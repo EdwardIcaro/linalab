@@ -1,0 +1,301 @@
+const API_BASE_URL = 'http://localhost:3001/api';
+
+// Função auxiliar para fazer requisições
+async function fetchApi(endpoint, options = {}) {
+  const token = localStorage.getItem('token');
+  const empresaId = localStorage.getItem('empresaId');
+  
+  const config = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(empresaId && { 'x-empresa-id': empresaId }),
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(`${API_BASE_URL}/${endpoint.startsWith('/') ? endpoint.substring(1) : endpoint}`, config);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+    const errorBody = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+    console.error('Erro do backend:', errorBody);
+    throw errorBody;
+  }
+
+  if (response.status === 204) {
+    return Promise.resolve(null);
+  }
+
+  return response.json();
+}
+
+// Função auxiliar para chamadas públicas que não devem causar logout
+async function fetchPublicApi(endpoint, options = {}) {
+  const config = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(`${API_BASE_URL}/${endpoint.startsWith('/') ? endpoint.substring(1) : endpoint}`, config);
+
+  if (!response.ok) {
+    throw await response.json().catch(() => ({ message: 'Erro desconhecido na API pública' }));
+  }
+  return response.json();
+}
+
+// ===== API =====
+const api = {
+  /**
+   * Função genérica para chamadas diretas à API.
+   */
+  call: (method, endpoint, body = null) => {
+    return fetchApi(endpoint, { method, ...(body && { body: JSON.stringify(body) }) });
+  },
+
+  // ===== AUTH =====
+  login: (email, password) => fetchApi('/usuarios/auth', {
+    method: 'POST',
+    body: JSON.stringify({ nome: email, senha: password }),
+  }),
+
+  signup: (userData) => fetchApi('/usuarios', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  }),
+
+  generateScopedToken: (empresaId) => fetchApi('/usuarios/scope-token', {
+    method: 'POST',
+    body: JSON.stringify({ empresaId }),
+  }),
+
+  // ===== EMPRESAS =====
+  getEmpresasDoUsuario: () => fetchApi('/empresas'),
+  createEmpresa: (data) => fetchApi('/empresas', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  updateEmpresa: (id, data) => fetchApi(`/empresas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  getEmpresaById: (id) => fetchApi(`/empresas/${id}`),
+
+  // ===== CLIENTES =====
+  getClientes: (page = 1, limit = 10, search = '') => 
+    fetchApi(`/clientes?page=${page}&limit=${limit}&search=${search}`),
+  getClienteById: (id) => fetchApi(`/clientes/${id}`),
+  createCliente: (data) => fetchApi('/clientes', { method: 'POST', body: JSON.stringify(data) }),
+  updateCliente: (id, data) => fetchApi(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCliente: (id) => fetchApi(`/clientes/${id}`, { method: 'DELETE' }),
+  getVeiculoByPlaca: (placa) => fetchApi(`/clientes/veiculo/placa/${placa}`),
+
+  // ===== VEÍCULOS =====
+  createVeiculo: (data) => fetchApi('/veiculos', { method: 'POST', body: JSON.stringify(data) }),
+  updateVeiculo: (id, data) => fetchApi(`/veiculos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteVeiculo: (id) => fetchApi(`/veiculos/${id}`, { method: 'DELETE' }),
+
+  // ===== SERVIÇOS =====
+  getServicos: (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return fetchApi(`/servicos?${params.toString()}`);
+  },
+  getServicosSimple: () => fetchApi('/servicos/simple'),
+  createServico: (data) => fetchApi('/servicos', { method: 'POST', body: JSON.stringify(data) }),
+  updateServico: (id, data) => fetchApi(`/servicos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteServico: (id) => fetchApi(`/servicos/${id}`, { method: 'DELETE' }),
+  
+  // ===== ADICIONAIS =====
+  getAdicionais: () => fetchApi('/adicionais'),
+  getAdicionaisSimple: () => fetchApi('/adicionais/simple'),
+  createAdicional: (data) => fetchApi('/adicionais', { method: 'POST', body: JSON.stringify(data) }),
+  updateAdicional: (id, data) => fetchApi(`/adicionais/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAdicional: (id) => fetchApi(`/adicionais/${id}`, { method: 'DELETE' }),
+
+  // ===== LAVADORES =====
+  getLavadores: () => fetchApi('/lavadores'),
+  getLavadoresSimple: () => fetchApi('/lavadores/simple'),
+  createLavador: (data) => fetchApi('/lavadores', { method: 'POST', body: JSON.stringify(data) }),
+  updateLavador: (id, data) => fetchApi(`/lavadores/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteLavador: (id) => fetchApi(`/lavadores/${id}`, { method: 'DELETE' }),
+  gerarTokenLavador: (id) => fetchApi(`/lavadores/${id}/token`, { method: 'POST' }),
+  getLavadorTokens: () => fetchApi('/lavadores/tokens'),
+  toggleLavadorToken: (id) => fetchApi(`/lavadores/tokens/${id}/toggle`, { method: 'PATCH' }),
+  updateLavadorTokenStatus: (id, data) => fetchApi(`/lavadores/tokens/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deleteLavadorToken: (id) => fetchApi(`/lavadores/tokens/${id}`, { method: 'DELETE' }),
+  getLavadorPublico: (token) => fetchPublicApi('/public/lavador-data', {
+    method: 'POST',
+    body: JSON.stringify({ token })
+  }),
+
+  // ===== ORDENS - REFATORADO =====
+  /**
+   * Buscar ordens com filtros avançados
+   * @param {number} page - Página atual
+   * @param {number} limit - Itens por página
+   * @param {string} search - Busca por texto
+   * @param {string} status - Status específico ou vazio
+   * @param {string} lavadorId - ID do lavador
+   * @param {string} clienteId - ID do cliente
+   * @param {string} dataInicio - Data inicial (ISO string)
+   * @param {string} dataFim - Data final (ISO string)
+   * @param {string} metodoPagamento - Método de pagamento
+   * @param {string} tipo - 'ativas' ou 'historico' (NOVO)
+   */
+  getOrdens: (page = 1, limit = 15, search = '', status = '', lavadorId = '', clienteId = '', dataInicio = null, dataFim = null, metodoPagamento = '', tipo = 'ativas') => {
+    const params = new URLSearchParams();
+    
+    // Adiciona apenas parâmetros com valores
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (search) params.append('search', search);
+    if (status) params.append('status', status);
+    if (lavadorId) params.append('lavadorId', lavadorId);
+    if (clienteId) params.append('clienteId', clienteId);
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    if (metodoPagamento) params.append('metodoPagamento', metodoPagamento);
+    if (tipo) params.append('tipo', tipo); // NOVO
+    
+    return fetchApi(`/ordens?${params.toString()}`);
+  },
+  
+  getOrdensStats: (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return fetchApi(`/ordens/stats?${params.toString()}`);
+  },
+
+  createOrdem: (data) => fetchApi('/ordens', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  updateOrdem: (id, data) => fetchApi(`/ordens/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+
+  /**
+   * NOVO: Finalizar ordem com pagamentos
+   * @param {string} ordemId - ID da ordem
+   * @param {object} payload - Objeto contendo `pagamentos` e opcionalmente `lavadorDebitoId`.
+   * @returns {Promise}
+   */
+  finalizarOrdem: (ordemId, payload) => {
+    if (!ordemId || !payload || !Array.isArray(payload.pagamentos)) {
+      throw new Error('ID da ordem e um payload com array de pagamentos são obrigatórios');
+    }
+
+    return fetchApi(`/ordens/${ordemId}/finalizar`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  deleteOrdem: (id) => fetchApi(`/ordens/${id}`, { method: 'DELETE' }),
+  getOrdemById: (id) => fetchApi(`/ordens/${id}`),
+  finalizarOrdensPendentes: () => fetchApi('/ordens/finalizar-pendentes', { method: 'POST' }),
+
+  // ===== PAGAMENTOS - REFATORADO =====
+  /**
+   * Criar pagamento avulso (não finaliza ordem automaticamente)
+   */
+  criarPagamento: (data) => fetchApi('/pagamentos', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  /**
+   * REFATORADO: Quitar pendência (atualiza pagamento existente)
+   * @param {string} ordemId - ID da ordem
+   * @param {string} pagamentoId - ID do pagamento pendente
+   * @param {string} metodo - Novo método de pagamento (DINHEIRO, PIX, CARTAO)
+   * @returns {Promise}
+   */
+  quitarPendencia: (ordemId, pagamentoId, metodo) => {
+    if (!ordemId || !pagamentoId || !metodo) {
+      throw new Error('ID da ordem, pagamento e método são obrigatórios');
+    }
+
+    return fetchApi('/pagamentos/quitar-pendencia', {
+      method: 'POST',
+      body: JSON.stringify({ ordemId, pagamentoId, metodo })
+    });
+  },
+
+  /**
+   * DEPRECATED: Use quitarPendencia ao invés
+   * Mantido para compatibilidade temporária
+   */
+  quitarPendenciaLegacy: (ordemId, pagamentos) => fetchApi('/pagamentos/quitar-pendencia', {
+    method: 'POST',
+    body: JSON.stringify({ ordemId, pagamentos }),
+  }),
+
+  deletePagamento: (id) => fetchApi(`/pagamentos/${id}`, { method: 'DELETE' }),
+
+  // ===== CAIXA E FORNECEDORES =====
+  getResumoDia: () => fetchApi('/caixa/resumo-dia'),
+  getHistoricoCaixa: (filters) => {
+    const params = new URLSearchParams(filters);
+    return fetchApi(`/caixa/historico?${params.toString()}`);
+  },
+  getGanhosDoMes: (filters) => {
+    const params = new URLSearchParams(filters);
+    return fetchApi(`/caixa/ganhos-mes?${params.toString()}`);
+  },
+  createFechamento: (data) => fetchApi('/caixa/fechamento', { method: 'POST', body: JSON.stringify(data) }),
+  createSaida: (data) => fetchApi('/caixa/saida', { method: 'POST', body: JSON.stringify(data) }),
+  createSangria: (data) => fetchApi('/caixa/sangria', { method: 'POST', body: JSON.stringify(data) }),
+  updateCaixaRegistro: (id, data) => fetchApi(`/caixa/registros/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCaixaRegistro: (id) => fetchApi(`/caixa/registros/${id}`, { method: 'DELETE' }),
+  getFechamentoById: (id) => fetchApi(`/caixa/fechamento/${id}`),
+  getDadosComissao: (filters) => {
+    const params = new URLSearchParams(filters);
+    return fetchApi(`/caixa/comissoes?${params.toString()}`);
+  },
+  fecharComissao: (data) => fetchApi('/caixa/comissoes/fechar', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getHistoricoComissoes: (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return fetchApi(`/caixa/comissoes/historico?${params.toString()}`);
+  },
+  getFechamentoComissaoById: (id) => fetchApi(`/caixa/comissoes/fechamento/${id}`),
+  migrarHistoricoComissoes: () => fetchApi('/caixa/comissoes/migrar-historico', { method: 'POST' }),
+  getFornecedores: () => fetchApi('/fornecedores'),
+
+  // ===== TIPOS DE VEÍCULO =====
+  getTiposVeiculo: () => fetchApi('/tipos-veiculo'),
+
+  // ===== NOTIFICAÇÕES =====
+  getNotificacoes: () => fetchApi('/notificacoes'),
+  marcarNotificacaoComoLida: (id) => fetchApi(`/notificacoes/${id}/lida`, { method: 'PATCH' }),
+  marcarTodasComoLidas: () => fetchApi('/notificacoes/marcar-todas-lidas', { method: 'POST' }),
+
+  // ===== ADMIN =====
+  getAdminStats: () => api.call('GET', 'admin/stats'),
+  getAdminEmpresaById: (id) => api.call('GET', `admin/empresas/${id}/details`),
+
+  // ===== UTILS =====
+  isAuthenticated: () => !!localStorage.getItem('token'),
+  logout: () => {
+    localStorage.clear();
+    window.location.href = 'login.html';
+  },
+};
+
+// Disponibilizar globalmente
+window.api = api;

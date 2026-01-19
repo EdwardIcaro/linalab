@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Configurações</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="configuracoes.css">
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
+    <script src="theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Adiciona a biblioteca SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body id="config-page">
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li data-permission="ver_dashboard"><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li data-permission="gerenciar_clientes"><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li data-permission="ver_financeiro"><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html" class="active"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            
+            <!-- Notification Bell (Corrigido) -->
+            <div class="notification-wrapper">
+                <button id="notification-bell" class="icon-btn">
+                    <i class="fas fa-bell"></i>
+                    <span id="notification-dot" class="notification-dot"></span>
+                </button>
+                <div id="notification-panel" class="notification-panel">
+                    <!-- O conteúdo será preenchido via JS -->
+                </div>
+            </div>
+
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar">
+                        <!-- Avatar -->
+                    </div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown">
+                        <!-- User info -->
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-title">
+                <h2>Configurações</h2>
+                <p>Gerencie os serviços, adicionais e outras configurações da sua empresa.</p>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <!-- Botão de Adicionais removido e o de Serviços renomeado -->
+            <button class="tab-button active" data-permission="config_ver_servicos" onclick="openTab(event, 'servicos')">Serviços e Adicionais</button>
+            <button class="tab-button" data-permission="config_ver_empresa" onclick="openTab(event, 'empresa')">Empresa</button>
+            <button class="tab-button" data-permission="config_ver_tokens" onclick="openTab(event, 'tokens')">Tokens de Acesso</button>
+            <button class="tab-button" data-permission="config_ver_usuarios" onclick="openTab(event, 'usuarios')">Usuários e Permissões</button>
+            <button class="tab-button" data-permission="config_ver_preferencias" onclick="openTab(event, 'preferencias')">Preferências</button>
+        </div>
+
+        <!-- Tab de Preferências -->
+        <div id="preferencias" class="tab-content">
+            <div class="card">
+                <h3 class="text-xl font-semibold mb-6">Preferências Gerais</h3>
+                <form id="preferenciasForm">
+                    <!-- Seção de Finalização e Exigências -->
+                    <div class="secao-preferencia">
+                        <h4 class="text-lg font-semibold mb-4">Finalização de Ordens</h4>
+                        <div class="notification-preference-list">
+                            <div class="notification-preference-item">
+                                <label for="finalizacaoAutomatica" class="form-label">Finalização Automática de Ordens
+                                    <span class="tooltip"><i class="fas fa-info-circle text-secondary"></i><span class="tooltip-text">Se habilitado, no "fim do dia de trabalho", o sistema irá alterar ordens "pendentes" ou "em andamento" de dias anteriores para "finalizado" com pagamento "PENDENTE".</span></span>
+                                </label>
+                                <label class="switch"><input type="checkbox" id="finalizacaoAutomatica"><span class="slider round"></span></label>
+                            </div>
+                            <div class="notification-preference-item">
+                                <label for="exigirLavadorParaFinalizar" class="form-label">Exigir Lavador para Finalizar Ordem
+                                    <span class="tooltip"><i class="fas fa-info-circle text-secondary"></i><span class="tooltip-text">Se habilitado, o sistema impedirá a finalização de uma ordem de serviço que não tenha um lavador atribuído.</span></span>
+                                </label>
+                                <label class="switch"><input type="checkbox" id="exigirLavadorParaFinalizar"><span class="slider round"></span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="secao-preferencia">
+                        <h4 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-credit-card mr-2" style="color: var(--primary-color);"></i>
+                            Formas de Pagamento Aceitas
+                        </h4>
+                        <p class="text-sm text-secondary mb-4">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Selecione quais formas de pagamento estarão disponíveis no momento de finalizar uma ordem de serviço.
+                        </p>
+                        
+                        <div class="payment-methods-grid">
+                            <!-- Dinheiro -->
+                            <label class="payment-method-card" for="paymentDinheiro">
+                                <div class="payment-method-info">
+                                    <div class="payment-icon">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </div>
+                                    <div>
+                                        <div class="form-label" style="margin-bottom: 4px;">Dinheiro</div>
+                                        <span class="text-sm text-secondary">Pagamento em espécie</span>
+                                    </div>
+                                </div>
+                                <label class="switch" onclick="event.stopPropagation()">
+                                    <input type="checkbox" id="paymentDinheiro" data-payment-method="DINHEIRO">
+                                    <span class="slider round"></span>
+                                </label>
+                            </label>
+                    
+                            <!-- PIX -->
+                            <label class="payment-method-card" for="paymentPix">
+                                <div class="payment-method-info">
+                                    <div class="payment-icon" style="background: linear-gradient(135deg, rgba(50, 188, 173, 0.2) 0%, rgba(50, 188, 173, 0.1) 100%);">
+                                        <i class="fab fa-pix" style="color: #32BCAD;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="form-label" style="margin-bottom: 4px;">PIX</div>
+                                        <span class="text-sm text-secondary">Pagamento instantâneo</span>
+                                    </div>
+                                </div>
+                                <label class="switch" onclick="event.stopPropagation()">
+                                    <input type="checkbox" id="paymentPix" data-payment-method="PIX">
+                                    <span class="slider round"></span>
+                                </label>
+                            </label>
+                    
+                            <!-- Cartão -->
+                            <label class="payment-method-card" for="paymentCartao">
+                                <div class="payment-method-info">
+                                    <div class="payment-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);">
+                                        <i class="fas fa-credit-card" style="color: #3b82f6;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="form-label" style="margin-bottom: 4px;">Cartão</div>
+                                        <span class="text-sm text-secondary">Débito ou crédito</span>
+                                    </div>
+                                </div>
+                                <label class="switch" onclick="event.stopPropagation()">
+                                    <input type="checkbox" id="paymentCartao" data-payment-method="CARTAO">
+                                    <span class="slider round"></span>
+                                </label>
+                            </label>
+                    
+                            <!-- Débito de Funcionário -->
+                            <label class="payment-method-card" for="paymentDebitoFuncionario">
+                                <div class="payment-method-info">
+                                    <div class="payment-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.1) 100%);">
+                                        <i class="fas fa-user-tag" style="color: #f97316;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="form-label" style="margin-bottom: 4px;">Débito de Funcionário</div>
+                                        <span class="text-sm text-secondary">Lançar como adiantamento</span>
+                                    </div>
+                                </div>
+                                <label class="switch" onclick="event.stopPropagation()">
+                                    <input type="checkbox" id="paymentDebitoFuncionario" data-payment-method="DEBITO_FUNCIONARIO">
+                                    <span class="slider round"></span>
+                                </label>
+                            </label>
+                        </div>
+                    
+                        <div style="margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #fbbf24;">
+                            <p class="text-sm" style="color: #92400e; margin: 0;">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <strong>Atenção:</strong> Desabilitar uma forma de pagamento a removerá das opções ao finalizar ordens de serviço.
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Seção de Preferências de Notificação -->
+                    <div class="secao-preferencia secao-notificacao">
+                        <h4 class="text-lg font-semibold mb-4">Notificações no Painel</h4>
+                        <p class="text-sm text-secondary mb-4">Escolha quais notificações você deseja receber no sino de notificações.</p>
+                        <div class="notification-preference-list">
+                            <!-- Notificação: Ordem Criada -->
+                            <div class="notification-preference-item">
+                                <label for="notifOrdemCriada" class="form-label">Ordem de Serviço Criada</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="notifOrdemCriada">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <!-- Notificação: Ordem Editada -->
+                            <div class="notification-preference-item">
+                                <label for="notifOrdemEditada" class="form-label">Ordem de Serviço Editada</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="notifOrdemEditada">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <!-- Notificação: Ordem Deletada -->
+                            <div class="notification-preference-item">
+                                <label for="notifOrdemDeletada" class="form-label">Ordem de Serviço Deletada</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="notifOrdemDeletada">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <!-- Notificação: Finalização Automática -->
+                            <div id="notifFinalizacaoContainer" class="notification-preference-item">
+                                <label for="notifFinalizacaoAutomatica" class="form-label">Aviso de Finalização Automática</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="notifFinalizacaoAutomatica">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary mt-6">Salvar Preferências</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab de Tokens de Acesso -->
+        <div id="tokens" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold">Gerenciar Tokens de Acesso</h3>
+                <p class="text-secondary">Ative, desative ou exclua os links de acesso dos funcionários.</p>
+            </div>
+            <div class="table-wrapper card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Funcionário</th>
+                            <th>Link de Acesso</th>
+                            <th>Status</th>
+                            <th class="actions-cell">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tokensTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab de Usuários e Permissões -->
+        <div id="usuarios" class="tab-content">
+            <!-- Seção de Roles -->
+            <div class="card mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Funções (Roles)</h3>
+                    <button data-permission="config_ver_usuarios" onclick="openRoleModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Nova Função</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Usuários</th><th>Permissões</th><th class="actions-cell">Ações</th></tr></thead>
+                        <tbody id="rolesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Seção de Usuários -->
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Usuários (Subcontas)</h3>
+                    <button data-permission="config_ver_usuarios" onclick="openUserModal()" class="btn-primary"><i class="fas fa-user-plus mr-2"></i> Novo Usuário</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Email</th><th>Função</th><th class="actions-cell">Ações</th></tr></thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab de Serviços -->
+        <div id="servicos" class="tab-content active">
+            <!-- Seção de Serviços -->
+            <div class="card mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold">Lista de Serviços</h3>
+                    <button data-permission="config_ver_servicos" onclick="openServiceModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Novo Serviço</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Preço</th>
+                                <th>Tipo de Veículo</th>
+                                <th>Subtipo</th>
+                                <th class="actions-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="servicesTableBody"></tbody>
+                    </table>
+                    <p class="text-sm text-secondary mt-4"><i class="fas fa-info-circle mr-2"></i>Arraste e solte as linhas para reordenar os serviços.</p>
+                </div>
+            </div>
+
+            <!-- Seção de Adicionais (agora dentro da mesma aba) -->
+            <div class="card">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold">Lista de Adicionais</h3>
+                    <button data-permission="config_ver_adicionais" onclick="openAdicionalModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Novo Adicional</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Preço</th>
+                                <th class="actions-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adicionaisTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab de Empresa -->
+        <div id="empresa" class="tab-content">
+            <div class="card">
+                <h3 class="text-xl font-semibold mb-6">Dados da Empresa</h3>
+                <form id="empresaForm">
+                    <div class="form-group">
+                        <label for="empresaNome" class="form-label">Nome da Empresa</label>
+                        <input type="text" id="empresaNome" class="form-input" required>
+                    </div>
+                    <h4 class="text-lg font-semibold mt-6 mb-4">Horário de Funcionamento</h4>
+                    <p class="text-secondary mb-4">Define o início e o fim do "dia de trabalho" para relatórios e filtros. Por padrão, de 07:00 às 19:00.</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label for="horarioAbertura" class="form-label">Abertura</label>
+                            <input type="time" id="horarioAbertura" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="horarioFechamento" class="form-label">Fechamento</label>
+                            <input type="time" id="horarioFechamento" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Página Inicial (Movida para cá) -->
+                    <h4 class="text-lg font-semibold mt-6 mb-4">Preferências de Acesso</h4>
+                    <div class="form-group secao-pagina-inicial">
+                        <label for="paginaInicialPadrao" class="form-label">Página Inicial Padrão</label>
+                        <select id="paginaInicialPadrao" class="form-select" style="max-width: 400px;">
+                            <option value="index.html">Dashboard</option>
+                            <option value="ordens.html">Ordens de Serviço</option>
+                            <option value="selecionar-tipo-veiculo.html">Nova Ordem</option>
+                        </select>
+                        <p class="text-sm text-secondary mt-2">Escolha para qual página você será redirecionado após o login.</p>
+                    </div>
+                    <button type="submit" class="btn-primary mt-4">Salvar Alterações</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals, Toasts, etc. -->
+
+    <!-- Service Modal -->
+    <div id="serviceModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="serviceModalTitle" class="modal-title">Novo Serviço</h2>
+                <button onclick="closeServiceModal()" class="modal-close">&times;</button>
+            </div>
+            <form id="serviceForm">
+                <input type="hidden" id="serviceId">
+                <div class="form-group">
+                    <label for="serviceName" class="form-label">Nome do Serviço</label>
+                    <input type="text" id="serviceName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="servicePrice" class="form-label">Preço</label>
+                    <input type="number" step="0.01" id="servicePrice" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="serviceTipoPrincipal" class="form-label">Tipo Principal</label>
+                    <select id="serviceTipoPrincipal" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        <option value="CARRO">Carro</option>
+                        <option value="MOTO">Moto</option>
+                    </select>
+                </div>
+                <div class="form-group" id="subtipoContainer" style="display: none;">
+                    <label class="form-label">Subtipos</label>
+                    <div id="subtipoCheckboxContainer" class="checkbox-group"></div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeServiceModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Adicional Modal -->
+    <div id="adicionalModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="adicionalModalTitle" class="modal-title">Novo Adicional</h2>
+                <button onclick="closeAdicionalModal()" class="modal-close">&times;</button>
+            </div>
+            <form id="adicionalForm">
+                <input type="hidden" id="adicionalId">
+                <div class="form-group">
+                    <label for="adicionalName" class="form-label">Nome do Adicional</label>
+                    <input type="text" id="adicionalName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="adicionalPrice" class="form-label">Preço</label>
+                    <input type="number" step="0.01" id="adicionalPrice" class="form-input" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeAdicionalModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Role Modal -->
+    <div id="roleModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="roleModalTitle" class="modal-title">Nova Função</h2>
+                <button onclick="closeModal('roleModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="roleForm">
+                <input type="hidden" id="roleId">
+                <div class="form-group">
+                    <label for="roleName" class="form-label">Nome da Função</label>
+                    <input type="text" id="roleName" class="form-input" required placeholder="Ex: Gerente">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Permissões</label>
+                    <p class="text-sm text-secondary mb-4">Selecione o que usuários com esta função podem ver e fazer.</p>
+                    <div id="permissionsContainer" class="permissions-accordion"></div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('roleModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div id="userModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="userModalTitle" class="modal-title">Novo Usuário</h2>
+                <button onclick="closeModal('userModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="userForm">
+                <input type="hidden" id="subUserId">
+                <div class="form-group">
+                    <label for="userName" class="form-label">Nome de Usuário (para login)</label>
+                    <input type="text" id="userName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="userEmail" class="form-label">Email</label>
+                    <input type="email" id="userEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="userPassword" class="form-label">Senha</label>
+                    <input type="password" id="userPassword" class="form-input" placeholder="Deixe em branco para não alterar">
+                    <p id="passwordHint" class="text-sm text-secondary mt-1" style="display: none;">
+                        Preencha apenas se desejar alterar a senha.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label for="userRoleSelect" class="form-label">Função (Role)</label>
+                    <select id="userRoleSelect" class="form-select" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="userMaxDesconto" class="form-label">Desconto Máximo Permitido (%)</label>
+                    <input type="number" id="userMaxDesconto" class="form-input" min="0" max="100" value="0" placeholder="Ex: 10 para 10%">
+                    <p class="text-sm text-secondary mt-1">Define a porcentagem máxima de desconto que este usuário pode aplicar em uma OS.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('userModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                <h2 id="customConfirmTitle" class="modal-title"></h2>
+            </div>
+            <p id="customConfirmMessage" class="text-secondary my-4"></p>
+            <div class="modal-actions" style="justify-content: center; border-top: none; margin-top: 16px;">
+                <button id="customCancelBtn" class="btn btn-secondary">Cancelar</button>
+                <button id="customConfirmBtn" class="btn btn-danger">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Container para as notificações (toasts) -->
+    <div id="toast-container" class="toast-container"></div>
+
+
+    <script>
+        let allTiposVeiculo = [];
+        let cachedServices = [];
+
+        // --- UTILS ---
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+        // --- AUTH & GENERAL SETUP ---
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            enforcePermission('gerenciar_configuracoes');
+            handleImpersonationBanner();
+            
+            if (window.initializeUserMenu) initializeUserMenu();
+            if (window.updateMenuVisibility) updateMenuVisibility();
+            if (window.initializeNotificationSystem) initializeNotificationSystem();
+
+            initializeTabs();
+            updateActionButtonsVisibility();
+            
+            // Carrega todos os dados iniciais de forma assíncrona
+            Promise.all([
+                loadPreferencias(),
+                loadEmpresaData(),
+                loadAdicionais(),
+                loadRolesAndUsers(),
+                loadTokens(),
+                loadTiposVeiculo()
+            ]).then(() => {
+                loadServices();
+                initializeSortable();
+                initializePaymentCards(); // Inicializa os cards visuais APÓS carregar as preferências
+            });
+
+            // Adiciona listeners aos formulários
+            document.getElementById('preferenciasForm').addEventListener('submit', savePreferencias);
+            document.getElementById('empresaForm').addEventListener('submit', saveEmpresa);
+            document.getElementById('serviceForm').addEventListener('submit', saveService);
+            document.getElementById('adicionalForm').addEventListener('submit', saveAdicional);
+            document.getElementById('serviceTipoPrincipal').addEventListener('change', updateSubtipoCheckboxes);
+            document.getElementById('roleForm').addEventListener('submit', saveRole);
+            document.getElementById('userForm').addEventListener('submit', saveUser);
+        });
+
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function logout() {
+            window.api.logout();
+        }
+
+        // --- Sistema de Notificação ---
+        function initializeNotificationSystem() {
+            const bell = document.getElementById('notification-bell');
+            const panel = document.getElementById('notification-panel');
+            
+            if (!bell || !panel) return;
+
+            bell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panel.classList.toggle('active');
+                if (panel.classList.contains('active')) {
+                    markAllAsRead();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!panel.contains(e.target) && !bell.contains(e.target)) {
+                    panel.classList.remove('active');
+                }
+            });
+
+            loadNotifications();
+            setInterval(loadNotifications, 30000);
+        }
+
+        async function loadNotifications() {
+            try {
+                const response = await window.api.getNotificacoes({ limit: 5 });
+                const notifications = response.notificacoes || [];
+                const panel = document.getElementById('notification-panel');
+                const dot = document.getElementById('notification-dot');
+                
+                if (!panel || !dot) return;
+
+                panel.innerHTML = '<div class="notification-panel-header"><h4>Notificações</h4></div>';
+
+                if (notifications.length > 0) {
+                    const hasUnread = notifications.some(n => !n.lida);
+                    dot.style.display = hasUnread ? 'block' : 'none';
+
+                    notifications.forEach(n => {
+                        const item = document.createElement('div');
+                        item.className = `notification-item ${n.lida ? '' : 'unread'}`;
+                        item.innerHTML = `
+                            <div class="notification-content">
+                                <p>${n.mensagem}</p>
+                                <small class="text-secondary">${new Date(n.createdAt).toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+                        panel.appendChild(item);
+                    });
+                } else {
+                    dot.style.display = 'none';
+                    panel.innerHTML += '<div class="notification-empty">Nenhuma notificação nova.</div>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar notificações:', error);
+            }
+        }
+
+        async function markAllAsRead() {
+            await window.api.marcarTodasComoLidas();
+            document.getElementById('notification-dot').style.display = 'none';
+        }
+
+        // --- TABS ---
+        function initializeTabs() {
+            updateTabsVisibility();
+            const activeTabId = localStorage.getItem('activeConfigTab');
+            const savedTabButton = document.querySelector(`.tab-button[onclick*="'${activeTabId}'"]`);
+
+            if (activeTabId && savedTabButton && savedTabButton.style.display !== 'none') {
+                openTab(null, activeTabId);
+            } else {
+                const firstVisibleTab = document.querySelector('.tab-button:not([style*="display: none"])');
+                if (firstVisibleTab) {
+                    const tabName = firstVisibleTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+                    openTab(null, tabName);
+                }
+            }
+        }
+
+        function openTab(evt, tabName) {
+            localStorage.setItem('activeConfigTab', tabName);
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.tab-button').forEach(link => link.classList.remove('active'));
+            document.getElementById(tabName).style.display = 'block';
+            const tabButton = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
+            if (tabButton) {
+                tabButton.classList.add('active');
+            }
+        }
+
+        // --- TOKENS ---
+        async function loadTokens() {
+            const tableBody = document.getElementById('tokensTableBody');
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Carregando tokens...</td></tr>';
+            try {
+                const response = await window.api.getLavadorTokens();
+                const tokens = response.tokens || [];
+                if (tokens.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-secondary">Nenhum token de acesso gerado.</td></tr>';
+                    return;
+                }
+                tableBody.innerHTML = tokens.map(t => `
+                    <tr>
+                        <td>${t.lavador.nome}</td>
+                        <td>
+                            <a href="${window.location.origin}/lavador-publico.html?token=${t.token}" target="_blank" class="link-like">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span>Acessar Link</span>
+                            </a>
+                        </td>
+                        <td class="status-cell">
+                            <select class="form-select form-select-sm" onchange="handleTokenStatusChange(this, '${t.id}')">
+                                <option value="true" ${t.ativo ? 'selected' : ''}>Ativo</option>
+                                <option value="false" ${!t.ativo ? 'selected' : ''}>Inativo</option>
+                            </select>
+                        </td>
+                        <td class="actions-cell">
+                            <button data-action="copy" data-token="${t.token}" class="btn-sm btn-secondary" title="Copiar Link">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button data-action="delete" data-id="${t.id}" class="btn-sm btn-danger" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error("Erro ao carregar tokens:", error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-red-500">Erro ao carregar tokens.</td></tr>';
+            }
+        }
+
+        function setButtonLoadingState(button, loading) {
+            if (!button) return;
+            const icon = button.querySelector('i');
+            if (!icon) return;
+            if (loading) {
+                button.disabled = true;
+                button.dataset.originalIcon = icon.className;
+                icon.className = 'fas fa-spinner fa-spin';
+            } else {
+                button.disabled = false;
+                if (button.dataset.originalIcon) {
+                    icon.className = button.dataset.originalIcon;
+                    delete button.dataset.originalIcon;
+                }
+            }
+        }
+
+        async function handleTokenStatusChange(selectElement, tokenId) {
+            const novoStatus = selectElement.value === 'true';
+            const action = novoStatus ? 'ativar' : 'desativar';
+            selectElement.disabled = true;
+            selectElement.style.border = '2px solid var(--primary-purple)';
+            try {
+                await window.api.updateLavadorTokenStatus(tokenId, { ativo: novoStatus });
+                showToast(`Token ${action} com sucesso!`, 'success');
+                loadTokens();
+            } catch (error) {
+                showToast(`Erro ao ${action} o token.`, 'error');
+                console.error(`Erro ao alterar status do token:`, error);
+                selectElement.value = !novoStatus;
+            }
+        }
+
+        document.getElementById('tokensTableBody').addEventListener('click', (event) => {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+            const action = button.dataset.action;
+            if (action === 'delete') {
+                const tokenId = button.dataset.id;
+                deleteToken(tokenId, button);
+            } else if (action === 'copy') {
+                const token = button.dataset.token;
+                if (token) copyTokenLink(token);
+            }
+        });
+
+        async function deleteToken(id, button) {
+            showCustomConfirm({
+                title: 'Excluir Token',
+                message: 'Tem certeza que deseja excluir permanentemente este token? Esta ação não pode ser desfeita.',
+                onConfirm: async () => {
+                    if (!button) button = document.querySelector(`#tokensTableBody button[data-action="delete"][data-id="${id}"]`);
+                    setButtonLoadingState(button, true);
+                    try {
+                        await window.api.deleteLavadorToken(id);
+                        showToast('Token excluído com sucesso!', 'success');
+                        loadTokens();
+                    } catch (error) {
+                        console.error('Erro ao excluir token:', error);
+                        showToast(error.message || 'Erro ao excluir token.', 'error');
+                        setButtonLoadingState(button, false);
+                    }
+                }
+            });
+        }
+
+        function copyTokenLink(token) {
+            const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('Link copiado para a área de transferência!', 'success');
+            }, (err) => {
+                console.error('Erro ao copiar link: ', err);
+                showToast('Falha ao copiar o link.', 'error');
+            });
+        }
+
+        // --- ROLES & USERS ---
+        const allPermissions = [
+             { label: 'Dashboard', name: 'ver_dashboard', icon: 'fa-home' },
+             { label: 'Ordens', name: 'gerenciar_ordens', icon: 'fa-list-alt' },
+             { label: 'Clientes', name: 'gerenciar_clientes', icon: 'fa-users' },
+             { label: 'Funcionários', name: 'gerenciar_funcionarios', icon: 'fa-user-tie' },
+             { label: 'Financeiro', name: 'ver_financeiro', icon: 'fa-chart-pie' },
+             { label: 'Configurações', name: 'gerenciar_configuracoes', icon: 'fa-cog',
+                sub_permissions: [
+                    { name: 'config_ver_servicos', label: 'Serviços e Adicionais' },
+                    { name: 'config_ver_empresa', label: 'Dados da Empresa' },
+                    { name: 'config_ver_tokens', label: 'Tokens de Acesso' },
+                    { name: 'config_ver_usuarios', label: 'Usuários e Permissões' },
+                    { name: 'config_ver_preferencias', label: 'Preferências' },
+                ]
+            },
+        ];
+
+        async function loadRolesAndUsers() {
+            try {
+                const { roles, usuarios } = await window.api.call('GET', 'roles');
+                renderRoles(roles);
+                renderUsers(usuarios);
+                populateRoleSelect(roles);
+            } catch (error) {
+                console.error("Erro ao carregar roles e usuários:", error);
+                showToast('Erro ao carregar dados de permissões.', 'error');
+            }
+        }
+
+        function renderRoles(roles) {
+            const tableBody = document.getElementById('rolesTableBody');
+            tableBody.innerHTML = '';
+            roles.forEach(role => {
+                const permissoesHtml = role.permissoes.map(p => `<span class="subtipo-badge">${p.nome.replace(/_/g, ' ')}</span>`).join('');
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${role.nome}</strong></td>
+                    <td>${role._count.usuarios}</td>
+                    <td>${permissoesHtml || 'Nenhuma'}</td>
+                    <td class="actions-cell">
+                        <button onclick='openRoleModal(${JSON.stringify(role)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick='deleteRole("${role.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+            });
+        }
+
+        function renderUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = '';
+            users.forEach(user => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${user.nome}</td>
+                    <td>${user.email}</td>
+                    <td>${user.roleInt?.nome || 'Sem Função'}</td>
+                    <td class="actions-cell">
+                        <button onclick='openUserModal(${JSON.stringify(user)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick='deleteUser("${user.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+            });
+        }
+
+        function populateRoleSelect(roles) {
+            const select = document.getElementById('userRoleSelect');
+            select.innerHTML = '<option value="">Selecione uma função</option>';
+            roles.forEach(role => {
+                select.innerHTML += `<option value="${role.id}">${role.nome}</option>`;
+            });
+        }
+
+        function openRoleModal(role = null) {
+            document.getElementById('roleForm').reset();
+            document.getElementById('roleId').value = '';
+            document.getElementById('roleModalTitle').textContent = 'Nova Função';
+            const permissionsContainer = document.getElementById('permissionsContainer');
+            permissionsContainer.innerHTML = '';
+            allPermissions.forEach(perm => {
+                const groupEl = document.createElement('div');
+                groupEl.className = 'permission-group';
+                let headerHtml = `
+                    <div class="permission-group-header">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" class="form-checkbox master-checkbox" name="permissoes" value="${perm.name}" data-group="${perm.name}" ${perm.sub_permissions ? 'data-is-parent="true"' : ''}>
+                            <i class="fas ${perm.icon} text-secondary"></i>
+                            <span class="permission-group-title">${perm.label}</span>
+                        </label>
+                        ${perm.sub_permissions ? '<i class="fas fa-chevron-down expand-icon"></i>' : ''}
+                    </div>
+                `;
+                groupEl.innerHTML = headerHtml;
+                if (perm.sub_permissions) {
+                    const subList = document.createElement('div');
+                    subList.className = 'sub-permissions-list';
+                    subList.innerHTML = perm.sub_permissions.map(sub => `
+                        <label class="sub-permission-item">
+                            <input type="checkbox" class="form-checkbox sub-checkbox" name="permissoes" value="${sub.name}" data-parent-group="${perm.name}">
+                            <span>${sub.label}</span>
+                        </label>
+                    `).join('');
+                    groupEl.appendChild(subList);
+                }
+                permissionsContainer.appendChild(groupEl);
+            });
+            if (role) {
+                document.getElementById('roleModalTitle').textContent = 'Editar Função';
+                document.getElementById('roleId').value = role.id;
+                document.getElementById('roleName').value = role.nome;
+                if (role.permissoes) {
+                    role.permissoes.forEach(p => {
+                        const checkbox = document.querySelector(`input[name="permissoes"][value="${p.name}"]`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+                document.querySelectorAll('.sub-checkbox:checked').forEach(sub => {
+                    handleSubCheckboxChange(sub);
+                });
+            }
+            document.getElementById('roleModal').classList.add('active');
+            addPermissionEventListeners();
+        }
+
+        function addPermissionEventListeners() {
+            document.querySelectorAll('.permission-group-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('label')) return;
+                    const group = header.closest('.permission-group');
+                    group.classList.toggle('expanded');
+                });
+            });
+            document.querySelectorAll('.master-checkbox').forEach(master => {
+                master.addEventListener('change', (e) => handleMasterCheckboxChange(e.target));
+            });
+            document.querySelectorAll('.sub-checkbox').forEach(sub => {
+                sub.addEventListener('change', (e) => handleSubCheckboxChange(e.target));
+            });
+        }
+
+        function openUserModal(user = null) {
+            document.getElementById('userForm').reset();
+            document.getElementById('subUserId').value = '';
+            document.getElementById('userModalTitle').textContent = 'Novo Usuário';
+            document.getElementById('passwordHint').style.display = 'none';
+            document.getElementById('userPassword').required = true;
+            document.getElementById('userPassword').placeholder = '';
+            if (user) {
+                document.getElementById('userModalTitle').textContent = 'Editar Usuário';
+                document.getElementById('subUserId').value = user.id;
+                document.getElementById('userName').value = user.nome;
+                document.getElementById('userEmail').value = user.email;
+                document.getElementById('userRoleSelect').value = user.roleInt?.id || '';
+                document.getElementById('userMaxDesconto').value = user.maxDesconto || 0;
+                document.getElementById('userPassword').required = false;
+                document.getElementById('passwordHint').style.display = 'block';
+            }
+            document.getElementById('userModal').classList.add('active');
+        }
+
+        function handleMasterCheckboxChange(masterCheckbox) {
+            const groupName = masterCheckbox.dataset.group;
+            const subCheckboxes = document.querySelectorAll(`.sub-checkbox[data-parent-group="${groupName}"]`);
+            subCheckboxes.forEach(sub => sub.checked = masterCheckbox.checked);
+        }
+
+        function handleSubCheckboxChange(subCheckbox) {
+            const parentGroupName = subCheckbox.dataset.parentGroup;
+            const masterCheckbox = document.querySelector(`.master-checkbox[data-group="${parentGroupName}"]`);
+            const allSubCheckboxes = document.querySelectorAll(`.sub-checkbox[data-parent-group="${parentGroupName}"]`);
+            const anySubChecked = Array.from(allSubCheckboxes).some(sub => sub.checked);
+            if (masterCheckbox) masterCheckbox.checked = anySubChecked;
+        }
+
+        async function saveRole(event) {
+            event.preventDefault();
+            const id = document.getElementById('roleId').value;
+            const data = {
+                id: id || null,
+                nome: document.getElementById('roleName').value,
+                permissoes: Array.from(document.querySelectorAll('input[name="permissoes"]:checked:not([data-is-parent="true"])')).map(cb => cb.value)
+            };
+            try {
+                await window.api.call('POST', 'roles', data); 
+                showToast('Função salva com sucesso!', 'success');
+                closeModal('roleModal');
+                loadRolesAndUsers();
+            } catch (error) { showToast(error.message || 'Erro ao salvar função.', 'error'); }
+        }
+
+        async function saveUser(event) {
+            event.preventDefault();
+            const id = document.getElementById('subUserId').value;
+            const senha = document.getElementById('userPassword').value;
+            const data = {
+                nome: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                roleId: document.getElementById('userRoleSelect').value,
+                maxDesconto: document.getElementById('userMaxDesconto').value || 0
+            };
+            if (senha) data.senha = senha;
+            try {
+                if (id) {
+                    await window.api.call('PATCH', `roles/subaccount/${id}`, data);
+                    showToast('Usuário atualizado com sucesso!', 'success');
+                } else {
+                    await window.api.call('POST', 'roles/subaccount', data);
+                    showToast('Usuário criado com sucesso!', 'success');
+                }
+                closeModal('userModal');
+                loadRolesAndUsers();
+            } catch (error) { showToast(error.message || 'Erro ao criar usuário.', 'error'); }
+        }
+
+        async function deleteRole(id) {
+            showCustomConfirm({
+                title: 'Excluir Função',
+                message: 'Tem certeza que deseja excluir esta função? Apenas funções sem usuários podem ser excluídas.',
+                onConfirm: async () => {
+                    try {
+                        await window.api.call('DELETE', `roles/${id}`);
+                        showToast('Função excluída com sucesso!', 'success');
+                        loadRolesAndUsers();
+                    } catch (error) { showToast(error.message || 'Erro ao excluir função.', 'error'); }
+                }
+            });
+        }
+
+        async function deleteUser(id) {
+            showCustomConfirm({
+                title: 'Excluir Usuário',
+                message: 'Tem certeza que deseja excluir este usuário permanentemente?',
+                onConfirm: async () => {
+                    try {
+                        await window.api.call('DELETE', `roles/subaccount/${id}`);
+                        showToast('Usuário excluído com sucesso!', 'success');
+                        loadRolesAndUsers();
+                    } catch (error) { showToast(error.message || 'Erro ao excluir usuário.', 'error'); }
+                }
+            });
+        }
+
+        function updateTabsVisibility() {
+            const tabButtons = document.querySelectorAll('.tabs .tab-button[data-permission]');
+            tabButtons.forEach(button => {
+                const requiredPermission = button.dataset.permission;
+                if (!hasPermission(requiredPermission)) {
+                    button.style.display = 'none';
+                }
+            });
+        }
+
+        function updateActionButtonsVisibility() {
+            const actionButtons = document.querySelectorAll('.tab-content button[data-permission]');
+            actionButtons.forEach(button => {
+                const requiredPermission = button.dataset.permission;
+                if (!hasPermission(requiredPermission)) {
+                    button.style.display = 'none';
+                }
+            });
+        }
+
+        function initializeSortable() {
+            const tableBody = document.getElementById('servicesTableBody');
+            new Sortable(tableBody, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: async function (evt) {
+                    const serviceIds = Array.from(tableBody.querySelectorAll('tr')).map(row => row.dataset.id);
+                    try {
+                        await window.api.call('POST', 'servicos/reorder', { ids: serviceIds });
+                        showToast('Ordem dos serviços salva com sucesso!', 'success');
+                    } catch (error) {
+                        console.error('Erro ao reordenar serviços:', error);
+                        showToast('Não foi possível salvar a nova ordem.', 'error');
+                        loadServices();
+                    }
+                },
+            });
+        }
+
+        // --- DATA LOADING ---
+        async function loadServices() {
+            try {
+                const response = await window.api.getServicos();
+                const services = response.servicos || response;
+                cachedServices = services;
+                const tableBody = document.getElementById('servicesTableBody');
+                tableBody.innerHTML = '';
+                if (!Array.isArray(services)) {
+                    console.error("Erro: a resposta de serviços não é um array.", services);
+                    return;
+                }
+                services.forEach(s => {
+                    const row = tableBody.insertRow();
+                    const tipoPrincipal = s.tiposVeiculo && s.tiposVeiculo.length > 0 ? s.tiposVeiculo[0].nome : 'N/A';
+                    const categoriasArray = s.tiposVeiculo?.map(t => t.categoria).filter(Boolean);
+                    const categoriasHtml = categoriasArray && categoriasArray.length > 0
+                        ? categoriasArray.map(cat => `<span class="subtipo-badge">${cat}</span>`).join('')
+                        : 'Todos';
+                    row.dataset.id = s.id;
+                    row.innerHTML = `
+                        <td>${s.nome}</td>
+                        <td><strong class="font-semibold">${formatCurrency(s.preco)}</strong></td>
+                        <td>${tipoPrincipal}</td>
+                        <td>${categoriasHtml}</td>
+                        <td class="actions-cell">
+                            <button onclick='openServiceModal("${s.id}")' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                            <button onclick='deleteService("${s.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                });
+            } catch (error) { console.error("Erro ao carregar serviços:", error); }
+        }
+
+        async function loadAdicionais() {
+            try {
+                const response = await window.api.getAdicionais();
+                const adicionais = response.adicionais || response;
+                const tableBody = document.getElementById('adicionaisTableBody');
+                tableBody.innerHTML = '';
+                if (!Array.isArray(adicionais)) {
+                    console.error("Erro: a resposta de adicionais não é um array.", adicionais);
+                    return;
+                }
+                adicionais.forEach(a => {
+                    const row = tableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${a.nome}</td>
+                        <td><strong class="font-semibold">${formatCurrency(a.preco)}</strong></td>
+                        <td class="actions-cell">
+                            <button onclick='openAdicionalModal("${a.id}")' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                            <button onclick='deleteAdicional("${a.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                });
+            } catch (error) { console.error("Erro ao carregar adicionais:", error); }
+        }
+
+        async function loadEmpresaData() {
+            try {
+                const empresaId = localStorage.getItem('empresaId');
+                const empresa = await window.api.getEmpresaById(empresaId);
+                document.getElementById('empresaNome').value = empresa.nome;
+                document.getElementById('horarioAbertura').value = empresa.horarioAbertura;
+                document.getElementById('horarioFechamento').value = empresa.horarioFechamento;                
+                document.getElementById('paginaInicialPadrao').value = empresa.paginaInicialPadrao || 'index.html';
+            } catch (error) { console.error("Erro ao carregar dados da empresa:", error); }
+        }
+
+        async function loadTiposVeiculo() {
+            try {
+                const response = await window.api.getTiposVeiculo();
+                allTiposVeiculo = response.tiposVeiculo || response;
+                if (!Array.isArray(allTiposVeiculo)) {
+                    console.error('A resposta de tipos de veículo não é um array:', allTiposVeiculo);
+                    allTiposVeiculo = [];
+                }
+            } catch (error) { 
+                console.error("Erro ao carregar tipos de veículo:", error); 
+                alert('Não foi possível carregar os tipos de veículo. A página pode não funcionar corretamente.');
+            }
+        }
+
+        function updateSubtipoCheckboxes() {
+            const tipoPrincipal = document.getElementById('serviceTipoPrincipal').value;
+            const subtipoContainer = document.getElementById('subtipoContainer');
+            const checkboxContainer = document.getElementById('subtipoCheckboxContainer');
+            checkboxContainer.innerHTML = '';
+            subtipoContainer.style.display = 'none';
+            if (tipoPrincipal === 'CARRO') {
+                const subtipos = allTiposVeiculo.filter(t => t.nome === 'CARRO' && t.categoria);
+                if (subtipos.length > 0) {
+                    subtipos.forEach(t => {
+                        const checkboxWrapper = document.createElement('div');
+                        checkboxWrapper.className = 'checkbox-item';
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = `subtipo-${t.categoria}`;
+                        checkbox.value = t.categoria;
+                        checkbox.name = 'subtiposVeiculo';
+                        const label = document.createElement('label');
+                        label.htmlFor = `subtipo-${t.categoria}`;
+                        label.textContent = t.categoria;
+                        checkboxWrapper.appendChild(checkbox);
+                        checkboxWrapper.appendChild(label);
+                        checkboxContainer.appendChild(checkboxWrapper);
+                    });
+                    subtipoContainer.style.display = 'block';
+                }
+            }
+        }
+
+        // --- MODALS & FORMS ---
+        async function openServiceModal(id = null) {
+            const form = document.getElementById('serviceForm');
+            form.reset();
+            document.getElementById('serviceId').value = '';
+            document.getElementById('subtipoCheckboxContainer').innerHTML = '';
+            document.getElementById('subtipoContainer').style.display = 'none';
+            if (id) {
+                document.getElementById('serviceModalTitle').textContent = 'Editar Serviço';
+                const service = cachedServices.find(s => s.id === id);
+                if(service) {
+                    document.getElementById('serviceId').value = service.id;
+                    document.getElementById('serviceName').value = service.nome;
+                    document.getElementById('servicePrice').value = service.preco;
+                    const tipoPrincipal = service.tiposVeiculo && service.tiposVeiculo[0] ? service.tiposVeiculo[0].nome : '';
+                    document.getElementById('serviceTipoPrincipal').value = tipoPrincipal;
+                    if (tipoPrincipal === 'CARRO') {
+                        updateSubtipoCheckboxes();
+                        const categoriasSalvas = service.tiposVeiculo.map(t => t.categoria).filter(Boolean);
+                        categoriasSalvas.forEach(categoria => {
+                            const checkbox = document.getElementById(`subtipo-${categoria}`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                }
+            } else {
+                document.getElementById('serviceModalTitle').textContent = 'Novo Serviço';
+            }
+            document.getElementById('serviceModal').classList.add('active');
+        }
+
+        function closeServiceModal() {
+            document.getElementById('serviceModal').classList.remove('active');
+        }
+
+        async function saveService(event) {
+            event.preventDefault();
+            const id = document.getElementById('serviceId').value;
+            const nome = document.getElementById('serviceName').value;
+            const preco = parseFloat(document.getElementById('servicePrice').value);
+            const tipoPrincipal = document.getElementById('serviceTipoPrincipal').value;
+            if (!tipoPrincipal) {
+                alert('Por favor, selecione um tipo de veículo.');
+                return;
+            }
+            const data = { nome, preco, tipoVeiculo: tipoPrincipal };
+            if (tipoPrincipal === 'CARRO') {
+                const subtiposSelecionados = Array.from(document.querySelectorAll('#subtipoCheckboxContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+                if (subtiposSelecionados.length > 0) data.subtiposVeiculo = subtiposSelecionados;
+            }
+            try {
+                if (id) {
+                    await window.api.updateServico(id, data);
+                } else {
+                    await window.api.createServico(data);
+                }
+                closeServiceModal();
+                loadServices();
+            } catch (error) { 
+                console.error("Erro ao salvar serviço:", error); 
+                showToast(`Erro ao salvar serviço: ${error.message || 'Verifique o console.'}`, 'error');
+            }
+        }
+
+        async function deleteService(id) {
+            showCustomConfirm({
+                title: 'Excluir Serviço',
+                message: 'Tem certeza que deseja excluir este serviço? Esta ação não pode ser desfeita.',
+                onConfirm: async () => {
+                    try {
+                        await window.api.deleteServico(id);
+                        showToast('Serviço excluído com sucesso!', 'success');
+                        loadServices();
+                    } catch (error) { showToast(error.message || 'Erro ao excluir serviço.', 'error'); }
+                }
+            });
+        }
+
+        async function openAdicionalModal(id = null) {
+            const form = document.getElementById('adicionalForm');
+            form.reset();
+            document.getElementById('adicionalId').value = '';
+            if (id) {
+                document.getElementById('adicionalModalTitle').textContent = 'Editar Adicional';
+                const adicional = await window.api.getAdicionalById(id);
+                 if(adicional) {
+                    document.getElementById('adicionalId').value = adicional.id;
+                    document.getElementById('adicionalName').value = adicional.nome;
+                    document.getElementById('adicionalPrice').value = adicional.preco;
+                }
+            } else {
+                document.getElementById('adicionalModalTitle').textContent = 'Novo Adicional';
+            }
+            document.getElementById('adicionalModal').classList.add('active');
+        }
+
+        function closeAdicionalModal() {
+            document.getElementById('adicionalModal').classList.remove('active');
+        }
+
+        async function saveAdicional(event) {
+            event.preventDefault();
+            const id = document.getElementById('adicionalId').value;
+            const data = {
+                nome: document.getElementById('adicionalName').value,
+                preco: parseFloat(document.getElementById('adicionalPrice').value)
+            };
+            try {
+                if (id) {
+                    await window.api.updateAdicional(id, data);
+                } else {
+                    await window.api.createAdicional(data);
+                }
+                closeAdicionalModal();
+                loadAdicionais();
+            } catch (error) { 
+                console.error("Erro ao salvar adicional:", error); 
+                showToast('Erro ao salvar adicional.', 'error');
+            }
+        }
+
+        async function deleteAdicional(id) {
+            showCustomConfirm({
+                title: 'Excluir Adicional',
+                message: 'Tem certeza que deseja excluir este adicional? Esta ação não pode ser desfeita.',
+                onConfirm: async () => {
+                    try {
+                        await window.api.deleteAdicional(id);
+                        showToast('Adicional excluído com sucesso!', 'success');
+                        loadAdicionais();
+                    } catch (error) { showToast(error.message || 'Erro ao excluir adicional.', 'error'); }
+                }
+            });
+        }
+
+        async function savePreferencias(event) {
+            event.preventDefault();
+            await saveAllSettings(event);
+        }
+
+        async function saveEmpresa(event) {
+            event.preventDefault();
+            await saveAllSettings(event);
+        }
+
+        // Função unificada para salvar todas as configurações
+        async function saveAllSettings(event) {
+            const empresaId = localStorage.getItem('empresaId');
+
+            const data = {
+                // Dados da aba "Empresa"
+                nome: document.getElementById('empresaNome').value,
+                horarioAbertura: document.getElementById('horarioAbertura').value,
+                horarioFechamento: document.getElementById('horarioFechamento').value,
+                paginaInicialPadrao: document.getElementById('paginaInicialPadrao').value,
+
+                // Dados da aba "Preferências"
+                finalizacaoAutomatica: document.getElementById('finalizacaoAutomatica').checked,
+                exigirLavadorParaFinalizar: document.getElementById('exigirLavadorParaFinalizar').checked,
+                notificationPreferences: JSON.stringify({
+                    ordemCriada: document.getElementById('notifOrdemCriada').checked,
+                    ordemEditada: document.getElementById('notifOrdemEditada').checked,
+                    ordemDeletada: document.getElementById('notifOrdemDeletada').checked,
+                    finalizacaoAutomatica: document.getElementById('notifFinalizacaoAutomatica').checked
+                }),
+                paymentMethodsConfig: JSON.stringify(
+                    Array.from(document.querySelectorAll('input[data-payment-method]')).reduce((acc, input) => {
+                        acc[input.dataset.paymentMethod] = input.checked;
+                        return acc;
+                    }, {})
+                )
+            };
+            try {
+                await window.api.updateEmpresa(empresaId, data);
+                localStorage.setItem('empresaNome', data.nome);
+                localStorage.setItem('paginaInicialPadrao', data.paginaInicialPadrao);
+                localStorage.setItem('exigirLavadorParaFinalizar', data.exigirLavadorParaFinalizar);
+                showToast('Configurações salvas com sucesso!', 'success');
+            } catch (error) {
+                console.error("Erro ao salvar configurações:", error);
+                showToast('Erro ao salvar configurações.', 'error');
+            }
+        }
+
+        // Atualiza visualmente os cards de pagamento quando os checkboxes mudam
+        function initializePaymentCards() {
+            document.querySelectorAll('.payment-method-card').forEach(card => {
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                
+                if (checkbox) {
+                    // Estado inicial
+                    updateCardState(card, checkbox.checked);
+                    
+                    // Listener para mudanças
+                    checkbox.addEventListener('change', function() {
+                        updateCardState(card, this.checked);
+                    });
+                    
+                    // Clique no card (exceto no switch)
+                    card.addEventListener('click', function(e) {
+                        if (!e.target.closest('.switch')) {
+                            checkbox.checked = !checkbox.checked;
+                            updateCardState(card, checkbox.checked);
+                        }
+                    });
+                }
+            });
+        }
+
+        function updateCardState(card, isActive) {
+            if (isActive) {
+                card.classList.add('active');
+            } else {
+                card.classList.remove('active');
+            }
+        }
+
+        // Chamar após o carregamento das preferências
+        async function loadPreferencias() {
+            try {
+                const empresaId = localStorage.getItem('empresaId');
+                const empresa = await window.api.getEmpresaById(empresaId);
+                
+                // Preferências Gerais
+                document.getElementById('finalizacaoAutomatica').checked = empresa.finalizacaoAutomatica || false;
+                document.getElementById('exigirLavadorParaFinalizar').checked = empresa.exigirLavadorParaFinalizar || false;
+
+                // Preferências de Notificação
+                const prefs = empresa.notificationPreferences || {};
+                document.getElementById('notifOrdemCriada').checked = prefs.ordemCriada !== false;
+                document.getElementById('notifOrdemEditada').checked = prefs.ordemEditada !== false;
+                document.getElementById('notifOrdemDeletada').checked = prefs.ordemDeletada === true;
+                document.getElementById('notifFinalizacaoAutomatica').checked = prefs.finalizacaoAutomatica !== false;
+
+                // Carrega config de pagamentos
+                const paymentConfig = empresa.paymentMethodsConfig || {};
+                document.querySelectorAll('input[data-payment-method]').forEach(input => {
+                    input.checked = paymentConfig[input.dataset.paymentMethod] !== false;
+                });
+                
+            } catch (error) { 
+                console.error("Erro ao carregar preferências:", error); 
+            }
+        }
+
+    </script>
+</body>
+</html>

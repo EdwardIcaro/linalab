@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINA OWNER - Notificações Globais</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../configuracoes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../api.js"></script>
+    <script src="../utils.js"></script>
+</head>
+<body id="config-page">
+    <main class="main-content" style="padding-top: 32px;">
+        <header class="main-header">
+            <div class="header-title">
+                <h2><i class="fas fa-bullhorn"></i> Notificações Globais</h2>
+                <p>Crie e gerencie anúncios e alertas para seus clientes.</p>
+            </div>
+            <div class="header-controls">
+                <a href="dashboard.html" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+                <button onclick="openNotificationModal()" class="btn-primary"><i class="fas fa-plus"></i> Nova Notificação</button>
+            </div>
+        </header>
+
+        <div class="card table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Tipo</th>
+                        <th>Status</th>
+                        <th>Direcionamento</th>
+                        <th>Expira em</th>
+                        <th class="actions-cell">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="notificationsTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal de Notificação -->
+    <div id="notificationModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="notificationModalTitle" class="modal-title">Nova Notificação</h2>
+                <button onclick="closeModal('notificationModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="notificationForm">
+                <input type="hidden" id="notificationId">
+                <div class="form-group">
+                    <label for="titulo" class="form-label">Título</label>
+                    <input type="text" id="titulo" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="conteudo" class="form-label">Conteúdo (suporta HTML básico)</label>
+                    <textarea id="conteudo" class="form-input" rows="5" required></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="tipoExibicao" class="form-label">Tipo de Exibição</label>
+                        <select id="tipoExibicao" class="form-select">
+                            <option value="SINO">Apenas no Sino</option>
+                            <option value="TOPO_ALERTA">Alerta no Topo</option>
+                            <option value="MODAL">Modal Urgente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status" class="form-label">Status</label>
+                        <select id="status" class="form-select">
+                            <option value="DRAFT">Rascunho</option>
+                            <option value="ATIVA">Ativa</option>
+                            <option value="FINALIZADA">Finalizada</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="dataExpiracao" class="form-label">Data de Expiração (Opcional)</label>
+                    <input type="date" id="dataExpiracao" class="form-input">
+                </div>
+
+                <!-- Seção de Direcionamento -->
+                <div class="card" style="background-color: var(--background-light); padding: 16px;">
+                    <h4 class="font-semibold mb-2">Direcionamento</h4>
+                    <div class="form-group">
+                        <label class="form-label">Público-Alvo</label>
+                        <select id="alvoTipo" class="form-select">
+                            <option value="todas">Todas as Empresas (Broadcast)</option>
+                            <option value="especificas">Empresas Específicas</option>
+                        </select>
+                    </div>
+                    <div id="alvoEmpresasContainer" class="form-group" style="display: none;">
+                        <label class="form-label">Selecione as Empresas</label>
+                        <select id="alvoEmpresaId" class="form-select" multiple style="height: 150px;"></select>
+                        <p class="text-sm text-secondary mt-1">Segure Ctrl (ou Cmd) para selecionar múltiplas empresas.</p>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('notificationModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Notificação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        let allEmpresas = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const userRole = localStorage.getItem('userRole');
+            if (userRole !== 'LINA_OWNER') {
+                alert('Acesso negado.');
+                window.location.href = '../login.html';
+                return;
+            }
+
+            await loadAllEmpresas();
+            await loadNotifications();
+
+            document.getElementById('notificationForm').addEventListener('submit', saveNotification);
+            document.getElementById('alvoTipo').addEventListener('change', (e) => {
+                document.getElementById('alvoEmpresasContainer').style.display = e.target.value === 'especificas' ? 'block' : 'none';
+            });
+        });
+
+        async function loadAllEmpresas() {
+            try {
+                const response = await window.api.call('GET', 'admin/empresas');
+                allEmpresas = response.empresas || [];
+                const select = document.getElementById('alvoEmpresaId');
+                select.innerHTML = '';
+                allEmpresas.forEach(empresa => {
+                    select.innerHTML += `<option value="${empresa.id}">${empresa.nome}</option>`;
+                });
+            } catch (error) {
+                console.error("Erro ao carregar empresas:", error);
+            }
+        }
+
+        async function loadNotifications() {
+            const tableBody = document.getElementById('notificationsTableBody');
+            tableBody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+            try {
+                const notificacoes = await window.api.call('GET', 'notificacoes-globais/admin');
+                tableBody.innerHTML = '';
+                notificacoes.forEach(n => {
+                    const row = tableBody.insertRow();
+                    const direcionamento = n.direcionamento || {};
+                    let alvoTexto = 'N/A';
+                    if (direcionamento.alvoEmpresas) {
+                        alvoTexto = 'Todas as Empresas';
+                    } else if (direcionamento.alvoEmpresaId?.length > 0) {
+                        alvoTexto = `${direcionamento.alvoEmpresaId.length} empresa(s)`;
+                    }
+
+                    row.innerHTML = `
+                        <td><strong>${n.titulo}</strong></td>
+                        <td>${n.tipoExibicao}</td>
+                        <td><span class="status-badge status-${n.status === 'ATIVA' ? 'ativo' : 'inativo'}">${n.status}</span></td>
+                        <td>${alvoTexto}</td>
+                        <td>${n.dataExpiracao ? new Date(n.dataExpiracao).toLocaleDateString('pt-BR') : 'Nunca'}</td>
+                        <td class="actions-cell">
+                            <button onclick='openNotificationModal(${JSON.stringify(n)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        </td>
+                    `;
+                });
+            } catch (error) {
+                tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Erro ao carregar notificações.</td></tr>';
+            }
+        }
+
+        function openNotificationModal(notification = null) {
+            const form = document.getElementById('notificationForm');
+            form.reset();
+            document.getElementById('notificationId').value = '';
+            document.getElementById('notificationModalTitle').textContent = 'Nova Notificação';
+            document.getElementById('alvoEmpresasContainer').style.display = 'none';
+
+            if (notification) {
+                document.getElementById('notificationModalTitle').textContent = 'Editar Notificação';
+                document.getElementById('notificationId').value = notification.id;
+                document.getElementById('titulo').value = notification.titulo;
+                document.getElementById('conteudo').value = notification.conteudo;
+                document.getElementById('tipoExibicao').value = notification.tipoExibicao;
+                document.getElementById('status').value = notification.status;
+                if (notification.dataExpiracao) {
+                    document.getElementById('dataExpiracao').value = new Date(notification.dataExpiracao).toISOString().split('T')[0];
+                }
+
+                const direcionamento = notification.direcionamento || {};
+                if (direcionamento.alvoEmpresaId?.length > 0) {
+                    document.getElementById('alvoTipo').value = 'especificas';
+                    document.getElementById('alvoEmpresasContainer').style.display = 'block';
+                    const select = document.getElementById('alvoEmpresaId');
+                    Array.from(select.options).forEach(option => {
+                        option.selected = direcionamento.alvoEmpresaId.includes(option.value);
+                    });
+                } else {
+                    document.getElementById('alvoTipo').value = 'todas';
+                }
+            }
+
+            openModal('notificationModal');
+        }
+
+        async function saveNotification(event) {
+            event.preventDefault();
+            const id = document.getElementById('notificationId').value;
+            const alvoTipo = document.getElementById('alvoTipo').value;
+            let direcionamento = {};
+
+            if (alvoTipo === 'todas') {
+                direcionamento.alvoEmpresas = true;
+            } else {
+                direcionamento.alvoEmpresaId = Array.from(document.getElementById('alvoEmpresaId').selectedOptions).map(opt => opt.value);
+            }
+
+            const data = {
+                id: id || null,
+                titulo: document.getElementById('titulo').value,
+                conteudo: document.getElementById('conteudo').value,
+                tipoExibicao: document.getElementById('tipoExibicao').value,
+                status: document.getElementById('status').value,
+                dataExpiracao: document.getElementById('dataExpiracao').value || null,
+                direcionamento
+            };
+
+            try {
+                await window.api.call('POST', 'notificacoes-globais/admin', data);
+                showToast('Notificação salva com sucesso!', 'success');
+                closeModal('notificationModal');
+                loadNotifications();
+            } catch (error) {
+                showToast(error.message || 'Erro ao salvar notificação.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

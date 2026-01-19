@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINA OWNER - Detalhes da Empresa</title>
+    <link rel="stylesheet" href="../configuracoes.css"> <!-- Garante que os estilos de tabelas e modais sejam aplicados -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../api.js"></script>
+    <script src="../utils.js"></script>
+    <style>
+        .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .detail-item { background-color: var(--background-light); padding: 1rem; border-radius: 8px; }
+        .detail-item .label { font-size: 0.875rem; color: var(--text-secondary); }
+        .detail-item .value { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+    </style>
+</head>
+<body id="config-page"> <!-- Adiciona o ID para que os estilos de configuracoes.css sejam aplicados corretamente -->
+    <main class="main-content" style="padding-top: 32px;">
+        <header class="main-header">
+            <div class="header-title">
+                <h2><i class="fas fa-building"></i> Detalhes da Empresa</h2>
+                <p>Gerencie informações e usuários da empresa <strong id="headerEmpresaNome">...</strong></p>
+            </div>
+            <div class="header-controls">
+                <a href="dashboard.html" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+            </div>
+        </header>
+
+        <!-- Detalhes da Empresa -->
+        <div class="card mb-6">
+            <h3 class="text-lg font-semibold mb-4">Informações Gerais</h3>
+            <div class="details-grid mb-6">
+                <div class="detail-item">
+                    <span class="label">ID da Empresa</span>
+                    <span id="empresaId" class="value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Data de Criação</span>
+                    <span id="empresaDataCriacao" class="value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Status</span>
+                    <span id="empresaStatus" class="value"></span>
+                </div>
+            </div>
+            <form id="empresaDetailsForm" class="flex items-end gap-4">
+                <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
+                    <label for="empresaNomeInput" class="form-label">Nome da Empresa</label>
+                    <input type="text" id="empresaNomeInput" class="form-input">
+                </div>
+                <button type="submit" class="btn-primary" style="margin-bottom: 0;">Salvar Nome</button>
+            </form>
+        </div>
+
+        <!-- Usuário Dono -->
+        <div class="card mb-6">
+            <h3 class="text-lg font-semibold mb-4">Usuário Responsável</h3>
+            <form id="userCredentialsForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <input type="hidden" id="userId">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="userName" class="form-label">Nome de Usuário (Login)</label>
+                    <input type="text" id="userLoginName" class="form-input">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="userEmail" class="form-label">Email de Login</label>
+                    <input type="email" id="userEmail" class="form-input">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="userNewPassword" class="form-label">Nova Senha (Opcional)</label>
+                    <input type="text" id="userNewPassword" class="form-input" placeholder="Deixe em branco para não alterar">
+                </div>
+                <button type="submit" class="btn-primary" style="margin-bottom: 0;">Atualizar Credenciais</button>
+            </form>
+        </div>
+
+        <!-- Seção de Usuários e Permissões (Movido de gerenciar-empresa.html) -->
+        <div class="card">
+            <h3 class="text-xl font-semibold mb-6">Usuários e Permissões</h3>
+            <!-- Seção de Roles -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4" data-permission="config_ver_usuarios">
+                    <h4 class="text-xl font-semibold">Funções (Roles)</h4>
+                    <button onclick="openRoleModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Nova Função</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Usuários</th><th>Permissões</th><th class="actions-cell">Ações</th></tr></thead>
+                        <tbody id="rolesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Seção de Usuários -->
+            <div>
+                <div class="flex justify-between items-center mb-4" data-permission="config_ver_usuarios">
+                    <h4 class="text-xl font-semibold">Usuários (Subcontas)</h4>
+                    <button onclick="openUserModal()" class="btn-primary"><i class="fas fa-user-plus mr-2"></i> Novo Usuário</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Email</th><th>Função</th><th class="actions-cell">Ações</th></tr></thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals (Movidos de gerenciar-empresa.html) -->
+    <!-- Role Modal -->
+    <div id="roleModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="roleModalTitle" class="modal-title">Nova Função</h2>
+                <button onclick="closeModal('roleModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="roleForm">
+                <input type="hidden" id="roleId">
+                <div class="form-group">
+                    <label for="roleName" class="form-label">Nome da Função</label>
+                    <input type="text" id="roleName" class="form-input" required placeholder="Ex: Gerente">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Permissões</label>
+                    <p class="text-sm text-secondary mb-4">Selecione o que usuários com esta função podem ver e fazer.</p>
+                    <div id="permissionsContainer" class="permissions-accordion"></div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('roleModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div id="userModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="userModalTitle" class="modal-title">Novo Usuário</h2>
+                <button onclick="closeModal('userModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="userForm">
+                <input type="hidden" id="subUserId">
+                <div class="form-group">
+                    <label for="userName" class="form-label">Nome de Usuário (para login)</label>
+                    <input type="text" id="subUserName" class="form-input" required> <!-- ID já estava corrigido, mas confirmando -->
+                </div>
+                <div class="form-group">
+                    <label for="userEmail" class="form-label">Email</label>
+                    <input type="email" id="subUserEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="userPassword" class="form-label">Senha</label>
+                    <input type="password" id="userPassword" class="form-input" placeholder="Deixe em branco para não alterar">
+                    <p id="passwordHint" class="text-sm text-secondary mt-1" style="display: none;">
+                        Preencha apenas se desejar alterar a senha.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label for="userRoleSelect" class="form-label">Função (Role)</label>
+                    <select id="userRoleSelect" class="form-select" required></select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('userModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                <h2 id="customConfirmTitle" class="modal-title"></h2>
+            </div>
+            <p id="customConfirmMessage" class="text-secondary my-4"></p>
+            <div class="modal-actions" style="justify-content: center; border-top: none; margin-top: 16px;">
+                <button id="customCancelBtn" class="btn btn-secondary">Cancelar</button>
+                <button id="customConfirmBtn" class="btn btn-danger">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        let empresaId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const userRole = localStorage.getItem('userRole');
+            if (userRole !== 'LINA_OWNER') {
+                alert('Acesso negado.');
+                window.location.href = '../login.html';
+                return;
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            empresaId = params.get('id');
+
+            if (!empresaId) {
+                alert('ID da empresa não fornecido!');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // CRUCIAL: Define o contexto da empresa para as chamadas de API
+            localStorage.setItem('empresaId', empresaId);
+
+            await loadEmpresaDetails();
+
+            document.getElementById('empresaDetailsForm').addEventListener('submit', saveEmpresaDetails);
+            document.getElementById('userCredentialsForm').addEventListener('submit', saveUserCredentials);
+            document.getElementById('roleForm').addEventListener('submit', saveRole);
+            document.getElementById('userForm').addEventListener('submit', saveUser);
+        });
+
+        async function loadEmpresaDetails() {
+            try {
+                const { empresa } = await window.api.call('GET', `admin/empresas/${empresaId}/details`);
+                
+                // Preenche informações da empresa
+                document.getElementById('headerEmpresaNome').textContent = empresa.nome;
+                document.getElementById('empresaId').textContent = empresa.id;
+                document.getElementById('empresaDataCriacao').textContent = new Date(empresa.createdAt).toLocaleDateString('pt-BR');
+                document.getElementById('empresaStatus').innerHTML = `<span class="status-badge ${empresa.ativo ? 'status-ativo' : 'status-inativo'}">${empresa.ativo ? 'Ativa' : 'Inativa'}</span>`;
+                document.getElementById('empresaNomeInput').value = empresa.nome;
+
+                // Preenche informações do usuário
+                document.getElementById('userId').value = empresa.usuario.id;
+                document.getElementById('userLoginName').value = empresa.usuario.nome;
+                document.getElementById('userEmail').value = empresa.usuario.email;
+
+                // Carrega dados de usuários e funções
+                await loadRolesAndUsers();
+
+            } catch (error) {
+                showToast('Erro ao carregar detalhes da empresa.', 'error');
+                console.error(error);
+            }
+        }
+
+        async function saveEmpresaDetails(event) {
+            event.preventDefault();
+            const novoNome = document.getElementById('empresaNomeInput').value;
+            try {
+                await window.api.call('PATCH', `admin/empresas/${empresaId}/update`, { nome: novoNome });
+                showToast('Nome da empresa atualizado com sucesso!', 'success');
+                document.getElementById('headerEmpresaNome').textContent = novoNome;
+            } catch (error) {
+                showToast(error.message || 'Erro ao salvar nome da empresa.', 'error');
+            }
+        }
+
+        async function saveUserCredentials(event) {
+            event.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const nome = document.getElementById('userLoginName').value;
+            const email = document.getElementById('userEmail').value;
+            const novaSenha = document.getElementById('userNewPassword').value;
+
+            if (!confirm('Você tem certeza que deseja alterar as credenciais deste usuário? Esta é uma ação de alto risco.')) {
+                return;
+            }
+            
+            const data = { nome, email };
+            if (novaSenha) {
+                data.novaSenha = novaSenha;
+            }
+
+            try {
+                await window.api.call('PATCH', `admin/users/${userId}/update-credentials`, data);
+                showToast('Credenciais do usuário atualizadas com sucesso!', 'success');
+                document.getElementById('userNewPassword').value = ''; // Limpa o campo de senha
+            } catch (error) {
+                showToast(error.message || 'Erro ao atualizar credenciais.', 'error');
+            }
+        }
+
+        // --- Funções de Modal (ausentes anteriormente) ---
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('active');
+        }
+
+
+        // --- LÓGICA DE ROLES & USERS (Movida de gerenciar-empresa.html) ---
+        const allPermissions = [
+             { label: 'Dashboard', name: 'ver_dashboard', icon: 'fa-home' },
+             { label: 'Ordens', name: 'gerenciar_ordens', icon: 'fa-list-alt' },
+             { label: 'Clientes', name: 'gerenciar_clientes', icon: 'fa-users' },
+             { label: 'Funcionários', name: 'gerenciar_funcionarios', icon: 'fa-user-tie' },
+             { label: 'Financeiro', name: 'ver_financeiro', icon: 'fa-chart-pie' },
+             { label: 'Configurações', name: 'gerenciar_configuracoes', icon: 'fa-cog',
+                sub_permissions: [
+                    { name: 'config_ver_servicos', label: 'Serviços e Adicionais' },
+                    { name: 'config_ver_empresa', label: 'Dados da Empresa' },
+                    { name: 'config_ver_tokens', label: 'Tokens de Acesso' },
+                    { name: 'config_ver_usuarios', label: 'Usuários e Permissões' },
+                    { name: 'config_ver_preferencias', label: 'Preferências' },
+                ]
+            },
+        ];
+
+        async function loadRolesAndUsers() {
+            try {
+                const { roles, usuarios } = await window.api.call('GET', `admin/empresas/${empresaId}/roles`);
+                renderRoles(roles);
+                renderUsers(usuarios);
+                populateRoleSelect(roles);
+            } catch (error) {
+                console.error("Erro ao carregar roles e usuários:", error);
+                showToast('Erro ao carregar dados de permissões.', 'error');
+            }
+        }
+
+        function renderRoles(roles) {
+            const tableBody = document.getElementById('rolesTableBody');
+            tableBody.innerHTML = '';
+            roles.forEach(role => {
+                const permissoesHtml = role.permissoes.map(p => `<span class="subtipo-badge">${p.nome.replace(/_/g, ' ')}</span>`).join('');
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${role.nome}</strong></td>
+                    <td>${role._count.usuarios}</td>
+                    <td>${permissoesHtml || 'Nenhuma'}</td>
+                    <td class="actions-cell">
+                        <button onclick='openRoleModal(${JSON.stringify(role)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick='deleteRole("${role.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+            });
+        }
+
+        function renderUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = '';
+            users.forEach(user => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${user.nome}</td>
+                    <td>${user.email}</td>
+                    <td>${user.roleInt?.nome || 'Sem Função'}</td>
+                    <td class="actions-cell">
+                        <button onclick='impersonateUser("${user.id}")' class="btn-sm btn-info" title="Logar como este usuário">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </button>
+                        <button onclick='openUserModal(${JSON.stringify(user)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick='deleteUser("${user.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+            });
+        }
+
+        function populateRoleSelect(roles) {
+            const select = document.getElementById('userRoleSelect');
+            select.innerHTML = '<option value="">Selecione uma função</option>';
+            roles.forEach(role => {
+                select.innerHTML += `<option value="${role.id}">${role.nome}</option>`;
+            });
+        }
+
+        function openRoleModal(role = null) {
+            document.getElementById('roleForm').reset();
+            document.getElementById('roleId').value = '';
+            document.getElementById('roleModalTitle').textContent = 'Nova Função';
+
+            const permissionsContainer = document.getElementById('permissionsContainer');
+            permissionsContainer.innerHTML = '';
+
+            allPermissions.forEach(perm => {
+                const groupEl = document.createElement('div');
+                groupEl.className = 'permission-group';
+                let headerHtml = `
+                    <div class="permission-group-header">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" class="form-checkbox master-checkbox" name="permissoes" value="${perm.name}" data-group="${perm.name}">
+                            <i class="fas ${perm.icon} text-secondary"></i>
+                            <span class="permission-group-title">${perm.label}</span>
+                        </label>
+                        ${perm.sub_permissions ? '<i class="fas fa-chevron-down expand-icon"></i>' : ''}
+                    </div>
+                `;
+                groupEl.innerHTML = headerHtml;
+
+                if (perm.sub_permissions) {
+                    const subList = document.createElement('div');
+                    subList.className = 'sub-permissions-list';
+                    subList.innerHTML = perm.sub_permissions.map(sub => `
+                        <label class="sub-permission-item">
+                            <input type="checkbox" class="form-checkbox sub-checkbox" name="permissoes" value="${sub.name}" data-parent-group="${perm.name}">
+                            <span>${sub.label}</span>
+                        </label>
+                    `).join('');
+                    groupEl.appendChild(subList);
+                }
+                permissionsContainer.appendChild(groupEl);
+            });
+
+            if (role) {
+                document.getElementById('roleModalTitle').textContent = 'Editar Função';
+                document.getElementById('roleId').value = role.id;
+                document.getElementById('roleName').value = role.nome;
+                if (role.permissoes) {
+                    role.permissoes.forEach(p => {
+                        const checkbox = document.querySelector(`input[name="permissoes"][value="${p.name}"]`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+                document.querySelectorAll('.sub-checkbox:checked').forEach(sub => handleSubCheckboxChange(sub));
+            }
+            openModal('roleModal');
+            addPermissionEventListeners();
+        }
+
+        function addPermissionEventListeners() {
+            document.querySelectorAll('.permission-group-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('label')) return;
+                    header.closest('.permission-group').classList.toggle('expanded');
+                });
+            });
+            document.querySelectorAll('.master-checkbox').forEach(master => master.addEventListener('change', (e) => handleMasterCheckboxChange(e.target)));
+            document.querySelectorAll('.sub-checkbox').forEach(sub => sub.addEventListener('change', (e) => handleSubCheckboxChange(e.target)));
+        }
+
+        function openUserModal(user = null) {
+            document.getElementById('userForm').reset();
+            document.getElementById('subUserId').value = '';
+            document.getElementById('userModalTitle').textContent = 'Novo Usuário';
+            document.getElementById('passwordHint').style.display = 'none';
+            document.getElementById('userPassword').required = true;
+            document.getElementById('userPassword').placeholder = '';
+
+            if (user) {
+                document.getElementById('userModalTitle').textContent = 'Editar Usuário';
+                document.getElementById('subUserId').value = user.id;
+                document.getElementById('subUserName').value = user.nome; // Corrigido para usar subUserName
+                document.getElementById('subUserEmail').value = user.email; // Corrigido para usar subUserEmail
+                document.getElementById('userRoleSelect').value = user.roleInt?.id || '';
+                document.getElementById('userPassword').required = false;
+                document.getElementById('passwordHint').style.display = 'block';
+            }
+            openModal('userModal');
+        }
+
+        function handleMasterCheckboxChange(masterCheckbox) {
+            const groupName = masterCheckbox.dataset.group;
+            document.querySelectorAll(`.sub-checkbox[data-parent-group="${groupName}"]`).forEach(sub => sub.checked = masterCheckbox.checked);
+        }
+
+        function handleSubCheckboxChange(subCheckbox) {
+            const parentGroupName = subCheckbox.dataset.parentGroup;
+            const masterCheckbox = document.querySelector(`.master-checkbox[data-group="${parentGroupName}"]`);
+            const allSubCheckboxes = document.querySelectorAll(`.sub-checkbox[data-parent-group="${parentGroupName}"]`);
+            if (masterCheckbox) masterCheckbox.checked = Array.from(allSubCheckboxes).some(sub => sub.checked);
+        }
+
+        async function saveRole(event) {
+            event.preventDefault();
+            const id = document.getElementById('roleId').value;
+            const data = {
+                id: id || null,
+                nome: document.getElementById('roleName').value,
+                permissoes: Array.from(document.querySelectorAll('input[name="permissoes"]:checked')).map(cb => cb.value)
+            };
+            try {
+                await window.api.call('POST', 'roles', data); 
+                showToast('Função salva com sucesso!', 'success');
+                closeModal('roleModal');
+                loadRolesAndUsers();
+            } catch (error) { showToast(error.message || 'Erro ao salvar função.', 'error'); }
+        }
+
+        async function saveUser(event) {
+            event.preventDefault();
+            const id = document.getElementById('subUserId').value;
+            const senha = document.getElementById('userPassword').value;
+            const data = {
+                nome: document.getElementById('subUserName').value, // Corrigido para usar subUserName
+                email: document.getElementById('subUserEmail').value, // Corrigido para usar subUserEmail
+                roleId: document.getElementById('userRoleSelect').value
+            };
+            if (senha) data.senha = senha;
+
+            try {
+                if (id) {
+                    await window.api.call('PATCH', `roles/subaccount/${id}`, data);
+                    showToast('Usuário atualizado com sucesso!', 'success');
+                } else {
+                    await window.api.call('POST', 'roles/subaccount', data);
+                    showToast('Usuário criado com sucesso!', 'success');
+                }
+                closeModal('userModal');
+                loadRolesAndUsers();
+            } catch (error) { showToast(error.message || 'Erro ao criar usuário.', 'error'); }
+        }
+
+        async function deleteRole(id) {
+            showCustomConfirm({
+                title: 'Excluir Função',
+                message: 'Tem certeza que deseja excluir esta função? Apenas funções sem usuários podem ser excluídas.',
+                onConfirm: async () => {
+                    try {
+                        await window.api.call('DELETE', `roles/${id}`);
+                        showToast('Função excluída com sucesso!', 'success');
+                        loadRolesAndUsers();
+                    } catch (error) { showToast(error.message || 'Erro ao excluir função.', 'error'); }
+                }
+            });
+        }
+
+        async function deleteUser(id) {
+            showCustomConfirm({
+                title: 'Excluir Usuário',
+                message: 'Tem certeza que deseja excluir este usuário permanentemente?',
+                onConfirm: async () => {
+                    try {
+                        await window.api.call('DELETE', `roles/subaccount/${id}`);
+                        showToast('Usuário excluído com sucesso!', 'success');
+                        loadRolesAndUsers();
+                    } catch (error) { showToast(error.message || 'Erro ao excluir usuário.', 'error'); }
+                }
+            });
+        }
+
+        async function impersonateUser(userId) {
+            if (!confirm('Tem certeza que deseja logar como este usuário? Você será redirecionado e sua sessão de administrador será pausada.')) {
+                return;
+            }
+
+            try {
+                // 1. Salva a sessão completa do admin
+                const adminSession = {
+                    token: localStorage.getItem('token'),
+                    usuarioNome: localStorage.getItem('usuarioNome'),
+                    userRole: localStorage.getItem('userRole')
+                };
+                localStorage.setItem('original_admin_session', JSON.stringify(adminSession));
+
+                // 2. Pede um token de impersonação para o backend
+                const { token, usuario } = await window.api.call('POST', `admin/impersonate/${userId}`);
+
+                // 3. Define a nova sessão no localStorage
+                localStorage.setItem('token', token);
+                localStorage.setItem('usuarioNome', usuario.nome);
+                localStorage.setItem('userRole', usuario.role);
+                localStorage.setItem('permissoes', JSON.stringify(usuario.permissoes || []));
+                localStorage.setItem('empresaId', usuario.empresaId); // Essencial para subcontas
+                window.location.href = '../index.html'; // 4. Redireciona para o dashboard do usuário
+            } catch (error) { showToast(error.message || 'Erro ao personificar usuário.', 'error'); }
+        }
+    </script>
+</body>
+</html>

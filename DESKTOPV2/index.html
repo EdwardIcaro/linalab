@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<style>
+    .datetime-display {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
+    #current-time {
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* --- Estilos Melhorados para Notificações --- */
+    .notification-list {
+        padding: 0 8px 8px 8px;
+    }
+
+    .notification-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+        position: relative;
+    }
+
+    .notification-item:hover {
+        background-color: var(--background-light);
+    }
+
+    .notification-item.unread {
+        background-color: var(--primary-purple-light);
+    }
+
+    .notification-item.unread::before {
+        content: '';
+        position: absolute;
+        left: -2px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background-color: var(--primary-purple);
+    }
+
+    .notification-icon {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+
+    .notification-icon.ordemCriada { background-color: #D1FAE5; color: #065F46; }
+    .notification-icon.ordemEditada { background-color: #DBEAFE; color: #1E40AF; }
+    .notification-icon.finalizacaoAutomatica { background-color: #FEF3C7; color: #92400E; }
+    .notification-icon.ordemDeletada { background-color: #FEE2E2; color: #991B1B; }
+    .notification-icon.info { background-color: #E5E7EB; color: #4B5563; }
+
+    .notification-content p {
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 4px;
+    }
+</style>
+<body>
+    <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
+    <div id="screenLockModal" class="screen-lock-overlay">
+        <div class="screen-lock-content">
+            <i class="fas fa-lock screen-lock-icon"></i>
+            <h2>Acesso Negado</h2>
+            <p>Você não tem permissão para visualizar esta página. Redirecionando...</p>
+        </div>
+    </div>
+
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li data-permission="ver_dashboard"><a href="index.html" class="active"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li data-permission="gerenciar_clientes"><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li data-permission="ver_financeiro"><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            
+            <!-- Notification Bell -->
+            <div class="notification-wrapper">
+                <button id="notification-bell" class="icon-btn">
+                    <i class="fas fa-bell"></i>
+                    <span id="notification-dot" class="notification-dot"></span>
+                </button>
+                <div id="notification-panel" class="notification-panel">
+                    <div class="notification-panel-header">
+                        <h4>Notificações</h4>
+                        <button id="mark-all-read-btn" class="icon-btn" title="Marcar todas como lidas">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                    </div>
+                    <div id="notification-list" class="notification-list">
+                        <!-- As notificações serão injetadas aqui -->
+                    </div>
+                    <div class="notification-panel-footer">
+                        <a href="#">Ver todas as notificações</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar">
+                        <!-- Avatar will be injected here -->
+                    </div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown">
+                        <!-- User info will be injected here -->
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="main-header">
+            <div id="page-header-title" class="header-title">
+                <p id="header-company-name" class="company-context-title"></p>
+                <h2>Visão Geral do Dia</h2>
+                <p class="text-secondary">Acompanhe os principais indicadores da sua operação hoje.</p>
+            </div>
+            <div class="header-controls">
+                <div class="datetime-display">
+                    <span id="current-time">--:--:--</span>
+                    <div class="date-display" style="font-size: 14px;">
+                        <i class="fas fa-calendar-day"></i>
+                        <span id="current-date"></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Cards -->
+        <section class="main-cards-simplified">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Faturamento Hoje</p>
+                    <h3 id="faturamento-dia">R$ 0,00</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-car"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Ordens do Dia</p>
+                    <h3 id="ordens-dia">0</h3>
+                </div>
+            </div>
+            <div class="stat-card highlight">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Em Andamento</p>
+                    <h3 id="ordens-andamento">0</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Concluídas Hoje</p>
+                    <h3 id="ordens-concluidas">0</h3>
+                </div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
+        <!-- Quick Actions & Recent Activity -->
+        <section class="bottom-section">
+            <div class="card quick-actions">
+                <h4>Ações Rápidas</h4>
+                <a href="selecionar-tipo-veiculo.html" class="action-btn" data-permission="gerenciar_ordens">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Criar Nova Ordem</span>
+                </a>
+                <a href="clientes.html" class="action-btn" data-permission="gerenciar_clientes">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Adicionar Cliente</span>
+                </a>
+                <a href="comissoes.html" class="action-btn" data-permission="ver_financeiro">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Pagar Comissões</span>
+                </a>
+                <a href="financeiro.html" class="action-btn" data-permission="ver_financeiro">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Ver Financeiro</span>
+                </a>
+            </div>
+            <div class="card recent-activity">
+                <h4>Ordens Recentes</h4>
+                <div id="tabela-ultimas-ordens">
+                    <!-- Ordens recentes serão inseridas aqui pelo JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Container para as notificações (toasts) -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center;">
+                <h2 id="customConfirmTitle" class="modal-title"></h2>
+            </div>
+            <p id="customConfirmMessage" class="text-secondary mb-6"></p>
+            <div class="modal-actions" style="justify-content: center;">
+                <button id="customCancelBtn" class="btn btn-secondary">Cancelar</button>
+                <button id="customConfirmBtn" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script src="theme.js"></script>
+
+    <script>
+        // --- Redirecionamento de Página Inicial ---
+        (function handleInitialRedirect() {
+            if (sessionStorage.getItem('initialRedirectDone')) return;
+            const defaultPage = localStorage.getItem('paginaInicialPadrao');
+            const currentPage = window.location.pathname.split('/').pop();
+            if (defaultPage && defaultPage !== currentPage) {
+                sessionStorage.setItem('initialRedirectDone', 'true');
+                window.location.href = defaultPage;
+            }
+        })();
+
+        // --- Autenticação e UI do Usuário ---
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const usuarioNome = localStorage.getItem('usuarioNome') || 'Usuário';
+            const empresaNome = localStorage.getItem('empresaNome') || 'N/A';
+            const userInitial = usuarioNome.charAt(0).toUpperCase();
+
+            const userInfoAvatar = document.getElementById('user-info-avatar');
+            if (userInfoAvatar) {
+                userInfoAvatar.textContent = userInitial;
+            }
+            
+            const userInfoDropdown = document.getElementById('user-info-dropdown');
+            if (userInfoDropdown) {
+                userInfoDropdown.innerHTML = `
+                    <div style="padding: 8px 12px;">
+                        <p style="font-weight: 600; color: var(--text-primary);">${usuarioNome}</p>
+                        <p style="font-size: 12px; color: var(--text-secondary);">${empresaNome}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function logout() {
+            showCustomConfirm({
+                title: 'Confirmar Saída',
+                message: 'Tem certeza que deseja sair do sistema?',
+                onConfirm: () => window.api.logout()
+            });
+        }
+
+        async function setHeaderCompanyName() {
+            const empresaId = localStorage.getItem('empresaId');
+            if (!empresaId) return;
+
+            try {
+                const empresa = await window.api.getEmpresaById(empresaId);
+                document.getElementById('header-company-name').innerHTML = `<i class="fas fa-building"></i> <span>${empresa.nome}</span>`;
+            } catch (error) {
+                console.error("Erro ao buscar nome da empresa:", error);
+                document.getElementById('header-company-name').innerHTML = `<i class="fas fa-building"></i> <span>Empresa não encontrada</span>`;
+            }
+        }
+
+        function updateQuickActionsVisibility() {
+            const actionButtons = document.querySelectorAll('.quick-actions .action-btn[data-permission]');
+            actionButtons.forEach(button => {
+                const requiredPermission = button.dataset.permission;
+                if (!hasPermission(requiredPermission)) {
+                    button.style.display = 'none';
+                }
+            });
+        }
+
+        // --- Carregamento de Dados ---
+        async function loadDashboardData() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const filters = { dataInicio: today, dataFim: today };
+                const stats = await window.api.getOrdensStats(filters);
+                const activeOrdersResponse = await window.api.getOrdens(1, 1, '', 'PENDENTE,EM_ANDAMENTO');
+                
+                document.getElementById('faturamento-dia').textContent = formatCurrency(stats.valorTotal);
+                document.getElementById('ordens-dia').textContent = stats.ordensFinalizadas;
+                document.getElementById('ordens-concluidas').textContent = stats.ordensFinalizadas;
+                document.getElementById('ordens-andamento').textContent = activeOrdersResponse.pagination.total;
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                // Reset values on error
+            }
+        }
+
+        async function loadRecentOrders() {
+            const container = document.getElementById('tabela-ultimas-ordens');
+            container.innerHTML = '<p>Carregando...</p>';
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const filters = {
+                    page: 1,
+                    limit: 5,
+                    dataInicio: today,
+                    dataFim: today
+                };
+                const response = await window.api.getOrdens(filters);
+                const recentOrders = response.ordens || [];
+
+                if (recentOrders.length > 0) {
+                    container.innerHTML = '';
+                    recentOrders.forEach(ordem => {
+                        const ordemElement = document.createElement('div');
+                        ordemElement.className = 'activity-item';
+                        const servicoPrincipal = ordem.items?.find(i => i.tipo === 'SERVICO')?.servico?.nome || 'Serviço';
+                        ordemElement.innerHTML = `
+                            <div class="activity-icon ${getStatusClass(ordem.status)}"><i class="${getStatusIcon(ordem.status)}"></i></div>
+                            <div class="activity-details">
+                                <p><strong>${ordem.veiculo?.modelo || 'Veículo'}</strong> - ${ordem.veiculo?.placa || 'S/ Placa'}</p>
+                                <div class="activity-meta">
+                                    <span><i class="fas fa-concierge-bell"></i> ${servicoPrincipal}</span>
+                                    <span><i class="fas fa-user-cog"></i> ${ordem.lavador?.nome || 'N/A'}</span>
+                                    <span class="status-tag ${getStatusClass(ordem.status)}">${formatStatus(ordem.status)}</span>
+                                </div>
+                            </div>
+                            <div class="activity-value">
+                                <strong>${formatCurrency(ordem.valorTotal || 0)}</strong>
+                                <small>${new Date(ordem.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+                            </div>
+                        `;
+                        container.appendChild(ordemElement);
+                    });
+                } else {
+                    container.innerHTML = '<p>Nenhuma atividade recente.</p>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar ordens recentes:', error);
+                container.innerHTML = '<p>Erro ao carregar atividades.</p>';
+            }
+        }
+
+        // --- Funções Utilitárias ---
+        function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); }
+        function formatStatus(status) { return ({'FINALIZADO': 'Concluído', 'EM_ANDAMENTO': 'Em Andamento', 'PENDENTE': 'Pendente', 'CANCELADO': 'Cancelado'})[status] || status; }
+        function getStatusClass(status) { return ({'FINALIZADO': 'completed', 'EM_ANDAMENTO': 'progress', 'PENDENTE': 'pending', 'CANCELADO': 'cancelled'})[status] || 'pending'; }
+        function getStatusIcon(status) { return ({'FINALIZADO': 'fas fa-check-circle', 'EM_ANDAMENTO': 'fas fa-hourglass-half', 'PENDENTE': 'fas fa-info-circle', 'CANCELADO': 'fas fa-times-circle'})[status] || 'fas fa-info-circle'; }
+        
+        function setCurrentDateTime() {
+            const dateElement = document.getElementById('current-date');
+            const timeElement = document.getElementById('current-time');
+            if(dateElement) dateElement.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            if(timeElement) timeElement.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // --- Inicialização ---
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            enforcePermission('ver_dashboard');
+            initializeUserMenu();
+            updateQuickActionsVisibility();
+            loadDashboardData();
+            updateMenuVisibility();
+            loadRecentOrders();
+            setCurrentDateTime();
+            setInterval(setCurrentDateTime, 1000);
+            setHeaderCompanyName();
+            initializeNotificationSystem();
+            checkForGlobalNotifications(); // Adiciona a verificação de notificações globais
+            handleImpersonationBanner(); // Adiciona esta linha
+        });
+
+        // --- Sistema de Notificação (resumido para manter o foco) ---
+        function initializeNotificationSystem() {
+            const bell = document.getElementById('notification-bell');
+            const panel = document.getElementById('notification-panel');
+            const dot = document.getElementById('notification-dot');
+            const list = document.getElementById('notification-list');
+            const markAllReadBtn = document.getElementById('mark-all-read-btn');
+
+            bell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panel.classList.toggle('active');
+                if (panel.classList.contains('active')) {
+                    dot.style.display = 'none'; // Esconde o ponto ao abrir o painel
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!panel.contains(e.target) && !bell.contains(e.target)) {
+                    panel.classList.remove('active');
+                }
+            });
+
+            markAllReadBtn.addEventListener('click', async () => {
+                try {
+                    await window.api.marcarTodasComoLidas();
+                    showToast('Todas as notificações foram marcadas como lidas.');
+                    loadNotifications(); // Recarrega para mostrar o estado atualizado
+                } catch (error) {
+                    console.error('Erro ao marcar notificações como lidas:', error);
+                    showToast('Erro ao marcar notificações.', 'error');
+                }
+            });
+
+            // Carrega as notificações imediatamente e depois a cada 30 segundos
+            loadNotifications();
+            setInterval(loadNotifications, 30000); 
+        }
+        
+        async function loadNotifications() {
+            try {
+                const response = await window.api.getNotificacoes();
+                const notifications = response.notificacoes || []; // Garante que notifications seja um array
+                const list = document.getElementById('notification-list');
+                const dot = document.getElementById('notification-dot');
+                list.innerHTML = '';
+
+                if (notifications.length > 0) {
+                    const hasUnread = notifications.some(n => !n.lida);
+                    dot.style.display = hasUnread ? 'block' : 'none';
+
+                    notifications.forEach(n => {
+                        const item = document.createElement('div');
+                        const iconClass = getNotificationIcon(n.type);
+                        const iconBgClass = n.type || 'info';
+
+                        item.className = `notification-item ${n.lida ? '' : 'unread'}`;
+                        item.innerHTML = `
+                            <div class="notification-icon ${iconBgClass}">
+                                <i class="fas ${iconClass}"></i>
+                            </div>
+                            <div class="notification-content">
+                                <p>${n.mensagem}</p>
+                                <small class="text-secondary">
+                                    ${new Date(n.createdAt).toLocaleDateString('pt-BR')} às 
+                                    ${new Date(n.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </small>
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    });
+                } else {
+                    dot.style.display = 'none';
+                    list.innerHTML = '<div class="notification-empty">Nenhuma notificação nova.</div>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar notificações:', error);
+            }
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                ordemCriada: 'fa-plus-circle',
+                ordemEditada: 'fa-pencil-alt',
+                ordemDeletada: 'fa-trash-alt',
+                finalizacaoAutomatica: 'fa-magic',
+                info: 'fa-info-circle'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
+
+
+        // --- Menu de Usuário ---
+        function initializeUserMenu() {
+            const trigger = document.getElementById('user-menu-trigger');
+            const dropdown = document.getElementById('user-menu-dropdown');
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

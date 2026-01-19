@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Nova Ordem</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script src="theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .selection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .type-card {
+            background-color: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        .type-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.07);
+            border-color: var(--primary-purple);
+        }
+        .type-card i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--primary-purple);
+        }
+        .type-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .type-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="ordens.html" class="active"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h2>Nova Ordem de Serviço</h2>
+                    <p>Passo 1: Selecione o tipo de veículo.</p>
+                </div>
+            </header>
+
+            <section class="selection-grid">
+                <a href="selecionar-subtipo-carro.html" class="type-card">
+                    <i class="fas fa-car"></i>
+                    <h3>Carro</h3>
+                    <p>Para veículos de passeio, SUVs e pick-ups.</p>
+                </a>
+                <a href="novaordem.html?tipo=MOTO" class="type-card">
+                    <i class="fas fa-motorcycle"></i>
+                    <h3>Moto</h3>
+                    <p>Para motocicletas de todos os tipos.</p>
+                </a>
+            </section>
+        </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+            }
+            initializeUserMenu();
+        });
+
+        function logout() {
+            showCustomConfirm({
+                title: 'Confirmar Saída',
+                message: 'Tem certeza que deseja sair do sistema?',
+                onConfirm: () => window.api.logout()
+            });
+        }
+    </script>
+</body>
+</html>

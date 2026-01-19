@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Financeiro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 16px; text-align: left; font-size: 14px; white-space: nowrap; }
+        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); }
+        tbody tr:last-child { border-bottom: none; }
+        td { color: var(--text-primary); font-weight: 500; }
+
+        /* Estilos para os botões de ação na tabela */
+        .actions-cell .btn-sm {
+            width: 32px; height: 32px; border-radius: 50%;
+            border: none; cursor: pointer; transition: all 0.2s ease;
+            color: var(--text-secondary); background-color: transparent;
+            margin-left: 4px; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .actions-cell .btn-sm:hover { background-color: var(--background-light); }
+        .actions-cell .btn-info { color: #0ea5e9; } /* Azul claro */
+        .actions-cell .btn-secondary { color: #64748b; } /* Cinza */
+        .actions-cell .btn-danger { color: #ef4444; } /* Vermelho */
+
+        .valor-saida { color: #EF4444; font-weight: 600; }
+        .valor-entrada { color: #10B981; font-weight: 600; }
+        .text-blue-600 { color: #2563EB; } /* Cor azul para pendências */
+        .font-semibold { font-weight: 600; }
+
+
+        /* Cores para o background do TIPO de movimentação */
+        .tipo-bg { color: white; font-weight: 600; padding: 4px 12px; border-radius: 6px; text-align: center; }
+        .tipo-bg-SANGRIA { background-color: #D97706; } /* Laranja */
+        .tipo-bg-SAIDA, .tipo-bg-VALE { background-color: #DC2626; } /* Vermelho para Saídas e Vales */
+        .tipo-bg-FECHAMENTO { background-color: #2563EB; } /* Azul */
+        .tipo-bg-PAGAMENTOS { background-color: var(--primary-color); } /* Roxo para pagamentos de comissão */
+        .tipo-bg-PENDENTE { background-color: #F59E0B; } /* Amarelo para pendências */
+        .tipo-bg-PAGAMENTO { background-color: #16A34A; } /* Verde */
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; inset: 0; background-color: rgba(16, 24, 40, 0.6); backdrop-filter: blur(4px);
+            z-index: 50; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--white); border-radius: 16px; padding: 24px;
+            width: 90%; max-width: 550px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            transform: scale(0.95); transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .modal-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; }
+        .modal-actions { display: flex; gap: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border-color); justify-content: flex-end; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; color: var(--text-secondary); font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+        .form-input, .form-select { width: 100%; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; color: var(--text-primary); font-size: 14px; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1); }
+
+        .fechamento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+        .fechamento-total { text-align: center; padding: 16px; border-radius: 12px; background-color: var(--background-light); }
+
+        .highlight-name {
+            background-color: var(--background-light);
+            padding: 2px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        /* --- Estilos para o Card de Resumo Combinado --- */
+        .combined-summary-card {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .summary-part {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .vertical-divider {
+            width: 1px;
+            align-self: stretch;
+            background-color: var(--border-color);
+            margin: 0 24px;
+        }
+        .summary-part .stat-icon {
+            font-size: 24px; width: 56px; height: 56px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .summary-part .stat-icon.entrada { background-color: #D1FAE5; color: #065F46; } /* Verde */
+        .summary-part .stat-icon.saida { background-color: #FEE2E2; color: #991B1B; } /* Vermelho */
+        .summary-part .stat-info p { font-size: 14px; color: var(--text-secondary); }
+        .summary-part .stat-info h3 { font-size: 28px; font-weight: 700; }
+        .summary-part .stat-info .valor-entrada { color: #10B981; }
+        .summary-part .stat-info .valor-saida { color: #EF4444; }
+
+        /* --- Tooltip para o card de saídas --- */
+        #card-saida { position: relative; }
+        #saida-tooltip {
+            visibility: hidden;
+            width: max-content;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+        #card-saida:hover #saida-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* --- Estilos para o Dropdown de Ações --- */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: var(--white);
+            min-width: 220px; /* Largura mínima do menu */
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            z-index: 10;
+            right: 0;
+            top: calc(100% + 8px); /* Posiciona abaixo do botão */
+            padding: 8px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .dropdown-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .dropdown-content a {
+            cursor: pointer; /* Muda o cursor para indicar que é clicável */
+        }
+
+    </style>
+</head>
+<body id="financeiro-page">
+    <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
+    <div id="screenLockModal" class="screen-lock-overlay">
+        <div class="screen-lock-content">
+            <i class="fas fa-lock screen-lock-icon"></i>
+            <h2>Acesso Negado</h2>
+            <p>Você não tem permissão para visualizar esta página. Redirecionando...</p>
+        </div>
+    </div>
+
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li data-permission="ver_dashboard"><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li data-permission="gerenciar_clientes"><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li data-permission="ver_financeiro"><a href="financeiro.html" class="active"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-title">
+                <h2>Financeiro</h2>
+                <p>Acompanhe o fluxo de caixa e o histórico de movimentações.</p>
+            </div>
+            <div class="header-controls" style="display: flex; align-items: center; gap: 16px;">
+                <button onclick="openFechamentoModal()" class="btn-primary"><i class="fas fa-door-closed mr-2"></i> Fechar Caixa</button>
+                <div class="dropdown">
+                    <button onclick="toggleDropdown('actionsDropdown')" class="btn-secondary">
+                        <i class="fas fa-plus mr-2"></i> Mais Ações <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </button>
+                    <div id="actionsDropdown" class="dropdown-content">
+                        <a onclick="openSaidaModal()" class="dropdown-item"><i class="fas fa-arrow-up"></i> Registrar Saída</a>
+                        <a onclick="openSangriaModal()" class="dropdown-item"><i class="fas fa-arrow-down"></i> Registrar Sangria</a>
+                        <a href="comissoes.html" class="dropdown-item"><i class="fas fa-hand-holding-usd"></i> Pagar Comissões</a>
+                        <a onclick="openPendenciasModal()" class="dropdown-item"><i class="fas fa-clock"></i> Ver Pendências</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="card combined-summary-card mb-6">
+            <!-- Parte de Entradas -->
+            <div class="summary-part">
+                <div class="stat-icon entrada"><i class="fas fa-arrow-down"></i></div>
+                <div class="stat-info">
+                    <p>Total Recebido no Período</p>
+                    <h3 id="total-recebido" class="valor-entrada">R$ 0,00</h3>
+                </div>
+            </div>
+            
+            <!-- Divisor Vertical -->
+            <div class="vertical-divider"></div>
+
+            <!-- Parte de Saídas -->
+            <div id="card-saida" class="summary-part">
+                <div class="stat-icon saida"><i class="fas fa-arrow-up"></i></div>
+                <div class="stat-info">
+                    <p>Total de Saídas no Período
+                        <i class="fas fa-info-circle text-secondary ml-1" style="cursor: help;"></i>
+                    </p>
+                    <h3 id="total-saida" class="valor-saida">R$ 0,00</h3>
+                    <span id="saida-tooltip" class="tooltip-text"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold">Histórico de Movimentações</h3>
+                <div class="flex items-center gap-4">
+                    <div class="btn-group">
+                        <button class="btn-secondary btn-sm" onclick="applyDateFilterPreset('today')">Hoje</button>
+                        <button class="btn-secondary btn-sm" onclick="applyDateFilterPreset('week')">Esta Semana</button>
+                        <button class="btn-secondary btn-sm" onclick="applyDateFilterPreset('month')">Este Mês</button>
+                    </div>
+                        <select id="tipoFilter" class="form-select" style="width: auto;" onchange="loadHistorico()">
+                        <option value="">Todos os Tipos</option>
+                        <option value="PAGAMENTO">Pagamento (Entrada)</option>
+                        <option value="SAIDA">Saída</option>
+                        <option value="SANGRIA">Sangria</option>
+                        <option value="PENDENTE">Pendência</option>
+                        <option value="FECHAMENTO">Fechamento</option>
+                    </select>
+                    <input type="date" id="dataInicioFilter" class="form-input" style="width: auto;">
+                    <span class="text-secondary">até</span>
+                    <input type="date" id="dataFimFilter" class="form-input" style="width: auto;">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Descrição</th>
+                            <th>Forma Pag.</th>
+                            <th style="text-align: right;">Valor</th>
+                            <th class="actions-cell">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicoCaixaBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <!-- Fechamento Modal -->
+    <div id="fechamentoModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Fechar Caixa do Dia</h2>
+                <button onclick="closeModal('fechamentoModal')" class="modal-close">&times;</button>
+            </div>
+            <div id="resumoFechamento">
+                <p>Carregando resumo...</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('fechamentoModal')" class="btn btn-secondary">Cancelar</button>
+                <button onclick="confirmarFechamento()" class="btn btn-primary">Confirmar Fechamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saida Modal -->
+    <div id="saidaModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Registrar Saída</h2>
+                <button onclick="closeModal('saidaModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="saidaForm">
+                <input type="hidden" id="saidaId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="saidaValor" class="form-label">Valor</label>
+                        <input type="number" step="0.01" id="saidaValor" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="saidaFormaPagamento" class="form-label">Forma de Pagamento</label>
+                        <select id="saidaFormaPagamento" class="form-select" required>
+                            <option value="DINHEIRO">Dinheiro</option>
+                            <option value="PIX">PIX</option>
+                            <option value="CARTAO">Cartão</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="saidaTipo" class="form-label">Categoria da Saída</label>
+                    <select id="saidaTipo" class="form-select" required>
+                        <option value="Despesa">Despesa (Geral)</option>
+                        <option value="Adiantamento">Adiantamento (Vale)</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div id="saidaCamposDinamicos">
+                    <!-- Campos dinâmicos serão inseridos aqui -->
+                </div>
+                <div class="form-group" id="saidaDescricaoContainer">
+                    <label for="saidaDescricao" class="form-label">Descrição</label>
+                    <input type="text" id="saidaDescricao" class="form-input" placeholder="Ex: Compra de material de limpeza" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('saidaModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sangria Modal -->
+    <div id="sangriaModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Registrar Sangria</h2>
+                <button onclick="closeModal('sangriaModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="sangriaForm">
+                <div class="form-group">
+                    <label for="sangriaValor" class="form-label">Valor</label>
+                    <input type="number" step="0.01" id="sangriaValor" class="form-input" required>
+                </div>
+                 <div class="form-group">
+                    <label for="sangriaDescricao" class="form-label">Descrição (Opcional)</label>
+                    <input type="text" id="sangriaDescricao" class="form-input">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal('sangriaModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pendencias Modal -->
+    <div id="pendenciasModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Ordens com Pagamento Pendente</h2>
+                <button onclick="closeModal('pendenciasModal')" class="modal-close">&times;</button>
+            </div>
+            <div id="pendenciasContent" class="table-wrapper">
+                <p>Carregando pendências...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script src="theme.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            enforcePermission('ver_financeiro');
+            updateMenuVisibility();
+            handleImpersonationBanner();
+            initializeUserMenu();
+            handleImpersonationBanner(); // Adiciona esta linha
+            
+
+            applyDateFilterPreset('today');
+
+            document.getElementById('dataInicioFilter').addEventListener('change', loadHistorico);
+            document.getElementById('dataFimFilter').addEventListener('change', loadHistorico);
+            document.getElementById('tipoFilter').addEventListener('change', loadHistorico);
+            document.getElementById('saidaForm').addEventListener('submit', saveSaida);
+            document.getElementById('saidaForm').addEventListener('reset', () => document.getElementById('saidaId').value = '');
+            document.getElementById('saidaTipo').addEventListener('change', updateSaidaForm);
+            document.getElementById('sangriaForm').addEventListener('submit', saveSangria);
+        });
+
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function logout() {
+            showCustomConfirm({
+                title: 'Confirmar Saída',
+                message: 'Tem certeza que deseja sair do sistema?',
+                onConfirm: () => window.api.logout()
+            });
+        }
+
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+        function applyDateFilterPreset(preset) {
+            const today = new Date();
+            let startDate = new Date();
+            let endDate = new Date();
+
+            if (preset === 'today') {
+                startDate = new Date();
+                endDate = new Date();
+            } else if (preset === 'week') {
+                // Lógica para a semana corrente (Segunda a Domingo)
+                const dayOfWeek = today.getDay(); // 0=Domingo, 1=Segunda, ..., 6=Sábado
+                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Se for domingo, volta 6 dias, senão calcula a diferença para segunda
+                startDate.setDate(today.getDate() + diffToMonday);
+                endDate.setDate(startDate.getDate() + 6); // Domingo é 6 dias depois de segunda
+            } else if (preset === 'month') {
+                // Lógica nativa para obter o início do mês
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            }
+            
+            // Função auxiliar para formatar a data localmente para YYYY-MM-DD
+            const toYYYYMMDD = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            document.getElementById('dataInicioFilter').value = toYYYYMMDD(startDate);
+            document.getElementById('dataFimFilter').value = toYYYYMMDD(endDate);
+            loadHistorico();
+        }
+
+        async function loadHistorico() {
+            const filters = {
+                dataInicio: document.getElementById('dataInicioFilter').value,
+                dataFim: document.getElementById('dataFimFilter').value,
+                tipo: document.getElementById('tipoFilter').value,
+            };
+
+            try {
+                const response = await window.api.getHistoricoCaixa(filters);
+                const historico = response.registros || [];
+                const totais = response.totais || { totalEntradas: 0, totalSaidas: 0, detalheSaidas: { saidas: 0, sangrias: 0 } };
+
+                document.getElementById('total-recebido').textContent = formatCurrency(totais.totalEntradas);
+                document.getElementById('total-saida').textContent = formatCurrency(totais.totalSaidas);
+
+                // Atualiza o tooltip do card de saídas
+                const saidaTooltip = document.getElementById('saida-tooltip');
+                if (saidaTooltip) {
+                    saidaTooltip.textContent = `Despesas: ${formatCurrency(totais.detalheSaidas.saidas)} | Sangrias: ${formatCurrency(totais.detalheSaidas.sangrias)}`;
+                }
+
+                const tableBody = document.getElementById('historicoCaixaBody');
+                tableBody.innerHTML = '';
+                historico.forEach(reg => {
+                    const row = tableBody.insertRow();
+                    let valorClasse = 'valor-saida';
+                    let valorPrefixo = '-';
+
+                    if (reg.tipo === 'PAGAMENTO') {
+                        valorClasse = 'valor-entrada';
+                        valorPrefixo = '+';
+                    } else if (reg.tipo === 'PENDENTE') {
+                        valorClasse = 'text-blue-600 font-semibold'; // Classe de cor azul
+                        valorPrefixo = ''; // Sem prefixo
+                    }
+
+                    row.innerHTML = `
+                        <td>${new Date(reg.data).toLocaleString('pt-BR')}</td>
+                        <td><span class="tipo-bg tipo-bg-${reg.formaPagamento === 'DEBITO_FUNCIONARIO' ? 'SAIDA' : reg.tipo}">${reg.formaPagamento === 'DEBITO_FUNCIONARIO' ? 'DÉBITO OS' : reg.tipo}</span></td>
+                        <td>${reg.descricao}</td>
+                        <td>${reg.formaPagamento || 'N/A'}</td>
+                        <td style="text-align: right;" class="${valorClasse}">${valorPrefixo} ${formatCurrency(reg.valor)}</td>
+                        <td class="actions-cell">
+                            ${reg.ordemId ? `<a href="ordens.html?id=${reg.ordemId}" title="Ver Ordem" class="btn-sm btn-info"><i class="fas fa-eye"></i></a>` : ''}
+                            ${reg.tipo === 'SAIDA' ? `<button onclick='openSaidaModalForEdit(${JSON.stringify(reg)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>` : ''}
+                            ${reg.tipo === 'SAIDA' ? `<button onclick="deleteCaixaRegistro('${reg.id}')" class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
+                        </td>
+                    `;
+                });
+            } catch (error) {
+                console.error('Erro ao carregar histórico:', error);
+            }
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        async function openFechamentoModal() {
+            openModal('fechamentoModal');
+            const resumoDiv = document.getElementById('resumoFechamento');
+            resumoDiv.innerHTML = '<p>Carregando resumo...</p>';
+            try {
+                const resumo = await window.api.getResumoDia();
+                resumoDiv.innerHTML = `
+                    <div class="fechamento-grid">
+                        <div class="fechamento-total"><p>Recebido (Dinheiro)</p><h4 class="valor-entrada">${formatCurrency(resumo.totalDinheiro)}</h4></div>
+                        <div class="fechamento-total"><p>Recebido (Cartão)</p><h4 class="valor-entrada">${formatCurrency(resumo.totalCartao)}</h4></div>
+                        <div class="fechamento-total"><p>Recebido (PIX)</p><h4 class="valor-entrada">${formatCurrency(resumo.totalPix)}</h4></div>
+                        <div class="fechamento-total"><p>Total de Saídas</p><h4 class="valor-saida">${formatCurrency(resumo.totalSaidas)}</h4></div>
+                    </div>
+                    <hr style="margin: 16px 0;">
+                    <div class="fechamento-total" style="background-color: var(--background-light);"><p>Saldo Final Esperado (Dinheiro)</p><h3 class="valor-entrada">${formatCurrency(resumo.saldoDinheiro)}</h3></div>
+                `;
+            } catch (error) {
+                resumoDiv.innerHTML = '<p>Erro ao carregar resumo.</p>';
+            }
+        }
+
+        async function confirmarFechamento() {
+            if(confirm("Confirma o fechamento do caixa? Esta ação não pode ser desfeita.")) {
+                try {
+                    await window.api.createFechamento({});
+                    alert('Caixa fechado com sucesso!');
+                    closeModal('fechamentoModal');
+                    loadHistorico();
+                } catch(error) {
+                    alert('Erro ao fechar o caixa.');
+                }
+            }
+        }
+
+        async function openSaidaModal() {
+            document.getElementById('saidaForm').reset();
+            await updateSaidaForm(); // Garante que o formulário esteja no estado inicial
+            openModal('saidaModal');
+        }
+
+        async function openSaidaModalForEdit(registro) {
+            document.getElementById('saidaForm').reset();
+            document.getElementById('saidaId').value = registro.id;
+
+            // Preenche os campos básicos
+            document.getElementById('saidaValor').value = registro.valor;
+            document.getElementById('saidaFormaPagamento').value = registro.formaPagamento;
+            document.getElementById('saidaTipo').value = registro.lavadorId ? 'Adiantamento' : 'Despesa';
+            
+            // Atualiza os campos dinâmicos e preenche os valores específicos
+            await updateSaidaForm();
+            document.getElementById('saidaDescricao').value = registro.descricao.replace(/\[(Despesa|Adiantamento)\]\s*/, '');
+            if (registro.fornecedor) document.getElementById('fornecedorNome').value = registro.fornecedor.nome;
+            if (registro.lavador) document.getElementById('lavadorId').value = registro.lavador.id;
+
+            openModal('saidaModal');
+        }
+
+        function openSangriaModal() { openModal('sangriaModal'); }
+
+        async function updateSaidaForm() {
+            const tipo = document.getElementById('saidaTipo').value;
+            const container = document.getElementById('saidaCamposDinamicos');
+            const descricaoContainer = document.getElementById('saidaDescricaoContainer');
+            container.innerHTML = ''; // Limpa campos antigos
+
+            if (tipo === 'Despesa') {
+                const fornecedores = await window.api.getFornecedores();
+                let options = fornecedores.map(f => `<option value="${f.nome}"></option>`).join('');
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label for="fornecedorNome" class="form-label">Fornecedor (Opcional)</label>
+                        <input type="text" id="fornecedorNome" class="form-input" list="fornecedores-list" placeholder="Digite ou selecione um fornecedor">
+                        <datalist id="fornecedores-list">${options}</datalist>
+                    </div>
+                `;
+                descricaoContainer.style.display = 'block';
+            } else if (tipo === 'Adiantamento') {
+                const lavadores = await window.api.getLavadoresSimple();
+                let options = lavadores.lavadores.map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label for="lavadorId" class="form-label">Funcionário</label>
+                        <select id="lavadorId" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            ${options}
+                        </select>
+                    </div>
+                `;
+                descricaoContainer.style.display = 'none'; // Descrição é automática
+            } else {
+                descricaoContainer.style.display = 'block';
+            }
+        }
+
+        async function saveSaida(event) {
+            event.preventDefault();
+            const id = document.getElementById('saidaId').value;
+            const data = {
+                valor: parseFloat(document.getElementById('saidaValor').value),
+                formaPagamento: document.getElementById('saidaFormaPagamento').value,
+                tipo: document.getElementById('saidaTipo').value,
+                descricao: document.getElementById('saidaDescricao').value,
+                fornecedorNome: document.getElementById('fornecedorNome')?.value,
+                lavadorId: document.getElementById('lavadorId')?.value,
+            };
+
+            if (data.tipo === 'Adiantamento' && !data.lavadorId) {
+                showToast('Por favor, selecione um funcionário para o adiantamento.', 'error');
+                return;
+            }
+
+            try {
+                if (id) {
+                    await window.api.updateCaixaRegistro(id, data);
+                    showToast('Saída atualizada com sucesso!', 'success');
+                } else {
+                    await window.api.createSaida(data);
+                    showToast('Saída registrada com sucesso!', 'success');
+                }
+                closeModal('saidaModal');
+                loadHistorico();
+            } catch (error) { showToast('Erro ao salvar saída.', 'error'); }
+        }
+        
+        async function saveSangria(event) {
+            event.preventDefault();
+            const data = {
+                valor: parseFloat(document.getElementById('sangriaValor').value),
+                descricao: document.getElementById('sangriaDescricao').value,
+            };
+            try {
+                await window.api.createSangria(data);
+                closeModal('sangriaModal');
+                loadHistorico();
+            } catch (error) { alert('Erro ao registrar sangria.'); }
+        }
+
+        async function openPendenciasModal() {
+            openModal('pendenciasModal');
+            const content = document.getElementById('pendenciasContent');
+            content.innerHTML = '<p>Carregando...</p>';
+            try {
+                const response = await window.api.getOrdens(1, 50, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
+                const pendencias = response.ordens || [];
+                if (pendencias.length === 0) {
+                    content.innerHTML = '<p>Nenhuma pendência encontrada.</p>';
+                    return;
+                }
+                let table = '<table><thead><tr><th>Cliente</th><th>Data</th><th>Valor</th><th>Ação</th></tr></thead><tbody>';
+                pendencias.forEach(p => {
+                    table += `<tr>
+                        <td>${p.cliente.nome}</td>
+                        <td>${new Date(p.dataFinalizado).toLocaleDateString('pt-BR')}</td>
+                        <td>${formatCurrency(p.valorTotal)}</td>
+                        <td><a href="ordens.html?id=${p.id}" class="btn-sm btn-primary">Ver Ordem</a></td>
+                    </tr>`;
+                });
+                table += '</tbody></table>';
+                content.innerHTML = table;
+            } catch (error) {
+                content.innerHTML = '<p>Erro ao carregar pendências.</p>';
+            }
+        }
+        
+        function toggleDropdown(id) {
+            document.getElementById(id).classList.toggle('active');
+        }
+
+        async function deleteCaixaRegistro(id) {
+            showCustomConfirm({
+                title: 'Confirmar Exclusão',
+                message: 'Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.',
+                onConfirm: async () => {
+                    try {
+                        await window.api.deleteCaixaRegistro(id);
+                        showToast('Lançamento excluído com sucesso.');
+                        loadHistorico();
+                    } catch (error) { showToast('Erro ao excluir lançamento.', 'error'); }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

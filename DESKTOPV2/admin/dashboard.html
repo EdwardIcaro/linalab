@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINA OWNER - Dashboard</title>
+    <!-- A página de configurações tem os estilos que precisamos para o switch -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../configuracoes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../api.js"></script>
+    <script src="../utils.js"></script>
+    <style>
+        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 16px; text-align: left; font-size: 14px; white-space: nowrap; }
+        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); }
+        tbody tr:last-child { border-bottom: none; }
+        td { color: var(--text-primary); font-weight: 500; }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-ativo { background-color: #D1FAE5; color: #065F46; }
+        .status-inativo { background-color: #FEE2E2; color: #991B1B; }
+
+        /* Estilos para os novos widgets */
+        .widgets-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .alert-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .alert-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <main class="main-content" style="padding-top: 32px;">
+        <header class="main-header">
+            <div class="header-title">
+                <h2><i class="fas fa-crown" style="color: #F59E0B;"></i> Painel LINA OWNER</h2>
+                <p>Gerenciamento central da plataforma.</p>
+            </div>
+            <div class="header-controls">
+                <button onclick="logout()" class="btn-secondary" style="border-color: #dc3545; color: #dc3545;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Cards de Estatísticas Globais -->
+        <section class="main-cards-simplified mb-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #D1FAE5; color: #065F46;"><i class="fas fa-dollar-sign"></i></div>
+                <div class="stat-info">
+                    <p>Faturamento Total</p>
+                    <h3 id="stat-faturamento">R$ 0,00</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #DBEAFE; color: #1E40AF;"><i class="fas fa-building"></i></div>
+                <div class="stat-info">
+                    <p>Empresas Ativas</p>
+                    <h3 id="stat-empresas">0 / 0</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #E0E7FF; color: #4338CA;"><i class="fas fa-list-alt"></i></div>
+                <div class="stat-info">
+                    <p>Total de Ordens</p>
+                    <h3 id="stat-ordens">0</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: #FEF3C7; color: #92400E;"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <p>Valor Pendente</p>
+                    <h3 id="stat-pendente">R$ 0,00</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- Novos Widgets de Alertas e Métricas -->
+        <div class="widgets-grid">
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600;">
+                    <i class="fas fa-exclamation-triangle" style="color: #F59E0B;"></i> Central de Alertas de Risco
+                </h3>
+                <div id="riskAlertsContainer">
+                    <p class="text-secondary">Carregando alertas...</p>
+                </div>
+            </div>
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600;">
+                    <i class="fas fa-chart-line" style="color: #10B981;"></i> Métricas de Engajamento (30 dias)
+                </h3>
+                <div class="main-cards-simplified" style="grid-template-columns: 1fr 1fr;">
+                     <div class="stat-card">
+                        <div class="stat-icon" style="background-color: #E0E7FF; color: #4338CA;"><i class="fas fa-user-plus"></i></div>
+                        <div class="stat-info">
+                            <p>Novas Empresas</p>
+                            <h3 id="metric-novas-inscricoes">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background-color: #FEE2E2; color: #991B1B;"><i class="fas fa-user-slash"></i></div>
+                        <div class="stat-info">
+                            <p>Taxa de Churn</p>
+                            <h3 id="metric-churn-rate">0%</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card table-wrapper">
+            <h3 style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600;">Empresas Cadastradas</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th>Usuário Dono</th>
+                        <th>Status</th>
+                        <th>Clientes</th>
+                        <th>Ordens</th>
+                        <th>Data de Criação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="empresasTableBody">
+                    <!-- Dados serão inseridos aqui -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Verifica se o usuário é LINA_OWNER
+            const userRole = localStorage.getItem('userRole');
+            if (userRole !== 'LINA_OWNER') {
+                alert('Acesso negado. Você não tem permissão para ver esta página.');
+                window.location.href = '../login.html';
+                return;
+            }
+
+            // 2. Carrega os dados do painel
+            loadGlobalStats();
+            loadEmpresas();
+            loadRiskAlerts();
+            loadEngagementMetrics();
+
+            // 3. Adiciona listener para os interruptores de status
+            document.getElementById('empresasTableBody').addEventListener('change', handleStatusToggle);
+        });
+
+        function logout() {
+            showCustomConfirm({
+                title: 'Confirmar Saída',
+                message: 'Tem certeza que deseja sair do sistema?',
+                onConfirm: () => {
+                    localStorage.clear();
+                    window.location.href = '/login.html'; // Caminho absoluto a partir da raiz
+                }
+            });
+        }
+
+        async function loadGlobalStats() {
+            try {
+                const stats = await window.api.getAdminStats();
+                document.getElementById('stat-faturamento').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalFaturamento);
+                document.getElementById('stat-empresas').textContent = `${stats.empresasAtivas} / ${stats.totalEmpresas}`;
+                document.getElementById('stat-ordens').textContent = stats.totalOrdens;
+                document.getElementById('stat-pendente').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalPendente);
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas globais:', error);
+                // Deixa os valores como estão em caso de erro
+            }
+        }
+
+        async function loadEmpresas() {
+            const tableBody = document.getElementById('empresasTableBody');
+            tableBody.innerHTML = '<tr><td colspan="7">Carregando...</td></tr>';
+
+            try {
+                // Precisamos criar uma função na API para chamar a nova rota
+                const response = await window.api.call('GET', 'admin/empresas');
+                const empresas = response.empresas || [];
+
+                tableBody.innerHTML = '';
+                empresas.forEach(empresa => {
+                    const row = tableBody.insertRow();
+                    row.innerHTML = `
+                        <td><strong>${empresa.nome}</strong></td>
+                        <td>${empresa.usuario.nome} (${empresa.usuario.email})</td>
+                        <td><span class="status-badge ${empresa.ativo ? 'status-ativo' : 'status-inativo'}">${empresa.ativo ? 'Ativa' : 'Inativa'}</span></td>
+                        <td>${empresa._count.clientes}</td>
+                        <td>${empresa._count.ordens}</td>
+                        <td>${new Date(empresa.createdAt).toLocaleDateString('pt-BR')}</td>
+                        <td>
+                            <label class="switch">
+                                <input type="checkbox" data-id="${empresa.id}" ${empresa.ativo ? 'checked' : ''}>
+                                <span class="slider round"></span>
+                            </label>
+                            <a href="customizador.html?empresaId=${empresa.id}" class="btn-sm btn-secondary" title="Customizar Tema" style="margin-left: 8px;">
+                                <i class="fas fa-palette"></i>
+                            </a>
+                            <a href="detalhes.html?id=${empresa.id}" class="btn-sm btn-secondary" title="Gerenciar Empresa" style="margin-left: 8px;">
+                                <i class="fas fa-user-cog"></i>
+                            </a>
+                            <button onclick="impersonateEmpresaOwner('${empresa.id}')" class="btn-sm btn-info" title="Logar como Dono" style="margin-left: 8px;">
+                                <i class="fas fa-user-shield"></i>
+                            </button>
+                        </td>
+                    `;
+                });
+            } catch (error) {
+                console.error('Erro ao carregar empresas:', error);
+                tableBody.innerHTML = '<tr><td colspan="7" style="color: red;">Erro ao carregar empresas. Verifique o console.</td></tr>';
+            }
+        }
+
+        async function handleStatusToggle(event) {
+            const toggle = event.target;
+            if (toggle.type !== 'checkbox') return;
+
+            const empresaId = toggle.dataset.id;
+            const novoStatus = toggle.checked;
+
+            try {
+                await window.api.call('PATCH', `admin/empresas/${empresaId}/status`, { ativo: novoStatus });
+                showToast(`Status da empresa alterado com sucesso!`, 'success');
+            } catch (error) {
+                showToast(`Erro ao alterar status: ${error.message || 'Verifique o console.'}`, 'error');
+                toggle.checked = !novoStatus; // Reverte a mudança visual em caso de erro
+            }
+        }
+
+        async function impersonateEmpresaOwner(empresaId) {
+            if (!confirm('Tem certeza que deseja logar como o dono desta empresa? Você será redirecionado e sua sessão de administrador será pausada.')) {
+                return;
+            }
+
+            try {
+                // 1. Salva a sessão completa do admin
+                const adminSession = {
+                    token: localStorage.getItem('token'),
+                    usuarioNome: localStorage.getItem('usuarioNome'),
+                    userRole: localStorage.getItem('userRole')
+                };
+                localStorage.setItem('original_admin_session', JSON.stringify(adminSession));
+
+                // 2. Pede um token de impersonação para o backend
+                const { token, usuario, empresa } = await window.api.call('POST', `admin/impersonate/empresa/${empresaId}`);
+
+                // 3. Define a nova sessão no localStorage
+                localStorage.setItem('token', token);
+                localStorage.setItem('usuarioNome', usuario.nome);
+                localStorage.setItem('userRole', usuario.role);
+                localStorage.setItem('permissoes', JSON.stringify(usuario.permissoes || []));
+                localStorage.setItem('empresaId', empresa.id);
+                localStorage.setItem('empresaNome', empresa.nome);
+                window.location.href = '../index.html'; // 4. Redireciona para o dashboard do usuário
+            } catch (error) { showToast(error.message || 'Erro ao personificar usuário.', 'error'); }
+        }
+
+        async function loadRiskAlerts() {
+            const container = document.getElementById('riskAlertsContainer');
+            try {
+                const { alertasFaturamentoZero, alertasPoucoUso } = await window.api.call('GET', 'admin/alertas/risco');
+                container.innerHTML = '';
+
+                if (alertasFaturamentoZero.length === 0 && alertasPoucoUso.length === 0) {
+                    container.innerHTML = '<p class="text-secondary"><i class="fas fa-check-circle" style="color: #10B981;"></i> Nenhuma empresa em situação de risco no momento.</p>';
+                    return;
+                }
+
+                let content = '<ul class="alert-list">';
+                alertasFaturamentoZero.forEach(empresa => {
+                    content += `<li class="alert-item">
+                                    <span>${empresa.nome}</span>
+                                    <span class="status-badge status-inativo" style="font-size: 10px;">Sem Faturamento (7d)</span>
+                                </li>`;
+                });
+                alertasPoucoUso.forEach(empresa => {
+                    // Evita duplicar se a empresa estiver em ambos os alertas
+                    if (!alertasFaturamentoZero.some(e => e.id === empresa.id)) {
+                        content += `<li class="alert-item">
+                                        <span>${empresa.nome}</span>
+                                        <span class="status-badge" style="background-color: #FEF3C7; color: #92400E; font-size: 10px;">Pouco Uso (3d)</span>
+                                    </li>`;
+                    }
+                });
+                content += '</ul>';
+                container.innerHTML = content;
+
+            } catch (error) {
+                container.innerHTML = '<p class="text-secondary" style="color: #ef4444;">Erro ao carregar alertas.</p>';
+            }
+        }
+
+        async function loadEngagementMetrics() {
+            try {
+                const metrics = await window.api.call('GET', 'admin/metrics/engajamento');
+                document.getElementById('metric-novas-inscricoes').textContent = metrics.novasInscricoes;
+                document.getElementById('metric-churn-rate').textContent = `${metrics.taxaDeChurn}%`;
+            } catch (error) {
+                console.error('Erro ao carregar métricas de engajamento:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Criar Conta</title>
+    <link rel="stylesheet" href="style.css"> <!-- Estilos Globais e Variáveis -->
+    <link rel="stylesheet" href="auth.css">  <!-- Estilos de Autenticação -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="auth-body">
+
+    <div id="toast-container"></div>
+
+    <div class="auth-container">
+        <div class="auth-header">
+            <a href="login.html" class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </a>
+            <h2>Crie sua Conta</h2>
+            <p>Rápido e fácil. Comece a gerenciar agora mesmo.</p>
+        </div>
+
+        <div class="auth-card">
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="nome" class="form-label">Nome de Usuário</label>
+                    <div class="input-group">
+                        <input type="text" id="nome" class="form-input" placeholder="ex: carlos_silva" required>
+                        <i class="input-icon fas fa-user"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="email" class="form-label">E-mail</label>
+                    <div class="input-group">
+                        <input type="email" id="email" class="form-input" placeholder="seu@email.com" required>
+                        <i class="input-icon fas fa-envelope"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="senha" class="form-label">Senha</label>
+                    <div class="input-group">
+                        <input type="password" id="senha" class="form-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+                        <i class="input-icon fas fa-lock"></i>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Criar Conta</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="auth-link">
+            Já tem uma conta? <a href="login.html">Faça login</a>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const btnSpan = submitBtn.querySelector('span');
+
+            // Desabilitar botão e mostrar loading
+            submitBtn.disabled = true;
+            btnSpan.textContent = 'Criando...';
+
+            try {
+                await window.api.signup({ nome, email, senha });
+                showToast('Conta criada com sucesso! Redirecionando para o login...', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000); // Aguarda 2 segundos para o usuário ler o toast
+
+            } catch (error) {
+                console.error("Erro no cadastro:", error);
+                showToast(error.message || 'Não foi possível criar a conta.', 'error');
+                // Habilitar botão e restaurar texto em caso de erro
+                submitBtn.disabled = false;
+                btnSpan.textContent = 'Criar Conta';
+            }
+        });
+    </script>
+</body>
+</html>

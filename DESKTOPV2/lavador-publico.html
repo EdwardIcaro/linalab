@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinaX - Painel do Lavador</title>
+  <script src="api.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --success: #22C55E;
+      --warning: #F59E0B;
+      --info: #3B82F6;
+      --radius: 12px;
+      --shadow-light: 0 1px 2px 0 rgba(0,0,0,0.05);
+      --shadow-medium: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+    body { background: var(--background-light); }
+    .public-container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    
+    .public-header {
+      background: var(--white);
+      padding: 20px;
+      border-radius: var(--radius);
+      text-align: center;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-color);
+    }
+    .public-header h1 { font-size: 28px; font-weight: 700; }
+    .public-header p { font-size: 16px; color: var(--text-secondary); margin-top: 4px; }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    .summary-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
+    .summary-card {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: var(--radius);
+      text-align: center;
+      position: relative;
+      box-shadow: var(--shadow-light);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+    .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
+    .summary-card .icon { font-size: 18px; margin-bottom: 12px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .icon-week { background-color: var(--primary-color-light); color: var(--primary-color); }
+    .icon-month { background-color: #ECFDF5; color: #10B981; }
+    .summary-card .label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+    .summary-card .value { font-size: 22px; font-weight: 700; }
+    .toggle-visibility { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; }
+    .hidden-value { filter: blur(5px); }
+    
+    .days-bar { display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; -ms-overflow-style: none; scrollbar-width: none; }
+    .days-bar::-webkit-scrollbar { display: none; }
+    .day { background: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; font-size: 14px; font-weight: 500; color: var(--text-secondary); text-align: center; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
+    .day:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
+    .day.selected { background: var(--primary-color); color: #fff; border-color: var(--primary-color); font-weight: 600; transform: translateY(-2px); box-shadow: var(--shadow-medium); }
+
+    .order-list-header { 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between;
+        gap: 12px; 
+        cursor: pointer;
+        padding: 12px;
+        border-radius: var(--radius);
+        background-color: var(--white);
+        border: 1px solid var(--border-color);
+        margin-bottom: 12px;
+    }
+    .order-list-header-title { display: flex; align-items: center; gap: 12px; }
+    .order-count-badge { background-color: var(--primary-color); color: var(--white); border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+    .accordion-icon { font-size: 16px; color: var(--text-secondary); transition: transform 0.3s ease; }
+
+    #ordensList { transition: all 0.3s ease-in-out; overflow: hidden; }
+    #ordensList.collapsed { max-height: 0 !important; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; opacity: 0; }
+
+    .order-card {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      border-left-width: 5px;
+      border-left-color: var(--border-color);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-light);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    .order-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: var(--primary-color); }
+    .order-card.status-FINALIZADO { border-left-color: var(--success); }
+    .order-card.status-EM_ANDAMENTO { border-left-color: var(--warning); }
+    .order-card.status-PENDENTE { border-left-color: var(--info); }
+    
+    .order-main { padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .order-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .order-subtitle { font-size: 14px; color: var(--text-secondary); }
+    
+    .order-footer {
+      background: var(--background-light);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .gross-value { color: var(--text-secondary); }
+    .gross-value strong { font-weight: 600; }
+    .order-value { font-size: 18px; font-weight: 700; color: var(--primary-color); }
+    .status-FINALIZADO .order-value { color: var(--success); }
+    .status-PENDENTE .order-value { color: var(--info); }
+    .status-EM_ANDAMENTO .order-value { color: var(--warning); }
+    
+    .status-badge { padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .status-badge.status-FINALIZADO { background-color: #ECFDF5; color: #065F46; }
+    .status-badge.status-EM_ANDAMENTO { background-color: #FFFBEB; color: #B45309; }
+    .status-badge.status-PENDENTE { background-color: #EFF6FF; color: #1E40AF; }
+
+    .section-divider { height: 1px; background-color: var(--border-color); margin: 24px 0; }
+
+    .text-4xl { font-size: 2.25rem; }
+    .text-purple-600 { color: var(--primary-color); }
+    .fa-spin { animation: fa-spin 2s infinite linear; }
+    @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .hidden { display: none; }
+
+    /* Desktop Styles */
+    @media (min-width: 640px) {
+      .public-container { padding: 24px; }
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .order-title { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADER -->
+  <div id="loader" class="text-center p-12">
+    <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+    <p class="mt-4">Carregando seus dados...</p>
+  </div>
+
+  <!-- CONTEÚDO -->
+  <div id="content" class="public-container hidden">
+    <div class="public-header">
+      <h1 id="lavadorNome"></h1>
+      <p>Seu resumo de ganhos e ordens</p>
+    </div>
+
+    <h2 class="section-title">Ganhos Acumulados</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="icon icon-week"><i class="fas fa-calendar-week"></i></div>
+        <div class="label">Ganhos da Semana</div>
+        <div id="ganhoSemana" class="value">R$ 0,00</div>
+        <button onclick="toggleVisibility('ganhoSemana', this)" class="toggle-visibility"><i class="fas fa-eye"></i></button>
+      </div>
+      <div class="summary-card">
+        <div class="icon icon-month"><i class="fas fa-calendar-alt"></i></div>
+        <div class="label">Ganhos do Mês</div>
+        <div id="ganhoMes" class="value">R$ 0,00</div>
+        <button onclick="toggleVisibility('ganhoMes', this)" class="toggle-visibility"><i class="fas fa-eye"></i></button>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <h2 class="section-title">Resumo do Dia</h2>
+    <div class="daily-summary" style="margin-bottom: 12px;">
+      <div class="summary-card">
+        <div class="label">Ganho no dia</div>
+        <div id="totalGanhoDia" class="value">R$ 0,00</div>
+      </div>
+    </div>
+    
+    <div class="days-bar" id="daysBar"></div>
+
+    <div id="accordionHeader" class="order-list-header">
+        <div class="order-list-header-title">
+            <h2 class="section-title" style="margin-bottom: 0;">Ordens do dia</h2>
+            <span id="ordensCountBadge" class="order-count-badge">0</span>
+        </div>
+        <span class="accordion-icon"><i class="fas fa-chevron-up"></i></span>
+    </div>
+    
+    <div id="ordensList"></div>
+  </div>
+
+  <!-- ERRO -->
+  <div id="error" class="public-container text-center hidden">
+    <div class="container" style="max-width: 500px; margin: 4rem auto;">
+        <div class="icon" style="font-size: 64px; color: #EF4444; margin-bottom: 24px;">
+            <i id="error-icon" class="fas fa-user-lock"></i>
+        </div>
+        <h1 id="error-title" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+            Acesso Desativado
+        </h1>
+        <p id="error-message" style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">
+            Seu link de acesso foi desativado. Por favor, entre em contato com o administrador da sua empresa para solicitar um novo link.
+        </p>
+    </div>
+  </div>
+
+  <script>
+    // ---------- UTILS ----------
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+    }
+
+    function toLocaleDateISOString(dateInput = new Date()) {
+        const date = new Date(dateInput);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function toggleVisibility(id, btn) {
+      const el = document.getElementById(id);
+      const icon = btn.querySelector('i');
+      const isBlurred = el.classList.toggle('hidden-value');
+      icon.className = isBlurred ? 'fas fa-eye-slash' : 'fas fa-eye';
+    }
+
+    // ---------- STATE ----------
+    let allData = {};
+    let selectedDateISO = toLocaleDateISOString();
+
+    // ---------- DOM ELEMENTS ----------
+    const loader = document.getElementById('loader');
+    const content = document.getElementById('content');
+    const errorEl = document.getElementById('error');
+
+    // ---------- INIT ----------
+    document.addEventListener('DOMContentLoaded', async () => {
+      const token = new URLSearchParams(window.location.search).get('token');
+      if (!token) return showError();
+
+      try {
+        const data = await window.api.getLavadorPublico(token);
+        if (data) {
+          allData = data;
+          setupAccordion();
+          renderUI();
+          renderForSelectedDay();
+        } else {
+          showError();
+        }
+      }
+      catch (e) {
+        console.error("Erro na API:", e);
+        // Em vez de redirecionar, mostramos a mensagem de erro apropriada
+        if (e.error?.includes('inativo')) {
+            showError('Acesso Desativado', 'Seu link de acesso foi desativado. Por favor, entre em contato com o administrador da sua empresa para solicitar um novo link.', 'fa-user-lock');
+        } else if (e.error?.includes('expirado')) {
+            showError('Link Expirado', 'Seu link de acesso expirou. Por favor, solicite um novo link ao administrador da sua empresa.', 'fa-clock');
+        } else {
+            showError('Acesso Inválido', 'O link que você acessou é inválido. Por favor, solicite um novo link ao administrador da sua empresa.', 'fa-ban');
+        }
+      }
+    });
+
+    // ---------- UI ----------
+    function showError(title = 'Acesso Inválido', message = 'O link que você acessou é inválido ou expirou.', icon = 'fa-ban') {
+        document.getElementById('error-title').textContent = title;
+        document.getElementById('error-message').textContent = message;
+        document.getElementById('error-icon').className = `fas ${icon}`;
+        loader.classList.add('hidden');
+        errorEl.classList.remove('hidden');
+    }
+    function renderUI() {
+      loader.classList.add('hidden');
+      content.classList.remove('hidden');
+      document.getElementById('lavadorNome').textContent = allData.nome;
+      renderDaysBar();
+      calcAggregates();
+    }
+
+    function setupAccordion() {
+        const header = document.getElementById('accordionHeader');
+        header.addEventListener('click', () => {
+            const list = document.getElementById('ordensList');
+            const icon = header.querySelector('.accordion-icon i');
+            const isCollapsed = list.classList.toggle('collapsed');
+            icon.classList.toggle('fa-chevron-down', isCollapsed);
+            icon.classList.toggle('fa-chevron-up', !isCollapsed);
+        });
+    }
+
+    // ---------- DAYS BAR ----------
+    function renderDaysBar() {
+      const bar = document.getElementById('daysBar');
+      bar.innerHTML = '';
+      const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const iso = toLocaleDateISOString(date);
+
+        const day = document.createElement('div');
+        day.className = 'day';
+        day.dataset.date = iso;
+        day.innerHTML = `<div>${weekdays[date.getDay()]}</div><div>${date.getDate()}/${date.getMonth() + 1}</div>`;
+        if (iso === selectedDateISO) day.classList.add('selected');
+        day.onclick = () => selectDay(iso);
+        bar.prepend(day);
+      }
+    }
+
+    function selectDay(iso) {
+      selectedDateISO = iso;
+      document.querySelectorAll('.day').forEach(el => el.classList.toggle('selected', el.dataset.date === iso));
+      renderForSelectedDay();
+    }
+
+    // ---------- AGGREGATES ----------
+    function calcAggregates() {
+      const now = new Date();
+      const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const ordensParaGanho = allData.ordens.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO');
+      
+      const ganhoSemana = ordensParaGanho.filter(o => new Date(o.createdAt) >= weekStart).reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
+      const ganhoMes = ordensParaGanho.filter(o => new Date(o.createdAt) >= monthStart).reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
+
+      document.getElementById('ganhoSemana').textContent = formatCurrency(ganhoSemana);
+      document.getElementById('ganhoMes').textContent = formatCurrency(ganhoMes);
+    }
+
+    // ---------- DAY ORDERS ----------
+    function renderForSelectedDay() {
+      const orders = allData.ordens.filter(o => toLocaleDateISOString(o.createdAt) === selectedDateISO);
+      const ordensParaGanho = orders.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO');
+      const ganhoDia = ordensParaGanho.reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
+
+      document.getElementById('totalGanhoDia').textContent = formatCurrency(ganhoDia);
+      document.getElementById('ordensCountBadge').textContent = orders.length;
+
+      const list = document.getElementById('ordensList');
+      list.innerHTML = '';
+      if (!orders.length) {
+        list.innerHTML = '<p class="text-center text-secondary p-8">Nenhuma ordem atribuída a você neste dia.</p>';
+        const icon = document.querySelector('#accordionHeader .accordion-icon i');
+        list.classList.add('collapsed');
+        icon.classList.add('fa-chevron-down');
+        icon.classList.remove('fa-chevron-up');
+        return;
+      }
+      
+      const icon = document.querySelector('#accordionHeader .accordion-icon i');
+      list.classList.remove('collapsed');
+      icon.classList.remove('fa-chevron-down');
+      icon.classList.add('fa-chevron-up');
+
+      orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(ordem => {
+        const servicos = ordem.items.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ');
+        const comissao = (ordem.valorTotal * (allData.comissao / 100));
+        const status = ordem.status;
+        const statusText = status.replace('_', ' ');
+
+        list.innerHTML += `
+          <div class="order-card status-${status}">
+            <div class="order-main">
+              <div>
+                <div class="order-title">${ordem.veiculo.modelo}</div>
+                <div class="order-subtitle">${servicos}</div>
+              </div>
+              <span class="status-badge status-${status}">${statusText}</span>
+            </div>
+            <div class="order-footer">
+              <div class="gross-value">Valor Total: <strong>${formatCurrency(ordem.valorTotal)}</strong></div>
+              <div class="order-value">${ (status === 'FINALIZADO' || status === 'EM_ANDAMENTO') ? formatCurrency(comissao) : '-' }</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+  </script>
+</body>
+</html>

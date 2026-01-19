@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Histórico de Ordens</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
+    <script src="theme.js"></script>
+    <style>
+        /* Timeline View */
+        .timeline-view {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: none;
+        }
+
+        .timeline-view.active {
+            display: block;
+        }
+
+        /* Cards Compact View */
+        .history-cards-view {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .history-cards-view.active {
+            display: grid;
+        }
+
+        .history-card-compact {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .history-card-compact:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .history-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-order-number {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .history-status-badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .history-status-badge.finalizado {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .history-status-badge.cancelado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .history-compact-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .history-compact-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+
+        .history-compact-value {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .history-order-total {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .history-order-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .history-action-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .history-action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .history-action-btn.danger:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--background-light);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .view-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .view-btn.active {
+            background: var(--white);
+            color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--background-light);
+            color: var(--text-primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .timeline-date-group {
+            margin-bottom: 40px;
+        }
+
+        .timeline-date-header {
+            position: sticky;
+            top: calc(var(--top-bar-height) + 20px);
+            background: var(--background-color);
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .timeline-date-header i {
+            color: var(--primary-color);
+        }
+
+        .timeline-date-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .timeline-date-badge {
+            margin-left: auto;
+            background: var(--primary-color-light);
+            color: var(--primary-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .timeline-orders {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline-orders::before {
+            content: '';
+            position: absolute;
+            left: 16px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--primary-color), transparent);
+        }
+
+        .timeline-order-card {
+            position: relative;
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+        }
+
+        .timeline-order-card:hover {
+            transform: translateX(8px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .timeline-order-card::before {
+            content: '';
+            position: absolute;
+            left: -32px;
+            top: 24px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: 3px solid var(--background-color);
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .timeline-order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .timeline-order-number {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .timeline-order-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .timeline-order-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .timeline-detail-item {
+            font-size: 13px;
+        }
+
+        .timeline-detail-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .timeline-detail-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .timeline-payment-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .payment-badge-small {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--background-light);
+            color: var(--text-secondary);
+        }
+
+        .payment-badge-small.dinheiro {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .payment-badge-small.pix {
+            background: #cffafe;
+            color: #155e75;
+        }
+
+        .payment-badge-small.cartao {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .payment-badge-small.pendente {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .timeline-order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .timeline-order-total {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .timeline-order-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Advanced Filters */
+        .filters-advanced {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .filter-input {
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            background: var(--white);
+            color: var(--text-primary);
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .search-wrapper .filter-input {
+            padding-left: 40px;
+        }
+
+        /* Stats Summary */
+        .history-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .history-stat-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .history-stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .history-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* Export Button */
+        .btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--white);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-export:hover {
+            background: var(--background-light);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Status badges */
+        .status-badge-timeline {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-badge-timeline.finalizado {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge-timeline.cancelado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .timeline-orders {
+                padding-left: 30px;
+            }
+
+            .timeline-order-card::before {
+                left: -24px;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="ordens.html" class="active"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-title">
+                <h2><i class="fas fa-history"></i> Histórico de Ordens</h2>
+                <p>Consulte e gerencie ordens finalizadas e canceladas</p>
+            </div>
+            <div class="header-controls">
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="switchView('cards')">
+                        <i class="fas fa-th-large"></i> Cards
+                    </button>
+                    <button class="view-btn" onclick="switchView('timeline')">
+                        <i class="fas fa-stream"></i> Timeline
+                    </button>
+                </div>
+                <button class="btn-export" onclick="exportData()">
+                    <i class="fas fa-file-export"></i>
+                    <span>Exportar</span>
+                </button>
+                <a href="ordens.html" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Ordens Ativas</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Summary -->
+        <div class="history-stats">
+            <div class="history-stat-card">
+                <div class="history-stat-value" id="totalOrders">0</div>
+                <div class="history-stat-label">Total de Ordens</div>
+            </div>
+            <div class="history-stat-card">
+                <div class="history-stat-value" id="totalRevenue">R$ 0,00</div>
+                <div class="history-stat-label">Faturamento Total</div>
+            </div>
+            <div class="history-stat-card">
+                <div class="history-stat-value" id="avgTicket">R$ 0,00</div>
+                <div class="history-stat-label">Ticket Médio</div>
+            </div>
+            <div class="history-stat-card">
+                <div class="history-stat-value" id="pendingPayments">0</div>
+                <div class="history-stat-label">Pagamentos Pendentes</div>
+            </div>
+        </div>
+
+        <!-- Advanced Filters -->
+        <div class="filters-advanced">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Buscar</label>
+                    <div class="search-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Placa, cliente ou número..." class="filter-input search">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Status</label>
+                    <select id="statusFilter" class="filter-input">
+                        <option value="">Todos</option>
+                        <option value="FINALIZADO" selected>Finalizadas</option>
+                        <option value="CANCELADO">Canceladas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Período</label>
+                    <select id="periodFilter" class="filter-input">
+                        <option value="">Personalizado</option>
+                        <option value="today">Hoje</option>
+                        <option value="this_week">Esta Semana</option>
+                        <option value="this_month" selected>Este Mês</option>
+                        <option value="last_month">Mês Passado</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Pagamento</label>
+                    <select id="paymentFilter" class="filter-input">
+                        <option value="">Todos</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="PIX">PIX</option>
+                        <option value="CARTAO">Cartão</option>
+                        <option value="PENDENTE">Pendente</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Data Início</label>
+                    <input type="date" id="startDate" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Data Fim</label>
+                    <input type="date" id="endDate" class="filter-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards Compact View -->
+        <div class="history-cards-view active" id="historyCardsView">
+            <!-- Cards serão renderizados aqui -->
+        </div>
+
+        <!-- Timeline View -->
+        <div class="timeline-view" id="timelineView">
+            <!-- Timeline será renderizada aqui -->
+        </div>
+    </main>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="customConfirmTitle" class="modal-title">Confirmar</h2>
+                <button onclick="closeCustomConfirm()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="customConfirmMessage" style="padding: 20px 0; line-height: 1.6;"></div>
+            <div class="modal-actions">
+                <button id="customCancelBtn" onclick="closeCustomConfirm()" class="btn btn-secondary">Cancelar</button>
+                <button id="customConfirmBtn" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        let allOrders = [];
+let groupedOrders = {};
+let currentView = 'cards';
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthentication();
+    initializeUserMenu();
+    
+    const savedView = localStorage.getItem('historicoViewPreference') || 'cards';
+    currentView = savedView;
+    updateViewButtons();
+    
+    setupFilters();
+    loadOrders();
+});
+
+function updateViewButtons() {
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        const isCards = btn.querySelector('.fa-th-large');
+        if (isCards && currentView === 'cards') {
+            btn.classList.add('active');
+        } else if (!isCards && currentView === 'timeline') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    document.getElementById('historyCardsView').classList.toggle('active', currentView === 'cards');
+    document.getElementById('timelineView').classList.toggle('active', currentView === 'timeline');
+}
+
+function switchView(view) {
+    currentView = view;
+    localStorage.setItem('historicoViewPreference', view);
+    updateViewButtons();
+}
+
+function checkAuthentication() {
+    if (!window.api.isAuthenticated()) {
+        window.location.href = 'login.html';
+    }
+}
+
+function logout() {
+    showCustomConfirm({
+        title: 'Confirmar Saída',
+        message: 'Tem certeza que deseja sair do sistema?',
+        onConfirm: () => window.api.logout()
+    });
+}
+
+function closeCustomConfirm() {
+    const modal = document.getElementById('customConfirmModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function setupFilters() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    document.getElementById('startDate').valueAsDate = firstDay;
+    document.getElementById('endDate').valueAsDate = today;
+
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('statusFilter').addEventListener('change', loadOrders);
+    document.getElementById('periodFilter').addEventListener('change', handlePeriodChange);
+    document.getElementById('paymentFilter').addEventListener('change', loadOrders);
+    document.getElementById('startDate').addEventListener('change', loadOrders);
+    document.getElementById('endDate').addEventListener('change', loadOrders);
+}
+
+function handlePeriodChange() {
+    const period = document.getElementById('periodFilter').value;
+    const today = new Date();
+    let startDate, endDate;
+
+    switch (period) {
+        case 'today':
+            startDate = new Date(today.setHours(0, 0, 0, 0));
+            endDate = new Date(today.setHours(23, 59, 59, 999));
+            break;
+        case 'this_week':
+            const firstDayOfWeek = today.getDate() - today.getDay();
+            startDate = new Date(today.setDate(firstDayOfWeek));
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date();
+            break;
+        case 'this_month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date();
+            break;
+        case 'last_month':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+        default:
+            return;
+    }
+
+    document.getElementById('startDate').valueAsDate = startDate;
+    document.getElementById('endDate').valueAsDate = endDate;
+    loadOrders();
+}
+
+// ============================================
+// MUDANÇA PRINCIPAL: loadOrders() com tipo='historico'
+// ============================================
+async function loadOrders() {
+    const statusFilter = document.getElementById('statusFilter').value || 'FINALIZADO';
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const paymentMethod = document.getElementById('paymentFilter').value;
+
+    try {
+        console.log('🔍 [Histórico] Carregando:', { statusFilter, startDate, endDate, paymentMethod });
+
+        const startISO = startDate ? new Date(startDate + 'T00:00:00').toISOString() : null;
+        const endISO = endDate ? new Date(endDate + 'T23:59:59').toISOString() : null;
+
+        // MUDANÇA: Adicionar parâmetro tipo='historico'
+        const data = await window.api.getOrdens(
+            1,              // page
+            200,            // limit
+            '',             // search
+            statusFilter,   // status
+            '',             // lavadorId
+            '',             // clienteId
+            startISO,       // dataInicio
+            endISO,         // dataFim
+            paymentMethod,  // metodoPagamento
+            'historico'     // tipo (NOVO)
+        );
+        
+        console.log('📦 [Histórico] Dados recebidos:', data);
+        console.log('📊 [Histórico] Total de ordens:', data.ordens?.length || 0);
+
+        allOrders = data.ordens || [];
+        renderOrders(allOrders);
+        updateStats(allOrders);
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        showToast('Erro ao carregar histórico', 'error');
+    }
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+
+    let filtered = allOrders;
+
+    if (search) {
+        filtered = filtered.filter(order => 
+            order.numeroOrdem.toLowerCase().includes(search) ||
+            order.cliente.nome.toLowerCase().includes(search) ||
+            order.veiculo.placa.toLowerCase().includes(search)
+        );
+    }
+
+    renderOrders(filtered);
+    updateStats(filtered);
+}
+
+function renderOrders(orders) {
+    const cardsView = document.getElementById('historyCardsView');
+    const timelineView = document.getElementById('timelineView');
+    
+    cardsView.innerHTML = '';
+    timelineView.innerHTML = '';
+
+    if (orders.length === 0) {
+        const emptyState = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px; color: var(--text-secondary);">
+                <i class="fas fa-inbox" style="font-size: 64px; margin-bottom: 16px; display: block; opacity: 0.3;"></i>
+                <h3>Nenhuma ordem encontrada</h3>
+                <p>Ajuste os filtros para ver mais resultados</p>
+            </div>
+        `;
+        cardsView.innerHTML = emptyState;
+        timelineView.innerHTML = emptyState;
+        return;
+    }
+
+    orders.forEach(order => {
+        cardsView.appendChild(createCompactCard(order));
+    });
+
+    renderTimeline(orders);
+}
+
+function createCompactCard(order) {
+    const card = document.createElement('div');
+    card.className = 'history-card-compact';
+
+    const statusClass = order.status === 'FINALIZADO' ? 'finalizado' : 'cancelado';
+    const statusText = order.status === 'FINALIZADO' ? 'Finalizada' : 'Cancelada';
+
+    let paymentInfo = '';
+    if (order.status === 'FINALIZADO' && order.pagamentos && order.pagamentos.length > 0) {
+        const paymentMethods = [...new Set(order.pagamentos.map(p => p.metodo))].map(m => {
+            switch(m) {
+                case 'DINHEIRO': return 'Dinheiro';
+                case 'CARTAO': return 'Cartão';
+                case 'PIX': return 'PIX';
+                case 'PENDENTE': return 'Pendente';
+                case 'DEBITO_FUNCIONARIO': return 'Débito Func.';
+                default: return m;
+            }
+        });
+        // Adiciona um badge para cada método de pagamento
+        paymentInfo = paymentMethods.map(m => `<span class="payment-badge-small">${m}</span>`).join(' ');
+    }
+    
+    const date = new Date(order.dataFim || order.updatedAt);
+    const formattedDate = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const payments = [...new Set(order.pagamentos.map(p => p.metodo))];
+    const hasPending = payments.includes('PENDENTE');
+
+    card.innerHTML = `
+        <div class="history-card-header">
+            <span class="history-order-number">#${order.numeroOrdem}</span>
+            <div>
+                <span class="history-status-badge ${statusClass}">${statusText}</span>
+                ${paymentInfo}
+            </div>
+        </div>
+        <div class="history-compact-info">
+            <div>
+                <div class="history-compact-label">Cliente</div>
+                <div class="history-compact-value">${order.cliente.nome}</div>
+            </div>
+            <div>
+                <div class="history-compact-label">Data</div>
+                <div class="history-compact-value">${formattedDate} ${formattedTime}</div>
+            </div>
+            <div>
+                <div class="history-compact-label">Veículo</div>
+                <div class="history-compact-value">${order.veiculo.modelo || 'N/A'}</div>
+            </div>
+            <div>
+                <div class="history-compact-label">Placa</div>
+                <div class="history-compact-value">${order.veiculo.placa}</div>
+            </div>
+        </div>
+        <div class="history-card-footer">
+            <span class="history-order-total">${formatCurrency(order.valorTotal)}</span>
+            <div class="history-order-actions">
+                <button class="history-action-btn" onclick="viewDetails('${order.id}')" title="Ver Detalhes">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${hasPending ? `
+                <button class="history-action-btn" onclick="payPending('${order.id}')" title="Quitar Pendência" style="color: #f59e0b;">
+                    <i class="fas fa-dollar-sign"></i>
+                </button>
+                ` : ''}
+                <button class="history-action-btn danger" onclick="deleteOrder('${order.id}')" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+function renderTimeline(orders) {
+    const timeline = document.getElementById('timelineView');
+
+    const grouped = groupOrdersByDate(orders);
+
+    Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a)).forEach(date => {
+        const dateOrders = grouped[date];
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('pt-BR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        const totalDay = dateOrders.reduce((sum, order) => sum + order.valorTotal, 0);
+
+        const dateGroup = document.createElement('div');
+        dateGroup.className = 'timeline-date-group';
+        dateGroup.innerHTML = `
+            <div class="timeline-date-header">
+                <i class="fas fa-calendar-day"></i>
+                <h3>${formattedDate}</h3>
+                <span class="timeline-date-badge">${dateOrders.length} ${dateOrders.length === 1 ? 'ordem' : 'ordens'}</span>
+                <span class="timeline-date-badge">${formatCurrency(totalDay)}</span>
+            </div>
+            <div class="timeline-orders" id="orders-${date}"></div>
+        `;
+
+        timeline.appendChild(dateGroup);
+
+        const ordersContainer = document.getElementById(`orders-${date}`);
+        dateOrders.forEach(order => {
+            ordersContainer.appendChild(createTimelineCard(order));
+        });
+    });
+}
+
+function groupOrdersByDate(orders) {
+    const grouped = {};
+    orders.forEach(order => {
+        const date = new Date(order.dataFim || order.updatedAt).toDateString();
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(order);
+    });
+    return grouped;
+}
+
+function createTimelineCard(order) {
+    const card = document.createElement('div');
+    card.className = 'timeline-order-card';
+
+    const time = new Date(order.dataFim || order.updatedAt).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const services = order.items.map(item => item.servico?.nome || item.adicional?.nome).filter(Boolean).join(', ');
+    
+    const payments = [...new Set(order.pagamentos.map(p => p.metodo))];
+    const paymentBadges = payments.map(method => {
+        const className = method.toLowerCase();
+        return `<span class="payment-badge-small ${className}">${method}</span>`;
+    }).join('');
+
+    const statusClass = order.status === 'FINALIZADO' ? 'finalizado' : 'cancelado';
+    const statusText = order.status === 'FINALIZADO' ? 'Finalizada' : 'Cancelada';
+
+    let paymentInfo = '';
+    if (order.status === 'FINALIZADO' && order.pagamentos && order.pagamentos.length > 0) {
+        const paymentMethods = [...new Set(order.pagamentos.map(p => p.metodo))];
+        paymentInfo = paymentMethods.map(method => {
+            const className = method.toLowerCase().replace('_', '-');
+            return `<span class="payment-badge-small ${className}">${method.replace('_', ' ')}</span>`;
+        }).join('');
+    }
+
+    card.innerHTML = `
+        <div class="timeline-order-header">
+            <div>
+                <div class="timeline-order-number">#${order.numeroOrdem}</div>
+                <div class="timeline-order-time">${time}</div> 
+            </div>
+            <span class="status-badge-timeline ${statusClass}">${statusText}</span>
+        </div>
+        <div class="timeline-order-details">
+            <div class="timeline-detail-item">
+                <div class="timeline-detail-label">Cliente</div>
+                <div class="timeline-detail-value">${order.cliente.nome}</div>
+            </div>
+            <div class="timeline-detail-item">
+                <div class="timeline-detail-label">Veículo</div>
+                <div class="timeline-detail-value">${order.veiculo.modelo || 'N/A'}</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">${order.veiculo.placa}</div>
+            </div>
+            <div class="timeline-detail-item">
+                <div class="timeline-detail-label">Lavador</div>
+                <div class="timeline-detail-value">${order.lavador?.nome || 'N/A'}</div>
+            </div>
+        </div>
+        <div style="margin-top: 12px;">
+            <div class="timeline-detail-label">Serviços</div>
+            <div style="font-size: 13px; margin-top: 4px;">${services}</div>
+        </div>
+        ${paymentBadges ? `
+        <div class="timeline-payment-badges">${paymentBadges}</div>
+        ` : ''}
+        <div class="timeline-order-footer">
+            <span class="timeline-order-total">${formatCurrency(order.valorTotal)}</span>
+            <div class="timeline-order-actions">
+                <button class="order-action-btn" onclick="viewDetails('${order.id}')" title="Ver Detalhes">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${payments.includes('PENDENTE') ? `
+                <button class="order-action-btn" onclick="payPending('${order.id}')" title="Quitar Pendência" style="color: #f59e0b;">
+                    <i class="fas fa-dollar-sign"></i>
+                </button>
+                ` : ''}
+                <button class="order-action-btn" onclick="deleteOrder('${order.id}')" title="Excluir" style="color: #ef4444;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+function updateStats(orders) {
+    document.getElementById('totalOrders').textContent = orders.length;
+    
+    const revenue = orders.reduce((sum, order) => sum + order.valorTotal, 0);
+    document.getElementById('totalRevenue').textContent = formatCurrency(revenue);
+    
+    const avgTicket = orders.length > 0 ? revenue / orders.length : 0;
+    document.getElementById('avgTicket').textContent = formatCurrency(avgTicket);
+    
+    const pending = orders.filter(order => 
+        order.pagamentos.some(p => p.metodo === 'PENDENTE')
+    ).length;
+    document.getElementById('pendingPayments').textContent = pending;
+}
+
+// ============================================
+// VER DETALHES
+// ============================================
+async function viewDetails(orderId) {
+    try {
+        const order = await window.api.getOrdemById(orderId);
+        if (!order) {
+            showToast('Ordem não encontrada', 'error');
+            return;
+        }
+
+        const modal = document.getElementById('customConfirmModal');
+        const title = document.getElementById('customConfirmTitle');
+        const message = document.getElementById('customConfirmMessage');
+        const confirmBtn = document.getElementById('customConfirmBtn');
+        const cancelBtn = document.getElementById('customCancelBtn');
+
+        title.textContent = `Ordem #${order.numeroOrdem}`;
+        
+        message.innerHTML = `
+            <div style="text-align: left; max-height: 400px; overflow-y: auto;">
+                <h4 style="margin: 16px 0 8px 0; font-size: 14px; font-weight: 600;">Cliente e Veículo</h4>
+                <div style="background: var(--background-light); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                    <p style="margin: 4px 0;"><strong>Cliente:</strong> ${order.cliente.nome}</p>
+                    <p style="margin: 4px 0;"><strong>Telefone:</strong> ${order.cliente.telefone || 'N/A'}</p>
+                    <p style="margin: 4px 0;"><strong>Veículo:</strong> ${order.veiculo.modelo || 'N/A'}</p>
+                    <p style="margin: 4px 0;"><strong>Placa:</strong> ${order.veiculo.placa}</p>
+                    <p style="margin: 4px 0;"><strong>Lavador:</strong> ${order.lavador?.nome || 'Não atribuído'}</p>
+                </div>
+                
+                <h4 style="margin: 16px 0 8px 0; font-size: 14px; font-weight: 600;">Serviços</h4>
+                <ul style="list-style: none; padding: 0; margin-bottom: 12px;">
+                    ${order.items.map(item => `
+                        <li style="padding: 6px; background: var(--background-light); border-radius: 6px; margin-bottom: 4px;">
+                            ${item.servico?.nome || item.adicional?.nome} - <strong>${formatCurrency(item.subtotal)}</strong>
+                        </li>
+                    `).join('')}
+                </ul>
+                
+                <h4 style="margin: 16px 0 8px 0; font-size: 14px; font-weight: 600;">Pagamentos</h4>
+                <ul style="list-style: none; padding: 0; margin-bottom: 12px;">
+                    ${order.pagamentos.map(p => `
+                        <li style="padding: 6px; background: var(--background-light); border-radius: 6px; margin-bottom: 4px;">
+                            ${p.metodo} - <strong>${formatCurrency(p.valor)}</strong>
+                        </li>
+                    `).join('')}
+                </ul>
+                
+                <div style="margin-top: 16px; padding: 12px; background: var(--primary-color-light); border-radius: 8px; text-align: center;">
+                    <strong style="font-size: 16px;">VALOR TOTAL: ${formatCurrency(order.valorTotal)}</strong>
+                </div>
+            </div>
+        `;
+
+        cancelBtn.textContent = 'Fechar';
+        cancelBtn.style.display = 'block';
+        confirmBtn.style.display = 'none';
+
+        modal.classList.add('active');
+    } catch (error) {
+        console.error('Erro ao buscar detalhes:', error);
+        showToast('Erro ao carregar detalhes', 'error');
+    }
+}
+
+// ============================================
+// QUITAR PENDÊNCIA - REFATORADO
+// ============================================
+async function payPending(orderId) {
+    try {
+        const order = await window.api.getOrdemById(orderId);
+        if (!order) return;
+
+        const pagamentoPendente = order.pagamentos.find(p => p.metodo === 'PENDENTE');
+        if (!pagamentoPendente) {
+            showToast('Nenhuma pendência encontrada', 'error');
+            return;
+        }
+
+        const modal = document.getElementById('customConfirmModal');
+        const title = document.getElementById('customConfirmTitle');
+        const message = document.getElementById('customConfirmMessage');
+        const confirmBtn = document.getElementById('customConfirmBtn');
+        const cancelBtn = document.getElementById('customCancelBtn');
+
+        title.textContent = 'Quitar Pendência';
+        
+        message.innerHTML = `
+            <div style="text-align: center;">
+                <p style="margin-bottom: 20px; font-size: 16px;">
+                    Valor pendente: <strong style="color: var(--primary-color); font-size: 20px;">${formatCurrency(pagamentoPendente.valor)}</strong>
+                </p>
+                <p style="margin-bottom: 16px; color: var(--text-secondary);">Escolha a forma de pagamento:</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                    <button onclick="processPayPending('${orderId}', '${pagamentoPendente.id}', 'DINHEIRO')" class="btn btn-primary" style="padding: 14px; font-size: 14px;">
+                        <i class="fas fa-money-bill-wave"></i> Dinheiro
+                    </button>
+                    <button onclick="processPayPending('${orderId}', '${pagamentoPendente.id}', 'PIX')" class="btn btn-primary" style="padding: 14px; font-size: 14px;">
+                        <i class="fab fa-pix"></i> PIX
+                    </button>
+                    <button onclick="processPayPending('${orderId}', '${pagamentoPendente.id}', 'CARTAO')" class="btn btn-primary" style="padding: 14px; font-size: 14px; grid-column: 1/-1;">
+                        <i class="fas fa-credit-card"></i> Cartão
+                    </button>
+                </div>
+            </div>
+        `;
+
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.style.display = 'block';
+        confirmBtn.style.display = 'none';
+
+        modal.classList.add('active');
+    } catch (error) {
+        console.error('Erro ao processar pendência:', error);
+        showToast('Erro ao processar pendência', 'error');
+    }
+}
+
+// ============================================
+// MUDANÇA PRINCIPAL: Usar quitarPendencia()
+// ============================================
+async function processPayPending(orderId, pagamentoPendenteId, metodo) {
+    try {
+        closeCustomConfirm();
+        
+        // MUDANÇA: Usar novo método simplificado
+        await window.api.quitarPendencia(orderId, pagamentoPendenteId, metodo);
+
+        showToast('Pendência quitada com sucesso!');
+        await loadOrders();
+    } catch (error) {
+        console.error('Erro ao quitar pendência:', error);
+        showToast(error.message || 'Erro ao quitar pendência', 'error');
+    }
+}
+
+// ============================================
+// DELETAR ORDEM
+// ============================================
+function deleteOrder(orderId) {
+    const modal = document.getElementById('customConfirmModal');
+    const title = document.getElementById('customConfirmTitle');
+    const message = document.getElementById('customConfirmMessage');
+    const confirmBtn = document.getElementById('customConfirmBtn');
+    const cancelBtn = document.getElementById('customCancelBtn');
+
+    title.textContent = 'Confirmar Exclusão Permanente';
+    message.innerHTML = '<p style="text-align: center; padding: 20px 0;">Esta ação <strong>NÃO PODE</strong> ser desfeita. Deseja excluir permanentemente esta ordem?</p>';
+    
+    cancelBtn.textContent = 'Cancelar';
+    cancelBtn.style.display = 'block';
+    confirmBtn.textContent = 'Sim, Excluir';
+    confirmBtn.style.display = 'block';
+    confirmBtn.style.background = '#ef4444';
+    
+    confirmBtn.onclick = async () => {
+        try {
+            closeCustomConfirm();
+            await window.api.deleteOrdem(orderId);
+            localStorage.setItem('financeiroNeedsRefresh', 'true');
+            showToast('Ordem excluída com sucesso');
+            await loadOrders();
+        } catch (error) {
+            console.error('Erro ao excluir:', error);
+            showToast('Erro ao excluir ordem', 'error');
+        }
+    };
+
+    modal.classList.add('active');
+}
+
+// ============================================
+// EXPORTAR DADOS
+// ============================================
+function exportData() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    const exportOrders = allOrders.map(order => ({
+        'Número': order.numeroOrdem,
+        'Data': new Date(order.dataFim || order.updatedAt).toLocaleDateString('pt-BR'),
+        'Cliente': order.cliente.nome,
+        'Veículo': `${order.veiculo.modelo || 'N/A'} - ${order.veiculo.placa}`,
+        'Status': order.status,
+        'Lavador': order.lavador?.nome || 'N/A',
+        'Pagamento': [...new Set(order.pagamentos.map(p => p.metodo))].join(', '),
+        'Total': order.valorTotal
+    }));
+
+    const headers = Object.keys(exportOrders[0]);
+    const csvContent = [
+        headers.join(';'),
+        ...exportOrders.map(row => headers.map(header => row[header]).join(';'))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `historico-ordens-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+
+    showToast('Exportação concluída!');
+}
+
+// ============================================
+// UTILS
+// ============================================
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', { 
+        style: 'currency', 
+        currency: 'BRL' 
+    }).format(value || 0);
+}
+    </script>
+</body>
+</html>

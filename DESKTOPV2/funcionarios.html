@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Funcionários</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 16px; text-align: left; font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
+        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); transition: background-color 0.2s ease; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background-color: var(--background-light); }
+        .actions-cell { text-align: right; }
+        .actions-cell button { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s ease; color: var(--text-secondary); background-color: transparent; margin-left: 4px; }
+        .actions-cell button:hover { color: var(--text-primary); background-color: #e5e7eb; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; inset: 0; background-color: rgba(16, 24, 40, 0.6); backdrop-filter: blur(4px);
+            z-index: 50; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--white); border-radius: 16px; padding: 24px;
+            width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            transform: scale(0.95); transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .modal-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: all 0.2s ease; }
+        .modal-close:hover { color: var(--text-primary); background-color: var(--background-light); }
+        .modal-actions { display: flex; gap: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border-color); justify-content: flex-end; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; color: var(--text-secondary); font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+        .form-input { width: 100%; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; color: var(--text-primary); font-size: 14px; }
+        .form-input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1); }
+
+        .link-container {
+            background-color: var(--background-light);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
+    <div id="screenLockModal" class="screen-lock-overlay">
+        <div class="screen-lock-content">
+            <i class="fas fa-lock screen-lock-icon"></i>
+            <h2>Acesso Negado</h2>
+            <p>Você não tem permissão para visualizar esta página. Redirecionando...</p>
+        </div>
+    </div>
+
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li data-permission="ver_dashboard"><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li data-permission="gerenciar_clientes"><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html" class="active"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li data-permission="ver_financeiro"><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-title">
+                <h2>Gerenciamento de Funcionários</h2>
+                <p>Adicione, edite e gerencie seus lavadores.</p>
+            </div>
+            <div class="header-controls">
+                <button onclick="openLavadorModal()" class="btn-primary">
+                    <i class="fas fa-plus"></i>
+                    <span>Novo Funcionário</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="table-wrapper card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Comissão</th>
+                        <th>Ordens (Mês)</th>
+                        <th>Comissão (Mês)</th>
+                        <th>Status</th>
+                        <th class="actions-cell">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lavadoresTableBody">
+                    <!-- Lavador rows will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modals -->
+<!-- Lavador Modal -->
+<div id="lavadorModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="lavadorModalTitle" class="modal-title">Novo Funcionário</h2>
+            <button onclick="closeLavadorModal()" class="modal-close">&times;</button>
+        </div>
+        <form id="lavadorForm">
+            <input type="hidden" id="lavadorId">
+            <div class="form-group">
+                <label for="lavadorName" class="form-label">Nome</label>
+                <input type="text" id="lavadorName" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="lavadorComissao" class="form-label">Comissão (%)</label>
+                <input type="number" id="lavadorComissao" class="form-input" required min="0" max="100">
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeLavadorModal()" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 id="customConfirmTitle" class="modal-title"></h2>
+                <button onclick="closeModal('customConfirmModal')" class="modal-close">&times;</button>
+            </div>
+            <p id="customConfirmMessage" class="text-secondary my-4"></p>
+            <div class="modal-actions">
+                <button id="customCancelBtn" onclick="closeModal('customConfirmModal')" class="btn btn-secondary">Cancelar</button>
+                <button id="customConfirmBtn" class="btn btn-danger">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script src="theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            enforcePermission('gerenciar_funcionarios');
+            updateMenuVisibility();
+            handleImpersonationBanner();
+            initializeUserMenu();
+            // applyTheme() é chamado automaticamente por theme.js
+            handleImpersonationBanner(); // Adiciona esta linha
+
+
+            loadLavadores();
+            
+            document.getElementById('lavadorForm').addEventListener('submit', saveLavador);
+            document.getElementById('lavadoresTableBody').addEventListener('click', handleTableActions);
+            
+        });
+
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function logout() {
+            showCustomConfirm({
+                title: 'Confirmar Saída',
+                message: 'Tem certeza que deseja sair do sistema?',
+                onConfirm: () => window.api.logout()
+            });
+        }
+
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+        async function loadLavadores() {
+            try {
+                const response = await window.api.getLavadores();
+                const lavadores = response.lavadores || []; // Garante que lavadores seja um array
+
+                const tableBody = document.getElementById('lavadoresTableBody');
+                tableBody.innerHTML = '';
+                if (lavadores.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-secondary">Nenhum funcionário cadastrado.</td></tr>';
+                    return;
+                }
+
+                lavadores.forEach(lavador => {
+                    const row = tableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${lavador.nome}</td>
+                        <td>${lavador.comissao}%</td>
+                        <td>${lavador.ordensMesAtual || 0}</td>
+                        <td>${formatCurrency(lavador.comissaoMesAtual || 0)}</td>
+                        <td>
+                            <span class="status-badge ${lavador.ativo ? 'status-FINALIZADO' : 'status-CANCELADO'}">
+                                ${lavador.ativo ? 'Ativo' : 'Inativo'}
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <button data-action="copy-link" data-id="${lavador.id}" class="btn-sm btn-info" title="Copiar Link de Acesso">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button data-action="edit" data-id="${lavador.id}" class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                            <label class="switch">
+                                <input type="checkbox" data-action="toggle" data-id="${lavador.id}" ${lavador.ativo ? 'checked' : ''}>
+                                <span class="slider round"></span>
+                            </label>
+                        </td>
+                    `;
+                });
+            } catch (error) {
+                console.error('Erro ao carregar funcionários:', error);
+                document.getElementById('lavadoresTableBody').innerHTML = '<tr><td colspan="6" class="text-center p-4 text-red-500">Erro ao carregar funcionários.</td></tr>';
+            }
+        }
+
+        async function openLavadorModal(id = null) {
+            const form = document.getElementById('lavadorForm');
+            form.reset();
+            document.getElementById('lavadorId').value = '';
+            const modalTitle = document.getElementById('lavadorModalTitle');
+            
+            if (id) {
+                modalTitle.textContent = 'Editar Funcionário';
+                try {
+                    const response = await window.api.getLavadores();
+                    const lavador = response.lavadores.find(l => l.id === id);
+                    if (lavador) {
+                        document.getElementById('lavadorId').value = lavador.id;
+                        document.getElementById('lavadorName').value = lavador.nome;
+                        document.getElementById('lavadorComissao').value = lavador.comissao;
+                    }
+                } catch (error) { 
+                    console.error(`Erro ao buscar funcionário ${id}:`, error);
+                    alert('Não foi possível carregar os dados do funcionário.');
+                    return;
+                }
+            } else {
+                modalTitle.textContent = 'Novo Funcionário';
+            }
+            document.getElementById('lavadorModal').classList.add('active');
+        }
+
+        function closeLavadorModal() {
+            document.getElementById('lavadorModal').classList.remove('active');
+        }
+
+        async function saveLavador(event) {
+            event.preventDefault();
+            const id = document.getElementById('lavadorId').value;
+            const data = {
+                nome: document.getElementById('lavadorName').value,
+                comissao: parseFloat(document.getElementById('lavadorComissao').value),
+            };
+
+            try {
+                if (id) {
+                    await window.api.updateLavador(id, data);
+                    showToast('Funcionário atualizado com sucesso!', 'success');
+                } else {
+                    await window.api.createLavador(data);
+                    showToast('Funcionário criado com sucesso!', 'success');
+                }
+                closeLavadorModal();
+                loadLavadores();
+            } catch (error) {
+                console.error('Erro ao salvar funcionário:', error);
+                showToast('Erro ao salvar funcionário.', 'error');
+            }
+        }
+
+        function handleTableActions(event) {
+            const target = event.target;
+            if (target.matches('input[data-action="toggle"]')) {
+                const id = target.dataset.id;
+                const isChecked = target.checked;
+                toggleLavadorStatus(id, !isChecked);
+            } else {
+                const button = target.closest('button[data-action]');
+                if (!button) return;
+                const { action, id } = button.dataset;
+                if (action === 'edit') {
+                    openLavadorModal(id);
+                }
+                if (action === 'copy-link') {
+                    generateAndCopyToken(id, button);
+                }
+            }
+        }
+
+        async function toggleLavadorStatus(id, currentState) {
+            const action = currentState ? 'desativar' : 'ativar';
+            showCustomConfirm({
+                title: `Confirmar ${action}`,
+                message: `Tem certeza que deseja ${action} este funcionário?`,
+                onConfirm: async () => {
+                    try {
+                        await window.api.toggleLavadorStatus(id);
+                        showToast(`Funcionário ${action} com sucesso!`, 'success');
+                        loadLavadores();
+                    } catch (error) {
+                        console.error(`Erro ao ${action} funcionário:`, error);
+                        showToast(error.message || `Erro ao ${action} funcionário.`, 'error');
+                        loadLavadores(); // Recarrega para reverter o estado visual do slider
+                    }
+                },
+                onCancel: () => {
+                    loadLavadores(); // Recarrega para reverter o estado visual do slider
+                }
+            });
+        }
+
+        async function generateAndCopyToken(lavadorId, button) {
+            setButtonLoadingState(button, true);
+            try {
+                const response = await window.api.gerarTokenLavador(lavadorId);
+                const token = response.token;
+                const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
+                
+                navigator.clipboard.writeText(link).then(() => {
+                    showToast('Link de acesso copiado!', 'success');
+                }, (err) => {
+                    console.error('Erro ao copiar link: ', err);
+                    showToast('Falha ao copiar o link.', 'error');
+                });
+            } catch (error) {
+                showToast('Erro ao gerar o link de acesso.', 'error');
+            } finally {
+                setButtonLoadingState(button, false);
+            }
+        }
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>

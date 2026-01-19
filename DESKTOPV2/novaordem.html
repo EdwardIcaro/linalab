@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Nova Ordem</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        :root {
+            --primary: #00bcd4;
+            --primary-dark: #0097a7;
+            --primary-light: #b2ebf2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        /* Header fixo mais compacto */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+            background: var(--bg);
+        }
+
+        .header-title {
+            flex: 1;
+        }
+
+        .header-title h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header-title p {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+
+        /* Container principal */
+        .container {
+            margin-top: 64px;
+            padding: 16px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Busca Hero redesenhada */
+        .search-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 24px;
+            padding: 32px 20px;
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .search-section h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .search-section p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 56px 16px 20px;
+            border: none;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .search-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .link-btn {
+            background: none;
+            border: none;
+            color: white;
+            text-decoration: underline;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* Cards redesenhados */
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .step-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .card-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        /* Info grid melhorado */
+        .info-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .info-item {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-light);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* Form inputs modernos */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            background: var(--card);
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        /* Service cards redesenhados */
+        .service-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .service-card {
+            position: relative;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--card);
+        }
+
+        .service-card:active {
+            transform: scale(0.98);
+        }
+
+        .service-card.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, var(--primary-light) 0%, white 100%);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        .service-check {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .service-card.selected .service-check {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .service-check i {
+            font-size: 12px;
+            color: white;
+            opacity: 0;
+        }
+
+        .service-card.selected .service-check i {
+            opacity: 1;
+        }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 8px;
+            padding-right: 32px;
+        }
+
+        .service-price {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Summary card flutuante */
+        .summary-float {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            padding: 16px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            z-index: 99;
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .summary-total {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .summary-items {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .btn-create {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-create:active {
+            transform: scale(0.98);
+        }
+
+        .btn-create:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        /* Autocomplete melhorado */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border: 2px solid var(--primary);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+            margin-top: -10px;
+        }
+
+        .autocomplete-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:active {
+            background: var(--bg);
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: slideUp 0.3s ease;
+        }
+
+        /* Responsive para tablets */
+        @media (min-width: 768px) {
+            .container {
+                padding: 24px;
+            }
+            
+            .info-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .service-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Hidden utility */
+        .hidden {
+            display: none !important;
+        }
+
+        .mt-4 { margin-top: 1rem; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <button class="back-btn" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="header-title">
+            <h1>Nova Ordem</h1>
+            <p>Passo <span id="currentStep">1</span> de 3</p>
+        </div>
+    </header>
+
+    <!-- Container Principal -->
+    <div class="container">
+        <!-- Etapa 1: Busca de Veículo -->
+        <div id="step1" class="step-content">
+            <div class="search-section">
+                <h2><i class="fas fa-car"></i> Buscar Veículo</h2>
+                <p>Digite a placa para começar</p>
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="plateInput" 
+                        class="search-input" 
+                        placeholder="ABC-1234"
+                        maxlength="8"
+                        autocomplete="off"
+                    >
+                    <button class="search-btn" onclick="searchVehicle()">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                <button class="link-btn" onclick="continueWithoutPlate()">
+                    Veículo sem placa? Continue aqui
+                </button>
+            </div>
+        </div>
+
+        <!-- Etapa 2: Dados e Serviços -->
+        <div id="step2" class="step-content hidden">
+            <!-- Cliente e Veículo -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="step-badge">1</div>
+                    <h3>Cliente e Veículo</h3>
+                </div>
+                <div id="clientVehicleInfo"></div>
+            </div>
+
+            <!-- Serviços -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="step-badge">2</div>
+                    <h3>Serviço Principal</h3>
+                </div>
+                <div id="servicesGrid" class="service-grid"></div>
+            </div>
+
+            <!-- Adicionais -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="step-badge">+</div>
+                    <h3>Adicionais (opcional)</h3>
+                </div>
+                <div id="additionalsGrid" class="service-grid"></div>
+            </div>
+
+            <!-- Detalhes Finais -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="step-badge">3</div>
+                    <h3>Detalhes Finais</h3>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Lavador (Opcional)</label>
+                    <select id="washerSelect" class="form-select">
+                        <option value="">Selecione um lavador</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observações (Opcional)</label>
+                    <textarea 
+                        id="observations" 
+                        class="form-textarea" 
+                        placeholder="Ex: Cliente pediu atenção especial nas rodas..."
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Float -->
+    <div id="summaryFloat" class="summary-float hidden">
+        <div class="summary-header">
+            <div>
+                <div class="summary-label">Total</div>
+                <div class="summary-total" id="totalAmount">R$ 0,00</div>
+            </div>
+        </div>
+        <div class="summary-items" id="summaryItems">Nenhum item selecionado</div>
+        <button class="btn-create" onclick="createOrder()">
+            <i class="fas fa-check-circle"></i>
+            Criar Ordem de Serviço
+        </button>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
+    <script src="theme.js"></script>
+    <script>
+        // Estado global
+        let state = {
+            currentStep: 1,
+            clientId: null,
+            vehicleId: null,
+            selectedServices: [],
+            selectedAdditionals: [],
+            vehicleType: new URLSearchParams(window.location.search).get('tipo') || 'carro',
+            vehicleSubtype: new URLSearchParams(window.location.search).get('subtipo') || null,
+            servicesData: [],
+            additionalsData: []
+        };
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            
+            if (!state.vehicleType) {
+                showToast('Tipo de veículo não especificado!', 'error');
+                window.location.href = 'selecionar-tipo-veiculo.html';
+                return;
+            }
+            
+            loadServices();
+            loadAdditionals();
+            loadWashers();
+            
+            // Enter na busca
+            document.getElementById('plateInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchVehicle();
+            });
+        });
+
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function searchVehicle() {
+            const plate = document.getElementById('plateInput').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            
+            if (plate.length < 7) {
+                showToast('Digite uma placa válida (mínimo 7 caracteres)', 'error');
+                return;
+            }
+            
+            const searchBtn = document.querySelector('.search-btn');
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            searchBtn.disabled = true;
+
+            try {
+                const response = await window.api.getVeiculoByPlaca(plate);
+                if (response && response.veiculo && response.cliente) {
+                    state.clientId = response.cliente.id;
+                    state.vehicleId = response.veiculo.id;
+                    showClientVehicleInfo(response.cliente, response.veiculo);
+                } else {
+                    showClientVehicleForm(plate, true);
+                }
+                goToStep(2);
+            } catch (error) {
+                console.error('Erro ao buscar veículo:', error);
+                showClientVehicleForm(plate, true);
+                goToStep(2);
+            } finally {
+                searchBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
+                searchBtn.disabled = false;
+            }
+        }
+
+        function continueWithoutPlate() {
+            showClientVehicleForm('SEM PLACA', true);
+            goToStep(2);
+        }
+
+        function showClientVehicleInfo(cliente, veiculo) {
+            const container = document.getElementById('clientVehicleInfo');
+            container.innerHTML = `
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Cliente</div>
+                        <div class="info-value">${cliente.nome}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Telefone</div>
+                        <div class="info-value">${cliente.telefone || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Placa</div>
+                        <div class="info-value">${veiculo.placa}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Veículo</div>
+                        <div class="info-value">${veiculo.modelo || 'N/A'}${veiculo.cor ? ' - ' + veiculo.cor : ''}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showClientVehicleForm(plate, isNew) {
+            const container = document.getElementById('clientVehicleInfo');
+            
+            container.innerHTML = `
+                <p style="font-size: 13px; color: var(--text-light); margin-bottom: 16px;">
+                    Veículo com placa <strong>${plate}</strong> não encontrado. Preencha os dados abaixo.
+                </p>
+                <div class="form-group autocomplete-container">
+                    <label class="form-label">Nome do Cliente</label>
+                    <input type="text" class="form-input" id="clientName" placeholder="Digite para buscar..." autocomplete="off">
+                    <div id="clientAutocomplete" class="autocomplete-results" style="display: none;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone</label>
+                    <input type="tel" class="form-input" id="clientPhone" placeholder="(00) 00000-0000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Placa</label>
+                    <input type="text" class="form-input" id="vehiclePlate" value="${plate}" ${plate === 'SEM PLACA' ? 'readonly' : ''}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Modelo do Veículo</label>
+                    <input type="text" class="form-input" id="vehicleModel" placeholder="Ex: Honda Civic">
+                </div>
+            `;
+
+            // Adiciona listener para autocomplete
+            document.getElementById('clientName').addEventListener('input', debounce(searchClients, 300));
+        }
+
+        async function searchClients() {
+            const searchTerm = document.getElementById('clientName').value;
+            const resultsContainer = document.getElementById('clientAutocomplete');
+
+            if (searchTerm.length < 2) {
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'none';
+                state.clientId = null;
+                return;
+            }
+
+            try {
+                const data = await window.api.getClientes(1, 5, searchTerm);
+                resultsContainer.innerHTML = '';
+                
+                if (data.clientes && data.clientes.length > 0) {
+                    data.clientes.forEach(cliente => {
+                        const item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        
+                        const veiculosInfo = cliente.veiculos && cliente.veiculos.length > 0
+                            ? cliente.veiculos.map(v => v.modelo || v.placa).slice(0, 2).join(', ')
+                            : '';
+                        
+                        const displayText = veiculosInfo 
+                            ? `${cliente.nome} <span style="font-size: 11px; color: var(--text-light);">(${veiculosInfo})</span>`
+                            : cliente.nome;
+                        
+                        item.innerHTML = displayText;
+                        item.onclick = () => selectExistingClient(cliente);
+                        resultsContainer.appendChild(item);
+                    });
+                    resultsContainer.style.display = 'block';
+                } else {
+                    resultsContainer.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Erro ao buscar clientes:', error);
+            }
+        }
+
+        function selectExistingClient(cliente) {
+            document.getElementById('clientName').value = cliente.nome;
+            document.getElementById('clientName').readOnly = true;
+            document.getElementById('clientPhone').value = cliente.telefone || '';
+            document.getElementById('clientPhone').readOnly = true;
+            state.clientId = cliente.id;
+            document.getElementById('clientAutocomplete').style.display = 'none';
+        }
+
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        async function loadServices() {
+            try {
+                const data = await window.api.getServicos({ 
+                    tipoVeiculo: state.vehicleType, 
+                    subtipoVeiculo: state.vehicleSubtype 
+                });
+                
+                state.servicesData = data.servicos || [];
+                
+                const grid = document.getElementById('servicesGrid');
+                if (state.servicesData.length === 0) {
+                    grid.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum serviço disponível</p></div>';
+                    return;
+                }
+                
+                grid.innerHTML = state.servicesData.map(service => `
+                    <div class="service-card" onclick="selectService('${service.id}')">
+                        <div class="service-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="service-name">${service.nome}</div>
+                        <div class="service-price">${formatCurrency(service.preco)}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar serviços:', error);
+                showToast('Erro ao carregar serviços', 'error');
+            }
+        }
+
+        async function loadAdditionals() {
+            try {
+                const data = await window.api.getAdicionaisSimple();
+                state.additionalsData = data.adicionais || [];
+                
+                const grid = document.getElementById('additionalsGrid');
+                if (state.additionalsData.length === 0) {
+                    grid.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum adicional disponível</p></div>';
+                    return;
+                }
+                
+                grid.innerHTML = state.additionalsData.map(add => `
+                    <div class="service-card" onclick="toggleAdditional('${add.id}')">
+                        <div class="service-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="service-name">${add.nome}</div>
+                        <div class="service-price">${formatCurrency(add.preco)}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar adicionais:', error);
+                showToast('Erro ao carregar adicionais', 'error');
+            }
+        }
+
+        async function loadWashers() {
+            try {
+                const data = await window.api.getLavadoresSimple();
+                const select = document.getElementById('washerSelect');
+                
+                (data.lavadores || []).forEach(washer => {
+                    const option = document.createElement('option');
+                    option.value = washer.id;
+                    option.textContent = washer.nome;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar lavadores:', error);
+            }
+        }
+
+        function selectService(id) {
+            // Remove seleção anterior
+            document.querySelectorAll('#servicesGrid .service-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Adiciona nova seleção
+            event.currentTarget.classList.add('selected');
+            state.selectedServices = [id];
+            updateSummary();
+        }
+
+        function toggleAdditional(id) {
+            const card = event.currentTarget;
+            card.classList.toggle('selected');
+            
+            const index = state.selectedAdditionals.indexOf(id);
+            if (index > -1) {
+                state.selectedAdditionals.splice(index, 1);
+            } else {
+                state.selectedAdditionals.push(id);
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const selectedServiceData = state.servicesData.filter(s => state.selectedServices.includes(s.id));
+            const selectedAdditionalData = state.additionalsData.filter(a => state.selectedAdditionals.includes(a.id));
+            
+            const items = [...selectedServiceData, ...selectedAdditionalData];
+            const total = items.reduce((sum, item) => sum + item.preco, 0);
+            
+            document.getElementById('totalAmount').textContent = formatCurrency(total);
+            document.getElementById('summaryItems').textContent = 
+                items.length > 0 
+                    ? `${items.length} ${items.length === 1 ? 'item selecionado' : 'itens selecionados'}`
+                    : 'Nenhum item selecionado';
+            
+            document.getElementById('summaryFloat').classList.toggle('hidden', items.length === 0);
+        }
+
+        async function createOrder() {
+            if (state.selectedServices.length === 0) {
+                showToast('Selecione pelo menos um serviço', 'error');
+                return;
+            }
+
+            // Preparar itens
+            const items = [];
+            
+            state.selectedServices.forEach(serviceId => {
+                const service = state.servicesData.find(s => s.id === serviceId);
+                if (service) {
+                    items.push({
+                        tipo: 'SERVICO',
+                        itemId: service.id,
+                        nome: service.nome,
+                        preco: service.preco,
+                        quantidade: 1
+                    });
+                }
+            });
+
+            state.selectedAdditionals.forEach(additionalId => {
+                const additional = state.additionalsData.find(a => a.id === additionalId);
+                if (additional) {
+                    items.push({
+                        tipo: 'ADICIONAL',
+                        itemId: additional.id,
+                        nome: additional.nome,
+                        preco: additional.preco,
+                        quantidade: 1
+                    });
+                }
+            });
+
+            const orderData = {
+                clienteId: state.clientId,
+                veiculoId: state.vehicleId,
+                lavadorId: document.getElementById('washerSelect').value || null,
+                itens: items,
+                observacoes: document.getElementById('observations').value.trim(),
+                forcarCriacao: false
+            };
+
+            // Se não tiver veículo existente, adicionar dados novos
+            if (!state.vehicleId) {
+                const clientName = document.getElementById('clientName').value.trim();
+                const vehicleModel = document.getElementById('vehicleModel').value.trim();
+                const plate = document.getElementById('vehiclePlate').value.toUpperCase();
+
+                if (!clientName || !vehicleModel || !plate) {
+                    showToast('Preencha todos os campos do cliente e veículo', 'error');
+                    return;
+                }
+
+                orderData.novoCliente = {
+                    nome: clientName,
+                    telefone: document.getElementById('clientPhone').value.trim()
+                };
+                orderData.novoVeiculo = {
+                    placa: plate,
+                    modelo: vehicleModel,
+                    cor: ''
+                };
+            }
+
+            const btn = document.querySelector('.btn-create');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando...';
+
+            try {
+                await window.api.createOrdem(orderData);
+                showToast('Ordem criada com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'ordens.html';
+                }, 1500);
+            } catch (error) {
+                console.error('Erro ao criar ordem:', error);
+                
+                if (error.code === 'ACTIVE_ORDER_EXISTS') {
+                    if (confirm('Já existe uma ordem ativa para este veículo. Deseja criar mesmo assim?')) {
+                        orderData.forcarCriacao = true;
+                        try {
+                            await window.api.createOrdem(orderData);
+                            showToast('Ordem criada com sucesso!', 'success');
+                            setTimeout(() => {
+                                window.location.href = 'ordens.html';
+                            }, 1500);
+                        } catch (retryError) {
+                            showToast('Erro ao criar ordem: ' + (retryError.details || retryError.error), 'error');
+                        }
+                    }
+                } else {
+                    const errorMessage = error.details || error.error || 'Erro desconhecido';
+                    showToast('Erro ao criar ordem: ' + errorMessage, 'error');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Criar Ordem de Serviço';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            // Função de toast básica - você pode usar a sua implementação do utils.js
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
+            const color = type === 'success' ? '#10b981' : '#ef4444';
+            
+            toast.innerHTML = `<i class="fas fa-${icon}" style="color: ${color}"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function goToStep(step) {
+            state.currentStep = step;
+            document.getElementById('currentStep').textContent = step;
+            
+            document.querySelectorAll('.step-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            document.getElementById(`step${step}`).classList.remove('hidden');
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { 
+                style: 'currency', 
+                currency: 'BRL' 
+            }).format(value);
+        }
+    </script>
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINA OWNER - Customizador de Tema</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../api.js"></script>
+    <script src="../utils.js"></script>
+    <style>
+        .editor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .color-picker-group input[type="color"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: transparent;
+        }
+        .color-picker-group input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker-group input[type="color"]::-webkit-color-swatch {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <main class="main-content" style="padding-top: 32px;">
+        <header class="main-header">
+            <div class="header-title">
+                <h2><i class="fas fa-palette"></i> Customizador de Tema</h2>
+                <p>Personalize a aparência para a empresa <strong id="nomeEmpresa">...</strong></p>
+            </div>
+            <div class="header-controls">
+                <a href="dashboard.html" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+            </div>
+        </header>
+
+        <!-- Container para as notificações (toasts) -->
+        <div id="toast-container"></div>
+
+        <form id="themeForm" class="card">
+            <div class="editor-grid">
+                <!-- Coluna 1: Cores -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Cores Principais</h3>
+                    <div class="form-group color-picker-group">
+                        <input type="color" id="corPrimaria" value="#00bcd4">
+                        <div>
+                            <label for="corPrimaria" class="form-label">Cor Primária</label>
+                            <p class="text-sm text-secondary">Usada em botões e destaques.</p>
+                        </div>
+                    </div>
+                    <div class="form-group color-picker-group">
+                        <input type="color" id="corSecundaria" value="#ff4081">
+                        <div>
+                            <label for="corSecundaria" class="form-label">Cor Secundária</label>
+                            <p class="text-sm text-secondary">Usada em alertas e ações secundárias.</p>
+                        </div>
+                    </div>
+                    <div class="form-group color-picker-group">
+                        <input type="color" id="fundoPainel" value="#f0f2f5">
+                        <div>
+                            <label for="fundoPainel" class="form-label">Fundo do Painel</label>
+                            <p class="text-sm text-secondary">Cor de fundo principal do sistema.</p>
+                        </div>
+                    </div>
+                    <div class="form-group color-picker-group">
+                        <input type="color" id="corTextoPrincipal" value="#000000">
+                        <div>
+                            <label for="corTextoPrincipal" class="form-label">Cor do Texto</label>
+                            <p class="text-sm text-secondary">Cor principal para textos e títulos.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coluna 2: Identidade Visual -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Identidade Visual</h3>
+                    <div class="form-group">
+                        <label for="urlLogotipo" class="form-label">URL do Logotipo</label>
+                        <input type="url" id="urlLogotipo" class="form-input" placeholder="https://exemplo.com/logo.png">
+                    </div>
+                    <div class="form-group">
+                        <label for="fonteFamilia" class="form-label">Família da Fonte</label>
+                        <input type="text" id="fonteFamilia" class="form-input" placeholder="'Roboto', sans-serif">
+                        <p class="text-sm text-secondary mt-2">Use fontes do Google Fonts ou fontes padrão do sistema.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="border-top: 1px solid var(--border-color); margin-top: 24px; padding-top: 24px;">
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> <span>Salvar Tema</span></button>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        let empresaId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            empresaId = params.get('empresaId');
+
+            if (!empresaId) {
+                alert('ID da empresa não fornecido!');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Carrega os dados da empresa para exibir o nome e as configs atuais
+            try {
+                const { empresa } = await window.api.getAdminEmpresaById(empresaId);
+                document.getElementById('nomeEmpresa').textContent = empresa.nome;
+                document.getElementById('corPrimaria').value = empresa.corPrimaria || '#00bcd4';
+                document.getElementById('corSecundaria').value = empresa.corSecundaria || '#ff4081';
+                document.getElementById('fundoPainel').value = empresa.fundoPainel || '#f0f2f5';
+                document.getElementById('corTextoPrincipal').value = empresa.corTextoPrincipal || '#000000';
+                document.getElementById('urlLogotipo').value = empresa.urlLogotipo || '';
+                document.getElementById('fonteFamilia').value = empresa.fonteFamilia || "'Poppins', sans-serif";
+            } catch (error) {
+                showToast('Erro ao carregar dados da empresa.', 'error');
+            }
+
+            document.getElementById('themeForm').addEventListener('submit', saveTheme);
+        });
+
+        async function saveTheme(event) {
+            event.preventDefault();
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const btnSpan = submitBtn.querySelector('span');
+
+            submitBtn.disabled = true;
+            btnSpan.textContent = 'Salvando...';
+
+            const themeData = {
+                corPrimaria: document.getElementById('corPrimaria').value,
+                corSecundaria: document.getElementById('corSecundaria').value,
+                fundoPainel: document.getElementById('fundoPainel').value,
+                corTextoPrincipal: document.getElementById('corTextoPrincipal').value,
+                urlLogotipo: document.getElementById('urlLogotipo').value,
+                fonteFamilia: document.getElementById('fonteFamilia').value,
+            };
+
+            try {
+                await window.api.call('PATCH', `admin/theme/config/${empresaId}`, themeData);
+                showToast('Tema salvo com sucesso!', 'success');
+            } catch (error) {
+                console.error('Erro ao salvar tema:', error);
+                showToast(error.message || 'Erro ao salvar o tema.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                btnSpan.textContent = 'Salvar Tema';
+            }
+        }
+    </script>
+</body>
+</html>

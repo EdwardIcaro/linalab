@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Login</title>
+    <link rel="stylesheet" href="style.css"> <!-- Estilos Globais e Variáveis -->
+    <link rel="stylesheet" href="auth.css">  <!-- Estilos de Autenticação -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="auth-body">
+
+    <div id="toast-container"></div>
+
+    <!-- Modal de Alerta Customizado -->
+    <div id="customAlertModal" class="custom-modal-overlay">
+        <div class="custom-modal-content" style="max-width: 420px;">
+            <div class="custom-modal-icon icon-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 id="customAlertTitle" class="custom-modal-title">Acesso Bloqueado</h3>
+            <p id="customAlertMessage" class="custom-modal-message">Sua conta está temporariamente desativada.</p>
+            <div class="custom-modal-actions" style="justify-content: center;">
+                <button id="customAlertCloseBtn" class="btn btn-primary">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="auth-container">
+        <div class="auth-header">
+            <a href="#" class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </a>
+            <h2>Bem-vindo de volta!</h2>
+            <p>Faça login para continuar gerenciando seu negócio.</p>
+        </div>
+        
+        <div class="auth-card">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email" class="form-label">E-mail</label>
+                    <div class="input-group">
+                        <input type="email" id="email" class="form-input" placeholder="seu@email.com" required>
+                        <i class="input-icon fas fa-envelope"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Senha</label>
+                    <div class="input-group">
+                        <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                        <i class="input-icon fas fa-lock"></i>
+                    </div>
+                </div>
+                
+                <div class="form-extra-options">
+                    <div class="remember-me">
+                        <input type="checkbox" id="rememberMe">
+                        <label for="rememberMe">Lembrar-me</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Entrar</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="auth-link">
+            Não tem uma conta? <a href="signup.html">Crie uma agora</a>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedEmail = localStorage.getItem('rememberedEmail');
+            if (savedEmail) {
+                document.getElementById('email').value = savedEmail;
+                document.getElementById('rememberMe').checked = true;
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const btnSpan = submitBtn.querySelector('span');
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            // Desabilitar botão e mostrar loading
+            submitBtn.disabled = true;
+            btnSpan.textContent = 'Entrando...';
+            
+            try {
+                const data = await window.api.login(email, password);
+                
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('usuarioNome', data.usuario.nome);
+                localStorage.setItem('userRole', data.usuario.role); // Salva a role
+                localStorage.setItem('permissoes', JSON.stringify(data.usuario.permissoes || [])); // << CORREÇÃO: Salva as permissões
+
+                // Lógica do "Lembrar-me"
+                if (rememberMe) {
+                    localStorage.setItem('rememberedEmail', email);
+                } else {
+                    localStorage.removeItem('rememberedEmail');
+                }
+
+                // Redirecionamento baseado na role
+                if (data.usuario.role === 'LINA_OWNER') {
+                    window.location.href = 'admin/dashboard.html'; // Caminho correto para o painel do owner
+                    return;
+                }
+
+                // --- NOVA LÓGICA DE REDIRECIONAMENTO ---
+                // Se o usuário é uma subconta, ele terá um `empresaId` no objeto de usuário.
+                if (data.usuario.empresaId) {
+                    // É uma subconta. Salva o ID da empresa e vai direto para o dashboard.
+                    localStorage.setItem('empresaId', data.usuario.empresaId);
+                    window.location.href = 'index.html';
+                } else {
+                    // É um usuário dono. Verifica se ele tem empresas para selecionar.
+                    const empresas = await window.api.getEmpresasDoUsuario();
+                    if (empresas && empresas.length > 0) {
+                        window.location.href = 'selecionar-empresa.html';
+                    } else {
+                        window.location.href = 'nova-empresa.html';
+                    }
+                }
+
+            } catch (error) {
+                console.error("Erro no login:", error);
+                // Verifica se o erro é de empresa desativada
+                if (error && error.error && error.error.includes('desativada')) {
+                    showCustomAlert({ title: 'Acesso Bloqueado', message: error.error });
+                } else {
+                    // Para outros erros, mantém o toast
+                    showToast(error.message || 'Erro de conexão. Tente novamente.', 'error');
+                }
+            } finally {
+                // Habilitar botão e restaurar texto
+                submitBtn.disabled = false;
+                btnSpan.textContent = 'Entrar';
+            }
+        });
+    </script>
+</body>
+</html>

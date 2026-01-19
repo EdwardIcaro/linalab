@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Detalhes do Fechamento</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="api.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .summary-card { background-color: var(--white); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; }
+        .summary-card .label { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+        .summary-card .value { font-size: 24px; font-weight: 700; }
+        .diferenca-positiva { color: #10B981; }
+        .diferenca-negativa { color: #EF4444; }
+
+        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 16px; text-align: left; font-size: 14px; white-space: nowrap; }
+        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); }
+        tbody tr:last-child { border-bottom: none; }
+        td { color: var(--text-primary); font-weight: 500; }
+        .valor-saida { color: #EF4444; font-weight: 600; }
+        .valor-entrada { color: #10B981; font-weight: 600; }
+
+        .tipo-bg { color: white; font-weight: 600; padding: 4px 12px; border-radius: 6px; text-align: center; }
+        .tipo-bg-SANGRIA { background-color: #D97706; }
+        .tipo-bg-SAIDA, .tipo-bg-VALE { background-color: #DC2626; }
+        .tipo-bg-FECHAMENTO { background-color: #2563EB; }
+        .tipo-bg-PAGAMENTO { background-color: #16A34A; }
+
+        .time-part {
+            background-color: var(--background-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header"><div class="logo"><i class="fas fa-car-wash"></i><h1>LinaX</h1></div></div>
+            <ul class="nav-links">
+                <li><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                <li><a href="selecionar-tipo-veiculo.html"><i class="fas fa-plus-circle"></i><span>Nova Ordem</span></a></li>
+                <li><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                <li><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                <li><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                <li><a href="financeiro.html" class="active"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                <li><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+            </ul>
+            <div class="sidebar-footer"><div id="user-info"></div><button onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button></div>
+        </nav>
+
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h2 id="pageTitle">Detalhes do Fechamento</h2>
+                    <p id="pageSubtitle">Análise detalhada do fechamento de caixa.</p>
+                </div>
+                <a href="financeiro.html" class="btn-secondary"><i class="fas fa-arrow-left mr-2"></i> Voltar para o Histórico</a>
+            </header>
+
+            <div id="loader" class="text-center p-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+                <p class="mt-4">Carregando detalhes...</p>
+            </div>
+
+            <div id="content" style="display: none;">
+                <!-- Resumo do Fechamento -->
+                <section class="card mb-6 p-6">
+                    <h3 class="text-xl font-semibold mb-4">Resumo do Fechamento</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <div class="label">Faturamento (Sistema)</div>
+                            <div id="faturamentoDia" class="value">R$ 0,00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="label">Total Informado</div>
+                            <div id="totalInformado" class="value">R$ 0,00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="label">Diferença</div>
+                            <div id="diferenca" class="value">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 mt-4">
+                        <div class="summary-card">
+                            <div class="label">PIX Informado</div>
+                            <div id="valorPix" class="value">R$ 0,00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="label">Dinheiro Informado</div>
+                            <div id="valorDinheiro" class="value">R$ 0,00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="label">Cartão Informado</div>
+                            <div id="valorCartao" class="value">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <div id="observacaoContainer" class="mt-4" style="display: none;">
+                        <h4 class="font-semibold">Observação:</h4>
+                        <p id="observacaoText" class="text-secondary p-2 bg-gray-100 rounded"></p>
+                    </div>
+                </section>
+
+                <!-- Histórico de Movimentações do Dia -->
+                <section class="card">
+                    <h3 class="text-xl font-semibold mb-4">Movimentações do Dia</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th>Forma Pag.</th>
+                                    <th style="text-align: right;">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movimentacoesDiaBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            loadFechamentoDetails();
+        });
+
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const empresaNome = localStorage.getItem('empresaNome') || 'Empresa';
+            document.getElementById('user-info').innerHTML = `<div class="user-details"><p class="user-name">${empresaNome}</p><p class="user-role">Admin</p></div>`;
+        }
+
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) window.api.logout();
+        }
+
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+        async function loadFechamentoDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const fechamentoId = params.get('id');
+
+            if (!fechamentoId) {
+                alert('ID do fechamento não encontrado.');
+                window.location.href = 'financeiro.html';
+                return;
+            }
+
+            try {
+                const data = await window.api.getFechamentoById(fechamentoId);
+                renderPage(data);
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do fechamento:', error);
+                document.getElementById('loader').innerHTML = '<p class="text-red-500">Erro ao carregar dados.</p>';
+            }
+        }
+
+        function renderPage(data) {
+            const { fechamento, movimentacoes } = data;
+
+            // --- Preencher Header e Resumo ---
+            const dataFechamento = new Date(fechamento.data).toLocaleDateString('pt-BR');
+            document.getElementById('pageTitle').textContent = `Detalhes do Fechamento`;
+            document.getElementById('pageSubtitle').textContent = `Análise detalhada do dia ${dataFechamento}`;
+
+            document.getElementById('faturamentoDia').textContent = formatCurrency(fechamento.faturamentoDia);
+            document.getElementById('valorPix').textContent = formatCurrency(fechamento.pix);
+            document.getElementById('valorDinheiro').textContent = formatCurrency(fechamento.dinheiro);
+            document.getElementById('valorCartao').textContent = formatCurrency(fechamento.cartao);
+
+            const totalInformado = parseFloat(fechamento.pix) + parseFloat(fechamento.dinheiro) + parseFloat(fechamento.cartao);
+            document.getElementById('totalInformado').textContent = formatCurrency(totalInformado);
+
+            const diferencaEl = document.getElementById('diferenca');
+            diferencaEl.textContent = formatCurrency(fechamento.diferenca);
+            diferencaEl.className = 'value'; // Reset class
+            if (fechamento.diferenca > 0) {
+                diferencaEl.classList.add('diferenca-positiva');
+            } else if (fechamento.diferenca < 0) {
+                diferencaEl.classList.add('diferenca-negativa');
+            }
+
+            if (fechamento.observacao) {
+                document.getElementById('observacaoContainer').style.display = 'block';
+                document.getElementById('observacaoText').textContent = fechamento.observacao;
+            }
+
+            // --- Preencher Tabela de Movimentações ---
+            const tableBody = document.getElementById('movimentacoesDiaBody');
+            tableBody.innerHTML = '';
+
+            if (movimentacoes.length > 0) {
+                movimentacoes.forEach(reg => {
+                    const row = document.createElement('tr');
+                    const isEntrada = reg.tipo === 'PAGAMENTO';
+                    let tipoClasse = `tipo-bg tipo-bg-${reg.tipo}`;
+                    if (reg.lavadorId) {
+                        tipoClasse = 'tipo-bg tipo-bg-VALE';
+                    }
+
+                    row.innerHTML = `
+                        <td><span class="time-part">${new Date(reg.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></td>
+                        <td><span class="${tipoClasse}">${reg.tipo}</span></td>
+                        <td>${reg.lavador ? `Vale para: <strong>${reg.lavador.nome}</strong>` : reg.descricao}</td>
+                        <td>${reg.formaPagamento}</td>
+                        <td class="${isEntrada ? 'valor-entrada' : 'valor-saida'}" style="text-align: right;">
+                            ${isEntrada ? '+' : '-'} ${formatCurrency(reg.valor)}
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center p-8">Nenhuma movimentação neste dia.</td></tr>';
+            }
+
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

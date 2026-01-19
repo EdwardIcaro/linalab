@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Clientes</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 16px; text-align: left; font-size: 14px; color: var(--text-primary); white-space: nowrap; }
+        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); transition: background-color 0.2s ease; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background-color: var(--background-light); }
+        .actions-cell { text-align: right; }
+        .actions-cell button { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s ease; color: var(--text-secondary); background-color: transparent; margin-left: 4px; }
+        .actions-cell button:hover { color: var(--text-primary); background-color: #e5e7eb; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; inset: 0; background-color: rgba(16, 24, 40, 0.6); backdrop-filter: blur(4px);
+            z-index: 50; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+            overflow-y: auto; padding: 2rem 0;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--white); border-radius: 16px; padding: 24px;
+            width: 90%; max-width: 600px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            transform: scale(0.95); transition: transform 0.3s ease; margin: auto;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .modal-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: all 0.2s ease; }
+        .modal-close:hover { color: var(--text-primary); background-color: var(--background-light); }
+        .modal-actions { display: flex; gap: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border-color); justify-content: flex-end; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; color: var(--text-secondary); font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+        .form-input { width: 100%; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; color: var(--text-primary); font-size: 14px; }
+        .form-input:focus { outline: none; border-color: var(--primary-purple); box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.1); }
+
+        .search-wrapper { position: relative; display: flex; align-items: center; max-width: 400px; }
+        .search-wrapper i { position: absolute; left: 16px; color: var(--text-secondary); }
+        .search-input { background-color: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px 12px 40px; font-size: 14px; width: 100%; color: var(--text-primary); }
+    
+        .hidden { display: none; }
+        .space-y-2 > * { margin-top: 0.5rem; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Details Modal Styles */
+        .details-section { margin-bottom: 24px; }
+        .details-section h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+        .details-card { background-color: var(--background-light); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .details-card-empty { text-align: center; color: var(--text-secondary); font-size: 14px; padding: 20px; }
+
+        /* Contêiner para rolagem horizontal */
+        .details-grid-horizontal {
+            display: flex;
+            flex-wrap: nowrap; /* Impede que os itens quebrem a linha */
+            overflow-x: auto; /* Habilita a rolagem horizontal */
+            overflow-y: hidden; /* Esconde a rolagem vertical se aparecer */
+            -webkit-overflow-scrolling: touch; /* Melhora a rolagem em dispositivos touch */
+            gap: 16px; /* Aumenta o espaçamento entre os cards */
+            padding-bottom: 10px; /* Espaço para a barra de rolagem */
+            /* Esconde a barra de rolagem padrão */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .details-grid-horizontal { user-select: none; -webkit-user-select: none; -moz-user-select: none; cursor: grab; }
+        .details-grid-horizontal.active-drag { cursor: grabbing; }
+        /* Esconde a barra de rolagem para Webkit (Chrome, Safari) */
+        .details-grid-horizontal::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Estilo dos cards de veículo e ordem */
+        .vehicle-card, .order-card-details {
+            flex-shrink: 0; /* Impede que os cards encolham */
+            width: 180px; /* Largura fixa */
+            height: 150px; /* Altura fixa */
+            display: flex;
+            flex-direction: column; /* Conteúdo empilhado verticalmente */
+            justify-content: space-between; /* Distribui o conteúdo verticalmente */
+            align-items: center; /* Centraliza horizontalmente */
+            gap: 5px; /* Espaçamento menor entre os itens internos */
+            background-color: var(--background-light); /* Cor de fundo sutil */
+            padding: 16px 10px; /* Aumenta o padding vertical */
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            box-shadow: var(--shadow-light); /* Sombra leve */
+            cursor: pointer; /* Indica que o card pode ser clicado */
+            transition: all 0.2s ease;
+        }
+        .vehicle-card:hover, .order-card-details:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Estilos específicos para o card de veículo */
+        .vehicle-card .icon { font-size: 32px; margin-bottom: 8px; color: var(--primary-color); }
+        .vehicle-card .plate { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .vehicle-card .model { font-size: 12px; color: var(--text-primary); opacity: 0.8; } /* Alterado para preto com opacidade */
+
+        /* Estilos específicos para o card de ordem */
+        .order-card-details .order-header {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .order-card-details .id { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .order-card-details .service { font-size: 12px; color: var(--text-primary); opacity: 0.8; } /* Alterado para preto com opacidade */
+
+        .order-card-details .order-value-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        .order-card-details .order-value-icon { font-size: 18px; color: #10B981; } /* Cor verde para ganhos */
+        .order-card-details .order-total-value { font-size: 18px; font-weight: 700; color: #10B981; } /* Cor verde para ganhos */
+        .order-card-details .date { font-size: 11px; color: var(--text-primary); opacity: 0.7; } /* Alterado para preto com opacidade */
+
+
+        .details-summary {
+            border-top: 1px solid var(--border-color); padding-top: 24px; margin-top: 24px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;
+        }
+        .summary-item { display: flex; flex-direction: column; }
+        .summary-item .label { font-size: 13px; color: var(--text-primary); margin-bottom: 4px; } /* Alterado para preto */
+        .summary-item .value { font-size: 14px; font-weight: 600; color: var(--primary-color); } /* Alterado para azul turquesa */
+
+        /* Ajustes para o contêiner de cards dentro do modal */
+        #clientVehiclesList, #clientOrdersList {
+            padding: 0; /* Remove o padding do details-card para que o scroll fique mais fluido */
+            background-color: transparent; /* Remove o background do details-card, o card interno já tem */
+            box-shadow: none; /* Remove a sombra do details-card */
+            border: none; /* Remove a borda do details-card */
+        }
+
+        .status-badge {
+            padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap;
+        }
+        .status-PENDENTE { background-color: #FEF3C7; color: #92400E; }
+        .status-EM_ANDAMENTO { background-color: #DBEAFE; color: #1E40AF; }
+        .status-FINALIZADO { background-color: #D1FAE5; color: #065F46; }
+        .status-CANCELADO { background-color: #FEE2E2; color: #991B1B; }
+    </style>
+</head>
+<body id="clientes-page">
+    <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
+    <div id="screenLockModal" class="screen-lock-overlay">
+        <div class="screen-lock-content">
+            <i class="fas fa-lock screen-lock-icon"></i>
+            <h2>Acesso Negado</h2>
+            <p>Você não tem permissão para visualizar esta página. Redirecionando...</p>
+        </div>
+    </div>
+    
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li data-permission="ver_dashboard"><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li data-permission="gerenciar_clientes"><a href="clientes.html" class="active"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li data-permission="ver_financeiro"><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-title">
+                <h2>Gerenciamento de Clientes</h2>
+                <p>Adicione, edite e visualize seus clientes.</p>
+            </div>
+            <div class="header-controls">
+                <button onclick="openClientModal()" class="btn-primary">
+                    <i class="fas fa-plus"></i>
+                    <span>Novo Cliente</span>
+                </button>
+            </div>
+        </header>
+
+        <section class="card mb-6 p-4">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Buscar por nome ou telefone..." class="search-input">
+            </div>
+        </section>
+
+        <div class="table-wrapper card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Veículos</th>
+                        <th>Total Gasto</th>
+                        <th class="actions-cell">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="clientsTableBody">
+                    <!-- Client rows will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <!-- Client Edit/Create Modal -->
+    <div id="clientModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="clientModalTitle" class="modal-title">Novo Cliente</h2>
+                <button onclick="closeClientModal()" class="modal-close">&times;</button>
+            </div>
+            <form id="clientForm">
+                <input type="hidden" id="clientId">
+                <div class="form-group">
+                    <label for="clientName" class="form-label">Nome</label>
+                    <input type="text" id="clientName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="clientPhone" class="form-label">Telefone</label>
+                    <input type="tel" id="clientPhone" class="form-input">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeClientModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Client Details Modal -->
+    <div id="clientDetailsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="clientDetailsTitle" class="modal-title">Detalhes do Cliente</h2>
+                <button onclick="closeClientDetailsModal()" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="details-section">
+                    <h3>Veículos</h3>
+                    <div id="clientVehiclesList" class="details-card" style="padding: 0; background-color: transparent; box-shadow: none; border: none;">
+                        <div id="clientVehiclesGrid" class="details-grid-horizontal">
+                            <!-- Vehicle cards will be injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="details-section">
+                    <h3>Últimas Ordens</h3>
+                    <div id="clientOrdersList" class="details-card" style="padding: 0; background-color: transparent; box-shadow: none; border: none;">
+                        <div id="clientOrdersGrid" class="details-grid-horizontal">
+                            <!-- Order cards will be injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div id="clientSummary" class="details-summary">
+                    <!-- Summary items will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Edit Modal -->
+    <div id="vehicleModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="vehicleModalTitle" class="modal-title">Editar Veículo</h2>
+                <button onclick="closeModal('vehicleModal')" class="modal-close">&times;</button>
+            </div>
+            <form id="vehicleForm">
+                <input type="hidden" id="vehicleId">
+                <input type="hidden" id="vehicleClientId">
+                <div class="form-group">
+                    <label for="vehiclePlaca" class="form-label">Placa</label>
+                    <input type="text" id="vehiclePlaca" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="vehicleModelo" class="form-label">Modelo</label>
+                    <input type="text" id="vehicleModelo" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="vehicleCor" class="form-label">Cor</label>
+                    <input type="text" id="vehicleCor" class="form-input">
+                </div>
+                <div class="modal-actions" style="justify-content: space-between;">
+                    <button type="button" onclick="handleDeleteVehicle()" class="btn btn-danger">Excluir Veículo</button>
+                    <button type="button" onclick="closeModal('vehicleModal')" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
+    <script src="theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            enforcePermission('gerenciar_clientes');
+            updateMenuVisibility(); // Adiciona a chamada que estava faltando
+            if (window.initializeUserMenu) initializeUserMenu();
+            if (window.applyTheme) applyTheme();
+
+            loadClients();
+
+            const searchInput = document.getElementById('searchInput');
+            let searchTimeout;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    loadClients(1, searchInput.value);
+                }, 300); // Debounce search
+            });
+            
+            document.getElementById('clientForm').addEventListener('submit', saveClient);
+            document.getElementById('vehicleForm').addEventListener('submit', saveVehicle);
+        });
+
+        function checkAuthentication() {
+            if (!window.api.isAuthenticated()) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function logout() {
+            window.api.logout();
+        }
+
+        async function loadClients(page = 1, search = '') {
+            try {
+                const response = await window.api.getClientes(page, 10, search);
+                const clients = response.clientes || [];
+                const tableBody = document.getElementById('clientsTableBody');
+                tableBody.innerHTML = '';
+                clients.forEach(client => {
+                    const row = tableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${client.nome}</td>
+                        <td>${client.telefone || 'N/A'}</td>
+                        <td>${client.veiculos?.length || 0}</td>
+                        <td>${formatCurrency(client._sum?.valorTotal || 0)}</td>
+                        <td class="actions-cell">
+                            <button onclick="showClientDetails('${client.id}')" class="btn-sm btn-info" title="Detalhes"><i class="fas fa-eye"></i></button>
+                            <button onclick="openClientModal('${client.id}')" class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                            <button onclick="deleteClient('${client.id}')" class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                });
+                // TODO: Add pagination controls logic based on response.pagination
+            } catch (error) {
+                console.error('Erro ao carregar clientes:', error);
+                document.getElementById('clientsTableBody').innerHTML = '<tr><td colspan="5">Erro ao carregar clientes.</td></tr>';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const d = new Date(dateString);
+            return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('pt-BR');
+        }
+
+        // Função para adicionar funcionalidade de scroll com click-and-drag
+        function makeScrollableWithDrag(elementId) {
+            const slider = document.getElementById(elementId);
+            if (!slider) return;
+
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            slider.addEventListener('mousedown', (e) => {
+                isDown = true;
+                slider.classList.add('active-drag'); // Opcional: Adicionar classe para feedback visual
+                startX = e.pageX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+            });
+            slider.addEventListener('mouseleave', () => { isDown = false; slider.classList.remove('active-drag'); });
+            slider.addEventListener('mouseup', () => { isDown = false; slider.classList.remove('active-drag'); });
+            slider.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - slider.offsetLeft;
+                const walk = (x - startX) * 1.5; // Ajuste a velocidade da rolagem
+                slider.scrollLeft = scrollLeft - walk;
+            });
+        }
+
+        async function showClientDetails(id) {
+            try {
+                const client = await window.api.getClienteById(id);
+                if (!client) {
+                    alert('Cliente não encontrado.');
+                    return;
+                }
+
+                document.getElementById('clientDetailsTitle').textContent = `Detalhes de ${client.nome}`;
+
+                // Populate Vehicles
+                const vehiclesGrid = document.getElementById('clientVehiclesGrid');
+                vehiclesGrid.innerHTML = ''; // Limpa o conteúdo
+                // Garante que o contêiner de veículos tenha a classe para rolagem
+                vehiclesGrid.classList.add('details-grid-horizontal');
+                if (client.veiculos && client.veiculos.length > 0) {
+                    client.veiculos.forEach(v => { 
+                        const vehicleCard = document.createElement('div');
+                        vehicleCard.className = 'vehicle-card';
+                        vehicleCard.innerHTML = `
+                            <i class="fas fa-car icon"></i>
+                            <div class="plate">${v.placa.startsWith('SEM-PLACA') ? 'Sem Placa' : v.placa}</div>
+                            <div class="model">${v.modelo || 'N/A'} - ${v.cor || 'N/A'}</div>
+                        `;
+                        vehicleCard.ondblclick = () => openVehicleModal(v, client.id);
+                        vehiclesGrid.appendChild(vehicleCard);
+                    });
+                } else { // Se não houver veículos, exibe a mensagem de vazio no contêiner principal
+                    document.getElementById('clientVehiclesList').innerHTML = '<div class="details-card-empty">Nenhum veículo cadastrado.</div>';
+                }
+
+                // Populate Orders
+                const ordersGrid = document.getElementById('clientOrdersGrid');
+                ordersGrid.innerHTML = ''; // Limpa o conteúdo
+                // Garante que o contêiner de ordens tenha a classe para rolagem
+                ordersGrid.classList.add('details-grid-horizontal');
+                if (client.ordens && client.ordens.length > 0) {
+                    client.ordens.forEach(o => {
+                        const servicesText = o.items.map(item => item.servico?.nome || item.adicional?.nome).filter(Boolean).join(', ') || 'Serviço não informado';
+                        ordersGrid.innerHTML += `
+                            <div class="order-card-details">
+                                <div class="order-header">
+                                    <div class="id">Ordem #${o.numeroOrdem}</div>
+                                    <div class="service">${servicesText}</div>
+                                </div>
+                                <div class="order-value-section">
+                                    <i class="fas fa-money-bill-wave order-value-icon"></i>
+                                    <strong class="order-total-value">${formatCurrency(o.valorTotal)}</strong>
+                                </div>
+                                <div class="date">${formatDate(o.createdAt)}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    document.getElementById('clientOrdersList').innerHTML = '<div class="details-card-empty">Nenhuma ordem encontrada.</div>';
+                }
+
+                // Populate Summary
+                const summary = document.getElementById('clientSummary');
+                const totalGasto = client.ordens?.reduce((acc, o) => acc + o.valorTotal, 0) || 0;
+                summary.innerHTML = `
+                    <div class="summary-item">
+                        <span class="label">Criado em</span>
+                        <span class="value">${formatDate(client.createdAt)}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Telefone</span>
+                        <span class="value">${client.telefone || 'N/A'}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total de Ordens</span>
+                        <span class="value">${client.ordens?.length || 0}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total Gasto</span>
+                        <span class="value">${formatCurrency(totalGasto)}</span>
+                    </div>
+                `;
+
+                document.getElementById('clientDetailsModal').classList.add('active');
+
+                // Ativa a rolagem com click-and-drag após o modal ser aberto e preenchido
+                makeScrollableWithDrag('clientVehiclesGrid');
+                makeScrollableWithDrag('clientOrdersGrid');
+
+            } catch (error) {
+                console.error(`Erro ao buscar detalhes do cliente ${id}:`, error);
+                alert('Não foi possível carregar os detalhes do cliente.');
+            }
+        }
+
+        function closeClientDetailsModal() {
+            document.getElementById('clientDetailsModal').classList.remove('active');
+        }
+
+        async function openClientModal(id = null) {
+            const form = document.getElementById('clientForm');
+            form.reset();
+            document.getElementById('clientId').value = '';
+            const modalTitle = document.getElementById('clientModalTitle');
+            
+            if (id) {
+                modalTitle.textContent = 'Editar Cliente';
+                try {
+                    const client = await window.api.getClienteById(id);
+                    if (client) {
+                        document.getElementById('clientId').value = client.id;
+                        document.getElementById('clientName').value = client.nome;
+                        document.getElementById('clientPhone').value = client.telefone;
+                    }
+                } catch (error) { 
+                    console.error(`Erro ao buscar cliente ${id}:`, error);
+                    alert('Não foi possível carregar os dados do cliente.');
+                    return;
+                }
+            } else {
+                modalTitle.textContent = 'Novo Cliente';
+            }
+            document.getElementById('clientModal').classList.add('active');
+        }
+
+        function closeClientModal() {
+            document.getElementById('clientModal').classList.remove('active');
+        }
+
+        async function saveClient(event) {
+            event.preventDefault();
+            const id = document.getElementById('clientId').value;
+            const data = {
+                nome: document.getElementById('clientName').value,
+                telefone: document.getElementById('clientPhone').value,
+            };
+
+            try {
+                if (id) {
+                    await window.api.updateCliente(id, data);
+                } else {
+                    await window.api.createCliente(data);
+                }
+                closeClientModal();
+                loadClients(); // Reload the list
+            } catch (error) {
+                console.error('Erro ao salvar cliente:', error);
+                alert('Erro ao salvar cliente. Verifique o console para mais detalhes.');
+            }
+        }
+
+        async function deleteClient(id) {
+            if (confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.')) {
+                try {
+                    await window.api.deleteCliente(id);
+                    loadClients();
+                } catch (error) {
+                    console.error('Erro ao excluir cliente:', error);
+                    alert('Erro ao excluir cliente.');
+                }
+            }
+        }
+
+        // --- Vehicle Modal Logic ---
+        function openVehicleModal(vehicle, clientId) {
+            const form = document.getElementById('vehicleForm');
+            form.reset();
+            document.getElementById('vehicleModalTitle').textContent = 'Editar Veículo';
+            document.getElementById('vehicleId').value = vehicle.id;
+            document.getElementById('vehicleClientId').value = clientId;
+            document.getElementById('vehiclePlaca').value = vehicle.placa.startsWith('SEM-PLACA') ? 'SEM PLACA' : vehicle.placa;
+            document.getElementById('vehicleModelo').value = vehicle.modelo || '';
+            document.getElementById('vehicleCor').value = vehicle.cor || '';
+
+            // Trava o campo de placa se for "SEM PLACA"
+            document.getElementById('vehiclePlaca').readOnly = vehicle.placa.startsWith('SEM-PLACA');
+
+            openModal('vehicleModal');
+        }
+
+        async function saveVehicle(event) {
+            event.preventDefault();
+            const id = document.getElementById('vehicleId').value;
+            const placaInput = document.getElementById('vehiclePlaca');
+            let placaValue = placaInput.value.trim().toUpperCase();
+
+            // Se o campo estiver travado como "SEM PLACA", não envie esse valor literal
+            if (placaInput.readOnly && placaValue === 'SEM PLACA') {
+                // Não incluímos a placa no payload de atualização para não alterá-la
+                placaValue = undefined;
+            }
+
+            const data = {
+                placa: placaValue,
+                modelo: document.getElementById('vehicleModelo').value,
+                cor: document.getElementById('vehicleCor').value,
+            };
+
+            try {
+                await window.api.updateVeiculo(id, data);
+                showToast('Veículo atualizado com sucesso!', 'success');
+                closeModal('vehicleModal');
+                // Recarrega os detalhes do cliente para mostrar a alteração
+                showClientDetails(document.getElementById('vehicleClientId').value);
+            } catch (error) {
+                console.error('Erro ao salvar veículo:', error);
+                showToast(error.error || 'Erro ao salvar veículo.', 'error');
+            }
+        }
+
+        function handleDeleteVehicle() {
+            const vehicleId = document.getElementById('vehicleId').value;
+            const clientId = document.getElementById('vehicleClientId').value;
+            showCustomConfirm({
+                title: 'Excluir Veículo',
+                message: 'Tem certeza que deseja excluir este veículo? Esta ação não pode ser desfeita.',
+                onConfirm: async () => {
+                    try {
+                        await window.api.deleteVeiculo(vehicleId);
+                        showToast('Veículo excluído com sucesso!', 'success');
+                        closeModal('vehicleModal');
+                        showClientDetails(clientId); // Recarrega os detalhes
+                    } catch (error) { showToast(error.error || 'Erro ao excluir veículo.', 'error'); }
+                }
+            });
+        }
+
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+    </script>
+</body>
+</html>

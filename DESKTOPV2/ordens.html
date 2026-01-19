@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Ordens de Serviço</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
+    <script src="theme.js"></script>
+    <style>
+        /* Custom Select Styling */
+        .custom-select-wrapper {
+            position: relative;
+        }
+
+        .custom-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: var(--white);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 40px 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .custom-select:hover {
+            border-color: var(--primary-color);
+        }
+
+        .custom-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        .custom-select-wrapper::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            transition: transform 0.2s;
+        }
+
+        .custom-select:focus + .custom-select-wrapper::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        /* Stats Cards - Apenas do dia */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card-modern {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .stat-card-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon-modern {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stat-icon-modern.pending {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+        }
+
+        .stat-icon-modern.progress {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .stat-icon-modern.revenue {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #007a8a 100%);
+            color: white;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Filters */
+        .filters-modern {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 16px;
+            color: var(--text-secondary);
+        }
+
+        .filter-input {
+            background: var(--white);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.2s;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .filter-input.search {
+            padding-left: 40px;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--background-light);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .view-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .view-btn.active {
+            background: var(--white);
+            color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        /* Cards View - COMPACTOS */
+        .orders-grid {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+        }
+
+        .orders-grid.active {
+            display: grid;
+        }
+
+        .order-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .order-number {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .order-status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-PENDENTE {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-EM_ANDAMENTO {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-FINALIZADO {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-CANCELADO {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .order-compact-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .compact-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .compact-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .compact-value {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .order-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .order-total {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .order-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .order-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .order-action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Table View */
+        .table-view {
+            display: none;
+        }
+
+        .table-view.active {
+            display: block;
+        }
+
+        .cards-view.active {
+            display: grid;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        thead th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: var(--background-light);
+        }
+
+        .veiculo-cell {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .veiculo-cell span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Modais (copiados do original) */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 550px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--background-light);
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Payment Modal Styles */
+        .payment-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .remaining-amount {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .payment-input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        #paymentValueInput {
+            font-size: 28px;
+            font-weight: 700;
+            text-align: right;
+            padding: 16px 20px 16px 50px;
+        }
+
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .payment-method-btn {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--white);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .payment-method-btn:hover {
+            background: var(--primary-color-light);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .payment-method-btn.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .payment-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: var(--background-light);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .remove-payment-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .remove-payment-btn:hover {
+            color: #ef4444;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+
+            .orders-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="ordens.html" class="active"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-title">
+                <h2><i class="fas fa-clipboard-list"></i> Ordens Ativas</h2>
+                <p>Ordens pendentes e em andamento</p>
+            </div>
+            <div class="header-controls">
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="switchView('cards')">
+                        <i class="fas fa-th-large"></i> Cards
+                    </button>
+                    <button class="view-btn" onclick="switchView('table')">
+                        <i class="fas fa-table"></i> Tabela
+                    </button>
+                </div>
+                <a href="historico.html" class="btn-secondary">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Grid - Apenas ordens DO DIA -->
+        <div class="stats-grid">
+            <div class="stat-card-modern">
+                <div class="stat-icon-modern pending">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Pendentes Hoje</div>
+                    <div class="stat-value" id="statPending">0</div>
+                </div>
+            </div>
+            <div class="stat-card-modern">
+                <div class="stat-icon-modern progress">
+                    <i class="fas fa-spinner"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Em Andamento Hoje</div>
+                    <div class="stat-value" id="statProgress">0</div>
+                </div>
+            </div>
+            <div class="stat-card-modern">
+                <div class="stat-icon-modern revenue">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Faturamento Previsto Hoje</div>
+                    <div class="stat-value" id="statRevenue">R$ 0,00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-modern">
+            <div class="filter-row">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar por placa, cliente ou número..." class="filter-input search">
+                </div>
+                <div class="custom-select-wrapper">
+                    <select id="statusFilter" class="custom-select">
+                        <option value="">Todos Status</option>
+                        <option value="PENDENTE">Pendente</option>
+                        <option value="EM_ANDAMENTO">Em Andamento</option>
+                    </select>
+                </div>
+                <div class="custom-select-wrapper">
+                    <select id="washerFilter" class="custom-select">
+                        <option value="">Todos Lavadores</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards View -->
+        <div class="orders-grid cards-view active" id="ordersCardsView"></div>
+
+        <!-- Table View -->
+        <div class="table-view" id="ordersTableView">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ordem</th>
+                            <th>Status</th>
+                            <th>Veículo</th>
+                            <th>Cliente</th>
+                            <th>Lavador</th>
+                            <th style="text-align: right;">Total</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Edição -->
+    <div id="editOrderModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Editar Ordem</h2>
+                <button onclick="closeEditModal()" class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="hidden" id="editOrderId">
+            
+            <div class="form-group">
+                <label class="form-label">Itens</label>
+                <ul id="editItemsList" style="list-style: none; padding: 0;"></ul>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Adicionar Serviço</label>
+                <div style="display: flex; gap: 8px;">
+                    <select id="addServiceSelect" class="form-select" style="flex: 1;"></select>
+                    <button onclick="addItemToModal('SERVICO')" class="btn-primary" style="padding: 0 12px;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Adicionar Adicional</label>
+                <div style="display: flex; gap: 8px;">
+                    <select id="addAdicionalSelect" class="form-select" style="flex: 1;"></select>
+                    <button onclick="addItemToModal('ADICIONAL')" class="btn-primary" style="padding: 0 12px;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Lavador</label>
+                <select id="editLavador" class="form-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="editStatus" class="form-select">
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="EM_ANDAMENTO">Em Andamento</option>
+                    <option value="FINALIZADO">Finalizado</option>
+                    <option value="CANCELADO">Cancelado</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="closeEditModal()" class="btn btn-secondary">Cancelar</button>
+                <button onclick="handleUpdateOrder()" class="btn btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Pagamento -->
+    <div id="paymentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Registrar Pagamento</h2>
+                <button onclick="closePaymentModal()" class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="hidden" id="paymentOrderId">
+
+            <div class="payment-header">
+                <p style="font-size: 14px; color: var(--text-secondary);">Valor Restante</p>
+                <p id="paymentOrderRemaining" class="remaining-amount">R$ 0,00</p>
+                <p style="font-size: 14px; color: var(--text-secondary);">
+                    Total: <span id="paymentOrderTotal">R$ 0,00</span> | 
+                    Pago: <span id="paymentOrderPaid">R$ 0,00</span>
+                </p>
+            </div>
+
+            <!-- NOVO: Link para mostrar/esconder a seção de desconto -->
+            <div style="text-align: center; margin: 16px 0;">
+                <a href="#" onclick="toggleDiscountSection(event)" style="color: var(--primary-color); font-weight: 600; font-size: 14px;">
+                    <i class="fas fa-tag"></i> Aplicar Desconto
+                </a>
+            </div>
+
+            <!-- Seção de Desconto (Agora escondida por padrão) -->
+            <div id="discountSection" style="display: none; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Desconto</label>
+                    <div style="display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center;">
+                        <div style="position: relative;">
+                            <input type="text" id="discountValueInput" class="form-input" placeholder="0,00" oninput="formatInputAsCurrency(this)">
+                            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);">R$</span>
+                        </div>
+                        <select id="discountTypeSelect" class="form-select">
+                            <option value="VALOR">Valor (R$)</option>
+                            <option value="PERCENTUAL">Porcentagem (%)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button onclick="applyDiscount()" class="btn-secondary" style="flex: 1;">Aplicar</button>
+                        <button onclick="removeDiscount()" class="btn-secondary" style="flex: 0; padding: 0 12px;" title="Remover Desconto"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-input-group">
+                <span class="currency-symbol">R$</span>
+                <input type="text" id="paymentValueInput" class="form-input" placeholder="0,00" oninput="formatInputAsCurrency(this)">
+            </div>
+
+            <button class="btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="fillRemainingAmount()">
+                Preencher Valor Restante
+            </button>
+
+            <p class="form-label">Adicionar pagamento como:</p>
+            <div class="payment-methods">
+                <button class="payment-method-btn" data-method="DINHEIRO" onclick="addPayment('DINHEIRO')">
+                    <i class="fas fa-money-bill-wave"></i> Dinheiro
+                </button>
+                <button class="payment-method-btn" data-method="PIX" onclick="addPayment('PIX')">
+                    <i class="fab fa-pix"></i> PIX
+                </button>
+                <button class="payment-method-btn" data-method="CARTAO" onclick="addPayment('CARTAO')">
+                    <i class="fas fa-credit-card"></i> Cartão
+                </button>
+                <button class="payment-method-btn pending" data-method="PENDENTE" onclick="addPayment('PENDENTE')">
+                    <i class="fas fa-clock"></i> Pendente
+                </button>
+                <button class="payment-method-btn" data-method="DEBITO_FUNCIONARIO" onclick="openDebitoFuncionarioModal()">
+                    <i class="fas fa-user-tag"></i> Débito Funcionário
+                </button>
+            </div>
+
+            <div id="addedPaymentsContainer" style="margin-top: 16px; display: none;">
+                <p class="form-label">Pagamentos adicionados:</p>
+                <div id="addedPaymentsList"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="closePaymentModal()" class="btn btn-secondary">Cancelar</button>
+                <button id="submitPaymentBtn" onclick="submitPayments()" class="btn btn-primary">
+                    Finalizar Ordem
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOVO: Modal para Débito de Funcionário -->
+    <div id="debitoFuncionarioModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Lançar Débito para Funcionário</h2>
+                <button onclick="closeModal('debitoFuncionarioModal')" class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-secondary mb-4">
+                Selecione o funcionário que assumirá o débito desta ordem. O valor total será lançado como um adiantamento para ele.
+            </p>
+            <div class="form-group">
+                <label for="debitoLavadorSelect" class="form-label">Funcionário</label>
+                <select id="debitoLavadorSelect" class="form-select"></select>
+            </div>
+            <p class="text-sm text-secondary mt-2">
+                <i class="fas fa-info-circle"></i>
+                Se o funcionário selecionado for o mesmo que realizou o serviço, a comissão <strong>não</strong> será creditada.
+            </p>
+            <div class="modal-actions">
+                <button onclick="closeModal('debitoFuncionarioModal')" class="btn btn-secondary">Cancelar</button>
+                <button onclick="confirmDebitoFuncionario()" class="btn btn-primary">Confirmar Débito</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+let currentView = 'cards';
+let allOrders = [];
+let itemsInModal = [];
+let allServices = [];
+let allAdicionais = [];
+let paymentMethodsConfig = {}; // NOVO: Armazenar a configuração de pagamentos
+let paymentOrder = { 
+    id: null, total: 0, remaining: 0, addedPayments: [], desconto: 0, valorFinal: 0
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthentication();
+    initializeUserMenu();
+    handleImpersonationBanner();
+    
+    const savedView = localStorage.getItem('ordensViewPreference') || 'cards';
+    currentView = savedView;
+    updateViewButtons();
+    loadPaymentMethodsConfig(); // CORREÇÃO: Nome da função corrigido
+    
+    loadInitialData();
+
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('washerFilter').addEventListener('change', applyFilters);
+});
+
+function updateViewButtons() {
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        const isCards = btn.querySelector('.fa-th-large');
+        if (isCards && currentView === 'cards') {
+            btn.classList.add('active');
+        } else if (!isCards && currentView === 'table') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    document.getElementById('ordersCardsView').classList.toggle('active', currentView === 'cards');
+    document.getElementById('ordersTableView').classList.toggle('active', currentView === 'table');
+}
+
+function checkAuthentication() {
+    if (!window.api.isAuthenticated()) {
+        window.location.href = 'login.html';
+    }
+}
+
+function logout() {
+    showCustomConfirm({
+        title: 'Confirmar Saída',
+        message: 'Tem certeza que deseja sair do sistema?',
+        onConfirm: () => window.api.logout()
+    });
+}
+
+// ============================================
+// NOVO: Carregar configurações da empresa
+// ============================================
+async function loadPaymentMethodsConfig() {
+    try {
+        const empresaId = localStorage.getItem('empresaId');
+        const empresa = await window.api.getEmpresaById(empresaId);
+        // Garante que o JSON seja parseado se for uma string
+        paymentMethodsConfig = typeof empresa.paymentMethodsConfig === 'string' 
+            ? JSON.parse(empresa.paymentMethodsConfig) 
+            : (empresa.paymentMethodsConfig || {});
+    } catch (error) {
+        console.error('Erro ao carregar configurações da empresa:', error);
+    }
+}
+
+async function loadInitialData() {
+    await Promise.all([
+        loadWashers(),
+        loadServicesAndAdicionais()
+    ]);
+    await loadOrders();
+}
+
+async function loadWashers() {
+    try {
+        const data = await window.api.getLavadoresSimple();
+        const washerFilter = document.getElementById('washerFilter');
+        (data.lavadores || []).forEach(lavador => {
+            const option = document.createElement('option');
+            option.value = lavador.id;
+            option.textContent = lavador.nome;
+            washerFilter.appendChild(option);
+        });
+
+        const debitoSelect = document.getElementById('debitoLavadorSelect');
+        debitoSelect.innerHTML = '<option value="">Selecione um funcionário</option>';
+        (data.lavadores || []).forEach(lavador => {
+            const option = document.createElement('option');
+            option.value = lavador.id;
+            option.textContent = lavador.nome;
+            debitoSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar lavadores:', error);
+    }
+}
+
+async function loadServicesAndAdicionais() {
+    try {
+        const [servicosData, adicionaisData] = await Promise.all([
+            window.api.getServicosSimple(),
+            window.api.getAdicionaisSimple()
+        ]);
+        allServices = servicosData.servicos || [];
+        allAdicionais = adicionaisData.adicionais || [];
+    } catch (error) {
+        console.error('Erro ao carregar serviços:', error);
+    }
+}
+
+async function loadOrders() {
+    try {
+        console.log('🔄 Carregando ordens ativas...');
+        
+        const data = await window.api.getOrdens(
+            1, 100, '', '', '', '', null, null, '', 'ativas'
+        );
+        
+        console.log('📦 Dados recebidos:', data);
+        
+        allOrders = data.ordens || [];
+        renderOrders(allOrders);
+        updateStats();
+    } catch (error) {
+        console.error('❌ Erro ao carregar ordens:', error);
+        showToast('Erro ao carregar ordens', 'error');
+    }
+}
+
+function renderOrders(orders) {
+    const cardsView = document.getElementById('ordersCardsView');
+    const tableBody = document.getElementById('ordersTableBody');
+    
+    cardsView.innerHTML = '';
+    tableBody.innerHTML = '';
+
+    if (orders.length === 0) {
+        const emptyMsg = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-secondary);">
+                <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                <p>Nenhuma ordem ativa no momento</p>
+            </div>
+        `;
+        cardsView.innerHTML = emptyMsg;
+        return;
+    }
+
+    orders.forEach(order => {
+        cardsView.appendChild(createOrderCard(order));
+        tableBody.appendChild(createOrderRow(order));
+    });
+}
+
+function createOrderCard(order) {
+    const card = document.createElement('div');
+    card.className = 'order-card';
+    card.dataset.orderId = order.id;
+    
+    const statusClass = `status-${order.status}`;
+    const statusMap = {
+        'PENDENTE': 'Pendente',
+        'EM_ANDAMENTO': 'Em Andamento'
+    };
+    const statusText = statusMap[order.status] || order.status;
+
+    card.innerHTML = `
+        <div class="order-card-header">
+            <span class="order-number">#${order.numeroOrdem}</span>
+            <span class="order-status-badge ${statusClass}">${statusText}</span>
+        </div>
+        <div class="order-compact-info">
+            <div class="compact-info-item">
+                <span class="compact-label">Cliente</span>
+                <span class="compact-value">${order.cliente.nome}</span>
+            </div>
+            <div class="compact-info-item">
+                <span class="compact-label">Placa</span>
+                <span class="compact-value">${order.veiculo.placa}</span>
+            </div>
+            <div class="compact-info-item">
+                <span class="compact-label">Veículo</span>
+                <span class="compact-value">${order.veiculo.modelo || 'N/A'}</span>
+            </div>
+            <div class="compact-info-item">
+                <span class="compact-label">Lavador</span>
+                <span class="compact-value">${order.lavador?.nome || 'Não atribuído'}</span>
+            </div>
+        </div>
+        <div class="order-card-footer">
+            <span class="order-total">${formatCurrency(order.valorTotal)}</span>
+            <div class="order-actions" onclick="event.stopPropagation()">
+                <button class="order-action-btn" onclick='handleEditOrder(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="order-action-btn" onclick='openPaymentModal(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Finalizar">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="order-action-btn" onclick="handleCancelOrder('${order.id}')" title="Cancelar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+function createOrderRow(order) {
+    const row = document.createElement('tr');
+    row.dataset.orderId = order.id;
+    
+    const statusClass = `status-${order.status}`;
+    const statusMap = {
+        'PENDENTE': 'Pendente',
+        'EM_ANDAMENTO': 'Em Andamento'
+    };
+    const statusText = statusMap[order.status] || order.status;
+
+    row.innerHTML = `
+        <td class="veiculo-cell">#${order.numeroOrdem}</td>
+        <td><span class="order-status-badge ${statusClass}">${statusText}</span></td>
+        <td class="veiculo-cell">${order.veiculo.modelo || 'N/A'}<span>${order.veiculo.placa}</span></td>
+        <td>${order.cliente.nome}</td>
+        <td>${order.lavador?.nome || 'N/A'}</td>
+        <td style="text-align: right; font-weight: 600;">${formatCurrency(order.valorTotal)}</td>
+        <td style="text-align: right;">
+            <button class="order-action-btn" onclick='handleEditOrder(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Editar">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="order-action-btn" onclick='openPaymentModal(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Finalizar">
+                <i class="fas fa-check-circle"></i>
+            </button>
+            <button class="order-action-btn" onclick="handleCancelOrder('${order.id}')" title="Cancelar">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+    `;
+
+    return row;
+}
+
+function switchView(view) {
+    currentView = view;
+    localStorage.setItem('ordensViewPreference', view);
+    updateViewButtons();
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    const washer = document.getElementById('washerFilter').value;
+
+    let filtered = allOrders;
+
+    if (search) {
+        filtered = filtered.filter(order => 
+            order.numeroOrdem.toString().toLowerCase().includes(search) ||
+            order.cliente.nome.toLowerCase().includes(search) ||
+            order.veiculo.placa.toLowerCase().includes(search)
+        );
+    }
+
+    if (status) {
+        filtered = filtered.filter(order => order.status === status);
+    }
+
+    if (washer) {
+        filtered = filtered.filter(order => order.lavadorId === washer);
+    }
+
+    renderOrders(filtered);
+}
+
+function updateStats() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayOrders = allOrders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        orderDate.setHours(0, 0, 0, 0);
+        return orderDate.getTime() === today.getTime();
+    });
+
+    const pending = todayOrders.filter(o => o.status === 'PENDENTE').length;
+    const progress = todayOrders.filter(o => o.status === 'EM_ANDAMENTO').length;
+    const revenue = todayOrders.reduce((sum, o) => sum + o.valorTotal, 0);
+
+    document.getElementById('statPending').textContent = pending;
+    document.getElementById('statProgress').textContent = progress;
+    document.getElementById('statRevenue').textContent = formatCurrency(revenue);
+}
+
+// ============================================
+// EDIÇÃO DE ORDEM
+// ============================================
+async function handleEditOrder(order) {
+    try {
+        const lavadoresData = await window.api.getLavadoresSimple();
+        
+        document.getElementById('editOrderId').value = order.id;
+
+        const lavadorSelect = document.getElementById('editLavador');
+        lavadorSelect.innerHTML = '<option value="">Não atribuído</option>';
+        lavadoresData.lavadores.forEach(lavador => {
+            lavadorSelect.innerHTML += `<option value="${lavador.id}">${lavador.nome}</option>`;
+        });
+        lavadorSelect.value = order.lavadorId || '';
+
+        document.getElementById('editStatus').value = order.status;
+
+        const serviceSelect = document.getElementById('addServiceSelect');
+        serviceSelect.innerHTML = '<option value="">Selecione</option>';
+        allServices.forEach(s => {
+            serviceSelect.innerHTML += `<option value="${s.id}" data-price="${s.preco}">${s.nome}</option>`;
+        });
+
+        const adicionalSelect = document.getElementById('addAdicionalSelect');
+        adicionalSelect.innerHTML = '<option value="">Selecione</option>';
+        allAdicionais.forEach(a => {
+            adicionalSelect.innerHTML += `<option value="${a.id}" data-price="${a.preco}">${a.nome}</option>`;
+        });
+
+        itemsInModal = order.items.map(item => ({
+            tipo: item.servicoId ? 'SERVICO' : 'ADICIONAL',
+            itemId: item.servicoId || item.adicionalId,
+            nome: item.servico?.nome || item.adicional?.nome,
+            quantidade: item.quantidade,
+            precoUnit: item.precoUnit
+        }));
+
+        renderItemsInModal();
+        document.getElementById('editOrderModal').classList.add('active');
+    } catch (error) {
+        console.error('Erro ao abrir edição:', error);
+        showToast('Erro ao abrir edição', 'error');
+    }
+}
+
+function renderItemsInModal() {
+    const list = document.getElementById('editItemsList');
+    list.innerHTML = '';
+    
+    if (itemsInModal.length === 0) {
+        list.innerHTML = '<li style="color: var(--text-secondary); font-size: 13px;">Nenhum item</li>';
+        return;
+    }
+
+    itemsInModal.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display: flex; justify-content: space-between; padding: 8px; background: var(--background-light); border-radius: 6px; margin-bottom: 6px;';
+        li.innerHTML = `
+            <span>${item.nome} (${formatCurrency(item.precoUnit)})</span>
+            <button onclick="removeItemFromModal(${index})" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        list.appendChild(li);
+    });
+}
+
+function addItemToModal(type) {
+    const selectId = type === 'SERVICO' ? 'addServiceSelect' : 'addAdicionalSelect';
+    const select = document.getElementById(selectId);
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (!selectedOption.value) {
+        showToast('Selecione um item', 'error');
+        return;
+    }
+
+    const itemId = selectedOption.value;
+    if (itemsInModal.some(i => i.itemId === itemId)) {
+        showToast('Item já adicionado', 'error');
+        return;
+    }
+
+    itemsInModal.push({
+        tipo: type,
+        itemId,
+        nome: selectedOption.text,
+        quantidade: 1,
+        precoUnit: parseFloat(selectedOption.dataset.price)
+    });
+
+    select.value = '';
+    renderItemsInModal();
+}
+
+function removeItemFromModal(index) {
+    itemsInModal.splice(index, 1);
+    renderItemsInModal();
+}
+
+function closeEditModal() {
+    document.getElementById('editOrderModal').classList.remove('active');
+    itemsInModal = [];
+}
+
+async function handleUpdateOrder() {
+    const orderId = document.getElementById('editOrderId').value;
+    const lavadorId = document.getElementById('editLavador').value;
+    const status = document.getElementById('editStatus').value;
+
+    if (itemsInModal.length === 0) {
+        showToast('Adicione pelo menos um item', 'error');
+        return;
+    }
+
+    const updateData = {
+        status,
+        lavadorId: lavadorId || null,
+        itens: itemsInModal.map(item => ({
+            tipo: item.tipo,
+            itemId: item.itemId,
+            quantidade: item.quantidade
+        }))
+    };
+
+    try {
+        const response = await window.api.updateOrdem(orderId, updateData);
+        showToast('Ordem atualizada com sucesso!');
+        closeEditModal();
+        
+        if (status === 'FINALIZADO' || status === 'CANCELADO') {
+            removeOrderFromView(orderId);
+        } else {
+            const orderIndex = allOrders.findIndex(o => o.id === orderId);
+            if (orderIndex !== -1 && response.ordem) {
+                allOrders[orderIndex] = response.ordem;
+                renderOrders(allOrders);
+                updateStats();
+            } else {
+                await loadOrders();
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar:', error);
+        showToast('Erro ao atualizar ordem', 'error');
+    }
+}
+
+async function handleCancelOrder(orderId) {
+    showCustomConfirm({
+        title: 'Cancelar Ordem',
+        message: 'Tem certeza que deseja cancelar esta ordem?',
+        onConfirm: async () => {
+            try {
+                await window.api.updateOrdem(orderId, { status: 'CANCELADO' });
+                showToast('Ordem cancelada');
+                removeOrderFromView(orderId);
+            } catch (error) {
+                console.error('Erro ao cancelar:', error);
+                showToast('Erro ao cancelar ordem', 'error');
+            }
+        }
+    });
+}
+
+// ============================================
+// PAGAMENTO COM DESCONTO - REFATORADO
+// ============================================
+function openPaymentModal(order) {
+    const exigirLavador = localStorage.getItem('exigirLavadorParaFinalizar') === 'true';
+
+    if (exigirLavador && !order.lavadorId) {
+        showToast('Atribua um lavador antes de finalizar', 'error');
+        return;
+    }
+
+    if (!order.lavadorId) {
+        showCustomConfirm({
+            title: 'Ordem Sem Lavador',
+            message: 'Esta ordem não tem lavador. Continuar?',
+            onConfirm: () => proceedToOpenPaymentModal(order)
+        });
+        return;
+    }
+
+    proceedToOpenPaymentModal(order);
+}
+
+function proceedToOpenPaymentModal(order) {
+    paymentOrder.id = order.id;
+    paymentOrder.total = order.valorTotal;
+    paymentOrder.desconto = 0;
+    paymentOrder.valorFinal = order.valorTotal;
+    paymentOrder.addedPayments = [];
+
+    const paidAmount = (order.pagamentos || []).reduce((sum, p) => 
+        p.status === 'PAGO' ? sum + p.valor : sum, 0
+    );
+
+    paymentOrder.remaining = order.valorTotal - paidAmount;
+
+    document.getElementById('paymentOrderId').value = order.id;
+    document.getElementById('paymentOrderTotal').textContent = formatCurrency(order.valorTotal);
+    document.getElementById('paymentOrderPaid').textContent = formatCurrency(paidAmount);
+    
+    // NOVO: Mostrar/esconder botões de pagamento com base na configuração
+    document.querySelectorAll('.payment-method-btn').forEach(button => {
+        const method = button.getAttribute('data-method'); // Usar getAttribute para pegar o data-method
+        if (method) {
+            // Se a configuração para este método for 'false', esconde o botão.
+            // Se não estiver definida (undefined), mostra por padrão (ativo).
+            const isVisible = paymentMethodsConfig[method] !== false;
+            // Usar 'flex' para manter o alinhamento correto dos ícones e texto
+            button.style.display = isVisible ? 'flex' : 'none';
+        }
+    });
+
+    // Resetar e esconder a seção de desconto ao abrir o modal
+    document.getElementById('discountSection').style.display = 'none';
+    document.getElementById('discountValueInput').value = '';
+    document.getElementById('discountTypeSelect').value = 'VALOR';
+
+    // NOVO: Resetar campos de desconto
+    document.getElementById('discountValueInput').value = '';
+    document.getElementById('discountTypeSelect').value = 'VALOR';
+    
+    updatePaymentSummary();
+    document.getElementById('paymentValueInput').value = '';
+    document.getElementById('paymentModal').classList.add('active');
+}
+
+function closePaymentModal() {
+    document.getElementById('paymentModal').classList.remove('active');
+    paymentOrder = { id: null, total: 0, remaining: 0, addedPayments: [], desconto: 0, valorFinal: 0 };
+}
+
+// ============================================
+// NOVA FUNÇÃO: Mostrar/esconder seção de desconto
+// ============================================
+function toggleDiscountSection(event) {
+    event.preventDefault();
+    const section = document.getElementById('discountSection');
+    const isVisible = section.style.display === 'block';
+    section.style.display = isVisible ? 'none' : 'block';
+}
+
+// ============================================
+// NOVA FUNÇÃO: Aplicar desconto
+// ============================================
+function applyDiscount() {
+    const discountInput = document.getElementById('discountValueInput').value;
+    const discountType = document.getElementById('discountTypeSelect').value;
+    
+    if (!discountInput || isNaN(parseFloat(discountInput.replace(',', '.')))) {
+        showToast('Digite um valor válido para o desconto', 'error');
+        return;
+    }
+
+    let discountValue = parseFloat(discountInput.replace(',', '.'));
+    
+    if (discountValue < 0) {
+        showToast('O desconto não pode ser negativo', 'error');
+        return;
+    }
+
+    let descontoCalculado = 0;
+
+    if (discountType === 'PERCENTUAL') {
+        if (discountValue > 100) {
+            showToast('O desconto percentual não pode ser maior que 100%', 'error');
+            return;
+        }
+        descontoCalculado = paymentOrder.total * (discountValue / 100);
+    } else {
+        if (discountValue > paymentOrder.total) {
+            showToast('O desconto não pode ser maior que o valor total', 'error');
+            return;
+        }
+        descontoCalculado = discountValue;
+    }
+
+    paymentOrder.desconto = descontoCalculado;
+    paymentOrder.valorFinal = paymentOrder.total - descontoCalculado;
+    paymentOrder.remaining = paymentOrder.valorFinal;
+    paymentOrder.addedPayments = []; // Limpa pagamentos ao aplicar desconto
+
+    updatePaymentSummary();
+    showToast('Desconto aplicado com sucesso!', 'success');
+}
+
+// ============================================
+// NOVA FUNÇÃO: Remover desconto
+// ============================================
+function removeDiscount() {
+    paymentOrder.desconto = 0;
+    paymentOrder.valorFinal = paymentOrder.total;
+    paymentOrder.remaining = paymentOrder.total;
+    paymentOrder.addedPayments = [];
+    
+    document.getElementById('discountValueInput').value = '';
+    document.getElementById('discountTypeSelect').value = 'VALOR';
+    
+    updatePaymentSummary();
+
+    // Esconde a seção de desconto após remover
+    document.getElementById('discountSection').style.display = 'none';
+
+    showToast('Desconto removido', 'success');
+}
+
+function formatInputAsCurrency(input) {
+    let value = input.value.replace(/\D/g, '');
+    value = (parseInt(value, 10) / 100).toFixed(2);
+    if (isNaN(value)) value = "0.00";
+    input.value = value.replace('.', ',');
+}
+
+function fillRemainingAmount() {
+    document.getElementById('paymentValueInput').value = paymentOrder.remaining.toFixed(2).replace('.', ',');
+}
+
+function addPayment(method) {
+    const input = document.getElementById('paymentValueInput');
+    let amount = parseFloat(input.value.replace(',', '.')) || 0;
+
+    if (method === 'PENDENTE' && amount === 0) {
+        amount = paymentOrder.remaining > 0 ? paymentOrder.remaining : 0;
+    }
+
+    if (amount <= 0) {
+        showToast('Valor deve ser maior que zero', 'error');
+        return;
+    }
+
+    if (amount > paymentOrder.remaining + 0.01) {
+        showToast('Valor maior que o restante', 'error');
+        return;
+    }
+
+    paymentOrder.addedPayments.push({ method, amount });
+    paymentOrder.remaining -= amount;
+    input.value = '';
+    updatePaymentSummary();
+}
+
+function removeAddedPayment(index) {
+    const removed = paymentOrder.addedPayments.splice(index, 1);
+    if (removed.length > 0) {
+        paymentOrder.remaining += removed[0].amount;
+    }
+    updatePaymentSummary();
+}
+
+// ============================================
+// ATUALIZADA: Incluir informações de desconto
+// ============================================
+function updatePaymentSummary() {
+    // Atualizar valor restante
+    document.getElementById('paymentOrderRemaining').textContent = 
+        formatCurrency(paymentOrder.remaining < 0 ? 0 : paymentOrder.remaining);
+    
+    // NOVO: Atualizar informações com desconto
+    const totalOriginal = paymentOrder.total;
+    const desconto = paymentOrder.desconto;
+    const valorFinal = paymentOrder.valorFinal;
+    
+    // Atualiza o header do modal para refletir o desconto
+    if (desconto > 0) {
+        document.getElementById('paymentOrderTotal').innerHTML = 
+            `${formatCurrency(totalOriginal)} <span style="font-size: 14px; color: #ef4444; font-weight: 600;">(-${formatCurrency(desconto)})</span>`;
+    } else {
+        document.getElementById('paymentOrderTotal').textContent = formatCurrency(totalOriginal);
+    }
+
+    const container = document.getElementById('addedPaymentsContainer');
+    const list = document.getElementById('addedPaymentsList');
+    list.innerHTML = '';
+
+    if (paymentOrder.addedPayments.length === 0) {
+        container.style.display = 'none';
+    } else {
+        container.style.display = 'block';
+        paymentOrder.addedPayments.forEach((p, index) => {
+            const item = document.createElement('div');
+            item.className = 'payment-list-item';
+            item.innerHTML = `
+                <span>${p.method} - <strong>${formatCurrency(p.amount)}</strong></span>
+                <button class="remove-payment-btn" onclick="removeAddedPayment(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            list.appendChild(item);
+        });
+    }
+}
+
+async function submitPayments() {
+    const btn = document.getElementById('submitPaymentBtn');
+    
+    if (paymentOrder.addedPayments.length === 0) {
+        showToast('Adicione pelo menos um pagamento', 'error');
+        return;
+    }
+
+    if (paymentOrder.remaining > 0.01) {
+        showCustomConfirm({
+            title: 'Saldo Pendente',
+            message: `Resta ${formatCurrency(paymentOrder.remaining)}. Registrar como PENDENTE?`,
+            onConfirm: () => {
+                paymentOrder.addedPayments.push({ 
+                    method: 'PENDENTE', 
+                    amount: parseFloat(paymentOrder.remaining.toFixed(2)) 
+                });
+                proceedWithPaymentSubmission(btn);
+            }
+        });
+        return;
+    }
+
+    await proceedWithPaymentSubmission(btn);
+}
+
+// ============================================
+// ATUALIZADA: Enviar desconto para o backend
+// ============================================
+async function proceedWithPaymentSubmission(btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+    const payload = {
+        pagamentos: paymentOrder.addedPayments.map(p => ({
+            metodo: p.method,
+            valor: p.amount,
+        })),
+        desconto: paymentOrder.desconto // NOVO: Enviar desconto
+    };
+
+    try {
+        await window.api.finalizarOrdem(paymentOrder.id, payload);
+        
+        showToast('Ordem finalizada com sucesso!');
+        closePaymentModal();
+        removeOrderFromView(paymentOrder.id);
+    } catch (error) {
+        console.error('Erro ao processar:', error);
+        showToast(error.message || 'Erro ao processar pagamento', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Finalizar Ordem';
+    }
+}
+
+function openDebitoFuncionarioModal() {
+    if (paymentOrder.remaining <= 0) {
+        showToast('A ordem já está totalmente paga.', 'error');
+        return;
+    }
+    openModal('debitoFuncionarioModal');
+}
+
+function confirmDebitoFuncionario() {
+    const lavadorDebitoId = document.getElementById('debitoLavadorSelect').value;
+    if (!lavadorDebitoId) {
+        showToast('Por favor, selecione um funcionário.', 'error');
+        return;
+    }
+
+    const payload = {
+        pagamentos: [{
+            metodo: 'DEBITO_FUNCIONARIO',
+            valor: paymentOrder.valorFinal // Usa valor final (com desconto)
+        }],
+        lavadorDebitoId: lavadorDebitoId,
+        desconto: paymentOrder.desconto, // NOVO: Enviar desconto
+    };
+
+    proceedWithDebitoSubmission(payload);
+}
+
+async function proceedWithDebitoSubmission(payload) {
+    closeModal('debitoFuncionarioModal');
+    const btn = document.getElementById('submitPaymentBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+    try {
+        await window.api.finalizarOrdem(paymentOrder.id, payload);
+        showToast('Ordem finalizada e débito lançado com sucesso!');
+        closePaymentModal();
+        removeOrderFromView(paymentOrder.id);
+    } catch (error) {
+        console.error('Erro ao processar débito:', error);
+        showToast(error.message || 'Erro ao processar débito', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Finalizar Ordem';
+    }
+}
+
+function removeOrderFromView(orderId) {
+    allOrders = allOrders.filter(o => o.id !== orderId);
+    
+    const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+    if (card) {
+        card.style.transition = 'all 0.3s';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.8)';
+        setTimeout(() => card.remove(), 300);
+    }
+    
+    const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+    if (row) {
+        row.style.transition = 'all 0.3s';
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+    }
+    
+    updateStats();
+    
+    if (allOrders.length === 0) {
+        setTimeout(() => {
+            renderOrders([]);
+        }, 350);
+    }
+}
+
+// ============================================
+// UTILS
+// ============================================
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', { 
+        style: 'currency', 
+        currency: 'BRL' 
+    }).format(value || 0);
+}
+    </script>
+</body>
+</html>

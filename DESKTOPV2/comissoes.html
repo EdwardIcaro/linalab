@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Gestão de Comissões</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
+    <script src="theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos adicionais para o novo design */
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Seletor de Funcionários estilo Stories */
+        .employees-section {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .employees-scroll {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 8px 4px;
+            scrollbar-width: thin;
+        }
+
+        .employees-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .employees-scroll::-webkit-scrollbar-track {
+            background: var(--background-light);
+            border-radius: 10px;
+        }
+
+        .employees-scroll::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .employee-avatar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            min-width: 80px;
+        }
+
+        .employee-avatar:hover {
+            transform: translateY(-4px);
+        }
+
+        .avatar-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #007a8a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 3px;
+            transition: all 0.3s;
+        }
+
+        .employee-avatar.active .avatar-circle {
+            box-shadow: 0 0 0 3px var(--white), 0 0 0 6px var(--primary-color);
+        }
+
+        .avatar-circle::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            padding: 3px;
+            background: linear-gradient(135deg, var(--primary-color), #ffc107);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+
+        .employee-avatar:not(.active) .avatar-circle::before {
+            opacity: 0.3;
+        }
+
+        .avatar-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .employee-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: center;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .employee-avatar:not(.active) .employee-name {
+            color: var(--text-secondary);
+        }
+
+        /* Date Range */
+        .date-range-section {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .date-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .date-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .date-input {
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.2s;
+            background-color: var(--white);
+            color: var(--text-primary);
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: var(--white);
+        }
+
+        /* Commission Content */
+        .commission-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .commission-column {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .column-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .column-icon.credits {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .column-icon.debits {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .column-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .column-badge {
+            background: var(--primary-color-light);
+            color: var(--primary-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Commission Items */
+        .commission-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--background-light);
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .commission-item:hover {
+            background: var(--background-color);
+            transform: translateX(4px);
+        }
+
+        .commission-item.selected {
+            background: var(--primary-color-light);
+            border: 2px solid var(--primary-color);
+        }
+
+        .item-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .commission-item.selected .item-checkbox {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .item-checkbox i {
+            color: white;
+            font-size: 12px;
+            opacity: 0;
+        }
+
+        .commission-item.selected .item-checkbox i {
+            opacity: 1;
+        }
+
+        .item-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .item-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .item-value {
+            font-size: 16px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .item-value.credit {
+            color: #10b981;
+        }
+
+        .item-value.debit {
+            color: #ef4444;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state p {
+            font-size: 15px;
+        }
+
+        /* Summary Card */
+        .summary-card-new {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #007a8a 100%);
+            border-radius: 20px;
+            padding: 32px;
+            color: white;
+            box-shadow: 0 20px 40px rgba(0, 188, 212, 0.3);
+        }
+
+        .summary-row-new {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .summary-row-new:last-of-type {
+            border-bottom: none;
+            padding-top: 24px;
+            margin-top: 8px;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .summary-label-new {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .summary-value-new {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .summary-total-new {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .btn-pay {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: white;
+            color: var(--primary-color);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+            transition: all 0.2s;
+        }
+
+        .btn-pay:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-pay:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* History Section */
+        .history-section {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .history-header i {
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+
+        .history-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Placeholder */
+        .placeholder-section {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 80px 40px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .placeholder-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary-color-light);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 24px;
+        }
+
+        .placeholder-section h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .placeholder-section p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* History Items */
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--background-light);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .history-item .item-title strong {
+            color: var(--primary-color);
+        }
+
+        .history-item-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+        }
+
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .commission-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .date-inputs {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <i class="fas fa-car-wash"></i>
+                <h1>LinaX</h1>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <nav class="top-nav-links">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
+                    <li><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                    <li><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
+                    <li><a href="financeiro.html" class="active"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
+                    <li><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="top-bar-right">
+            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                <span>Nova Ordem</span>
+            </a>
+            <div class="user-menu-container">
+                <div id="user-menu-trigger" class="user-menu-trigger">
+                    <div id="user-info-avatar" class="user-avatar"></div>
+                </div>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                    <div id="user-info-dropdown"></div>
+                    <div class="dropdown-divider"></div>
+                    <button id="theme-toggle" class="dropdown-item">
+                        <i class="fas fa-moon"></i>
+                        <span>Alterar Tema</span>
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="page-container">
+            <header class="main-header">
+                <div class="header-title">
+                    <h2><i class="fas fa-coins"></i> Gestão de Comissões</h2>
+                    <p>Selecione o funcionário e o período para fechar as comissões</p>
+                </div>
+            </header>
+
+            <!-- Employee Selector (Stories Style) -->
+            <div class="employees-section">
+                <div class="section-label">Selecione o Funcionário</div>
+                <div class="employees-scroll" id="employeesScroll">
+                    <!-- Employees will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Date Range -->
+            <div class="date-range-section">
+                <div class="section-label">Período de Análise</div>
+                <div class="date-inputs">
+                    <div class="date-group">
+                        <label>Data Início</label>
+                        <input type="date" id="dataInicio" class="date-input">
+                    </div>
+                    <div class="date-group">
+                        <label>Data Fim</label>
+                        <input type="date" id="dataFim" class="date-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commission Content -->
+            <div id="commission-content" style="display: none;">
+                <div class="commission-grid">
+                    <!-- Credits Column -->
+                    <div class="commission-column">
+                        <div class="column-header">
+                            <div class="column-icon credits">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <h3>Créditos</h3>
+                            <span class="column-badge" id="creditsBadge">0</span>
+                        </div>
+                        <div id="creditos-list">
+                            <!-- Credit items will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Debits Column -->
+                    <div class="commission-column">
+                        <div class="column-header">
+                            <div class="column-icon debits">
+                                <i class="fas fa-minus"></i>
+                            </div>
+                            <h3>Débitos</h3>
+                            <span class="column-badge" id="debitsBadge">0</span>
+                        </div>
+                        <div id="debitos-list">
+                            <!-- Debit items will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Card -->
+                <div class="summary-card-new">
+                    <div class="summary-row-new">
+                        <span class="summary-label-new">Total de Comissões</span>
+                        <span class="summary-value-new" id="summary-creditos">R$ 0,00</span>
+                    </div>
+                    <div class="summary-row-new">
+                        <span class="summary-label-new">Total de Descontos</span>
+                        <span class="summary-value-new" id="summary-debitos">- R$ 0,00</span>
+                    </div>
+                    <div class="summary-row-new">
+                        <span class="summary-label-new">Saldo a Pagar</span>
+                        <span class="summary-total-new" id="summary-total">R$ 0,00</span>
+                    </div>
+                    <button class="btn-pay" id="fecharComissaoBtn" disabled>
+                        <i class="fas fa-check-circle"></i>
+                        Fechar e Pagar Comissão
+                    </button>
+                </div>
+            </div>
+
+            <!-- Placeholder -->
+            <div id="commission-placeholder" class="placeholder-section">
+                <div class="placeholder-icon">
+                    <i class="fas fa-hand-pointer"></i>
+                </div>
+                <h3>Selecione um Funcionário</h3>
+                <p>Escolha um funcionário acima e defina o período para visualizar as comissões</p>
+            </div>
+
+            <!-- History Section -->
+            <div class="history-section">
+                <div class="history-header">
+                    <i class="fas fa-history"></i>
+                    <h3>Histórico de Pagamentos</h3>
+                </div>
+                <div id="historicoComissoesContainer">
+                    <!-- Cards do histórico serão carregados aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmação Genérico -->
+        <div id="customConfirmModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 550px;">
+                <div class="modal-header">
+                    <h2 id="customConfirmTitle" class="modal-title"></h2>
+                    <button onclick="closeModal('customConfirmModal')" class="modal-close">&times;</button>
+                </div>
+                <div id="customConfirmMessage" class="text-secondary my-4" style="text-align: left;"></div>
+                <div class="modal-actions">
+                    <button id="customCancelBtn" class="btn btn-secondary">Cancelar</button>
+                    <button id="customConfirmBtn" class="btn btn-primary">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="comissoes.js"></script>
+</body>
+</html>
