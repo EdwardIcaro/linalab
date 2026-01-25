@@ -3,62 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinaX - Ordens de Serviço</title>
+    <title>LinaX - Ordens de Servico</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="utils.js"></script>
-    <script src="api.js"></script>
-    <script src="theme.js"></script>
+    <!-- Alpine.js via CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <style>
-        /* Custom Select Styling */
-        .custom-select-wrapper {
-            position: relative;
-        }
-
-        .custom-select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background: var(--white);
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 12px 40px 12px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-        }
-
-        .custom-select:hover {
-            border-color: var(--primary-color);
-        }
-
-        .custom-select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
-        }
-
-        .custom-select-wrapper::after {
-            content: '\f078';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            pointer-events: none;
-            transition: transform 0.2s;
-        }
-
-        .custom-select:focus + .custom-select-wrapper::after {
-            transform: translateY(-50%) rotate(180deg);
-        }
-
-        /* Stats Cards - Apenas do dia */
+        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -92,36 +43,13 @@
             font-size: 20px;
         }
 
-        .stat-icon-modern.pending {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            color: white;
-        }
+        .stat-icon-modern.pending { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; }
+        .stat-icon-modern.progress { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        .stat-icon-modern.revenue { background: linear-gradient(135deg, var(--primary-color) 0%, #007a8a 100%); color: white; }
 
-        .stat-icon-modern.progress {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-        }
-
-        .stat-icon-modern.revenue {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #007a8a 100%);
-            color: white;
-        }
-
-        .stat-content {
-            flex: 1;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
+        .stat-content { flex: 1; }
+        .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--text-primary); }
 
         /* Filters */
         .filters-modern {
@@ -162,11 +90,33 @@
             font-weight: 500;
         }
 
-        .filter-input.search {
-            padding-left: 40px;
-        }
+        .filter-input.search { padding-left: 40px; }
 
         .filter-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        .custom-select {
+            appearance: none;
+            background: var(--white);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 40px 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+
+        .custom-select:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
@@ -198,15 +148,11 @@
             box-shadow: var(--shadow);
         }
 
-        /* Cards View - COMPACTOS */
+        /* Cards View */
         .orders-grid {
-            display: none;
+            display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 12px;
-        }
-
-        .orders-grid.active {
-            display: grid;
         }
 
         .order-card {
@@ -232,11 +178,7 @@
             margin-bottom: 12px;
         }
 
-        .order-number {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
+        .order-number { font-size: 16px; font-weight: 700; color: var(--text-primary); }
 
         .order-status-badge {
             padding: 4px 10px;
@@ -246,25 +188,11 @@
             text-transform: uppercase;
         }
 
-        .status-PENDENTE {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-EM_ANDAMENTO {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-FINALIZADO {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-CANCELADO {
-            background: #fee2e2;
-            color: #991b1b;
-        }
+        .status-PENDENTE { background: #fef3c7; color: #92400e; }
+        .status-EM_ANDAMENTO { background: #dbeafe; color: #1e40af; }
+        .status-AGUARDANDO_PAGAMENTO { background: #fde68a; color: #92400e; }
+        .status-FINALIZADO { background: #d1fae5; color: #065f46; }
+        .status-CANCELADO { background: #fee2e2; color: #991b1b; }
 
         .order-compact-info {
             display: grid;
@@ -274,26 +202,9 @@
             font-size: 13px;
         }
 
-        .compact-info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .compact-label {
-            font-size: 10px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .compact-value {
-            font-weight: 600;
-            color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .compact-info-item { display: flex; flex-direction: column; gap: 2px; }
+        .compact-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .compact-value { font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .order-card-footer {
             display: flex;
@@ -303,16 +214,9 @@
             border-top: 1px solid var(--border-color);
         }
 
-        .order-total {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
+        .order-total { font-size: 18px; font-weight: 700; color: var(--primary-color); }
 
-        .order-actions {
-            display: flex;
-            gap: 6px;
-        }
+        .order-actions { display: flex; gap: 6px; }
 
         .order-action-btn {
             width: 32px;
@@ -335,19 +239,11 @@
             border-color: var(--primary-color);
         }
 
+        .order-action-btn.finish:hover { background: #10b981; border-color: #10b981; }
+        .order-action-btn.complete:hover { background: #f59e0b; border-color: #f59e0b; }
+        .order-action-btn.cancel:hover { background: #ef4444; border-color: #ef4444; }
+
         /* Table View */
-        .table-view {
-            display: none;
-        }
-
-        .table-view.active {
-            display: block;
-        }
-
-        .cards-view.active {
-            display: grid;
-        }
-
         .table-wrapper {
             width: 100%;
             overflow-x: auto;
@@ -357,45 +253,58 @@
             padding: 8px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; font-size: 13px; }
+        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); transition: background 0.2s; }
+        tbody tr:hover { background: var(--background-light); }
+        tbody tr:last-child { border-bottom: none; }
+
+        .veiculo-cell { font-weight: 600; color: var(--text-primary); }
+        .veiculo-cell span { display: block; font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+
+        /* Skeleton Loader */
+        .skeleton {
+            animation: skeleton-pulse 1.5s ease-in-out infinite;
+            background: linear-gradient(90deg, var(--border-color) 25%, var(--background-color) 50%, var(--border-color) 75%);
+            background-size: 200% 100%;
+            border-radius: 8px;
         }
 
-        th, td {
-            padding: 12px;
-            text-align: left;
-            font-size: 13px;
+        @keyframes skeleton-pulse {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
-        thead th {
-            font-weight: 600;
+        .skeleton-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .skeleton-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .skeleton-title { height: 20px; width: 80px; }
+        .skeleton-badge { height: 24px; width: 100px; border-radius: 12px; }
+        .skeleton-row { height: 16px; margin-bottom: 8px; }
+        .skeleton-footer { display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border-color); margin-top: 12px; }
+        .skeleton-price { height: 24px; width: 100px; }
+        .skeleton-actions { display: flex; gap: 6px; }
+        .skeleton-btn { width: 32px; height: 32px; border-radius: 50%; }
+
+        /* Empty State */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
             color: var(--text-secondary);
-            border-bottom: 1px solid var(--border-color);
         }
 
-        tbody tr {
-            border-bottom: 1px solid var(--border-color);
-            transition: background 0.2s;
-        }
+        .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+        .empty-state h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+        .empty-state p { margin-bottom: 24px; }
 
-        tbody tr:hover {
-            background: var(--background-light);
-        }
-
-        .veiculo-cell {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .veiculo-cell span {
-            display: block;
-            font-size: 11px;
-            color: var(--text-secondary);
-            font-weight: 400;
-        }
-
-        /* Modais (copiados do original) */
+        /* Modals */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -410,10 +319,7 @@
             transition: all 0.3s;
         }
 
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
 
         .modal-content {
             background: var(--white);
@@ -424,7 +330,11 @@
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: var(--shadow-lg);
+            transform: scale(0.9);
+            transition: transform 0.3s;
         }
+
+        .modal-overlay.active .modal-content { transform: scale(1); }
 
         .modal-header {
             display: flex;
@@ -435,10 +345,7 @@
             border-bottom: 1px solid var(--border-color);
         }
 
-        .modal-title {
-            font-size: 20px;
-            font-weight: 600;
-        }
+        .modal-title { font-size: 20px; font-weight: 600; }
 
         .modal-close {
             background: none;
@@ -451,22 +358,10 @@
             transition: all 0.2s;
         }
 
-        .modal-close:hover {
-            background: var(--background-light);
-            color: var(--text-primary);
-        }
+        .modal-close:hover { background: var(--background-light); color: var(--text-primary); }
 
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
 
         .form-input, .form-select {
             width: 100%;
@@ -491,45 +386,15 @@
             border-top: 1px solid var(--border-color);
         }
 
-        /* Payment Modal Styles */
-        .payment-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
+        /* Payment Modal */
+        .payment-header { text-align: center; margin-bottom: 24px; }
+        .remaining-amount { font-size: 48px; font-weight: 700; color: var(--primary-color); }
 
-        .remaining-amount {
-            font-size: 48px;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
+        .payment-input-group { position: relative; margin-bottom: 16px; }
+        .currency-symbol { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 24px; font-weight: 600; color: var(--text-secondary); }
+        #paymentValueInput { font-size: 28px; font-weight: 700; text-align: right; padding: 16px 20px 16px 50px; }
 
-        .payment-input-group {
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        .currency-symbol {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        #paymentValueInput {
-            font-size: 28px;
-            font-weight: 700;
-            text-align: right;
-            padding: 16px 20px 16px 50px;
-        }
-
-        .payment-methods {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
+        .payment-methods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
         .payment-method-btn {
             padding: 12px;
@@ -551,10 +416,7 @@
             color: var(--primary-color);
         }
 
-        .payment-method-btn.pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
+        .payment-method-btn.pending { background: #fef3c7; color: #92400e; }
 
         .payment-list-item {
             display: flex;
@@ -565,76 +427,61 @@
             margin-bottom: 8px;
         }
 
-        .remove-payment-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-        }
+        /* Alpine.js Cloak */
+        [x-cloak] { display: none !important; }
 
-        .remove-payment-btn:hover {
-            color: #ef4444;
-        }
+        /* Spinner */
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .filter-row {
-                grid-template-columns: 1fr;
-            }
-
-            .orders-grid {
-                grid-template-columns: 1fr;
-            }
+            .filter-row { grid-template-columns: 1fr; }
+            .orders-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
-<body>
-    <header class="top-bar">
-        <div class="top-bar-left">
-            <div class="logo">
-                <i class="fas fa-car-wash"></i>
-                <h1>LinaX</h1>
-            </div>
-        </div>
-        <div class="top-bar-center">
-            <nav class="top-nav-links">
-                <ul>
-                    <li><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
-                    <li><a href="ordens.html" class="active"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
-                    <li><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
-                    <li><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
-                    <li><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
-                    <li><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
-                </ul>
-            </nav>
-        </div>
-        <div class="top-bar-right">
-            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
-                <i class="fas fa-plus"></i>
-                <span>Nova Ordem</span>
-            </a>
-            <div class="user-menu-container">
-                <div id="user-menu-trigger" class="user-menu-trigger">
-                    <div id="user-info-avatar" class="user-avatar"></div>
-                </div>
-                <div id="user-menu-dropdown" class="user-menu-dropdown">
-                    <div id="user-info-dropdown"></div>
-                    <div class="dropdown-divider"></div>
-                    <button id="theme-toggle" class="dropdown-item">
-                        <i class="fas fa-moon"></i>
-                        <span>Alterar Tema</span>
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Sair</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+<body data-permission="gerenciar_ordens">
+    <!-- Navigation Menu -->
+    <nav class="nav-menu-card" style="margin: 32px;">
+        <a href="index.html" class="nav-menu-item" data-permission="ver_dashboard">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="ordens.html" class="nav-menu-item active" data-permission="gerenciar_ordens">
+            <i class="fas fa-list-alt"></i>
+            <span>Ordens</span>
+        </a>
+        <a href="novaordem.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+            <i class="fas fa-plus-circle"></i>
+            <span>Nova Ordem</span>
+        </a>
+        <a href="clientes.html" class="nav-menu-item" data-permission="gerenciar_clientes">
+            <i class="fas fa-users"></i>
+            <span>Clientes</span>
+        </a>
+        <a href="funcionarios.html" class="nav-menu-item" data-permission="gerenciar_funcionarios">
+            <i class="fas fa-user-tie"></i>
+            <span>Funcionários</span>
+        </a>
+        <a href="financeiro.html" class="nav-menu-item" data-permission="ver_financeiro">
+            <i class="fas fa-chart-pie"></i>
+            <span>Financeiro</span>
+        </a>
+        <a href="configuracoes.html" class="nav-menu-item" data-permission="gerenciar_configuracoes">
+            <i class="fas fa-cog"></i>
+            <span>Configurações</span>
+        </a>
+    </nav>
 
-    <main class="main-content">
+    <!-- Main Content with Alpine.js -->
+    <main
+        class="main-content"
+        x-data="ordersDashboard()"
+        x-init="init()"
+        x-cloak
+    >
+        <!-- Header -->
         <header class="main-header">
             <div class="header-title">
                 <h2><i class="fas fa-clipboard-list"></i> Ordens Ativas</h2>
@@ -642,21 +489,29 @@
             </div>
             <div class="header-controls">
                 <div class="view-toggle">
-                    <button class="view-btn active" onclick="switchView('cards')">
+                    <button
+                        class="view-btn"
+                        :class="{ 'active': viewMode === 'cards' }"
+                        @click="setViewMode('cards')"
+                    >
                         <i class="fas fa-th-large"></i> Cards
                     </button>
-                    <button class="view-btn" onclick="switchView('table')">
+                    <button
+                        class="view-btn"
+                        :class="{ 'active': viewMode === 'table' }"
+                        @click="setViewMode('table')"
+                    >
                         <i class="fas fa-table"></i> Tabela
                     </button>
                 </div>
                 <a href="historico.html" class="btn-secondary">
                     <i class="fas fa-history"></i>
-                    <span>Histórico</span>
+                    <span>Historico</span>
                 </a>
             </div>
         </header>
 
-        <!-- Stats Grid - Apenas ordens DO DIA -->
+        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card-modern">
                 <div class="stat-icon-modern pending">
@@ -664,7 +519,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">Pendentes Hoje</div>
-                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-value" x-text="stats.pending">0</div>
                 </div>
             </div>
             <div class="stat-card-modern">
@@ -673,7 +528,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">Em Andamento Hoje</div>
-                    <div class="stat-value" id="statProgress">0</div>
+                    <div class="stat-value" x-text="stats.inProgress">0</div>
                 </div>
             </div>
             <div class="stat-card-modern">
@@ -682,7 +537,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">Faturamento Previsto Hoje</div>
-                    <div class="stat-value" id="statRevenue">R$ 0,00</div>
+                    <div class="stat-value" x-text="formatCurrency(stats.revenue)">R$ 0,00</div>
                 </div>
             </div>
         </div>
@@ -692,1063 +547,1132 @@
             <div class="filter-row">
                 <div class="search-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Buscar por placa, cliente ou número..." class="filter-input search">
+                    <input
+                        type="text"
+                        placeholder="Buscar por placa, cliente ou numero..."
+                        class="filter-input search"
+                        x-model.debounce.300ms="searchQuery"
+                    >
                 </div>
-                <div class="custom-select-wrapper">
-                    <select id="statusFilter" class="custom-select">
-                        <option value="">Todos Status</option>
-                        <option value="PENDENTE">Pendente</option>
-                        <option value="EM_ANDAMENTO">Em Andamento</option>
-                    </select>
-                </div>
-                <div class="custom-select-wrapper">
-                    <select id="washerFilter" class="custom-select">
-                        <option value="">Todos Lavadores</option>
-                    </select>
-                </div>
+                <select class="custom-select" x-model="statusFilter">
+                    <option value="">Todos Status</option>
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="EM_ANDAMENTO">Em Andamento</option>
+                    <option value="AGUARDANDO_PAGAMENTO">Aguardando Pagamento</option>
+                </select>
+                <select class="custom-select" x-model="washerFilter">
+                    <option value="">Todos Lavadores</option>
+                    <template x-for="washer in washers" :key="washer.id">
+                        <option :value="washer.id" x-text="washer.nome"></option>
+                    </template>
+                </select>
             </div>
         </div>
 
         <!-- Cards View -->
-        <div class="orders-grid cards-view active" id="ordersCardsView"></div>
+        <div class="orders-grid" x-show="viewMode === 'cards'">
+            <!-- Loading Skeletons -->
+            <template x-if="isLoading">
+                <template x-for="i in 6" :key="'skeleton-' + i">
+                    <div class="skeleton-card">
+                        <div class="skeleton-header">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-badge"></div>
+                        </div>
+                        <div class="skeleton skeleton-row" style="width: 70%"></div>
+                        <div class="skeleton skeleton-row" style="width: 50%"></div>
+                        <div class="skeleton skeleton-row" style="width: 60%"></div>
+                        <div class="skeleton-footer">
+                            <div class="skeleton skeleton-price"></div>
+                            <div class="skeleton-actions">
+                                <div class="skeleton skeleton-btn"></div>
+                                <div class="skeleton skeleton-btn"></div>
+                                <div class="skeleton skeleton-btn"></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Order Cards -->
+            <template x-if="!isLoading && filteredOrders.length > 0">
+                <template x-for="order in filteredOrders" :key="order.id">
+                    <div class="order-card" :data-order-id="order.id">
+                        <div class="order-card-header">
+                            <span class="order-number" x-text="'#' + order.numeroOrdem"></span>
+                            <span
+                                class="order-status-badge"
+                                :class="'status-' + order.status"
+                                x-text="getStatusText(order.status)"
+                            ></span>
+                        </div>
+                        <div class="order-compact-info">
+                            <div class="compact-info-item">
+                                <span class="compact-label">Cliente</span>
+                                <span class="compact-value" x-text="order.cliente.nome"></span>
+                            </div>
+                            <div class="compact-info-item">
+                                <span class="compact-label">Placa</span>
+                                <span class="compact-value" x-text="order.veiculo.placa"></span>
+                            </div>
+                            <div class="compact-info-item">
+                                <span class="compact-label">Veiculo</span>
+                                <span class="compact-value" x-text="order.veiculo.modelo || 'N/A'"></span>
+                            </div>
+                            <div class="compact-info-item">
+                                <span class="compact-label">Lavador</span>
+                                <span class="compact-value" x-text="getOrderWasherLabel(order)"></span>
+                            </div>
+                        </div>
+                        <div class="order-card-footer">
+                            <span class="order-total" x-text="formatCurrency(order.valorTotal)"></span>
+                            <div class="order-actions" @click.stop>
+                                <button
+                                    class="order-action-btn"
+                                    @click="openEditModal(order)"
+                                    title="Editar"
+                                >
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button
+                                    class="order-action-btn complete"
+                                    @click="markOrderCompleted(order)"
+                                    title="Concluir Lavagem"
+                                    x-show="order.status === 'PENDENTE' || order.status === 'EM_ANDAMENTO'"
+                                >
+                                    <i class="fas fa-flag-checkered"></i>
+                                </button>
+                                <button
+                                    class="order-action-btn finish"
+                                    @click="openPaymentModal(order)"
+                                    title="Registrar Pagamento"
+                                    x-show="order.status === 'AGUARDANDO_PAGAMENTO'"
+                                >
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button
+                                    class="order-action-btn cancel"
+                                    @click="cancelOrder(order.id)"
+                                    title="Cancelar"
+                                >
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Empty State -->
+            <template x-if="!isLoading && filteredOrders.length === 0">
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <h3 x-text="searchQuery || statusFilter || washerFilter ? 'Nenhuma ordem encontrada' : 'Nenhuma ordem ativa'"></h3>
+                    <p x-text="searchQuery || statusFilter || washerFilter ? 'Tente ajustar os filtros de busca' : 'Todas as ordens foram concluidas ou ainda nao ha ordens cadastradas'"></p>
+                    <a href="selecionar-tipo-veiculo.html" class="btn-primary" x-show="!searchQuery && !statusFilter && !washerFilter">
+                        <i class="fas fa-plus"></i> Criar Nova Ordem
+                    </a>
+                </div>
+            </template>
+        </div>
 
         <!-- Table View -->
-        <div class="table-view" id="ordersTableView">
-            <div class="table-wrapper">
-                <table>
-                    <thead>
+        <div class="table-wrapper" x-show="viewMode === 'table'">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ordem</th>
+                        <th>Status</th>
+                        <th>Veiculo</th>
+                        <th>Cliente</th>
+                        <th>Lavador</th>
+                        <th style="text-align: right;">Total</th>
+                        <th style="text-align: right;">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loading Skeletons for Table -->
+                    <template x-if="isLoading">
+                        <template x-for="i in 5" :key="'table-skeleton-' + i">
+                            <tr>
+                                <td><div class="skeleton" style="height: 16px; width: 60px;"></div></td>
+                                <td><div class="skeleton" style="height: 24px; width: 100px; border-radius: 12px;"></div></td>
+                                <td><div class="skeleton" style="height: 16px; width: 120px;"></div></td>
+                                <td><div class="skeleton" style="height: 16px; width: 150px;"></div></td>
+                                <td><div class="skeleton" style="height: 16px; width: 100px;"></div></td>
+                                <td style="text-align: right;"><div class="skeleton" style="height: 16px; width: 80px; margin-left: auto;"></div></td>
+                                <td style="text-align: right;"><div class="skeleton" style="height: 32px; width: 100px; margin-left: auto;"></div></td>
+                            </tr>
+                        </template>
+                    </template>
+
+                    <!-- Table Rows -->
+                    <template x-if="!isLoading">
+                        <template x-for="order in filteredOrders" :key="order.id">
+                            <tr :data-order-id="order.id">
+                                <td class="veiculo-cell" x-text="'#' + order.numeroOrdem"></td>
+                                <td>
+                                    <span
+                                        class="order-status-badge"
+                                        :class="'status-' + order.status"
+                                        x-text="getStatusText(order.status)"
+                                    ></span>
+                                </td>
+                                <td class="veiculo-cell">
+                                    <span x-text="order.veiculo.modelo || 'N/A'"></span>
+                                    <span x-text="order.veiculo.placa"></span>
+                                </td>
+                                <td x-text="order.cliente.nome"></td>
+                                <td x-text="getOrderWasherLabel(order)"></td>
+                                <td style="text-align: right; font-weight: 600;" x-text="formatCurrency(order.valorTotal)"></td>
+                                <td style="text-align: right;">
+                                    <button class="order-action-btn" @click="openEditModal(order)" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button
+                                        class="order-action-btn complete"
+                                        @click="markOrderCompleted(order)"
+                                        title="Concluir Lavagem"
+                                        x-show="order.status === 'PENDENTE' || order.status === 'EM_ANDAMENTO'"
+                                    >
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </button>
+                                    <button
+                                        class="order-action-btn finish"
+                                        @click="openPaymentModal(order)"
+                                        title="Registrar Pagamento"
+                                        x-show="order.status === 'AGUARDANDO_PAGAMENTO'"
+                                    >
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>
+                                    <button class="order-action-btn cancel" @click="cancelOrder(order.id)" title="Cancelar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </template>
+
+                    <!-- Empty Row -->
+                    <template x-if="!isLoading && filteredOrders.length === 0">
                         <tr>
-                            <th>Ordem</th>
-                            <th>Status</th>
-                            <th>Veículo</th>
-                            <th>Cliente</th>
-                            <th>Lavador</th>
-                            <th style="text-align: right;">Total</th>
-                            <th style="text-align: right;">Ações</th>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+                                Nenhuma ordem encontrada
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody id="ordersTableBody"></tbody>
-                </table>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Edit Order Modal -->
+        <div
+            class="modal-overlay"
+            :class="{ 'active': editModal.isOpen }"
+            @click.self="closeEditModal()"
+            @keydown.escape.window="closeEditModal()"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Editar Ordem</h2>
+                    <button @click="closeEditModal()" class="modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Itens</label>
+                    <ul style="list-style: none; padding: 0;">
+                        <template x-if="editModal.items.length === 0">
+                            <li style="color: var(--text-secondary); font-size: 13px;">Nenhum item</li>
+                        </template>
+                        <template x-for="(item, index) in editModal.items" :key="index">
+                            <li style="display: flex; justify-content: space-between; padding: 8px; background: var(--background-light); border-radius: 6px; margin-bottom: 6px;">
+                                <span x-text="item.nome + ' (' + formatCurrency(item.precoUnit) + ')'"></span>
+                                <button @click="removeEditItem(index)" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Adicionar Servico</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select x-model="editModal.selectedService" class="form-select" style="flex: 1;">
+                            <option value="">Selecione</option>
+                            <template x-for="service in services" :key="service.id">
+                                <option :value="service.id" x-text="service.nome"></option>
+                            </template>
+                        </select>
+                        <button @click="addEditItem('SERVICO')" class="btn-primary" style="padding: 0 12px;">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Adicionar Adicional</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select x-model="editModal.selectedAdicional" class="form-select" style="flex: 1;">
+                            <option value="">Selecione</option>
+                            <template x-for="adicional in adicionais" :key="adicional.id">
+                                <option :value="adicional.id" x-text="adicional.nome"></option>
+                            </template>
+                        </select>
+                        <button @click="addEditItem('ADICIONAL')" class="btn-primary" style="padding: 0 12px;">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Lavador</label>
+                    <select x-model="editModal.lavadorIds" class="form-select" multiple size="4">
+                        <option value="">Nao atribuido</option>
+                        <template x-for="washer in washers" :key="washer.id">
+                            <option :value="washer.id" x-text="washer.nome"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select x-model="editModal.status" class="form-select">
+                        <option value="PENDENTE">Pendente</option>
+                        <option value="EM_ANDAMENTO">Em Andamento</option>
+                        <option value="AGUARDANDO_PAGAMENTO">Aguardando Pagamento</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button @click="closeEditModal()" class="btn btn-secondary">Cancelar</button>
+                    <button @click="saveOrderEdit()" class="btn btn-primary" :disabled="editModal.isSaving">
+                        <template x-if="editModal.isSaving">
+                            <i class="fas fa-spinner spinner"></i>
+                        </template>
+                        <span x-text="editModal.isSaving ? 'Salvando...' : 'Salvar'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Modal -->
+        <div
+            class="modal-overlay"
+            :class="{ 'active': paymentModal.isOpen }"
+            @click.self="closePaymentModal()"
+            @keydown.escape.window="closePaymentModal()"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Registrar Pagamento</h2>
+                    <button @click="closePaymentModal()" class="modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="payment-header">
+                    <p style="font-size: 14px; color: var(--text-secondary);">Valor Restante</p>
+                    <p class="remaining-amount" x-text="formatCurrency(paymentModal.remaining)"></p>
+                    <p style="font-size: 14px; color: var(--text-secondary);">
+                        Total: <span x-text="formatCurrency(paymentModal.total)"></span> |
+                        Pago: <span x-text="formatCurrency(paymentModal.paid)"></span>
+                    </p>
+                </div>
+
+                <div class="payment-input-group">
+                    <span class="currency-symbol">R$</span>
+                    <input
+                        type="text"
+                        class="form-input"
+                        placeholder="0,00"
+                        x-model="paymentModal.inputValue"
+                        @input="formatPaymentInput($event)"
+                        id="paymentValueInput"
+                    >
+                </div>
+
+                <button
+                    class="btn-secondary"
+                    style="width: 100%; margin-bottom: 16px;"
+                    @click="fillRemainingAmount()"
+                >
+                    Preencher Valor Restante
+                </button>
+
+                <p class="form-label">Adicionar pagamento como:</p>
+                <div class="payment-methods">
+                    <button class="payment-method-btn" @click="addPayment('DINHEIRO')" x-show="paymentMethodsConfig.DINHEIRO">
+                        <i class="fas fa-money-bill-wave"></i> Dinheiro
+                    </button>
+                    <button class="payment-method-btn" @click="addPayment('PIX')" x-show="paymentMethodsConfig.PIX">
+                        <i class="fab fa-pix"></i> PIX
+                    </button>
+                    <button class="payment-method-btn" @click="addPayment('CARTAO')" x-show="paymentMethodsConfig.CARTAO">
+                        <i class="fas fa-credit-card"></i> Cartao
+                    </button>
+                    <button class="payment-method-btn" @click="addPayment('DEBITO_FUNCIONARIO')" x-show="paymentMethodsConfig.DEBITO_FUNCIONARIO">
+                        <i class="fas fa-user-tag"></i> Debito Funcionario
+                    </button>
+                    <button class="payment-method-btn pending" @click="addPayment('PENDENTE')">
+                        <i class="fas fa-clock"></i> Pendente
+                    </button>
+                </div>
+
+                <div style="margin-top: 16px;" x-show="paymentModal.payments.length > 0">
+                    <p class="form-label">Pagamentos adicionados:</p>
+                    <template x-for="(payment, index) in paymentModal.payments" :key="index">
+                        <div class="payment-list-item">
+                            <span x-text="payment.method + ' - ' + formatCurrency(payment.amount)"></span>
+                            <button
+                                @click="removePayment(index)"
+                                style="background: none; border: none; color: var(--text-secondary); cursor: pointer;"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="modal-actions">
+                    <button @click="closePaymentModal()" class="btn btn-secondary">Cancelar</button>
+                    <button
+                        @click="submitPayments()"
+                        class="btn btn-primary"
+                        :disabled="paymentModal.isProcessing"
+                    >
+                        <template x-if="paymentModal.isProcessing">
+                            <i class="fas fa-spinner spinner"></i>
+                        </template>
+                        <span x-text="paymentModal.isProcessing ? 'Processando...' : 'Finalizar Ordem'"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal de Edição -->
-    <div id="editOrderModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Editar Ordem</h2>
-                <button onclick="closeEditModal()" class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <input type="hidden" id="editOrderId">
-            
-            <div class="form-group">
-                <label class="form-label">Itens</label>
-                <ul id="editItemsList" style="list-style: none; padding: 0;"></ul>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Adicionar Serviço</label>
-                <div style="display: flex; gap: 8px;">
-                    <select id="addServiceSelect" class="form-select" style="flex: 1;"></select>
-                    <button onclick="addItemToModal('SERVICO')" class="btn-primary" style="padding: 0 12px;">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Adicionar Adicional</label>
-                <div style="display: flex; gap: 8px;">
-                    <select id="addAdicionalSelect" class="form-select" style="flex: 1;"></select>
-                    <button onclick="addItemToModal('ADICIONAL')" class="btn-primary" style="padding: 0 12px;">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Lavador</label>
-                <select id="editLavador" class="form-select"></select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Status</label>
-                <select id="editStatus" class="form-select">
-                    <option value="PENDENTE">Pendente</option>
-                    <option value="EM_ANDAMENTO">Em Andamento</option>
-                    <option value="FINALIZADO">Finalizado</option>
-                    <option value="CANCELADO">Cancelado</option>
-                </select>
-            </div>
-
-            <div class="modal-actions">
-                <button onclick="closeEditModal()" class="btn btn-secondary">Cancelar</button>
-                <button onclick="handleUpdateOrder()" class="btn btn-primary">Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Pagamento -->
-    <div id="paymentModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Registrar Pagamento</h2>
-                <button onclick="closePaymentModal()" class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <input type="hidden" id="paymentOrderId">
-
-            <div class="payment-header">
-                <p style="font-size: 14px; color: var(--text-secondary);">Valor Restante</p>
-                <p id="paymentOrderRemaining" class="remaining-amount">R$ 0,00</p>
-                <p style="font-size: 14px; color: var(--text-secondary);">
-                    Total: <span id="paymentOrderTotal">R$ 0,00</span> | 
-                    Pago: <span id="paymentOrderPaid">R$ 0,00</span>
-                </p>
-            </div>
-
-            <!-- NOVO: Link para mostrar/esconder a seção de desconto -->
-            <div style="text-align: center; margin: 16px 0;">
-                <a href="#" onclick="toggleDiscountSection(event)" style="color: var(--primary-color); font-weight: 600; font-size: 14px;">
-                    <i class="fas fa-tag"></i> Aplicar Desconto
-                </a>
-            </div>
-
-            <!-- Seção de Desconto (Agora escondida por padrão) -->
-            <div id="discountSection" style="display: none; border-top: 1px solid var(--border-color); padding-top: 16px;">
-                <div class="form-group">
-                    <label class="form-label">Desconto</label>
-                    <div style="display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center;">
-                        <div style="position: relative;">
-                            <input type="text" id="discountValueInput" class="form-input" placeholder="0,00" oninput="formatInputAsCurrency(this)">
-                            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);">R$</span>
-                        </div>
-                        <select id="discountTypeSelect" class="form-select">
-                            <option value="VALOR">Valor (R$)</option>
-                            <option value="PERCENTUAL">Porcentagem (%)</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button onclick="applyDiscount()" class="btn-secondary" style="flex: 1;">Aplicar</button>
-                        <button onclick="removeDiscount()" class="btn-secondary" style="flex: 0; padding: 0 12px;" title="Remover Desconto"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="payment-input-group">
-                <span class="currency-symbol">R$</span>
-                <input type="text" id="paymentValueInput" class="form-input" placeholder="0,00" oninput="formatInputAsCurrency(this)">
-            </div>
-
-            <button class="btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="fillRemainingAmount()">
-                Preencher Valor Restante
-            </button>
-
-            <p class="form-label">Adicionar pagamento como:</p>
-            <div class="payment-methods">
-                <button class="payment-method-btn" data-method="DINHEIRO" onclick="addPayment('DINHEIRO')">
-                    <i class="fas fa-money-bill-wave"></i> Dinheiro
-                </button>
-                <button class="payment-method-btn" data-method="PIX" onclick="addPayment('PIX')">
-                    <i class="fab fa-pix"></i> PIX
-                </button>
-                <button class="payment-method-btn" data-method="CARTAO" onclick="addPayment('CARTAO')">
-                    <i class="fas fa-credit-card"></i> Cartão
-                </button>
-                <button class="payment-method-btn pending" data-method="PENDENTE" onclick="addPayment('PENDENTE')">
-                    <i class="fas fa-clock"></i> Pendente
-                </button>
-                <button class="payment-method-btn" data-method="DEBITO_FUNCIONARIO" onclick="openDebitoFuncionarioModal()">
-                    <i class="fas fa-user-tag"></i> Débito Funcionário
-                </button>
-            </div>
-
-            <div id="addedPaymentsContainer" style="margin-top: 16px; display: none;">
-                <p class="form-label">Pagamentos adicionados:</p>
-                <div id="addedPaymentsList"></div>
-            </div>
-
-            <div class="modal-actions">
-                <button onclick="closePaymentModal()" class="btn btn-secondary">Cancelar</button>
-                <button id="submitPaymentBtn" onclick="submitPayments()" class="btn btn-primary">
-                    Finalizar Ordem
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NOVO: Modal para Débito de Funcionário -->
-    <div id="debitoFuncionarioModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 450px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Lançar Débito para Funcionário</h2>
-                <button onclick="closeModal('debitoFuncionarioModal')" class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <p class="text-secondary mb-4">
-                Selecione o funcionário que assumirá o débito desta ordem. O valor total será lançado como um adiantamento para ele.
-            </p>
-            <div class="form-group">
-                <label for="debitoLavadorSelect" class="form-label">Funcionário</label>
-                <select id="debitoLavadorSelect" class="form-select"></select>
-            </div>
-            <p class="text-sm text-secondary mt-2">
-                <i class="fas fa-info-circle"></i>
-                Se o funcionário selecionado for o mesmo que realizou o serviço, a comissão <strong>não</strong> será creditada.
-            </p>
-            <div class="modal-actions">
-                <button onclick="closeModal('debitoFuncionarioModal')" class="btn btn-secondary">Cancelar</button>
-                <button onclick="confirmDebitoFuncionario()" class="btn btn-primary">Confirmar Débito</button>
-            </div>
-        </div>
-    </div>
-
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Confirm Modal -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center;">
+                <h2 id="customConfirmTitle" class="modal-title"></h2>
+            </div>
+            <p id="customConfirmMessage" class="text-secondary mb-6"></p>
+            <div class="modal-actions" style="justify-content: center;">
+                <button id="customCancelBtn" class="btn btn-secondary">Cancelar</button>
+                <button id="customConfirmBtn" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
+    <script src="theme.js"></script>
     <script>
-let currentView = 'cards';
-let allOrders = [];
-let itemsInModal = [];
-let allServices = [];
-let allAdicionais = [];
-let paymentMethodsConfig = {}; // NOVO: Armazenar a configuração de pagamentos
-let paymentOrder = { 
-    id: null, total: 0, remaining: 0, addedPayments: [], desconto: 0, valorFinal: 0
-};
+        /**
+         * Alpine.js Component: Orders Dashboard
+         *
+         * Manages the orders list, filtering, and CRUD operations
+         * with reactive data binding and computed properties.
+         */
+        function ordersDashboard() {
+            return {
+                // ==========================================
+                // STATE
+                // ==========================================
+                orders: [],
+                washers: [],
+                services: [],
+                adicionais: [],
+                isLoading: true,
+                viewMode: localStorage.getItem('ordensViewPreference') || 'cards',
 
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuthentication();
-    initializeUserMenu();
-    handleImpersonationBanner();
-    
-    const savedView = localStorage.getItem('ordensViewPreference') || 'cards';
-    currentView = savedView;
-    updateViewButtons();
-    loadPaymentMethodsConfig(); // CORREÇÃO: Nome da função corrigido
-    
-    loadInitialData();
+                // Filter State
+                searchQuery: '',
+                statusFilter: '',
+                washerFilter: '',
 
-    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('statusFilter').addEventListener('change', applyFilters);
-    document.getElementById('washerFilter').addEventListener('change', applyFilters);
-});
+                // Stats (computed from orders)
+                stats: {
+                    pending: 0,
+                    inProgress: 0,
+                    revenue: 0
+                },
 
-function updateViewButtons() {
-    document.querySelectorAll('.view-btn').forEach(btn => {
-        const isCards = btn.querySelector('.fa-th-large');
-        if (isCards && currentView === 'cards') {
-            btn.classList.add('active');
-        } else if (!isCards && currentView === 'table') {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
+                // Edit Modal State
+                editModal: {
+                    isOpen: false,
+                    isSaving: false,
+                    orderId: null,
+                    items: [],
+                    lavadorId: '',
+                    lavadorIds: [],
+                    status: '',
+                    selectedService: '',
+                    selectedAdicional: ''
+                },
+
+                // Payment Modal State
+                paymentModal: {
+                    isOpen: false,
+                    isProcessing: false,
+                    orderId: null,
+                    total: 0,
+                    paid: 0,
+                    remaining: 0,
+                    inputValue: '',
+                    payments: []
+                },
+                paymentMethodsConfig: {
+                    DINHEIRO: true,
+                    PIX: true,
+                    CARTAO: true,
+                    DEBITO_FUNCIONARIO: false
+                },
+                paymentKeydownHandler: null,
+
+                // ==========================================
+                // COMPUTED: Filtered Orders
+                // ==========================================
+                /**
+                 * filteredOrders - Client-side filtering for instant feedback
+                 *
+                 * How it works:
+                 * 1. Starts with the full orders array
+                 * 2. Applies search filter (matches order number, client name, or plate)
+                 * 3. Applies status filter (exact match)
+                 * 4. Applies washer filter (exact match)
+                 *
+                 * Alpine.js automatically re-runs this getter whenever any
+                 * of the dependencies (orders, searchQuery, statusFilter, washerFilter)
+                 * change, making the UI instantly reactive.
+                 */
+                get filteredOrders() {
+                    let result = this.orders;
+
+                    // Search filter
+                    if (this.searchQuery) {
+                        const query = this.searchQuery.toLowerCase();
+                        result = result.filter(order =>
+                            order.numeroOrdem.toString().includes(query) ||
+                            order.cliente.nome.toLowerCase().includes(query) ||
+                            order.veiculo.placa.toLowerCase().includes(query)
+                        );
+                    }
+
+                    // Status filter
+                    if (this.statusFilter) {
+                        result = result.filter(order => order.status === this.statusFilter);
+                    }
+
+                    // Washer filter
+                    if (this.washerFilter) {
+                        const filterId = String(this.washerFilter);
+                        result = result.filter(order => {
+                            const washerIds = this.getOrderWasherIds(order);
+                            if (washerIds.length) {
+                                return washerIds.some(id => String(id) === filterId);
+                            }
+                            if (Array.isArray(order.lavadores) && order.lavadores.length > 0) {
+                                return order.lavadores.some(lav => {
+                                    const candidate = lav && typeof lav === 'object' ? lav.id : lav;
+                                    return String(candidate || '') === filterId;
+                                });
+                            }
+                            return String(order.lavadorId || '') === filterId;
+                        });
+                    }
+
+                    return result;
+                },
+
+                // ==========================================
+                // LIFECYCLE
+                // ==========================================
+                async init() {
+                    // Check authentication
+                    if (!window.api.isAuthenticated()) {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+
+                    // Initialize user menu
+                    if (typeof initializeUserMenu === 'function') {
+                        initializeUserMenu();
+                    }
+                    if (typeof handleImpersonationBanner === 'function') {
+                        handleImpersonationBanner();
+                    }
+
+                    // Load data in parallel
+                    await Promise.all([
+                        this.loadWashers(),
+                        this.loadServicesAndAdicionais(),
+                        this.loadPaymentMethodsConfig()
+                    ]);
+
+                    // Load orders (depends on washers for display)
+                    await this.loadOrders();
+                },
+
+                // ==========================================
+                // DATA FETCHING
+                // ==========================================
+                async loadOrders() {
+                    this.isLoading = true;
+                    try {
+                        const data = await window.api.getOrdens(1, 100, '', '', '', '', null, null, '', 'ativas');
+                        this.orders = data.ordens || [];
+                        this.updateStats();
+                    } catch (error) {
+                        console.error('Error loading orders:', error);
+                        showToast('Erro ao carregar ordens', 'error');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                async loadWashers() {
+                    try {
+                        const data = await window.api.getLavadoresSimple();
+                        this.washers = data.lavadores || [];
+                    } catch (error) {
+                        console.error('Error loading washers:', error);
+                    }
+                },
+
+                async loadServicesAndAdicionais() {
+                    try {
+                        const [servicosData, adicionaisData] = await Promise.all([
+                            window.api.getServicosSimple(),
+                            window.api.getAdicionaisSimple()
+                        ]);
+                        this.services = servicosData.servicos || [];
+                        this.adicionais = adicionaisData.adicionais || [];
+                    } catch (error) {
+                        console.error('Error loading services:', error);
+                    }
+                },
+
+                async loadPaymentMethodsConfig() {
+                    try {
+                        const empresaId = localStorage.getItem('empresaId');
+                        if (!empresaId) return;
+                        const empresa = await window.api.getEmpresaById(empresaId);
+                        const paymentConfig = empresa.paymentMethodsConfig || {};
+                        this.paymentMethodsConfig = {
+                            DINHEIRO: paymentConfig.DINHEIRO !== false,
+                            PIX: paymentConfig.PIX !== false,
+                            CARTAO: paymentConfig.CARTAO !== false,
+                            DEBITO_FUNCIONARIO: paymentConfig.DEBITO_FUNCIONARIO === true
+                        };
+                    } catch (error) {
+                        console.error('Error loading payment methods config:', error);
+                    }
+                },
+
+                // ==========================================
+                // STATS
+                // ==========================================
+                updateStats() {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const todayOrders = this.orders.filter(order => {
+                        const orderDate = new Date(order.createdAt);
+                        orderDate.setHours(0, 0, 0, 0);
+                        return orderDate.getTime() === today.getTime();
+                    });
+
+                    this.stats.pending = todayOrders.filter(o => o.status === 'PENDENTE').length;
+                    this.stats.inProgress = todayOrders.filter(o => o.status === 'EM_ANDAMENTO' || o.status === 'AGUARDANDO_PAGAMENTO').length;
+                    this.stats.revenue = todayOrders.reduce((sum, o) => sum + o.valorTotal, 0);
+                },
+
+                // ==========================================
+                // VIEW MANAGEMENT
+                // ==========================================
+                setViewMode(mode) {
+                    this.viewMode = mode;
+                    localStorage.setItem('ordensViewPreference', mode);
+                },
+
+                // ==========================================
+                // EDIT MODAL
+                // ==========================================
+                openEditModal(order) {
+                    this.editModal.orderId = order.id;
+                    const lavadorIds = [];
+                    if (Array.isArray(order.lavadores)) {
+                        order.lavadores.forEach(lav => {
+                            if (lav && typeof lav === 'object' && lav.id) {
+                                lavadorIds.push(lav.id);
+                            } else if (lav) {
+                                lavadorIds.push(lav);
+                            }
+                        });
+                    }
+                    if (!lavadorIds.length && order.lavadorId) {
+                        lavadorIds.push(order.lavadorId);
+                    }
+                    this.editModal.lavadorIds = lavadorIds;
+                    this.editModal.lavadorId = lavadorIds[0] || order.lavadorId || '';
+                    this.editModal.status = order.status;
+                    this.editModal.items = order.items.map(item => ({
+                        tipo: item.servicoId ? 'SERVICO' : 'ADICIONAL',
+                        itemId: item.servicoId || item.adicionalId,
+                        nome: item.servico?.nome || item.adicional?.nome,
+                        quantidade: item.quantidade,
+                        precoUnit: item.precoUnit
+                    }));
+                    this.editModal.selectedService = '';
+                    this.editModal.selectedAdicional = '';
+                    this.editModal.isOpen = true;
+                },
+
+                closeEditModal() {
+                    this.editModal.isOpen = false;
+                    this.editModal.items = [];
+                    this.editModal.lavadorIds = [];
+                    this.editModal.lavadorId = '';
+                },
+
+                addEditItem(type) {
+                    const itemId = type === 'SERVICO'
+                        ? this.editModal.selectedService
+                        : this.editModal.selectedAdicional;
+
+                    if (!itemId) {
+                        showToast('Selecione um item', 'error');
+                        return;
+                    }
+
+                    if (this.editModal.items.some(i => i.itemId === itemId)) {
+                        showToast('Item ja adicionado', 'error');
+                        return;
+                    }
+
+                    const source = type === 'SERVICO' ? this.services : this.adicionais;
+                    const item = source.find(s => s.id === itemId);
+
+                    if (item) {
+                        this.editModal.items.push({
+                            tipo: type,
+                            itemId: item.id,
+                            nome: item.nome,
+                            quantidade: 1,
+                            precoUnit: item.preco
+                        });
+
+                        if (type === 'SERVICO') {
+                            this.editModal.selectedService = '';
+                        } else {
+                            this.editModal.selectedAdicional = '';
+                        }
+                    }
+                },
+
+                removeEditItem(index) {
+                    this.editModal.items.splice(index, 1);
+                },
+
+                async saveOrderEdit() {
+                    if (this.editModal.items.length === 0) {
+                        showToast('Adicione pelo menos um item', 'error');
+                        return;
+                    }
+
+                    this.editModal.isSaving = true;
+
+                    const selectedLavadorId = this.editModal.lavadorIds[0] || null;
+                    const updateData = {
+                        status: this.editModal.status,
+                        lavadorId: selectedLavadorId,
+                        lavadorIds: this.editModal.lavadorIds,
+                        itens: this.editModal.items.map(item => ({
+                            tipo: item.tipo,
+                            itemId: item.itemId,
+                            quantidade: item.quantidade
+                        }))
+                    };
+
+                    try {
+                        const response = await window.api.updateOrdem(this.editModal.orderId, updateData);
+                        showToast('Ordem atualizada com sucesso!');
+                        this.closeEditModal();
+
+                        if (this.editModal.status === 'FINALIZADO' || this.editModal.status === 'CANCELADO') {
+                            this.removeOrderFromList(this.editModal.orderId);
+                        } else {
+                            await this.loadOrders();
+                        }
+                    } catch (error) {
+                        console.error('Error updating order:', error);
+                        showToast('Erro ao atualizar ordem', 'error');
+                    } finally {
+                        this.editModal.isSaving = false;
+                    }
+                },
+
+                // ==========================================
+                // PAYMENT MODAL
+                // ==========================================
+                openPaymentModal(order) {
+                    if (order.status !== 'AGUARDANDO_PAGAMENTO') {
+                        showToast('Marque a lavagem como concluida antes de receber o pagamento', 'error');
+                        return;
+                    }
+
+                    const exigirLavador = localStorage.getItem('exigirLavadorParaFinalizar') === 'true';
+                    const orderHasLavadores = (Array.isArray(order.lavadorIds) && order.lavadorIds.length > 0)
+                        || (Array.isArray(order.lavadores) && order.lavadores.length > 0)
+                        || !!order.lavadorId;
+
+                    if (exigirLavador && !orderHasLavadores) {
+                        showToast('Atribua um lavador antes de finalizar', 'error');
+                        return;
+                    }
+
+                    this.paymentModal.orderId = order.id;
+                    this.paymentModal.total = order.valorTotal;
+                    this.paymentModal.paid = (order.pagamentos || [])
+                        .filter(p => p.status === 'PAGO')
+                        .reduce((sum, p) => sum + p.valor, 0);
+                    this.paymentModal.remaining = order.valorTotal - this.paymentModal.paid;
+                    this.paymentModal.inputValue = '';
+                    this.paymentModal.payments = [];
+                    this.paymentModal.isOpen = true;
+                    this.bindPaymentHotkeys();
+                    this.$nextTick(() => {
+                        const input = document.getElementById('paymentValueInput');
+                        if (input) {
+                            input.focus();
+                            if (typeof input.select === 'function') {
+                                input.select();
+                            }
+                        }
+                    });
+                },
+
+                closePaymentModal() {
+                    this.paymentModal.isOpen = false;
+                    this.paymentModal.payments = [];
+                    this.unbindPaymentHotkeys();
+                },
+
+                formatPaymentInput(event) {
+                    let value = event.target.value.replace(/\D/g, '');
+                    value = (parseInt(value, 10) / 100).toFixed(2);
+                    if (isNaN(value)) value = "0.00";
+                    this.paymentModal.inputValue = value.replace('.', ',');
+                },
+
+                fillRemainingAmount() {
+                    this.paymentModal.inputValue = this.paymentModal.remaining.toFixed(2).replace('.', ',');
+                },
+
+                addPayment(method) {
+                    if (!this.isPaymentMethodEnabled(method)) {
+                        showToast('Metodo de pagamento desabilitado nas configuracoes', 'error');
+                        return;
+                    }
+
+                    let amount = parseFloat(this.paymentModal.inputValue.replace(',', '.')) || 0;
+
+                    if (method === 'PENDENTE' && amount === 0) {
+                        amount = this.paymentModal.remaining > 0 ? this.paymentModal.remaining : 0;
+                    }
+
+                    if (amount <= 0) {
+                        showToast('Valor deve ser maior que zero', 'error');
+                        return;
+                    }
+
+                    if (amount > this.paymentModal.remaining + 0.01) {
+                        showToast('Valor maior que o restante', 'error');
+                        return;
+                    }
+
+                    this.paymentModal.payments.push({ method, amount });
+                    this.paymentModal.remaining -= amount;
+                    this.paymentModal.inputValue = '';
+                },
+
+                bindPaymentHotkeys() {
+                    this.unbindPaymentHotkeys();
+                    this.paymentKeydownHandler = (event) => {
+                        if (!this.paymentModal.isOpen) return;
+                        const target = event.target;
+                        const isEditable = target && (
+                            target.tagName === 'INPUT' ||
+                            target.tagName === 'TEXTAREA' ||
+                            target.isContentEditable
+                        );
+                        if (isEditable && target.id !== 'paymentValueInput') {
+                            return;
+                        }
+
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            this.closePaymentModal();
+                            return;
+                        }
+
+                        if (event.key === 'Backspace') {
+                            event.preventDefault();
+                            this.updatePaymentInputByKey('BACKSPACE');
+                            return;
+                        }
+
+                        if (/^[0-9]$/.test(event.key)) {
+                            event.preventDefault();
+                            this.updatePaymentInputByKey(event.key);
+                        }
+                    };
+                    document.addEventListener('keydown', this.paymentKeydownHandler);
+                },
+
+                unbindPaymentHotkeys() {
+                    if (this.paymentKeydownHandler) {
+                        document.removeEventListener('keydown', this.paymentKeydownHandler);
+                        this.paymentKeydownHandler = null;
+                    }
+                },
+
+                updatePaymentInputByKey(key) {
+                    const input = document.getElementById('paymentValueInput');
+                    if (!input) return;
+                    let digits = (input.value || '').replace(/\D/g, '');
+                    if (key === 'BACKSPACE') {
+                        digits = digits.slice(0, -1);
+                    } else {
+                        digits += key;
+                    }
+                    input.value = digits;
+                    this.formatPaymentInput({ target: input });
+                    input.value = this.paymentModal.inputValue;
+                },
+
+                removePayment(index) {
+                    const removed = this.paymentModal.payments.splice(index, 1);
+                    if (removed.length > 0) {
+                        this.paymentModal.remaining += removed[0].amount;
+                    }
+                },
+
+                async submitPayments() {
+                    if (this.paymentModal.payments.length === 0) {
+                        showToast('Adicione pelo menos um pagamento', 'error');
+                        return;
+                    }
+
+                    if (this.paymentModal.remaining > 0.01) {
+                        showCustomConfirm({
+                            title: 'Saldo Pendente',
+                            message: `Resta ${this.formatCurrency(this.paymentModal.remaining)}. Registrar como PENDENTE?`,
+                            onConfirm: () => {
+                                this.paymentModal.payments.push({
+                                    method: 'PENDENTE',
+                                    amount: parseFloat(this.paymentModal.remaining.toFixed(2))
+                                });
+                                this.processPayments();
+                            }
+                        });
+                        return;
+                    }
+
+                    await this.processPayments();
+                },
+
+                async processPayments() {
+                    this.paymentModal.isProcessing = true;
+
+                    const payload = {
+                        pagamentos: this.paymentModal.payments.map(p => ({
+                            metodo: p.method,
+                            valor: p.amount
+                        }))
+                    };
+
+                    try {
+                        await window.api.finalizarOrdem(this.paymentModal.orderId, payload);
+                        showToast('Ordem finalizada com sucesso!');
+                        this.closePaymentModal();
+                        this.removeOrderFromList(this.paymentModal.orderId);
+                    } catch (error) {
+                        console.error('Error processing payment:', error);
+                        showToast(error.message || 'Erro ao processar pagamento', 'error');
+                    } finally {
+                        this.paymentModal.isProcessing = false;
+                    }
+                },
+
+                // ==========================================
+                // ORDER ACTIONS
+                // ==========================================
+                async markOrderCompleted(order) {
+                    showCustomConfirm({
+                        title: 'Concluir Lavagem',
+                        message: 'Marcar a ordem como concluida e aguardando pagamento?',
+                        onConfirm: async () => {
+                            try {
+                                await window.api.updateOrdem(order.id, { status: 'AGUARDANDO_PAGAMENTO' });
+                                order.status = 'AGUARDANDO_PAGAMENTO';
+                                showToast('Lavagem concluida. Aguardando pagamento.');
+                                this.updateStats();
+                            } catch (error) {
+                                console.error('Error updating order status:', error);
+                                showToast('Erro ao atualizar status da ordem', 'error');
+                            }
+                        }
+                    });
+                },
+
+                async cancelOrder(orderId) {
+                    showCustomConfirm({
+                        title: 'Cancelar Ordem',
+                        message: 'Tem certeza que deseja cancelar esta ordem?',
+                        onConfirm: async () => {
+                            try {
+                                await window.api.updateOrdem(orderId, { status: 'CANCELADO' });
+                                showToast('Ordem cancelada');
+                                this.removeOrderFromList(orderId);
+                            } catch (error) {
+                                console.error('Error canceling order:', error);
+                                showToast('Erro ao cancelar ordem', 'error');
+                            }
+                        }
+                    });
+                },
+
+                removeOrderFromList(orderId) {
+                    // Animate out then remove
+                    const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+                    if (card) {
+                        card.style.transition = 'all 0.3s';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.8)';
+                    }
+
+                    const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+                    if (row) {
+                        row.style.transition = 'all 0.3s';
+                        row.style.opacity = '0';
+                    }
+
+                    // Remove from data after animation
+                    setTimeout(() => {
+                        this.orders = this.orders.filter(o => o.id !== orderId);
+                        this.updateStats();
+                    }, 300);
+                },
+
+                // ==========================================
+                // FORMATTERS
+                // ==========================================
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    }).format(value || 0);
+                },
+
+                formatDate(dateString) {
+                    if (!dateString) return 'N/A';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                getStatusText(status) {
+                    const statusMap = {
+                        'PENDENTE': 'Pendente',
+                        'EM_ANDAMENTO': 'Em Andamento',
+                        'AGUARDANDO_PAGAMENTO': 'Aguardando Pagamento',
+                        'FINALIZADO': 'Finalizado',
+                        'CANCELADO': 'Cancelado'
+                    };
+                    return statusMap[status] || status;
+                },
+                getOrderWasherIds(order) {
+                    if (Array.isArray(order?.lavadorIds) && order.lavadorIds.length > 0) {
+                        return order.lavadorIds;
+                    }
+                    if (Array.isArray(order?.lavadores) && order.lavadores.length > 0) {
+                        return order.lavadores
+                            .map(lav => {
+                                if (lav && typeof lav === 'object' && lav.id) return lav.id;
+                                return lav;
+                            })
+                            .filter(Boolean);
+                    }
+                    if (order?.lavadorId) {
+                        return [order.lavadorId];
+                    }
+                    return [];
+                },
+                getOrderWasherLabel(order) {
+                    const lavadores = Array.isArray(order?.lavadores) ? order.lavadores : [];
+                    if (lavadores.length > 0) {
+                        const names = lavadores.map(lav => {
+                            if (lav && typeof lav === 'object') {
+                                return lav.nome || lav.name || lav.id;
+                            }
+                            if (lav) {
+                                const washer = this.washers.find(w => w.id === lav);
+                                return washer?.nome || lav;
+                            }
+                            return null;
+                        }).filter(Boolean);
+                        if (names.length) return names.join(', ');
+                    }
+
+                    const ids = this.getOrderWasherIds(order);
+                    if (ids.length) {
+                        const names = ids
+                            .map(id => {
+                                const washer = this.washers.find(w => w.id === id);
+                                return washer?.nome || id;
+                            })
+                            .filter(Boolean);
+                        if (names.length) return names.join(', ');
+                    }
+
+                    if (order?.lavador?.nome) {
+                        return order.lavador.nome;
+                    }
+
+                    return 'Nao atribuido';
+                },
+                isPaymentMethodEnabled(method) {
+                    if (method === 'PENDENTE') return true;
+                    return !!this.paymentMethodsConfig[method];
+                }
+            };
         }
-    });
 
-    document.getElementById('ordersCardsView').classList.toggle('active', currentView === 'cards');
-    document.getElementById('ordersTableView').classList.toggle('active', currentView === 'table');
-}
-
-function checkAuthentication() {
-    if (!window.api.isAuthenticated()) {
-        window.location.href = 'login.html';
-    }
-}
-
-function logout() {
-    showCustomConfirm({
-        title: 'Confirmar Saída',
-        message: 'Tem certeza que deseja sair do sistema?',
-        onConfirm: () => window.api.logout()
-    });
-}
-
-// ============================================
-// NOVO: Carregar configurações da empresa
-// ============================================
-async function loadPaymentMethodsConfig() {
-    try {
-        const empresaId = localStorage.getItem('empresaId');
-        const empresa = await window.api.getEmpresaById(empresaId);
-        // Garante que o JSON seja parseado se for uma string
-        paymentMethodsConfig = typeof empresa.paymentMethodsConfig === 'string' 
-            ? JSON.parse(empresa.paymentMethodsConfig) 
-            : (empresa.paymentMethodsConfig || {});
-    } catch (error) {
-        console.error('Erro ao carregar configurações da empresa:', error);
-    }
-}
-
-async function loadInitialData() {
-    await Promise.all([
-        loadWashers(),
-        loadServicesAndAdicionais()
-    ]);
-    await loadOrders();
-}
-
-async function loadWashers() {
-    try {
-        const data = await window.api.getLavadoresSimple();
-        const washerFilter = document.getElementById('washerFilter');
-        (data.lavadores || []).forEach(lavador => {
-            const option = document.createElement('option');
-            option.value = lavador.id;
-            option.textContent = lavador.nome;
-            washerFilter.appendChild(option);
-        });
-
-        const debitoSelect = document.getElementById('debitoLavadorSelect');
-        debitoSelect.innerHTML = '<option value="">Selecione um funcionário</option>';
-        (data.lavadores || []).forEach(lavador => {
-            const option = document.createElement('option');
-            option.value = lavador.id;
-            option.textContent = lavador.nome;
-            debitoSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Erro ao carregar lavadores:', error);
-    }
-}
-
-async function loadServicesAndAdicionais() {
-    try {
-        const [servicosData, adicionaisData] = await Promise.all([
-            window.api.getServicosSimple(),
-            window.api.getAdicionaisSimple()
-        ]);
-        allServices = servicosData.servicos || [];
-        allAdicionais = adicionaisData.adicionais || [];
-    } catch (error) {
-        console.error('Erro ao carregar serviços:', error);
-    }
-}
-
-async function loadOrders() {
-    try {
-        console.log('🔄 Carregando ordens ativas...');
-        
-        const data = await window.api.getOrdens(
-            1, 100, '', '', '', '', null, null, '', 'ativas'
-        );
-        
-        console.log('📦 Dados recebidos:', data);
-        
-        allOrders = data.ordens || [];
-        renderOrders(allOrders);
-        updateStats();
-    } catch (error) {
-        console.error('❌ Erro ao carregar ordens:', error);
-        showToast('Erro ao carregar ordens', 'error');
-    }
-}
-
-function renderOrders(orders) {
-    const cardsView = document.getElementById('ordersCardsView');
-    const tableBody = document.getElementById('ordersTableBody');
-    
-    cardsView.innerHTML = '';
-    tableBody.innerHTML = '';
-
-    if (orders.length === 0) {
-        const emptyMsg = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-secondary);">
-                <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
-                <p>Nenhuma ordem ativa no momento</p>
-            </div>
-        `;
-        cardsView.innerHTML = emptyMsg;
-        return;
-    }
-
-    orders.forEach(order => {
-        cardsView.appendChild(createOrderCard(order));
-        tableBody.appendChild(createOrderRow(order));
-    });
-}
-
-function createOrderCard(order) {
-    const card = document.createElement('div');
-    card.className = 'order-card';
-    card.dataset.orderId = order.id;
-    
-    const statusClass = `status-${order.status}`;
-    const statusMap = {
-        'PENDENTE': 'Pendente',
-        'EM_ANDAMENTO': 'Em Andamento'
-    };
-    const statusText = statusMap[order.status] || order.status;
-
-    card.innerHTML = `
-        <div class="order-card-header">
-            <span class="order-number">#${order.numeroOrdem}</span>
-            <span class="order-status-badge ${statusClass}">${statusText}</span>
-        </div>
-        <div class="order-compact-info">
-            <div class="compact-info-item">
-                <span class="compact-label">Cliente</span>
-                <span class="compact-value">${order.cliente.nome}</span>
-            </div>
-            <div class="compact-info-item">
-                <span class="compact-label">Placa</span>
-                <span class="compact-value">${order.veiculo.placa}</span>
-            </div>
-            <div class="compact-info-item">
-                <span class="compact-label">Veículo</span>
-                <span class="compact-value">${order.veiculo.modelo || 'N/A'}</span>
-            </div>
-            <div class="compact-info-item">
-                <span class="compact-label">Lavador</span>
-                <span class="compact-value">${order.lavador?.nome || 'Não atribuído'}</span>
-            </div>
-        </div>
-        <div class="order-card-footer">
-            <span class="order-total">${formatCurrency(order.valorTotal)}</span>
-            <div class="order-actions" onclick="event.stopPropagation()">
-                <button class="order-action-btn" onclick='handleEditOrder(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="order-action-btn" onclick='openPaymentModal(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Finalizar">
-                    <i class="fas fa-check"></i>
-                </button>
-                <button class="order-action-btn" onclick="handleCancelOrder('${order.id}')" title="Cancelar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-    `;
-
-    return card;
-}
-
-function createOrderRow(order) {
-    const row = document.createElement('tr');
-    row.dataset.orderId = order.id;
-    
-    const statusClass = `status-${order.status}`;
-    const statusMap = {
-        'PENDENTE': 'Pendente',
-        'EM_ANDAMENTO': 'Em Andamento'
-    };
-    const statusText = statusMap[order.status] || order.status;
-
-    row.innerHTML = `
-        <td class="veiculo-cell">#${order.numeroOrdem}</td>
-        <td><span class="order-status-badge ${statusClass}">${statusText}</span></td>
-        <td class="veiculo-cell">${order.veiculo.modelo || 'N/A'}<span>${order.veiculo.placa}</span></td>
-        <td>${order.cliente.nome}</td>
-        <td>${order.lavador?.nome || 'N/A'}</td>
-        <td style="text-align: right; font-weight: 600;">${formatCurrency(order.valorTotal)}</td>
-        <td style="text-align: right;">
-            <button class="order-action-btn" onclick='handleEditOrder(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Editar">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="order-action-btn" onclick='openPaymentModal(${JSON.stringify(order).replace(/'/g, "\\'")})'  title="Finalizar">
-                <i class="fas fa-check-circle"></i>
-            </button>
-            <button class="order-action-btn" onclick="handleCancelOrder('${order.id}')" title="Cancelar">
-                <i class="fas fa-times"></i>
-            </button>
-        </td>
-    `;
-
-    return row;
-}
-
-function switchView(view) {
-    currentView = view;
-    localStorage.setItem('ordensViewPreference', view);
-    updateViewButtons();
-}
-
-function applyFilters() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const status = document.getElementById('statusFilter').value;
-    const washer = document.getElementById('washerFilter').value;
-
-    let filtered = allOrders;
-
-    if (search) {
-        filtered = filtered.filter(order => 
-            order.numeroOrdem.toString().toLowerCase().includes(search) ||
-            order.cliente.nome.toLowerCase().includes(search) ||
-            order.veiculo.placa.toLowerCase().includes(search)
-        );
-    }
-
-    if (status) {
-        filtered = filtered.filter(order => order.status === status);
-    }
-
-    if (washer) {
-        filtered = filtered.filter(order => order.lavadorId === washer);
-    }
-
-    renderOrders(filtered);
-}
-
-function updateStats() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayOrders = allOrders.filter(order => {
-        const orderDate = new Date(order.createdAt);
-        orderDate.setHours(0, 0, 0, 0);
-        return orderDate.getTime() === today.getTime();
-    });
-
-    const pending = todayOrders.filter(o => o.status === 'PENDENTE').length;
-    const progress = todayOrders.filter(o => o.status === 'EM_ANDAMENTO').length;
-    const revenue = todayOrders.reduce((sum, o) => sum + o.valorTotal, 0);
-
-    document.getElementById('statPending').textContent = pending;
-    document.getElementById('statProgress').textContent = progress;
-    document.getElementById('statRevenue').textContent = formatCurrency(revenue);
-}
-
-// ============================================
-// EDIÇÃO DE ORDEM
-// ============================================
-async function handleEditOrder(order) {
-    try {
-        const lavadoresData = await window.api.getLavadoresSimple();
-        
-        document.getElementById('editOrderId').value = order.id;
-
-        const lavadorSelect = document.getElementById('editLavador');
-        lavadorSelect.innerHTML = '<option value="">Não atribuído</option>';
-        lavadoresData.lavadores.forEach(lavador => {
-            lavadorSelect.innerHTML += `<option value="${lavador.id}">${lavador.nome}</option>`;
-        });
-        lavadorSelect.value = order.lavadorId || '';
-
-        document.getElementById('editStatus').value = order.status;
-
-        const serviceSelect = document.getElementById('addServiceSelect');
-        serviceSelect.innerHTML = '<option value="">Selecione</option>';
-        allServices.forEach(s => {
-            serviceSelect.innerHTML += `<option value="${s.id}" data-price="${s.preco}">${s.nome}</option>`;
-        });
-
-        const adicionalSelect = document.getElementById('addAdicionalSelect');
-        adicionalSelect.innerHTML = '<option value="">Selecione</option>';
-        allAdicionais.forEach(a => {
-            adicionalSelect.innerHTML += `<option value="${a.id}" data-price="${a.preco}">${a.nome}</option>`;
-        });
-
-        itemsInModal = order.items.map(item => ({
-            tipo: item.servicoId ? 'SERVICO' : 'ADICIONAL',
-            itemId: item.servicoId || item.adicionalId,
-            nome: item.servico?.nome || item.adicional?.nome,
-            quantidade: item.quantidade,
-            precoUnit: item.precoUnit
-        }));
-
-        renderItemsInModal();
-        document.getElementById('editOrderModal').classList.add('active');
-    } catch (error) {
-        console.error('Erro ao abrir edição:', error);
-        showToast('Erro ao abrir edição', 'error');
-    }
-}
-
-function renderItemsInModal() {
-    const list = document.getElementById('editItemsList');
-    list.innerHTML = '';
-    
-    if (itemsInModal.length === 0) {
-        list.innerHTML = '<li style="color: var(--text-secondary); font-size: 13px;">Nenhum item</li>';
-        return;
-    }
-
-    itemsInModal.forEach((item, index) => {
-        const li = document.createElement('li');
-        li.style.cssText = 'display: flex; justify-content: space-between; padding: 8px; background: var(--background-light); border-radius: 6px; margin-bottom: 6px;';
-        li.innerHTML = `
-            <span>${item.nome} (${formatCurrency(item.precoUnit)})</span>
-            <button onclick="removeItemFromModal(${index})" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">
-                <i class="fas fa-trash"></i>
-            </button>
-        `;
-        list.appendChild(li);
-    });
-}
-
-function addItemToModal(type) {
-    const selectId = type === 'SERVICO' ? 'addServiceSelect' : 'addAdicionalSelect';
-    const select = document.getElementById(selectId);
-    const selectedOption = select.options[select.selectedIndex];
-    
-    if (!selectedOption.value) {
-        showToast('Selecione um item', 'error');
-        return;
-    }
-
-    const itemId = selectedOption.value;
-    if (itemsInModal.some(i => i.itemId === itemId)) {
-        showToast('Item já adicionado', 'error');
-        return;
-    }
-
-    itemsInModal.push({
-        tipo: type,
-        itemId,
-        nome: selectedOption.text,
-        quantidade: 1,
-        precoUnit: parseFloat(selectedOption.dataset.price)
-    });
-
-    select.value = '';
-    renderItemsInModal();
-}
-
-function removeItemFromModal(index) {
-    itemsInModal.splice(index, 1);
-    renderItemsInModal();
-}
-
-function closeEditModal() {
-    document.getElementById('editOrderModal').classList.remove('active');
-    itemsInModal = [];
-}
-
-async function handleUpdateOrder() {
-    const orderId = document.getElementById('editOrderId').value;
-    const lavadorId = document.getElementById('editLavador').value;
-    const status = document.getElementById('editStatus').value;
-
-    if (itemsInModal.length === 0) {
-        showToast('Adicione pelo menos um item', 'error');
-        return;
-    }
-
-    const updateData = {
-        status,
-        lavadorId: lavadorId || null,
-        itens: itemsInModal.map(item => ({
-            tipo: item.tipo,
-            itemId: item.itemId,
-            quantidade: item.quantidade
-        }))
-    };
-
-    try {
-        const response = await window.api.updateOrdem(orderId, updateData);
-        showToast('Ordem atualizada com sucesso!');
-        closeEditModal();
-        
-        if (status === 'FINALIZADO' || status === 'CANCELADO') {
-            removeOrderFromView(orderId);
-        } else {
-            const orderIndex = allOrders.findIndex(o => o.id === orderId);
-            if (orderIndex !== -1 && response.ordem) {
-                allOrders[orderIndex] = response.ordem;
-                renderOrders(allOrders);
-                updateStats();
-            } else {
-                await loadOrders();
-            }
+        // Global logout function (used by header)
+        function logout() {
+            showCustomConfirm({
+                title: 'Confirmar Saida',
+                message: 'Tem certeza que deseja sair do sistema?',
+                onConfirm: () => window.api.logout()
+            });
         }
-    } catch (error) {
-        console.error('Erro ao atualizar:', error);
-        showToast('Erro ao atualizar ordem', 'error');
-    }
-}
-
-async function handleCancelOrder(orderId) {
-    showCustomConfirm({
-        title: 'Cancelar Ordem',
-        message: 'Tem certeza que deseja cancelar esta ordem?',
-        onConfirm: async () => {
-            try {
-                await window.api.updateOrdem(orderId, { status: 'CANCELADO' });
-                showToast('Ordem cancelada');
-                removeOrderFromView(orderId);
-            } catch (error) {
-                console.error('Erro ao cancelar:', error);
-                showToast('Erro ao cancelar ordem', 'error');
-            }
-        }
-    });
-}
-
-// ============================================
-// PAGAMENTO COM DESCONTO - REFATORADO
-// ============================================
-function openPaymentModal(order) {
-    const exigirLavador = localStorage.getItem('exigirLavadorParaFinalizar') === 'true';
-
-    if (exigirLavador && !order.lavadorId) {
-        showToast('Atribua um lavador antes de finalizar', 'error');
-        return;
-    }
-
-    if (!order.lavadorId) {
-        showCustomConfirm({
-            title: 'Ordem Sem Lavador',
-            message: 'Esta ordem não tem lavador. Continuar?',
-            onConfirm: () => proceedToOpenPaymentModal(order)
-        });
-        return;
-    }
-
-    proceedToOpenPaymentModal(order);
-}
-
-function proceedToOpenPaymentModal(order) {
-    paymentOrder.id = order.id;
-    paymentOrder.total = order.valorTotal;
-    paymentOrder.desconto = 0;
-    paymentOrder.valorFinal = order.valorTotal;
-    paymentOrder.addedPayments = [];
-
-    const paidAmount = (order.pagamentos || []).reduce((sum, p) => 
-        p.status === 'PAGO' ? sum + p.valor : sum, 0
-    );
-
-    paymentOrder.remaining = order.valorTotal - paidAmount;
-
-    document.getElementById('paymentOrderId').value = order.id;
-    document.getElementById('paymentOrderTotal').textContent = formatCurrency(order.valorTotal);
-    document.getElementById('paymentOrderPaid').textContent = formatCurrency(paidAmount);
-    
-    // NOVO: Mostrar/esconder botões de pagamento com base na configuração
-    document.querySelectorAll('.payment-method-btn').forEach(button => {
-        const method = button.getAttribute('data-method'); // Usar getAttribute para pegar o data-method
-        if (method) {
-            // Se a configuração para este método for 'false', esconde o botão.
-            // Se não estiver definida (undefined), mostra por padrão (ativo).
-            const isVisible = paymentMethodsConfig[method] !== false;
-            // Usar 'flex' para manter o alinhamento correto dos ícones e texto
-            button.style.display = isVisible ? 'flex' : 'none';
-        }
-    });
-
-    // Resetar e esconder a seção de desconto ao abrir o modal
-    document.getElementById('discountSection').style.display = 'none';
-    document.getElementById('discountValueInput').value = '';
-    document.getElementById('discountTypeSelect').value = 'VALOR';
-
-    // NOVO: Resetar campos de desconto
-    document.getElementById('discountValueInput').value = '';
-    document.getElementById('discountTypeSelect').value = 'VALOR';
-    
-    updatePaymentSummary();
-    document.getElementById('paymentValueInput').value = '';
-    document.getElementById('paymentModal').classList.add('active');
-}
-
-function closePaymentModal() {
-    document.getElementById('paymentModal').classList.remove('active');
-    paymentOrder = { id: null, total: 0, remaining: 0, addedPayments: [], desconto: 0, valorFinal: 0 };
-}
-
-// ============================================
-// NOVA FUNÇÃO: Mostrar/esconder seção de desconto
-// ============================================
-function toggleDiscountSection(event) {
-    event.preventDefault();
-    const section = document.getElementById('discountSection');
-    const isVisible = section.style.display === 'block';
-    section.style.display = isVisible ? 'none' : 'block';
-}
-
-// ============================================
-// NOVA FUNÇÃO: Aplicar desconto
-// ============================================
-function applyDiscount() {
-    const discountInput = document.getElementById('discountValueInput').value;
-    const discountType = document.getElementById('discountTypeSelect').value;
-    
-    if (!discountInput || isNaN(parseFloat(discountInput.replace(',', '.')))) {
-        showToast('Digite um valor válido para o desconto', 'error');
-        return;
-    }
-
-    let discountValue = parseFloat(discountInput.replace(',', '.'));
-    
-    if (discountValue < 0) {
-        showToast('O desconto não pode ser negativo', 'error');
-        return;
-    }
-
-    let descontoCalculado = 0;
-
-    if (discountType === 'PERCENTUAL') {
-        if (discountValue > 100) {
-            showToast('O desconto percentual não pode ser maior que 100%', 'error');
-            return;
-        }
-        descontoCalculado = paymentOrder.total * (discountValue / 100);
-    } else {
-        if (discountValue > paymentOrder.total) {
-            showToast('O desconto não pode ser maior que o valor total', 'error');
-            return;
-        }
-        descontoCalculado = discountValue;
-    }
-
-    paymentOrder.desconto = descontoCalculado;
-    paymentOrder.valorFinal = paymentOrder.total - descontoCalculado;
-    paymentOrder.remaining = paymentOrder.valorFinal;
-    paymentOrder.addedPayments = []; // Limpa pagamentos ao aplicar desconto
-
-    updatePaymentSummary();
-    showToast('Desconto aplicado com sucesso!', 'success');
-}
-
-// ============================================
-// NOVA FUNÇÃO: Remover desconto
-// ============================================
-function removeDiscount() {
-    paymentOrder.desconto = 0;
-    paymentOrder.valorFinal = paymentOrder.total;
-    paymentOrder.remaining = paymentOrder.total;
-    paymentOrder.addedPayments = [];
-    
-    document.getElementById('discountValueInput').value = '';
-    document.getElementById('discountTypeSelect').value = 'VALOR';
-    
-    updatePaymentSummary();
-
-    // Esconde a seção de desconto após remover
-    document.getElementById('discountSection').style.display = 'none';
-
-    showToast('Desconto removido', 'success');
-}
-
-function formatInputAsCurrency(input) {
-    let value = input.value.replace(/\D/g, '');
-    value = (parseInt(value, 10) / 100).toFixed(2);
-    if (isNaN(value)) value = "0.00";
-    input.value = value.replace('.', ',');
-}
-
-function fillRemainingAmount() {
-    document.getElementById('paymentValueInput').value = paymentOrder.remaining.toFixed(2).replace('.', ',');
-}
-
-function addPayment(method) {
-    const input = document.getElementById('paymentValueInput');
-    let amount = parseFloat(input.value.replace(',', '.')) || 0;
-
-    if (method === 'PENDENTE' && amount === 0) {
-        amount = paymentOrder.remaining > 0 ? paymentOrder.remaining : 0;
-    }
-
-    if (amount <= 0) {
-        showToast('Valor deve ser maior que zero', 'error');
-        return;
-    }
-
-    if (amount > paymentOrder.remaining + 0.01) {
-        showToast('Valor maior que o restante', 'error');
-        return;
-    }
-
-    paymentOrder.addedPayments.push({ method, amount });
-    paymentOrder.remaining -= amount;
-    input.value = '';
-    updatePaymentSummary();
-}
-
-function removeAddedPayment(index) {
-    const removed = paymentOrder.addedPayments.splice(index, 1);
-    if (removed.length > 0) {
-        paymentOrder.remaining += removed[0].amount;
-    }
-    updatePaymentSummary();
-}
-
-// ============================================
-// ATUALIZADA: Incluir informações de desconto
-// ============================================
-function updatePaymentSummary() {
-    // Atualizar valor restante
-    document.getElementById('paymentOrderRemaining').textContent = 
-        formatCurrency(paymentOrder.remaining < 0 ? 0 : paymentOrder.remaining);
-    
-    // NOVO: Atualizar informações com desconto
-    const totalOriginal = paymentOrder.total;
-    const desconto = paymentOrder.desconto;
-    const valorFinal = paymentOrder.valorFinal;
-    
-    // Atualiza o header do modal para refletir o desconto
-    if (desconto > 0) {
-        document.getElementById('paymentOrderTotal').innerHTML = 
-            `${formatCurrency(totalOriginal)} <span style="font-size: 14px; color: #ef4444; font-weight: 600;">(-${formatCurrency(desconto)})</span>`;
-    } else {
-        document.getElementById('paymentOrderTotal').textContent = formatCurrency(totalOriginal);
-    }
-
-    const container = document.getElementById('addedPaymentsContainer');
-    const list = document.getElementById('addedPaymentsList');
-    list.innerHTML = '';
-
-    if (paymentOrder.addedPayments.length === 0) {
-        container.style.display = 'none';
-    } else {
-        container.style.display = 'block';
-        paymentOrder.addedPayments.forEach((p, index) => {
-            const item = document.createElement('div');
-            item.className = 'payment-list-item';
-            item.innerHTML = `
-                <span>${p.method} - <strong>${formatCurrency(p.amount)}</strong></span>
-                <button class="remove-payment-btn" onclick="removeAddedPayment(${index})">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            list.appendChild(item);
-        });
-    }
-}
-
-async function submitPayments() {
-    const btn = document.getElementById('submitPaymentBtn');
-    
-    if (paymentOrder.addedPayments.length === 0) {
-        showToast('Adicione pelo menos um pagamento', 'error');
-        return;
-    }
-
-    if (paymentOrder.remaining > 0.01) {
-        showCustomConfirm({
-            title: 'Saldo Pendente',
-            message: `Resta ${formatCurrency(paymentOrder.remaining)}. Registrar como PENDENTE?`,
-            onConfirm: () => {
-                paymentOrder.addedPayments.push({ 
-                    method: 'PENDENTE', 
-                    amount: parseFloat(paymentOrder.remaining.toFixed(2)) 
-                });
-                proceedWithPaymentSubmission(btn);
-            }
-        });
-        return;
-    }
-
-    await proceedWithPaymentSubmission(btn);
-}
-
-// ============================================
-// ATUALIZADA: Enviar desconto para o backend
-// ============================================
-async function proceedWithPaymentSubmission(btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-
-    const payload = {
-        pagamentos: paymentOrder.addedPayments.map(p => ({
-            metodo: p.method,
-            valor: p.amount,
-        })),
-        desconto: paymentOrder.desconto // NOVO: Enviar desconto
-    };
-
-    try {
-        await window.api.finalizarOrdem(paymentOrder.id, payload);
-        
-        showToast('Ordem finalizada com sucesso!');
-        closePaymentModal();
-        removeOrderFromView(paymentOrder.id);
-    } catch (error) {
-        console.error('Erro ao processar:', error);
-        showToast(error.message || 'Erro ao processar pagamento', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Finalizar Ordem';
-    }
-}
-
-function openDebitoFuncionarioModal() {
-    if (paymentOrder.remaining <= 0) {
-        showToast('A ordem já está totalmente paga.', 'error');
-        return;
-    }
-    openModal('debitoFuncionarioModal');
-}
-
-function confirmDebitoFuncionario() {
-    const lavadorDebitoId = document.getElementById('debitoLavadorSelect').value;
-    if (!lavadorDebitoId) {
-        showToast('Por favor, selecione um funcionário.', 'error');
-        return;
-    }
-
-    const payload = {
-        pagamentos: [{
-            metodo: 'DEBITO_FUNCIONARIO',
-            valor: paymentOrder.valorFinal // Usa valor final (com desconto)
-        }],
-        lavadorDebitoId: lavadorDebitoId,
-        desconto: paymentOrder.desconto, // NOVO: Enviar desconto
-    };
-
-    proceedWithDebitoSubmission(payload);
-}
-
-async function proceedWithDebitoSubmission(payload) {
-    closeModal('debitoFuncionarioModal');
-    const btn = document.getElementById('submitPaymentBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-
-    try {
-        await window.api.finalizarOrdem(paymentOrder.id, payload);
-        showToast('Ordem finalizada e débito lançado com sucesso!');
-        closePaymentModal();
-        removeOrderFromView(paymentOrder.id);
-    } catch (error) {
-        console.error('Erro ao processar débito:', error);
-        showToast(error.message || 'Erro ao processar débito', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Finalizar Ordem';
-    }
-}
-
-function removeOrderFromView(orderId) {
-    allOrders = allOrders.filter(o => o.id !== orderId);
-    
-    const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
-    if (card) {
-        card.style.transition = 'all 0.3s';
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.8)';
-        setTimeout(() => card.remove(), 300);
-    }
-    
-    const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
-    if (row) {
-        row.style.transition = 'all 0.3s';
-        row.style.opacity = '0';
-        setTimeout(() => row.remove(), 300);
-    }
-    
-    updateStats();
-    
-    if (allOrders.length === 0) {
-        setTimeout(() => {
-            renderOrders([]);
-        }, 350);
-    }
-}
-
-// ============================================
-// UTILS
-// ============================================
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', { 
-        style: 'currency', 
-        currency: 'BRL' 
-    }).format(value || 0);
-}
     </script>
 </body>
 </html>
+
+

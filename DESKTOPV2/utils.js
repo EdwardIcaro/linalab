@@ -4,7 +4,43 @@
  * @param {string} requiredPermission O nome da permissão a ser verificada.
  * @returns {boolean} `true` se o usuário tiver a permissão, `false` caso contrário.
  */
+function getEffectiveRole() {
+    const storedRole = localStorage.getItem('userRole');
+    if (storedRole) {
+        return storedRole;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const payloadBase64 = token.split('.')[1]
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+        const payload = JSON.parse(atob(payloadBase64));
+
+        if (payload?.subaccountId) {
+            return 'USER';
+        }
+
+        if (payload?.role) {
+            return payload.role;
+        }
+
+        return 'OWNER';
+    } catch (error) {
+        console.warn('Falha ao inferir role do token:', error);
+        return null;
+    }
+}
+
 function hasPermission(requiredPermission) {
+    const userRole = getEffectiveRole();
+    if (userRole === 'OWNER' || userRole === 'LINA_OWNER') {
+        return true;
+    }
     const permissions = JSON.parse(localStorage.getItem('permissoes') || '[]');
     if (!Array.isArray(permissions)) {
         return false;
@@ -157,6 +193,21 @@ function enforcePermission(requiredPermission) {
 }
 
 /**
+ * Renderiza uma tela simples de acesso negado (fallback quando não há modal).
+ */
+function renderAccessDeniedPage() {
+    document.body.innerHTML = `
+        <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; background: #f8fafc; color: #0f172a; font-family: 'Poppins', Arial, sans-serif;">
+            <div style="max-width: 520px; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; text-align: center; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);">
+                <div style="font-size: 42px; margin-bottom: 12px;">⛔</div>
+                <h2 style="margin: 0 0 12px; font-size: 22px;">Acesso negado</h2>
+                <p style="margin: 0 0 20px; color: #64748b;">Você não tem permissão para acessar esta página.</p>
+                <p style="margin: 0; color: #64748b;">Redirecionando...</p>
+            </div>
+        </div>
+    `;
+}
+/**
  * Initializes the user dropdown menu in the sidebar.
  */
 function initializeUserMenu() {
@@ -194,6 +245,46 @@ function updateMenuVisibility() {
         }
     });
 }
+
+/**
+ * Esconde itens do menu de navegação padrão (nav-menu-card) com base nas permissões.
+ */
+function updateNavMenuVisibility() {
+    const navItems = document.querySelectorAll('.nav-menu-item[data-permission]');
+    navItems.forEach(item => {
+        const requiredPermission = item.dataset.permission;
+        if (!hasPermission(requiredPermission)) {
+            item.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Auto-aplica permissões por página se o <body> declarar data-permission.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        if (typeof updateNavMenuVisibility === 'function') {
+            updateNavMenuVisibility();
+        }
+
+        const requiredPermission = document.body?.dataset?.permission;
+        if (requiredPermission) {
+            if (!hasPermission(requiredPermission)) {
+                renderAccessDeniedPage();
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+                return;
+            }
+            if (typeof enforcePermission === 'function') {
+                enforcePermission(requiredPermission);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao aplicar permissões da página:', error);
+    }
+});
 
 /**
  * Alterna o estado de um botão para "carregando".
@@ -355,3 +446,8 @@ function renderTopBanner(notification) {
         document.querySelector('.main-content').style.paddingTop = 'calc(var(--top-bar-height) + 32px)';
     });
 }
+
+
+
+
+

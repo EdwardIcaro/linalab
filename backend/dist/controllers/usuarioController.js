@@ -37,6 +37,7 @@ const createUsuario = async (req, res) => {
 exports.createUsuario = createUsuario;
 /**
  * Gera um novo token com o escopo de uma empresa específica
+ * SECURITY: Validates that the user actually owns/belongs to the empresa before issuing token
  */
 const generateScopedToken = async (req, res) => {
     const usuarioId = req.usuarioId;
@@ -44,14 +45,42 @@ const generateScopedToken = async (req, res) => {
     if (!empresaId) {
         return res.status(400).json({ error: 'empresaId é obrigatório' });
     }
+    // SECURITY: Validate JWT_SECRET is configured
+    if (!process.env.JWT_SECRET) {
+        console.error('CRITICAL: JWT_SECRET not configured');
+        return res.status(500).json({ error: 'Erro de configuração do servidor' });
+    }
     try {
         const usuario = await db_1.default.usuario.findUnique({ where: { id: usuarioId } });
         if (!usuario) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
-        const token = jsonwebtoken_1.default.sign({ id: usuario.id, nome: usuario.nome, empresaId }, // Agora inclui o empresaId
-        process.env.JWT_SECRET || 'seu_segredo_jwt_aqui', { expiresIn: '1d' });
-        res.json({ token });
+        // SECURITY FIX: Verify the user actually owns this empresa
+        // This prevents horizontal privilege escalation
+        const empresa = await db_1.default.empresa.findFirst({
+            where: {
+                id: empresaId,
+                usuarioId: usuarioId, // User must be the owner
+            },
+        });
+        if (!empresa) {
+            console.warn(`[SECURITY] User ${usuarioId} attempted to access empresa ${empresaId} without permission`);
+            return res.status(403).json({ error: 'Acesso negado: você não tem permissão para acessar esta empresa' });
+        }
+        // Generate token with empresaId embedded in claims (signed, tamper-proof)
+        const token = jsonwebtoken_1.default.sign({
+            id: usuario.id,
+            nome: usuario.nome,
+            empresaId: empresa.id, // Embed in JWT - cannot be tampered
+            empresaNome: empresa.nome, // Include empresa name for convenience
+        }, process.env.JWT_SECRET, { expiresIn: '24h' });
+        res.json({
+            token,
+            empresa: {
+                id: empresa.id,
+                nome: empresa.nome,
+            }
+        });
     }
     catch (error) {
         console.error('Erro ao gerar token com escopo:', error);
@@ -61,6 +90,7 @@ const generateScopedToken = async (req, res) => {
 exports.generateScopedToken = generateScopedToken;
 /**
  * Autenticar usuário (login)
+ * Returns a base token (no empresa scope) + list of user's empresas
  */
 const authenticateUsuario = async (req, res) => {
     try {
@@ -68,16 +98,23 @@ const authenticateUsuario = async (req, res) => {
         if (!identifier || !senha) {
             return res.status(400).json({ error: 'Nome de usuário e senha são obrigatórios' });
         }
+        // SECURITY: Validate JWT_SECRET is configured
+        if (!process.env.JWT_SECRET) {
+            console.error('CRITICAL: JWT_SECRET not configured');
+            return res.status(500).json({ error: 'Erro de configuração do servidor' });
+        }
         // Procura o usuário tanto pelo nome quanto pelo e-mail
         const usuario = await db_1.default.usuario.findFirst({
             where: { OR: [{ nome: identifier }, { email: identifier }] },
         });
         if (!usuario) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
+            // Use generic message to prevent user enumeration
+            return res.status(401).json({ error: 'Credenciais inválidas' });
         }
         const isSenhaValida = await bcrypt_1.default.compare(senha, usuario.senha);
         if (!isSenhaValida) {
-            return res.status(401).json({ error: 'Senha inválida' });
+            // Use generic message to prevent user enumeration
+            return res.status(401).json({ error: 'Credenciais inválidas' });
         }
         // Retorna dados do usuário e suas empresas associadas
         const empresas = await db_1.default.empresa.findMany({
@@ -85,17 +122,18 @@ const authenticateUsuario = async (req, res) => {
             select: { id: true, nome: true },
         });
         const { senha: _, ...usuarioData } = usuario;
-        // Gerar token JWT
-        const token = jsonwebtoken_1.default.sign({ id: usuario.id, nome: usuario.nome }, process.env.JWT_SECRET || 'seu_segredo_jwt_aqui', // Use uma variável de ambiente!
-        { expiresIn: '1d' } // Token expira em 1 dia
+        // Generate base token (no empresa scope yet)
+        // User must call generateScopedToken after selecting an empresa
+        const token = jsonwebtoken_1.default.sign({ id: usuario.id, nome: usuario.nome, role: usuario.role }, process.env.JWT_SECRET, { expiresIn: '1h' } // Short-lived until empresa is selected
         );
         res.json({
             message: 'Autenticação realizada com sucesso',
             usuario: {
                 ...usuarioData,
+                role: usuario.role, // ← CRITICAL: Return role for frontend routing
                 empresas,
             },
-            token, // Envia o token para o frontend
+            token,
         });
     }
     catch (error) {

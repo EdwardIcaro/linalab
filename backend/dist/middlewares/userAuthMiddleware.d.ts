@@ -1,7 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-interface AuthRequest extends Request {
-    usuarioId?: string;
+/**
+ * Extended Request with user authentication data (no empresa scope)
+ */
+export interface UserAuthRequest extends Request {
+    usuarioId: string;
+    usuarioNome?: string;
 }
-declare const userAuthMiddleware: (req: AuthRequest, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;
+/**
+ * User Authentication Middleware (No Empresa Scope)
+ *
+ * Used for routes that only need user identity, not empresa context.
+ * Example: selecting an empresa, managing user profile, etc.
+ *
+ * SECURITY: No fallback JWT secret
+ */
+declare const userAuthMiddleware: (req: Request, res: Response, next: NextFunction) => void | Response;
 export default userAuthMiddleware;
 //# sourceMappingURL=userAuthMiddleware.d.ts.map

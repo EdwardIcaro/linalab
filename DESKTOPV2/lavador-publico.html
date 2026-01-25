@@ -103,6 +103,7 @@
     .order-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: var(--primary-color); }
     .order-card.status-FINALIZADO { border-left-color: var(--success); }
     .order-card.status-EM_ANDAMENTO { border-left-color: var(--warning); }
+    .order-card.status-AGUARDANDO_PAGAMENTO { border-left-color: #f59e0b; }
     .order-card.status-PENDENTE { border-left-color: var(--info); }
     
     .order-main { padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
@@ -121,12 +122,14 @@
     .gross-value strong { font-weight: 600; }
     .order-value { font-size: 18px; font-weight: 700; color: var(--primary-color); }
     .status-FINALIZADO .order-value { color: var(--success); }
+    .status-AGUARDANDO_PAGAMENTO .order-value { color: #b45309; }
     .status-PENDENTE .order-value { color: var(--info); }
     .status-EM_ANDAMENTO .order-value { color: var(--warning); }
     
     .status-badge { padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; white-space: nowrap; }
     .status-badge.status-FINALIZADO { background-color: #ECFDF5; color: #065F46; }
     .status-badge.status-EM_ANDAMENTO { background-color: #FFFBEB; color: #B45309; }
+    .status-badge.status-AGUARDANDO_PAGAMENTO { background-color: #FEF3C7; color: #92400E; }
     .status-badge.status-PENDENTE { background-color: #EFF6FF; color: #1E40AF; }
 
     .section-divider { height: 1px; background-color: var(--border-color); margin: 24px 0; }
@@ -332,7 +335,7 @@
       const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const ordensParaGanho = allData.ordens.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO');
+      const ordensParaGanho = allData.ordens.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO' || o.status === 'AGUARDANDO_PAGAMENTO');
       
       const ganhoSemana = ordensParaGanho.filter(o => new Date(o.createdAt) >= weekStart).reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
       const ganhoMes = ordensParaGanho.filter(o => new Date(o.createdAt) >= monthStart).reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
@@ -344,7 +347,7 @@
     // ---------- DAY ORDERS ----------
     function renderForSelectedDay() {
       const orders = allData.ordens.filter(o => toLocaleDateISOString(o.createdAt) === selectedDateISO);
-      const ordensParaGanho = orders.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO');
+      const ordensParaGanho = orders.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO' || o.status === 'AGUARDANDO_PAGAMENTO');
       const ganhoDia = ordensParaGanho.reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
 
       document.getElementById('totalGanhoDia').textContent = formatCurrency(ganhoDia);
@@ -383,7 +386,7 @@
             </div>
             <div class="order-footer">
               <div class="gross-value">Valor Total: <strong>${formatCurrency(ordem.valorTotal)}</strong></div>
-              <div class="order-value">${ (status === 'FINALIZADO' || status === 'EM_ANDAMENTO') ? formatCurrency(comissao) : '-' }</div>
+              <div class="order-value">${ (status === 'FINALIZADO' || status === 'EM_ANDAMENTO' || status === 'AGUARDANDO_PAGAMENTO') ? formatCurrency(comissao) : '-' }</div>
             </div>
           </div>
         `;
@@ -392,3 +395,4 @@
   </script>
 </body>
 </html>
+

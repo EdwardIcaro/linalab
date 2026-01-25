@@ -19,6 +19,14 @@ const parseEmpresaConfig = (empresa: any) => {
       empresa.notificationPreferences = {}; // Retorna objeto vazio em caso de erro
     }
   }
+  if (empresa.paymentMethodsConfig && typeof empresa.paymentMethodsConfig === 'string') {
+    try {
+      empresa.paymentMethodsConfig = JSON.parse(empresa.paymentMethodsConfig);
+    } catch (e) {
+      console.error('Erro ao parsear paymentMethodsConfig JSON:', e);
+      empresa.paymentMethodsConfig = {}; // Retorna objeto vazio em caso de erro
+    }
+  }
   return empresa;
 };
 
@@ -63,6 +71,12 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
             ordemEditada: true,
             ordemDeletada: false,
             finalizacaoAutomatica: true
+        }),
+        paymentMethodsConfig: JSON.stringify({
+          DINHEIRO: true,
+          PIX: true,
+          CARTAO: true,
+          DEBITO_FUNCIONARIO: true
         })
       },
       select: {
@@ -71,6 +85,7 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
         ativo: true,
         config: true,
         notificationPreferences: true,
+        paymentMethodsConfig: true,
         createdAt: true,
         updatedAt: true
       }
@@ -157,6 +172,7 @@ export const getEmpresaById = async (req: EmpresaRequest, res: Response) => {
         exigirLavadorParaFinalizar: true,
         paginaInicialPadrao: true,
         notificationPreferences: true,
+        paymentMethodsConfig: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -190,7 +206,7 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
     const { 
       nome, config, horarioAbertura, horarioFechamento, 
       finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao, 
-      notificationPreferences
+      notificationPreferences, paymentMethodsConfig
     } = req.body;
 
     const existingEmpresa = await prisma.empresa.findUnique({
@@ -211,6 +227,7 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
     if (exigirLavadorParaFinalizar !== undefined) updateData.exigirLavadorParaFinalizar = exigirLavadorParaFinalizar;
     if (paginaInicialPadrao) updateData.paginaInicialPadrao = paginaInicialPadrao;
     if (notificationPreferences && typeof notificationPreferences === 'object') updateData.notificationPreferences = JSON.stringify(notificationPreferences);
+    if (paymentMethodsConfig && typeof paymentMethodsConfig === 'object') updateData.paymentMethodsConfig = JSON.stringify(paymentMethodsConfig);
     
     let empresa = await prisma.empresa.update({
       where: { id },
@@ -226,6 +243,7 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
         exigirLavadorParaFinalizar: true,
         paginaInicialPadrao: true,
         notificationPreferences: true,
+        paymentMethodsConfig: true,
         updatedAt: true
       }
     });

@@ -3,12 +3,13 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:c:/LinaX/backend/prisma/dev.db"
+  // For SQLite (development): provider = "sqlite"
+  // For PostgreSQL (production): provider = "postgresql"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // Modelo de Usuários (NOVO)
@@ -17,6 +18,7 @@ model Usuario {
   nome      String    @unique // Nome de usuário para login
   email     String    @unique
   senha     String
+  role      UserRole  @default(USER) // Role-based access control
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -24,6 +26,14 @@ model Usuario {
   empresas  Empresa[]
 
   @@map("usuarios")
+}
+
+// Enum de Roles para controle de acesso
+enum UserRole {
+  LINA_OWNER  // SaaS Super Admin - Access to admin/*
+  OWNER       // Company Owner - Access to company dashboard
+  MANAGER     // Manager - Limited company access
+  USER        // Regular User - Basic access
 }
 
 // Modelo principal de Empresas (Multi-tenancy)
@@ -39,6 +49,7 @@ model Empresa {
   exigirLavadorParaFinalizar   Boolean?               @default(false)
   paginaInicialPadrao          String?                @default("index.html")
   notificationPreferences      Json?
+  paymentMethodsConfig         Json?
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
   usuarioId                    String // Chave estrangeira para o usuário dono
@@ -55,8 +66,11 @@ model Empresa {
   fechamentosCaixa             FechamentoCaixa[]
   caixaRegistros               CaixaRegistro[]
   fechamentosComissao          FechamentoComissao[]
+  roles                        Role[]
+  subaccounts                  Subaccount[]
   usuario                      Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   notificacoes                 Notificacao[]
+  theme                        Theme?
 
   @@map("empresas")
 }
@@ -125,6 +139,7 @@ model Lavador {
   // Relacionamentos
   empresa             Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   ordens              OrdemServico[]
+  ordemLavadores      OrdemServicoLavador[]
   tokens              LavadorToken[]
   caixaRegistros      CaixaRegistro[]
   adiantamentos       Adiantamento[]
@@ -290,12 +305,25 @@ model OrdemServico {
   lavador              Lavador?              @relation(fields: [lavadorId], references: [id], onDelete: SetNull)
   items                OrdemServicoItem[]
   pagamentos           Pagamento[]
+  ordemLavadores       OrdemServicoLavador[]
 
   fechamentoComissaoId String?
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
 
   @@unique([empresaId, numeroOrdem])
   @@map("ordens_servico")
+}
+
+model OrdemServicoLavador {
+  ordemId     String
+  lavadorId   String
+  createdAt   DateTime           @default(now())
+
+  ordem     OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  lavador   Lavador      @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+
+  @@id([ordemId, lavadorId])
+  @@map("ordens_servico_lavadores")
 }
 
 // Modelo de Itens da Ordem de Serviço
@@ -338,6 +366,52 @@ model Pagamento {
   @@map("pagamentos")
 }
 
+// Roles internas da empresa (RBAC)
+model Role {
+  id        String       @id @default(cuid())
+  nome      String
+  empresaId String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  empresa   Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarios  Subaccount[]
+  permissoes Permission[]
+
+  @@unique([empresaId, nome])
+  @@map("roles")
+}
+
+// Permissoes por role
+model Permission {
+  id      String @id @default(cuid())
+  name    String
+  nome    String
+  roleId  String
+
+  role    Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("permissions")
+}
+
+// Subcontas (usuarios internos da empresa)
+model Subaccount {
+  id          String   @id @default(cuid())
+  nome        String
+  email       String   @unique
+  senha       String
+  roleId      String
+  maxDesconto Int      @default(0)
+  empresaId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roleInt Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("subaccounts")
+}
+
 model Adiantamento {
   id              String                @id @default(cuid())
   valor           Float
@@ -378,9 +452,26 @@ model FechamentoComissao {
   @@map("fechamentos_comissao")
 }
 
+// Modelo de Tema (Theme Customization)
+model Theme {
+  id             String   @id @default(cuid())
+  empresaId      String   @unique
+  corPrimaria    String   @default("#F59E0B") // Default: Amber/Orange
+  corSecundaria  String   @default("#1F2937") // Default: Dark Gray
+  logoUrl        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relacionamento
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("themes")
+}
+
 enum OrdemStatus {
   PENDENTE
   EM_ANDAMENTO
+  AGUARDANDO_PAGAMENTO
   FINALIZADO
   CANCELADO
 }
@@ -392,11 +483,13 @@ enum OrdemItemType {
 
 enum MetodoPagamento {
   DINHEIRO
+  CARTAO
   CARTAO_CREDITO
   CARTAO_DEBITO
   PIX
   OUTRO
   PENDENTE
+  DEBITO_FUNCIONARIO
 }
 
 enum StatusPagamento {

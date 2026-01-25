@@ -21,12 +21,16 @@ import fornecedorRoutes from './routes/fornecedor';
 import pagamentoRoutes from './routes/pagamento';
 import tipoVeiculoRoutes from './routes/tipoVeiculo';
 import notificacaoRoutes from './routes/notificacao';
+import adminRoutes from './routes/adminRoutes';
+import themeRoutes from './routes/themeRoutes';
+import roleRoutes from './routes/roles';
 
 import prisma from './db'; // Importa a instância do Prisma
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
 import userAuthMiddleware from './middlewares/userAuthMiddleware';
+import adminMiddleware from './middlewares/adminMiddleware';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -55,6 +59,8 @@ app.get('/api/public/lavador/:id/ordens', getOrdensByLavadorPublic);
 app.post('/api/public/lavador-data', getLavadorPublicData);
 
 // Middleware de autenticação para rotas protegidas
+app.use('/api/admin', adminMiddleware, adminRoutes); // Admin routes (LINA_OWNER only)
+app.use('/api/theme', authMiddleware, themeRoutes); // Theme routes (requires empresa scope)
 app.use('/api/empresas', userAuthMiddleware, empresaRoutes); // Usa middleware de usuário
 app.use('/api/clientes', authMiddleware, clienteRoutes); // Usa middleware de empresa
 app.use('/api/veiculos', authMiddleware, veiculoRoutes); // Usa middleware de empresa
@@ -67,6 +73,7 @@ app.use('/api/fornecedores', authMiddleware, fornecedorRoutes); // Usa middlewar
 app.use('/api/pagamentos', authMiddleware, pagamentoRoutes); // Usa middleware de empresa
 app.use('/api/tipos-veiculo', authMiddleware, tipoVeiculoRoutes); // Usa middleware de empresa
 app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middleware de empresa
+app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
 
 // Rota de saúde
 app.get('/health', (_req: express.Request, res: express.Response) => {

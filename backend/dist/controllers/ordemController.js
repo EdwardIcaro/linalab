@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processarFinalizacoesAutomaticas = exports.deleteOrdem = exports.getOrdensStats = exports.cancelOrdem = exports.updateOrdem = exports.getOrdemById = exports.getOrdens = exports.createOrdem = void 0;
-const client_1 = require("@prisma/client");
 const db_1 = __importDefault(require("../db"));
 const notificationService_1 = require("../services/notificationService");
 /**
@@ -83,7 +82,7 @@ const createOrdem = async (req, res) => {
                     where: {
                         veiculoId: finalVeiculoId,
                         empresaId,
-                        status: { in: [client_1.OrdemStatus.PENDENTE, client_1.OrdemStatus.EM_ANDAMENTO] },
+                        status: { in: ['PENDENTE', 'EM_ANDAMENTO'] },
                     },
                 });
                 if (ordemAtiva) {
@@ -170,7 +169,7 @@ const createOrdem = async (req, res) => {
                     lavadorId,
                     valorTotal: calculatedValorTotal,
                     comissao: comissaoCalculada, // A comissão é calculada, mas só é "devida" ao finalizar
-                    status: lavadorId ? client_1.OrdemStatus.EM_ANDAMENTO : client_1.OrdemStatus.PENDENTE,
+                    status: lavadorId ? 'EM_ANDAMENTO' : 'PENDENTE',
                     observacoes: observacoes,
                     items: { create: ordemItemsData.filter(Boolean) },
                 },
@@ -237,7 +236,7 @@ const getOrdens = async (req, res) => {
         if (status) {
             const statusString = status;
             if (statusString === 'ACTIVE') {
-                where.status = { in: [client_1.OrdemStatus.PENDENTE, client_1.OrdemStatus.EM_ANDAMENTO] };
+                where.status = { in: ['PENDENTE', 'EM_ANDAMENTO'] };
             }
             else if (statusString.includes(',')) {
                 where.status = { in: statusString.split(',') };
@@ -253,14 +252,12 @@ const getOrdens = async (req, res) => {
             where.lavadorId = lavadorId;
         }
         if (dataInicio && dataFim && dataInicio !== 'null' && dataFim !== 'null') {
-            const empresa = await db_1.default.empresa.findUnique({ where: { id: req.empresaId } });
-            const horarioAbertura = empresa?.horarioAbertura || '07:00';
-            const startDateString = dataInicio.split('T')[0];
-            const endDateString = dataFim.split('T')[0];
-            const start = new Date(`T:00`);
-            const end = new Date(`T:00`);
+            // As datas já chegam no formato YYYY-MM-DD
+            const start = new Date(dataInicio);
+            start.setUTCHours(0, 0, 0, 0);
+            const end = new Date(dataFim);
+            end.setUTCHours(23, 59, 59, 999);
             end.setDate(end.getDate() + 1);
-            end.setMilliseconds(end.getMilliseconds() - 1);
             where.createdAt = {
                 gte: start,
                 lte: end,
@@ -446,19 +443,19 @@ const updateOrdem = async (req, res) => {
                     }
                     let itemData;
                     let precoUnitario = 0;
-                    if (tipo === client_1.OrdemItemType.SERVICO) {
+                    if (tipo === 'SERVICO') {
                         const servico = await tx.servico.findUnique({ where: { id: itemId, empresaId: req.empresaId } });
                         if (!servico)
                             throw new Error(`Serviço com ID ${itemId} não encontrado`);
                         precoUnitario = servico.preco;
-                        itemData = { tipo: client_1.OrdemItemType.SERVICO, servico: { connect: { id: itemId } }, quantidade, precoUnit: precoUnitario, subtotal: precoUnitario * quantidade };
+                        itemData = { tipo: 'SERVICO', servico: { connect: { id: itemId } }, quantidade, precoUnit: precoUnitario, subtotal: precoUnitario * quantidade };
                     }
-                    else if (tipo === client_1.OrdemItemType.ADICIONAL) {
+                    else if (tipo === 'ADICIONAL') {
                         const adicional = await tx.adicional.findUnique({ where: { id: itemId, empresaId: req.empresaId } });
                         if (!adicional)
                             throw new Error(`Adicional com ID ${itemId} não encontrado`);
                         precoUnitario = adicional.preco;
-                        itemData = { tipo: client_1.OrdemItemType.ADICIONAL, adicional: { connect: { id: itemId } }, quantidade, precoUnit: precoUnitario, subtotal: precoUnitario * quantidade };
+                        itemData = { tipo: 'ADICIONAL', adicional: { connect: { id: itemId } }, quantidade, precoUnit: precoUnitario, subtotal: precoUnitario * quantidade };
                     }
                     else {
                         throw new Error('Tipo de item inválido. Use SERVICO ou ADICIONAL');
@@ -890,8 +887,8 @@ const processarFinalizacoesAutomaticas = async () => {
                                 pagamentos: {
                                     create: {
                                         empresaId: empresa.id,
-                                        valor: ordem.valorTotal, // TODO: Check if this should be the remaining amount
-                                        metodo: client_1.MetodoPagamento.PENDENTE,
+                                        valor: ordem.valorTotal,
+                                        metodo: 'PENDENTE',
                                         status: 'PENDENTE',
                                     },
                                 },

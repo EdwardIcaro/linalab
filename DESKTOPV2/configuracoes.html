@@ -9,118 +9,500 @@
     <link rel="stylesheet" href="configuracoes.css">
     <script src="utils.js"></script>
     <script src="api.js"></script>
-    <script src="theme.js"></script>
+    <!-- theme.js removed - now opt-in only (enable via Aparência tab) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Adiciona a biblioteca SortableJS -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body id="config-page">
-    <header class="top-bar">
-        <div class="top-bar-left">
-            <div class="logo">
-                <i class="fas fa-car-wash"></i>
-                <h1>LinaX</h1>
-            </div>
-        </div>
-        <div class="top-bar-center">
-            <nav class="top-nav-links">
-                <ul>
-                    <li data-permission="ver_dashboard"><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
-                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
-                    <li data-permission="gerenciar_clientes"><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
-                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
-                    <li data-permission="ver_financeiro"><a href="financeiro.html"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
-                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html" class="active"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
-                </ul>
-            </nav>
-        </div>
-        <div class="top-bar-right">
-            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
-                <i class="fas fa-plus"></i>
-                <span>Nova Ordem</span>
-            </a>
-            
-            <!-- Notification Bell (Corrigido) -->
-            <div class="notification-wrapper">
-                <button id="notification-bell" class="icon-btn">
-                    <i class="fas fa-bell"></i>
-                    <span id="notification-dot" class="notification-dot"></span>
-                </button>
-                <div id="notification-panel" class="notification-panel">
-                    <!-- O conteúdo será preenchido via JS -->
-                </div>
-            </div>
-
-            <div class="user-menu-container">
-                <div id="user-menu-trigger" class="user-menu-trigger">
-                    <div id="user-info-avatar" class="user-avatar">
-                        <!-- Avatar -->
-                    </div>
-                </div>
-                <div id="user-menu-dropdown" class="user-menu-dropdown">
-                    <div id="user-info-dropdown">
-                        <!-- User info -->
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <button id="theme-toggle" class="dropdown-item">
-                        <i class="fas fa-moon"></i>
-                        <span>Alterar Tema</span>
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Sair</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+<body id="config-page" data-permission="gerenciar_configuracoes">
+    <!-- Navigation Menu -->
+    <nav class="nav-menu-card" style="margin: 32px;">
+        <a href="index.html" class="nav-menu-item" data-permission="ver_dashboard">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="ordens.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+            <i class="fas fa-list-alt"></i>
+            <span>Ordens</span>
+        </a>
+        <a href="novaordem.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+            <i class="fas fa-plus-circle"></i>
+            <span>Nova Ordem</span>
+        </a>
+        <a href="clientes.html" class="nav-menu-item" data-permission="gerenciar_clientes">
+            <i class="fas fa-users"></i>
+            <span>Clientes</span>
+        </a>
+        <a href="funcionarios.html" class="nav-menu-item" data-permission="gerenciar_funcionarios">
+            <i class="fas fa-user-tie"></i>
+            <span>Funcionários</span>
+        </a>
+        <a href="financeiro.html" class="nav-menu-item" data-permission="ver_financeiro">
+            <i class="fas fa-chart-pie"></i>
+            <span>Financeiro</span>
+        </a>
+        <a href="configuracoes.html" class="nav-menu-item active" data-permission="gerenciar_configuracoes">
+            <i class="fas fa-cog"></i>
+            <span>Configurações</span>
+        </a>
+    </nav>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" x-data="configApp()">
         <header class="main-header">
             <div class="header-title">
                 <h2>Configurações</h2>
-                <p>Gerencie os serviços, adicionais e outras configurações da sua empresa.</p>
+                <p>Gerencie os dados da sua empresa, tabela de preços e preferências do sistema.</p>
             </div>
         </header>
 
+        <!-- Modern Tab Navigation -->
         <div class="tabs">
-            <!-- Botão de Adicionais removido e o de Serviços renomeado -->
-            <button class="tab-button active" data-permission="config_ver_servicos" onclick="openTab(event, 'servicos')">Serviços e Adicionais</button>
-            <button class="tab-button" data-permission="config_ver_empresa" onclick="openTab(event, 'empresa')">Empresa</button>
-            <button class="tab-button" data-permission="config_ver_tokens" onclick="openTab(event, 'tokens')">Tokens de Acesso</button>
-            <button class="tab-button" data-permission="config_ver_usuarios" onclick="openTab(event, 'usuarios')">Usuários e Permissões</button>
-            <button class="tab-button" data-permission="config_ver_preferencias" onclick="openTab(event, 'preferencias')">Preferências</button>
+            <button
+                class="tab-button"
+                :class="{ 'active': activeTab === 'empresa' }"
+                @click="activeTab = 'empresa'"
+            >
+                <i class="fas fa-building mr-2"></i> Dados da Empresa
+            </button>
+            <button
+                class="tab-button"
+                :class="{ 'active': activeTab === 'precos' }"
+                @click="activeTab = 'precos'"
+            >
+                <i class="fas fa-tags mr-2"></i> Tabela de Preços
+            </button>
+            <button
+                class="tab-button"
+                :class="{ 'active': activeTab === 'aparencia' }"
+                @click="activeTab = 'aparencia'"
+            >
+                <i class="fas fa-palette mr-2"></i> Aparência
+            </button>
+            <button
+                class="tab-button"
+                :class="{ 'active': activeTab === 'preferencias' }"
+                @click="activeTab = 'preferencias'"
+                x-show="canViewTab('preferencias')"
+            >
+                <i class="fas fa-cog mr-2"></i> Preferências
+            </button>
+            <button
+                class="tab-button"
+                :class="{ 'active': activeTab === 'usuarios' }"
+                @click="activeTab = 'usuarios'"
+                x-show="canViewTab('usuarios')"
+            >
+                <i class="fas fa-user-shield mr-2"></i> Usuários e Permissões
+            </button>
+            <button
+                class="tab-button"
+                :class="{ 'active': activeTab === 'tokens' }"
+                @click="activeTab = 'tokens'"
+                x-show="canViewTab('tokens')"
+            >
+                <i class="fas fa-key mr-2"></i> Tokens de Acesso
+            </button>
         </div>
 
-        <!-- Tab de Preferências -->
-        <div id="preferencias" class="tab-content">
+        <!-- Tab 1: Dados da Empresa -->
+        <div x-show="activeTab === 'empresa'" x-transition class="tab-content">
             <div class="card">
-                <h3 class="text-xl font-semibold mb-6">Preferências Gerais</h3>
-                <form id="preferenciasForm">
-                    <!-- Seção de Finalização e Exigências -->
-                    <div class="secao-preferencia">
-                        <h4 class="text-lg font-semibold mb-4">Finalização de Ordens</h4>
-                        <div class="notification-preference-list">
-                            <div class="notification-preference-item">
-                                <label for="finalizacaoAutomatica" class="form-label">Finalização Automática de Ordens
-                                    <span class="tooltip"><i class="fas fa-info-circle text-secondary"></i><span class="tooltip-text">Se habilitado, no "fim do dia de trabalho", o sistema irá alterar ordens "pendentes" ou "em andamento" de dias anteriores para "finalizado" com pagamento "PENDENTE".</span></span>
-                                </label>
-                                <label class="switch"><input type="checkbox" id="finalizacaoAutomatica"><span class="slider round"></span></label>
+                <h3 class="text-xl font-semibold mb-6">
+                    <i class="fas fa-building mr-2" style="color: var(--primary-color);"></i>
+                    Informações da Empresa
+                </h3>
+                <form @submit.prevent="saveEmpresa">
+                    <div class="form-group">
+                        <label for="empresaNome" class="form-label">Nome da Empresa</label>
+                        <input
+                            type="text"
+                            id="empresaNome"
+                            class="form-input"
+                            x-model="empresaForm.nome"
+                            required
+                        >
+                    </div>
+
+                    <h4 class="text-lg font-semibold mt-6 mb-4">
+                        <i class="fas fa-clock mr-2" style="color: var(--primary-color);"></i>
+                        Horário de Funcionamento
+                    </h4>
+                    <p class="text-secondary mb-4">Define o início e o fim do "dia de trabalho" para relatórios e filtros.</p>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label for="horarioAbertura" class="form-label">Abertura</label>
+                            <input
+                                type="time"
+                                id="horarioAbertura"
+                                class="form-input"
+                                x-model="empresaForm.horarioAbertura"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="horarioFechamento" class="form-label">Fechamento</label>
+                            <input
+                                type="time"
+                                id="horarioFechamento"
+                                class="form-input"
+                                x-model="empresaForm.horarioFechamento"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary mt-6">
+                        <i class="fas fa-save mr-2"></i>
+                        Salvar Alterações
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab 2: Tabela de Preços (CRITICAL) -->
+        <div x-show="activeTab === 'precos'" x-transition class="tab-content">
+            <!-- Services Section -->
+            <div class="card mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-semibold">
+                            <i class="fas fa-spray-can mr-2" style="color: var(--primary-color);"></i>
+                            Serviços
+                        </h3>
+                        <p class="text-sm text-secondary mt-1">Gerencie os serviços disponíveis para cada tipo de veículo</p>
+                    </div>
+                    <button @click="openServiceModal()" class="btn-primary" x-show="hasPermissionSafe('config_ver_servicos')">
+                        <i class="fas fa-plus mr-2"></i> Novo Serviço
+                    </button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Preço</th>
+                                <th>Tipo de Veículo</th>
+                                <th>Categoria</th>
+                                <th class="actions-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="services.length === 0">
+                                <tr>
+                                    <td colspan="5" class="text-center p-8 text-secondary">
+                                        <i class="fas fa-inbox fa-3x mb-4" style="opacity: 0.3;"></i>
+                                        <p>Nenhum serviço cadastrado ainda.</p>
+                                        <p class="text-sm mt-2">Clique em "Novo Serviço" para começar.</p>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="service in services" :key="service.id">
+                                <tr>
+                                    <td x-text="service.nome"></td>
+                                    <td><strong class="font-semibold" x-text="formatCurrency(service.preco)"></strong></td>
+                                    <td x-text="service.tiposVeiculo && service.tiposVeiculo.length > 0 ? service.tiposVeiculo[0].nome : 'N/A'"></td>
+                                    <td>
+                                        <template x-if="service.tiposVeiculo && service.tiposVeiculo.some(t => t.categoria)">
+                                            <div>
+                                                <template x-for="tipo in service.tiposVeiculo.filter(t => t.categoria)" :key="tipo.categoria">
+                                                    <span class="subtipo-badge" x-text="tipo.categoria"></span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template x-if="!service.tiposVeiculo || !service.tiposVeiculo.some(t => t.categoria)">
+                                            <span class="text-secondary">Todos</span>
+                                        </template>
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button @click="openServiceModal(service)" class="btn-sm btn-secondary" title="Editar" x-show="hasPermissionSafe('config_ver_servicos')">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                        <button @click="deleteService(service.id)" class="btn-sm btn-danger" title="Excluir" x-show="hasPermissionSafe('config_ver_servicos')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Adicionais Section -->
+            <div class="card">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-semibold">
+                            <i class="fas fa-plus-circle mr-2" style="color: var(--primary-color);"></i>
+                            Adicionais
+                        </h3>
+                        <p class="text-sm text-secondary mt-1">Itens extras que podem ser adicionados aos serviços</p>
+                    </div>
+                    <button @click="openAdicionalModal()" class="btn-primary" x-show="hasPermissionSafe('config_ver_servicos')">
+                        <i class="fas fa-plus mr-2"></i> Novo Adicional
+                    </button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Preço</th>
+                                <th class="actions-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="adicionais.length === 0">
+                                <tr>
+                                    <td colspan="3" class="text-center p-8 text-secondary">
+                                        <i class="fas fa-inbox fa-3x mb-4" style="opacity: 0.3;"></i>
+                                        <p>Nenhum adicional cadastrado ainda.</p>
+                                        <p class="text-sm mt-2">Clique em "Novo Adicional" para começar.</p>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="adicional in adicionais" :key="adicional.id">
+                                <tr>
+                                    <td x-text="adicional.nome"></td>
+                                    <td><strong class="font-semibold" x-text="formatCurrency(adicional.preco)"></strong></td>
+                                    <td class="actions-cell">
+                                        <button @click="openAdicionalModal(adicional)" class="btn-sm btn-secondary" title="Editar" x-show="hasPermissionSafe('config_ver_servicos')">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                        <button @click="deleteAdicional(adicional.id)" class="btn-sm btn-danger" title="Excluir" x-show="hasPermissionSafe('config_ver_servicos')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Aparência -->
+        <div x-show="activeTab === 'aparencia'" x-transition class="tab-content">
+            <div class="card">
+                <h3 class="text-xl font-semibold mb-6">
+                    <i class="fas fa-palette mr-2" style="color: var(--primary-color);"></i>
+                    Personalização da Marca
+                </h3>
+                <p class="text-secondary mb-6">Customize as cores do sistema para refletir a identidade visual da sua empresa.</p>
+
+                <form @submit.prevent="saveTheme">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <!-- Primary Color Picker -->
+                        <div class="form-group">
+                            <label for="corPrimaria" class="form-label">
+                                <i class="fas fa-circle mr-2" :style="{ color: theme.corPrimaria }"></i>
+                                Cor Primária
+                            </label>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <input
+                                    type="color"
+                                    id="corPrimaria"
+                                    x-model="theme.corPrimaria"
+                                    style="width: 80px; height: 50px; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer;"
+                                >
+                                <input
+                                    type="text"
+                                    x-model="theme.corPrimaria"
+                                    class="form-input"
+                                    placeholder="#FF5733"
+                                    pattern="^#[0-9A-Fa-f]{6}$"
+                                    maxlength="7"
+                                    @input="theme.corPrimaria = $event.target.value.toUpperCase()"
+                                    style="flex: 1;"
+                                >
                             </div>
-                            <div class="notification-preference-item">
-                                <label for="exigirLavadorParaFinalizar" class="form-label">Exigir Lavador para Finalizar Ordem
-                                    <span class="tooltip"><i class="fas fa-info-circle text-secondary"></i><span class="tooltip-text">Se habilitado, o sistema impedirá a finalização de uma ordem de serviço que não tenha um lavador atribuído.</span></span>
-                                </label>
-                                <label class="switch"><input type="checkbox" id="exigirLavadorParaFinalizar"><span class="slider round"></span></label>
+                            <p class="text-sm text-secondary mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Usada em botões principais, destaques e elementos de ação
+                            </p>
+                        </div>
+
+                        <!-- Secondary Color Picker -->
+                        <div class="form-group">
+                            <label for="corSecundaria" class="form-label">
+                                <i class="fas fa-circle mr-2" :style="{ color: theme.corSecundaria }"></i>
+                                Cor Secundária
+                            </label>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <input
+                                    type="color"
+                                    id="corSecundaria"
+                                    x-model="theme.corSecundaria"
+                                    style="width: 80px; height: 50px; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer;"
+                                >
+                                <input
+                                    type="text"
+                                    x-model="theme.corSecundaria"
+                                    class="form-input"
+                                    placeholder="#1F2937"
+                                    pattern="^#[0-9A-Fa-f]{6}$"
+                                    maxlength="7"
+                                    @input="theme.corSecundaria = $event.target.value.toUpperCase()"
+                                    style="flex: 1;"
+                                >
+                            </div>
+                            <p class="text-sm text-secondary mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Usada em textos, bordas e elementos secundários
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Live Preview Card -->
+                    <div class="mb-6">
+                        <label class="form-label mb-3">
+                            <i class="fas fa-eye mr-2"></i>
+                            Pré-visualização
+                        </label>
+                        <div style="background: linear-gradient(135deg, rgba(243, 244, 246, 0.5) 0%, rgba(255, 255, 255, 1) 100%); padding: 32px; border-radius: 16px; border: 2px solid var(--border-color);">
+                            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                                <!-- Preview Button Primary -->
+                                <button
+                                    type="button"
+                                    :style="{
+                                        background: `linear-gradient(135deg, ${theme.corPrimaria} 0%, ${adjustBrightness(theme.corPrimaria, -20)} 100%)`,
+                                        color: 'white',
+                                        padding: '12px 24px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        fontWeight: '600',
+                                        boxShadow: `0 4px 12px ${theme.corPrimaria}40`,
+                                        cursor: 'pointer'
+                                    }"
+                                >
+                                    <i class="fas fa-check mr-2"></i>
+                                    Botão Primário
+                                </button>
+
+                                <!-- Preview Badge -->
+                                <div
+                                    :style="{
+                                        background: `${theme.corPrimaria}20`,
+                                        color: theme.corPrimaria,
+                                        padding: '8px 16px',
+                                        borderRadius: '8px',
+                                        border: `1px solid ${theme.corPrimaria}30`,
+                                        fontWeight: '600',
+                                        fontSize: '14px'
+                                    }"
+                                >
+                                    <i class="fas fa-tag mr-2"></i>
+                                    Badge
+                                </div>
+
+                                <!-- Preview Text -->
+                                <div :style="{ color: theme.corSecundaria, fontWeight: '500' }">
+                                    <i class="fas fa-font mr-2"></i>
+                                    Texto Secundário
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Reset to Default Button -->
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save mr-2"></i>
+                            Salvar Personalização
+                        </button>
+                        <button
+                            type="button"
+                            @click="resetTheme()"
+                            class="btn btn-secondary"
+                        >
+                            <i class="fas fa-undo mr-2"></i>
+                            Restaurar Padrão
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 24px; padding: 16px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #fbbf24;">
+                        <p class="text-sm" style="color: #92400e; margin: 0;">
+                            <i class="fas fa-lightbulb mr-2"></i>
+                            <strong>Dica:</strong> As cores serão aplicadas imediatamente após salvar. Você pode usar o botão "Restaurar Padrão" para voltar às cores originais.
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab 4: Preferências -->
+        <div x-show="activeTab === 'preferencias' && canViewTab('preferencias')" x-transition class="tab-content">
+            <div class="card">
+                <h3 class="text-xl font-semibold mb-6">
+                    <i class="fas fa-cog mr-2" style="color: var(--primary-color);"></i>
+                    Preferências Gerais
+                </h3>
+
+                <form @submit.prevent="savePreferencias">
+                    <!-- Seção de Finalização e Exigências -->
                     <div class="secao-preferencia">
+                        <h4 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-clipboard-check mr-2" style="color: var(--primary-color);"></i>
+                            Finalização de Ordens
+                        </h4>
+
+                        <div class="notification-preference-list">
+                            <div class="notification-preference-item">
+                                <div>
+                                    <label for="finalizacaoAutomatica" class="form-label" style="margin-bottom: 4px;">
+                                        Finalização Automática de Ordens
+                                    </label>
+                                    <p class="text-sm text-secondary">
+                                        Se habilitado, no "fim do dia de trabalho", o sistema irá alterar ordens "pendentes" ou "em andamento" de dias anteriores para "finalizado" com pagamento "PENDENTE".
+                                    </p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="finalizacaoAutomatica" x-model="preferencias.finalizacaoAutomatica">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+
+                            <div class="notification-preference-item">
+                                <div>
+                                    <label for="exigirLavadorParaFinalizar" class="form-label" style="margin-bottom: 4px;">
+                                        Exigir Lavador para Finalizar Ordem
+                                    </label>
+                                    <p class="text-sm text-secondary">
+                                        Se habilitado, o sistema impedirá a finalização de uma ordem de serviço que não tenha um lavador atribuído.
+                                    </p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="exigirLavadorParaFinalizar" x-model="preferencias.exigirLavadorParaFinalizar">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+
+                            <div class="notification-preference-item">
+                                <div>
+                                    <label for="paginaInicialPadrao" class="form-label" style="margin-bottom: 4px;">
+                                        Página Inicial Padrão
+                                    </label>
+                                    <p class="text-sm text-secondary">
+                                        Escolha para qual página você será redirecionado após o login.
+                                    </p>
+                                </div>
+                                <select id="paginaInicialPadrao" x-model="preferencias.paginaInicialPadrao" class="form-select" style="max-width: 300px;">
+                                    <option value="index.html">Dashboard</option>
+                                    <option value="ordens.html">Ordens de Serviço</option>
+                                    <option value="selecionar-tipo-veiculo.html">Nova Ordem</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Formas de Pagamento -->
+                    <div class="secao-preferencia" style="margin-top: 32px;">
                         <h4 class="text-lg font-semibold mb-4">
                             <i class="fas fa-credit-card mr-2" style="color: var(--primary-color);"></i>
                             Formas de Pagamento Aceitas
@@ -129,10 +511,10 @@
                             <i class="fas fa-info-circle mr-2"></i>
                             Selecione quais formas de pagamento estarão disponíveis no momento de finalizar uma ordem de serviço.
                         </p>
-                        
+
                         <div class="payment-methods-grid">
                             <!-- Dinheiro -->
-                            <label class="payment-method-card" for="paymentDinheiro">
+                            <label class="payment-method-card" for="paymentDinheiro" :class="{ 'active': preferencias.paymentMethods.DINHEIRO }">
                                 <div class="payment-method-info">
                                     <div class="payment-icon">
                                         <i class="fas fa-money-bill-wave"></i>
@@ -142,14 +524,14 @@
                                         <span class="text-sm text-secondary">Pagamento em espécie</span>
                                     </div>
                                 </div>
-                                <label class="switch" onclick="event.stopPropagation()">
-                                    <input type="checkbox" id="paymentDinheiro" data-payment-method="DINHEIRO">
+                                <label class="switch" @click.stop>
+                                    <input type="checkbox" id="paymentDinheiro" x-model="preferencias.paymentMethods.DINHEIRO">
                                     <span class="slider round"></span>
                                 </label>
                             </label>
-                    
+
                             <!-- PIX -->
-                            <label class="payment-method-card" for="paymentPix">
+                            <label class="payment-method-card" for="paymentPix" :class="{ 'active': preferencias.paymentMethods.PIX }">
                                 <div class="payment-method-info">
                                     <div class="payment-icon" style="background: linear-gradient(135deg, rgba(50, 188, 173, 0.2) 0%, rgba(50, 188, 173, 0.1) 100%);">
                                         <i class="fab fa-pix" style="color: #32BCAD;"></i>
@@ -159,14 +541,14 @@
                                         <span class="text-sm text-secondary">Pagamento instantâneo</span>
                                     </div>
                                 </div>
-                                <label class="switch" onclick="event.stopPropagation()">
-                                    <input type="checkbox" id="paymentPix" data-payment-method="PIX">
+                                <label class="switch" @click.stop>
+                                    <input type="checkbox" id="paymentPix" x-model="preferencias.paymentMethods.PIX">
                                     <span class="slider round"></span>
                                 </label>
                             </label>
-                    
+
                             <!-- Cartão -->
-                            <label class="payment-method-card" for="paymentCartao">
+                            <label class="payment-method-card" for="paymentCartao" :class="{ 'active': preferencias.paymentMethods.CARTAO }">
                                 <div class="payment-method-info">
                                     <div class="payment-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);">
                                         <i class="fas fa-credit-card" style="color: #3b82f6;"></i>
@@ -176,14 +558,14 @@
                                         <span class="text-sm text-secondary">Débito ou crédito</span>
                                     </div>
                                 </div>
-                                <label class="switch" onclick="event.stopPropagation()">
-                                    <input type="checkbox" id="paymentCartao" data-payment-method="CARTAO">
+                                <label class="switch" @click.stop>
+                                    <input type="checkbox" id="paymentCartao" x-model="preferencias.paymentMethods.CARTAO">
                                     <span class="slider round"></span>
                                 </label>
                             </label>
-                    
+
                             <!-- Débito de Funcionário -->
-                            <label class="payment-method-card" for="paymentDebitoFuncionario">
+                            <label class="payment-method-card" for="paymentDebitoFuncionario" :class="{ 'active': preferencias.paymentMethods.DEBITO_FUNCIONARIO }">
                                 <div class="payment-method-info">
                                     <div class="payment-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.1) 100%);">
                                         <i class="fas fa-user-tag" style="color: #f97316;"></i>
@@ -193,13 +575,13 @@
                                         <span class="text-sm text-secondary">Lançar como adiantamento</span>
                                     </div>
                                 </div>
-                                <label class="switch" onclick="event.stopPropagation()">
-                                    <input type="checkbox" id="paymentDebitoFuncionario" data-payment-method="DEBITO_FUNCIONARIO">
+                                <label class="switch" @click.stop>
+                                    <input type="checkbox" id="paymentDebitoFuncionario" x-model="preferencias.paymentMethods.DEBITO_FUNCIONARIO">
                                     <span class="slider round"></span>
                                 </label>
                             </label>
                         </div>
-                    
+
                         <div style="margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #fbbf24;">
                             <p class="text-sm" style="color: #92400e; margin: 0;">
                                 <i class="fas fa-exclamation-triangle mr-2"></i>
@@ -207,16 +589,20 @@
                             </p>
                         </div>
                     </div>
+
                     <!-- Seção de Preferências de Notificação -->
-                    <div class="secao-preferencia secao-notificacao">
-                        <h4 class="text-lg font-semibold mb-4">Notificações no Painel</h4>
+                    <div class="secao-preferencia secao-notificacao" style="margin-top: 32px;">
+                        <h4 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-bell mr-2" style="color: var(--primary-color);"></i>
+                            Notificações no Painel
+                        </h4>
                         <p class="text-sm text-secondary mb-4">Escolha quais notificações você deseja receber no sino de notificações.</p>
                         <div class="notification-preference-list">
                             <!-- Notificação: Ordem Criada -->
                             <div class="notification-preference-item">
                                 <label for="notifOrdemCriada" class="form-label">Ordem de Serviço Criada</label>
                                 <label class="switch">
-                                    <input type="checkbox" id="notifOrdemCriada">
+                                    <input type="checkbox" id="notifOrdemCriada" x-model="preferencias.notifications.ordemCriada">
                                     <span class="slider round"></span>
                                 </label>
                             </div>
@@ -224,7 +610,7 @@
                             <div class="notification-preference-item">
                                 <label for="notifOrdemEditada" class="form-label">Ordem de Serviço Editada</label>
                                 <label class="switch">
-                                    <input type="checkbox" id="notifOrdemEditada">
+                                    <input type="checkbox" id="notifOrdemEditada" x-model="preferencias.notifications.ordemEditada">
                                     <span class="slider round"></span>
                                 </label>
                             </div>
@@ -232,370 +618,1522 @@
                             <div class="notification-preference-item">
                                 <label for="notifOrdemDeletada" class="form-label">Ordem de Serviço Deletada</label>
                                 <label class="switch">
-                                    <input type="checkbox" id="notifOrdemDeletada">
+                                    <input type="checkbox" id="notifOrdemDeletada" x-model="preferencias.notifications.ordemDeletada">
                                     <span class="slider round"></span>
                                 </label>
                             </div>
                             <!-- Notificação: Finalização Automática -->
-                            <div id="notifFinalizacaoContainer" class="notification-preference-item">
+                            <div class="notification-preference-item">
                                 <label for="notifFinalizacaoAutomatica" class="form-label">Aviso de Finalização Automática</label>
                                 <label class="switch">
-                                    <input type="checkbox" id="notifFinalizacaoAutomatica">
+                                    <input type="checkbox" id="notifFinalizacaoAutomatica" x-model="preferencias.notifications.finalizacaoAutomatica">
                                     <span class="slider round"></span>
                                 </label>
                             </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary mt-6">Salvar Preferências</button>
+
+                    <button type="submit" class="btn-primary mt-6">
+                        <i class="fas fa-save mr-2"></i>
+                        Salvar Preferências
+                    </button>
                 </form>
             </div>
         </div>
 
-        <!-- Tab de Tokens de Acesso -->
-        <div id="tokens" class="tab-content">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold">Gerenciar Tokens de Acesso</h3>
-                <p class="text-secondary">Ative, desative ou exclua os links de acesso dos funcionários.</p>
-            </div>
-            <div class="table-wrapper card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Funcionário</th>
-                            <th>Link de Acesso</th>
-                            <th>Status</th>
-                            <th class="actions-cell">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tokensTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Tab de Usuários e Permissões -->
-        <div id="usuarios" class="tab-content">
+        <!-- Tab 5: Usuários e Permissões -->
+        <div x-show="activeTab === 'usuarios' && canViewTab('usuarios')" x-transition class="tab-content">
             <!-- Seção de Roles -->
             <div class="card mb-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold">Funções (Roles)</h3>
-                    <button data-permission="config_ver_usuarios" onclick="openRoleModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Nova Função</button>
+                    <div>
+                        <h3 class="text-xl font-semibold">
+                            <i class="fas fa-user-tag mr-2" style="color: var(--primary-color);"></i>
+                            Funções (Roles)
+                        </h3>
+                        <p class="text-secondary text-sm mt-1">Defina funções com permissões específicas para organizar sua equipe</p>
+                    </div>
+                    <button @click="openRoleModal()" class="btn-primary" x-show="hasPermissionSafe('config_ver_usuarios')">
+                        <i class="fas fa-plus mr-2"></i> Nova Função
+                    </button>
                 </div>
                 <div class="table-wrapper">
                     <table>
-                        <thead><tr><th>Nome</th><th>Usuários</th><th>Permissões</th><th class="actions-cell">Ações</th></tr></thead>
-                        <tbody id="rolesTableBody"></tbody>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Usuários</th>
+                                <th>Permissões</th>
+                                <th class="actions-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="roles.length === 0">
+                                <tr>
+                                    <td colspan="4" class="text-center p-4 text-secondary">
+                                        <i class="fas fa-inbox mr-2"></i>
+                                        Nenhuma função cadastrada. Clique em "Nova Função" para começar.
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="role in roles" :key="role.id">
+                                <tr>
+                                    <td><strong x-text="role.nome"></strong></td>
+                                    <td x-text="role._count?.usuarios || 0"></td>
+                                    <td>
+                                        <template x-if="role.permissoes && role.permissoes.length > 0">
+                                            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                                <template x-for="perm in role.permissoes.slice(0, 3)" :key="perm.name">
+                                                    <span class="subtipo-badge" x-text="perm.nome.replace(/_/g, ' ')"></span>
+                                                </template>
+                                                <template x-if="role.permissoes.length > 3">
+                                                    <span class="subtipo-badge" x-text="`+${role.permissoes.length - 3}`"></span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template x-if="!role.permissoes || role.permissoes.length === 0">
+                                            <span class="text-secondary text-sm">Nenhuma</span>
+                                        </template>
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button @click="openRoleModal(role)" class="btn-sm btn-secondary" title="Editar" x-show="hasPermissionSafe('config_ver_usuarios')">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                        <button @click="deleteRole(role.id, role.nome)" class="btn-sm btn-danger" title="Excluir" x-show="hasPermissionSafe('config_ver_usuarios')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
                     </table>
                 </div>
             </div>
+
             <!-- Seção de Usuários -->
             <div class="card">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold">Usuários (Subcontas)</h3>
-                    <button data-permission="config_ver_usuarios" onclick="openUserModal()" class="btn-primary"><i class="fas fa-user-plus mr-2"></i> Novo Usuário</button>
-                </div>
-                <div class="table-wrapper">
-                    <table>
-                        <thead><tr><th>Nome</th><th>Email</th><th>Função</th><th class="actions-cell">Ações</th></tr></thead>
-                        <tbody id="usersTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab de Serviços -->
-        <div id="servicos" class="tab-content active">
-            <!-- Seção de Serviços -->
-            <div class="card mb-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-semibold">Lista de Serviços</h3>
-                    <button data-permission="config_ver_servicos" onclick="openServiceModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Novo Serviço</button>
+                    <div>
+                        <h3 class="text-xl font-semibold">
+                            <i class="fas fa-users mr-2" style="color: var(--primary-color);"></i>
+                            Usuários (Subcontas)
+                        </h3>
+                        <p class="text-secondary text-sm mt-1">Gerencie usuários com acesso ao sistema</p>
+                    </div>
+                    <button @click="openUserModal()" class="btn-primary" x-show="hasPermissionSafe('config_ver_usuarios')">
+                        <i class="fas fa-user-plus mr-2"></i> Novo Usuário
+                    </button>
                 </div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
                                 <th>Nome</th>
-                                <th>Preço</th>
-                                <th>Tipo de Veículo</th>
-                                <th>Subtipo</th>
+                                <th>Email</th>
+                                <th>Função</th>
+                                <th>Desconto Máx.</th>
                                 <th class="actions-cell">Ações</th>
                             </tr>
                         </thead>
-                        <tbody id="servicesTableBody"></tbody>
-                    </table>
-                    <p class="text-sm text-secondary mt-4"><i class="fas fa-info-circle mr-2"></i>Arraste e solte as linhas para reordenar os serviços.</p>
-                </div>
-            </div>
-
-            <!-- Seção de Adicionais (agora dentro da mesma aba) -->
-            <div class="card">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-semibold">Lista de Adicionais</h3>
-                    <button data-permission="config_ver_adicionais" onclick="openAdicionalModal()" class="btn-primary"><i class="fas fa-plus mr-2"></i> Novo Adicional</button>
-                </div>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Preço</th>
-                                <th class="actions-cell">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adicionaisTableBody"></tbody>
+                        <tbody>
+                            <template x-if="users.length === 0">
+                                <tr>
+                                    <td colspan="5" class="text-center p-4 text-secondary">
+                                        <i class="fas fa-inbox mr-2"></i>
+                                        Nenhum usuário cadastrado. Clique em "Novo Usuário" para começar.
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="user in users" :key="user.id">
+                                <tr>
+                                    <td x-text="user.nome"></td>
+                                    <td x-text="user.email"></td>
+                                    <td x-text="user.roleInt?.nome || 'Sem Função'"></td>
+                                    <td><span x-text="(user.maxDesconto || 0) + '%'"></span></td>
+                                    <td class="actions-cell">
+                                        <button @click="openUserModal(user)" class="btn-sm btn-secondary" title="Editar" x-show="hasPermissionSafe('config_ver_usuarios')">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                        <button @click="deleteUser(user.id, user.nome)" class="btn-sm btn-danger" title="Excluir" x-show="hasPermissionSafe('config_ver_usuarios')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- Tab de Empresa -->
-        <div id="empresa" class="tab-content">
+        <!-- Tab 6: Tokens de Acesso -->
+        <div x-show="activeTab === 'tokens' && canViewTab('tokens')" x-transition class="tab-content">
             <div class="card">
-                <h3 class="text-xl font-semibold mb-6">Dados da Empresa</h3>
-                <form id="empresaForm">
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2">
+                        <i class="fas fa-key mr-2" style="color: var(--primary-color);"></i>
+                        Gerenciar Tokens de Acesso
+                    </h3>
+                    <p class="text-secondary text-sm">
+                        Gerencie os links de acesso dos funcionários ao painel de lavadores. Ative, desative ou exclua tokens conforme necessário.
+                    </p>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Funcionário</th>
+                                <th>Link de Acesso</th>
+                                <th>Status</th>
+                                <th class="actions-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="tokens.length === 0">
+                                <tr>
+                                    <td colspan="4" class="text-center p-4 text-secondary">
+                                        <i class="fas fa-inbox mr-2"></i>
+                                        Nenhum token de acesso gerado. Tokens são criados automaticamente na página de Funcionários.
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="token in tokens" :key="token.id">
+                                <tr>
+                                    <td>
+                                        <strong x-text="token.lavador.nome"></strong>
+                                    </td>
+                                    <td>
+                                        <a
+                                            :href="`${window.location.origin}/lavador-publico.html?token=${token.token}`"
+                                            target="_blank"
+                                            class="link-like"
+                                            style="display: inline-flex; align-items: center; gap: 6px;"
+                                        >
+                                            <i class="fas fa-external-link-alt"></i>
+                                            <span>Acessar Link</span>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" x-show="hasPermissionSafe('config_ver_tokens')"
+                                            :value="token.ativo ? 'true' : 'false'"
+                                            @change="updateTokenStatus(token.id, $event.target.value === 'true')"
+                                            style="max-width: 120px;"
+                                        >
+                                            <option value="true">Ativo</option>
+                                            <option value="false">Inativo</option>
+                                        </select>
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button
+                                            @click="copyTokenLink(token.token)"
+                                            class="btn-sm btn-secondary"
+                                            title="Copiar Link"
+                                        >
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                        <button @click="deleteToken(token.id, token.lavador.nome)" class="btn-sm btn-danger" x-show="hasPermissionSafe('config_ver_tokens')"
+                                            title="Excluir"
+                                        >
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 24px; padding: 16px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 12px; border: 1px solid #3b82f6;">
+                    <p class="text-sm" style="color: #1e40af; margin: 0;">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Como funciona:</strong> Os tokens são gerados automaticamente na página de Funcionários quando você clica em "Gerar Token de Acesso". Use esta página para gerenciar os tokens existentes.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Modal -->
+        <div
+            x-show="modals.service"
+            :class="{ 'active': modals.service }"
+            x-transition
+            @click.self="closeServiceModal()"
+            class="modal-overlay"
+        >
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h2 class="modal-title" x-text="serviceForm.id ? 'Editar Serviço' : 'Novo Serviço'"></h2>
+                    <button @click="closeServiceModal()" class="modal-close">&times;</button>
+                </div>
+                <form @submit.prevent="saveService">
                     <div class="form-group">
-                        <label for="empresaNome" class="form-label">Nome da Empresa</label>
-                        <input type="text" id="empresaNome" class="form-input" required>
+                        <label for="serviceName" class="form-label">Nome do Serviço</label>
+                        <input
+                            type="text"
+                            id="serviceName"
+                            class="form-input"
+                            x-model="serviceForm.nome"
+                            required
+                        >
                     </div>
-                    <h4 class="text-lg font-semibold mt-6 mb-4">Horário de Funcionamento</h4>
-                    <p class="text-secondary mb-4">Define o início e o fim do "dia de trabalho" para relatórios e filtros. Por padrão, de 07:00 às 19:00.</p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="form-group">
-                            <label for="horarioAbertura" class="form-label">Abertura</label>
-                            <input type="time" id="horarioAbertura" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="horarioFechamento" class="form-label">Fechamento</label>
-                            <input type="time" id="horarioFechamento" class="form-input" required>
-                        </div>
+                    <div class="form-group">
+                        <label for="servicePrice" class="form-label">Preço (R$)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            id="servicePrice"
+                            class="form-input"
+                            x-model="serviceForm.preco"
+                            required
+                        >
+                        <p class="text-sm text-secondary mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            O preço deve ser maior que zero
+                        </p>
                     </div>
-
-                    <!-- Seção de Página Inicial (Movida para cá) -->
-                    <h4 class="text-lg font-semibold mt-6 mb-4">Preferências de Acesso</h4>
-                    <div class="form-group secao-pagina-inicial">
-                        <label for="paginaInicialPadrao" class="form-label">Página Inicial Padrão</label>
-                        <select id="paginaInicialPadrao" class="form-select" style="max-width: 400px;">
-                            <option value="index.html">Dashboard</option>
-                            <option value="ordens.html">Ordens de Serviço</option>
-                            <option value="selecionar-tipo-veiculo.html">Nova Ordem</option>
+                    <div class="form-group">
+                        <label for="serviceTipoPrincipal" class="form-label">Tipo de Veículo</label>
+                        <select
+                            id="serviceTipoPrincipal"
+                            class="form-select"
+                            x-model="serviceForm.tipoVeiculo"
+                            @change="updateSubtipoOptions()"
+                            required
+                        >
+                            <option value="">Selecione...</option>
+                            <option value="CARRO">Carro</option>
+                            <option value="MOTO">Moto</option>
                         </select>
-                        <p class="text-sm text-secondary mt-2">Escolha para qual página você será redirecionado após o login.</p>
                     </div>
-                    <button type="submit" class="btn-primary mt-4">Salvar Alterações</button>
+                    <div class="form-group" x-show="serviceForm.tipoVeiculo === 'CARRO' && subtipoOptions.length > 0">
+                        <label class="form-label">Categorias (Subtipos)</label>
+                        <p class="text-sm text-secondary mb-3">Selecione as categorias de carro para este serviço</p>
+                        <div class="checkbox-group">
+                            <template x-for="subtipo in subtipoOptions" :key="subtipo.categoria">
+                                <div class="checkbox-item">
+                                    <input
+                                        type="checkbox"
+                                        :id="'subtipo-' + subtipo.categoria"
+                                        :value="subtipo.categoria"
+                                        x-model="serviceForm.subtiposVeiculo"
+                                    >
+                                    <label :for="'subtipo-' + subtipo.categoria" x-text="subtipo.categoria"></label>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" @click="closeServiceModal()" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save mr-2"></i>
+                            Salvar
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
-    </main>
 
-    <!-- Modals, Toasts, etc. -->
-
-    <!-- Service Modal -->
-    <div id="serviceModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="serviceModalTitle" class="modal-title">Novo Serviço</h2>
-                <button onclick="closeServiceModal()" class="modal-close">&times;</button>
+        <!-- Adicional Modal -->
+        <div
+            x-show="modals.adicional"
+            :class="{ 'active': modals.adicional }"
+            x-transition
+            @click.self="closeAdicionalModal()"
+            class="modal-overlay"
+        >
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h2 class="modal-title" x-text="adicionalForm.id ? 'Editar Adicional' : 'Novo Adicional'"></h2>
+                    <button @click="closeAdicionalModal()" class="modal-close">&times;</button>
+                </div>
+                <form @submit.prevent="saveAdicional">
+                    <div class="form-group">
+                        <label for="adicionalName" class="form-label">Nome do Adicional</label>
+                        <input
+                            type="text"
+                            id="adicionalName"
+                            class="form-input"
+                            x-model="adicionalForm.nome"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="adicionalPrice" class="form-label">Preço (R$)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            id="adicionalPrice"
+                            class="form-input"
+                            x-model="adicionalForm.preco"
+                            required
+                        >
+                        <p class="text-sm text-secondary mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            O preço deve ser maior que zero
+                        </p>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" @click="closeAdicionalModal()" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save mr-2"></i>
+                            Salvar
+                        </button>
+                    </div>
+                </form>
             </div>
-            <form id="serviceForm">
-                <input type="hidden" id="serviceId">
-                <div class="form-group">
-                    <label for="serviceName" class="form-label">Nome do Serviço</label>
-                    <input type="text" id="serviceName" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label for="servicePrice" class="form-label">Preço</label>
-                    <input type="number" step="0.01" id="servicePrice" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label for="serviceTipoPrincipal" class="form-label">Tipo Principal</label>
-                    <select id="serviceTipoPrincipal" class="form-select" required>
-                        <option value="">Selecione...</option>
-                        <option value="CARRO">Carro</option>
-                        <option value="MOTO">Moto</option>
-                    </select>
-                </div>
-                <div class="form-group" id="subtipoContainer" style="display: none;">
-                    <label class="form-label">Subtipos</label>
-                    <div id="subtipoCheckboxContainer" class="checkbox-group"></div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" onclick="closeServiceModal()" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                </div>
-            </form>
         </div>
-    </div>
 
-    <!-- Adicional Modal -->
-    <div id="adicionalModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="adicionalModalTitle" class="modal-title">Novo Adicional</h2>
-                <button onclick="closeAdicionalModal()" class="modal-close">&times;</button>
+        <!-- Confirmation Modal -->
+        <div
+            x-show="modals.confirm"
+            :class="{ 'active': modals.confirm }"
+            x-transition
+            @click.self="modals.confirm = false"
+            class="modal-overlay"
+        >
+            <div class="modal-content" style="max-width: 400px; text-align: center;" @click.stop>
+                <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                    <h2 class="modal-title" x-text="confirmModal.title"></h2>
+                </div>
+                <p class="text-secondary my-4" x-text="confirmModal.message"></p>
+                <div class="modal-actions" style="justify-content: center; border-top: none; margin-top: 16px;">
+                    <button @click="modals.confirm = false" class="btn btn-secondary">Cancelar</button>
+                    <button @click="confirmModal.onConfirm(); modals.confirm = false" class="btn btn-danger">
+                        <i class="fas fa-trash mr-2"></i>
+                        Confirmar
+                    </button>
+                </div>
             </div>
-            <form id="adicionalForm">
-                <input type="hidden" id="adicionalId">
-                <div class="form-group">
-                    <label for="adicionalName" class="form-label">Nome do Adicional</label>
-                    <input type="text" id="adicionalName" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label for="adicionalPrice" class="form-label">Preço</label>
-                    <input type="number" step="0.01" id="adicionalPrice" class="form-input" required>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" onclick="closeAdicionalModal()" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                </div>
-            </form>
         </div>
-    </div>
 
     <!-- Role Modal -->
-    <div id="roleModal" class="modal-overlay">
-        <div class="modal-content">
+    <div
+        x-show="modals.role"
+        :class="{ 'active': modals.role }"
+        x-transition
+        @click.self="closeRoleModal()"
+        class="modal-overlay"
+    >
+        <div class="modal-content" @click.stop style="max-width: 700px;">
             <div class="modal-header">
-                <h2 id="roleModalTitle" class="modal-title">Nova Função</h2>
-                <button onclick="closeModal('roleModal')" class="modal-close">&times;</button>
+                <h2 class="modal-title" x-text="roleForm.id ? 'Editar Função' : 'Nova Função'"></h2>
+                <button @click="closeRoleModal()" class="modal-close">&times;</button>
             </div>
-            <form id="roleForm">
-                <input type="hidden" id="roleId">
+            <form @submit.prevent="saveRole">
                 <div class="form-group">
                     <label for="roleName" class="form-label">Nome da Função</label>
-                    <input type="text" id="roleName" class="form-input" required placeholder="Ex: Gerente">
+                    <input
+                        type="text"
+                        id="roleName"
+                        class="form-input"
+                        x-model="roleForm.nome"
+                        placeholder="Ex: Gerente, Operador, Financeiro"
+                        required
+                    >
                 </div>
                 <div class="form-group">
                     <label class="form-label">Permissões</label>
-                    <p class="text-sm text-secondary mb-4">Selecione o que usuários com esta função podem ver e fazer.</p>
-                    <div id="permissionsContainer" class="permissions-accordion"></div>
+                    <p class="text-sm text-secondary mb-4">Selecione o que usuários com esta função podem ver e fazer</p>
+                    <div class="permissions-accordion">
+                        <template x-for="perm in allPermissions" :key="perm.name">
+                            <div class="permission-group" :class="{ 'expanded': expandedPermissions.includes(perm.name) }">
+                                <div class="permission-group-header" @click="togglePermissionGroup(perm.name)">
+                                    <label class="flex items-center gap-3 cursor-pointer" @click.stop>
+                                        <input
+                                            type="checkbox"
+                                            class="form-checkbox master-checkbox"
+                                            :value="perm.name"
+                                            x-model="roleForm.selectedPermissions"
+                                            @change="handleMasterCheckboxChange(perm)"
+                                        >
+                                        <i class="fas mr-2" :class="perm.icon" style="color: var(--primary-color);"></i>
+                                        <span class="permission-group-title" x-text="perm.label"></span>
+                                    </label>
+                                    <template x-if="perm.sub_permissions">
+                                        <i class="fas fa-chevron-down expand-icon"></i>
+                                    </template>
+                                </div>
+                                <template x-if="perm.sub_permissions">
+                                    <div class="sub-permissions-list">
+                                        <template x-for="sub in perm.sub_permissions" :key="sub.name">
+                                            <label class="sub-permission-item">
+                                                <input
+                                                    type="checkbox"
+                                                    class="form-checkbox sub-checkbox"
+                                                    :value="sub.name"
+                                                    x-model="roleForm.selectedPermissions"
+                                                    @change="handleSubCheckboxChange(perm, sub)"
+                                                >
+                                                <span x-text="sub.label"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" onclick="closeModal('roleModal')" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" @click="closeRoleModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Salvar
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- User Modal -->
-    <div id="userModal" class="modal-overlay">
-        <div class="modal-content">
+    <div
+        x-show="modals.user"
+        :class="{ 'active': modals.user }"
+        x-transition
+        @click.self="closeUserModal()"
+        class="modal-overlay"
+    >
+        <div class="modal-content" @click.stop>
             <div class="modal-header">
-                <h2 id="userModalTitle" class="modal-title">Novo Usuário</h2>
-                <button onclick="closeModal('userModal')" class="modal-close">&times;</button>
+                <h2 class="modal-title" x-text="userForm.id ? 'Editar Usuário' : 'Novo Usuário'"></h2>
+                <button @click="closeUserModal()" class="modal-close">&times;</button>
             </div>
-            <form id="userForm">
-                <input type="hidden" id="subUserId">
+            <form @submit.prevent="saveUser">
                 <div class="form-group">
                     <label for="userName" class="form-label">Nome de Usuário (para login)</label>
-                    <input type="text" id="userName" class="form-input" required>
+                    <input
+                        type="text"
+                        id="userName"
+                        class="form-input"
+                        x-model="userForm.nome"
+                        required
+                    >
                 </div>
                 <div class="form-group">
                     <label for="userEmail" class="form-label">Email</label>
-                    <input type="email" id="userEmail" class="form-input" required>
+                    <input
+                        type="email"
+                        id="userEmail"
+                        class="form-input"
+                        x-model="userForm.email"
+                        required
+                    >
                 </div>
                 <div class="form-group">
                     <label for="userPassword" class="form-label">Senha</label>
-                    <input type="password" id="userPassword" class="form-input" placeholder="Deixe em branco para não alterar">
-                    <p id="passwordHint" class="text-sm text-secondary mt-1" style="display: none;">
-                        Preencha apenas se desejar alterar a senha.
-                    </p>
+                    <input
+                        type="password"
+                        id="userPassword"
+                        class="form-input"
+                        x-model="userForm.senha"
+                        :required="!userForm.id"
+                        :placeholder="userForm.id ? 'Deixe em branco para não alterar' : ''"
+                    >
+                    <template x-if="userForm.id">
+                        <p class="text-sm text-secondary mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Preencha apenas se desejar alterar a senha
+                        </p>
+                    </template>
                 </div>
                 <div class="form-group">
                     <label for="userRoleSelect" class="form-label">Função (Role)</label>
-                    <select id="userRoleSelect" class="form-select" required></select>
+                    <select
+                        id="userRoleSelect"
+                        class="form-select"
+                        x-model="userForm.roleId"
+                        required
+                    >
+                        <option value="">Selecione uma função</option>
+                        <template x-for="role in roles" :key="role.id">
+                            <option :value="role.id" x-text="role.nome"></option>
+                        </template>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="userMaxDesconto" class="form-label">Desconto Máximo Permitido (%)</label>
-                    <input type="number" id="userMaxDesconto" class="form-input" min="0" max="100" value="0" placeholder="Ex: 10 para 10%">
-                    <p class="text-sm text-secondary mt-1">Define a porcentagem máxima de desconto que este usuário pode aplicar em uma OS.</p>
+                    <input
+                        type="number"
+                        id="userMaxDesconto"
+                        class="form-input"
+                        x-model="userForm.maxDesconto"
+                        min="0"
+                        max="100"
+                        placeholder="Ex: 10 para 10%"
+                    >
+                    <p class="text-sm text-secondary mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Define a porcentagem máxima de desconto que este usuário pode aplicar em uma OS
+                    </p>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" onclick="closeModal('userModal')" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" @click="closeUserModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Salvar
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Confirmação Genérico -->
-    <div id="customConfirmModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <div class="modal-header" style="justify-content: center; border-bottom: none;">
-                <h2 id="customConfirmTitle" class="modal-title"></h2>
-            </div>
-            <p id="customConfirmMessage" class="text-secondary my-4"></p>
-            <div class="modal-actions" style="justify-content: center; border-top: none; margin-top: 16px;">
-                <button id="customCancelBtn" class="btn btn-secondary">Cancelar</button>
-                <button id="customConfirmBtn" class="btn btn-danger">Confirmar</button>
-            </div>
-        </div>
-    </div>
+    </main>
 
-
-    <!-- Container para as notificações (toasts) -->
+    <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-
     <script>
-        let allTiposVeiculo = [];
-        let cachedServices = [];
+        function configApp() {
+            return {
+                activeTab: 'empresa',
 
-        // --- UTILS ---
-        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+                // Modals state
+                modals: {
+                    service: false,
+                    adicional: false,
+                    confirm: false,
+                    role: false,
+                    user: false
+                },
 
-        // --- AUTH & GENERAL SETUP ---
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuthentication();
-            enforcePermission('gerenciar_configuracoes');
-            handleImpersonationBanner();
-            
-            if (window.initializeUserMenu) initializeUserMenu();
-            if (window.updateMenuVisibility) updateMenuVisibility();
-            if (window.initializeNotificationSystem) initializeNotificationSystem();
+                // Data
+                services: [],
+                adicionais: [],
+                tiposVeiculo: [],
+                subtipoOptions: [],
+                roles: [],
+                users: [],
+                tokens: [],
+                expandedPermissions: [],
 
-            initializeTabs();
-            updateActionButtonsVisibility();
-            
-            // Carrega todos os dados iniciais de forma assíncrona
-            Promise.all([
-                loadPreferencias(),
-                loadEmpresaData(),
-                loadAdicionais(),
-                loadRolesAndUsers(),
-                loadTokens(),
-                loadTiposVeiculo()
-            ]).then(() => {
-                loadServices();
-                initializeSortable();
-                initializePaymentCards(); // Inicializa os cards visuais APÓS carregar as preferências
-            });
+                // Forms
+                empresaForm: {
+                    nome: '',
+                    horarioAbertura: '07:00',
+                    horarioFechamento: '19:00'
+                },
 
-            // Adiciona listeners aos formulários
-            document.getElementById('preferenciasForm').addEventListener('submit', savePreferencias);
-            document.getElementById('empresaForm').addEventListener('submit', saveEmpresa);
-            document.getElementById('serviceForm').addEventListener('submit', saveService);
-            document.getElementById('adicionalForm').addEventListener('submit', saveAdicional);
-            document.getElementById('serviceTipoPrincipal').addEventListener('change', updateSubtipoCheckboxes);
-            document.getElementById('roleForm').addEventListener('submit', saveRole);
-            document.getElementById('userForm').addEventListener('submit', saveUser);
-        });
+                preferencias: {
+                    finalizacaoAutomatica: false,
+                    exigirLavadorParaFinalizar: false,
+                    paginaInicialPadrao: 'index.html',
+                    paymentMethods: {
+                        DINHEIRO: true,
+                        PIX: true,
+                        CARTAO: true,
+                        DEBITO_FUNCIONARIO: false
+                    },
+                    notifications: {
+                        ordemCriada: true,
+                        ordemEditada: true,
+                        ordemDeletada: false,
+                        finalizacaoAutomatica: true
+                    }
+                },
 
-        function checkAuthentication() {
-            if (!window.api.isAuthenticated()) {
-                window.location.href = 'login.html';
+                theme: {
+                    corPrimaria: '#F59E0B',
+                    corSecundaria: '#1F2937'
+                },
+
+                serviceForm: {
+                    id: null,
+                    nome: '',
+                    preco: '',
+                    tipoVeiculo: '',
+                    subtiposVeiculo: []
+                },
+
+                adicionalForm: {
+                    id: null,
+                    nome: '',
+                    preco: ''
+                },
+
+                confirmModal: {
+                    title: '',
+                    message: '',
+                    onConfirm: () => {}
+                },
+
+                roleForm: {
+                    id: null,
+                    nome: '',
+                    selectedPermissions: []
+                },
+
+                userForm: {
+                    id: null,
+                    nome: '',
+                    email: '',
+                    senha: '',
+                    roleId: '',
+                    maxDesconto: 0
+                },
+
+                allPermissions: [
+                    { label: 'Dashboard', name: 'ver_dashboard', icon: 'fa-home' },
+                    { label: 'Ordens', name: 'gerenciar_ordens', icon: 'fa-list-alt' },
+                    { label: 'Clientes', name: 'gerenciar_clientes', icon: 'fa-users' },
+                    { label: 'Funcionários', name: 'gerenciar_funcionarios', icon: 'fa-user-tie' },
+                    { label: 'Financeiro', name: 'ver_financeiro', icon: 'fa-chart-pie' },
+                    {
+                        label: 'Configurações',
+                        name: 'gerenciar_configuracoes',
+                        icon: 'fa-cog',
+                        sub_permissions: [
+                            { name: 'config_ver_servicos', label: 'Serviços e Adicionais' },
+                            { name: 'config_ver_empresa', label: 'Dados da Empresa' },
+                            { name: 'config_ver_tokens', label: 'Tokens de Acesso' },
+                            { name: 'config_ver_usuarios', label: 'Usuários e Permissões' },
+                            { name: 'config_ver_preferencias', label: 'Preferências' }
+                        ]
+                    }
+                ],
+        
+                hasPermissionSafe(permission) {
+                    const userRole = localStorage.getItem('userRole');
+                    if (userRole === 'OWNER' || userRole === 'LINA_OWNER') {
+                        return true;
+                    }
+                    if (typeof hasPermission === 'function') {
+                        return hasPermission(permission);
+                    }
+                    return true;
+                },
+
+                canViewTab(tab) {
+                    if (tab === 'preferencias') return this.hasPermissionSafe('config_ver_preferencias');
+                    if (tab === 'usuarios') return this.hasPermissionSafe('config_ver_usuarios');
+                    if (tab === 'tokens') return this.hasPermissionSafe('config_ver_tokens');
+                    return true;
+                },
+
+                getFirstVisibleTab() {
+                    const tabs = ['empresa', 'precos', 'aparencia', 'preferencias', 'usuarios', 'tokens'];
+                    return tabs.find(tab => this.canViewTab(tab)) || 'empresa';
+                },
+
+                setActiveTab(tab) {
+                    this.activeTab = this.canViewTab(tab) ? tab : this.getFirstVisibleTab();
+                },
+
+                // Initialize
+                async init() {
+                    console.log('[Config] ========================================');
+                    console.log('[Config] Initializing configuracoes page...');
+                    console.log('[Config] ========================================');
+
+                    // CRITICAL: Auth check must happen first
+                    if (!window.api.isAuthenticated()) {
+                        console.warn('[Config] ⚠️ Not authenticated - redirecting to login');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    console.log('[Config] ✅ User authenticated');
+
+                    // CRITICAL: Wrap in try-catch to prevent silent crashes
+                    try {
+                        // Permission check DISABLED - settings page is accessible to all authenticated users
+                        // if (typeof enforcePermission === 'function') {
+                        //     enforcePermission('gerenciar_configuracoes');
+                        // }
+
+                        if (typeof handleImpersonationBanner === 'function') {
+                            handleImpersonationBanner();
+                        }
+
+                        // Initialize UI components
+                        console.log('[Config] Initializing UI components...');
+                        if (window.initializeUserMenu) window.initializeUserMenu();
+                        if (window.updateMenuVisibility) window.updateMenuVisibility();
+                        if (window.initializeNotificationSystem) window.initializeNotificationSystem();
+
+                        // Load all data (with error handling inside loadData)
+                        console.log('[Config] Loading all data from API...');
+                        await this.loadData();
+
+                        // Restore active tab from localStorage
+                        const savedTab = localStorage.getItem('activeConfigTab');
+                        if (savedTab && ['empresa', 'precos', 'aparencia', 'preferencias', 'usuarios', 'tokens'].includes(savedTab)) {
+                            this.setActiveTab(savedTab);
+                            console.log('[Config] Restored active tab:', savedTab);
+                        } else {
+                            this.setActiveTab(this.activeTab);
+                        }
+
+                        console.log('[Config] ========================================');
+                        console.log('[Config] ✅ Initialization complete!');
+                        console.log('[Config] ========================================');
+                    } catch (error) {
+                        // SAFE MODE: Show error WITHOUT redirecting - allows debugging
+                        console.error('[Config] ❌ Fatal initialization error:', error);
+                        console.error('[Config] Error stack:', error.stack);
+
+                        // Show persistent error message to user
+                        if (typeof showToast === 'function') {
+                            showToast('Erro ao carregar configurações. Veja o console para detalhes.', 'error');
+                        } else {
+                            // Fallback if toast is not available
+                            alert('Erro ao carregar configurações.\n\nDetalhes no console (F12):\n' + error.message);
+                        }
+
+                        // DO NOT REDIRECT - Allow user to see the page and debug
+                        // Component will remain in a safe fallback state
+                    }
+                },
+
+                // Load all data
+                async loadData() {
+                    console.log('[Config] Starting loadData()...');
+                    try {
+                        await Promise.all([
+                            this.loadEmpresaData(),
+                            this.loadPreferencias(),
+                            this.loadServices(),
+                            this.loadAdicionais(),
+                            this.loadTiposVeiculo(),
+                            this.loadTheme(),
+                            this.loadRolesAndUsers(),
+                            this.loadTokens()
+                        ]);
+                        console.log('[Config] ✅ All data loaded successfully');
+                        console.log('[Config] Services:', this.services.length, 'items');
+                        console.log('[Config] Adicionais:', this.adicionais.length, 'items');
+                        console.log('[Config] Tipos de Veículo:', this.tiposVeiculo.length, 'items');
+                        console.log('[Config] Roles:', this.roles.length, 'items');
+                        console.log('[Config] Users:', this.users.length, 'items');
+                        console.log('[Config] Tokens:', this.tokens.length, 'items');
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar dados:', error);
+                        console.error('[Config] Error stack:', error.stack);
+                        showToast('Erro ao carregar dados. Tente recarregar a página.', 'error');
+                    }
+                },
+
+                async loadEmpresaData() {
+                    try {
+                        const empresaId = localStorage.getItem('empresaId');
+                        console.log('[Config] Loading empresa data for ID:', empresaId);
+                        const empresa = await window.api.getEmpresaById(empresaId);
+                        console.log('[Config] ✅ Empresa data:', empresa);
+                        this.empresaForm.nome = empresa.nome;
+                        this.empresaForm.horarioAbertura = empresa.horarioAbertura || '07:00';
+                        this.empresaForm.horarioFechamento = empresa.horarioFechamento || '19:00';
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar dados da empresa:', error);
+                        showToast('Erro ao carregar dados da empresa.', 'error');
+                    }
+                },
+
+                async loadPreferencias() {
+                    try {
+                        const empresaId = localStorage.getItem('empresaId');
+                        console.log('[Config] Loading preferencias...');
+                        const empresa = await window.api.getEmpresaById(empresaId);
+                        console.log('[Config] ✅ Preferencias data:', empresa);
+
+                        // Load business logic settings
+                        this.preferencias.finalizacaoAutomatica = empresa.finalizacaoAutomatica || false;
+                        this.preferencias.exigirLavadorParaFinalizar = empresa.exigirLavadorParaFinalizar || false;
+                        this.preferencias.paginaInicialPadrao = empresa.paginaInicialPadrao || 'index.html';
+
+                        // Load payment methods config
+                        const paymentConfig = empresa.paymentMethodsConfig || {};
+                        this.preferencias.paymentMethods = {
+                            DINHEIRO: paymentConfig.DINHEIRO !== false,
+                            PIX: paymentConfig.PIX !== false,
+                            CARTAO: paymentConfig.CARTAO !== false,
+                            DEBITO_FUNCIONARIO: paymentConfig.DEBITO_FUNCIONARIO === true
+                        };
+
+                        // Load notification preferences
+                        const notifPrefs = empresa.notificationPreferences || {};
+                        this.preferencias.notifications = {
+                            ordemCriada: notifPrefs.ordemCriada !== false,
+                            ordemEditada: notifPrefs.ordemEditada !== false,
+                            ordemDeletada: notifPrefs.ordemDeletada === true,
+                            finalizacaoAutomatica: notifPrefs.finalizacaoAutomatica !== false
+                        };
+
+                        console.log('[Config] Preferencias loaded:', this.preferencias);
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar preferências:', error);
+                        showToast('Erro ao carregar preferências.', 'error');
+                    }
+                },
+
+                async loadServices() {
+                    try {
+                        console.log('[Config] Loading services...');
+                        const response = await window.api.getServicos();
+                        console.log('[Config] Services API response:', response);
+                        this.services = response.servicos || response;
+                        console.log('[Config] ✅ Services loaded:', this.services.length, 'items');
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar serviços:', error);
+                        console.error('[Config] Error details:', error.message, error.stack);
+                        showToast('Erro ao carregar serviços.', 'error');
+                    }
+                },
+
+                async loadAdicionais() {
+                    try {
+                        console.log('[Config] Loading adicionais...');
+                        const response = await window.api.getAdicionais();
+                        console.log('[Config] Adicionais API response:', response);
+                        this.adicionais = response.adicionais || response;
+                        console.log('[Config] ✅ Adicionais loaded:', this.adicionais.length, 'items');
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar adicionais:', error);
+                        showToast('Erro ao carregar adicionais.', 'error');
+                    }
+                },
+
+                async loadTiposVeiculo() {
+                    try {
+                        const response = await window.api.getTiposVeiculo();
+                        this.tiposVeiculo = response.tiposVeiculo || response;
+                    } catch (error) {
+                        console.error('Erro ao carregar tipos de veículo:', error);
+                    }
+                },
+
+                async loadTheme() {
+                    try {
+                        const themeData = await window.api.getThemeConfig();
+                        this.theme.corPrimaria = themeData.corPrimaria || '#F59E0B';
+                        this.theme.corSecundaria = themeData.corSecundaria || '#1F2937';
+
+                        // Apply theme to document immediately
+                        this.applyThemeToDocument();
+                    } catch (error) {
+                        console.error('Erro ao carregar tema:', error);
+                        // Silent fail - use default colors
+                    }
+                },
+
+                // Empresa actions
+                async saveEmpresa() {
+                    try {
+                        const empresaId = localStorage.getItem('empresaId');
+                        await window.api.updateEmpresa(empresaId, this.empresaForm);
+
+                        localStorage.setItem('empresaNome', this.empresaForm.nome);
+                        showToast('Dados da empresa salvos com sucesso!', 'success');
+                    } catch (error) {
+                        console.error('Erro ao salvar dados da empresa:', error);
+                        showToast('Erro ao salvar dados da empresa.', 'error');
+                    }
+                },
+
+                // Preferencias actions
+                async savePreferencias() {
+                    try {
+                        const empresaId = localStorage.getItem('empresaId');
+
+                        const data = {
+                            finalizacaoAutomatica: this.preferencias.finalizacaoAutomatica,
+                            exigirLavadorParaFinalizar: this.preferencias.exigirLavadorParaFinalizar,
+                            paginaInicialPadrao: this.preferencias.paginaInicialPadrao,
+                            paymentMethodsConfig: this.preferencias.paymentMethods,
+                            notificationPreferences: this.preferencias.notifications
+                        };
+
+                        console.log('[Config] Saving preferencias:', data);
+                        await window.api.updateEmpresa(empresaId, data);
+
+                        // Update localStorage
+                        localStorage.setItem('paginaInicialPadrao', data.paginaInicialPadrao);
+                        localStorage.setItem('exigirLavadorParaFinalizar', data.exigirLavadorParaFinalizar);
+
+                        showToast('Preferências salvas com sucesso!', 'success');
+                    } catch (error) {
+                        console.error('Erro ao salvar preferências:', error);
+                        showToast('Erro ao salvar preferências.', 'error');
+                    }
+                },
+
+                // Roles and Users actions
+                async loadRolesAndUsers() {
+                    try {
+                        console.log('[Config] Loading roles and users...');
+                        const response = await window.api.call('GET', 'roles');
+                        console.log('[Config] Roles API response:', response);
+                        this.roles = response.roles || [];
+                        this.users = response.usuarios || [];
+                        console.log('[Config] ✅ Roles and users loaded');
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar roles e usuários:', error);
+                        // Don't show toast - this might be because backend doesn't have the endpoint yet
+                        // Silent fail is acceptable for this feature
+                        this.roles = [];
+                        this.users = [];
+                    }
+                },
+
+                openRoleModal(role = null) {
+                    if (role) {
+                        this.roleForm.id = role.id;
+                        this.roleForm.nome = role.nome;
+                        this.roleForm.selectedPermissions = role.permissoes?.map(p => p.name) || [];
+                    } else {
+                        this.roleForm = {
+                            id: null,
+                            nome: '',
+                            selectedPermissions: []
+                        };
+                    }
+                    this.modals.role = true;
+                },
+
+                closeRoleModal() {
+                    this.modals.role = false;
+                    this.roleForm = {
+                        id: null,
+                        nome: '',
+                        selectedPermissions: []
+                    };
+                    this.expandedPermissions = [];
+                },
+
+                async saveRole() {
+                    try {
+                        const data = {
+                            id: this.roleForm.id || null,
+                            nome: this.roleForm.nome,
+                            permissoes: this.roleForm.selectedPermissions
+                        };
+
+                        console.log('[Config] Saving role:', data);
+                        await window.api.call('POST', 'roles', data);
+                        showToast('Função salva com sucesso!', 'success');
+                        this.closeRoleModal();
+                        await this.loadRolesAndUsers();
+                    } catch (error) {
+                        console.error('Erro ao salvar função:', error);
+                        showToast(error.message || 'Erro ao salvar função.', 'error');
+                    }
+                },
+
+                deleteRole(id, nome) {
+                    this.confirmModal = {
+                        title: 'Excluir Função',
+                        message: `Tem certeza que deseja excluir a função "${nome}"? Apenas funções sem usuários podem ser excluídas.`,
+                        onConfirm: async () => {
+                            try {
+                                await window.api.call('DELETE', `roles/${id}`);
+                                showToast('Função excluída com sucesso!', 'success');
+                                await this.loadRolesAndUsers();
+                            } catch (error) {
+                                console.error('Erro ao excluir função:', error);
+                                showToast(error.message || 'Erro ao excluir função.', 'error');
+                            }
+                            this.modals.confirm = false;
+                        }
+                    };
+                    this.modals.confirm = true;
+                },
+
+                openUserModal(user = null) {
+                    if (user) {
+                        this.userForm = {
+                            id: user.id,
+                            nome: user.nome,
+                            email: user.email,
+                            senha: '',
+                            roleId: user.roleInt?.id || '',
+                            maxDesconto: user.maxDesconto || 0
+                        };
+                    } else {
+                        this.userForm = {
+                            id: null,
+                            nome: '',
+                            email: '',
+                            senha: '',
+                            roleId: '',
+                            maxDesconto: 0
+                        };
+                    }
+                    this.modals.user = true;
+                },
+
+                closeUserModal() {
+                    this.modals.user = false;
+                    this.userForm = {
+                        id: null,
+                        nome: '',
+                        email: '',
+                        senha: '',
+                        roleId: '',
+                        maxDesconto: 0
+                    };
+                },
+
+                async saveUser() {
+                    try {
+                        const data = {
+                            nome: this.userForm.nome,
+                            email: this.userForm.email,
+                            roleId: this.userForm.roleId,
+                            maxDesconto: this.userForm.maxDesconto || 0
+                        };
+
+                        if (this.userForm.senha) {
+                            data.senha = this.userForm.senha;
+                        }
+
+                        console.log('[Config] Saving user:', data);
+
+                        if (this.userForm.id) {
+                            await window.api.call('PATCH', `roles/subaccount/${this.userForm.id}`, data);
+                            showToast('Usuário atualizado com sucesso!', 'success');
+                        } else {
+                            await window.api.call('POST', 'roles/subaccount', data);
+                            showToast('Usuário criado com sucesso!', 'success');
+                        }
+
+                        this.closeUserModal();
+                        await this.loadRolesAndUsers();
+                    } catch (error) {
+                        console.error('Erro ao salvar usuário:', error);
+                        showToast(error.message || 'Erro ao salvar usuário.', 'error');
+                    }
+                },
+
+                deleteUser(id, nome) {
+                    this.confirmModal = {
+                        title: 'Excluir Usuário',
+                        message: `Tem certeza que deseja excluir o usuário "${nome}" permanentemente?`,
+                        onConfirm: async () => {
+                            try {
+                                await window.api.call('DELETE', `roles/subaccount/${id}`);
+                                showToast('Usuário excluído com sucesso!', 'success');
+                                await this.loadRolesAndUsers();
+                            } catch (error) {
+                                console.error('Erro ao excluir usuário:', error);
+                                showToast(error.message || 'Erro ao excluir usuário.', 'error');
+                            }
+                            this.modals.confirm = false;
+                        }
+                    };
+                    this.modals.confirm = true;
+                },
+
+                togglePermissionGroup(permName) {
+                    const index = this.expandedPermissions.indexOf(permName);
+                    if (index > -1) {
+                        this.expandedPermissions.splice(index, 1);
+                    } else {
+                        this.expandedPermissions.push(permName);
+                    }
+                },
+
+                handleMasterCheckboxChange(perm) {
+                    if (perm.sub_permissions) {
+                        const isChecked = this.roleForm.selectedPermissions.includes(perm.name);
+                        if (isChecked) {
+                            // Add all sub-permissions
+                            perm.sub_permissions.forEach(sub => {
+                                if (!this.roleForm.selectedPermissions.includes(sub.name)) {
+                                    this.roleForm.selectedPermissions.push(sub.name);
+                                }
+                            });
+                        } else {
+                            // Remove all sub-permissions
+                            perm.sub_permissions.forEach(sub => {
+                                const index = this.roleForm.selectedPermissions.indexOf(sub.name);
+                                if (index > -1) {
+                                    this.roleForm.selectedPermissions.splice(index, 1);
+                                }
+                            });
+                        }
+                    }
+                },
+
+                handleSubCheckboxChange(perm, sub) {
+                    // Check if any sub-permission is checked
+                    const anySubChecked = perm.sub_permissions.some(s =>
+                        this.roleForm.selectedPermissions.includes(s.name)
+                    );
+
+                    // Update master checkbox based on sub-checkboxes
+                    const masterIndex = this.roleForm.selectedPermissions.indexOf(perm.name);
+                    if (anySubChecked && masterIndex === -1) {
+                        this.roleForm.selectedPermissions.push(perm.name);
+                    } else if (!anySubChecked && masterIndex > -1) {
+                        this.roleForm.selectedPermissions.splice(masterIndex, 1);
+                    }
+                },
+
+                // Tokens actions
+                async loadTokens() {
+                    try {
+                        console.log('[Config] Loading tokens...');
+                        const response = await window.api.getLavadorTokens();
+                        console.log('[Config] Tokens API response:', response);
+                        this.tokens = response.tokens || [];
+                        console.log('[Config] ✅ Tokens loaded:', this.tokens.length, 'items');
+                    } catch (error) {
+                        console.error('[Config] ❌ Erro ao carregar tokens:', error);
+                        // Silent fail - tokens might not exist yet
+                        this.tokens = [];
+                    }
+                },
+
+                async copyTokenLink(token) {
+                    try {
+                        const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
+                        await navigator.clipboard.writeText(link);
+                        showToast('Link copiado para a área de transferência!', 'success');
+                    } catch (error) {
+                        console.error('Erro ao copiar link:', error);
+                        showToast('Falha ao copiar o link.', 'error');
+                    }
+                },
+
+                async updateTokenStatus(tokenId, ativo) {
+                    try {
+                        console.log('[Config] Updating token status:', tokenId, ativo);
+                        await window.api.updateLavadorTokenStatus(tokenId, { ativo });
+                        showToast(`Token ${ativo ? 'ativado' : 'desativado'} com sucesso!`, 'success');
+                        await this.loadTokens();
+                    } catch (error) {
+                        console.error('Erro ao alterar status do token:', error);
+                        showToast('Erro ao alterar status do token.', 'error');
+                        await this.loadTokens(); // Reload to revert UI
+                    }
+                },
+
+                deleteToken(tokenId, lavadorNome) {
+                    this.confirmModal = {
+                        title: 'Excluir Token',
+                        message: `Tem certeza que deseja excluir permanentemente o token de acesso de "${lavadorNome}"? Esta ação não pode ser desfeita.`,
+                        onConfirm: async () => {
+                            try {
+                                await window.api.deleteLavadorToken(tokenId);
+                                showToast('Token excluído com sucesso!', 'success');
+                                await this.loadTokens();
+                            } catch (error) {
+                                console.error('Erro ao excluir token:', error);
+                                showToast(error.message || 'Erro ao excluir token.', 'error');
+                            }
+                            this.modals.confirm = false;
+                        }
+                    };
+                    this.modals.confirm = true;
+                },
+
+                // Service actions
+                openServiceModal(service = null) {
+                    if (service) {
+                        this.serviceForm.id = service.id;
+                        this.serviceForm.nome = service.nome;
+                        this.serviceForm.preco = service.preco;
+
+                        const tipoPrincipal = service.tiposVeiculo && service.tiposVeiculo.length > 0
+                            ? service.tiposVeiculo[0].nome
+                            : '';
+                        this.serviceForm.tipoVeiculo = tipoPrincipal;
+
+                        if (tipoPrincipal === 'CARRO') {
+                            this.updateSubtipoOptions();
+                            const categorias = service.tiposVeiculo
+                                .map(t => t.categoria)
+                                .filter(Boolean);
+                            this.serviceForm.subtiposVeiculo = categorias;
+                        } else {
+                            this.serviceForm.subtiposVeiculo = [];
+                        }
+                    } else {
+                        this.serviceForm = {
+                            id: null,
+                            nome: '',
+                            preco: '',
+                            tipoVeiculo: '',
+                            subtiposVeiculo: []
+                        };
+                        this.subtipoOptions = [];
+                    }
+                    this.modals.service = true;
+                },
+
+                closeServiceModal() {
+                    this.modals.service = false;
+                    this.serviceForm = {
+                        id: null,
+                        nome: '',
+                        preco: '',
+                        tipoVeiculo: '',
+                        subtiposVeiculo: []
+                    };
+                    this.subtipoOptions = [];
+                },
+
+                updateSubtipoOptions() {
+                    if (this.serviceForm.tipoVeiculo === 'CARRO') {
+                        this.subtipoOptions = this.tiposVeiculo.filter(t =>
+                            t.nome === 'CARRO' && t.categoria
+                        );
+                    } else {
+                        this.subtipoOptions = [];
+                        this.serviceForm.subtiposVeiculo = [];
+                    }
+                },
+
+                async saveService() {
+                    // Validate price
+                    const preco = parseFloat(this.serviceForm.preco);
+                    if (isNaN(preco) || preco <= 0) {
+                        showToast('O preço deve ser maior que zero.', 'error');
+                        return;
+                    }
+
+                    try {
+                        const data = {
+                            nome: this.serviceForm.nome,
+                            preco: preco,
+                            tipoVeiculo: this.serviceForm.tipoVeiculo
+                        };
+
+                        if (this.serviceForm.tipoVeiculo === 'CARRO' && this.serviceForm.subtiposVeiculo.length > 0) {
+                            data.subtiposVeiculo = this.serviceForm.subtiposVeiculo;
+                        }
+
+                        if (this.serviceForm.id) {
+                            await window.api.updateServico(this.serviceForm.id, data);
+                            showToast('Serviço atualizado com sucesso!', 'success');
+                        } else {
+                            await window.api.createServico(data);
+                            showToast('Serviço criado com sucesso!', 'success');
+                        }
+
+                        this.closeServiceModal();
+                        await this.loadServices();
+                    } catch (error) {
+                        console.error('Erro ao salvar serviço:', error);
+                        showToast(error.message || 'Erro ao salvar serviço.', 'error');
+                    }
+                },
+
+                deleteService(id) {
+                    this.confirmModal = {
+                        title: 'Excluir Serviço',
+                        message: 'Tem certeza que deseja excluir este serviço? Esta ação não pode ser desfeita.',
+                        onConfirm: async () => {
+                            try {
+                                await window.api.deleteServico(id);
+                                showToast('Serviço excluído com sucesso!', 'success');
+                                await this.loadServices();
+                            } catch (error) {
+                                console.error('Erro ao excluir serviço:', error);
+                                showToast(error.message || 'Erro ao excluir serviço.', 'error');
+                            }
+                        }
+                    };
+                    this.modals.confirm = true;
+                },
+
+                // Adicional actions
+                openAdicionalModal(adicional = null) {
+                    if (adicional) {
+                        this.adicionalForm = {
+                            id: adicional.id,
+                            nome: adicional.nome,
+                            preco: adicional.preco
+                        };
+                    } else {
+                        this.adicionalForm = {
+                            id: null,
+                            nome: '',
+                            preco: ''
+                        };
+                    }
+                    this.modals.adicional = true;
+                },
+
+                closeAdicionalModal() {
+                    this.modals.adicional = false;
+                    this.adicionalForm = {
+                        id: null,
+                        nome: '',
+                        preco: ''
+                    };
+                },
+
+                async saveAdicional() {
+                    // Validate price
+                    const preco = parseFloat(this.adicionalForm.preco);
+                    if (isNaN(preco) || preco <= 0) {
+                        showToast('O preço deve ser maior que zero.', 'error');
+                        return;
+                    }
+
+                    try {
+                        const data = {
+                            nome: this.adicionalForm.nome,
+                            preco: preco
+                        };
+
+                        if (this.adicionalForm.id) {
+                            await window.api.updateAdicional(this.adicionalForm.id, data);
+                            showToast('Adicional atualizado com sucesso!', 'success');
+                        } else {
+                            await window.api.createAdicional(data);
+                            showToast('Adicional criado com sucesso!', 'success');
+                        }
+
+                        this.closeAdicionalModal();
+                        await this.loadAdicionais();
+                    } catch (error) {
+                        console.error('Erro ao salvar adicional:', error);
+                        showToast('Erro ao salvar adicional.', 'error');
+                    }
+                },
+
+                deleteAdicional(id) {
+                    this.confirmModal = {
+                        title: 'Excluir Adicional',
+                        message: 'Tem certeza que deseja excluir este adicional? Esta ação não pode ser desfeita.',
+                        onConfirm: async () => {
+                            try {
+                                await window.api.deleteAdicional(id);
+                                showToast('Adicional excluído com sucesso!', 'success');
+                                await this.loadAdicionais();
+                            } catch (error) {
+                                console.error('Erro ao excluir adicional:', error);
+                                showToast(error.message || 'Erro ao excluir adicional.', 'error');
+                            }
+                        }
+                    };
+                    this.modals.confirm = true;
+                },
+
+                // Theme actions
+                async saveTheme() {
+                    try {
+                        // Validate HEX format
+                        const hexRegex = /^#[0-9A-F]{6}$/i;
+                        if (!hexRegex.test(this.theme.corPrimaria)) {
+                            showToast('Cor primária inválida. Use formato HEX (ex: #FF5733)', 'error');
+                            return;
+                        }
+                        if (!hexRegex.test(this.theme.corSecundaria)) {
+                            showToast('Cor secundária inválida. Use formato HEX (ex: #1F2937)', 'error');
+                            return;
+                        }
+
+                        await window.api.updateThemeConfig({
+                            corPrimaria: this.theme.corPrimaria.toUpperCase(),
+                            corSecundaria: this.theme.corSecundaria.toUpperCase()
+                        });
+
+                        // CRITICAL: Enable custom theme system-wide
+                        if (typeof window.enableCustomTheme === 'function') {
+                            window.enableCustomTheme();
+                        } else {
+                            localStorage.setItem('customThemeEnabled', 'true');
+                        }
+
+                        // Apply immediately to document
+                        this.applyThemeToDocument();
+
+                        showToast('Tema personalizado salvo com sucesso! Recarregue as páginas para aplicar.', 'success');
+                    } catch (error) {
+                        console.error('Erro ao salvar tema:', error);
+                        showToast(error.error || 'Erro ao salvar personalização do tema.', 'error');
+                    }
+                },
+
+                resetTheme() {
+                    this.theme.corPrimaria = '#F59E0B';
+                    this.theme.corSecundaria = '#1F2937';
+
+                    // CRITICAL: Disable custom theme when resetting to default
+                    if (typeof window.disableCustomTheme === 'function') {
+                        window.disableCustomTheme();
+                    } else {
+                        localStorage.removeItem('customThemeEnabled');
+                    }
+
+                    // Apply default theme to document
+                    this.applyThemeToDocument();
+
+                    showToast('Tema padrão restaurado com sucesso!', 'success');
+                },
+
+                applyThemeToDocument() {
+                    // Apply primary color
+                    document.documentElement.style.setProperty('--primary-color', this.theme.corPrimaria);
+                    document.documentElement.style.setProperty('--primary-purple', this.theme.corPrimaria);
+
+                    // Apply secondary color
+                    document.documentElement.style.setProperty('--text-primary', this.theme.corSecundaria);
+                    document.documentElement.style.setProperty('--text-secondary', this.theme.corSecundaria);
+
+                    // Generate lighter version for backgrounds
+                    const primaryLight = this.theme.corPrimaria + '15'; // Add alpha for transparency
+                    document.documentElement.style.setProperty('--primary-color-light', primaryLight);
+                },
+
+                adjustBrightness(hex, percent) {
+                    // Remove # if present
+                    hex = hex.replace('#', '');
+
+                    // Convert to RGB
+                    const r = parseInt(hex.substring(0, 2), 16);
+                    const g = parseInt(hex.substring(2, 4), 16);
+                    const b = parseInt(hex.substring(4, 6), 16);
+
+                    // Adjust brightness
+                    const newR = Math.max(0, Math.min(255, r + (r * percent / 100)));
+                    const newG = Math.max(0, Math.min(255, g + (g * percent / 100)));
+                    const newB = Math.max(0, Math.min(255, b + (b * percent / 100)));
+
+                    // Convert back to hex
+                    const toHex = (n) => {
+                        const hex = Math.round(n).toString(16);
+                        return hex.length === 1 ? '0' + hex : hex;
+                    };
+
+                    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+                },
+
+                // Utilities
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    }).format(value || 0);
+                }
             }
         }
 
-        function logout() {
-            window.api.logout();
-        }
+        // Watch for tab changes and save to localStorage
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('configApp', configApp);
+        });
 
-        // --- Sistema de Notificação ---
-        function initializeNotificationSystem() {
+        // Save active tab to localStorage
+        document.addEventListener('click', (e) => {
+            const tabButton = e.target.closest('.tab-button');
+            if (tabButton) {
+                const app = Alpine.$data(document.querySelector('[x-data]'));
+                if (app) {
+                    setTimeout(() => {
+                        localStorage.setItem('activeConfigTab', app.activeTab);
+                    }, 0);
+                }
+            }
+        });
+
+        // Notification system
+        window.initializeNotificationSystem = function() {
             const bell = document.getElementById('notification-bell');
             const panel = document.getElementById('notification-panel');
-            
+
             if (!bell || !panel) return;
 
             bell.addEventListener('click', (e) => {
@@ -614,7 +2152,7 @@
 
             loadNotifications();
             setInterval(loadNotifications, 30000);
-        }
+        };
 
         async function loadNotifications() {
             try {
@@ -622,7 +2160,7 @@
                 const notifications = response.notificacoes || [];
                 const panel = document.getElementById('notification-panel');
                 const dot = document.getElementById('notification-dot');
-                
+
                 if (!panel || !dot) return;
 
                 panel.innerHTML = '<div class="notification-panel-header"><h4>Notificações</h4></div>';
@@ -656,790 +2194,34 @@
             document.getElementById('notification-dot').style.display = 'none';
         }
 
-        // --- TABS ---
-        function initializeTabs() {
-            updateTabsVisibility();
-            const activeTabId = localStorage.getItem('activeConfigTab');
-            const savedTabButton = document.querySelector(`.tab-button[onclick*="'${activeTabId}'"]`);
-
-            if (activeTabId && savedTabButton && savedTabButton.style.display !== 'none') {
-                openTab(null, activeTabId);
-            } else {
-                const firstVisibleTab = document.querySelector('.tab-button:not([style*="display: none"])');
-                if (firstVisibleTab) {
-                    const tabName = firstVisibleTab.getAttribute('onclick').match(/'([^']+)'/)[1];
-                    openTab(null, tabName);
-                }
-            }
+        function logout() {
+            window.api.logout();
         }
-
-        function openTab(evt, tabName) {
-            localStorage.setItem('activeConfigTab', tabName);
-            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-            document.querySelectorAll('.tab-button').forEach(link => link.classList.remove('active'));
-            document.getElementById(tabName).style.display = 'block';
-            const tabButton = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
-            if (tabButton) {
-                tabButton.classList.add('active');
-            }
-        }
-
-        // --- TOKENS ---
-        async function loadTokens() {
-            const tableBody = document.getElementById('tokensTableBody');
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Carregando tokens...</td></tr>';
-            try {
-                const response = await window.api.getLavadorTokens();
-                const tokens = response.tokens || [];
-                if (tokens.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-secondary">Nenhum token de acesso gerado.</td></tr>';
-                    return;
-                }
-                tableBody.innerHTML = tokens.map(t => `
-                    <tr>
-                        <td>${t.lavador.nome}</td>
-                        <td>
-                            <a href="${window.location.origin}/lavador-publico.html?token=${t.token}" target="_blank" class="link-like">
-                                <i class="fas fa-external-link-alt"></i>
-                                <span>Acessar Link</span>
-                            </a>
-                        </td>
-                        <td class="status-cell">
-                            <select class="form-select form-select-sm" onchange="handleTokenStatusChange(this, '${t.id}')">
-                                <option value="true" ${t.ativo ? 'selected' : ''}>Ativo</option>
-                                <option value="false" ${!t.ativo ? 'selected' : ''}>Inativo</option>
-                            </select>
-                        </td>
-                        <td class="actions-cell">
-                            <button data-action="copy" data-token="${t.token}" class="btn-sm btn-secondary" title="Copiar Link">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button data-action="delete" data-id="${t.id}" class="btn-sm btn-danger" title="Excluir">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error("Erro ao carregar tokens:", error);
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-red-500">Erro ao carregar tokens.</td></tr>';
-            }
-        }
-
-        function setButtonLoadingState(button, loading) {
-            if (!button) return;
-            const icon = button.querySelector('i');
-            if (!icon) return;
-            if (loading) {
-                button.disabled = true;
-                button.dataset.originalIcon = icon.className;
-                icon.className = 'fas fa-spinner fa-spin';
-            } else {
-                button.disabled = false;
-                if (button.dataset.originalIcon) {
-                    icon.className = button.dataset.originalIcon;
-                    delete button.dataset.originalIcon;
-                }
-            }
-        }
-
-        async function handleTokenStatusChange(selectElement, tokenId) {
-            const novoStatus = selectElement.value === 'true';
-            const action = novoStatus ? 'ativar' : 'desativar';
-            selectElement.disabled = true;
-            selectElement.style.border = '2px solid var(--primary-purple)';
-            try {
-                await window.api.updateLavadorTokenStatus(tokenId, { ativo: novoStatus });
-                showToast(`Token ${action} com sucesso!`, 'success');
-                loadTokens();
-            } catch (error) {
-                showToast(`Erro ao ${action} o token.`, 'error');
-                console.error(`Erro ao alterar status do token:`, error);
-                selectElement.value = !novoStatus;
-            }
-        }
-
-        document.getElementById('tokensTableBody').addEventListener('click', (event) => {
-            const button = event.target.closest('button[data-action]');
-            if (!button) return;
-            const action = button.dataset.action;
-            if (action === 'delete') {
-                const tokenId = button.dataset.id;
-                deleteToken(tokenId, button);
-            } else if (action === 'copy') {
-                const token = button.dataset.token;
-                if (token) copyTokenLink(token);
-            }
-        });
-
-        async function deleteToken(id, button) {
-            showCustomConfirm({
-                title: 'Excluir Token',
-                message: 'Tem certeza que deseja excluir permanentemente este token? Esta ação não pode ser desfeita.',
-                onConfirm: async () => {
-                    if (!button) button = document.querySelector(`#tokensTableBody button[data-action="delete"][data-id="${id}"]`);
-                    setButtonLoadingState(button, true);
-                    try {
-                        await window.api.deleteLavadorToken(id);
-                        showToast('Token excluído com sucesso!', 'success');
-                        loadTokens();
-                    } catch (error) {
-                        console.error('Erro ao excluir token:', error);
-                        showToast(error.message || 'Erro ao excluir token.', 'error');
-                        setButtonLoadingState(button, false);
-                    }
-                }
-            });
-        }
-
-        function copyTokenLink(token) {
-            const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
-            navigator.clipboard.writeText(link).then(() => {
-                showToast('Link copiado para a área de transferência!', 'success');
-            }, (err) => {
-                console.error('Erro ao copiar link: ', err);
-                showToast('Falha ao copiar o link.', 'error');
-            });
-        }
-
-        // --- ROLES & USERS ---
-        const allPermissions = [
-             { label: 'Dashboard', name: 'ver_dashboard', icon: 'fa-home' },
-             { label: 'Ordens', name: 'gerenciar_ordens', icon: 'fa-list-alt' },
-             { label: 'Clientes', name: 'gerenciar_clientes', icon: 'fa-users' },
-             { label: 'Funcionários', name: 'gerenciar_funcionarios', icon: 'fa-user-tie' },
-             { label: 'Financeiro', name: 'ver_financeiro', icon: 'fa-chart-pie' },
-             { label: 'Configurações', name: 'gerenciar_configuracoes', icon: 'fa-cog',
-                sub_permissions: [
-                    { name: 'config_ver_servicos', label: 'Serviços e Adicionais' },
-                    { name: 'config_ver_empresa', label: 'Dados da Empresa' },
-                    { name: 'config_ver_tokens', label: 'Tokens de Acesso' },
-                    { name: 'config_ver_usuarios', label: 'Usuários e Permissões' },
-                    { name: 'config_ver_preferencias', label: 'Preferências' },
-                ]
-            },
-        ];
-
-        async function loadRolesAndUsers() {
-            try {
-                const { roles, usuarios } = await window.api.call('GET', 'roles');
-                renderRoles(roles);
-                renderUsers(usuarios);
-                populateRoleSelect(roles);
-            } catch (error) {
-                console.error("Erro ao carregar roles e usuários:", error);
-                showToast('Erro ao carregar dados de permissões.', 'error');
-            }
-        }
-
-        function renderRoles(roles) {
-            const tableBody = document.getElementById('rolesTableBody');
-            tableBody.innerHTML = '';
-            roles.forEach(role => {
-                const permissoesHtml = role.permissoes.map(p => `<span class="subtipo-badge">${p.nome.replace(/_/g, ' ')}</span>`).join('');
-                const row = tableBody.insertRow();
-                row.innerHTML = `
-                    <td><strong>${role.nome}</strong></td>
-                    <td>${role._count.usuarios}</td>
-                    <td>${permissoesHtml || 'Nenhuma'}</td>
-                    <td class="actions-cell">
-                        <button onclick='openRoleModal(${JSON.stringify(role)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
-                        <button onclick='deleteRole("${role.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-            });
-        }
-
-        function renderUsers(users) {
-            const tableBody = document.getElementById('usersTableBody');
-            tableBody.innerHTML = '';
-            users.forEach(user => {
-                const row = tableBody.insertRow();
-                row.innerHTML = `
-                    <td>${user.nome}</td>
-                    <td>${user.email}</td>
-                    <td>${user.roleInt?.nome || 'Sem Função'}</td>
-                    <td class="actions-cell">
-                        <button onclick='openUserModal(${JSON.stringify(user)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
-                        <button onclick='deleteUser("${user.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-            });
-        }
-
-        function populateRoleSelect(roles) {
-            const select = document.getElementById('userRoleSelect');
-            select.innerHTML = '<option value="">Selecione uma função</option>';
-            roles.forEach(role => {
-                select.innerHTML += `<option value="${role.id}">${role.nome}</option>`;
-            });
-        }
-
-        function openRoleModal(role = null) {
-            document.getElementById('roleForm').reset();
-            document.getElementById('roleId').value = '';
-            document.getElementById('roleModalTitle').textContent = 'Nova Função';
-            const permissionsContainer = document.getElementById('permissionsContainer');
-            permissionsContainer.innerHTML = '';
-            allPermissions.forEach(perm => {
-                const groupEl = document.createElement('div');
-                groupEl.className = 'permission-group';
-                let headerHtml = `
-                    <div class="permission-group-header">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" class="form-checkbox master-checkbox" name="permissoes" value="${perm.name}" data-group="${perm.name}" ${perm.sub_permissions ? 'data-is-parent="true"' : ''}>
-                            <i class="fas ${perm.icon} text-secondary"></i>
-                            <span class="permission-group-title">${perm.label}</span>
-                        </label>
-                        ${perm.sub_permissions ? '<i class="fas fa-chevron-down expand-icon"></i>' : ''}
-                    </div>
-                `;
-                groupEl.innerHTML = headerHtml;
-                if (perm.sub_permissions) {
-                    const subList = document.createElement('div');
-                    subList.className = 'sub-permissions-list';
-                    subList.innerHTML = perm.sub_permissions.map(sub => `
-                        <label class="sub-permission-item">
-                            <input type="checkbox" class="form-checkbox sub-checkbox" name="permissoes" value="${sub.name}" data-parent-group="${perm.name}">
-                            <span>${sub.label}</span>
-                        </label>
-                    `).join('');
-                    groupEl.appendChild(subList);
-                }
-                permissionsContainer.appendChild(groupEl);
-            });
-            if (role) {
-                document.getElementById('roleModalTitle').textContent = 'Editar Função';
-                document.getElementById('roleId').value = role.id;
-                document.getElementById('roleName').value = role.nome;
-                if (role.permissoes) {
-                    role.permissoes.forEach(p => {
-                        const checkbox = document.querySelector(`input[name="permissoes"][value="${p.name}"]`);
-                        if (checkbox) checkbox.checked = true;
-                    });
-                }
-                document.querySelectorAll('.sub-checkbox:checked').forEach(sub => {
-                    handleSubCheckboxChange(sub);
-                });
-            }
-            document.getElementById('roleModal').classList.add('active');
-            addPermissionEventListeners();
-        }
-
-        function addPermissionEventListeners() {
-            document.querySelectorAll('.permission-group-header').forEach(header => {
-                header.addEventListener('click', (e) => {
-                    if (e.target.closest('label')) return;
-                    const group = header.closest('.permission-group');
-                    group.classList.toggle('expanded');
-                });
-            });
-            document.querySelectorAll('.master-checkbox').forEach(master => {
-                master.addEventListener('change', (e) => handleMasterCheckboxChange(e.target));
-            });
-            document.querySelectorAll('.sub-checkbox').forEach(sub => {
-                sub.addEventListener('change', (e) => handleSubCheckboxChange(e.target));
-            });
-        }
-
-        function openUserModal(user = null) {
-            document.getElementById('userForm').reset();
-            document.getElementById('subUserId').value = '';
-            document.getElementById('userModalTitle').textContent = 'Novo Usuário';
-            document.getElementById('passwordHint').style.display = 'none';
-            document.getElementById('userPassword').required = true;
-            document.getElementById('userPassword').placeholder = '';
-            if (user) {
-                document.getElementById('userModalTitle').textContent = 'Editar Usuário';
-                document.getElementById('subUserId').value = user.id;
-                document.getElementById('userName').value = user.nome;
-                document.getElementById('userEmail').value = user.email;
-                document.getElementById('userRoleSelect').value = user.roleInt?.id || '';
-                document.getElementById('userMaxDesconto').value = user.maxDesconto || 0;
-                document.getElementById('userPassword').required = false;
-                document.getElementById('passwordHint').style.display = 'block';
-            }
-            document.getElementById('userModal').classList.add('active');
-        }
-
-        function handleMasterCheckboxChange(masterCheckbox) {
-            const groupName = masterCheckbox.dataset.group;
-            const subCheckboxes = document.querySelectorAll(`.sub-checkbox[data-parent-group="${groupName}"]`);
-            subCheckboxes.forEach(sub => sub.checked = masterCheckbox.checked);
-        }
-
-        function handleSubCheckboxChange(subCheckbox) {
-            const parentGroupName = subCheckbox.dataset.parentGroup;
-            const masterCheckbox = document.querySelector(`.master-checkbox[data-group="${parentGroupName}"]`);
-            const allSubCheckboxes = document.querySelectorAll(`.sub-checkbox[data-parent-group="${parentGroupName}"]`);
-            const anySubChecked = Array.from(allSubCheckboxes).some(sub => sub.checked);
-            if (masterCheckbox) masterCheckbox.checked = anySubChecked;
-        }
-
-        async function saveRole(event) {
-            event.preventDefault();
-            const id = document.getElementById('roleId').value;
-            const data = {
-                id: id || null,
-                nome: document.getElementById('roleName').value,
-                permissoes: Array.from(document.querySelectorAll('input[name="permissoes"]:checked:not([data-is-parent="true"])')).map(cb => cb.value)
-            };
-            try {
-                await window.api.call('POST', 'roles', data); 
-                showToast('Função salva com sucesso!', 'success');
-                closeModal('roleModal');
-                loadRolesAndUsers();
-            } catch (error) { showToast(error.message || 'Erro ao salvar função.', 'error'); }
-        }
-
-        async function saveUser(event) {
-            event.preventDefault();
-            const id = document.getElementById('subUserId').value;
-            const senha = document.getElementById('userPassword').value;
-            const data = {
-                nome: document.getElementById('userName').value,
-                email: document.getElementById('userEmail').value,
-                roleId: document.getElementById('userRoleSelect').value,
-                maxDesconto: document.getElementById('userMaxDesconto').value || 0
-            };
-            if (senha) data.senha = senha;
-            try {
-                if (id) {
-                    await window.api.call('PATCH', `roles/subaccount/${id}`, data);
-                    showToast('Usuário atualizado com sucesso!', 'success');
-                } else {
-                    await window.api.call('POST', 'roles/subaccount', data);
-                    showToast('Usuário criado com sucesso!', 'success');
-                }
-                closeModal('userModal');
-                loadRolesAndUsers();
-            } catch (error) { showToast(error.message || 'Erro ao criar usuário.', 'error'); }
-        }
-
-        async function deleteRole(id) {
-            showCustomConfirm({
-                title: 'Excluir Função',
-                message: 'Tem certeza que deseja excluir esta função? Apenas funções sem usuários podem ser excluídas.',
-                onConfirm: async () => {
-                    try {
-                        await window.api.call('DELETE', `roles/${id}`);
-                        showToast('Função excluída com sucesso!', 'success');
-                        loadRolesAndUsers();
-                    } catch (error) { showToast(error.message || 'Erro ao excluir função.', 'error'); }
-                }
-            });
-        }
-
-        async function deleteUser(id) {
-            showCustomConfirm({
-                title: 'Excluir Usuário',
-                message: 'Tem certeza que deseja excluir este usuário permanentemente?',
-                onConfirm: async () => {
-                    try {
-                        await window.api.call('DELETE', `roles/subaccount/${id}`);
-                        showToast('Usuário excluído com sucesso!', 'success');
-                        loadRolesAndUsers();
-                    } catch (error) { showToast(error.message || 'Erro ao excluir usuário.', 'error'); }
-                }
-            });
-        }
-
-        function updateTabsVisibility() {
-            const tabButtons = document.querySelectorAll('.tabs .tab-button[data-permission]');
-            tabButtons.forEach(button => {
-                const requiredPermission = button.dataset.permission;
-                if (!hasPermission(requiredPermission)) {
-                    button.style.display = 'none';
-                }
-            });
-        }
-
-        function updateActionButtonsVisibility() {
-            const actionButtons = document.querySelectorAll('.tab-content button[data-permission]');
-            actionButtons.forEach(button => {
-                const requiredPermission = button.dataset.permission;
-                if (!hasPermission(requiredPermission)) {
-                    button.style.display = 'none';
-                }
-            });
-        }
-
-        function initializeSortable() {
-            const tableBody = document.getElementById('servicesTableBody');
-            new Sortable(tableBody, {
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                onEnd: async function (evt) {
-                    const serviceIds = Array.from(tableBody.querySelectorAll('tr')).map(row => row.dataset.id);
-                    try {
-                        await window.api.call('POST', 'servicos/reorder', { ids: serviceIds });
-                        showToast('Ordem dos serviços salva com sucesso!', 'success');
-                    } catch (error) {
-                        console.error('Erro ao reordenar serviços:', error);
-                        showToast('Não foi possível salvar a nova ordem.', 'error');
-                        loadServices();
-                    }
-                },
-            });
-        }
-
-        // --- DATA LOADING ---
-        async function loadServices() {
-            try {
-                const response = await window.api.getServicos();
-                const services = response.servicos || response;
-                cachedServices = services;
-                const tableBody = document.getElementById('servicesTableBody');
-                tableBody.innerHTML = '';
-                if (!Array.isArray(services)) {
-                    console.error("Erro: a resposta de serviços não é um array.", services);
-                    return;
-                }
-                services.forEach(s => {
-                    const row = tableBody.insertRow();
-                    const tipoPrincipal = s.tiposVeiculo && s.tiposVeiculo.length > 0 ? s.tiposVeiculo[0].nome : 'N/A';
-                    const categoriasArray = s.tiposVeiculo?.map(t => t.categoria).filter(Boolean);
-                    const categoriasHtml = categoriasArray && categoriasArray.length > 0
-                        ? categoriasArray.map(cat => `<span class="subtipo-badge">${cat}</span>`).join('')
-                        : 'Todos';
-                    row.dataset.id = s.id;
-                    row.innerHTML = `
-                        <td>${s.nome}</td>
-                        <td><strong class="font-semibold">${formatCurrency(s.preco)}</strong></td>
-                        <td>${tipoPrincipal}</td>
-                        <td>${categoriasHtml}</td>
-                        <td class="actions-cell">
-                            <button onclick='openServiceModal("${s.id}")' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
-                            <button onclick='deleteService("${s.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
-                        </td>
-                    `;
-                });
-            } catch (error) { console.error("Erro ao carregar serviços:", error); }
-        }
-
-        async function loadAdicionais() {
-            try {
-                const response = await window.api.getAdicionais();
-                const adicionais = response.adicionais || response;
-                const tableBody = document.getElementById('adicionaisTableBody');
-                tableBody.innerHTML = '';
-                if (!Array.isArray(adicionais)) {
-                    console.error("Erro: a resposta de adicionais não é um array.", adicionais);
-                    return;
-                }
-                adicionais.forEach(a => {
-                    const row = tableBody.insertRow();
-                    row.innerHTML = `
-                        <td>${a.nome}</td>
-                        <td><strong class="font-semibold">${formatCurrency(a.preco)}</strong></td>
-                        <td class="actions-cell">
-                            <button onclick='openAdicionalModal("${a.id}")' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>
-                            <button onclick='deleteAdicional("${a.id}")' class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
-                        </td>
-                    `;
-                });
-            } catch (error) { console.error("Erro ao carregar adicionais:", error); }
-        }
-
-        async function loadEmpresaData() {
-            try {
-                const empresaId = localStorage.getItem('empresaId');
-                const empresa = await window.api.getEmpresaById(empresaId);
-                document.getElementById('empresaNome').value = empresa.nome;
-                document.getElementById('horarioAbertura').value = empresa.horarioAbertura;
-                document.getElementById('horarioFechamento').value = empresa.horarioFechamento;                
-                document.getElementById('paginaInicialPadrao').value = empresa.paginaInicialPadrao || 'index.html';
-            } catch (error) { console.error("Erro ao carregar dados da empresa:", error); }
-        }
-
-        async function loadTiposVeiculo() {
-            try {
-                const response = await window.api.getTiposVeiculo();
-                allTiposVeiculo = response.tiposVeiculo || response;
-                if (!Array.isArray(allTiposVeiculo)) {
-                    console.error('A resposta de tipos de veículo não é um array:', allTiposVeiculo);
-                    allTiposVeiculo = [];
-                }
-            } catch (error) { 
-                console.error("Erro ao carregar tipos de veículo:", error); 
-                alert('Não foi possível carregar os tipos de veículo. A página pode não funcionar corretamente.');
-            }
-        }
-
-        function updateSubtipoCheckboxes() {
-            const tipoPrincipal = document.getElementById('serviceTipoPrincipal').value;
-            const subtipoContainer = document.getElementById('subtipoContainer');
-            const checkboxContainer = document.getElementById('subtipoCheckboxContainer');
-            checkboxContainer.innerHTML = '';
-            subtipoContainer.style.display = 'none';
-            if (tipoPrincipal === 'CARRO') {
-                const subtipos = allTiposVeiculo.filter(t => t.nome === 'CARRO' && t.categoria);
-                if (subtipos.length > 0) {
-                    subtipos.forEach(t => {
-                        const checkboxWrapper = document.createElement('div');
-                        checkboxWrapper.className = 'checkbox-item';
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.id = `subtipo-${t.categoria}`;
-                        checkbox.value = t.categoria;
-                        checkbox.name = 'subtiposVeiculo';
-                        const label = document.createElement('label');
-                        label.htmlFor = `subtipo-${t.categoria}`;
-                        label.textContent = t.categoria;
-                        checkboxWrapper.appendChild(checkbox);
-                        checkboxWrapper.appendChild(label);
-                        checkboxContainer.appendChild(checkboxWrapper);
-                    });
-                    subtipoContainer.style.display = 'block';
-                }
-            }
-        }
-
-        // --- MODALS & FORMS ---
-        async function openServiceModal(id = null) {
-            const form = document.getElementById('serviceForm');
-            form.reset();
-            document.getElementById('serviceId').value = '';
-            document.getElementById('subtipoCheckboxContainer').innerHTML = '';
-            document.getElementById('subtipoContainer').style.display = 'none';
-            if (id) {
-                document.getElementById('serviceModalTitle').textContent = 'Editar Serviço';
-                const service = cachedServices.find(s => s.id === id);
-                if(service) {
-                    document.getElementById('serviceId').value = service.id;
-                    document.getElementById('serviceName').value = service.nome;
-                    document.getElementById('servicePrice').value = service.preco;
-                    const tipoPrincipal = service.tiposVeiculo && service.tiposVeiculo[0] ? service.tiposVeiculo[0].nome : '';
-                    document.getElementById('serviceTipoPrincipal').value = tipoPrincipal;
-                    if (tipoPrincipal === 'CARRO') {
-                        updateSubtipoCheckboxes();
-                        const categoriasSalvas = service.tiposVeiculo.map(t => t.categoria).filter(Boolean);
-                        categoriasSalvas.forEach(categoria => {
-                            const checkbox = document.getElementById(`subtipo-${categoria}`);
-                            if (checkbox) checkbox.checked = true;
-                        });
-                    }
-                }
-            } else {
-                document.getElementById('serviceModalTitle').textContent = 'Novo Serviço';
-            }
-            document.getElementById('serviceModal').classList.add('active');
-        }
-
-        function closeServiceModal() {
-            document.getElementById('serviceModal').classList.remove('active');
-        }
-
-        async function saveService(event) {
-            event.preventDefault();
-            const id = document.getElementById('serviceId').value;
-            const nome = document.getElementById('serviceName').value;
-            const preco = parseFloat(document.getElementById('servicePrice').value);
-            const tipoPrincipal = document.getElementById('serviceTipoPrincipal').value;
-            if (!tipoPrincipal) {
-                alert('Por favor, selecione um tipo de veículo.');
-                return;
-            }
-            const data = { nome, preco, tipoVeiculo: tipoPrincipal };
-            if (tipoPrincipal === 'CARRO') {
-                const subtiposSelecionados = Array.from(document.querySelectorAll('#subtipoCheckboxContainer input[type="checkbox"]:checked')).map(cb => cb.value);
-                if (subtiposSelecionados.length > 0) data.subtiposVeiculo = subtiposSelecionados;
-            }
-            try {
-                if (id) {
-                    await window.api.updateServico(id, data);
-                } else {
-                    await window.api.createServico(data);
-                }
-                closeServiceModal();
-                loadServices();
-            } catch (error) { 
-                console.error("Erro ao salvar serviço:", error); 
-                showToast(`Erro ao salvar serviço: ${error.message || 'Verifique o console.'}`, 'error');
-            }
-        }
-
-        async function deleteService(id) {
-            showCustomConfirm({
-                title: 'Excluir Serviço',
-                message: 'Tem certeza que deseja excluir este serviço? Esta ação não pode ser desfeita.',
-                onConfirm: async () => {
-                    try {
-                        await window.api.deleteServico(id);
-                        showToast('Serviço excluído com sucesso!', 'success');
-                        loadServices();
-                    } catch (error) { showToast(error.message || 'Erro ao excluir serviço.', 'error'); }
-                }
-            });
-        }
-
-        async function openAdicionalModal(id = null) {
-            const form = document.getElementById('adicionalForm');
-            form.reset();
-            document.getElementById('adicionalId').value = '';
-            if (id) {
-                document.getElementById('adicionalModalTitle').textContent = 'Editar Adicional';
-                const adicional = await window.api.getAdicionalById(id);
-                 if(adicional) {
-                    document.getElementById('adicionalId').value = adicional.id;
-                    document.getElementById('adicionalName').value = adicional.nome;
-                    document.getElementById('adicionalPrice').value = adicional.preco;
-                }
-            } else {
-                document.getElementById('adicionalModalTitle').textContent = 'Novo Adicional';
-            }
-            document.getElementById('adicionalModal').classList.add('active');
-        }
-
-        function closeAdicionalModal() {
-            document.getElementById('adicionalModal').classList.remove('active');
-        }
-
-        async function saveAdicional(event) {
-            event.preventDefault();
-            const id = document.getElementById('adicionalId').value;
-            const data = {
-                nome: document.getElementById('adicionalName').value,
-                preco: parseFloat(document.getElementById('adicionalPrice').value)
-            };
-            try {
-                if (id) {
-                    await window.api.updateAdicional(id, data);
-                } else {
-                    await window.api.createAdicional(data);
-                }
-                closeAdicionalModal();
-                loadAdicionais();
-            } catch (error) { 
-                console.error("Erro ao salvar adicional:", error); 
-                showToast('Erro ao salvar adicional.', 'error');
-            }
-        }
-
-        async function deleteAdicional(id) {
-            showCustomConfirm({
-                title: 'Excluir Adicional',
-                message: 'Tem certeza que deseja excluir este adicional? Esta ação não pode ser desfeita.',
-                onConfirm: async () => {
-                    try {
-                        await window.api.deleteAdicional(id);
-                        showToast('Adicional excluído com sucesso!', 'success');
-                        loadAdicionais();
-                    } catch (error) { showToast(error.message || 'Erro ao excluir adicional.', 'error'); }
-                }
-            });
-        }
-
-        async function savePreferencias(event) {
-            event.preventDefault();
-            await saveAllSettings(event);
-        }
-
-        async function saveEmpresa(event) {
-            event.preventDefault();
-            await saveAllSettings(event);
-        }
-
-        // Função unificada para salvar todas as configurações
-        async function saveAllSettings(event) {
-            const empresaId = localStorage.getItem('empresaId');
-
-            const data = {
-                // Dados da aba "Empresa"
-                nome: document.getElementById('empresaNome').value,
-                horarioAbertura: document.getElementById('horarioAbertura').value,
-                horarioFechamento: document.getElementById('horarioFechamento').value,
-                paginaInicialPadrao: document.getElementById('paginaInicialPadrao').value,
-
-                // Dados da aba "Preferências"
-                finalizacaoAutomatica: document.getElementById('finalizacaoAutomatica').checked,
-                exigirLavadorParaFinalizar: document.getElementById('exigirLavadorParaFinalizar').checked,
-                notificationPreferences: JSON.stringify({
-                    ordemCriada: document.getElementById('notifOrdemCriada').checked,
-                    ordemEditada: document.getElementById('notifOrdemEditada').checked,
-                    ordemDeletada: document.getElementById('notifOrdemDeletada').checked,
-                    finalizacaoAutomatica: document.getElementById('notifFinalizacaoAutomatica').checked
-                }),
-                paymentMethodsConfig: JSON.stringify(
-                    Array.from(document.querySelectorAll('input[data-payment-method]')).reduce((acc, input) => {
-                        acc[input.dataset.paymentMethod] = input.checked;
-                        return acc;
-                    }, {})
-                )
-            };
-            try {
-                await window.api.updateEmpresa(empresaId, data);
-                localStorage.setItem('empresaNome', data.nome);
-                localStorage.setItem('paginaInicialPadrao', data.paginaInicialPadrao);
-                localStorage.setItem('exigirLavadorParaFinalizar', data.exigirLavadorParaFinalizar);
-                showToast('Configurações salvas com sucesso!', 'success');
-            } catch (error) {
-                console.error("Erro ao salvar configurações:", error);
-                showToast('Erro ao salvar configurações.', 'error');
-            }
-        }
-
-        // Atualiza visualmente os cards de pagamento quando os checkboxes mudam
-        function initializePaymentCards() {
-            document.querySelectorAll('.payment-method-card').forEach(card => {
-                const checkbox = card.querySelector('input[type="checkbox"]');
-                
-                if (checkbox) {
-                    // Estado inicial
-                    updateCardState(card, checkbox.checked);
-                    
-                    // Listener para mudanças
-                    checkbox.addEventListener('change', function() {
-                        updateCardState(card, this.checked);
-                    });
-                    
-                    // Clique no card (exceto no switch)
-                    card.addEventListener('click', function(e) {
-                        if (!e.target.closest('.switch')) {
-                            checkbox.checked = !checkbox.checked;
-                            updateCardState(card, checkbox.checked);
-                        }
-                    });
-                }
-            });
-        }
-
-        function updateCardState(card, isActive) {
-            if (isActive) {
-                card.classList.add('active');
-            } else {
-                card.classList.remove('active');
-            }
-        }
-
-        // Chamar após o carregamento das preferências
-        async function loadPreferencias() {
-            try {
-                const empresaId = localStorage.getItem('empresaId');
-                const empresa = await window.api.getEmpresaById(empresaId);
-                
-                // Preferências Gerais
-                document.getElementById('finalizacaoAutomatica').checked = empresa.finalizacaoAutomatica || false;
-                document.getElementById('exigirLavadorParaFinalizar').checked = empresa.exigirLavadorParaFinalizar || false;
-
-                // Preferências de Notificação
-                const prefs = empresa.notificationPreferences || {};
-                document.getElementById('notifOrdemCriada').checked = prefs.ordemCriada !== false;
-                document.getElementById('notifOrdemEditada').checked = prefs.ordemEditada !== false;
-                document.getElementById('notifOrdemDeletada').checked = prefs.ordemDeletada === true;
-                document.getElementById('notifFinalizacaoAutomatica').checked = prefs.finalizacaoAutomatica !== false;
-
-                // Carrega config de pagamentos
-                const paymentConfig = empresa.paymentMethodsConfig || {};
-                document.querySelectorAll('input[data-payment-method]').forEach(input => {
-                    input.checked = paymentConfig[input.dataset.paymentMethod] !== false;
-                });
-                
-            } catch (error) { 
-                console.error("Erro ao carregar preferências:", error); 
-            }
-        }
-
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

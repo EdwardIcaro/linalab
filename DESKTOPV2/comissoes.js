@@ -81,6 +81,10 @@ function renderEmployeeAvatars(lavadores) {
         `;
         container.appendChild(avatarEl);
     });
+
+    if (!selectedLavadorId && lavadores.length > 0) {
+        selectEmployee(lavadores[0].id);
+    }
 }
 
 function selectEmployee(lavadorId) {
@@ -126,23 +130,84 @@ async function loadCommissionData() {
     }
 }
 
+function normalizeOrderWashers(order) {
+    if (!order) return [];
+    if (Array.isArray(order.lavadores) && order.lavadores.length > 0) {
+        return order.lavadores.map(lav => {
+            if (lav && typeof lav === 'object') {
+                return { id: lav.id || lav.value || lav, nome: lav.nome || lav.name, ganho: typeof lav.ganho === 'number' ? lav.ganho : undefined };
+            }
+            return { id: lav, nome: null };
+        }).filter(w => w.id);
+    }
+    if (order.lavadorId) {
+        return [{
+            id: order.lavadorId,
+            nome: order.lavador?.nome,
+            ganho: typeof order.comissao === 'number' ? order.comissao : undefined
+        }];
+    }
+    return [];
+}
+
+function getCommissionPercent(order) {
+    if (order?.lavador?.comissao) {
+        return order.lavador.comissao;
+    }
+    if (order?.comissao && order?.valorTotal) {
+        return (order.comissao / order.valorTotal) * 100;
+    }
+    return 0;
+}
+
+function getWasherShare(order, washerId) {
+    const washers = normalizeOrderWashers(order);
+    if (!washers.length || !washerId) return 0;
+    const existing = washers.find(w => w.id === washerId && typeof w.ganho === 'number');
+    if (existing) return existing.ganho;
+
+    const percent = getCommissionPercent(order);
+    const totalCents = Math.round((order?.valorTotal || 0) * (percent / 100) * 100);
+    if (totalCents <= 0) return 0;
+
+    const base = Math.floor(totalCents / washers.length);
+    let remainder = totalCents % washers.length;
+
+    const shareMap = {};
+    washers.forEach(washer => {
+        let cents = base;
+        if (remainder > 0) {
+            cents += 1;
+            remainder -= 1;
+        }
+        shareMap[washer.id] = cents / 100;
+    });
+
+    return shareMap[washerId] || 0;
+}
+
 function renderComissoes(comissoes) {
     const creditosList = document.getElementById('creditos-list');
-    document.getElementById('creditsBadge').textContent = comissoes.length;
-    if (comissoes.length === 0) {
+    const creditItems = (comissoes || []).map(c => {
+        const share = getWasherShare(c, selectedLavadorId);
+        if (!share) return null;
+        return `
+            <div class="commission-item" data-id="${c.id}" data-valor="${share}" data-type="credit" onclick="toggleItemSelection(this)">
+                <div class="item-checkbox"><i class="fas fa-check"></i></div>
+                <div class="item-details">
+                    <div class="item-title">OS #${c.numeroOrdem} - ${c.veiculo?.modelo || 'S/ Modelo'}</div>
+                    <div class="item-subtitle">Finalizada em: ${new Date(c.dataFim).toLocaleDateString('pt-BR')}</div>
+                </div>
+                <span class="item-value credit">${formatCurrency(share)}</span>
+            </div>
+        `;
+    }).filter(Boolean);
+    document.getElementById('creditsBadge').textContent = creditItems.length;
+    if (!creditItems.length) {
         creditosList.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Nenhuma comissão pendente no período.</p></div>';
         return;
     }
-    creditosList.innerHTML = comissoes.map(c => `
-        <div class="commission-item" data-id="${c.id}" data-valor="${c.comissao}" data-type="credit" onclick="toggleItemSelection(this)">
-            <div class="item-checkbox"><i class="fas fa-check"></i></div>
-            <div class="item-details">
-                <div class="item-title">OS #${c.numeroOrdem} - ${c.veiculo.modelo}</div>
-                <div class="item-subtitle">Finalizada em: ${new Date(c.dataFim).toLocaleDateString('pt-BR')}</div>
-            </div>
-            <span class="item-value credit">${formatCurrency(c.comissao)}</span>
-        </div>
-    `).join('');
+    creditosList.innerHTML = creditItems.join('');
 }
 
 function renderAdiantamentos(adiantamentos) {

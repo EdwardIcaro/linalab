@@ -4,326 +4,678 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LINA OWNER - Dashboard</title>
-    <!-- A página de configurações tem os estilos que precisamos para o switch -->
     <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="../configuracoes.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="../api.js"></script>
-    <script src="../utils.js"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <style>
-        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 16px; text-align: left; font-size: 14px; white-space: nowrap; }
-        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
-        tbody tr { border-bottom: 1px solid var(--border-color); }
-        tbody tr:last-child { border-bottom: none; }
-        td { color: var(--text-primary); font-weight: 500; }
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 600;
+        /* Windows 11 Inspired Admin Theme */
+        :root {
+            --admin-primary: #F59E0B;
+            --admin-primary-dark: #D97706;
+            --admin-accent: #8B5CF6;
+            --admin-success: #10B981;
+            --admin-danger: #EF4444;
+            --admin-warning: #F59E0B;
         }
-        .status-ativo { background-color: #D1FAE5; color: #065F46; }
-        .status-inativo { background-color: #FEE2E2; color: #991B1B; }
 
-        /* Estilos para os novos widgets */
-        .widgets-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 24px;
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
-        .alert-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 200px;
-            overflow-y: auto;
+
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
         }
-        .alert-item {
+
+        .admin-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border-color);
+            align-items: center;
         }
-        .alert-item:last-child { border-bottom: none; }
+
+        .admin-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-title i {
+            font-size: 2rem;
+            color: var(--admin-primary);
+        }
+
+        .admin-title h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        .admin-title p {
+            color: #64748B;
+            margin: 0.25rem 0 0 0;
+            font-size: 0.9rem;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* KPI Cards Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .kpi-label {
+            font-size: 0.875rem;
+            color: #64748B;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin: 0;
+        }
+
+        .kpi-change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .kpi-change.positive {
+            color: var(--admin-success);
+        }
+
+        .kpi-change.negative {
+            color: var(--admin-danger);
+        }
+
+        /* Company Table */
+        .table-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .table-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin: 0;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--admin-primary);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94A3B8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        thead th {
+            background: #F8FAFC;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        thead th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+
+        thead th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #F8FAFC;
+        }
+
+        tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid #F1F5F9;
+            color: #334155;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            gap: 0.375rem;
+        }
+
+        .status-badge.active {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-badge.inactive {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .action-btn.primary {
+            background: var(--admin-primary);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            background: var(--admin-primary-dark);
+        }
+
+        .action-btn.secondary {
+            background: #E2E8F0;
+            color: #475569;
+        }
+
+        .action-btn.secondary:hover {
+            background: #CBD5E1;
+        }
+
+        .action-btn.danger {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .action-btn.danger:hover {
+            background: #FECACA;
+        }
+
+        /* Skeleton Loader */
+        .skeleton {
+            background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        .skeleton-text {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #94A3B8;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            color: #64748B;
+            margin-bottom: 0.5rem;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .btn-logout {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-logout:hover {
+            background: #FECACA;
+        }
     </style>
 </head>
 <body>
-    <main class="main-content" style="padding-top: 32px;">
-        <header class="main-header">
-            <div class="header-title">
-                <h2><i class="fas fa-crown" style="color: #F59E0B;"></i> Painel LINA OWNER</h2>
-                <p>Gerenciamento central da plataforma.</p>
+    <div class="admin-container" x-data="adminDashboard()" x-init="init()" x-cloak>
+        <!-- Header -->
+        <div class="admin-header">
+            <div class="admin-title">
+                <i class="fas fa-crown"></i>
+                <div>
+                    <h1>Super Admin Dashboard</h1>
+                    <p>Gerenciamento central da plataforma LinaX</p>
+                </div>
             </div>
-            <div class="header-controls">
-                <button onclick="logout()" class="btn-secondary" style="border-color: #dc3545; color: #dc3545;">
+            <div class="admin-actions">
+                <button class="btn-logout" @click="logout()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Sair</span>
                 </button>
             </div>
-        </header>
-
-        <!-- Cards de Estatísticas Globais -->
-        <section class="main-cards-simplified mb-6">
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: #D1FAE5; color: #065F46;"><i class="fas fa-dollar-sign"></i></div>
-                <div class="stat-info">
-                    <p>Faturamento Total</p>
-                    <h3 id="stat-faturamento">R$ 0,00</h3>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: #DBEAFE; color: #1E40AF;"><i class="fas fa-building"></i></div>
-                <div class="stat-info">
-                    <p>Empresas Ativas</p>
-                    <h3 id="stat-empresas">0 / 0</h3>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: #E0E7FF; color: #4338CA;"><i class="fas fa-list-alt"></i></div>
-                <div class="stat-info">
-                    <p>Total de Ordens</p>
-                    <h3 id="stat-ordens">0</h3>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: #FEF3C7; color: #92400E;"><i class="fas fa-clock"></i></div>
-                <div class="stat-info">
-                    <p>Valor Pendente</p>
-                    <h3 id="stat-pendente">R$ 0,00</h3>
-                </div>
-            </div>
-        </section>
-
-        <!-- Novos Widgets de Alertas e Métricas -->
-        <div class="widgets-grid">
-            <div class="card">
-                <h3 style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600;">
-                    <i class="fas fa-exclamation-triangle" style="color: #F59E0B;"></i> Central de Alertas de Risco
-                </h3>
-                <div id="riskAlertsContainer">
-                    <p class="text-secondary">Carregando alertas...</p>
-                </div>
-            </div>
-            <div class="card">
-                <h3 style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600;">
-                    <i class="fas fa-chart-line" style="color: #10B981;"></i> Métricas de Engajamento (30 dias)
-                </h3>
-                <div class="main-cards-simplified" style="grid-template-columns: 1fr 1fr;">
-                     <div class="stat-card">
-                        <div class="stat-icon" style="background-color: #E0E7FF; color: #4338CA;"><i class="fas fa-user-plus"></i></div>
-                        <div class="stat-info">
-                            <p>Novas Empresas</p>
-                            <h3 id="metric-novas-inscricoes">0</h3>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background-color: #FEE2E2; color: #991B1B;"><i class="fas fa-user-slash"></i></div>
-                        <div class="stat-info">
-                            <p>Taxa de Churn</p>
-                            <h3 id="metric-churn-rate">0%</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <div class="card table-wrapper">
-            <h3 style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600;">Empresas Cadastradas</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Empresa</th>
-                        <th>Usuário Dono</th>
-                        <th>Status</th>
-                        <th>Clientes</th>
-                        <th>Ordens</th>
-                        <th>Data de Criação</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="empresasTableBody">
-                    <!-- Dados serão inseridos aqui -->
-                </tbody>
-            </table>
-        </div>
-    </main>
+        <!-- Loading State -->
+        <template x-if="isLoading">
+            <div class="kpi-grid">
+                <div class="kpi-card" x-for="i in 4">
+                    <div class="skeleton" style="height: 120px;"></div>
+                </div>
+            </div>
+        </template>
 
+        <!-- KPI Cards -->
+        <template x-if="!isLoading">
+            <div class="kpi-grid">
+                <!-- Total Revenue -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon" style="background: #D1FAE5; color: #065F46;">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-label">Faturamento Total</div>
+                    <h3 class="kpi-value" x-text="formatCurrency(stats.faturamentoTotal)">R$ 0,00</h3>
+                    <div class="kpi-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span x-text="`${stats.ordensFinalizadas} ordens finalizadas`"></span>
+                    </div>
+                </div>
+
+                <!-- Active Companies -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon" style="background: #DBEAFE; color: #1E40AF;">
+                            <i class="fas fa-building"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-label">Empresas Ativas</div>
+                    <h3 class="kpi-value" x-text="`${stats.empresasAtivas} / ${stats.totalEmpresas}`">0 / 0</h3>
+                    <div class="kpi-change">
+                        <i class="fas fa-info-circle"></i>
+                        <span x-text="`${stats.totalEmpresas} total cadastradas`"></span>
+                    </div>
+                </div>
+
+                <!-- Total Users -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon" style="background: #E0E7FF; color: #4338CA;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-label">Usuários Totais</div>
+                    <h3 class="kpi-value" x-text="stats.totalUsuarios">0</h3>
+                    <div class="kpi-change">
+                        <i class="fas fa-user-check"></i>
+                        <span>Usuários ativos na plataforma</span>
+                    </div>
+                </div>
+
+                <!-- Pending Value -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon" style="background: #FEF3C7; color: #92400E;">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-label">Valor Pendente</div>
+                    <h3 class="kpi-value" x-text="formatCurrency(stats.valorPendente)">R$ 0,00</h3>
+                    <div class="kpi-change" :class="stats.ordensPendentes > 10 ? 'negative' : ''">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span x-text="`${stats.ordensPendentes} ordens em aberto`"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Companies Table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h2>
+                    <i class="fas fa-store" style="color: var(--admin-accent); margin-right: 0.5rem;"></i>
+                    Monitoramento de Empresas
+                </h2>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input
+                        type="text"
+                        placeholder="Buscar empresa..."
+                        x-model="searchQuery"
+                    >
+                </div>
+            </div>
+
+            <!-- Loading Skeleton -->
+            <template x-if="isLoading">
+                <div>
+                    <div class="skeleton skeleton-text" x-for="i in 5"></div>
+                </div>
+            </template>
+
+            <!-- Companies Table -->
+            <template x-if="!isLoading && filteredCompanies.length > 0">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th>Proprietário</th>
+                            <th>Status</th>
+                            <th>Clientes</th>
+                            <th>Ordens</th>
+                            <th>Receita</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="empresa in filteredCompanies" :key="empresa.id">
+                            <tr>
+                                <td>
+                                    <strong x-text="empresa.nome"></strong><br>
+                                    <small style="color: #94A3B8;" x-text="empresa.cnpj || 'Sem CNPJ'"></small>
+                                </td>
+                                <td>
+                                    <span x-text="empresa.usuario.nome"></span><br>
+                                    <small style="color: #94A3B8;" x-text="empresa.usuario.email"></small>
+                                </td>
+                                <td>
+                                    <span
+                                        class="status-badge"
+                                        :class="empresa.ativo ? 'active' : 'inactive'"
+                                    >
+                                        <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                        <span x-text="empresa.ativo ? 'Ativa' : 'Inativa'"></span>
+                                    </span>
+                                </td>
+                                <td x-text="empresa._count.clientes">0</td>
+                                <td x-text="empresa._count.ordens">0</td>
+                                <td x-text="formatCurrency(empresa.faturamento)">R$ 0,00</td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button
+                                            class="action-btn primary"
+                                            @click="viewCompanyDetails(empresa.id)"
+                                            title="Ver detalhes"
+                                        >
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button
+                                            class="action-btn"
+                                            :class="empresa.ativo ? 'danger' : 'secondary'"
+                                            @click="toggleStatus(empresa.id)"
+                                            :title="empresa.ativo ? 'Desativar' : 'Ativar'"
+                                        >
+                                            <i :class="empresa.ativo ? 'fas fa-ban' : 'fas fa-check'"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </template>
+
+            <!-- Empty State -->
+            <template x-if="!isLoading && filteredCompanies.length === 0">
+                <div class="empty-state">
+                    <i class="fas fa-building"></i>
+                    <h3>Nenhuma empresa encontrada</h3>
+                    <p x-text="searchQuery ? 'Tente buscar com outro termo' : 'Nenhuma empresa cadastrada no sistema'"></p>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script src="../api.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. Verifica se o usuário é LINA_OWNER
-            const userRole = localStorage.getItem('userRole');
-            if (userRole !== 'LINA_OWNER') {
-                alert('Acesso negado. Você não tem permissão para ver esta página.');
-                window.location.href = '../login.html';
-                return;
-            }
+        /**
+         * Admin Dashboard Alpine.js Component
+         * Manages global platform statistics and company monitoring
+         */
+        function adminDashboard() {
+            return {
+                // State
+                stats: {
+                    faturamentoTotal: 0,
+                    totalEmpresas: 0,
+                    empresasAtivas: 0,
+                    totalUsuarios: 0,
+                    valorPendente: 0,
+                    ordensPendentes: 0,
+                    ordensFinalizadas: 0,
+                },
+                companies: [],
+                searchQuery: '',
+                isLoading: true,
 
-            // 2. Carrega os dados do painel
-            loadGlobalStats();
-            loadEmpresas();
-            loadRiskAlerts();
-            loadEngagementMetrics();
+                // Computed: Filtered companies
+                get filteredCompanies() {
+                    if (!this.searchQuery) return this.companies;
 
-            // 3. Adiciona listener para os interruptores de status
-            document.getElementById('empresasTableBody').addEventListener('change', handleStatusToggle);
-        });
+                    const query = this.searchQuery.toLowerCase();
+                    return this.companies.filter(empresa =>
+                        empresa.nome.toLowerCase().includes(query) ||
+                        empresa.usuario.nome.toLowerCase().includes(query) ||
+                        empresa.usuario.email.toLowerCase().includes(query)
+                    );
+                },
 
-        function logout() {
-            showCustomConfirm({
-                title: 'Confirmar Saída',
-                message: 'Tem certeza que deseja sair do sistema?',
-                onConfirm: () => {
-                    localStorage.clear();
-                    window.location.href = '/login.html'; // Caminho absoluto a partir da raiz
-                }
-            });
-        }
-
-        async function loadGlobalStats() {
-            try {
-                const stats = await window.api.getAdminStats();
-                document.getElementById('stat-faturamento').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalFaturamento);
-                document.getElementById('stat-empresas').textContent = `${stats.empresasAtivas} / ${stats.totalEmpresas}`;
-                document.getElementById('stat-ordens').textContent = stats.totalOrdens;
-                document.getElementById('stat-pendente').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalPendente);
-            } catch (error) {
-                console.error('Erro ao carregar estatísticas globais:', error);
-                // Deixa os valores como estão em caso de erro
-            }
-        }
-
-        async function loadEmpresas() {
-            const tableBody = document.getElementById('empresasTableBody');
-            tableBody.innerHTML = '<tr><td colspan="7">Carregando...</td></tr>';
-
-            try {
-                // Precisamos criar uma função na API para chamar a nova rota
-                const response = await window.api.call('GET', 'admin/empresas');
-                const empresas = response.empresas || [];
-
-                tableBody.innerHTML = '';
-                empresas.forEach(empresa => {
-                    const row = tableBody.insertRow();
-                    row.innerHTML = `
-                        <td><strong>${empresa.nome}</strong></td>
-                        <td>${empresa.usuario.nome} (${empresa.usuario.email})</td>
-                        <td><span class="status-badge ${empresa.ativo ? 'status-ativo' : 'status-inativo'}">${empresa.ativo ? 'Ativa' : 'Inativa'}</span></td>
-                        <td>${empresa._count.clientes}</td>
-                        <td>${empresa._count.ordens}</td>
-                        <td>${new Date(empresa.createdAt).toLocaleDateString('pt-BR')}</td>
-                        <td>
-                            <label class="switch">
-                                <input type="checkbox" data-id="${empresa.id}" ${empresa.ativo ? 'checked' : ''}>
-                                <span class="slider round"></span>
-                            </label>
-                            <a href="customizador.html?empresaId=${empresa.id}" class="btn-sm btn-secondary" title="Customizar Tema" style="margin-left: 8px;">
-                                <i class="fas fa-palette"></i>
-                            </a>
-                            <a href="detalhes.html?id=${empresa.id}" class="btn-sm btn-secondary" title="Gerenciar Empresa" style="margin-left: 8px;">
-                                <i class="fas fa-user-cog"></i>
-                            </a>
-                            <button onclick="impersonateEmpresaOwner('${empresa.id}')" class="btn-sm btn-info" title="Logar como Dono" style="margin-left: 8px;">
-                                <i class="fas fa-user-shield"></i>
-                            </button>
-                        </td>
-                    `;
-                });
-            } catch (error) {
-                console.error('Erro ao carregar empresas:', error);
-                tableBody.innerHTML = '<tr><td colspan="7" style="color: red;">Erro ao carregar empresas. Verifique o console.</td></tr>';
-            }
-        }
-
-        async function handleStatusToggle(event) {
-            const toggle = event.target;
-            if (toggle.type !== 'checkbox') return;
-
-            const empresaId = toggle.dataset.id;
-            const novoStatus = toggle.checked;
-
-            try {
-                await window.api.call('PATCH', `admin/empresas/${empresaId}/status`, { ativo: novoStatus });
-                showToast(`Status da empresa alterado com sucesso!`, 'success');
-            } catch (error) {
-                showToast(`Erro ao alterar status: ${error.message || 'Verifique o console.'}`, 'error');
-                toggle.checked = !novoStatus; // Reverte a mudança visual em caso de erro
-            }
-        }
-
-        async function impersonateEmpresaOwner(empresaId) {
-            if (!confirm('Tem certeza que deseja logar como o dono desta empresa? Você será redirecionado e sua sessão de administrador será pausada.')) {
-                return;
-            }
-
-            try {
-                // 1. Salva a sessão completa do admin
-                const adminSession = {
-                    token: localStorage.getItem('token'),
-                    usuarioNome: localStorage.getItem('usuarioNome'),
-                    userRole: localStorage.getItem('userRole')
-                };
-                localStorage.setItem('original_admin_session', JSON.stringify(adminSession));
-
-                // 2. Pede um token de impersonação para o backend
-                const { token, usuario, empresa } = await window.api.call('POST', `admin/impersonate/empresa/${empresaId}`);
-
-                // 3. Define a nova sessão no localStorage
-                localStorage.setItem('token', token);
-                localStorage.setItem('usuarioNome', usuario.nome);
-                localStorage.setItem('userRole', usuario.role);
-                localStorage.setItem('permissoes', JSON.stringify(usuario.permissoes || []));
-                localStorage.setItem('empresaId', empresa.id);
-                localStorage.setItem('empresaNome', empresa.nome);
-                window.location.href = '../index.html'; // 4. Redireciona para o dashboard do usuário
-            } catch (error) { showToast(error.message || 'Erro ao personificar usuário.', 'error'); }
-        }
-
-        async function loadRiskAlerts() {
-            const container = document.getElementById('riskAlertsContainer');
-            try {
-                const { alertasFaturamentoZero, alertasPoucoUso } = await window.api.call('GET', 'admin/alertas/risco');
-                container.innerHTML = '';
-
-                if (alertasFaturamentoZero.length === 0 && alertasPoucoUso.length === 0) {
-                    container.innerHTML = '<p class="text-secondary"><i class="fas fa-check-circle" style="color: #10B981;"></i> Nenhuma empresa em situação de risco no momento.</p>';
-                    return;
-                }
-
-                let content = '<ul class="alert-list">';
-                alertasFaturamentoZero.forEach(empresa => {
-                    content += `<li class="alert-item">
-                                    <span>${empresa.nome}</span>
-                                    <span class="status-badge status-inativo" style="font-size: 10px;">Sem Faturamento (7d)</span>
-                                </li>`;
-                });
-                alertasPoucoUso.forEach(empresa => {
-                    // Evita duplicar se a empresa estiver em ambos os alertas
-                    if (!alertasFaturamentoZero.some(e => e.id === empresa.id)) {
-                        content += `<li class="alert-item">
-                                        <span>${empresa.nome}</span>
-                                        <span class="status-badge" style="background-color: #FEF3C7; color: #92400E; font-size: 10px;">Pouco Uso (3d)</span>
-                                    </li>`;
+                /**
+                 * Initialize dashboard
+                 */
+                async init() {
+                    // Check authentication and role
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        window.location.href = '../login.html';
+                        return;
                     }
-                });
-                content += '</ul>';
-                container.innerHTML = content;
 
-            } catch (error) {
-                container.innerHTML = '<p class="text-secondary" style="color: #ef4444;">Erro ao carregar alertas.</p>';
-            }
-        }
+                    // Load data
+                    await this.loadDashboardData();
+                },
 
-        async function loadEngagementMetrics() {
-            try {
-                const metrics = await window.api.call('GET', 'admin/metrics/engajamento');
-                document.getElementById('metric-novas-inscricoes').textContent = metrics.novasInscricoes;
-                document.getElementById('metric-churn-rate').textContent = `${metrics.taxaDeChurn}%`;
-            } catch (error) {
-                console.error('Erro ao carregar métricas de engajamento:', error);
-            }
+                /**
+                 * Load all dashboard data
+                 */
+                async loadDashboardData() {
+                    this.isLoading = true;
+                    try {
+                        // Fetch stats and companies in parallel
+                        const [statsRes, companiesRes] = await Promise.all([
+                            window.api.call('GET', 'admin/stats'),
+                            window.api.call('GET', 'admin/empresas'),
+                        ]);
+
+                        this.stats = statsRes;
+                        this.companies = companiesRes;
+                    } catch (error) {
+                        console.error('Error loading dashboard:', error);
+
+                        // Check if forbidden (not admin)
+                        if (error.code === 'FORBIDDEN') {
+                            alert('Acesso negado: você não tem permissão para acessar esta área.');
+                            window.location.href = '../index.html';
+                            return;
+                        }
+
+                        alert('Erro ao carregar dados do dashboard');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                /**
+                 * Format currency
+                 */
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                    }).format(value || 0);
+                },
+
+                /**
+                 * View company details
+                 */
+                viewCompanyDetails(empresaId) {
+                    window.location.href = `detalhes.html?id=${empresaId}`;
+                },
+
+                /**
+                 * Toggle company active status
+                 */
+                async toggleStatus(empresaId) {
+                    const empresa = this.companies.find(e => e.id === empresaId);
+                    const action = empresa.ativo ? 'desativar' : 'ativar';
+
+                    if (!confirm(`Tem certeza que deseja ${action} esta empresa?`)) {
+                        return;
+                    }
+
+                    try {
+                        await window.api.call('PATCH', `admin/empresas/${empresaId}/toggle-status`);
+
+                        // Update local state
+                        empresa.ativo = !empresa.ativo;
+
+                        // Update stats
+                        this.stats.empresasAtivas += empresa.ativo ? 1 : -1;
+
+                        alert(`Empresa ${action === 'desativar' ? 'desativada' : 'ativada'} com sucesso!`);
+                    } catch (error) {
+                        console.error('Error toggling company status:', error);
+                        alert('Erro ao alterar status da empresa');
+                    }
+                },
+
+                /**
+                 * Logout
+                 */
+                logout() {
+                    if (confirm('Tem certeza que deseja sair?')) {
+                        localStorage.clear();
+                        window.location.href = '../login.html';
+                    }
+                },
+            };
         }
     </script>
 </body>

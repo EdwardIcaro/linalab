@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.quitarPendencia = exports.getPaymentStats = exports.deletePagamento = exports.updatePagamentoStatus = exports.getPagamentosByOrdem = exports.createPagamento = void 0;
 const db_1 = __importDefault(require("../db"));
-const client_1 = require("@prisma/client");
 /**
  * Criar novo pagamento
  */
@@ -27,13 +26,6 @@ const createPagamento = async (req, res) => {
         if (!ordem) {
             return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
         }
-        // Validar método de pagamento
-        const metodosValidos = Object.values(client_1.MetodoPagamento);
-        if (!metodosValidos.includes(metodo)) {
-            return res.status(400).json({
-                error: `Método inválido. Use: ${metodosValidos.join(', ')}`
-            });
-        }
         // Validar valor
         if (valor <= 0) {
             return res.status(400).json({ error: 'Valor deve ser maior que zero' });
@@ -46,7 +38,7 @@ const createPagamento = async (req, res) => {
                 metodo: metodo,
                 valor: valor,
                 observacoes,
-                status: metodo === 'PENDENTE' ? client_1.StatusPagamento.PENDENTE : client_1.StatusPagamento.PAGO,
+                status: metodo === 'PENDENTE' ? 'PENDENTE' : 'PAGO',
                 pagoEm: metodo === 'PENDENTE' ? null : new Date()
             },
             include: {
@@ -130,13 +122,6 @@ const updatePagamentoStatus = async (req, res) => {
         });
         if (!pagamento) {
             return res.status(404).json({ error: 'Pagamento não encontrado' });
-        }
-        // Validar status
-        const statusValidos = Object.values(client_1.StatusPagamento);
-        if (!statusValidos.includes(status)) {
-            return res.status(400).json({
-                error: `Status inválido. Use: ${statusValidos.join(', ')}`
-            });
         }
         const updatedPagamento = await db_1.default.pagamento.update({
             where: { id },

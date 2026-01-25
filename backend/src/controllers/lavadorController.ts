@@ -61,6 +61,129 @@ export const getLavadoresSimple = async (req: EmpresaRequest, res: Response) => 
   }
 };
 
+/**
+ * Listar tokens de acesso dos lavadores da empresa
+ */
+export const getLavadorTokens = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const tokens = await prisma.lavadorToken.findMany({
+      where: {
+        lavador: {
+          empresaId: req.empresaId
+        }
+      },
+      include: {
+        lavador: {
+          select: {
+            id: true,
+            nome: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json({ tokens });
+  } catch (error) {
+    console.error('Erro ao listar tokens dos lavadores:', error);
+    res.status(500).json({ error: 'Erro ao listar tokens dos lavadores.' });
+  }
+};
+
+/**
+ * Atualizar status de um token
+ */
+export const updateLavadorTokenStatus = async (req: EmpresaRequest, res: Response) => {
+  const { id } = req.params;
+  const { ativo } = req.body;
+
+  if (typeof ativo !== 'boolean') {
+    return res.status(400).json({ error: 'Campo \"ativo\" deve ser booleano.' });
+  }
+
+  try {
+    const updated = await prisma.lavadorToken.updateMany({
+      where: {
+        id,
+        lavador: {
+          empresaId: req.empresaId
+        }
+      },
+      data: { ativo }
+    });
+
+    if (updated.count === 0) {
+      return res.status(404).json({ error: 'Token nÃ£o encontrado para esta empresa.' });
+    }
+
+    res.json({ message: 'Status do token atualizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar status do token:', error);
+    res.status(500).json({ error: 'Erro ao atualizar status do token.' });
+  }
+};
+
+/**
+ * Alternar status do token (ativo/inativo)
+ */
+export const toggleLavadorToken = async (req: EmpresaRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const token = await prisma.lavadorToken.findFirst({
+      where: {
+        id,
+        lavador: {
+          empresaId: req.empresaId
+        }
+      }
+    });
+
+    if (!token) {
+      return res.status(404).json({ error: 'Token nÃ£o encontrado para esta empresa.' });
+    }
+
+    await prisma.lavadorToken.update({
+      where: { id },
+      data: { ativo: !token.ativo }
+    });
+
+    res.json({ message: 'Status do token atualizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao alternar status do token:', error);
+    res.status(500).json({ error: 'Erro ao alternar status do token.' });
+  }
+};
+
+/**
+ * Excluir token de acesso
+ */
+export const deleteLavadorToken = async (req: EmpresaRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await prisma.lavadorToken.deleteMany({
+      where: {
+        id,
+        lavador: {
+          empresaId: req.empresaId
+        }
+      }
+    });
+
+    if (deleted.count === 0) {
+      return res.status(404).json({ error: 'Token nÃ£o encontrado para esta empresa.' });
+    }
+
+    res.json({ message: 'Token excluÃ­do com sucesso' });
+  } catch (error) {
+    console.error('Erro ao excluir token:', error);
+    res.status(500).json({ error: 'Erro ao excluir token.' });
+  }
+};
+
 export const updateLavador = async (req: EmpresaRequest, res: Response) => {
   const { id } = req.params;
   const { nome, comissao } = req.body;
@@ -112,6 +235,14 @@ export const gerarTokenPublico = async (req: EmpresaRequest, res: Response) => {
             { expiresIn: '24h' } // O link público expira em 24 horas
         );
 
+        await prisma.lavadorToken.create({
+            data: {
+                token,
+                lavadorId: lavador.id,
+                ativo: true
+            }
+        });
+
         res.json({ token });
 
     } catch (error) {
@@ -119,3 +250,4 @@ export const gerarTokenPublico = async (req: EmpresaRequest, res: Response) => {
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
+

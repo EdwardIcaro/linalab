@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
+import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 
 
 interface EmpresaRequest extends Request {
@@ -14,6 +15,23 @@ interface OrdemItemInput {
   quantidade: number;
 }
 
+function formatOrderWithLavadores(order: any) {
+  if (!order) return order;
+  const ordemLavadores = order.ordemLavadores || [];
+  const lavadores = ordemLavadores.map((relation: any) => ({
+    id: relation.lavadorId,
+    nome: relation.lavador?.nome || null
+  }));
+  const lavadorIds = lavadores.map((l: any) => l.id);
+  const formatted = {
+    ...order,
+    lavadores,
+    lavadorIds
+  };
+  delete formatted.ordemLavadores;
+  return formatted;
+}
+
 /**
  * Criar nova ordem de serviço
  * Agora, esta função também pode criar um cliente e/ou veículo se eles não existirem.
@@ -24,15 +42,27 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
     return res.status(401).json({ error: 'Empresa não autenticada' });
   }
 
+  // SECURITY: Validate and sanitize input data
+  const validation = validateCreateOrder(req.body);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      error: 'Dados inválidos para criar ordem',
+      details: validation.errors,
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  // Use sanitized data instead of raw req.body
   const {
     clienteId, novoCliente, veiculoId, novoVeiculo,
-    lavadorId, itens, forcarCriacao, observacoes
-  } = req.body;
+    lavadorId, lavadorIds, itens, forcarCriacao, observacoes
+  } = validation.sanitizedData!;
 
-  // Validações
-  if ((!clienteId && !novoCliente) || (!veiculoId && !novoVeiculo) || !itens || !Array.isArray(itens) || itens.length === 0) {
-    return res.status(400).json({ error: 'Dados incompletos para criar a ordem.' });
-  }
+    const extraLavadores = Array.from(new Set(
+      (lavadorIds || []).filter((id: string | null | undefined): id is string => !!id && id !== lavadorId)
+    ));
+  const normalizedLavadorIds = lavadorId ? [lavadorId, ...extraLavadores] : extraLavadores;
+  const primaryLavadorId = normalizedLavadorIds[0] || null;
 
   try {
     // Utiliza uma transação para garantir a atomicidade da operação
@@ -99,7 +129,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           where: {
             veiculoId: finalVeiculoId,
             empresaId,
-                        status: { in: ['PENDENTE', 'EM_ANDAMENTO'] as any },
+                        status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any },
           },
         });
 
@@ -189,33 +219,48 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           empresaId,
           clienteId: finalClienteId,
           veiculoId: finalVeiculoId,
-          lavadorId,
+          lavadorId: primaryLavadorId,
           valorTotal: calculatedValorTotal,
           comissao: comissaoCalculada, // A comissão é calculada, mas só é "devida" ao finalizar
-                    status: lavadorId ? 'EM_ANDAMENTO' : 'PENDENTE' as any,
+          status: primaryLavadorId ? 'EM_ANDAMENTO' : 'PENDENTE' as any,
           observacoes: observacoes,
           items: { create: ordemItemsData.filter(Boolean) as any },
         },
+      });
+
+      if (normalizedLavadorIds.length > 0) {
+        await tx.ordemServicoLavador.createMany({
+          data: normalizedLavadorIds.map(lavadorIdValue => ({
+            ordemId: novaOrdem.id,
+            lavadorId: lavadorIdValue
+          }))
+        });
+      }
+
+      const ordemComLavadores = await tx.ordemServico.findUnique({
+        where: { id: novaOrdem.id },
         include: {
           cliente: true,
           veiculo: true,
           lavador: true,
           items: { include: { servico: true, adicional: true } },
-        },
+          ordemLavadores: { include: { lavador: true } }
+        }
       });
 
-      return novaOrdem;
+      return ordemComLavadores!;
     });
+    const ordemFinal = formatOrderWithLavadores(ordem);
 
     // Enviar notificação APÓS a transação para garantir que os dados estão corretos
     await createNotification({
       empresaId: empresaId,
-      mensagem: `Nova ordem #${ordem.numeroOrdem} (${ordem.cliente.nome}) foi criada.`,
+      mensagem: `Nova ordem #${ordem.numeroOrdem} (${ordemFinal.cliente.nome}) foi criada.`,
       link: `ordens.html?id=${ordem.id}`,
       type: 'ordemCriada'
     });
 
-    res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem });
+    res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem: ordemFinal });
   } catch (error: any) {
     if (error.code === 'ACTIVE_ORDER_EXISTS') {
       return res.status(409).json({
@@ -224,10 +269,9 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       });
     }
     console.error('Erro detalhado ao criar ordem de serviço:', error);
-    res.status(500).json({ 
+    res.status(500).json({
         error: 'Erro interno do servidor ao criar ordem.',
-        details: error.message || 'Nenhuma mensagem de erro específica.',
-        stack: error.stack
+        details: error.message || 'Nenhuma mensagem de erro específica.'
     });
   }
 };
@@ -275,7 +319,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     if (status) {
       const statusString = status as string;
       if (statusString === 'ACTIVE') {
-                where.status = { in: ['PENDENTE', 'EM_ANDAMENTO'] as any };
+                where.status = { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any };
       } else if (statusString.includes(',')) {
                 where.status = { in: statusString.split(',') as any };
       } else {
@@ -288,7 +332,19 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     }
 
     if (lavadorId) {
-      where.lavadorId = lavadorId as string;
+      const washerFilterId = lavadorId as string;
+      const washerFilterCondition: Prisma.OrdemServicoWhereInput = {
+        OR: [
+          { lavadorId: washerFilterId },
+          { ordemLavadores: { some: { lavadorId: washerFilterId } } }
+        ]
+      };
+      const existingAnd = Array.isArray(where.AND)
+        ? [...where.AND]
+        : where.AND
+          ? [where.AND]
+          : [];
+      where.AND = [...existingAnd, washerFilterCondition];
     }
 
     if (dataInicio && dataFim && dataInicio !== 'null' && dataFim !== 'null') {
@@ -356,6 +412,16 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               }
             }
           },
+          ordemLavadores: {
+            include: {
+              lavador: {
+                select: {
+                  id: true,
+                  nome: true
+                }
+              }
+            }
+          },
           pagamentos: {
             orderBy: {
               createdAt: 'asc'
@@ -371,8 +437,9 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
       prisma.ordemServico.count({ where })
     ]);
 
+    const enrichedOrders = ordens.map(order => formatOrderWithLavadores(order));
     res.json({
-      ordens,
+      ordens: enrichedOrders,
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -391,7 +458,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
  */
 export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     const ordem = await prisma.ordemServico.findFirst({
       where: {
@@ -439,6 +506,16 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             }
           }
         },
+        ordemLavadores: {
+          include: {
+            lavador: {
+              select: {
+                id: true,
+                nome: true
+              }
+            }
+          }
+        },
         pagamentos: {
           orderBy: {
             createdAt: 'asc'
@@ -450,7 +527,7 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
       return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
     }
 
-    res.json(ordem);
+    res.json(formatOrderWithLavadores(ordem));
   } catch (error) {
     console.error('Erro ao buscar ordem de serviço:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -461,10 +538,19 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
  * Atualizar ordem de serviço
  */
 export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
+  const validation = validateUpdateOrder(req.body);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      error: 'Dados inválidos para atualizar ordem',
+      details: validation.errors,
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
   try {
     const updatedOrdemResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const { id } = req.params;
-      const { status, lavadorId, observacoes, itens } = req.body;
+      const { id } = req.params as { id: string };
+      const { status, lavadorId, lavadorIds, observacoes, itens } = validation.sanitizedData!;
 
       const existingOrdem = await tx.ordemServico.findFirst({
         where: { id, empresaId: req.empresaId },
@@ -474,11 +560,17 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         throw new Error('Ordem de serviço não encontrada'); // Lança um erro para ser pego pelo catch
       }
 
+      const extraLavadores = Array.from(new Set(
+        (lavadorIds || []).filter((id: string | null | undefined): id is string => !!id && id !== lavadorId)
+      ));
+      const normalizedLavadorIds = lavadorId ? [lavadorId, ...extraLavadores] : extraLavadores;
+      const primaryLavadorId = normalizedLavadorIds[0] || null;
+
       let valorTotal = existingOrdem.valorTotal;
       const dataToUpdate: Prisma.OrdemServicoUpdateInput = {
         observacoes,
         status,
-        lavador: lavadorId ? { connect: { id: lavadorId } } : undefined,
+        lavador: primaryLavadorId ? { connect: { id: primaryLavadorId } } : undefined,
       };
 
       if (itens && Array.isArray(itens)) {
@@ -547,7 +639,7 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         dataToUpdate.dataFim = new Date();
       }
 
-      const ordem = await tx.ordemServico.update({
+      const ordemAtualizada = await tx.ordemServico.update({
         where: { id },
         data: dataToUpdate,
         include: {
@@ -558,18 +650,40 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         },
       });
 
-      return ordem;
+      await tx.ordemServicoLavador.deleteMany({ where: { ordemId: id } });
+      if (normalizedLavadorIds.length > 0) {
+        await tx.ordemServicoLavador.createMany({
+          data: normalizedLavadorIds.map(lavadorIdValue => ({
+            ordemId: id,
+            lavadorId: lavadorIdValue
+          }))
+        });
+      }
+
+      const ordemComLavadores = await tx.ordemServico.findUnique({
+        where: { id },
+        include: {
+          cliente: { select: { id: true, nome: true, telefone: true } },
+          veiculo: { select: { id: true, placa: true, modelo: true, cor: true } },
+          lavador: { select: { id: true, nome: true, comissao: true } },
+          items: { include: { servico: { select: { id: true, nome: true } }, adicional: { select: { id: true, nome: true } } } },
+          ordemLavadores: { include: { lavador: true } }
+        }
+      });
+
+      return ordemComLavadores!;
     });
 
     // Enviar notificação após a transação ser bem-sucedida
+    const ordemFinal = formatOrderWithLavadores(updatedOrdemResult);
     await createNotification({
       empresaId: req.empresaId!,
-      mensagem: `A ordem #${updatedOrdemResult.numeroOrdem} (${updatedOrdemResult.cliente.nome}) foi atualizada.`,
-      link: `ordens.html?id=${updatedOrdemResult.id}`,
+      mensagem: `A ordem #${ordemFinal.numeroOrdem} (${ordemFinal.cliente.nome}) foi atualizada.`,
+      link: `ordens.html?id=${ordemFinal.id}`,
       type: 'ordemEditada'
     });
 
-    res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: updatedOrdemResult });
+    res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: ordemFinal });
   } catch (error: any) {
     console.error('Erro ao atualizar ordem de serviço:', error);
     res.status(error.message === 'Ordem de serviço não encontrada' ? 404 : 500).json({ error: error.message || 'Erro interno do servidor' });
@@ -581,7 +695,7 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
  */
 export const cancelOrdem = async (req: EmpresaRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     // Verificar se ordem existe e pertence à empresa
     const ordem = await prisma.ordemServico.findFirst({
@@ -686,7 +800,19 @@ export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
     }
 
     if (lavadorId) {
-      where.lavadorId = lavadorId as string;
+      const washerFilterId = lavadorId as string;
+      const washerFilterCondition: Prisma.OrdemServicoWhereInput = {
+        OR: [
+          { lavadorId: washerFilterId },
+          { ordemLavadores: { some: { lavadorId: washerFilterId } } }
+        ]
+      };
+      const existingAnd: Prisma.OrdemServicoWhereInput[] = Array.isArray(where.AND)
+        ? [...where.AND]
+        : where.AND
+          ? [where.AND]
+          : [];
+      where.AND = [...existingAnd, washerFilterCondition];
     }
 
     if (servicoId) {
@@ -880,7 +1006,7 @@ export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
  */
 export const deleteOrdem = async (req: EmpresaRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     // Verificar se ordem existe e pertence à empresa, incluindo dados para a notificação
     const ordem = await prisma.ordemServico.findFirst({
@@ -935,6 +1061,176 @@ export const deleteOrdem = async (req: EmpresaRequest, res: Response) => {
 };
 
 /**
+ * Finalizar ordem de serviço manualmente
+ * Processa pagamento, atualiza status e calcula comissão
+ */
+export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = req.empresaId!;
+  const { id } = req.params as { id: string };
+
+  // Validação de entrada
+  if (!empresaId) {
+    return res.status(401).json({ error: 'Empresa não autenticada' });
+  }
+
+  // SECURITY: Validate and sanitize payment data
+  const validation = validateFinalizarOrdem(req.body);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      error: 'Dados de pagamento inválidos',
+      details: validation.errors,
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  // Use sanitized data
+  const { pagamentos, lavadorDebitoId } = validation.sanitizedData!;
+
+  try {
+    // Buscar a ordem e verificar se existe e pertence à empresa
+    const ordem = await prisma.ordemServico.findFirst({
+      where: {
+        id,
+        empresaId
+      },
+      include: {
+        lavador: true,
+        cliente: true,
+        veiculo: true
+      }
+    });
+
+    if (!ordem) {
+      return res.status(404).json({
+        error: 'Ordem de serviço não encontrada',
+        code: 'ORDER_NOT_FOUND'
+      });
+    }
+
+    // Verificar se a ordem já foi finalizada
+    if (ordem.status === 'FINALIZADO') {
+      return res.status(409).json({
+        error: 'Esta ordem já foi finalizada',
+        code: 'ORDER_ALREADY_FINALIZED'
+      });
+    }
+
+    // Verificar se a ordem foi cancelada
+    if (ordem.status === 'CANCELADO') {
+      return res.status(409).json({
+        error: 'Não é possível finalizar uma ordem cancelada',
+        code: 'ORDER_CANCELLED'
+      });
+    }
+
+    // Calcular valor total dos pagamentos
+    const valorTotalPagamentos = pagamentos.reduce((sum: number, pag: any) => sum + pag.valor, 0);
+
+    // Verificar se o valor total dos pagamentos corresponde ao valor da ordem
+    if (Math.abs(valorTotalPagamentos - ordem.valorTotal) > 0.01) { // Tolerância de 1 centavo para erros de arredondamento
+      return res.status(400).json({
+        error: `Valor total dos pagamentos (R$ ${valorTotalPagamentos.toFixed(2)}) não corresponde ao valor da ordem (R$ ${ordem.valorTotal.toFixed(2)})`,
+        code: 'PAYMENT_VALUE_MISMATCH'
+      });
+    }
+
+    // Calcular comissão se houver lavador
+    let comissaoCalculada = 0;
+    if (ordem.lavador) {
+      // Comissão é uma porcentagem do valor total (ex: 15.5% = 15.5)
+      comissaoCalculada = (ordem.valorTotal * ordem.lavador.comissao) / 100;
+    }
+
+    // Executar tudo em uma transação atômica
+    const resultado = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Atualizar status da ordem para FINALIZADO
+      const ordemAtualizada = await tx.ordemServico.update({
+        where: { id },
+        data: {
+          status: 'FINALIZADO',
+          dataFim: new Date(),
+          comissao: comissaoCalculada,
+          comissaoPaga: false, // Será paga no fechamento de comissão
+          pago: true
+        },
+        include: {
+          cliente: true,
+          veiculo: true,
+          lavador: true,
+          items: {
+            include: {
+              servico: true,
+              adicional: true
+            }
+          }
+        }
+      });
+
+      // 2. Criar registros de pagamento
+      const pagamentosCriados = await Promise.all(
+        pagamentos.map((pag: any) =>
+          tx.pagamento.create({
+            data: {
+              empresaId,
+              ordemId: id,
+              metodo: pag.metodo,
+              valor: pag.valor,
+              status: 'PAGO',
+              pagoEm: new Date(),
+              observacoes: pag.observacoes || null
+            }
+          })
+        )
+      );
+
+      // 3. Se houver débito de lavador, criar registro de adiantamento
+      if (lavadorDebitoId && ordem.lavador) {
+        await tx.adiantamento.create({
+          data: {
+            empresaId,
+            lavadorId: lavadorDebitoId,
+            valor: comissaoCalculada,
+            status: 'QUITADO'
+          }
+        });
+      }
+
+      return {
+        ordem: ordemAtualizada,
+        pagamentos: pagamentosCriados
+      };
+    });
+
+    // 4. Enviar notificação após a transação
+    await createNotification({
+      empresaId,
+      mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${ordem.valorTotal.toFixed(2)}`,
+      link: `ordens.html?id=${ordem.id}`,
+      type: 'ordemEditada'
+    });
+
+    // Resposta de sucesso
+    res.status(200).json({
+      message: 'Ordem finalizada com sucesso',
+      ordem: resultado.ordem,
+      pagamentos: resultado.pagamentos,
+      comissao: comissaoCalculada > 0 ? {
+        valor: comissaoCalculada,
+        porcentagem: ordem.lavador?.comissao,
+        lavador: ordem.lavador?.nome
+      } : null
+    });
+
+  } catch (error: any) {
+    console.error('Erro ao finalizar ordem de serviço:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor ao finalizar ordem',
+      details: error.message || 'Erro desconhecido'
+    });
+  }
+};
+
+/**
  * Itera sobre as empresas para finalizar ordens do dia conforme o horário de fechamento.
  * Esta função é chamada pelo cron job a cada 15 minutos.
  */
@@ -971,7 +1267,7 @@ export const processarFinalizacoesAutomaticas = async () => {
           const ordensParaFinalizar = await prisma.ordemServico.findMany({
             where: {
               empresaId: empresa.id,
-              status: { in: ['PENDENTE', 'EM_ANDAMENTO'] },
+              status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any },
             },
           });
 

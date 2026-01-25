@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDadosComissao = exports.deleteCaixaRegistro = exports.updateCaixaRegistro = exports.migrarPagamentosComissaoAntigos = exports.fecharComissao = exports.getHistoricoComissoes = exports.getFechamentoComissaoById = exports.getGanhosDoMes = exports.getFechamentoById = exports.getHistorico = exports.createSangria = exports.createSaida = exports.createFechamento = exports.getResumoDia = void 0;
 const db_1 = __importDefault(require("../db"));
-const client_1 = require("@prisma/client");
 const getWorkdayRange = (date, horarioAbertura = '07:00') => {
     const [hours, minutes] = horarioAbertura.split(':').map(Number);
     const start = new Date(date);
@@ -56,16 +55,16 @@ const createFechamento = async (req, res) => {
                     dinheiro: dinheiro,
                     cartao: cartao,
                     diferenca,
-                    status: Math.abs(diferenca) < 0.01 ? client_1.StatusFechamento.CONFERIDO : client_1.StatusFechamento.DIVERGENTE,
+                    status: Math.abs(diferenca) < 0.01 ? 'CONFERIDO' : 'DIVERGENTE',
                     observacao,
                 },
             }),
             db_1.default.caixaRegistro.create({
                 data: {
                     empresaId,
-                    tipo: client_1.TipoCaixa.FECHAMENTO,
+                    tipo: 'FECHAMENTO',
                     valor: 0,
-                    formaPagamento: client_1.FormaPagamento.NA,
+                    formaPagamento: 'NA',
                     descricao: `Fechamento do dia. Diferença: ${diferenca.toFixed(2)}`,
                 }
             })
@@ -113,7 +112,7 @@ const createSaida = async (req, res) => {
             return await tx.caixaRegistro.create({
                 data: {
                     empresaId,
-                    tipo: client_1.TipoCaixa.SAIDA,
+                    tipo: 'SAIDA',
                     valor: valor,
                     formaPagamento: formaPagamento,
                     descricao: finalDescricao,
@@ -150,9 +149,9 @@ const createSangria = async (req, res) => {
         const sangria = await db_1.default.caixaRegistro.create({
             data: {
                 empresaId,
-                tipo: client_1.TipoCaixa.SANGRIA,
+                tipo: 'SANGRIA',
                 valor: valor,
-                formaPagamento: client_1.FormaPagamento.DINHEIRO,
+                formaPagamento: 'DINHEIRO',
                 descricao: observacao || 'Retirada de caixa (Sangria)',
             }
         });
@@ -201,7 +200,23 @@ const getHistorico = async (req, res) => {
             });
         }
         const todosRegistros = [...registrosPagamento, ...outrosRegistros].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-        res.json(todosRegistros);
+        // Calcular totais com base nos registros filtrados
+        const totalEntradas = registrosPagamento.reduce((acc, p) => acc + p.valor, 0);
+        const totalSaidas = outrosRegistros
+            .filter(r => r.tipo === 'SAIDA' || r.tipo === 'SANGRIA')
+            .reduce((acc, r) => acc + r.valor, 0);
+        const totais = {
+            totalEntradas,
+            totalSaidas,
+            detalheSaidas: {
+                saidas: outrosRegistros.filter(r => r.tipo === 'SAIDA').reduce((acc, r) => acc + r.valor, 0),
+                sangrias: outrosRegistros.filter(r => r.tipo === 'SANGRIA').reduce((acc, r) => acc + r.valor, 0),
+            }
+        };
+        res.json({
+            registros: todosRegistros,
+            totais: totais
+        });
     }
     catch (error) {
         console.error('Erro ao buscar histórico de caixa:', error);
@@ -405,7 +420,7 @@ const fecharComissao = async (req, res) => {
                 await tx.caixaRegistro.create({
                     data: {
                         empresaId,
-                        tipo: client_1.TipoCaixa.SAIDA,
+                        tipo: 'SAIDA',
                         valor: valorPago,
                         formaPagamento: formaPagamento,
                         descricao: `Pagamento de comissão para ${lavador?.nome || 'Funcionário'}`,
@@ -472,7 +487,7 @@ const updateCaixaRegistro = async (req, res) => {
             }
             fornecedorId = fornecedor.id;
         }
-        const finalDescricao = tipo === 'Adiantamento' ? 'Adiantamento para funcionário' : `[${tipo}] ${descricao}`;
+        const finalDescricao = tipo === 'Adiantamento' ? `Adiantamento para funcionário` : `[${tipo}] ${descricao}`;
         const registroAtualizado = await db_1.default.caixaRegistro.update({
             where: { id, empresaId },
             data: {

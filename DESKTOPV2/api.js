@@ -1,16 +1,17 @@
 const API_BASE_URL = 'http://localhost:3001/api';
 
 // Função auxiliar para fazer requisições
+// SECURITY: empresaId is now embedded in the JWT token (not sent as header)
+// The token is obtained from generateScopedToken after selecting an empresa
 async function fetchApi(endpoint, options = {}) {
   const token = localStorage.getItem('token');
-  const empresaId = localStorage.getItem('empresaId');
-  
+
   const config = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
-      ...(empresaId && { 'x-empresa-id': empresaId }),
+      // SECURITY: x-empresa-id header removed - empresaId is now in JWT claims
       ...options.headers,
     },
   };
@@ -284,6 +285,10 @@ const api = {
   getNotificacoes: () => fetchApi('/notificacoes'),
   marcarNotificacaoComoLida: (id) => fetchApi(`/notificacoes/${id}/lida`, { method: 'PATCH' }),
   marcarTodasComoLidas: () => fetchApi('/notificacoes/marcar-todas-lidas', { method: 'POST' }),
+
+  // ===== THEME =====
+  getThemeConfig: () => fetchApi('/theme/config'),
+  updateThemeConfig: (data) => fetchApi('/theme/config', { method: 'PATCH', body: JSON.stringify(data) }),
 
   // ===== ADMIN =====
   getAdminStats: () => api.call('GET', 'admin/stats'),

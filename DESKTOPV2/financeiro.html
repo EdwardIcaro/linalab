@@ -9,723 +9,1971 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <style>
-        .table-wrapper { width: 100%; overflow-x: auto; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 16px; padding: 8px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 16px; text-align: left; font-size: 14px; white-space: nowrap; }
-        thead th { font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
-        tbody tr { border-bottom: 1px solid var(--border-color); }
-        tbody tr:last-child { border-bottom: none; }
-        td { color: var(--text-primary); font-weight: 500; }
+        /* ==========================================
+           CSS VARIABLES - Finance Theme
+           ========================================== */
+        :root {
+            --finance-bg: #f8fafc;
+            --finance-card: #ffffff;
+            --finance-border: #e2e8f0;
+            --finance-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            --finance-shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --finance-text: #1e293b;
+            --finance-text-secondary: #64748b;
+            --finance-text-muted: #94a3b8;
 
-        /* Estilos para os botões de ação na tabela */
-        .actions-cell .btn-sm {
-            width: 32px; height: 32px; border-radius: 50%;
-            border: none; cursor: pointer; transition: all 0.2s ease;
-            color: var(--text-secondary); background-color: transparent;
-            margin-left: 4px; display: inline-flex; align-items: center; justify-content: center;
+            /* Finance Colors */
+            --finance-green: #10b981;
+            --finance-green-light: rgba(16, 185, 129, 0.1);
+            --finance-red: #ef4444;
+            --finance-red-light: rgba(239, 68, 68, 0.1);
+            --finance-blue: #3b82f6;
+            --finance-blue-light: rgba(59, 130, 246, 0.1);
+            --finance-orange: #f59e0b;
+            --finance-orange-light: rgba(245, 158, 11, 0.1);
+            --finance-purple: #8b5cf6;
+            --finance-purple-light: rgba(139, 92, 246, 0.1);
+            --finance-cyan: #06b6d4;
+            --finance-cyan-light: rgba(6, 182, 212, 0.1);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
         }
-        .actions-cell .btn-sm:hover { background-color: var(--background-light); }
-        .actions-cell .btn-info { color: #0ea5e9; } /* Azul claro */
-        .actions-cell .btn-secondary { color: #64748b; } /* Cinza */
-        .actions-cell .btn-danger { color: #ef4444; } /* Vermelho */
 
-        .valor-saida { color: #EF4444; font-weight: 600; }
-        .valor-entrada { color: #10B981; font-weight: 600; }
-        .text-blue-600 { color: #2563EB; } /* Cor azul para pendências */
-        .font-semibold { font-weight: 600; }
+        /* Alpine cloak */
+        [x-cloak] { display: none !important; }
 
-
-        /* Cores para o background do TIPO de movimentação */
-        .tipo-bg { color: white; font-weight: 600; padding: 4px 12px; border-radius: 6px; text-align: center; }
-        .tipo-bg-SANGRIA { background-color: #D97706; } /* Laranja */
-        .tipo-bg-SAIDA, .tipo-bg-VALE { background-color: #DC2626; } /* Vermelho para Saídas e Vales */
-        .tipo-bg-FECHAMENTO { background-color: #2563EB; } /* Azul */
-        .tipo-bg-PAGAMENTOS { background-color: var(--primary-color); } /* Roxo para pagamentos de comissão */
-        .tipo-bg-PENDENTE { background-color: #F59E0B; } /* Amarelo para pendências */
-        .tipo-bg-PAGAMENTO { background-color: #16A34A; } /* Verde */
-
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed; inset: 0; background-color: rgba(16, 24, 40, 0.6); backdrop-filter: blur(4px);
-            z-index: 50; display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        /* ==========================================
+           LAYOUT
+           ========================================== */
+        .finance-container {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
         }
-        .modal-overlay.active { opacity: 1; visibility: visible; }
-        .modal-content {
-            background-color: var(--white); border-radius: 16px; padding: 24px;
-            width: 90%; max-width: 550px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            transform: scale(0.95); transition: transform 0.3s ease;
+
+        /* ==========================================
+           BALANCE HERO
+           ========================================== */
+        .balance-hero {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
         }
-        .modal-overlay.active .modal-content { transform: scale(1); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
-        .modal-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
-        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; }
-        .modal-actions { display: flex; gap: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border-color); justify-content: flex-end; }
-        
-        .form-group { margin-bottom: 20px; }
-        .form-label { display: block; color: var(--text-secondary); font-size: 14px; font-weight: 500; margin-bottom: 8px; }
-        .form-input, .form-select { width: 100%; background-color: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; color: var(--text-primary); font-size: 14px; }
-        .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1); }
 
-        .fechamento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
-        .fechamento-total { text-align: center; padding: 16px; border-radius: 12px; background-color: var(--background-light); }
+        @media (max-width: 1100px) {
+            .balance-hero { grid-template-columns: repeat(2, 1fr); }
+        }
 
-        .highlight-name {
-            background-color: var(--background-light);
-            padding: 2px 8px;
-            border: 1px solid var(--border-color);
+        @media (max-width: 600px) {
+            .balance-hero { grid-template-columns: 1fr; }
+        }
+
+        .balance-card {
+            background: var(--finance-card);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            border: 1px solid var(--finance-border);
+            box-shadow: var(--finance-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+
+        .balance-card.green::before { background: var(--finance-green); }
+        .balance-card.red::before { background: var(--finance-red); }
+        .balance-card.blue::before { background: var(--finance-blue); }
+        .balance-card.orange::before { background: var(--finance-orange); }
+
+        .balance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .balance-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .balance-card.green .balance-icon { background: var(--finance-green-light); color: var(--finance-green); }
+        .balance-card.red .balance-icon { background: var(--finance-red-light); color: var(--finance-red); }
+        .balance-card.blue .balance-icon { background: var(--finance-blue-light); color: var(--finance-blue); }
+        .balance-card.orange .balance-icon { background: var(--finance-orange-light); color: var(--finance-orange); }
+
+        .balance-label {
+            font-size: 13px;
+            color: var(--finance-text-secondary);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .balance-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .balance-card.green .balance-value { color: var(--finance-green); }
+        .balance-card.red .balance-value { color: var(--finance-red); }
+        .balance-card.blue .balance-value { color: var(--finance-blue); }
+        .balance-card.orange .balance-value { color: var(--finance-orange); }
+
+        .balance-breakdown {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--finance-border);
+            font-size: 12px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--finance-text-secondary);
+        }
+
+        .breakdown-item i {
+            font-size: 10px;
+        }
+
+        /* ==========================================
+           TABS NAVIGATION
+           ========================================== */
+        .tabs-container {
+            background: var(--finance-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--finance-border);
+            box-shadow: var(--finance-shadow);
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--finance-border);
+            padding: 0 24px;
+            background: var(--finance-bg);
+        }
+
+        .tab-btn {
+            padding: 16px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--finance-text-secondary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--finance-text);
+        }
+
+        .tab-btn.active {
+            color: var(--finance-cyan);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--finance-cyan);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .tab-btn i {
+            font-size: 16px;
+        }
+
+        .tabs-content {
+            padding: 24px;
+        }
+
+        /* ==========================================
+           FILTERS BAR
+           ========================================== */
+        .filters-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-presets {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preset-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            background: var(--finance-bg);
+            border: 1px solid var(--finance-border);
+            color: var(--finance-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover, .preset-btn.active {
+            background: var(--finance-cyan-light);
+            border-color: var(--finance-cyan);
+            color: var(--finance-cyan);
+        }
+
+        .filter-input {
+            padding: 10px 14px;
+            border: 1px solid var(--finance-border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--finance-card);
+            color: var(--finance-text);
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--finance-cyan);
+        }
+
+        .filter-select {
+            padding: 10px 14px;
+            border: 1px solid var(--finance-border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--finance-card);
+            color: var(--finance-text);
+            min-width: 150px;
+        }
+
+        .filter-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* ==========================================
+           TRANSACTION TABLE
+           ========================================== */
+        .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .transactions-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--finance-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--finance-bg);
+            border-bottom: 1px solid var(--finance-border);
+        }
+
+        .transactions-table td {
+            padding: 16px;
+            font-size: 14px;
+            color: var(--finance-text);
+            border-bottom: 1px solid var(--finance-border);
+        }
+
+        .transactions-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .transactions-table tr:hover {
+            background: var(--finance-bg);
+        }
+
+        /* Transaction Type Badge */
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
             border-radius: 6px;
+            font-size: 12px;
             font-weight: 600;
         }
 
-        /* --- Estilos para o Card de Resumo Combinado --- */
-        .combined-summary-card {
-            display: flex;
-            justify-content: space-around;
+        .type-badge.entrada { background: var(--finance-green-light); color: var(--finance-green); }
+        .type-badge.saida { background: var(--finance-red-light); color: var(--finance-red); }
+        .type-badge.sangria { background: var(--finance-orange-light); color: var(--finance-orange); }
+        .type-badge.fechamento { background: var(--finance-blue-light); color: var(--finance-blue); }
+        .type-badge.pendente { background: var(--finance-purple-light); color: var(--finance-purple); }
+
+        /* Value Colors */
+        .value-positive { color: var(--finance-green); font-weight: 600; }
+        .value-negative { color: var(--finance-red); font-weight: 600; }
+        .value-pending { color: var(--finance-purple); font-weight: 600; }
+
+        /* Action Buttons */
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: inline-flex;
             align-items: center;
-            padding: 24px;
+            justify-content: center;
+            color: var(--finance-text-secondary);
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--finance-bg);
+        }
+
+        .action-btn.edit:hover { color: var(--finance-blue); }
+        .action-btn.delete:hover { color: var(--finance-red); }
+        .action-btn.view:hover { color: var(--finance-cyan); }
+
+        /* ==========================================
+           CAIXA (REGISTER) TAB
+           ========================================== */
+        .register-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 32px;
+            background: linear-gradient(135deg, var(--finance-green) 0%, #059669 100%);
+            border-radius: var(--radius-lg);
+            color: white;
             margin-bottom: 24px;
         }
-        .summary-part {
+
+        .register-status.closed {
+            background: linear-gradient(135deg, var(--finance-red) 0%, #dc2626 100%);
+        }
+
+        .register-status-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
             display: flex;
             align-items: center;
-            gap: 20px;
+            justify-content: center;
+            font-size: 28px;
         }
-        .vertical-divider {
-            width: 1px;
-            align-self: stretch;
-            background-color: var(--border-color);
-            margin: 0 24px;
-        }
-        .summary-part .stat-icon {
-            font-size: 24px; width: 56px; height: 56px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .summary-part .stat-icon.entrada { background-color: #D1FAE5; color: #065F46; } /* Verde */
-        .summary-part .stat-icon.saida { background-color: #FEE2E2; color: #991B1B; } /* Vermelho */
-        .summary-part .stat-info p { font-size: 14px; color: var(--text-secondary); }
-        .summary-part .stat-info h3 { font-size: 28px; font-weight: 700; }
-        .summary-part .stat-info .valor-entrada { color: #10B981; }
-        .summary-part .stat-info .valor-saida { color: #EF4444; }
 
-        /* --- Tooltip para o card de saídas --- */
-        #card-saida { position: relative; }
-        #saida-tooltip {
-            visibility: hidden;
-            width: max-content;
-            background-color: #333;
-            color: #fff;
+        .register-status-text h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .register-status-text p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* Register Actions Grid */
+        .register-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .register-actions { grid-template-columns: 1fr; }
+        }
+
+        .register-action-card {
+            background: var(--finance-card);
+            border: 2px solid var(--finance-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
             text-align: center;
-            border-radius: 6px;
-            padding: 8px 12px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 12px;
-        }
-        #card-saida:hover #saida-tooltip {
-            visibility: visible;
-            opacity: 1;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        /* --- Estilos para o Dropdown de Ações --- */
-        .dropdown {
-            position: relative;
-            display: inline-block;
+        .register-action-card:hover {
+            border-color: var(--finance-cyan);
+            transform: translateY(-2px);
         }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: var(--white);
-            min-width: 220px; /* Largura mínima do menu */
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
+
+        .register-action-card i {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .register-action-card.sangria i { color: var(--finance-orange); }
+        .register-action-card.suprimento i { color: var(--finance-green); }
+        .register-action-card.fechar i { color: var(--finance-red); }
+
+        .register-action-card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--finance-text);
+            margin-bottom: 4px;
+        }
+
+        .register-action-card p {
+            font-size: 13px;
+            color: var(--finance-text-secondary);
+        }
+
+        /* Payment Methods Summary */
+        .payment-methods-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .payment-methods-grid { grid-template-columns: 1fr; }
+        }
+
+        .payment-method-card {
+            background: var(--finance-bg);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .payment-method-card i {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: var(--finance-cyan);
+        }
+
+        .payment-method-card .label {
+            font-size: 13px;
+            color: var(--finance-text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .payment-method-card .value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--finance-green);
+        }
+
+        /* ==========================================
+           MODALS
+           ========================================== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-content {
+            background: var(--finance-card);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--finance-shadow-lg);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        .modal-content.wide {
+            max-width: 700px;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--finance-border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--finance-text);
+        }
+
+        .modal-title i {
+            color: var(--finance-cyan);
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
             border-radius: 8px;
-            z-index: 10;
-            right: 0;
-            top: calc(100% + 8px); /* Posiciona abaixo do botão */
-            padding: 8px;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-        }
-        .dropdown-content.active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .dropdown-content a {
-            cursor: pointer; /* Muda o cursor para indicar que é clicável */
+            border: none;
+            background: var(--finance-bg);
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--finance-text-secondary);
+            transition: all 0.2s;
         }
 
+        .modal-close:hover {
+            background: var(--finance-red-light);
+            color: var(--finance-red);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--finance-text);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--finance-border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--finance-card);
+            color: var(--finance-text);
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--finance-cyan);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--finance-border);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: var(--finance-bg);
+            color: var(--finance-text);
+            border: 1px solid var(--finance-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--finance-border);
+        }
+
+        .btn-primary {
+            background: var(--finance-cyan);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0891b2;
+        }
+
+        .btn-danger {
+            background: var(--finance-red);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Fechamento Summary */
+        .fechamento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .fechamento-item {
+            background: var(--finance-bg);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .fechamento-item .label {
+            font-size: 12px;
+            color: var(--finance-text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .fechamento-item .value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .fechamento-item .value.positive { color: var(--finance-green); }
+        .fechamento-item .value.negative { color: var(--finance-red); }
+
+        .fechamento-total {
+            background: linear-gradient(135deg, var(--finance-cyan) 0%, #0891b2 100%);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            color: white;
+        }
+
+        .fechamento-total .label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        .fechamento-total .value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        /* ==========================================
+           SKELETON LOADERS
+           ========================================== */
+        .skeleton {
+            animation: skeleton-pulse 1.5s ease-in-out infinite;
+            background: linear-gradient(90deg, var(--finance-border) 25%, var(--finance-bg) 50%, var(--finance-border) 75%);
+            background-size: 200% 100%;
+            border-radius: 6px;
+        }
+
+        @keyframes skeleton-pulse {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border-bottom: 1px solid var(--finance-border);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--finance-text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            opacity: 0.3;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h4 {
+            font-size: 16px;
+            color: var(--finance-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        /* Spinner */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body id="financeiro-page">
-    <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
+<body id="financeiro-page" data-permission="ver_financeiro">
+    <!-- Screen Lock Modal -->
     <div id="screenLockModal" class="screen-lock-overlay">
         <div class="screen-lock-content">
             <i class="fas fa-lock screen-lock-icon"></i>
             <h2>Acesso Negado</h2>
-            <p>Você não tem permissão para visualizar esta página. Redirecionando...</p>
+            <p>Voce nao tem permissao para visualizar esta pagina. Redirecionando...</p>
         </div>
     </div>
 
-    <header class="top-bar">
-        <div class="top-bar-left">
-            <div class="logo">
-                <i class="fas fa-car-wash"></i>
-                <h1>LinaX</h1>
-            </div>
-        </div>
-        <div class="top-bar-center">
-            <nav class="top-nav-links">
-                <ul>
-                    <li data-permission="ver_dashboard"><a href="index.html"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
-                    <li data-permission="gerenciar_ordens"><a href="ordens.html"><i class="fas fa-list-alt"></i><span>Ordens</span></a></li>
-                    <li data-permission="gerenciar_clientes"><a href="clientes.html"><i class="fas fa-users"></i><span>Clientes</span></a></li>
-                    <li data-permission="gerenciar_funcionarios"><a href="funcionarios.html"><i class="fas fa-user-tie"></i><span>Funcionários</span></a></li>
-                    <li data-permission="ver_financeiro"><a href="financeiro.html" class="active"><i class="fas fa-chart-pie"></i><span>Financeiro</span></a></li>
-                    <li data-permission="gerenciar_configuracoes"><a href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a></li>
-                </ul>
-            </nav>
-        </div>
-        <div class="top-bar-right">
-            <a href="selecionar-tipo-veiculo.html" class="btn-primary">
-                <i class="fas fa-plus"></i>
-                <span>Nova Ordem</span>
-            </a>
-            <div class="user-menu-container">
-                <div id="user-menu-trigger" class="user-menu-trigger">
-                    <div id="user-info-avatar" class="user-avatar"></div>
-                </div>
-                <div id="user-menu-dropdown" class="user-menu-dropdown">
-                    <div id="user-info-dropdown"></div>
-                    <div class="dropdown-divider"></div>
-                    <button id="theme-toggle" class="dropdown-item">
-                        <i class="fas fa-moon"></i>
-                        <span>Alterar Tema</span>
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button onclick="logout()" class="dropdown-item dropdown-item-logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Sair</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- Navigation Menu -->
+    <nav class="nav-menu-card" style="margin: 32px;">
+        <a href="index.html" class="nav-menu-item" data-permission="ver_dashboard">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="ordens.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+            <i class="fas fa-list-alt"></i>
+            <span>Ordens</span>
+        </a>
+        <a href="novaordem.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+            <i class="fas fa-plus-circle"></i>
+            <span>Nova Ordem</span>
+        </a>
+        <a href="clientes.html" class="nav-menu-item" data-permission="gerenciar_clientes">
+            <i class="fas fa-users"></i>
+            <span>Clientes</span>
+        </a>
+        <a href="funcionarios.html" class="nav-menu-item" data-permission="gerenciar_funcionarios">
+            <i class="fas fa-user-tie"></i>
+            <span>Funcionários</span>
+        </a>
+        <a href="financeiro.html" class="nav-menu-item active" data-permission="ver_financeiro">
+            <i class="fas fa-chart-pie"></i>
+            <span>Financeiro</span>
+        </a>
+        <a href="configuracoes.html" class="nav-menu-item" data-permission="gerenciar_configuracoes">
+            <i class="fas fa-cog"></i>
+            <span>Configurações</span>
+        </a>
+    </nav>
 
-    <main class="main-content">
-        <header class="main-header">
-            <div class="header-title">
-                <h2>Financeiro</h2>
-                <p>Acompanhe o fluxo de caixa e o histórico de movimentações.</p>
-            </div>
-            <div class="header-controls" style="display: flex; align-items: center; gap: 16px;">
-                <button onclick="openFechamentoModal()" class="btn-primary"><i class="fas fa-door-closed mr-2"></i> Fechar Caixa</button>
-                <div class="dropdown">
-                    <button onclick="toggleDropdown('actionsDropdown')" class="btn-secondary">
-                        <i class="fas fa-plus mr-2"></i> Mais Ações <i class="fas fa-chevron-down ml-2 text-xs"></i>
-                    </button>
-                    <div id="actionsDropdown" class="dropdown-content">
-                        <a onclick="openSaidaModal()" class="dropdown-item"><i class="fas fa-arrow-up"></i> Registrar Saída</a>
-                        <a onclick="openSangriaModal()" class="dropdown-item"><i class="fas fa-arrow-down"></i> Registrar Sangria</a>
-                        <a href="comissoes.html" class="dropdown-item"><i class="fas fa-hand-holding-usd"></i> Pagar Comissões</a>
-                        <a onclick="openPendenciasModal()" class="dropdown-item"><i class="fas fa-clock"></i> Ver Pendências</a>
+    <!-- Main Finance Dashboard -->
+    <main class="main-content" x-data="financeDashboard()" x-init="init()" x-cloak>
+        <div class="finance-container">
+            <!-- Balance Cards -->
+            <section class="balance-hero">
+                <!-- Total Revenue -->
+                <div class="balance-card green">
+                    <div class="balance-header">
+                        <div class="balance-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                    </div>
+                    <div class="balance-label">Total Recebido</div>
+                    <template x-if="isLoading">
+                        <div class="skeleton" style="height: 32px; width: 120px;"></div>
+                    </template>
+                    <template x-if="!isLoading">
+                        <div class="balance-value" x-text="formatCurrency(balance.totalReceived)"></div>
+                    </template>
+                    <div class="balance-breakdown" x-show="!isLoading">
+                        <div class="breakdown-item">
+                            <i class="fas fa-money-bill"></i>
+                            <span x-text="formatCurrency(balance.cash)"></span>
+                        </div>
+                        <div class="breakdown-item">
+                            <i class="fas fa-credit-card"></i>
+                            <span x-text="formatCurrency(balance.card)"></span>
+                        </div>
+                        <div class="breakdown-item">
+                            <i class="fas fa-qrcode"></i>
+                            <span x-text="formatCurrency(balance.pix)"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </header>
 
-        <section class="card combined-summary-card mb-6">
-            <!-- Parte de Entradas -->
-            <div class="summary-part">
-                <div class="stat-icon entrada"><i class="fas fa-arrow-down"></i></div>
-                <div class="stat-info">
-                    <p>Total Recebido no Período</p>
-                    <h3 id="total-recebido" class="valor-entrada">R$ 0,00</h3>
-                </div>
-            </div>
-            
-            <!-- Divisor Vertical -->
-            <div class="vertical-divider"></div>
-
-            <!-- Parte de Saídas -->
-            <div id="card-saida" class="summary-part">
-                <div class="stat-icon saida"><i class="fas fa-arrow-up"></i></div>
-                <div class="stat-info">
-                    <p>Total de Saídas no Período
-                        <i class="fas fa-info-circle text-secondary ml-1" style="cursor: help;"></i>
-                    </p>
-                    <h3 id="total-saida" class="valor-saida">R$ 0,00</h3>
-                    <span id="saida-tooltip" class="tooltip-text"></span>
-                </div>
-            </div>
-        </section>
-
-        <section class="card">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-semibold">Histórico de Movimentações</h3>
-                <div class="flex items-center gap-4">
-                    <div class="btn-group">
-                        <button class="btn-secondary btn-sm" onclick="applyDateFilterPreset('today')">Hoje</button>
-                        <button class="btn-secondary btn-sm" onclick="applyDateFilterPreset('week')">Esta Semana</button>
-                        <button class="btn-secondary btn-sm" onclick="applyDateFilterPreset('month')">Este Mês</button>
+                <!-- Total Expenses -->
+                <div class="balance-card red">
+                    <div class="balance-header">
+                        <div class="balance-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
                     </div>
-                        <select id="tipoFilter" class="form-select" style="width: auto;" onchange="loadHistorico()">
-                        <option value="">Todos os Tipos</option>
-                        <option value="PAGAMENTO">Pagamento (Entrada)</option>
-                        <option value="SAIDA">Saída</option>
-                        <option value="SANGRIA">Sangria</option>
-                        <option value="PENDENTE">Pendência</option>
-                        <option value="FECHAMENTO">Fechamento</option>
-                    </select>
-                    <input type="date" id="dataInicioFilter" class="form-input" style="width: auto;">
-                    <span class="text-secondary">até</span>
-                    <input type="date" id="dataFimFilter" class="form-input" style="width: auto;">
+                    <div class="balance-label">Total de Saidas</div>
+                    <template x-if="isLoading">
+                        <div class="skeleton" style="height: 32px; width: 100px;"></div>
+                    </template>
+                    <template x-if="!isLoading">
+                        <div class="balance-value" x-text="formatCurrency(balance.totalExpenses)"></div>
+                    </template>
+                    <div class="balance-breakdown" x-show="!isLoading">
+                        <div class="breakdown-item">
+                            <span>Despesas: </span>
+                            <span x-text="formatCurrency(balance.expenses)"></span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Sangrias: </span>
+                            <span x-text="formatCurrency(balance.sangrias)"></span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Tipo</th>
-                            <th>Descrição</th>
-                            <th>Forma Pag.</th>
-                            <th style="text-align: right;">Valor</th>
-                            <th class="actions-cell">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historicoCaixaBody"></tbody>
-                </table>
-            </div>
-        </section>
-    </main>
 
-    <!-- Modals -->
-    <!-- Fechamento Modal -->
-    <div id="fechamentoModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Fechar Caixa do Dia</h2>
-                <button onclick="closeModal('fechamentoModal')" class="modal-close">&times;</button>
-            </div>
-            <div id="resumoFechamento">
-                <p>Carregando resumo...</p>
-            </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('fechamentoModal')" class="btn btn-secondary">Cancelar</button>
-                <button onclick="confirmarFechamento()" class="btn btn-primary">Confirmar Fechamento</button>
-            </div>
+                <!-- Net Balance -->
+                <div class="balance-card blue">
+                    <div class="balance-header">
+                        <div class="balance-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                    </div>
+                    <div class="balance-label">Saldo Liquido</div>
+                    <template x-if="isLoading">
+                        <div class="skeleton" style="height: 32px; width: 100px;"></div>
+                    </template>
+                    <template x-if="!isLoading">
+                        <div class="balance-value" x-text="formatCurrency(balance.netBalance)"></div>
+                    </template>
+                </div>
+
+                <!-- Pending -->
+                <div class="balance-card orange">
+                    <div class="balance-header">
+                        <div class="balance-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="balance-label">Pendencias</div>
+                    <template x-if="isLoading">
+                        <div class="skeleton" style="height: 32px; width: 80px;"></div>
+                    </template>
+                    <template x-if="!isLoading">
+                        <div class="balance-value" x-text="formatCurrency(balance.pending)"></div>
+                    </template>
+                </div>
+            </section>
+
+            <!-- Tabs Container -->
+            <section class="tabs-container">
+                <!-- Tabs Header -->
+                <div class="tabs-header">
+                    <button
+                        class="tab-btn"
+                        :class="{ 'active': activeTab === 'movimentacoes' }"
+                        @click="activeTab = 'movimentacoes'"
+                    >
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Movimentacoes</span>
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ 'active': activeTab === 'caixa' }"
+                        @click="activeTab = 'caixa'"
+                    >
+                        <i class="fas fa-cash-register"></i>
+                        <span>Controle de Caixa</span>
+                    </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ 'active': activeTab === 'pendencias' }"
+                        @click="activeTab = 'pendencias'; loadPendencias()"
+                    >
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Pendencias</span>
+                        <span
+                            x-show="pendenciasCount > 0"
+                            class="type-badge pendente"
+                            style="padding: 2px 8px; font-size: 11px;"
+                            x-text="pendenciasCount"
+                        ></span>
+                    </button>
+                </div>
+
+                <!-- Tabs Content -->
+                <div class="tabs-content">
+                    <!-- TAB 1: Movimentacoes -->
+                    <div x-show="activeTab === 'movimentacoes'" x-transition>
+                        <!-- Filters -->
+                        <div class="filters-bar">
+                            <div class="filter-presets">
+                                <button
+                                    class="preset-btn"
+                                    :class="{ 'active': datePreset === 'today' }"
+                                    @click="applyDatePreset('today')"
+                                >Hoje</button>
+                                <button
+                                    class="preset-btn"
+                                    :class="{ 'active': datePreset === 'week' }"
+                                    @click="applyDatePreset('week')"
+                                >Esta Semana</button>
+                                <button
+                                    class="preset-btn"
+                                    :class="{ 'active': datePreset === 'month' }"
+                                    @click="applyDatePreset('month')"
+                                >Este Mes</button>
+                            </div>
+
+                            <select class="filter-select" x-model="filters.tipo" @change="loadTransactions()">
+                                <option value="">Todos os Tipos</option>
+                                <option value="PAGAMENTO">Pagamento (Entrada)</option>
+                                <option value="SAIDA">Saida</option>
+                                <option value="SANGRIA">Sangria</option>
+                                <option value="PENDENTE">Pendencia</option>
+                                <option value="FECHAMENTO">Fechamento</option>
+                            </select>
+
+                            <input
+                                type="date"
+                                class="filter-input"
+                                x-model="filters.dataInicio"
+                                @change="loadTransactions()"
+                            >
+                            <span style="color: var(--finance-text-secondary);">ate</span>
+                            <input
+                                type="date"
+                                class="filter-input"
+                                x-model="filters.dataFim"
+                                @change="loadTransactions()"
+                            >
+
+                            <div class="filter-actions">
+                                <button class="btn btn-secondary" @click="openTransactionModal('saida')">
+                                    <i class="fas fa-arrow-up"></i>
+                                    Lancar Despesa
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Transactions Table -->
+                        <div style="overflow-x: auto;">
+                            <!-- Loading State -->
+                            <template x-if="isLoadingTransactions">
+                                <div>
+                                    <template x-for="i in 5" :key="'skel-' + i">
+                                        <div class="skeleton-row">
+                                            <div class="skeleton" style="height: 16px; width: 100px;"></div>
+                                            <div class="skeleton" style="height: 24px; width: 80px;"></div>
+                                            <div class="skeleton" style="height: 16px; width: 200px;"></div>
+                                            <div class="skeleton" style="height: 16px; width: 80px;"></div>
+                                            <div class="skeleton" style="height: 16px; width: 100px;"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Empty State -->
+                            <template x-if="!isLoadingTransactions && transactions.length === 0">
+                                <div class="empty-state">
+                                    <i class="fas fa-receipt"></i>
+                                    <h4>Nenhuma movimentacao encontrada</h4>
+                                    <p>Ajuste os filtros ou registre uma nova transacao.</p>
+                                </div>
+                            </template>
+
+                            <!-- Table -->
+                            <table class="transactions-table" x-show="!isLoadingTransactions && transactions.length > 0">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Descricao</th>
+                                        <th>Forma Pag.</th>
+                                        <th style="text-align: right;">Valor</th>
+                                        <th style="width: 100px;">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="tx in transactions" :key="tx.id">
+                                        <tr>
+                                            <td x-text="formatDateTime(tx.data)"></td>
+                                            <td>
+                                                <span
+                                                    class="type-badge"
+                                                    :class="getTypeBadgeClass(tx.tipo)"
+                                                    x-text="getTypeLabel(tx.tipo, tx.formaPagamento)"
+                                                ></span>
+                                            </td>
+                                            <td x-text="tx.descricao"></td>
+                                            <td x-text="tx.formaPagamento || 'N/A'"></td>
+                                            <td style="text-align: right;">
+                                                <span
+                                                    :class="getValueClass(tx.tipo)"
+                                                    x-text="(tx.tipo === 'PAGAMENTO' ? '+ ' : tx.tipo === 'PENDENTE' ? '' : '- ') + formatCurrency(tx.valor)"
+                                                ></span>
+                                            </td>
+                                            <td>
+                                                <template x-if="tx.ordemId">
+                                                    <a :href="'ordens.html?id=' + tx.ordemId" class="action-btn view" title="Ver Ordem">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </template>
+                                                <template x-if="tx.tipo === 'SAIDA'">
+                                                    <button class="action-btn edit" @click="openEditModal(tx)" title="Editar">
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </button>
+                                                </template>
+                                                <template x-if="tx.tipo === 'SAIDA'">
+                                                    <button class="action-btn delete" @click="deleteTransaction(tx.id)" title="Excluir">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Controle de Caixa -->
+                    <div x-show="activeTab === 'caixa'" x-transition>
+                        <!-- Register Status -->
+                        <div class="register-status" :class="{ 'closed': !isRegisterOpen }">
+                            <div class="register-status-icon">
+                                <i :class="isRegisterOpen ? 'fas fa-lock-open' : 'fas fa-lock'"></i>
+                            </div>
+                            <div class="register-status-text">
+                                <h3 x-text="isRegisterOpen ? 'Caixa Aberto' : 'Caixa Fechado'"></h3>
+                                <p x-text="isRegisterOpen ? 'O caixa esta operando normalmente' : 'O caixa de hoje foi fechado'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Register Actions -->
+                        <div class="register-actions">
+                            <div class="register-action-card sangria" @click="openTransactionModal('sangria')">
+                                <i class="fas fa-arrow-down"></i>
+                                <h4>Sangria</h4>
+                                <p>Retirar dinheiro do caixa</p>
+                            </div>
+                            <div class="register-action-card suprimento" @click="openTransactionModal('suprimento')">
+                                <i class="fas fa-arrow-up"></i>
+                                <h4>Suprimento</h4>
+                                <p>Adicionar troco ao caixa</p>
+                            </div>
+                            <div class="register-action-card fechar" @click="openFechamentoModal()">
+                                <i class="fas fa-door-closed"></i>
+                                <h4>Fechar Caixa</h4>
+                                <p>Encerrar o dia de trabalho</p>
+                            </div>
+                        </div>
+
+                        <!-- Today's Summary -->
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--finance-text);">
+                            <i class="fas fa-chart-bar" style="color: var(--finance-cyan); margin-right: 8px;"></i>
+                            Resumo do Dia
+                        </h3>
+
+                        <div class="payment-methods-grid">
+                            <div class="payment-method-card">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <div class="label">Dinheiro</div>
+                                <div class="value" x-text="formatCurrency(daySummary.dinheiro)"></div>
+                            </div>
+                            <div class="payment-method-card">
+                                <i class="fas fa-credit-card"></i>
+                                <div class="label">Cartao</div>
+                                <div class="value" x-text="formatCurrency(daySummary.cartao)"></div>
+                            </div>
+                            <div class="payment-method-card">
+                                <i class="fas fa-qrcode"></i>
+                                <div class="label">PIX</div>
+                                <div class="value" x-text="formatCurrency(daySummary.pix)"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: Pendencias -->
+                    <div x-show="activeTab === 'pendencias'" x-transition>
+                        <!-- Loading -->
+                        <template x-if="isLoadingPendencias">
+                            <div>
+                                <template x-for="i in 3" :key="'pend-skel-' + i">
+                                    <div class="skeleton-row">
+                                        <div class="skeleton" style="height: 16px; width: 150px;"></div>
+                                        <div class="skeleton" style="height: 16px; width: 100px;"></div>
+                                        <div class="skeleton" style="height: 16px; width: 80px;"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Empty -->
+                        <template x-if="!isLoadingPendencias && pendencias.length === 0">
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle" style="color: var(--finance-green);"></i>
+                                <h4>Nenhuma pendencia!</h4>
+                                <p>Todas as ordens foram pagas corretamente.</p>
+                            </div>
+                        </template>
+
+                        <!-- Pendencias Table -->
+                        <table class="transactions-table" x-show="!isLoadingPendencias && pendencias.length > 0">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Veiculo</th>
+                                    <th>Data</th>
+                                    <th style="text-align: right;">Valor</th>
+                                    <th>Acao</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="pend in pendencias" :key="pend.id">
+                                    <tr>
+                                        <td x-text="pend.cliente?.nome || 'N/A'"></td>
+                                        <td x-text="pend.veiculo?.placa || 'N/A'"></td>
+                                        <td x-text="formatDate(pend.dataFinalizado || pend.createdAt)"></td>
+                                        <td style="text-align: right;" class="value-pending" x-text="formatCurrency(pend.valorTotal)"></td>
+                                        <td>
+                                            <a :href="'ordens.html?id=' + pend.id" class="btn btn-primary" style="padding: 8px 16px;">
+                                                Ver Ordem
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
-    </div>
 
-    <!-- Saida Modal -->
-    <div id="saidaModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Registrar Saída</h2>
-                <button onclick="closeModal('saidaModal')" class="modal-close">&times;</button>
-            </div>
-            <form id="saidaForm">
-                <input type="hidden" id="saidaId">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-group">
-                        <label for="saidaValor" class="form-label">Valor</label>
-                        <input type="number" step="0.01" id="saidaValor" class="form-input" required>
+        <!-- ==========================================
+             MODALS
+             ========================================== -->
+
+        <!-- Transaction Modal (Saida/Sangria/Suprimento) -->
+        <div
+            class="modal-overlay"
+            x-show="transactionModal.isOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click.self="closeTransactionModal()"
+            @keydown.escape.window="closeTransactionModal()"
+        >
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i :class="getTransactionModalIcon()"></i>
+                        <span x-text="getTransactionModalTitle()"></span>
+                    </h2>
+                    <button class="modal-close" @click="closeTransactionModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form @submit.prevent="saveTransaction()">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Valor *</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                class="form-input"
+                                x-model="transactionModal.valor"
+                                required
+                                x-ref="transactionValor"
+                            >
+                        </div>
+                        <div class="form-group" x-show="transactionModal.type === 'saida'">
+                            <label class="form-label">Forma de Pagamento</label>
+                            <select class="form-select" x-model="transactionModal.formaPagamento">
+                                <option value="DINHEIRO">Dinheiro</option>
+                                <option value="PIX">PIX</option>
+                                <option value="CARTAO">Cartao</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="saidaFormaPagamento" class="form-label">Forma de Pagamento</label>
-                        <select id="saidaFormaPagamento" class="form-select" required>
-                            <option value="DINHEIRO">Dinheiro</option>
-                            <option value="PIX">PIX</option>
-                            <option value="CARTAO">Cartão</option>
+
+                    <div class="form-group" x-show="transactionModal.type === 'saida'">
+                        <label class="form-label">Categoria</label>
+                        <select class="form-select" x-model="transactionModal.categoria" @change="onCategoriaChange()">
+                            <option value="Despesa">Despesa (Geral)</option>
+                            <option value="Adiantamento">Adiantamento (Vale)</option>
+                            <option value="Outro">Outro</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="saidaTipo" class="form-label">Categoria da Saída</label>
-                    <select id="saidaTipo" class="form-select" required>
-                        <option value="Despesa">Despesa (Geral)</option>
-                        <option value="Adiantamento">Adiantamento (Vale)</option>
-                        <option value="Outro">Outro</option>
-                    </select>
-                </div>
-                <div id="saidaCamposDinamicos">
-                    <!-- Campos dinâmicos serão inseridos aqui -->
-                </div>
-                <div class="form-group" id="saidaDescricaoContainer">
-                    <label for="saidaDescricao" class="form-label">Descrição</label>
-                    <input type="text" id="saidaDescricao" class="form-input" placeholder="Ex: Compra de material de limpeza" required>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" onclick="closeModal('saidaModal')" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- Sangria Modal -->
-    <div id="sangriaModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Registrar Sangria</h2>
-                <button onclick="closeModal('sangriaModal')" class="modal-close">&times;</button>
-            </div>
-            <form id="sangriaForm">
-                <div class="form-group">
-                    <label for="sangriaValor" class="form-label">Valor</label>
-                    <input type="number" step="0.01" id="sangriaValor" class="form-input" required>
-                </div>
-                 <div class="form-group">
-                    <label for="sangriaDescricao" class="form-label">Descrição (Opcional)</label>
-                    <input type="text" id="sangriaDescricao" class="form-input">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" onclick="closeModal('sangriaModal')" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+                    <!-- Dynamic Fields for Adiantamento -->
+                    <div class="form-group" x-show="transactionModal.categoria === 'Adiantamento'">
+                        <label class="form-label">Funcionario *</label>
+                        <select class="form-select" x-model="transactionModal.lavadorId" :required="transactionModal.categoria === 'Adiantamento'">
+                            <option value="">Selecione...</option>
+                            <template x-for="lavador in lavadores" :key="lavador.id">
+                                <option :value="lavador.id" x-text="lavador.nome"></option>
+                            </template>
+                        </select>
+                    </div>
 
-    <!-- Pendencias Modal -->
-    <div id="pendenciasModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Ordens com Pagamento Pendente</h2>
-                <button onclick="closeModal('pendenciasModal')" class="modal-close">&times;</button>
-            </div>
-            <div id="pendenciasContent" class="table-wrapper">
-                <p>Carregando pendências...</p>
+                    <!-- Dynamic Fields for Despesa -->
+                    <div class="form-group" x-show="transactionModal.categoria === 'Despesa'">
+                        <label class="form-label">Fornecedor (Opcional)</label>
+                        <input
+                            type="text"
+                            class="form-input"
+                            placeholder="Digite o nome do fornecedor"
+                            x-model="transactionModal.fornecedorNome"
+                            list="fornecedores-list"
+                        >
+                        <datalist id="fornecedores-list">
+                            <template x-for="fornecedor in fornecedores" :key="fornecedor.id">
+                                <option :value="fornecedor.nome"></option>
+                            </template>
+                        </datalist>
+                    </div>
+
+                    <div class="form-group" x-show="transactionModal.categoria !== 'Adiantamento'">
+                        <label class="form-label">Descricao *</label>
+                        <input
+                            type="text"
+                            class="form-input"
+                            placeholder="Ex: Compra de material de limpeza"
+                            x-model="transactionModal.descricao"
+                            :required="transactionModal.categoria !== 'Adiantamento'"
+                        >
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" @click="closeTransactionModal()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" :disabled="transactionModal.isSaving">
+                            <template x-if="transactionModal.isSaving">
+                                <i class="fas fa-spinner spinner"></i>
+                            </template>
+                            <span x-text="transactionModal.isSaving ? 'Salvando...' : 'Salvar'"></span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
+
+        <!-- Fechamento Modal -->
+        <div
+            class="modal-overlay"
+            x-show="fechamentoModal.isOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click.self="closeFechamentoModal()"
+            @keydown.escape.window="closeFechamentoModal()"
+        >
+            <div class="modal-content wide" @click.stop>
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-door-closed"></i>
+                        Fechar Caixa do Dia
+                    </h2>
+                    <button class="modal-close" @click="closeFechamentoModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Loading -->
+                <template x-if="fechamentoModal.isLoading">
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-spinner spinner" style="font-size: 32px; color: var(--finance-cyan);"></i>
+                        <p style="margin-top: 16px; color: var(--finance-text-secondary);">Carregando resumo...</p>
+                    </div>
+                </template>
+
+                <!-- Summary -->
+                <div x-show="!fechamentoModal.isLoading">
+                    <div class="fechamento-grid">
+                        <div class="fechamento-item">
+                            <div class="label">Dinheiro</div>
+                            <div class="value positive" x-text="formatCurrency(fechamentoModal.resumo.totalDinheiro)"></div>
+                        </div>
+                        <div class="fechamento-item">
+                            <div class="label">Cartao</div>
+                            <div class="value positive" x-text="formatCurrency(fechamentoModal.resumo.totalCartao)"></div>
+                        </div>
+                        <div class="fechamento-item">
+                            <div class="label">PIX</div>
+                            <div class="value positive" x-text="formatCurrency(fechamentoModal.resumo.totalPix)"></div>
+                        </div>
+                        <div class="fechamento-item">
+                            <div class="label">Saidas / Sangrias</div>
+                            <div class="value negative" x-text="'- ' + formatCurrency(fechamentoModal.resumo.totalSaidas)"></div>
+                        </div>
+                    </div>
+
+                    <div class="fechamento-total">
+                        <div class="label">Saldo Final Esperado (Dinheiro)</div>
+                        <div class="value" x-text="formatCurrency(fechamentoModal.resumo.saldoDinheiro)"></div>
+                    </div>
+
+                    <div style="margin-top: 16px; padding: 16px; background: var(--finance-orange-light); border-radius: var(--radius-md); text-align: center;">
+                        <i class="fas fa-exclamation-triangle" style="color: var(--finance-orange);"></i>
+                        <span style="color: var(--finance-text); margin-left: 8px;">Esta acao nao pode ser desfeita.</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions" x-show="!fechamentoModal.isLoading">
+                    <button type="button" class="btn btn-secondary" @click="closeFechamentoModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-danger" @click="confirmarFechamento()" :disabled="fechamentoModal.isClosing">
+                        <template x-if="fechamentoModal.isClosing">
+                            <i class="fas fa-spinner spinner"></i>
+                        </template>
+                        <template x-if="!fechamentoModal.isClosing">
+                            <i class="fas fa-lock"></i>
+                        </template>
+                        <span x-text="fechamentoModal.isClosing ? 'Fechando...' : 'Confirmar Fechamento'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="api.js"></script>
     <script src="utils.js"></script>
     <script src="theme.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuthentication();
-            enforcePermission('ver_financeiro');
-            updateMenuVisibility();
-            handleImpersonationBanner();
-            initializeUserMenu();
-            handleImpersonationBanner(); // Adiciona esta linha
-            
+        /**
+         * ============================================================
+         * Alpine.js Component: Finance Dashboard
+         * ============================================================
+         *
+         * A reactive financial module with tabs for transactions,
+         * register control, and pending payments management.
+         *
+         * SANGRIA LOGIC - IMMEDIATE STATE UPDATE:
+         * ---------------------------------------
+         * When a Sangria (cash withdrawal) is registered, we update
+         * the local state immediately before the API call completes.
+         * This provides instant feedback to the user.
+         *
+         * Steps:
+         * 1. User enters sangria amount and submits
+         * 2. We optimistically update balance.sangrias and balance.netBalance
+         * 3. We add a temporary transaction to the transactions array
+         * 4. API call is made in background
+         * 5. On success: reload full data to sync with server
+         * 6. On failure: revert the optimistic update and show error
+         *
+         * This pattern is common in fintech apps where perceived
+         * performance is critical for user trust.
+         *
+         * ============================================================
+         */
+        function financeDashboard() {
+            return {
+                // ==========================================
+                // STATE
+                // ==========================================
+                isLoading: true,
+                isLoadingTransactions: true,
+                isLoadingPendencias: false,
 
-            applyDateFilterPreset('today');
+                // Tabs
+                activeTab: 'movimentacoes',
 
-            document.getElementById('dataInicioFilter').addEventListener('change', loadHistorico);
-            document.getElementById('dataFimFilter').addEventListener('change', loadHistorico);
-            document.getElementById('tipoFilter').addEventListener('change', loadHistorico);
-            document.getElementById('saidaForm').addEventListener('submit', saveSaida);
-            document.getElementById('saidaForm').addEventListener('reset', () => document.getElementById('saidaId').value = '');
-            document.getElementById('saidaTipo').addEventListener('change', updateSaidaForm);
-            document.getElementById('sangriaForm').addEventListener('submit', saveSangria);
-        });
+                // Balance Summary
+                balance: {
+                    totalReceived: 0,
+                    totalExpenses: 0,
+                    netBalance: 0,
+                    pending: 0,
+                    cash: 0,
+                    card: 0,
+                    pix: 0,
+                    expenses: 0,
+                    sangrias: 0
+                },
 
-        function checkAuthentication() {
-            if (!window.api.isAuthenticated()) {
-                window.location.href = 'login.html';
-            }
-        }
+                // Day Summary (for Caixa tab)
+                daySummary: {
+                    dinheiro: 0,
+                    cartao: 0,
+                    pix: 0
+                },
 
-        function logout() {
-            showCustomConfirm({
-                title: 'Confirmar Saída',
-                message: 'Tem certeza que deseja sair do sistema?',
-                onConfirm: () => window.api.logout()
-            });
-        }
+                // Transactions
+                transactions: [],
+                pendencias: [],
+                pendenciasCount: 0,
 
-        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+                // Filters
+                filters: {
+                    dataInicio: '',
+                    dataFim: '',
+                    tipo: ''
+                },
+                datePreset: 'today',
 
-        function applyDateFilterPreset(preset) {
-            const today = new Date();
-            let startDate = new Date();
-            let endDate = new Date();
+                // Register Status
+                isRegisterOpen: true,
 
-            if (preset === 'today') {
-                startDate = new Date();
-                endDate = new Date();
-            } else if (preset === 'week') {
-                // Lógica para a semana corrente (Segunda a Domingo)
-                const dayOfWeek = today.getDay(); // 0=Domingo, 1=Segunda, ..., 6=Sábado
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Se for domingo, volta 6 dias, senão calcula a diferença para segunda
-                startDate.setDate(today.getDate() + diffToMonday);
-                endDate.setDate(startDate.getDate() + 6); // Domingo é 6 dias depois de segunda
-            } else if (preset === 'month') {
-                // Lógica nativa para obter o início do mês
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            }
-            
-            // Função auxiliar para formatar a data localmente para YYYY-MM-DD
-            const toYYYYMMDD = (date) => {
-                const y = date.getFullYear();
-                const m = String(date.getMonth() + 1).padStart(2, '0');
-                const d = String(date.getDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            };
+                // Lookups
+                lavadores: [],
+                fornecedores: [],
 
-            document.getElementById('dataInicioFilter').value = toYYYYMMDD(startDate);
-            document.getElementById('dataFimFilter').value = toYYYYMMDD(endDate);
-            loadHistorico();
-        }
+                // Transaction Modal
+                transactionModal: {
+                    isOpen: false,
+                    isSaving: false,
+                    type: 'saida', // 'saida' | 'sangria' | 'suprimento'
+                    editId: null,
+                    valor: '',
+                    formaPagamento: 'DINHEIRO',
+                    categoria: 'Despesa',
+                    descricao: '',
+                    lavadorId: '',
+                    fornecedorNome: ''
+                },
 
-        async function loadHistorico() {
-            const filters = {
-                dataInicio: document.getElementById('dataInicioFilter').value,
-                dataFim: document.getElementById('dataFimFilter').value,
-                tipo: document.getElementById('tipoFilter').value,
-            };
+                // Fechamento Modal
+                fechamentoModal: {
+                    isOpen: false,
+                    isLoading: false,
+                    isClosing: false,
+                    resumo: {
+                        totalDinheiro: 0,
+                        totalCartao: 0,
+                        totalPix: 0,
+                        totalSaidas: 0,
+                        saldoDinheiro: 0
+                    }
+                },
 
-            try {
-                const response = await window.api.getHistoricoCaixa(filters);
-                const historico = response.registros || [];
-                const totais = response.totais || { totalEntradas: 0, totalSaidas: 0, detalheSaidas: { saidas: 0, sangrias: 0 } };
-
-                document.getElementById('total-recebido').textContent = formatCurrency(totais.totalEntradas);
-                document.getElementById('total-saida').textContent = formatCurrency(totais.totalSaidas);
-
-                // Atualiza o tooltip do card de saídas
-                const saidaTooltip = document.getElementById('saida-tooltip');
-                if (saidaTooltip) {
-                    saidaTooltip.textContent = `Despesas: ${formatCurrency(totais.detalheSaidas.saidas)} | Sangrias: ${formatCurrency(totais.detalheSaidas.sangrias)}`;
-                }
-
-                const tableBody = document.getElementById('historicoCaixaBody');
-                tableBody.innerHTML = '';
-                historico.forEach(reg => {
-                    const row = tableBody.insertRow();
-                    let valorClasse = 'valor-saida';
-                    let valorPrefixo = '-';
-
-                    if (reg.tipo === 'PAGAMENTO') {
-                        valorClasse = 'valor-entrada';
-                        valorPrefixo = '+';
-                    } else if (reg.tipo === 'PENDENTE') {
-                        valorClasse = 'text-blue-600 font-semibold'; // Classe de cor azul
-                        valorPrefixo = ''; // Sem prefixo
+                // ==========================================
+                // LIFECYCLE
+                // ==========================================
+                async init() {
+                    // Check authentication
+                    if (!window.api.isAuthenticated()) {
+                        window.location.href = 'login.html';
+                        return;
                     }
 
-                    row.innerHTML = `
-                        <td>${new Date(reg.data).toLocaleString('pt-BR')}</td>
-                        <td><span class="tipo-bg tipo-bg-${reg.formaPagamento === 'DEBITO_FUNCIONARIO' ? 'SAIDA' : reg.tipo}">${reg.formaPagamento === 'DEBITO_FUNCIONARIO' ? 'DÉBITO OS' : reg.tipo}</span></td>
-                        <td>${reg.descricao}</td>
-                        <td>${reg.formaPagamento || 'N/A'}</td>
-                        <td style="text-align: right;" class="${valorClasse}">${valorPrefixo} ${formatCurrency(reg.valor)}</td>
-                        <td class="actions-cell">
-                            ${reg.ordemId ? `<a href="ordens.html?id=${reg.ordemId}" title="Ver Ordem" class="btn-sm btn-info"><i class="fas fa-eye"></i></a>` : ''}
-                            ${reg.tipo === 'SAIDA' ? `<button onclick='openSaidaModalForEdit(${JSON.stringify(reg)})' class="btn-sm btn-secondary" title="Editar"><i class="fas fa-pencil-alt"></i></button>` : ''}
-                            ${reg.tipo === 'SAIDA' ? `<button onclick="deleteCaixaRegistro('${reg.id}')" class="btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
-                        </td>
-                    `;
-                });
-            } catch (error) {
-                console.error('Erro ao carregar histórico:', error);
-            }
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
+                    // Initialize UI
+                    this.initializeUI();
 
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
+                    // Apply default date filter
+                    this.applyDatePreset('today');
 
-        async function openFechamentoModal() {
-            openModal('fechamentoModal');
-            const resumoDiv = document.getElementById('resumoFechamento');
-            resumoDiv.innerHTML = '<p>Carregando resumo...</p>';
-            try {
-                const resumo = await window.api.getResumoDia();
-                resumoDiv.innerHTML = `
-                    <div class="fechamento-grid">
-                        <div class="fechamento-total"><p>Recebido (Dinheiro)</p><h4 class="valor-entrada">${formatCurrency(resumo.totalDinheiro)}</h4></div>
-                        <div class="fechamento-total"><p>Recebido (Cartão)</p><h4 class="valor-entrada">${formatCurrency(resumo.totalCartao)}</h4></div>
-                        <div class="fechamento-total"><p>Recebido (PIX)</p><h4 class="valor-entrada">${formatCurrency(resumo.totalPix)}</h4></div>
-                        <div class="fechamento-total"><p>Total de Saídas</p><h4 class="valor-saida">${formatCurrency(resumo.totalSaidas)}</h4></div>
-                    </div>
-                    <hr style="margin: 16px 0;">
-                    <div class="fechamento-total" style="background-color: var(--background-light);"><p>Saldo Final Esperado (Dinheiro)</p><h3 class="valor-entrada">${formatCurrency(resumo.saldoDinheiro)}</h3></div>
-                `;
-            } catch (error) {
-                resumoDiv.innerHTML = '<p>Erro ao carregar resumo.</p>';
-            }
-        }
+                    // Load lookup data
+                    await this.loadLookups();
 
-        async function confirmarFechamento() {
-            if(confirm("Confirma o fechamento do caixa? Esta ação não pode ser desfeita.")) {
-                try {
-                    await window.api.createFechamento({});
-                    alert('Caixa fechado com sucesso!');
-                    closeModal('fechamentoModal');
-                    loadHistorico();
-                } catch(error) {
-                    alert('Erro ao fechar o caixa.');
-                }
-            }
-        }
+                    // Load pendencias count
+                    this.loadPendenciasCount();
+                },
 
-        async function openSaidaModal() {
-            document.getElementById('saidaForm').reset();
-            await updateSaidaForm(); // Garante que o formulário esteja no estado inicial
-            openModal('saidaModal');
-        }
+                initializeUI() {
+                    // Permissions
+                    if (typeof enforcePermission === 'function') {
+                        enforcePermission('ver_financeiro');
+                    }
+                    if (typeof updateMenuVisibility === 'function') {
+                        updateMenuVisibility();
+                    }
+                    if (typeof handleImpersonationBanner === 'function') {
+                        handleImpersonationBanner();
+                    }
 
-        async function openSaidaModalForEdit(registro) {
-            document.getElementById('saidaForm').reset();
-            document.getElementById('saidaId').value = registro.id;
+                    // User menu
+                    const trigger = document.getElementById('user-menu-trigger');
+                    const dropdown = document.getElementById('user-menu-dropdown');
+                    const avatar = document.getElementById('user-info-avatar');
+                    const info = document.getElementById('user-info-dropdown');
 
-            // Preenche os campos básicos
-            document.getElementById('saidaValor').value = registro.valor;
-            document.getElementById('saidaFormaPagamento').value = registro.formaPagamento;
-            document.getElementById('saidaTipo').value = registro.lavadorId ? 'Adiantamento' : 'Despesa';
-            
-            // Atualiza os campos dinâmicos e preenche os valores específicos
-            await updateSaidaForm();
-            document.getElementById('saidaDescricao').value = registro.descricao.replace(/\[(Despesa|Adiantamento)\]\s*/, '');
-            if (registro.fornecedor) document.getElementById('fornecedorNome').value = registro.fornecedor.nome;
-            if (registro.lavador) document.getElementById('lavadorId').value = registro.lavador.id;
+                    const userName = localStorage.getItem('usuarioNome') || 'Usuario';
+                    const empresaNome = localStorage.getItem('empresaNome') || 'N/A';
 
-            openModal('saidaModal');
-        }
+                    if (avatar) avatar.textContent = userName.charAt(0).toUpperCase();
+                    if (info) {
+                        info.innerHTML = `
+                            <div style="padding: 8px 12px;">
+                                <p style="font-weight: 600;">${userName}</p>
+                                <p style="font-size: 12px; color: var(--finance-text-secondary);">${empresaNome}</p>
+                            </div>
+                        `;
+                    }
 
-        function openSangriaModal() { openModal('sangriaModal'); }
+                    if (trigger && dropdown) {
+                        trigger.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            dropdown.classList.toggle('active');
+                        });
+                        document.addEventListener('click', () => dropdown.classList.remove('active'));
+                    }
+                },
 
-        async function updateSaidaForm() {
-            const tipo = document.getElementById('saidaTipo').value;
-            const container = document.getElementById('saidaCamposDinamicos');
-            const descricaoContainer = document.getElementById('saidaDescricaoContainer');
-            container.innerHTML = ''; // Limpa campos antigos
-
-            if (tipo === 'Despesa') {
-                const fornecedores = await window.api.getFornecedores();
-                let options = fornecedores.map(f => `<option value="${f.nome}"></option>`).join('');
-                container.innerHTML = `
-                    <div class="form-group">
-                        <label for="fornecedorNome" class="form-label">Fornecedor (Opcional)</label>
-                        <input type="text" id="fornecedorNome" class="form-input" list="fornecedores-list" placeholder="Digite ou selecione um fornecedor">
-                        <datalist id="fornecedores-list">${options}</datalist>
-                    </div>
-                `;
-                descricaoContainer.style.display = 'block';
-            } else if (tipo === 'Adiantamento') {
-                const lavadores = await window.api.getLavadoresSimple();
-                let options = lavadores.lavadores.map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
-                container.innerHTML = `
-                    <div class="form-group">
-                        <label for="lavadorId" class="form-label">Funcionário</label>
-                        <select id="lavadorId" class="form-select" required>
-                            <option value="">Selecione...</option>
-                            ${options}
-                        </select>
-                    </div>
-                `;
-                descricaoContainer.style.display = 'none'; // Descrição é automática
-            } else {
-                descricaoContainer.style.display = 'block';
-            }
-        }
-
-        async function saveSaida(event) {
-            event.preventDefault();
-            const id = document.getElementById('saidaId').value;
-            const data = {
-                valor: parseFloat(document.getElementById('saidaValor').value),
-                formaPagamento: document.getElementById('saidaFormaPagamento').value,
-                tipo: document.getElementById('saidaTipo').value,
-                descricao: document.getElementById('saidaDescricao').value,
-                fornecedorNome: document.getElementById('fornecedorNome')?.value,
-                lavadorId: document.getElementById('lavadorId')?.value,
-            };
-
-            if (data.tipo === 'Adiantamento' && !data.lavadorId) {
-                showToast('Por favor, selecione um funcionário para o adiantamento.', 'error');
-                return;
-            }
-
-            try {
-                if (id) {
-                    await window.api.updateCaixaRegistro(id, data);
-                    showToast('Saída atualizada com sucesso!', 'success');
-                } else {
-                    await window.api.createSaida(data);
-                    showToast('Saída registrada com sucesso!', 'success');
-                }
-                closeModal('saidaModal');
-                loadHistorico();
-            } catch (error) { showToast('Erro ao salvar saída.', 'error'); }
-        }
-        
-        async function saveSangria(event) {
-            event.preventDefault();
-            const data = {
-                valor: parseFloat(document.getElementById('sangriaValor').value),
-                descricao: document.getElementById('sangriaDescricao').value,
-            };
-            try {
-                await window.api.createSangria(data);
-                closeModal('sangriaModal');
-                loadHistorico();
-            } catch (error) { alert('Erro ao registrar sangria.'); }
-        }
-
-        async function openPendenciasModal() {
-            openModal('pendenciasModal');
-            const content = document.getElementById('pendenciasContent');
-            content.innerHTML = '<p>Carregando...</p>';
-            try {
-                const response = await window.api.getOrdens(1, 50, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
-                const pendencias = response.ordens || [];
-                if (pendencias.length === 0) {
-                    content.innerHTML = '<p>Nenhuma pendência encontrada.</p>';
-                    return;
-                }
-                let table = '<table><thead><tr><th>Cliente</th><th>Data</th><th>Valor</th><th>Ação</th></tr></thead><tbody>';
-                pendencias.forEach(p => {
-                    table += `<tr>
-                        <td>${p.cliente.nome}</td>
-                        <td>${new Date(p.dataFinalizado).toLocaleDateString('pt-BR')}</td>
-                        <td>${formatCurrency(p.valorTotal)}</td>
-                        <td><a href="ordens.html?id=${p.id}" class="btn-sm btn-primary">Ver Ordem</a></td>
-                    </tr>`;
-                });
-                table += '</tbody></table>';
-                content.innerHTML = table;
-            } catch (error) {
-                content.innerHTML = '<p>Erro ao carregar pendências.</p>';
-            }
-        }
-        
-        function toggleDropdown(id) {
-            document.getElementById(id).classList.toggle('active');
-        }
-
-        async function deleteCaixaRegistro(id) {
-            showCustomConfirm({
-                title: 'Confirmar Exclusão',
-                message: 'Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.',
-                onConfirm: async () => {
+                async loadLookups() {
                     try {
-                        await window.api.deleteCaixaRegistro(id);
-                        showToast('Lançamento excluído com sucesso.');
-                        loadHistorico();
-                    } catch (error) { showToast('Erro ao excluir lançamento.', 'error'); }
+                        const [lavadoresData, fornecedoresData] = await Promise.all([
+                            window.api.getLavadoresSimple(),
+                            window.api.getFornecedores()
+                        ]);
+                        this.lavadores = lavadoresData.lavadores || [];
+                        this.fornecedores = fornecedoresData || [];
+                    } catch (error) {
+                        console.error('Error loading lookups:', error);
+                    }
+                },
+
+                // ==========================================
+                // DATE PRESETS
+                // ==========================================
+                applyDatePreset(preset) {
+                    this.datePreset = preset;
+                    const today = new Date();
+                    let startDate = new Date();
+                    let endDate = new Date();
+
+                    if (preset === 'today') {
+                        // Today
+                    } else if (preset === 'week') {
+                        const dayOfWeek = today.getDay();
+                        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                        startDate.setDate(today.getDate() + diffToMonday);
+                        endDate.setDate(startDate.getDate() + 6);
+                    } else if (preset === 'month') {
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    }
+
+                    this.filters.dataInicio = this.toDateString(startDate);
+                    this.filters.dataFim = this.toDateString(endDate);
+
+                    this.loadTransactions();
+                },
+
+                toDateString(date) {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                },
+
+                // ==========================================
+                // DATA LOADING
+                // ==========================================
+                async loadTransactions() {
+                    this.isLoadingTransactions = true;
+                    this.isLoading = true;
+
+                    try {
+                        const response = await window.api.getHistoricoCaixa({
+                            dataInicio: this.filters.dataInicio,
+                            dataFim: this.filters.dataFim,
+                            tipo: this.filters.tipo
+                        });
+
+                        this.transactions = response.registros || [];
+                        const totais = response.totais || {};
+
+                        // Update balance
+                        this.balance.totalReceived = totais.totalEntradas || 0;
+                        this.balance.totalExpenses = totais.totalSaidas || 0;
+                        this.balance.netBalance = this.balance.totalReceived - this.balance.totalExpenses;
+                        this.balance.expenses = totais.detalheSaidas?.saidas || 0;
+                        this.balance.sangrias = totais.detalheSaidas?.sangrias || 0;
+
+                        // Calculate by payment method from transactions
+                        this.balance.cash = 0;
+                        this.balance.card = 0;
+                        this.balance.pix = 0;
+                        this.balance.pending = 0;
+
+                        this.transactions.forEach(tx => {
+                            if (tx.tipo === 'PAGAMENTO') {
+                                if (tx.formaPagamento === 'DINHEIRO') this.balance.cash += tx.valor;
+                                else if (tx.formaPagamento === 'CARTAO') this.balance.card += tx.valor;
+                                else if (tx.formaPagamento === 'PIX') this.balance.pix += tx.valor;
+                            } else if (tx.tipo === 'PENDENTE') {
+                                this.balance.pending += tx.valor;
+                            }
+                        });
+
+                        // Also load day summary for Caixa tab
+                        await this.loadDaySummary();
+
+                    } catch (error) {
+                        console.error('Error loading transactions:', error);
+                        if (typeof showToast === 'function') {
+                            showToast('Erro ao carregar movimentacoes', 'error');
+                        }
+                    } finally {
+                        this.isLoading = false;
+                        this.isLoadingTransactions = false;
+                    }
+                },
+
+                async loadDaySummary() {
+                    try {
+                        const resumo = await window.api.getResumoDia();
+                        this.daySummary.dinheiro = resumo.totalDinheiro || 0;
+                        this.daySummary.cartao = resumo.totalCartao || 0;
+                        this.daySummary.pix = resumo.totalPix || 0;
+                    } catch (error) {
+                        console.error('Error loading day summary:', error);
+                    }
+                },
+
+                async loadPendencias() {
+                    this.isLoadingPendencias = true;
+                    try {
+                        const response = await window.api.getOrdens(1, 50, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
+                        this.pendencias = response.ordens || [];
+                        this.pendenciasCount = this.pendencias.length;
+                    } catch (error) {
+                        console.error('Error loading pendencias:', error);
+                    } finally {
+                        this.isLoadingPendencias = false;
+                    }
+                },
+
+                async loadPendenciasCount() {
+                    try {
+                        const response = await window.api.getOrdens(1, 1, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
+                        this.pendenciasCount = response.pagination?.total || 0;
+                    } catch (error) {
+                        console.error('Error loading pendencias count:', error);
+                    }
+                },
+
+                // ==========================================
+                // TRANSACTION MODAL
+                // ==========================================
+                openTransactionModal(type) {
+                    this.transactionModal = {
+                        isOpen: true,
+                        isSaving: false,
+                        type: type,
+                        editId: null,
+                        valor: '',
+                        formaPagamento: 'DINHEIRO',
+                        categoria: type === 'saida' ? 'Despesa' : 'Outro',
+                        descricao: type === 'sangria' ? 'Sangria de caixa' : (type === 'suprimento' ? 'Suprimento de caixa' : ''),
+                        lavadorId: '',
+                        fornecedorNome: ''
+                    };
+
+                    this.$nextTick(() => {
+                        this.$refs.transactionValor?.focus();
+                    });
+                },
+
+                openEditModal(tx) {
+                    this.transactionModal = {
+                        isOpen: true,
+                        isSaving: false,
+                        type: 'saida',
+                        editId: tx.id,
+                        valor: tx.valor,
+                        formaPagamento: tx.formaPagamento || 'DINHEIRO',
+                        categoria: tx.lavadorId ? 'Adiantamento' : 'Despesa',
+                        descricao: tx.descricao.replace(/\[(Despesa|Adiantamento)\]\s*/, ''),
+                        lavadorId: tx.lavadorId || '',
+                        fornecedorNome: tx.fornecedor?.nome || ''
+                    };
+                },
+
+                closeTransactionModal() {
+                    this.transactionModal.isOpen = false;
+                },
+
+                getTransactionModalIcon() {
+                    const icons = {
+                        'saida': 'fas fa-arrow-up',
+                        'sangria': 'fas fa-arrow-down',
+                        'suprimento': 'fas fa-arrow-up'
+                    };
+                    return icons[this.transactionModal.type] || 'fas fa-exchange-alt';
+                },
+
+                getTransactionModalTitle() {
+                    const titles = {
+                        'saida': 'Registrar Saida',
+                        'sangria': 'Registrar Sangria',
+                        'suprimento': 'Registrar Suprimento'
+                    };
+                    return this.transactionModal.editId ? 'Editar Saida' : (titles[this.transactionModal.type] || 'Nova Transacao');
+                },
+
+                onCategoriaChange() {
+                    if (this.transactionModal.categoria === 'Adiantamento') {
+                        this.transactionModal.descricao = '';
+                    }
+                },
+
+                /**
+                 * SAVE TRANSACTION WITH OPTIMISTIC UPDATE
+                 *
+                 * For Sangria, we immediately update the local state
+                 * to provide instant feedback, then sync with server.
+                 */
+                async saveTransaction() {
+                    const modal = this.transactionModal;
+
+                    // Validation
+                    if (modal.categoria === 'Adiantamento' && !modal.lavadorId) {
+                        showToast('Selecione um funcionario para o adiantamento.', 'error');
+                        return;
+                    }
+
+                    modal.isSaving = true;
+                    const valor = parseFloat(modal.valor);
+
+                    // Store original state for rollback
+                    const originalBalance = { ...this.balance };
+                    const originalTransactions = [...this.transactions];
+
+                    try {
+                        if (modal.type === 'sangria') {
+                            // ========================================
+                            // OPTIMISTIC UPDATE FOR SANGRIA
+                            // ========================================
+                            // Update balance immediately
+                            this.balance.sangrias += valor;
+                            this.balance.totalExpenses += valor;
+                            this.balance.netBalance = this.balance.totalReceived - this.balance.totalExpenses;
+
+                            // Add temporary transaction to list
+                            const tempTx = {
+                                id: 'temp-' + Date.now(),
+                                data: new Date().toISOString(),
+                                tipo: 'SANGRIA',
+                                descricao: modal.descricao || 'Sangria de caixa',
+                                valor: valor,
+                                formaPagamento: 'DINHEIRO'
+                            };
+                            this.transactions.unshift(tempTx);
+
+                            // Now make API call
+                            await window.api.createSangria({
+                                valor: valor,
+                                descricao: modal.descricao || 'Sangria de caixa'
+                            });
+
+                            showToast('Sangria registrada com sucesso!', 'success');
+
+                        } else if (modal.type === 'suprimento') {
+                            // Suprimento uses the saida endpoint with special type
+                            await window.api.createSaida({
+                                valor: valor,
+                                formaPagamento: 'DINHEIRO',
+                                tipo: 'Suprimento',
+                                descricao: modal.descricao || 'Suprimento de caixa'
+                            });
+                            showToast('Suprimento registrado com sucesso!', 'success');
+
+                        } else {
+                            // Regular Saida
+                            const data = {
+                                valor: valor,
+                                formaPagamento: modal.formaPagamento,
+                                tipo: modal.categoria,
+                                descricao: modal.descricao,
+                                fornecedorNome: modal.fornecedorNome,
+                                lavadorId: modal.lavadorId
+                            };
+
+                            if (modal.editId) {
+                                await window.api.updateCaixaRegistro(modal.editId, data);
+                                showToast('Saida atualizada com sucesso!', 'success');
+                            } else {
+                                await window.api.createSaida(data);
+                                showToast('Saida registrada com sucesso!', 'success');
+                            }
+                        }
+
+                        this.closeTransactionModal();
+                        // Reload to sync with server
+                        await this.loadTransactions();
+
+                    } catch (error) {
+                        console.error('Error saving transaction:', error);
+                        showToast('Erro ao salvar transacao.', 'error');
+
+                        // Rollback optimistic update on error
+                        if (modal.type === 'sangria') {
+                            this.balance = originalBalance;
+                            this.transactions = originalTransactions;
+                        }
+                    } finally {
+                        modal.isSaving = false;
+                    }
+                },
+
+                async deleteTransaction(id) {
+                    if (typeof showCustomConfirm === 'function') {
+                        showCustomConfirm({
+                            title: 'Confirmar Exclusao',
+                            message: 'Tem certeza que deseja excluir este lancamento?',
+                            onConfirm: async () => {
+                                try {
+                                    await window.api.deleteCaixaRegistro(id);
+                                    showToast('Lancamento excluido com sucesso.');
+                                    this.loadTransactions();
+                                } catch (error) {
+                                    showToast('Erro ao excluir lancamento.', 'error');
+                                }
+                            }
+                        });
+                    } else if (confirm('Tem certeza que deseja excluir este lancamento?')) {
+                        try {
+                            await window.api.deleteCaixaRegistro(id);
+                            showToast('Lancamento excluido com sucesso.');
+                            this.loadTransactions();
+                        } catch (error) {
+                            showToast('Erro ao excluir lancamento.', 'error');
+                        }
+                    }
+                },
+
+                // ==========================================
+                // FECHAMENTO MODAL
+                // ==========================================
+                async openFechamentoModal() {
+                    this.fechamentoModal.isOpen = true;
+                    this.fechamentoModal.isLoading = true;
+
+                    try {
+                        const resumo = await window.api.getResumoDia();
+                        this.fechamentoModal.resumo = {
+                            totalDinheiro: resumo.totalDinheiro || 0,
+                            totalCartao: resumo.totalCartao || 0,
+                            totalPix: resumo.totalPix || 0,
+                            totalSaidas: resumo.totalSaidas || 0,
+                            saldoDinheiro: resumo.saldoDinheiro || 0
+                        };
+                    } catch (error) {
+                        console.error('Error loading fechamento resumo:', error);
+                        showToast('Erro ao carregar resumo.', 'error');
+                    } finally {
+                        this.fechamentoModal.isLoading = false;
+                    }
+                },
+
+                closeFechamentoModal() {
+                    this.fechamentoModal.isOpen = false;
+                },
+
+                async confirmarFechamento() {
+                    this.fechamentoModal.isClosing = true;
+
+                    try {
+                        await window.api.createFechamento({});
+                        showToast('Caixa fechado com sucesso!', 'success');
+                        this.isRegisterOpen = false;
+                        this.closeFechamentoModal();
+                        this.loadTransactions();
+                    } catch (error) {
+                        console.error('Error closing register:', error);
+                        showToast('Erro ao fechar o caixa.', 'error');
+                    } finally {
+                        this.fechamentoModal.isClosing = false;
+                    }
+                },
+
+                // ==========================================
+                // FORMATTERS
+                // ==========================================
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    }).format(value || 0);
+                },
+
+                formatDateTime(dateString) {
+                    return new Date(dateString).toLocaleString('pt-BR');
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleDateString('pt-BR');
+                },
+
+                getTypeBadgeClass(tipo) {
+                    const classes = {
+                        'PAGAMENTO': 'entrada',
+                        'SAIDA': 'saida',
+                        'SANGRIA': 'sangria',
+                        'FECHAMENTO': 'fechamento',
+                        'PENDENTE': 'pendente'
+                    };
+                    return classes[tipo] || '';
+                },
+
+                getTypeLabel(tipo, formaPagamento) {
+                    if (formaPagamento === 'DEBITO_FUNCIONARIO') return 'DEBITO OS';
+                    return tipo;
+                },
+
+                getValueClass(tipo) {
+                    if (tipo === 'PAGAMENTO') return 'value-positive';
+                    if (tipo === 'PENDENTE') return 'value-pending';
+                    return 'value-negative';
                 }
-            });
+            };
+        }
+
+        // Global logout function
+        function logout() {
+            if (typeof showCustomConfirm === 'function') {
+                showCustomConfirm({
+                    title: 'Confirmar Saida',
+                    message: 'Tem certeza que deseja sair do sistema?',
+                    onConfirm: () => window.api.logout()
+                });
+            } else {
+                window.api.logout();
+            }
         }
     </script>
 </body>
 </html>
+
+

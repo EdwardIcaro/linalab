@@ -6,10 +6,11 @@
     <title>LinaX - Selecionar Empresa</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="api.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js via CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <style>
         body {
             display: flex;
@@ -19,6 +20,7 @@
             background-color: var(--background-color);
             color: var(--text-primary);
         }
+
         .selection-container {
             background-color: var(--white);
             padding: 40px;
@@ -27,25 +29,78 @@
             width: 100%;
             max-width: 600px;
             text-align: center;
+            position: relative;
         }
-        .selection-container h1 {
-            font-size: 24px;
-            font-weight: 600;
+
+        .selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 8px;
         }
-        .selection-container p {
+
+        .selection-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .selection-container > p {
             color: var(--text-secondary);
             margin-bottom: 32px;
+            text-align: center;
         }
+
+        /* User Badge */
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--background-color);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .user-badge i {
+            color: var(--primary-purple);
+        }
+
+        /* Logout Button */
+        .btn-logout {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-logout:hover {
+            background: var(--error-bg, #fee2e2);
+            color: var(--error-text, #dc2626);
+        }
+
+        /* Company List */
         .company-list {
             display: flex;
             flex-direction: column;
             gap: 16px;
-            max-height: 300px;
+            max-height: 320px;
             overflow-y: auto;
             padding-right: 10px;
             margin-bottom: 24px;
         }
+
         .company-card {
             display: flex;
             align-items: center;
@@ -56,12 +111,25 @@
             text-align: left;
             cursor: pointer;
             transition: all 0.2s ease;
+            background: var(--white);
         }
-        .company-card:hover {
+
+        .company-card:hover:not(.disabled) {
             border-color: var(--primary-purple);
             background-color: var(--primary-purple-light);
             transform: translateY(-2px);
         }
+
+        .company-card.disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .company-card.selecting {
+            border-color: var(--primary-purple);
+            background-color: var(--primary-purple-light);
+        }
+
         .company-icon {
             font-size: 24px;
             color: var(--primary-purple);
@@ -72,17 +140,80 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
+
+        .company-info {
+            flex: 1;
+        }
+
         .company-info h3 {
             font-size: 16px;
             font-weight: 600;
             color: var(--text-primary);
+            margin: 0 0 4px 0;
         }
+
         .company-info p {
             font-size: 14px;
             color: var(--text-secondary);
             margin: 0;
         }
+
+        .company-arrow {
+            color: var(--text-secondary);
+            transition: transform 0.2s ease;
+        }
+
+        .company-card:hover .company-arrow {
+            transform: translateX(4px);
+            color: var(--primary-purple);
+        }
+
+        /* Skeleton Loader */
+        .skeleton {
+            animation: skeleton-pulse 1.5s ease-in-out infinite;
+            background: linear-gradient(90deg, var(--border-color) 25%, var(--background-color) 50%, var(--border-color) 75%);
+            background-size: 200% 100%;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-pulse {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .skeleton-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+        }
+
+        .skeleton-text {
+            flex: 1;
+        }
+
+        .skeleton-title {
+            height: 20px;
+            width: 60%;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-subtitle {
+            height: 14px;
+            width: 40%;
+        }
+
+        /* Divider */
         .divider {
             display: flex;
             align-items: center;
@@ -91,84 +222,394 @@
             font-size: 12px;
             margin: 24px 0;
         }
+
         .divider::before, .divider::after {
             content: '';
             flex: 1;
             border-bottom: 1px solid var(--border-color);
         }
+
         .divider:not(:empty)::before { margin-right: .5em; }
         .divider:not(:empty)::after { margin-left: .5em; }
+
+        /* Empty State */
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Error State */
+        .error-message {
+            padding: 16px;
+            background: var(--error-bg, #fee2e2);
+            border: 1px solid var(--error-border, #fecaca);
+            border-radius: 12px;
+            color: var(--error-text, #dc2626);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .error-message i {
+            font-size: 20px;
+        }
+
+        .error-message-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .error-message-content strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .btn-retry {
+            padding: 8px 16px;
+            background: var(--error-text, #dc2626);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-retry:hover {
+            opacity: 0.9;
+        }
+
+        /* Spinner */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Transitions */
+        [x-cloak] { display: none !important; }
+
+        .fade-enter { opacity: 0; transform: translateY(-10px); }
+        .fade-enter-active { opacity: 1; transform: translateY(0); transition: all 0.3s ease; }
     </style>
 </head>
 <body>
-    <div class="selection-container">
-        <h1>Selecione sua Empresa</h1>
-        <p>Escolha uma empresa para gerenciar ou crie uma nova.</p>
+    <div
+        class="selection-container"
+        x-data="companySelection()"
+        x-init="init()"
+        x-cloak
+    >
+        <!-- Logout Button -->
+        <button
+            class="btn-logout"
+            @click="logout()"
+            :disabled="isSelecting"
+            title="Sair"
+        >
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Sair</span>
+        </button>
 
-        <div id="company-list" class="company-list">
-            <!-- Empresas serão carregadas aqui -->
+        <!-- Header -->
+        <div class="selection-header">
+            <h1>Selecione sua Empresa</h1>
         </div>
 
-        <div class="divider">OU</div>
+        <!-- User Badge -->
+        <div class="user-badge" style="margin: 0 auto 24px; width: fit-content;" x-show="userName">
+            <i class="fas fa-user-circle"></i>
+            <span x-text="userName"></span>
+        </div>
 
-        <a href="nova-empresa.html" class="btn btn-primary" style="width: 100%;">
-            <i class="fas fa-plus-circle mr-2"></i> Criar Nova Empresa
-        </a>
+        <p>Escolha uma empresa para gerenciar ou crie uma nova.</p>
+
+        <!-- Error Message -->
+        <div
+            class="error-message"
+            x-show="errorMessage"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform -translate-y-2"
+            x-transition:enter-end="opacity-100 transform translate-y-0"
+        >
+            <i class="fas fa-exclamation-circle"></i>
+            <div class="error-message-content">
+                <strong>Erro</strong>
+                <span x-text="errorMessage"></span>
+            </div>
+            <button class="btn-retry" @click="loadCompanies()">
+                <i class="fas fa-redo"></i> Tentar novamente
+            </button>
+        </div>
+
+        <!-- Company List -->
+        <div class="company-list">
+            <!-- Loading Skeletons -->
+            <template x-if="isLoading">
+                <template x-for="i in 3" :key="i">
+                    <div class="skeleton-card">
+                        <div class="skeleton skeleton-icon"></div>
+                        <div class="skeleton-text">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-subtitle"></div>
+                        </div>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Company Cards (x-for loop) -->
+            <template x-if="!isLoading && companies.length > 0">
+                <template x-for="company in companies" :key="company.id">
+                    <div
+                        class="company-card"
+                        :class="{
+                            'selecting': selectingId === company.id,
+                            'disabled': isSelecting && selectingId !== company.id
+                        }"
+                        @click="selectCompany(company)"
+                        role="button"
+                        tabindex="0"
+                        @keydown.enter="selectCompany(company)"
+                    >
+                        <div class="company-icon">
+                            <i
+                                class="fas"
+                                :class="selectingId === company.id ? 'fa-spinner spinner' : 'fa-building'"
+                            ></i>
+                        </div>
+                        <div class="company-info">
+                            <h3 x-text="company.nome"></h3>
+                            <p x-text="selectingId === company.id ? 'Conectando...' : 'Clique para acessar'"></p>
+                        </div>
+                        <div class="company-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Empty State -->
+            <template x-if="!isLoading && !errorMessage && companies.length === 0">
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-store-slash"></i>
+                    </div>
+                    <h3>Nenhuma empresa encontrada</h3>
+                    <p>Crie sua primeira empresa para começar a usar o sistema.</p>
+                </div>
+            </template>
+        </div>
+
+        <!-- Divider & Create Button -->
+        <template x-if="!isLoading">
+            <div>
+                <div class="divider" x-show="companies.length > 0">OU</div>
+
+                <a
+                    href="nova-empresa.html"
+                    class="btn btn-primary"
+                    style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                    :class="{ 'disabled': isSelecting }"
+                    @click.prevent="isSelecting ? null : window.location.href = 'nova-empresa.html'"
+                >
+                    <i class="fas fa-plus-circle"></i>
+                    <span x-text="companies.length === 0 ? 'Criar Minha Primeira Empresa' : 'Criar Nova Empresa'"></span>
+                </a>
+            </div>
+        </template>
     </div>
 
+    <script src="api.js"></script>
+    <script src="utils.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (!window.api.isAuthenticated()) {
-                window.location.href = 'login.html';
-                return;
-            }
-            loadEmpresas();
-        });
+        /**
+         * Alpine.js Component: Company Selection
+         *
+         * Implements the secure authentication flow:
+         * 1. User arrives with base token (from login)
+         * 2. Fetches list of companies they own
+         * 3. On selection, requests a NEW scoped token with empresaId embedded
+         * 4. Replaces the old token and redirects to dashboard
+         *
+         * SECURITY: The empresaId is now embedded in the JWT, not stored separately
+         */
+        function companySelection() {
+            return {
+                // State
+                companies: [],
+                isLoading: true,
+                isSelecting: false,
+                selectingId: null,
+                errorMessage: '',
+                userName: '',
 
-        async function loadEmpresas() {
-            const listElement = document.getElementById('company-list');
-            listElement.innerHTML = '<p>Carregando empresas...</p>';
-            try {
-                const empresas = await window.api.getEmpresasDoUsuario(); // Corrigido para usar a função renomeada
-                listElement.innerHTML = '';
-                if (empresas && empresas.length > 0) {
-                    empresas.forEach(empresa => {
-                        const card = document.createElement('div');
-                        card.className = 'company-card';
-                        card.innerHTML = `
-                            <div class="company-icon"><i class="fas fa-building"></i></div>
-                            <div class="company-info">
-                                <h3>${empresa.nome}</h3>
-                                <p>Clique para acessar</p>
-                            </div>
-                        `;
-                        card.onclick = async () => {
-                            try {
-                                // Gera o novo token com o ID da empresa
-                                const { token, usuario } = await window.api.generateScopedToken(empresa.id);
-                                localStorage.setItem('token', token); // Substitui o token antigo
-                                localStorage.setItem('empresaId', empresa.id);
-                                localStorage.setItem('empresaNome', empresa.nome);
-                                // Salva novamente os dados do usuário para não perder as permissões
-                                localStorage.setItem('usuarioNome', usuario.nome);
-                                localStorage.setItem('userRole', usuario.role);
-                                localStorage.setItem('permissoes', JSON.stringify(usuario.permissoes || []));
-                                window.location.href = 'index.html';
-                            } catch (error) {
-                                console.error("Erro ao definir escopo da empresa:", error);
-                                alert('Não foi possível selecionar a empresa. Tente fazer login novamente.');
-                            }
-                        };
-                        listElement.appendChild(card);
-                    });
-                } else {
-                    listElement.innerHTML = '<p>Nenhuma empresa encontrada. Crie uma nova para começar.</p>';
+                /**
+                 * Initialize component
+                 * - Check authentication
+                 * - Load user name from storage
+                 * - Fetch companies
+                 */
+                async init() {
+                    // Check if user is authenticated
+                    if (!this.isAuthenticated()) {
+                        this.redirectToLogin();
+                        return;
+                    }
+
+                    // Load user name for display
+                    this.userName = localStorage.getItem('usuarioNome') || '';
+
+                    // Load companies
+                    await this.loadCompanies();
+                },
+
+                /**
+                 * Check if user has a valid token
+                 */
+                isAuthenticated() {
+                    const token = localStorage.getItem('token');
+                    return !!token;
+                },
+
+                /**
+                 * Redirect to login page
+                 */
+                redirectToLogin() {
+                    window.location.href = 'login.html';
+                },
+
+                /**
+                 * Fetch companies from API
+                 */
+                async loadCompanies() {
+                    this.isLoading = true;
+                    this.errorMessage = '';
+
+                    try {
+                        // Call API to get user's companies
+                        const empresas = await window.api.getEmpresasDoUsuario();
+
+                        // Store in reactive state
+                        this.companies = empresas || [];
+
+                    } catch (error) {
+                        console.error('Error loading companies:', error);
+
+                        // Check for authentication errors
+                        if (error?.code === 'TOKEN_EXPIRED' || error?.code === 'INVALID_TOKEN') {
+                            this.redirectToLogin();
+                            return;
+                        }
+
+                        this.errorMessage = error?.message || error?.error || 'Erro ao carregar empresas. Verifique sua conexão.';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                /**
+                 * Select a company and get scoped token
+                 *
+                 * SECURITY FLOW:
+                 * 1. Send empresaId to backend
+                 * 2. Backend validates user owns this empresa
+                 * 3. Backend returns NEW JWT with empresaId embedded in claims
+                 * 4. Replace old token with new scoped token
+                 * 5. Redirect to dashboard
+                 *
+                 * @param {Object} company - The selected company
+                 */
+                async selectCompany(company) {
+                    // Prevent double-clicks or selection while processing
+                    if (this.isSelecting) return;
+
+                    this.isSelecting = true;
+                    this.selectingId = company.id;
+                    this.errorMessage = '';
+
+                    try {
+                        // Request scoped token from backend
+                        // Backend will validate ownership and return new JWT with empresaId
+                        const response = await window.api.generateScopedToken(company.id);
+
+                        // SECURITY: Replace the old (unscoped) token with the new (scoped) token
+                        // The new token has empresaId embedded in the JWT claims
+                        localStorage.setItem('token', response.token);
+
+                        // Store empresa info for UI purposes (not for auth - that's in the JWT)
+                        localStorage.setItem('empresaId', response.empresa?.id || company.id);
+                        localStorage.setItem('empresaNome', response.empresa?.nome || company.nome);
+
+                        // Redirect to dashboard
+                        window.location.href = 'index.html';
+
+                    } catch (error) {
+                        console.error('Error selecting company:', error);
+
+                        // Reset selection state
+                        this.isSelecting = false;
+                        this.selectingId = null;
+
+                        // Handle specific error codes
+                        if (error?.code === 'ACCESS_DENIED') {
+                            this.errorMessage = 'Você não tem permissão para acessar esta empresa.';
+                            // Refresh the list in case permissions changed
+                            await this.loadCompanies();
+                            return;
+                        }
+
+                        if (error?.code === 'TOKEN_EXPIRED') {
+                            this.redirectToLogin();
+                            return;
+                        }
+
+                        this.errorMessage = error?.message || error?.error || 'Não foi possível selecionar a empresa. Tente novamente.';
+                    }
+                },
+
+                /**
+                 * Logout user
+                 * Clears all stored data and redirects to login
+                 */
+                logout() {
+                    // Clear all authentication data
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('empresaId');
+                    localStorage.removeItem('empresaNome');
+                    localStorage.removeItem('usuarioNome');
+                    localStorage.removeItem('userRole');
+                    localStorage.removeItem('permissoes');
+                    // Note: We keep 'rememberedEmail' for convenience
+
+                    // Redirect to login
+                    this.redirectToLogin();
                 }
-            } catch (error) {
-                console.error('Erro ao carregar empresas:', error);
-                listElement.innerHTML = '<p style="color: red;">Erro ao carregar empresas.</p>';
-            }
+            };
         }
     </script>
 </body>
 </html>
+

@@ -659,11 +659,23 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
         const comissoesPendentes = await prisma.ordemServico.findMany({
             where: {
                 empresaId,
-                lavadorId: lavadorId as string,
+                ordemLavadores: {
+                    some: {
+                        lavadorId: lavadorId as string
+                    }
+                },
                 comissaoPaga: false,
                 dataFim: { gte: start, lte: end },
             },
-            include: { veiculo: true, lavador: true },
+            include: {
+                veiculo: true,
+                lavador: true,
+                ordemLavadores: {
+                    include: {
+                        lavador: true
+                    }
+                }
+            },
         });
 
         const adiantamentosPendentes = await prisma.adiantamento.findMany({
@@ -674,7 +686,20 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
             },
         });
 
-        res.json({ comissoes: comissoesPendentes, adiantamentos: adiantamentosPendentes });
+        const formattedComissoes = comissoesPendentes.map(ordem => ({
+            id: ordem.id,
+            numeroOrdem: ordem.numeroOrdem,
+            valorTotal: ordem.valorTotal,
+            dataFim: ordem.dataFim,
+            comissao: ordem.comissao,
+            lavadorId: ordem.lavadorId,
+            lavadores: (ordem.ordemLavadores || []).map(rel => ({
+                id: rel.lavadorId,
+                nome: rel.lavador?.nome || null
+            }))
+        }));
+
+        res.json({ comissoes: formattedComissoes, adiantamentos: adiantamentosPendentes });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao buscar dados de comissão.' });
     }

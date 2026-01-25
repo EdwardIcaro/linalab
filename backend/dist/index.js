@@ -24,9 +24,12 @@ const fornecedor_1 = __importDefault(require("./routes/fornecedor"));
 const pagamento_1 = __importDefault(require("./routes/pagamento"));
 const tipoVeiculo_1 = __importDefault(require("./routes/tipoVeiculo"));
 const notificacao_1 = __importDefault(require("./routes/notificacao"));
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const themeRoutes_1 = __importDefault(require("./routes/themeRoutes"));
 // Importar middleware
 const authMiddleware_1 = __importDefault(require("./middlewares/authMiddleware"));
 const userAuthMiddleware_1 = __importDefault(require("./middlewares/userAuthMiddleware"));
+const adminMiddleware_1 = __importDefault(require("./middlewares/adminMiddleware"));
 // Carregar variáveis de ambiente
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -47,6 +50,8 @@ app.use('/api/usuarios', usuario_1.default);
 app.get('/api/public/lavador/:id/ordens', publicController_1.getOrdensByLavadorPublic);
 app.post('/api/public/lavador-data', publicController_1.getLavadorPublicData);
 // Middleware de autenticação para rotas protegidas
+app.use('/api/admin', adminMiddleware_1.default, adminRoutes_1.default); // Admin routes (LINA_OWNER only)
+app.use('/api/theme', authMiddleware_1.default, themeRoutes_1.default); // Theme routes (requires empresa scope)
 app.use('/api/empresas', userAuthMiddleware_1.default, empresa_1.default); // Usa middleware de usuário
 app.use('/api/clientes', authMiddleware_1.default, cliente_1.default); // Usa middleware de empresa
 app.use('/api/veiculos', authMiddleware_1.default, veiculo_1.default); // Usa middleware de empresa

@@ -8,6 +8,6 @@ router.get('/simple', lavadorController_1.getLavadoresSimple); // <-- Rota que e
 router.post('/', lavadorController_1.createLavador);
 router.put('/:id', lavadorController_1.updateLavador);
 router.delete('/:id', lavadorController_1.deleteLavador);
-router.get('/:id/token', lavadorController_1.gerarTokenPublico); // <-- Rota que estava faltando
+router.post('/:id/token', lavadorController_1.gerarTokenPublico); // MUDADO PARA POST
 exports.default = router;
 //# sourceMappingURL=lavador.js.map
