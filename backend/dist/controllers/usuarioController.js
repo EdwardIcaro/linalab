@@ -108,8 +108,42 @@ const authenticateUsuario = async (req, res) => {
             where: { OR: [{ nome: identifier }, { email: identifier }] },
         });
         if (!usuario) {
-            // Use generic message to prevent user enumeration
-            return res.status(401).json({ error: 'Credenciais inválidas' });
+            // Fallback: subaccount login
+            const subaccount = await db_1.default.subaccount.findFirst({
+                where: { OR: [{ nome: identifier }, { email: identifier }] },
+                include: {
+                    roleInt: {
+                        include: {
+                            permissoes: true
+                        }
+                    }
+                }
+            });
+            if (!subaccount) {
+                return res.status(401).json({ error: 'Credenciais inválidas' });
+            }
+            const isSenhaValida = await bcrypt_1.default.compare(senha, subaccount.senha);
+            if (!isSenhaValida) {
+                return res.status(401).json({ error: 'Credenciais inválidas' });
+            }
+            const token = jsonwebtoken_1.default.sign({
+                id: subaccount.id,
+                subaccountId: subaccount.id,
+                nome: subaccount.nome,
+                empresaId: subaccount.empresaId
+            }, process.env.JWT_SECRET, { expiresIn: '24h' });
+            return res.json({
+                message: 'Autenticação realizada com sucesso',
+                usuario: {
+                    id: subaccount.id,
+                    nome: subaccount.nome,
+                    email: subaccount.email,
+                    role: 'USER',
+                    empresaId: subaccount.empresaId,
+                    permissoes: subaccount.roleInt?.permissoes?.map(p => p.name) || []
+                },
+                token
+            });
         }
         const isSenhaValida = await bcrypt_1.default.compare(senha, usuario.senha);
         if (!isSenhaValida) {

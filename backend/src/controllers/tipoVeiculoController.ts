@@ -64,6 +64,9 @@ export const getTiposVeiculo = async (req: EmpresaRequest, res: Response) => {
 export const getTipoVeiculoById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const tipoVeiculo = await prisma.tipoVeiculo.findFirst({
       where: {
         id,
@@ -93,6 +96,9 @@ export const getTipoVeiculoById = async (req: EmpresaRequest, res: Response) => 
 export const updateTipoVeiculo = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { nome, categoria, descricao, ativo } = req.body;
 
     const tipoVeiculoAtualizado = await prisma.tipoVeiculo.update({
@@ -124,6 +130,9 @@ export const updateTipoVeiculo = async (req: EmpresaRequest, res: Response) => {
 export const deleteTipoVeiculo = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se há serviços associados antes de excluir
     const servicosAssociados = await prisma.servico.count({
@@ -161,6 +170,9 @@ export const deleteTipoVeiculo = async (req: EmpresaRequest, res: Response) => {
 export const getServicosByTipoVeiculo = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const servicos = await prisma.servico.findMany({
       where: {
         empresaId: req.empresaId,
@@ -185,6 +197,10 @@ export const getServicosByTipoVeiculo = async (req: EmpresaRequest, res: Respons
 export const getSubtiposByTipo = async (req: EmpresaRequest, res: Response) => {
   try {
     const { categoria: nomeTipo } = req.params;
+
+    if (Array.isArray(nomeTipo)) {
+      return res.status(400).json({ error: 'Nome do tipo inválido' });
+    }
 
     const subtipos = await prisma.tipoVeiculo.findMany({
       where: {

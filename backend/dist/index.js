@@ -26,6 +26,7 @@ const tipoVeiculo_1 = __importDefault(require("./routes/tipoVeiculo"));
 const notificacao_1 = __importDefault(require("./routes/notificacao"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const themeRoutes_1 = __importDefault(require("./routes/themeRoutes"));
+const roles_1 = __importDefault(require("./routes/roles"));
 // Importar middleware
 const authMiddleware_1 = __importDefault(require("./middlewares/authMiddleware"));
 const userAuthMiddleware_1 = __importDefault(require("./middlewares/userAuthMiddleware"));
@@ -64,6 +65,7 @@ app.use('/api/fornecedores', authMiddleware_1.default, fornecedor_1.default); //
 app.use('/api/pagamentos', authMiddleware_1.default, pagamento_1.default); // Usa middleware de empresa
 app.use('/api/tipos-veiculo', authMiddleware_1.default, tipoVeiculo_1.default); // Usa middleware de empresa
 app.use('/api/notificacoes', authMiddleware_1.default, notificacao_1.default); // Usa middleware de empresa
+app.use('/api/roles', authMiddleware_1.default, roles_1.default); // Usa middleware de empresa
 // Rota de saúde
 app.get('/health', (_req, res) => {
     res.json({

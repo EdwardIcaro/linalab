@@ -3,396 +3,1434 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinaX - Painel do Lavador</title>
+  <title>LinaX - Extrato</title>
   <script src="api.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     :root {
-      --success: #22C55E;
+      --primary: #8B5CF6;
+      --primary-dark: #7C3AED;
+      --primary-light: #A78BFA;
+      --success: #10B981;
+      --success-light: #D1FAE5;
+      --danger: #EF4444;
+      --danger-light: #FEE2E2;
       --warning: #F59E0B;
+      --warning-light: #FEF3C7;
       --info: #3B82F6;
-      --radius: 12px;
-      --shadow-light: 0 1px 2px 0 rgba(0,0,0,0.05);
-      --shadow-medium: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-    }
-    body { background: var(--background-light); }
-    .public-container { max-width: 900px; margin: 0 auto; padding: 16px; }
-    
-    .public-header {
-      background: var(--white);
-      padding: 20px;
-      border-radius: var(--radius);
-      text-align: center;
-      margin-bottom: 24px;
-      border: 1px solid var(--border-color);
-    }
-    .public-header h1 { font-size: 28px; font-weight: 700; }
-    .public-header p { font-size: 16px; color: var(--text-secondary); margin-top: 4px; }
+      --info-light: #DBEAFE;
 
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-      padding-left: 4px;
+      --bg-main: #F5F5F7;
+      --bg-card: #FFFFFF;
+      --text-primary: #1F2937;
+      --text-secondary: #6B7280;
+      --text-muted: #9CA3AF;
+      --border: #E5E7EB;
+
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
     }
 
-    .summary-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
-    .summary-card {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      padding: 16px;
-      border-radius: var(--radius);
-      text-align: center;
-      position: relative;
-      box-shadow: var(--shadow-light);
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    /* =================== LOADER =================== */
+    .loader-screen {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      min-height: 100vh;
+      background: var(--bg-main);
     }
-    .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
-    .summary-card .icon { font-size: 18px; margin-bottom: 12px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-    .icon-week { background-color: var(--primary-color-light); color: var(--primary-color); }
-    .icon-month { background-color: #ECFDF5; color: #10B981; }
-    .summary-card .label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
-    .summary-card .value { font-size: 22px; font-weight: 700; }
-    .toggle-visibility { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; }
-    .hidden-value { filter: blur(5px); }
-    
-    .days-bar { display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; -ms-overflow-style: none; scrollbar-width: none; }
-    .days-bar::-webkit-scrollbar { display: none; }
-    .day { background: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; font-size: 14px; font-weight: 500; color: var(--text-secondary); text-align: center; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
-    .day:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
-    .day.selected { background: var(--primary-color); color: #fff; border-color: var(--primary-color); font-weight: 600; transform: translateY(-2px); box-shadow: var(--shadow-medium); }
 
-    .order-list-header { 
-        display: flex; 
-        align-items: center; 
-        justify-content: space-between;
-        gap: 12px; 
-        cursor: pointer;
-        padding: 12px;
-        border-radius: var(--radius);
-        background-color: var(--white);
-        border: 1px solid var(--border-color);
-        margin-bottom: 12px;
+    .loader-icon {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
-    .order-list-header-title { display: flex; align-items: center; gap: 12px; }
-    .order-count-badge { background-color: var(--primary-color); color: var(--white); border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
-    .accordion-icon { font-size: 16px; color: var(--text-secondary); transition: transform 0.3s ease; }
 
-    #ordensList { transition: all 0.3s ease-in-out; overflow: hidden; }
-    #ordensList.collapsed { max-height: 0 !important; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; opacity: 0; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
 
-    .order-card {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      border-left-width: 5px;
-      border-left-color: var(--border-color);
-      border-radius: var(--radius);
-      margin-bottom: 12px;
-      box-shadow: var(--shadow-light);
-      transition: all 0.3s ease;
+    .loader-text {
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* =================== ERROR =================== */
+    .error-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .error-icon {
+      font-size: 48px;
+      color: var(--danger);
+      margin-bottom: 20px;
+    }
+
+    .error-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .error-message {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 320px;
+    }
+
+    /* =================== HEADER =================== */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 24px 20px;
+      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .header-greeting {
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0.9;
+      margin-bottom: 2px;
+    }
+
+    .header-name {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .balance-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .balance-label {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.9;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .balance-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .balance-toggle {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.8;
+      padding: 4px;
+      transition: opacity 0.2s;
+    }
+
+    .balance-toggle:hover {
+      opacity: 1;
+    }
+
+    .balance-value.hidden-value {
+      filter: blur(8px);
+      user-select: none;
+    }
+
+    .token-timer {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .token-timer i {
+      font-size: 14px;
+    }
+
+    .token-timer.expiring-soon {
+      background: rgba(245, 158, 11, 0.2);
+      color: #FFF;
+    }
+
+    .token-timer.permanent {
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    /* =================== PERIOD SUMMARY =================== */
+    .period-summary {
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .period-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      padding: 12px 10px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-align: center;
+    }
+
+    .period-card:active {
+      transform: scale(0.98);
+    }
+
+    .period-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      margin: 0 auto 8px;
+    }
+
+    .period-icon.week {
+      background: #EEF2FF;
+      color: #6366F1;
+    }
+
+    .period-icon.month {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .period-icon.debt {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .period-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .period-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* =================== SECTION HEADER =================== */
+    .section-header {
+      padding: 20px 20px 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* =================== TRANSACTIONS =================== */
+    .transactions {
+      padding: 0 20px 20px 20px;
+    }
+
+    .transaction-day {
+      margin-bottom: 20px;
+    }
+
+    .day-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding-left: 4px;
+    }
+
+    .transaction-item {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
+      border-left: 3px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+
+    .transaction-item.clickable {
+      cursor: pointer;
+    }
+
+    .transaction-item.clickable:active {
+      transform: scale(0.98);
+    }
+
+    .transaction-item.credit {
+      border-left-color: var(--success);
+    }
+
+    .transaction-item.payment {
+      border-left-color: var(--info);
+    }
+
+    .transaction-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .transaction-icon.credit {
+      background: var(--success-light);
+      color: var(--success);
+    }
+
+    .transaction-icon.payment {
+      background: var(--info-light);
+      color: var(--info);
+    }
+
+    .transaction-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .transaction-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .transaction-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .order-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: var(--primary-color); }
-    .order-card.status-FINALIZADO { border-left-color: var(--success); }
-    .order-card.status-EM_ANDAMENTO { border-left-color: var(--warning); }
-    .order-card.status-AGUARDANDO_PAGAMENTO { border-left-color: #f59e0b; }
-    .order-card.status-PENDENTE { border-left-color: var(--info); }
-    
-    .order-main { padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .order-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-    .order-subtitle { font-size: 14px; color: var(--text-secondary); }
-    
-    .order-footer {
-      background: var(--background-light);
-      padding: 12px 16px;
+
+    .transaction-value {
+      font-size: 16px;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .transaction-value.credit {
+      color: var(--success);
+    }
+
+    .transaction-value.payment {
+      color: var(--info);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .multi-wash-badge {
+      background: var(--warning-light);
+      color: var(--warning);
+    }
+
+    .multi-wash-badge i {
+      font-size: 9px;
+    }
+
+    .status-badge.FINALIZADO {
+      background: var(--success-light);
+      color: #065F46;
+    }
+
+    .status-badge.EM_ANDAMENTO {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .status-badge.AGUARDANDO_PAGAMENTO {
+      background: #DBEAFE;
+      color: #1E40AF;
+    }
+
+    .status-badge.PENDENTE {
+      background: #F3F4F6;
+      color: #4B5563;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .empty-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* =================== MODAL =================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      width: 100%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      z-index: 10;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-summary {
+      background: var(--bg-main);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .modal-summary-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 14px;
+      margin-bottom: 10px;
     }
-    .gross-value { color: var(--text-secondary); }
-    .gross-value strong { font-weight: 600; }
-    .order-value { font-size: 18px; font-weight: 700; color: var(--primary-color); }
-    .status-FINALIZADO .order-value { color: var(--success); }
-    .status-AGUARDANDO_PAGAMENTO .order-value { color: #b45309; }
-    .status-PENDENTE .order-value { color: var(--info); }
-    .status-EM_ANDAMENTO .order-value { color: var(--warning); }
-    
-    .status-badge { padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-    .status-badge.status-FINALIZADO { background-color: #ECFDF5; color: #065F46; }
-    .status-badge.status-EM_ANDAMENTO { background-color: #FFFBEB; color: #B45309; }
-    .status-badge.status-AGUARDANDO_PAGAMENTO { background-color: #FEF3C7; color: #92400E; }
-    .status-badge.status-PENDENTE { background-color: #EFF6FF; color: #1E40AF; }
 
-    .section-divider { height: 1px; background-color: var(--border-color); margin: 24px 0; }
+    .modal-summary-row:last-child {
+      margin-bottom: 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
 
-    .text-4xl { font-size: 2.25rem; }
-    .text-purple-600 { color: var(--primary-color); }
-    .fa-spin { animation: fa-spin 2s infinite linear; }
-    @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .hidden { display: none; }
+    .modal-summary-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
 
-    /* Desktop Styles */
-    @media (min-width: 640px) {
-      .public-container { padding: 24px; }
-      .summary-grid { grid-template-columns: 1fr 1fr; }
-      .order-title { font-size: 18px; }
+    .modal-summary-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-summary-value.total {
+      font-size: 18px;
+      color: var(--info);
+    }
+
+    .modal-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .modal-order-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 8px;
+    }
+
+    .modal-order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .modal-order-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-order-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--success);
+    }
+
+    .modal-order-services {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .modal-order-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Utility */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Desktop */
+    @media (min-width: 641px) {
+      .header {
+        padding: 32px 24px;
+      }
+
+      .header-name {
+        font-size: 28px;
+      }
+
+      .balance-value {
+        font-size: 36px;
+      }
+
+      .period-summary {
+        padding: 20px 24px;
+        gap: 12px;
+      }
+
+      .period-card {
+        padding: 16px 14px;
+      }
+
+      .period-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 15px;
+        margin-bottom: 10px;
+      }
+
+      .period-label {
+        font-size: 11px;
+      }
+
+      .period-value {
+        font-size: 18px;
+      }
+
+      .section-header {
+        padding: 24px 24px 16px 24px;
+      }
+
+      .section-title {
+        font-size: 18px;
+      }
+
+      .section-subtitle {
+        font-size: 13px;
+      }
+
+      .transactions {
+        padding: 0 24px 24px 24px;
+      }
+
+      .day-header {
+        font-size: 13px;
+      }
+
+      .transaction-item {
+        padding: 16px;
+        gap: 16px;
+      }
+
+      .transaction-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+      }
+
+      .transaction-title {
+        font-size: 15px;
+        gap: 8px;
+      }
+
+      .transaction-subtitle {
+        font-size: 13px;
+      }
+
+      .transaction-value {
+        font-size: 18px;
+      }
+
+      .badge {
+        font-size: 11px;
+      }
+
+      .modal-content {
+        border-radius: var(--radius-xl);
+        max-height: 85vh;
+      }
+
+      .modal-overlay {
+        align-items: center;
+      }
     }
   </style>
 </head>
 <body>
 
   <!-- LOADER -->
-  <div id="loader" class="text-center p-12">
-    <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
-    <p class="mt-4">Carregando seus dados...</p>
+  <div id="loader" class="loader-screen">
+    <div class="loader-icon"></div>
+    <div class="loader-text">Carregando seu extrato...</div>
   </div>
 
-  <!-- CONTEÚDO -->
-  <div id="content" class="public-container hidden">
-    <div class="public-header">
-      <h1 id="lavadorNome"></h1>
-      <p>Seu resumo de ganhos e ordens</p>
+  <!-- ERROR -->
+  <div id="error" class="error-screen hidden">
+    <div class="error-icon">
+      <i id="error-icon" class="fas fa-user-lock"></i>
     </div>
-
-    <h2 class="section-title">Ganhos Acumulados</h2>
-    <div class="summary-grid">
-      <div class="summary-card">
-        <div class="icon icon-week"><i class="fas fa-calendar-week"></i></div>
-        <div class="label">Ganhos da Semana</div>
-        <div id="ganhoSemana" class="value">R$ 0,00</div>
-        <button onclick="toggleVisibility('ganhoSemana', this)" class="toggle-visibility"><i class="fas fa-eye"></i></button>
-      </div>
-      <div class="summary-card">
-        <div class="icon icon-month"><i class="fas fa-calendar-alt"></i></div>
-        <div class="label">Ganhos do Mês</div>
-        <div id="ganhoMes" class="value">R$ 0,00</div>
-        <button onclick="toggleVisibility('ganhoMes', this)" class="toggle-visibility"><i class="fas fa-eye"></i></button>
-      </div>
-    </div>
-
-    <div class="section-divider"></div>
-
-    <h2 class="section-title">Resumo do Dia</h2>
-    <div class="daily-summary" style="margin-bottom: 12px;">
-      <div class="summary-card">
-        <div class="label">Ganho no dia</div>
-        <div id="totalGanhoDia" class="value">R$ 0,00</div>
-      </div>
-    </div>
-    
-    <div class="days-bar" id="daysBar"></div>
-
-    <div id="accordionHeader" class="order-list-header">
-        <div class="order-list-header-title">
-            <h2 class="section-title" style="margin-bottom: 0;">Ordens do dia</h2>
-            <span id="ordensCountBadge" class="order-count-badge">0</span>
-        </div>
-        <span class="accordion-icon"><i class="fas fa-chevron-up"></i></span>
-    </div>
-    
-    <div id="ordensList"></div>
+    <h1 id="error-title" class="error-title">Acesso Desativado</h1>
+    <p id="error-message" class="error-message">
+      Seu link de acesso foi desativado. Por favor, entre em contato com o administrador.
+    </p>
   </div>
 
-  <!-- ERRO -->
-  <div id="error" class="public-container text-center hidden">
-    <div class="container" style="max-width: 500px; margin: 4rem auto;">
-        <div class="icon" style="font-size: 64px; color: #EF4444; margin-bottom: 24px;">
-            <i id="error-icon" class="fas fa-user-lock"></i>
+  <!-- CONTENT -->
+  <div id="content" class="container hidden">
+    <!-- Header com saldo -->
+    <div class="header">
+      <div class="header-greeting">Olá,</div>
+      <div id="lavadorNome" class="header-name">Carregando...</div>
+
+      <div class="balance-card">
+        <div class="balance-label">
+          <span>Saldo Disponível</span>
+          <button onclick="toggleBalance()" class="balance-toggle">
+            <i id="balance-eye" class="fas fa-eye"></i>
+          </button>
         </div>
-        <h1 id="error-title" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
-            Acesso Desativado
-        </h1>
-        <p id="error-message" style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">
-            Seu link de acesso foi desativado. Por favor, entre em contato com o administrador da sua empresa para solicitar um novo link.
-        </p>
+        <div id="saldoTotal" class="balance-value">R$ 0,00</div>
+
+        <!-- Token Timer -->
+        <div id="tokenTimer" class="token-timer hidden">
+          <i class="fas fa-clock"></i>
+          <span id="tokenTimerText">Carregando...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumo por período -->
+    <div class="period-summary">
+      <div class="period-card">
+        <div class="period-icon week">
+          <i class="fas fa-calendar-week"></i>
+        </div>
+        <div class="period-label">Esta Semana</div>
+        <div id="ganhoSemana" class="period-value">R$ 0,00</div>
+      </div>
+
+      <div class="period-card">
+        <div class="period-icon month">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+        <div class="period-label">Este Mês</div>
+        <div id="ganhoMes" class="period-value">R$ 0,00</div>
+      </div>
+
+      <div class="period-card">
+        <div class="period-icon debt">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="period-label">Dívida Atual</div>
+        <div id="dividaTotal" class="period-value">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Seção de transações -->
+    <div class="section-header">
+      <div class="section-title">
+        <i class="fas fa-receipt"></i>
+        Extrato
+      </div>
+      <div id="transactionsCount" class="section-subtitle">0 transações</div>
+    </div>
+
+    <div id="transactions" class="transactions">
+      <!-- Transactions will be rendered here -->
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="empty-state hidden">
+      <div class="empty-icon">
+        <i class="fas fa-inbox"></i>
+      </div>
+      <div class="empty-title">Nenhuma transação encontrada</div>
+      <div class="empty-text">Suas comissões aparecerão aqui</div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="paymentModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Detalhes do Pagamento</h2>
+        <button class="modal-close" onclick="closePaymentModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-summary">
+          <div class="modal-summary-row">
+            <span class="modal-summary-label">Total de Lavagens</span>
+            <span id="modalTotalOrdens" class="modal-summary-value">0</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="modal-summary-label">Dívidas Descontadas</span>
+            <span id="modalTotalAdiantamentos" class="modal-summary-value">R$ 0,00</span>
+          </div>
+          <div class="modal-summary-row">
+            <span class="modal-summary-label">Valor Pago</span>
+            <span id="modalValorPago" class="modal-summary-value total">R$ 0,00</span>
+          </div>
+        </div>
+
+        <div class="modal-section-title">Lavagens Incluídas</div>
+        <div id="modalOrdersList">
+          <!-- Orders will be rendered here -->
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
-    // ---------- UTILS ----------
+    // ==================== UTILS ====================
     function formatCurrency(value) {
-      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value || 0);
+    }
+
+    function formatDate(dateStr) {
+      // Parse da data vinda do backend (já está em UTC)
+      const date = new Date(dateStr);
+
+      // Obter data/hora atual em São Paulo
+      const formatter = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+
+      const todayParts = formatter.formatToParts(new Date());
+      const todayYear = parseInt(todayParts.find(p => p.type === 'year').value);
+      const todayMonth = parseInt(todayParts.find(p => p.type === 'month').value) - 1;
+      const todayDay = parseInt(todayParts.find(p => p.type === 'day').value);
+
+      // Converter data recebida para São Paulo
+      const dateParts = formatter.formatToParts(date);
+      const dateYear = parseInt(dateParts.find(p => p.type === 'year').value);
+      const dateMonth = parseInt(dateParts.find(p => p.type === 'month').value) - 1;
+      const dateDay = parseInt(dateParts.find(p => p.type === 'day').value);
+
+      // Criar datas apenas com dia/mês/ano para comparação
+      const dateOnly = new Date(dateYear, dateMonth, dateDay);
+      const todayOnly = new Date(todayYear, todayMonth, todayDay);
+      const yesterdayOnly = new Date(todayYear, todayMonth, todayDay - 1);
+
+      console.log('[formatDate] Debug:', {
+        input: dateStr,
+        dateStr: `${dateDay}/${dateMonth+1}/${dateYear}`,
+        todayStr: `${todayDay}/${todayMonth+1}/${todayYear}`,
+        dateTime: dateOnly.getTime(),
+        todayTime: todayOnly.getTime(),
+        diff: (dateOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24)
+      });
+
+      if (dateOnly.getTime() === todayOnly.getTime()) {
+        return 'Hoje';
+      } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+        return 'Ontem';
+      } else {
+        return date.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: 'long',
+          timeZone: 'America/Sao_Paulo'
+        });
+      }
     }
 
     function toLocaleDateISOString(dateInput = new Date()) {
-        const date = new Date(dateInput);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+      // Converter para timezone de São Paulo
+      const date = new Date(dateInput);
+      const dateStr = date.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+      const dateBrasilia = new Date(dateStr);
+
+      const year = dateBrasilia.getFullYear();
+      const month = String(dateBrasilia.getMonth() + 1).padStart(2, '0');
+      const day = String(dateBrasilia.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
-    function toggleVisibility(id, btn) {
-      const el = document.getElementById(id);
-      const icon = btn.querySelector('i');
-      const isBlurred = el.classList.toggle('hidden-value');
-      icon.className = isBlurred ? 'fas fa-eye-slash' : 'fas fa-eye';
+    function toggleBalance() {
+      const balanceEl = document.getElementById('saldoTotal');
+      const eyeIcon = document.getElementById('balance-eye');
+
+      balanceEl.classList.toggle('hidden-value');
+
+      if (balanceEl.classList.contains('hidden-value')) {
+        eyeIcon.className = 'fas fa-eye-slash';
+      } else {
+        eyeIcon.className = 'fas fa-eye';
+      }
     }
 
-    // ---------- STATE ----------
-    let allData = {};
-    let selectedDateISO = toLocaleDateISOString();
+    // ==================== MULTI-WASH LOGIC ====================
+    function normalizeOrderWashers(order) {
+      if (!order) return [];
 
-    // ---------- DOM ELEMENTS ----------
-    const loader = document.getElementById('loader');
-    const content = document.getElementById('content');
-    const errorEl = document.getElementById('error');
+      if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
+        return order.ordemLavadores.map(ol => ({
+          id: ol.lavador.id,
+          nome: ol.lavador.nome,
+          comissao: ol.lavador.comissao
+        }));
+      }
 
-    // ---------- INIT ----------
+      if (order.lavadorId && order.lavador) {
+        return [{
+          id: order.lavadorId,
+          nome: order.lavador.nome,
+          comissao: order.lavador.comissao
+        }];
+      }
+
+      return [];
+    }
+
+    function getCommissionPercent(order) {
+      if (order?.lavador?.comissao) {
+        return order.lavador.comissao;
+      }
+      if (order?.comissao && order?.valorTotal) {
+        return (order.comissao / order.valorTotal) * 100;
+      }
+      return 0;
+    }
+
+    function getWasherShare(order, washerId, lavadorComissao) {
+      const washers = normalizeOrderWashers(order);
+      if (!washers.length || !washerId) return 0;
+
+      if (washers.length === 1) {
+        const percent = lavadorComissao || getCommissionPercent(order);
+        return (order.valorTotal || 0) * (percent / 100);
+      }
+
+      const percent = lavadorComissao || getCommissionPercent(order);
+      const totalCents = Math.round((order?.valorTotal || 0) * (percent / 100) * 100);
+      if (totalCents <= 0) return 0;
+
+      const base = Math.floor(totalCents / washers.length);
+      let remainder = totalCents % washers.length;
+
+      const shareMap = {};
+      washers.forEach(washer => {
+        let cents = base;
+        if (remainder > 0) {
+          cents += 1;
+          remainder -= 1;
+        }
+        shareMap[washer.id] = cents / 100;
+      });
+
+      return shareMap[washerId] || 0;
+    }
+
+    function isMultiWash(order) {
+      return Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 1;
+    }
+
+    // ==================== STATE ====================
+    let lavadorData = null;
+    let currentLavadorId = null;
+    let tokenTimerInterval = null;
+
+    // ==================== INIT ====================
     document.addEventListener('DOMContentLoaded', async () => {
       const token = new URLSearchParams(window.location.search).get('token');
-      if (!token) return showError();
+      if (!token) {
+        showError('Link Inválido', 'Por favor, use o link fornecido pelo administrador.', 'fa-link');
+        return;
+      }
 
       try {
         const data = await window.api.getLavadorPublico(token);
         if (data) {
-          allData = data;
-          setupAccordion();
+          lavadorData = data;
+          // Usar o lavadorId retornado pelo backend
+          currentLavadorId = data.lavadorId;
+          console.log('[lavador-publico] Dados carregados:', {
+            lavadorId: currentLavadorId,
+            nome: data.nome,
+            ordens: data.ordens.length,
+            fechamentos: data.fechamentos?.length || 0,
+            adiantamentosNaoQuitados: data.adiantamentosNaoQuitados?.length || 0
+          });
           renderUI();
-          renderForSelectedDay();
         } else {
           showError();
         }
-      }
-      catch (e) {
-        console.error("Erro na API:", e);
-        // Em vez de redirecionar, mostramos a mensagem de erro apropriada
+      } catch (e) {
+        console.error('Erro na API:', e);
         if (e.error?.includes('inativo')) {
-            showError('Acesso Desativado', 'Seu link de acesso foi desativado. Por favor, entre em contato com o administrador da sua empresa para solicitar um novo link.', 'fa-user-lock');
+          showError('Acesso Desativado', 'Seu link foi desativado. Entre em contato com o administrador.', 'fa-user-lock');
         } else if (e.error?.includes('expirado')) {
-            showError('Link Expirado', 'Seu link de acesso expirou. Por favor, solicite um novo link ao administrador da sua empresa.', 'fa-clock');
+          showError('Link Expirado', 'Seu link expirou. Solicite um novo link ao administrador.', 'fa-clock');
         } else {
-            showError('Acesso Inválido', 'O link que você acessou é inválido. Por favor, solicite um novo link ao administrador da sua empresa.', 'fa-ban');
+          showError('Acesso Inválido', 'O link é inválido. Solicite um novo link ao administrador.', 'fa-ban');
         }
       }
     });
 
-    // ---------- UI ----------
-    function showError(title = 'Acesso Inválido', message = 'O link que você acessou é inválido ou expirou.', icon = 'fa-ban') {
-        document.getElementById('error-title').textContent = title;
-        document.getElementById('error-message').textContent = message;
-        document.getElementById('error-icon').className = `fas ${icon}`;
-        loader.classList.add('hidden');
-        errorEl.classList.remove('hidden');
+    // ==================== UI ====================
+    function showError(title = 'Acesso Inválido', message = 'O link é inválido ou expirou.', icon = 'fa-ban') {
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-icon').className = `fas ${icon}`;
+      document.getElementById('loader').classList.add('hidden');
+      document.getElementById('error').classList.remove('hidden');
     }
+
     function renderUI() {
-      loader.classList.add('hidden');
-      content.classList.remove('hidden');
-      document.getElementById('lavadorNome').textContent = allData.nome;
-      renderDaysBar();
-      calcAggregates();
+      document.getElementById('loader').classList.add('hidden');
+      document.getElementById('content').classList.remove('hidden');
+
+      document.getElementById('lavadorNome').textContent = lavadorData.nome;
+
+      calculatePeriodSummary();
+      renderTransactions();
+      startTokenTimer();
     }
 
-    function setupAccordion() {
-        const header = document.getElementById('accordionHeader');
-        header.addEventListener('click', () => {
-            const list = document.getElementById('ordensList');
-            const icon = header.querySelector('.accordion-icon i');
-            const isCollapsed = list.classList.toggle('collapsed');
-            icon.classList.toggle('fa-chevron-down', isCollapsed);
-            icon.classList.toggle('fa-chevron-up', !isCollapsed);
-        });
-    }
+    // ==================== TOKEN TIMER ====================
+    function startTokenTimer() {
+      const timerEl = document.getElementById('tokenTimer');
+      const timerTextEl = document.getElementById('tokenTimerText');
 
-    // ---------- DAYS BAR ----------
-    function renderDaysBar() {
-      const bar = document.getElementById('daysBar');
-      bar.innerHTML = '';
-      const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-      for (let i = 0; i < 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const iso = toLocaleDateISOString(date);
-
-        const day = document.createElement('div');
-        day.className = 'day';
-        day.dataset.date = iso;
-        day.innerHTML = `<div>${weekdays[date.getDay()]}</div><div>${date.getDate()}/${date.getMonth() + 1}</div>`;
-        if (iso === selectedDateISO) day.classList.add('selected');
-        day.onclick = () => selectDay(iso);
-        bar.prepend(day);
+      if (!lavadorData.tokenExpiresAt) {
+        // Token permanente
+        timerEl.classList.remove('hidden');
+        timerEl.classList.add('permanent');
+        timerTextEl.innerHTML = '<i class="fas fa-infinity"></i> Link Permanente';
+        return;
       }
+
+      timerEl.classList.remove('hidden');
+
+      function updateTimer() {
+        const now = new Date();
+        const expiresAt = new Date(lavadorData.tokenExpiresAt);
+        const diff = expiresAt.getTime() - now.getTime();
+
+        if (diff <= 0) {
+          timerTextEl.textContent = 'Link expirado';
+          timerEl.classList.add('expiring-soon');
+          clearInterval(tokenTimerInterval);
+          // Mostrar mensagem de expiração
+          setTimeout(() => {
+            showError('Link Expirado', 'Este link expirou. Solicite um novo link ao administrador.', 'fa-clock');
+          }, 1000);
+          return;
+        }
+
+        // Calcular tempo restante
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        let text = '';
+        if (hours > 0) {
+          text = `Expira em ${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+          text = `Expira em ${minutes}m ${seconds}s`;
+        } else {
+          text = `Expira em ${seconds}s`;
+        }
+
+        timerTextEl.textContent = text;
+
+        // Adicionar classe de alerta se falta menos de 1 hora
+        if (diff < 60 * 60 * 1000) {
+          timerEl.classList.add('expiring-soon');
+        }
+      }
+
+      updateTimer();
+      tokenTimerInterval = setInterval(updateTimer, 1000);
     }
 
-    function selectDay(iso) {
-      selectedDateISO = iso;
-      document.querySelectorAll('.day').forEach(el => el.classList.toggle('selected', el.dataset.date === iso));
-      renderForSelectedDay();
-    }
-
-    // ---------- AGGREGATES ----------
-    function calcAggregates() {
+    function calculatePeriodSummary() {
       const now = new Date();
-      const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const ordensParaGanho = allData.ordens.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO' || o.status === 'AGUARDANDO_PAGAMENTO');
-      
-      const ganhoSemana = ordensParaGanho.filter(o => new Date(o.createdAt) >= weekStart).reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
-      const ganhoMes = ordensParaGanho.filter(o => new Date(o.createdAt) >= monthStart).reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
+      let ganhoSemana = 0;
+      let ganhoMes = 0;
+      let totalCreditos = 0;
+
+      // Calcular ganhos das ordens
+      lavadorData.ordens.forEach(ordem => {
+        if (['FINALIZADO', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(ordem.status)) {
+          const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+          const ordemDate = new Date(ordem.createdAt);
+
+          totalCreditos += ganho;
+
+          if (ordemDate >= weekStart) {
+            ganhoSemana += ganho;
+          }
+          if (ordemDate >= monthStart) {
+            ganhoMes += ganho;
+          }
+        }
+      });
+
+      // Calcular dívida total (adiantamentos não quitados)
+      let dividaTotal = 0;
+      if (lavadorData.adiantamentosNaoQuitados) {
+        dividaTotal = lavadorData.adiantamentosNaoQuitados.reduce((sum, a) => sum + a.valor, 0);
+      }
+
+      // Saldo é apenas os créditos (não descontamos nada aqui, pois só mostramos pagamentos já feitos)
+      const saldoTotal = totalCreditos;
 
       document.getElementById('ganhoSemana').textContent = formatCurrency(ganhoSemana);
       document.getElementById('ganhoMes').textContent = formatCurrency(ganhoMes);
-    }
+      document.getElementById('dividaTotal').textContent = formatCurrency(dividaTotal);
+      document.getElementById('saldoTotal').textContent = formatCurrency(saldoTotal);
 
-    // ---------- DAY ORDERS ----------
-    function renderForSelectedDay() {
-      const orders = allData.ordens.filter(o => toLocaleDateISOString(o.createdAt) === selectedDateISO);
-      const ordensParaGanho = orders.filter(o => o.status === 'FINALIZADO' || o.status === 'EM_ANDAMENTO' || o.status === 'AGUARDANDO_PAGAMENTO');
-      const ganhoDia = ordensParaGanho.reduce((t, o) => t + (o.valorTotal * (allData.comissao / 100)), 0);
-
-      document.getElementById('totalGanhoDia').textContent = formatCurrency(ganhoDia);
-      document.getElementById('ordensCountBadge').textContent = orders.length;
-
-      const list = document.getElementById('ordensList');
-      list.innerHTML = '';
-      if (!orders.length) {
-        list.innerHTML = '<p class="text-center text-secondary p-8">Nenhuma ordem atribuída a você neste dia.</p>';
-        const icon = document.querySelector('#accordionHeader .accordion-icon i');
-        list.classList.add('collapsed');
-        icon.classList.add('fa-chevron-down');
-        icon.classList.remove('fa-chevron-up');
-        return;
-      }
-      
-      const icon = document.querySelector('#accordionHeader .accordion-icon i');
-      list.classList.remove('collapsed');
-      icon.classList.remove('fa-chevron-down');
-      icon.classList.add('fa-chevron-up');
-
-      orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(ordem => {
-        const servicos = ordem.items.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ');
-        const comissao = (ordem.valorTotal * (allData.comissao / 100));
-        const status = ordem.status;
-        const statusText = status.replace('_', ' ');
-
-        list.innerHTML += `
-          <div class="order-card status-${status}">
-            <div class="order-main">
-              <div>
-                <div class="order-title">${ordem.veiculo.modelo}</div>
-                <div class="order-subtitle">${servicos}</div>
-              </div>
-              <span class="status-badge status-${status}">${statusText}</span>
-            </div>
-            <div class="order-footer">
-              <div class="gross-value">Valor Total: <strong>${formatCurrency(ordem.valorTotal)}</strong></div>
-              <div class="order-value">${ (status === 'FINALIZADO' || status === 'EM_ANDAMENTO' || status === 'AGUARDANDO_PAGAMENTO') ? formatCurrency(comissao) : '-' }</div>
-            </div>
-          </div>
-        `;
+      console.log('[calculatePeriodSummary]', {
+        ganhoSemana,
+        ganhoMes,
+        dividaTotal,
+        saldoTotal
       });
     }
+
+    function renderTransactions() {
+      const container = document.getElementById('transactions');
+      const emptyState = document.getElementById('emptyState');
+
+      const transactions = [];
+
+      // Adicionar ordens como créditos
+      lavadorData.ordens.forEach(ordem => {
+        if (['FINALIZADO', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(ordem.status)) {
+          const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+
+          if (ganho > 0) {
+            transactions.push({
+              type: 'credit',
+              date: ordem.createdAt,
+              title: ordem.veiculo?.modelo || 'Veículo',
+              subtitle: ordem.items.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', '),
+              value: ganho,
+              status: ordem.status,
+              isMultiWash: isMultiWash(ordem),
+              washersCount: normalizeOrderWashers(ordem).length
+            });
+          }
+        }
+      });
+
+      // Adicionar fechamentos de comissão como "Pagamento Realizado"
+      if (lavadorData.fechamentos && lavadorData.fechamentos.length > 0) {
+        lavadorData.fechamentos.forEach(fechamento => {
+          const totalOrdens = (fechamento.ordensPagas?.length || 0) + (fechamento.ordemLavadoresPagos?.length || 0);
+
+          transactions.push({
+            type: 'payment',
+            date: fechamento.data,
+            title: 'Pagamento Realizado',
+            subtitle: `${totalOrdens} lavagen${totalOrdens === 1 ? '' : 's'}`,
+            value: fechamento.valorPago,
+            clickable: true,
+            fechamentoData: fechamento
+          });
+        });
+      }
+
+      transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      document.getElementById('transactionsCount').textContent =
+        `${transactions.length} transaç${transactions.length === 1 ? 'ão' : 'ões'}`;
+
+      if (transactions.length === 0) {
+        container.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+
+      const groupedByDay = {};
+      transactions.forEach(t => {
+        const dayKey = toLocaleDateISOString(t.date);
+        if (!groupedByDay[dayKey]) {
+          groupedByDay[dayKey] = [];
+        }
+        groupedByDay[dayKey].push(t);
+      });
+
+      container.innerHTML = '';
+      Object.keys(groupedByDay).sort((a, b) => b.localeCompare(a)).forEach(dayKey => {
+        const dayTransactions = groupedByDay[dayKey];
+
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'transaction-day';
+
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'day-header';
+        dayHeader.textContent = formatDate(dayKey);
+        dayDiv.appendChild(dayHeader);
+
+        dayTransactions.forEach(t => {
+          const item = document.createElement('div');
+          item.className = `transaction-item ${t.type}`;
+
+          if (t.clickable) {
+            item.classList.add('clickable');
+            item.onclick = () => openPaymentModal(t.fechamentoData);
+          }
+
+          let icon = '';
+          if (t.type === 'credit') {
+            icon = '<i class="fas fa-arrow-down"></i>';
+          } else if (t.type === 'payment') {
+            icon = '<i class="fas fa-dollar-sign"></i>';
+          }
+
+          const badges = [];
+          if (t.isMultiWash) {
+            badges.push(`<span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${t.washersCount}x</span>`);
+          }
+          if (t.status) {
+            const statusText = t.status.replace('_', ' ');
+            badges.push(`<span class="badge status-badge ${t.status}">${statusText}</span>`);
+          }
+
+          const valuePrefix = t.type === 'credit' ? '+' : '';
+          const valueClass = t.type === 'payment' ? 'payment' : t.type;
+
+          item.innerHTML = `
+            <div class="transaction-icon ${t.type}">
+              ${icon}
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-title">
+                ${t.title}
+                ${badges.join(' ')}
+              </div>
+              <div class="transaction-subtitle">${t.subtitle}</div>
+            </div>
+            <div class="transaction-value ${valueClass}">
+              ${valuePrefix} ${formatCurrency(t.value)}
+            </div>
+          `;
+
+          dayDiv.appendChild(item);
+        });
+
+        container.appendChild(dayDiv);
+      });
+    }
+
+    // ==================== MODAL ====================
+    function openPaymentModal(fechamento) {
+      const modal = document.getElementById('paymentModal');
+
+      console.log('[openPaymentModal] Fechamento completo:', fechamento);
+      console.log('[openPaymentModal] adiantamentosQuitados:', fechamento.adiantamentosQuitados);
+
+      // Calcular totais
+      const totalOrdens = (fechamento.ordensPagas?.length || 0) + (fechamento.ordemLavadoresPagos?.length || 0);
+
+      // Calcular total de adiantamentos quitados
+      let totalAdiantamentos = 0;
+      if (fechamento.adiantamentosQuitados && Array.isArray(fechamento.adiantamentosQuitados)) {
+        totalAdiantamentos = fechamento.adiantamentosQuitados.reduce((sum, a) => {
+          console.log('[modal] Adiantamento:', a);
+          return sum + (a.valor || 0);
+        }, 0);
+      }
+
+      console.log('[openPaymentModal] Total adiantamentos calculado:', totalAdiantamentos);
+
+      document.getElementById('modalTotalOrdens').textContent = totalOrdens;
+      document.getElementById('modalTotalAdiantamentos').textContent = formatCurrency(totalAdiantamentos);
+      document.getElementById('modalValorPago').textContent = formatCurrency(fechamento.valorPago);
+
+      console.log('[openPaymentModal] Totais finais:', {
+        totalOrdens,
+        totalAdiantamentos,
+        valorPago: fechamento.valorPago
+      });
+
+      // Renderizar ordens
+      const ordersList = document.getElementById('modalOrdersList');
+      ordersList.innerHTML = '';
+
+      let totalComissaoCalculada = 0;
+
+      // Ordens principais (onde o lavador é o principal)
+      if (fechamento.ordensPagas && Array.isArray(fechamento.ordensPagas)) {
+        fechamento.ordensPagas.forEach(ordem => {
+          console.log('[modal] Ordem principal:', ordem);
+
+          // Para ordens principais, o lavador é o principal da ordem
+          // Calcular a comissão usando o valorTotal e a comissão do lavador
+          let comissao = 0;
+
+          // Se a ordem tem ordemLavadores (multi-wash), calcular divisão
+          if (Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length > 0) {
+            comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+          } else {
+            // Ordem solo - lavador principal ganha comissão total
+            comissao = (ordem.valorTotal || 0) * ((lavadorData.comissao || 0) / 100);
+          }
+
+          totalComissaoCalculada += comissao;
+
+          const services = ordem.items?.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
+          const isMulti = Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length > 1;
+
+          console.log('[modal] Ordem comissão calculada:', comissao);
+
+          ordersList.innerHTML += `
+            <div class="modal-order-item">
+              <div class="modal-order-header">
+                <div class="modal-order-title">${ordem.veiculo?.modelo || 'Veículo'}</div>
+                <div class="modal-order-value">${formatCurrency(comissao)}</div>
+              </div>
+              <div class="modal-order-services">${services}</div>
+              <div class="modal-order-meta">
+                ${isMulti ? `<span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${ordem.ordemLavadores.length}x</span>` : ''}
+                <span class="badge status-badge FINALIZADO">FINALIZADO</span>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Ordens multi-wash (onde o lavador é secundário)
+      if (fechamento.ordemLavadoresPagos && Array.isArray(fechamento.ordemLavadoresPagos)) {
+        fechamento.ordemLavadoresPagos.forEach(ol => {
+          console.log('[modal] Ordem multi-wash:', ol);
+
+          const ordem = ol.ordem;
+
+          // Calcular comissão dividida
+          const comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+          totalComissaoCalculada += comissao;
+
+          const services = ordem.items?.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
+          const washersCount = normalizeOrderWashers(ordem).length;
+
+          console.log('[modal] Multi-wash comissão calculada:', comissao);
+
+          ordersList.innerHTML += `
+            <div class="modal-order-item">
+              <div class="modal-order-header">
+                <div class="modal-order-title">${ordem.veiculo?.modelo || 'Veículo'}</div>
+                <div class="modal-order-value">${formatCurrency(comissao)}</div>
+              </div>
+              <div class="modal-order-services">${services}</div>
+              <div class="modal-order-meta">
+                <span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${washersCount}x</span>
+                <span class="badge status-badge FINALIZADO">FINALIZADO</span>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      console.log('[modal] Total comissão calculada:', totalComissaoCalculada);
+
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePaymentModal() {
+      const modal = document.getElementById('paymentModal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Fechar modal ao clicar fora
+    document.getElementById('paymentModal').addEventListener('click', (e) => {
+      if (e.target.id === 'paymentModal') {
+        closePaymentModal();
+      }
+    });
   </script>
 </body>
 </html>
-

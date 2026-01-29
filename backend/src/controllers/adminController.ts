@@ -116,6 +116,9 @@ export const listCompanies = async (req: Request, res: Response) => {
 export const getCompanyDetails = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const empresa = await prisma.empresa.findUnique({
       where: { id },
@@ -285,6 +288,9 @@ export const getEngagement = async (req: Request, res: Response) => {
 export const toggleCompanyStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const empresa = await prisma.empresa.findUnique({
       where: { id },

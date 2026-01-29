@@ -77,7 +77,43 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
 
         const faturamentoDia = pagamentos.reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
 
-        res.json({ faturamentoDia });
+        // Calcular totais por forma de pagamento
+        const totalDinheiro = pagamentos
+            .filter(p => p.metodo === 'DINHEIRO')
+            .reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
+
+        const totalCartao = pagamentos
+            .filter(p => p.metodo === 'CARTAO')
+            .reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
+
+        const totalPix = pagamentos
+            .filter(p => p.metodo === 'PIX')
+            .reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
+
+        // Buscar saídas e sangrias do dia
+        const saidas = await prisma.caixaRegistro.findMany({
+            where: {
+                empresaId,
+                tipo: { in: ['SAIDA', 'SANGRIA'] },
+                data: { gte: start, lte: end },
+            },
+        });
+
+        const totalSaidas = saidas.reduce((acc: number, s) => acc + s.valor, 0);
+
+        // Calcular saldo de dinheiro (entradas - saídas)
+        const saldoDinheiro = totalDinheiro - saidas
+            .filter(s => s.formaPagamento === 'DINHEIRO')
+            .reduce((acc: number, s) => acc + s.valor, 0);
+
+        res.json({
+            faturamentoDia,
+            totalDinheiro,
+            totalCartao,
+            totalPix,
+            totalSaidas,
+            saldoDinheiro
+        });
     } catch (error) {
         console.error('Erro ao buscar resumo do dia:', error);
         res.status(500).json({ error: 'Erro ao buscar resumo do dia.' });
@@ -321,6 +357,9 @@ async function getPagamentosDoPeriodo(empresaId: string, dateFilter: Prisma.Date
 export const getFechamentoById = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     try {
         const registroFechamento = await prisma.caixaRegistro.findFirst({
@@ -413,6 +452,9 @@ export const getGanhosDoMes = async (req: EmpresaRequest, res: Response) => {
 export const getFechamentoComissaoById = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     try {
         const fechamento = await prisma.fechamentoComissao.findFirst({
@@ -422,6 +464,16 @@ export const getFechamentoComissaoById = async (req: EmpresaRequest, res: Respon
                 ordensPagas: {
                     include: {
                         veiculo: { select: { placa: true, modelo: true } },
+                    },
+                },
+                ordemLavadoresPagos: {
+                    include: {
+                        ordem: {
+                            include: {
+                                veiculo: { select: { placa: true, modelo: true } },
+                            },
+                        },
+                        lavador: { select: { id: true, nome: true } },
                     },
                 },
                 adiantamentosQuitados: true,
@@ -460,9 +512,17 @@ export const getHistoricoComissoes = async (req: EmpresaRequest, res: Response) 
     }
 };
 
+interface FecharComissaoBody {
+    lavadorId: string;
+    comissaoIds: string[];
+    adiantamentoIds: string[];
+    valorPago: number;
+    formaPagamento?: string;
+}
+
 export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { lavadorId, comissaoIds, adiantamentoIds, valorPago, formaPagamento } = req.body;
+    const { lavadorId, comissaoIds, adiantamentoIds, valorPago, formaPagamento } = req.body as FecharComissaoBody;
 
     if (!lavadorId || !comissaoIds || !adiantamentoIds || valorPago === undefined) {
         return res.status(400).json({ error: 'Dados insuficientes para fechar a comissão.' });
@@ -483,17 +543,36 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
             });
 
             if (comissaoIds.length > 0) {
-                await tx.ordemServico.updateMany({
+                await tx.ordemServicoLavador.updateMany({
                     where: {
-                        id: { in: comissaoIds },
-                        empresaId,
+                        ordemId: { in: comissaoIds },
                         lavadorId,
+                        comissaoPaga: false,
                     },
                     data: {
                         comissaoPaga: true,
-                        fechamentoComissaoId: fechamento.id
+                        fechamentoComissaoId: fechamento.id,
                     },
                 });
+
+                const uniqueOrdemIds = Array.from(new Set(comissaoIds)) as string[];
+                for (const ordemId of uniqueOrdemIds) {
+                    const pendingLavadores = await tx.ordemServicoLavador.count({
+                        where: {
+                            ordemId,
+                            comissaoPaga: false,
+                        },
+                    });
+                    if (pendingLavadores === 0) {
+                        await tx.ordemServico.update({
+                            where: { id: ordemId, empresaId },
+                            data: {
+                                comissaoPaga: true,
+                                fechamentoComissaoId: fechamento.id,
+                            },
+                        });
+                    }
+                }
             }
 
             if (adiantamentoIds.length > 0) {
@@ -577,6 +656,9 @@ export const migrarPagamentosComissaoAntigos = async (req: EmpresaRequest, res: 
 export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId } = req.body;
 
     try {
@@ -619,6 +701,9 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
 export const deleteCaixaRegistro = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     try {
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -659,13 +744,21 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
         const comissoesPendentes = await prisma.ordemServico.findMany({
             where: {
                 empresaId,
-                ordemLavadores: {
-                    some: {
-                        lavadorId: lavadorId as string
-                    }
-                },
-                comissaoPaga: false,
                 dataFim: { gte: start, lte: end },
+                OR: [
+                    {
+                        ordemLavadores: {
+                            some: {
+                                lavadorId: lavadorId as string,
+                                comissaoPaga: false
+                            }
+                        }
+                    },
+                    {
+                        lavadorId: lavadorId as string,
+                        comissaoPaga: false
+                    }
+                ]
             },
             include: {
                 veiculo: true,
@@ -686,20 +779,86 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
             },
         });
 
+        const debitosPendentes = await prisma.ordemServico.findMany({
+            where: {
+                empresaId,
+                dataFim: { gte: start, lte: end },
+                pagamentos: {
+                    some: {
+                        metodo: 'DEBITO_FUNCIONARIO'
+                    }
+                },
+                OR: [
+                    {
+                        ordemLavadores: {
+                            some: {
+                                lavadorId: lavadorId as string,
+                                comissaoPaga: false
+                            }
+                        }
+                    },
+                    {
+                        lavadorId: lavadorId as string,
+                        comissaoPaga: false
+                    }
+                ]
+            },
+            include: {
+                veiculo: true,
+                lavador: true,
+                ordemLavadores: {
+                    include: { lavador: true }
+                },
+                pagamentos: {
+                    where: { metodo: 'DEBITO_FUNCIONARIO' },
+                    select: { id: true, valor: true, pagoEm: true },
+                }
+            },
+        });
+
+        const normalizeOrderWashers = (ordem: any) => {
+            const washers = (ordem.ordemLavadores || []).map((rel: any) => ({
+                id: rel.lavadorId,
+                nome: rel.lavador?.nome || null
+            }));
+            if (!washers.length && ordem.lavadorId) {
+                washers.push({
+                    id: ordem.lavadorId,
+                    nome: ordem.lavador?.nome || null
+                });
+            }
+            return washers;
+        };
+
         const formattedComissoes = comissoesPendentes.map(ordem => ({
             id: ordem.id,
             numeroOrdem: ordem.numeroOrdem,
             valorTotal: ordem.valorTotal,
             dataFim: ordem.dataFim,
             comissao: ordem.comissao,
+            veiculo: ordem.veiculo,
             lavadorId: ordem.lavadorId,
-            lavadores: (ordem.ordemLavadores || []).map(rel => ({
-                id: rel.lavadorId,
-                nome: rel.lavador?.nome || null
-            }))
+            lavadores: normalizeOrderWashers(ordem)
         }));
 
-        res.json({ comissoes: formattedComissoes, adiantamentos: adiantamentosPendentes });
+        const formattedDebitos = debitosPendentes.map(ordem => ({
+            id: ordem.id,
+            numeroOrdem: ordem.numeroOrdem,
+            valorTotal: ordem.valorTotal,
+            dataFim: ordem.dataFim,
+            comissao: ordem.comissao,
+            veiculo: ordem.veiculo,
+            lavadorId: ordem.lavadorId,
+            lavadores: normalizeOrderWashers(ordem),
+            pagamentos: ordem.pagamentos || [],
+            debitoTotal: (ordem.pagamentos || []).reduce((sum, p) => sum + p.valor, 0)
+        }));
+
+        res.json({
+            comissoes: formattedComissoes,
+            adiantamentos: adiantamentosPendentes,
+            debitosOS: formattedDebitos
+        });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao buscar dados de comissão.' });
     }

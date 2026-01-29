@@ -50,6 +50,9 @@ export const getNotificacoes = async (req: EmpresaRequest, res: Response) => {
  */
 export const marcarComoLida = async (req: EmpresaRequest, res: Response) => {
   const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
   try {
     const notificacao = await prisma.notificacao.findFirst({

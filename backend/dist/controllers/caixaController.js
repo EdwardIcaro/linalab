@@ -336,6 +336,16 @@ const getFechamentoComissaoById = async (req, res) => {
                         veiculo: { select: { placa: true, modelo: true } },
                     },
                 },
+                ordemLavadoresPagos: {
+                    include: {
+                        ordem: {
+                            include: {
+                                veiculo: { select: { placa: true, modelo: true } },
+                            },
+                        },
+                        lavador: { select: { id: true, nome: true } },
+                    },
+                },
                 adiantamentosQuitados: true,
             },
         });
@@ -390,17 +400,35 @@ const fecharComissao = async (req, res) => {
                 }
             });
             if (comissaoIds.length > 0) {
-                await tx.ordemServico.updateMany({
+                await tx.ordemServicoLavador.updateMany({
                     where: {
-                        id: { in: comissaoIds },
-                        empresaId,
+                        ordemId: { in: comissaoIds },
                         lavadorId,
+                        comissaoPaga: false,
                     },
                     data: {
                         comissaoPaga: true,
-                        fechamentoComissaoId: fechamento.id
+                        fechamentoComissaoId: fechamento.id,
                     },
                 });
+                const uniqueOrdemIds = Array.from(new Set(comissaoIds));
+                for (const ordemId of uniqueOrdemIds) {
+                    const pendingLavadores = await tx.ordemServicoLavador.count({
+                        where: {
+                            ordemId,
+                            comissaoPaga: false,
+                        },
+                    });
+                    if (pendingLavadores === 0) {
+                        await tx.ordemServico.update({
+                            where: { id: ordemId, empresaId },
+                            data: {
+                                comissaoPaga: true,
+                                fechamentoComissaoId: fechamento.id,
+                            },
+                        });
+                    }
+                }
             }
             if (adiantamentoIds.length > 0) {
                 await tx.adiantamento.updateMany({
@@ -548,11 +576,31 @@ const getDadosComissao = async (req, res) => {
         const comissoesPendentes = await db_1.default.ordemServico.findMany({
             where: {
                 empresaId,
-                lavadorId: lavadorId,
-                comissaoPaga: false,
                 dataFim: { gte: start, lte: end },
+                OR: [
+                    {
+                        ordemLavadores: {
+                            some: {
+                                lavadorId: lavadorId,
+                                comissaoPaga: false
+                            }
+                        }
+                    },
+                    {
+                        lavadorId: lavadorId,
+                        comissaoPaga: false
+                    }
+                ]
             },
-            include: { veiculo: true, lavador: true },
+            include: {
+                veiculo: true,
+                lavador: true,
+                ordemLavadores: {
+                    include: {
+                        lavador: true
+                    }
+                }
+            },
         });
         const adiantamentosPendentes = await db_1.default.adiantamento.findMany({
             where: {
@@ -561,7 +609,82 @@ const getDadosComissao = async (req, res) => {
                 status: 'PENDENTE',
             },
         });
-        res.json({ comissoes: comissoesPendentes, adiantamentos: adiantamentosPendentes });
+        const debitosPendentes = await db_1.default.ordemServico.findMany({
+            where: {
+                empresaId,
+                dataFim: { gte: start, lte: end },
+                pagamentos: {
+                    some: {
+                        metodo: 'DEBITO_FUNCIONARIO'
+                    }
+                },
+                OR: [
+                    {
+                        ordemLavadores: {
+                            some: {
+                                lavadorId: lavadorId,
+                                comissaoPaga: false
+                            }
+                        }
+                    },
+                    {
+                        lavadorId: lavadorId,
+                        comissaoPaga: false
+                    }
+                ]
+            },
+            include: {
+                veiculo: true,
+                lavador: true,
+                ordemLavadores: {
+                    include: { lavador: true }
+                },
+                pagamentos: {
+                    where: { metodo: 'DEBITO_FUNCIONARIO' },
+                    select: { id: true, valor: true, pagoEm: true },
+                }
+            },
+        });
+        const normalizeOrderWashers = (ordem) => {
+            const washers = (ordem.ordemLavadores || []).map((rel) => ({
+                id: rel.lavadorId,
+                nome: rel.lavador?.nome || null
+            }));
+            if (!washers.length && ordem.lavadorId) {
+                washers.push({
+                    id: ordem.lavadorId,
+                    nome: ordem.lavador?.nome || null
+                });
+            }
+            return washers;
+        };
+        const formattedComissoes = comissoesPendentes.map(ordem => ({
+            id: ordem.id,
+            numeroOrdem: ordem.numeroOrdem,
+            valorTotal: ordem.valorTotal,
+            dataFim: ordem.dataFim,
+            comissao: ordem.comissao,
+            veiculo: ordem.veiculo,
+            lavadorId: ordem.lavadorId,
+            lavadores: normalizeOrderWashers(ordem)
+        }));
+        const formattedDebitos = debitosPendentes.map(ordem => ({
+            id: ordem.id,
+            numeroOrdem: ordem.numeroOrdem,
+            valorTotal: ordem.valorTotal,
+            dataFim: ordem.dataFim,
+            comissao: ordem.comissao,
+            veiculo: ordem.veiculo,
+            lavadorId: ordem.lavadorId,
+            lavadores: normalizeOrderWashers(ordem),
+            pagamentos: ordem.pagamentos || [],
+            debitoTotal: (ordem.pagamentos || []).reduce((sum, p) => sum + p.valor, 0)
+        }));
+        res.json({
+            comissoes: formattedComissoes,
+            adiantamentos: adiantamentosPendentes,
+            debitosOS: formattedDebitos
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Erro ao buscar dados de comissão.' });

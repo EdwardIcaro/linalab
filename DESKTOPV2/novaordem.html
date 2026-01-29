@@ -1044,7 +1044,10 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Placa *</label>
+                            <label class="form-label">
+                                Placa <span x-show="!semPlaca">*</span>
+                                <span x-show="semPlaca" style="color: var(--wizard-text-light); font-weight: 400;">(Opcional)</span>
+                            </label>
                             <input
                                 type="text"
                                 class="form-input"
@@ -1052,7 +1055,20 @@
                                 x-model.trim="quickRegister.vehiclePlate"
                                 @input="quickRegister.vehiclePlate = $event.target.value.toUpperCase(); syncQuickRegister()"
                                 maxlength="8"
+                                :disabled="semPlaca"
+                                :style="semPlaca ? 'opacity: 0.5; cursor: not-allowed;' : ''"
                             >
+                            <div style="margin-top: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--wizard-text-light);">
+                                    <input
+                                        type="checkbox"
+                                        x-model="semPlaca"
+                                        @change="if (semPlaca) quickRegister.vehiclePlate = ''"
+                                        style="width: 16px; height: 16px; cursor: pointer;"
+                                    >
+                                    <span>🚗 Veículo sem placa (carro novo, etc)</span>
+                                </label>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Modelo</label>
@@ -1314,7 +1330,7 @@
                             <i class="fas fa-car"></i>
                         </div>
                         <div>
-                            <div class="review-title" x-text="vehicle?.placa || quickRegister.vehiclePlate || 'Nova Placa'"></div>
+                            <div class="review-title" x-text="semPlaca ? '🚗 Veículo sem placa' : (vehicle?.placa || quickRegister.vehiclePlate || 'Nova Placa')"></div>
                             <div class="review-subtitle">
                                 <span x-text="vehicle?.modelo || quickRegister.vehicleModel || 'Modelo nao informado'"></span>
                                 <span x-text="' - ' + getCategoryLabel()"></span>
@@ -1552,6 +1568,7 @@
                 vehicle: null,          // Selected vehicle object
                 vehicleType: 'CARRO',   // CARRO or MOTO
                 vehicleCategory: null,  // HATCH, SEDAN, SUV, PICKUP (for cars)
+                semPlaca: false,        // Ordem sem placa (carros novos, etc)
 
                 quickRegister: {
                     clientName: '',
@@ -1614,11 +1631,13 @@
                 get canProceedStep1() {
                     // Need either:
                     // 1. An existing client+vehicle selected, OR
-                    // 2. Quick register data filled
+                    // 2. Quick register data filled (com ou sem placa)
                     const hasExisting = this.client && this.vehicle;
                     const quickName = (this.quickRegister.clientName || '').trim();
                     const quickPlate = (this.quickRegister.vehiclePlate || '').trim();
-                    const hasQuickRegister = quickName && quickPlate;
+
+                    // Se marcou "sem placa", só precisa do nome do cliente
+                    const hasQuickRegister = this.semPlaca ? quickName : (quickName && quickPlate);
                     const hasCategory = this.vehicleType === 'MOTO' || this.vehicleCategory;
 
                     return (hasExisting || hasQuickRegister) && hasCategory;
@@ -1794,11 +1813,18 @@
                     }
                 },
 
-                selectSearchResult(result) {
+                async selectSearchResult(result) {
                     if (result.type === 'vehicle') {
+                        // VEÍCULO JÁ CADASTRADO - Pular para seleção de serviços
                         this.client = result.client;
                         this.vehicle = result.vehicle;
                         this.searchQuery = result.vehicle.placa;
+
+                        // Carregar serviços e ir direto para step 2
+                        this.closeSearchResults();
+                        await this.loadServices();
+                        this.step = 2;
+                        return;
                     } else if (result.type === 'client') {
                         this.client = result.client;
                         this.vehicle = null;
@@ -2073,7 +2099,7 @@
                             telefone: this.quickRegister.clientPhone || null
                         };
                         orderData.novoVeiculo = {
-                            placa: this.quickRegister.vehiclePlate.toUpperCase(),
+                            placa: this.semPlaca ? `SEM-PLACA-${Date.now()}` : this.quickRegister.vehiclePlate.toUpperCase(),
                             modelo: this.quickRegister.vehicleModel || null,
                             cor: this.quickRegister.vehicleColor || null
                         };
@@ -2153,6 +2179,7 @@
             };
         }
     </script>
+    <script src="nav-menu-helper.js"></script>
 </body>
 </html>
 

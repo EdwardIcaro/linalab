@@ -7,6 +7,7 @@ export interface AuthenticatedRequest extends Request {
     empresaId: string;
     usuarioNome?: string;
     empresaNome?: string;
+    subaccountId?: string;
 }
 /**
  * SECURE Authentication Middleware

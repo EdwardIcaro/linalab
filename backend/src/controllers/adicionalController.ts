@@ -50,6 +50,9 @@ export const getAdicionaisSimple = async (req: EmpresaRequest, res: Response) =>
 
 export const updateAdicional = async (req: EmpresaRequest, res: Response) => {
   const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
   const { nome, preco } = req.body;
 
   try {
@@ -65,6 +68,9 @@ export const updateAdicional = async (req: EmpresaRequest, res: Response) => {
 
 export const deleteAdicional = async (req: EmpresaRequest, res: Response) => {
   const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
   try {
     await prisma.adicional.delete({

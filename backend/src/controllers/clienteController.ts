@@ -164,6 +164,9 @@ export const getClientes = async (req: EmpresaRequest, res: Response) => {
 export const getClienteById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const cliente = await prisma.cliente.findFirst({
       where: {
@@ -238,7 +241,14 @@ export const getClienteById = async (req: EmpresaRequest, res: Response) => {
 export const updateCliente = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { nome, telefone, email, ativo } = req.body;
+
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se cliente existe e pertence à empresa
     const existingCliente = await prisma.cliente.findFirst({
@@ -311,6 +321,9 @@ export const updateCliente = async (req: EmpresaRequest, res: Response) => {
 export const deleteCliente = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se cliente existe e pertence à empresa
     const cliente = await prisma.cliente.findFirst({
@@ -318,7 +331,8 @@ export const deleteCliente = async (req: EmpresaRequest, res: Response) => {
         id,
         empresaId: req.empresaId
       },
-      include: {
+      select: {
+        id: true,
         _count: {
           select: {
             ordens: true,
@@ -334,8 +348,8 @@ export const deleteCliente = async (req: EmpresaRequest, res: Response) => {
 
     // Não permitir excluir cliente com ordens ou veículos
     if (cliente._count.ordens > 0 || cliente._count.veiculos > 0) {
-      return res.status(400).json({ 
-        error: 'Não é possível excluir cliente com ordens de serviço ou veículos cadastrados' 
+      return res.status(400).json({
+        error: 'Não é possível excluir cliente com ordens de serviço ou veículos cadastrados'
       });
     }
 
@@ -358,10 +372,13 @@ export const deleteCliente = async (req: EmpresaRequest, res: Response) => {
 export const getClienteByPlaca = async (req: EmpresaRequest, res: Response) => {
   try {
     const { placa } = req.params;
+    if (Array.isArray(placa)) {
+      return res.status(400).json({ error: 'Placa inválida' });
+    }
 
     const veiculo = await prisma.veiculo.findFirst({
       where: {
-        placa: { equals: placa },
+        placa,
         cliente: {
           empresaId: req.empresaId
         }
@@ -371,7 +388,7 @@ export const getClienteByPlaca = async (req: EmpresaRequest, res: Response) => {
       }
     });
 
-    if (!veiculo) {
+    if (!veiculo || !veiculo.cliente) {
       return res.status(404).json({ error: 'Veículo não encontrado' });
     }
 

@@ -699,34 +699,72 @@
 
             <!-- Navigation Menu -->
             <nav class="nav-menu-card">
-                <a href="index.html" class="nav-menu-item active" data-permission="ver_dashboard">
-                    <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="ordens.html" class="nav-menu-item" data-permission="gerenciar_ordens">
-                    <i class="fas fa-list-alt"></i>
-                    <span>Ordens</span>
-                </a>
-                <a href="novaordem.html" class="nav-menu-item" data-permission="gerenciar_ordens">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Nova Ordem</span>
-                </a>
-                <a href="clientes.html" class="nav-menu-item" data-permission="gerenciar_clientes">
-                    <i class="fas fa-users"></i>
-                    <span>Clientes</span>
-                </a>
-                <a href="funcionarios.html" class="nav-menu-item" data-permission="gerenciar_funcionarios">
-                    <i class="fas fa-user-tie"></i>
-                    <span>Funcionários</span>
-                </a>
-                <a href="financeiro.html" class="nav-menu-item" data-permission="ver_financeiro">
-                    <i class="fas fa-chart-pie"></i>
-                    <span>Financeiro</span>
-                </a>
-                <a href="configuracoes.html" class="nav-menu-item" data-permission="gerenciar_configuracoes">
-                    <i class="fas fa-cog"></i>
-                    <span>Configurações</span>
-                </a>
+                <div class="nav-menu-links">
+                    <a href="index.html" class="nav-menu-item active" data-permission="ver_dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="ordens.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+                        <i class="fas fa-list-alt"></i>
+                        <span>Ordens</span>
+                    </a>
+                    <a href="novaordem.html" class="nav-menu-item" data-permission="gerenciar_ordens">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Nova Ordem</span>
+                    </a>
+                    <a href="clientes.html" class="nav-menu-item" data-permission="gerenciar_clientes">
+                        <i class="fas fa-users"></i>
+                        <span>Clientes</span>
+                    </a>
+                    <a href="funcionarios.html" class="nav-menu-item" data-permission="gerenciar_funcionarios">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Funcionários</span>
+                    </a>
+                    <a href="financeiro.html" class="nav-menu-item" data-permission="ver_financeiro">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Financeiro</span>
+                    </a>
+                    <a href="configuracoes.html" class="nav-menu-item" data-permission="gerenciar_configuracoes">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+                <div class="nav-menu-actions">
+                    <!-- Notification Bell -->
+                    <div class="notification-wrapper">
+                        <button id="notification-bell" class="icon-btn" title="Notificações">
+                            <i class="fas fa-bell"></i>
+                            <span id="notification-dot" class="notification-dot"></span>
+                        </button>
+                        <div id="notification-panel" class="notification-panel">
+                            <div class="notification-panel-header">
+                                <h4>Notificações</h4>
+                                <button id="mark-all-read-btn" class="btn-link" style="font-size: 12px;">Marcar todas como lidas</button>
+                            </div>
+                            <div id="notification-list" class="notification-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>Nenhuma notificação</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Profile -->
+                    <a href="perfil.html" class="nav-user-profile">
+                        <div class="nav-user-avatar" x-text="getUserInitials()"></div>
+                        <div class="nav-user-info">
+                            <span class="nav-user-name" x-text="getUserName()"></span>
+                            <span class="nav-user-role" x-text="getUserRole()"></span>
+                        </div>
+                    </a>
+
+                    <!-- Logout Button -->
+                    <button class="nav-logout-btn" @click="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
             </nav>
 
             <!-- KPI Cards Grid -->
@@ -1129,6 +1167,44 @@
                         localStorage.setItem('empresaNome', empresa.nome);
                     } catch (error) {
                         console.error('Error loading company:', error);
+                    }
+                },
+
+                // ==========================================
+                // NAV MENU USER FUNCTIONS
+                // ==========================================
+                getUserInitials() {
+                    const name = localStorage.getItem('usuarioNome') || 'U';
+                    const parts = name.trim().split(' ');
+                    if (parts.length >= 2) {
+                        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+                    }
+                    return name.charAt(0).toUpperCase();
+                },
+
+                getUserName() {
+                    return localStorage.getItem('usuarioNome') || 'Usuário';
+                },
+
+                getUserRole() {
+                    const role = localStorage.getItem('userRole');
+                    const roleNames = {
+                        'LINA_OWNER': '👑 Administrador Geral',
+                        'OWNER': '👑 Proprietário',
+                        'FUNCIONARIO': 'Funcionário',
+                        'LAVADOR': 'Lavador'
+                    };
+                    return roleNames[role] || 'Usuário';
+                },
+
+                handleLogout() {
+                    if (typeof logout === 'function') {
+                        logout();
+                    } else {
+                        // Fallback if global logout function doesn't exist
+                        if (confirm('Tem certeza que deseja sair do sistema?')) {
+                            window.api.logout();
+                        }
                     }
                 },
 
@@ -1583,6 +1659,14 @@
                     if (bell && panel) {
                         bell.addEventListener('click', (e) => {
                             e.stopPropagation();
+
+                            // Calcula a posição do botão do sino
+                            const bellRect = bell.getBoundingClientRect();
+
+                            // Posiciona o painel abaixo do sino, alinhado à direita
+                            panel.style.top = `${bellRect.bottom + 12}px`;
+                            panel.style.right = `${window.innerWidth - bellRect.right}px`;
+
                             panel.classList.toggle('active');
                             if (panel.classList.contains('active')) {
                                 dot.style.display = 'none';
@@ -1592,6 +1676,15 @@
                         document.addEventListener('click', (e) => {
                             if (!panel.contains(e.target) && !bell.contains(e.target)) {
                                 panel.classList.remove('active');
+                            }
+                        });
+
+                        // Reposiciona o painel ao redimensionar a janela
+                        window.addEventListener('resize', () => {
+                            if (panel.classList.contains('active')) {
+                                const bellRect = bell.getBoundingClientRect();
+                                panel.style.top = `${bellRect.bottom + 12}px`;
+                                panel.style.right = `${window.innerWidth - bellRect.right}px`;
                             }
                         });
                     }
@@ -1755,6 +1848,7 @@
             }, 1000);
         });
     </script>
+    <script src="nav-menu-helper.js"></script>
 </body>
 </html>
 

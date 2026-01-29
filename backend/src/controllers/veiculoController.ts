@@ -146,6 +146,9 @@ export const getVeiculos = async (req: EmpresaRequest, res: Response) => {
 export const getVeiculoById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const veiculo = await prisma.veiculo.findFirst({
       where: {
@@ -201,8 +204,11 @@ export const getVeiculoById = async (req: EmpresaRequest, res: Response) => {
 export const getVeiculoByPlaca = async (req: EmpresaRequest, res: Response) => {
   try {
     const { placa } = req.params;
+    if (Array.isArray(placa)) {
+      return res.status(400).json({ error: 'Placa inválida' });
+    }
 
-    if (!placa) {
+    if (!placa || Array.isArray(placa)) {
       return res.status(400).json({ error: 'Placa é obrigatória' });
     }
 
@@ -235,7 +241,14 @@ export const getVeiculoByPlaca = async (req: EmpresaRequest, res: Response) => {
 export const updateVeiculo = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { clienteId, placa, modelo, cor, ano } = req.body;
+
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se veículo existe e pertence à empresa
     const existingVeiculo = await prisma.veiculo.findFirst({
@@ -314,6 +327,9 @@ export const updateVeiculo = async (req: EmpresaRequest, res: Response) => {
 export const deleteVeiculo = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se veículo existe e pertence à empresa
     const veiculo = await prisma.veiculo.findFirst({
@@ -323,7 +339,8 @@ export const deleteVeiculo = async (req: EmpresaRequest, res: Response) => {
           empresaId: req.empresaId
         }
       },
-      include: {
+      select: {
+        id: true,
         _count: {
           select: {
             ordens: true
@@ -338,8 +355,8 @@ export const deleteVeiculo = async (req: EmpresaRequest, res: Response) => {
 
     // Não permitir excluir veículo com ordens de serviço
     if (veiculo._count.ordens > 0) {
-      return res.status(400).json({ 
-        error: 'Não é possível excluir veículo com ordens de serviço' 
+      return res.status(400).json({
+        error: 'Não é possível excluir veículo com ordens de serviço'
       });
     }
 

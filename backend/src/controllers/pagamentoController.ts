@@ -92,6 +92,10 @@ export const getPagamentosByOrdem = async (req: EmpresaRequest, res: Response) =
   try {
     const { ordemId } = req.params;
 
+    if (Array.isArray(ordemId)) {
+      return res.status(400).json({ error: 'ID da ordem inválido' });
+    }
+
     // Verificar se ordem existe e pertence à empresa
     const ordem = await prisma.ordemServico.findFirst({
       where: {
@@ -127,6 +131,9 @@ export const getPagamentosByOrdem = async (req: EmpresaRequest, res: Response) =
 export const updatePagamentoStatus = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { status } = req.body;
 
     // Verificar se pagamento existe e pertence à empresa
@@ -186,6 +193,9 @@ export const updatePagamentoStatus = async (req: EmpresaRequest, res: Response) 
 export const deletePagamento = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se pagamento existe e pertence à empresa
     const pagamento = await prisma.pagamento.findFirst({

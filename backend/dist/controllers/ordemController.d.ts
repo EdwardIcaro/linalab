@@ -18,7 +18,7 @@ export declare const getOrdemById: (req: EmpresaRequest, res: Response) => Promi
 /**
  * Atualizar ordem de serviço
  */
-export declare const updateOrdem: (req: EmpresaRequest, res: Response) => Promise<void>;
+export declare const updateOrdem: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
 /**
  * Cancelar ordem de serviço
  */
@@ -31,6 +31,11 @@ export declare const getOrdensStats: (req: EmpresaRequest, res: Response) => Pro
  * Deletar ordem de serviço permanentemente
  */
 export declare const deleteOrdem: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+/**
+ * Finalizar ordem de serviço manualmente
+ * Processa pagamento, atualiza status e calcula comissão
+ */
+export declare const finalizarOrdem: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
 /**
  * Itera sobre as empresas para finalizar ordens do dia conforme o horário de fechamento.
  * Esta função é chamada pelo cron job a cada 15 minutos.

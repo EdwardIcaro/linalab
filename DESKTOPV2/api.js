@@ -127,7 +127,10 @@ const api = {
   createLavador: (data) => fetchApi('/lavadores', { method: 'POST', body: JSON.stringify(data) }),
   updateLavador: (id, data) => fetchApi(`/lavadores/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteLavador: (id) => fetchApi(`/lavadores/${id}`, { method: 'DELETE' }),
-  gerarTokenLavador: (id) => fetchApi(`/lavadores/${id}/token`, { method: 'POST' }),
+  gerarTokenLavador: (id, duration = '24') => fetchApi(`/lavadores/${id}/token`, {
+    method: 'POST',
+    body: JSON.stringify({ duration })
+  }),
   getLavadorTokens: () => fetchApi('/lavadores/tokens'),
   toggleLavadorToken: (id) => fetchApi(`/lavadores/tokens/${id}/toggle`, { method: 'PATCH' }),
   updateLavadorTokenStatus: (id, data) => fetchApi(`/lavadores/tokens/${id}/status`, {
@@ -293,6 +296,19 @@ const api = {
   // ===== ADMIN =====
   getAdminStats: () => api.call('GET', 'admin/stats'),
   getAdminEmpresaById: (id) => api.call('GET', `admin/empresas/${id}/details`),
+
+  // ===== USER PROFILE =====
+  updateUserProfile: (data) => fetchApi('/usuarios/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  }),
+  changePassword: (data) => fetchApi('/usuarios/change-password', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  deleteAccount: () => fetchApi('/usuarios/account', {
+    method: 'DELETE'
+  }),
 
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),

@@ -39,7 +39,7 @@ const getLavadorPublicData = async (req, res) => {
             where: {
                 lavadorId: lavador.id,
                 createdAt: { gte: trintaDiasAtras },
-                status: { in: ['EM_ANDAMENTO', 'FINALIZADO', 'PENDENTE'] } // Inclui pendente e em andamento para o lavador ver o que tem pra fazer
+                status: { in: ['EM_ANDAMENTO', 'FINALIZADO', 'PENDENTE', 'AGUARDANDO_PAGAMENTO'] } // Inclui pendente, andamento e aguardando pagamento para o lavador ver o que tem pra fazer
             },
             include: {
                 veiculo: { select: { modelo: true, placa: true } },

@@ -158,6 +158,9 @@ export const getEmpresas = async (req: EmpresaRequest, res: Response) => {
 export const getEmpresaById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     let empresa = await prisma.empresa.findUnique({
       where: { id },
@@ -203,11 +206,18 @@ export const getEmpresaById = async (req: EmpresaRequest, res: Response) => {
 export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      nome, config, horarioAbertura, horarioFechamento, 
-      finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao, 
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    const {
+      nome, config, horarioAbertura, horarioFechamento,
+      finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao,
       notificationPreferences, paymentMethodsConfig
     } = req.body;
+
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const existingEmpresa = await prisma.empresa.findUnique({
       where: { id }
@@ -264,6 +274,9 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
 export const toggleEmpresaStatus = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const currentEmpresa = await prisma.empresa.findUnique({ where: { id } });
     if (!currentEmpresa) {

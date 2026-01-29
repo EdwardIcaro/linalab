@@ -151,12 +151,13 @@ model Lavador {
 
 // Modelo de Tokens de Acesso para Lavadores (NOVO)
 model LavadorToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  ativo     Boolean  @default(true)
+  id        String    @id @default(cuid())
+  token     String    @unique
+  ativo     Boolean   @default(true)
   lavadorId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  expiresAt DateTime? // Null = permanente
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relacionamento
   lavador Lavador @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
@@ -315,12 +316,15 @@ model OrdemServico {
 }
 
 model OrdemServicoLavador {
-  ordemId     String
-  lavadorId   String
-  createdAt   DateTime           @default(now())
+  ordemId               String
+  lavadorId             String
+  createdAt             DateTime           @default(now())
+  comissaoPaga          Boolean            @default(false)
+  fechamentoComissaoId  String?
 
   ordem     OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
   lavador   Lavador      @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+  fechamentoComissao FechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id])
 
   @@id([ordemId, lavadorId])
   @@map("ordens_servico_lavadores")
@@ -448,6 +452,7 @@ model FechamentoComissao {
   // Relacionamentos com os itens que foram pagos/quitados neste fechamento
   ordensPagas           OrdemServico[]
   adiantamentosQuitados Adiantamento[]
+  ordemLavadoresPagos   OrdemServicoLavador[]
 
   @@map("fechamentos_comissao")
 }

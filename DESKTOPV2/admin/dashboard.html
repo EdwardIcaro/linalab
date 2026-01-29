@@ -466,10 +466,11 @@
             <!-- Loading Skeleton -->
             <template x-if="isLoading">
                 <div>
-                    <div class="skeleton skeleton-text" x-for="i in 5"></div>
+                    <template x-for="i in 5">
+                        <div class="skeleton skeleton-text"></div>
+                    </template>
                 </div>
             </template>
-
             <!-- Companies Table -->
             <template x-if="!isLoading && filteredCompanies.length > 0">
                 <table>
@@ -490,10 +491,9 @@
                                 <td>
                                     <strong x-text="empresa.nome"></strong><br>
                                     <small style="color: #94A3B8;" x-text="empresa.cnpj || 'Sem CNPJ'"></small>
-                                </td>
                                 <td>
-                                    <span x-text="empresa.usuario.nome"></span><br>
-                                    <small style="color: #94A3B8;" x-text="empresa.usuario.email"></small>
+                                    <span x-text="empresa.usuario?.nome || 'N/A'"></span><br>
+                                    <small style="color: #94A3B8;" x-text="empresa.usuario?.email || 'N/A'"></small>
                                 </td>
                                 <td>
                                     <span
@@ -504,9 +504,9 @@
                                         <span x-text="empresa.ativo ? 'Ativa' : 'Inativa'"></span>
                                     </span>
                                 </td>
-                                <td x-text="empresa._count.clientes">0</td>
-                                <td x-text="empresa._count.ordens">0</td>
-                                <td x-text="formatCurrency(empresa.faturamento)">R$ 0,00</td>
+                                <td x-text="empresa._count?.clientes ?? 0">0</td>
+                                <td x-text="empresa._count?.ordens ?? 0">0</td>
+                                <td x-text="formatCurrency(empresa.faturamento)">R$ 0,00</td>                                <td x-text="formatCurrency(empresa.faturamento)">R$ 0,00</td>
                                 <td>
                                     <div style="display: flex; gap: 0.5rem;">
                                         <button
@@ -572,11 +572,10 @@
                     const query = this.searchQuery.toLowerCase();
                     return this.companies.filter(empresa =>
                         empresa.nome.toLowerCase().includes(query) ||
-                        empresa.usuario.nome.toLowerCase().includes(query) ||
-                        empresa.usuario.email.toLowerCase().includes(query)
+                        empresa.usuario?.nome?.toLowerCase()?.includes(query) ||
+                        empresa.usuario?.email?.toLowerCase()?.includes(query)
                     );
                 },
-
                 /**
                  * Initialize dashboard
                  */
@@ -671,7 +670,7 @@
                  */
                 logout() {
                     if (confirm('Tem certeza que deseja sair?')) {
-                        localStorage.clear();
+                        localStorage.clear();                        
                         window.location.href = '../login.html';
                     }
                 },

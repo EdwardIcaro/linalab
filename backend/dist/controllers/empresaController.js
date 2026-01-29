@@ -25,6 +25,15 @@ const parseEmpresaConfig = (empresa) => {
             empresa.notificationPreferences = {}; // Retorna objeto vazio em caso de erro
         }
     }
+    if (empresa.paymentMethodsConfig && typeof empresa.paymentMethodsConfig === 'string') {
+        try {
+            empresa.paymentMethodsConfig = JSON.parse(empresa.paymentMethodsConfig);
+        }
+        catch (e) {
+            console.error('Erro ao parsear paymentMethodsConfig JSON:', e);
+            empresa.paymentMethodsConfig = {}; // Retorna objeto vazio em caso de erro
+        }
+    }
     return empresa;
 };
 /**
@@ -59,6 +68,12 @@ const createEmpresa = async (req, res) => {
                     ordemEditada: true,
                     ordemDeletada: false,
                     finalizacaoAutomatica: true
+                }),
+                paymentMethodsConfig: JSON.stringify({
+                    DINHEIRO: true,
+                    PIX: true,
+                    CARTAO: true,
+                    DEBITO_FUNCIONARIO: true
                 })
             },
             select: {
@@ -67,6 +82,7 @@ const createEmpresa = async (req, res) => {
                 ativo: true,
                 config: true,
                 notificationPreferences: true,
+                paymentMethodsConfig: true,
                 createdAt: true,
                 updatedAt: true
             }
@@ -149,6 +165,7 @@ const getEmpresaById = async (req, res) => {
                 exigirLavadorParaFinalizar: true,
                 paginaInicialPadrao: true,
                 notificationPreferences: true,
+                paymentMethodsConfig: true,
                 createdAt: true,
                 updatedAt: true,
                 _count: {
@@ -178,7 +195,7 @@ exports.getEmpresaById = getEmpresaById;
 const updateEmpresa = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nome, config, horarioAbertura, horarioFechamento, finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao, notificationPreferences } = req.body;
+        const { nome, config, horarioAbertura, horarioFechamento, finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao, notificationPreferences, paymentMethodsConfig } = req.body;
         const existingEmpresa = await db_1.default.empresa.findUnique({
             where: { id }
         });
@@ -202,6 +219,8 @@ const updateEmpresa = async (req, res) => {
             updateData.paginaInicialPadrao = paginaInicialPadrao;
         if (notificationPreferences && typeof notificationPreferences === 'object')
             updateData.notificationPreferences = JSON.stringify(notificationPreferences);
+        if (paymentMethodsConfig && typeof paymentMethodsConfig === 'object')
+            updateData.paymentMethodsConfig = JSON.stringify(paymentMethodsConfig);
         let empresa = await db_1.default.empresa.update({
             where: { id },
             data: updateData,
@@ -216,6 +235,7 @@ const updateEmpresa = async (req, res) => {
                 exigirLavadorParaFinalizar: true,
                 paginaInicialPadrao: true,
                 notificationPreferences: true,
+                paymentMethodsConfig: true,
                 updatedAt: true
             }
         });

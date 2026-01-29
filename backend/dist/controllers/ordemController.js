@@ -3,9 +3,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processarFinalizacoesAutomaticas = exports.deleteOrdem = exports.getOrdensStats = exports.cancelOrdem = exports.updateOrdem = exports.getOrdemById = exports.getOrdens = exports.createOrdem = void 0;
+exports.processarFinalizacoesAutomaticas = exports.finalizarOrdem = exports.deleteOrdem = exports.getOrdensStats = exports.cancelOrdem = exports.updateOrdem = exports.getOrdemById = exports.getOrdens = exports.createOrdem = void 0;
 const db_1 = __importDefault(require("../db"));
 const notificationService_1 = require("../services/notificationService");
+const validate_1 = require("../utils/validate");
+function formatOrderWithLavadores(order) {
+    if (!order)
+        return order;
+    const ordemLavadores = order.ordemLavadores || [];
+    const lavadores = ordemLavadores.map((relation) => ({
+        id: relation.lavadorId,
+        nome: relation.lavador?.nome || null
+    }));
+    const lavadorIds = lavadores.map((l) => l.id);
+    const formatted = {
+        ...order,
+        lavadores,
+        lavadorIds
+    };
+    delete formatted.ordemLavadores;
+    return formatted;
+}
 /**
  * Criar nova ordem de serviço
  * Agora, esta função também pode criar um cliente e/ou veículo se eles não existirem.
@@ -15,11 +33,20 @@ const createOrdem = async (req, res) => {
     if (!empresaId) {
         return res.status(401).json({ error: 'Empresa não autenticada' });
     }
-    const { clienteId, novoCliente, veiculoId, novoVeiculo, lavadorId, itens, forcarCriacao, observacoes } = req.body;
-    // Validações
-    if ((!clienteId && !novoCliente) || (!veiculoId && !novoVeiculo) || !itens || !Array.isArray(itens) || itens.length === 0) {
-        return res.status(400).json({ error: 'Dados incompletos para criar a ordem.' });
+    // SECURITY: Validate and sanitize input data
+    const validation = (0, validate_1.validateCreateOrder)(req.body);
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: 'Dados inválidos para criar ordem',
+            details: validation.errors,
+            code: 'VALIDATION_ERROR'
+        });
     }
+    // Use sanitized data instead of raw req.body
+    const { clienteId, novoCliente, veiculoId, novoVeiculo, lavadorId, lavadorIds, itens, forcarCriacao, observacoes } = validation.sanitizedData;
+    const extraLavadores = Array.from(new Set((lavadorIds || []).filter((id) => !!id && id !== lavadorId)));
+    const normalizedLavadorIds = lavadorId ? [lavadorId, ...extraLavadores] : extraLavadores;
+    const primaryLavadorId = normalizedLavadorIds[0] || null;
     try {
         // Utiliza uma transação para garantir a atomicidade da operação
         const ordem = await db_1.default.$transaction(async (tx) => {
@@ -82,7 +109,7 @@ const createOrdem = async (req, res) => {
                     where: {
                         veiculoId: finalVeiculoId,
                         empresaId,
-                        status: { in: ['PENDENTE', 'EM_ANDAMENTO'] },
+                        status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] },
                     },
                 });
                 if (ordemAtiva) {
@@ -166,30 +193,43 @@ const createOrdem = async (req, res) => {
                     empresaId,
                     clienteId: finalClienteId,
                     veiculoId: finalVeiculoId,
-                    lavadorId,
+                    lavadorId: primaryLavadorId,
                     valorTotal: calculatedValorTotal,
                     comissao: comissaoCalculada, // A comissão é calculada, mas só é "devida" ao finalizar
-                    status: lavadorId ? 'EM_ANDAMENTO' : 'PENDENTE',
+                    status: primaryLavadorId ? 'EM_ANDAMENTO' : 'PENDENTE',
                     observacoes: observacoes,
                     items: { create: ordemItemsData.filter(Boolean) },
                 },
+            });
+            if (normalizedLavadorIds.length > 0) {
+                await tx.ordemServicoLavador.createMany({
+                    data: normalizedLavadorIds.map(lavadorIdValue => ({
+                        ordemId: novaOrdem.id,
+                        lavadorId: lavadorIdValue
+                    }))
+                });
+            }
+            const ordemComLavadores = await tx.ordemServico.findUnique({
+                where: { id: novaOrdem.id },
                 include: {
                     cliente: true,
                     veiculo: true,
                     lavador: true,
                     items: { include: { servico: true, adicional: true } },
-                },
+                    ordemLavadores: { include: { lavador: true } }
+                }
             });
-            return novaOrdem;
+            return ordemComLavadores;
         });
+        const ordemFinal = formatOrderWithLavadores(ordem);
         // Enviar notificação APÓS a transação para garantir que os dados estão corretos
         await (0, notificationService_1.createNotification)({
             empresaId: empresaId,
-            mensagem: `Nova ordem #${ordem.numeroOrdem} (${ordem.cliente.nome}) foi criada.`,
+            mensagem: `Nova ordem #${ordem.numeroOrdem} (${ordemFinal.cliente.nome}) foi criada.`,
             link: `ordens.html?id=${ordem.id}`,
             type: 'ordemCriada'
         });
-        res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem });
+        res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem: ordemFinal });
     }
     catch (error) {
         if (error.code === 'ACTIVE_ORDER_EXISTS') {
@@ -201,8 +241,7 @@ const createOrdem = async (req, res) => {
         console.error('Erro detalhado ao criar ordem de serviço:', error);
         res.status(500).json({
             error: 'Erro interno do servidor ao criar ordem.',
-            details: error.message || 'Nenhuma mensagem de erro específica.',
-            stack: error.stack
+            details: error.message || 'Nenhuma mensagem de erro específica.'
         });
     }
 };
@@ -236,7 +275,7 @@ const getOrdens = async (req, res) => {
         if (status) {
             const statusString = status;
             if (statusString === 'ACTIVE') {
-                where.status = { in: ['PENDENTE', 'EM_ANDAMENTO'] };
+                where.status = { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] };
             }
             else if (statusString.includes(',')) {
                 where.status = { in: statusString.split(',') };
@@ -249,7 +288,19 @@ const getOrdens = async (req, res) => {
             where.clienteId = clienteId;
         }
         if (lavadorId) {
-            where.lavadorId = lavadorId;
+            const washerFilterId = lavadorId;
+            const washerFilterCondition = {
+                OR: [
+                    { lavadorId: washerFilterId },
+                    { ordemLavadores: { some: { lavadorId: washerFilterId } } }
+                ]
+            };
+            const existingAnd = Array.isArray(where.AND)
+                ? [...where.AND]
+                : where.AND
+                    ? [where.AND]
+                    : [];
+            where.AND = [...existingAnd, washerFilterCondition];
         }
         if (dataInicio && dataFim && dataInicio !== 'null' && dataFim !== 'null') {
             // As datas já chegam no formato YYYY-MM-DD
@@ -312,6 +363,16 @@ const getOrdens = async (req, res) => {
                             }
                         }
                     },
+                    ordemLavadores: {
+                        include: {
+                            lavador: {
+                                select: {
+                                    id: true,
+                                    nome: true
+                                }
+                            }
+                        }
+                    },
                     pagamentos: {
                         orderBy: {
                             createdAt: 'asc'
@@ -326,8 +387,9 @@ const getOrdens = async (req, res) => {
             }),
             db_1.default.ordemServico.count({ where })
         ]);
+        const enrichedOrders = ordens.map(order => formatOrderWithLavadores(order));
         res.json({
-            ordens,
+            ordens: enrichedOrders,
             pagination: {
                 page: Number(page),
                 limit: Number(limit),
@@ -394,6 +456,16 @@ const getOrdemById = async (req, res) => {
                         }
                     }
                 },
+                ordemLavadores: {
+                    include: {
+                        lavador: {
+                            select: {
+                                id: true,
+                                nome: true
+                            }
+                        }
+                    }
+                },
                 pagamentos: {
                     orderBy: {
                         createdAt: 'asc'
@@ -404,7 +476,7 @@ const getOrdemById = async (req, res) => {
         if (!ordem) {
             return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
         }
-        res.json(ordem);
+        res.json(formatOrderWithLavadores(ordem));
     }
     catch (error) {
         console.error('Erro ao buscar ordem de serviço:', error);
@@ -416,21 +488,32 @@ exports.getOrdemById = getOrdemById;
  * Atualizar ordem de serviço
  */
 const updateOrdem = async (req, res) => {
+    const validation = (0, validate_1.validateUpdateOrder)(req.body);
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: 'Dados inválidos para atualizar ordem',
+            details: validation.errors,
+            code: 'VALIDATION_ERROR'
+        });
+    }
     try {
         const updatedOrdemResult = await db_1.default.$transaction(async (tx) => {
             const { id } = req.params;
-            const { status, lavadorId, observacoes, itens } = req.body;
+            const { status, lavadorId, lavadorIds, observacoes, itens } = validation.sanitizedData;
             const existingOrdem = await tx.ordemServico.findFirst({
                 where: { id, empresaId: req.empresaId },
             });
             if (!existingOrdem) {
                 throw new Error('Ordem de serviço não encontrada'); // Lança um erro para ser pego pelo catch
             }
+            const extraLavadores = Array.from(new Set((lavadorIds || []).filter((id) => !!id && id !== lavadorId)));
+            const normalizedLavadorIds = lavadorId ? [lavadorId, ...extraLavadores] : extraLavadores;
+            const primaryLavadorId = normalizedLavadorIds[0] || null;
             let valorTotal = existingOrdem.valorTotal;
             const dataToUpdate = {
                 observacoes,
                 status,
-                lavador: lavadorId ? { connect: { id: lavadorId } } : undefined,
+                lavador: primaryLavadorId ? { connect: { id: primaryLavadorId } } : undefined,
             };
             if (itens && Array.isArray(itens)) {
                 await tx.ordemServicoItem.deleteMany({ where: { ordemId: id } });
@@ -493,7 +576,7 @@ const updateOrdem = async (req, res) => {
             if (status && status === 'FINALIZADO' && !existingOrdem.dataFim) {
                 dataToUpdate.dataFim = new Date();
             }
-            const ordem = await tx.ordemServico.update({
+            const ordemAtualizada = await tx.ordemServico.update({
                 where: { id },
                 data: dataToUpdate,
                 include: {
@@ -503,16 +586,36 @@ const updateOrdem = async (req, res) => {
                     items: { include: { servico: { select: { id: true, nome: true } }, adicional: { select: { id: true, nome: true } } } }
                 },
             });
-            return ordem;
+            await tx.ordemServicoLavador.deleteMany({ where: { ordemId: id } });
+            if (normalizedLavadorIds.length > 0) {
+                await tx.ordemServicoLavador.createMany({
+                    data: normalizedLavadorIds.map(lavadorIdValue => ({
+                        ordemId: id,
+                        lavadorId: lavadorIdValue
+                    }))
+                });
+            }
+            const ordemComLavadores = await tx.ordemServico.findUnique({
+                where: { id },
+                include: {
+                    cliente: { select: { id: true, nome: true, telefone: true } },
+                    veiculo: { select: { id: true, placa: true, modelo: true, cor: true } },
+                    lavador: { select: { id: true, nome: true, comissao: true } },
+                    items: { include: { servico: { select: { id: true, nome: true } }, adicional: { select: { id: true, nome: true } } } },
+                    ordemLavadores: { include: { lavador: true } }
+                }
+            });
+            return ordemComLavadores;
         });
         // Enviar notificação após a transação ser bem-sucedida
+        const ordemFinal = formatOrderWithLavadores(updatedOrdemResult);
         await (0, notificationService_1.createNotification)({
             empresaId: req.empresaId,
-            mensagem: `A ordem #${updatedOrdemResult.numeroOrdem} (${updatedOrdemResult.cliente.nome}) foi atualizada.`,
-            link: `ordens.html?id=${updatedOrdemResult.id}`,
+            mensagem: `A ordem #${ordemFinal.numeroOrdem} (${ordemFinal.cliente.nome}) foi atualizada.`,
+            link: `ordens.html?id=${ordemFinal.id}`,
             type: 'ordemEditada'
         });
-        res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: updatedOrdemResult });
+        res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: ordemFinal });
     }
     catch (error) {
         console.error('Erro ao atualizar ordem de serviço:', error);
@@ -625,7 +728,19 @@ const getOrdensStats = async (req, res) => {
             }
         }
         if (lavadorId) {
-            where.lavadorId = lavadorId;
+            const washerFilterId = lavadorId;
+            const washerFilterCondition = {
+                OR: [
+                    { lavadorId: washerFilterId },
+                    { ordemLavadores: { some: { lavadorId: washerFilterId } } }
+                ]
+            };
+            const existingAnd = Array.isArray(where.AND)
+                ? [...where.AND]
+                : where.AND
+                    ? [where.AND]
+                    : [];
+            where.AND = [...existingAnd, washerFilterCondition];
         }
         if (servicoId) {
             where.items = {
@@ -846,6 +961,156 @@ const deleteOrdem = async (req, res) => {
 };
 exports.deleteOrdem = deleteOrdem;
 /**
+ * Finalizar ordem de serviço manualmente
+ * Processa pagamento, atualiza status e calcula comissão
+ */
+const finalizarOrdem = async (req, res) => {
+    const empresaId = req.empresaId;
+    const { id } = req.params;
+    // Validação de entrada
+    if (!empresaId) {
+        return res.status(401).json({ error: 'Empresa não autenticada' });
+    }
+    // SECURITY: Validate and sanitize payment data
+    const validation = (0, validate_1.validateFinalizarOrdem)(req.body);
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: 'Dados de pagamento inválidos',
+            details: validation.errors,
+            code: 'VALIDATION_ERROR'
+        });
+    }
+    // Use sanitized data
+    const { pagamentos, lavadorDebitoId } = validation.sanitizedData;
+    try {
+        // Buscar a ordem e verificar se existe e pertence à empresa
+        const ordem = await db_1.default.ordemServico.findFirst({
+            where: {
+                id,
+                empresaId
+            },
+            include: {
+                lavador: true,
+                cliente: true,
+                veiculo: true
+            }
+        });
+        if (!ordem) {
+            return res.status(404).json({
+                error: 'Ordem de serviço não encontrada',
+                code: 'ORDER_NOT_FOUND'
+            });
+        }
+        // Verificar se a ordem já foi finalizada
+        if (ordem.status === 'FINALIZADO') {
+            return res.status(409).json({
+                error: 'Esta ordem já foi finalizada',
+                code: 'ORDER_ALREADY_FINALIZED'
+            });
+        }
+        // Verificar se a ordem foi cancelada
+        if (ordem.status === 'CANCELADO') {
+            return res.status(409).json({
+                error: 'Não é possível finalizar uma ordem cancelada',
+                code: 'ORDER_CANCELLED'
+            });
+        }
+        // Calcular valor total dos pagamentos
+        const valorTotalPagamentos = pagamentos.reduce((sum, pag) => sum + pag.valor, 0);
+        // Verificar se o valor total dos pagamentos corresponde ao valor da ordem
+        if (Math.abs(valorTotalPagamentos - ordem.valorTotal) > 0.01) { // Tolerância de 1 centavo para erros de arredondamento
+            return res.status(400).json({
+                error: `Valor total dos pagamentos (R$ ${valorTotalPagamentos.toFixed(2)}) não corresponde ao valor da ordem (R$ ${ordem.valorTotal.toFixed(2)})`,
+                code: 'PAYMENT_VALUE_MISMATCH'
+            });
+        }
+        // Calcular comissão se houver lavador
+        let comissaoCalculada = 0;
+        if (ordem.lavador) {
+            // Comissão é uma porcentagem do valor total (ex: 15.5% = 15.5)
+            comissaoCalculada = (ordem.valorTotal * ordem.lavador.comissao) / 100;
+        }
+        // Executar tudo em uma transação atômica
+        const resultado = await db_1.default.$transaction(async (tx) => {
+            // 1. Atualizar status da ordem para FINALIZADO
+            const ordemAtualizada = await tx.ordemServico.update({
+                where: { id },
+                data: {
+                    status: 'FINALIZADO',
+                    dataFim: new Date(),
+                    comissao: comissaoCalculada,
+                    comissaoPaga: false, // Será paga no fechamento de comissão
+                    pago: true
+                },
+                include: {
+                    cliente: true,
+                    veiculo: true,
+                    lavador: true,
+                    items: {
+                        include: {
+                            servico: true,
+                            adicional: true
+                        }
+                    }
+                }
+            });
+            // 2. Criar registros de pagamento
+            const pagamentosCriados = await Promise.all(pagamentos.map((pag) => tx.pagamento.create({
+                data: {
+                    empresaId,
+                    ordemId: id,
+                    metodo: pag.metodo,
+                    valor: pag.valor,
+                    status: 'PAGO',
+                    pagoEm: new Date(),
+                    observacoes: pag.observacoes || null
+                }
+            })));
+            // 3. Se houver débito de lavador, criar registro de adiantamento
+            if (lavadorDebitoId && ordem.lavador) {
+                await tx.adiantamento.create({
+                    data: {
+                        empresaId,
+                        lavadorId: lavadorDebitoId,
+                        valor: comissaoCalculada,
+                        status: 'QUITADO'
+                    }
+                });
+            }
+            return {
+                ordem: ordemAtualizada,
+                pagamentos: pagamentosCriados
+            };
+        });
+        // 4. Enviar notificação após a transação
+        await (0, notificationService_1.createNotification)({
+            empresaId,
+            mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${ordem.valorTotal.toFixed(2)}`,
+            link: `ordens.html?id=${ordem.id}`,
+            type: 'ordemEditada'
+        });
+        // Resposta de sucesso
+        res.status(200).json({
+            message: 'Ordem finalizada com sucesso',
+            ordem: resultado.ordem,
+            pagamentos: resultado.pagamentos,
+            comissao: comissaoCalculada > 0 ? {
+                valor: comissaoCalculada,
+                porcentagem: ordem.lavador?.comissao,
+                lavador: ordem.lavador?.nome
+            } : null
+        });
+    }
+    catch (error) {
+        console.error('Erro ao finalizar ordem de serviço:', error);
+        res.status(500).json({
+            error: 'Erro interno do servidor ao finalizar ordem',
+            details: error.message || 'Erro desconhecido'
+        });
+    }
+};
+exports.finalizarOrdem = finalizarOrdem;
+/**
  * Itera sobre as empresas para finalizar ordens do dia conforme o horário de fechamento.
  * Esta função é chamada pelo cron job a cada 15 minutos.
  */
@@ -874,7 +1139,7 @@ const processarFinalizacoesAutomaticas = async () => {
                     const ordensParaFinalizar = await db_1.default.ordemServico.findMany({
                         where: {
                             empresaId: empresa.id,
-                            status: { in: ['PENDENTE', 'EM_ANDAMENTO'] },
+                            status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] },
                         },
                     });
                     if (ordensParaFinalizar.length > 0) {

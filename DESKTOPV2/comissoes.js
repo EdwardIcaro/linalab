@@ -117,9 +117,17 @@ async function loadCommissionData() {
 
     try {
         const { comissoes, adiantamentos, debitosOS } = await window.api.getDadosComissao({ lavadorId: selectedLavadorId, dataInicio, dataFim });
+        console.log('DEBUG loadCommissionData response', {
+            selectedLavadorId,
+            dataInicio,
+            dataFim,
+            comissoes,
+            adiantamentos,
+            debitosOS,
+        });
         
         renderComissoes(comissoes);
-        renderAdiantamentos(adiantamentos);
+        renderAdiantamentos(adiantamentos, debitosOS);
 
         calculateSummary();
 
@@ -188,9 +196,10 @@ function getWasherShare(order, washerId) {
 
 function renderComissoes(comissoes) {
     const creditosList = document.getElementById('creditos-list');
-    const creditItems = (comissoes || []).map(c => {
-        const share = getWasherShare(c, selectedLavadorId);
-        if (!share) return null;
+        const creditItems = (comissoes || []).map(c => {
+            const share = getWasherShare(c, selectedLavadorId);
+            console.log('DEBUG washer share', c.numeroOrdem, share, c.lavadores);
+            if (!share) return null;
         return `
             <div class="commission-item" data-id="${c.id}" data-valor="${share}" data-type="credit" onclick="toggleItemSelection(this)">
                 <div class="item-checkbox"><i class="fas fa-check"></i></div>
@@ -210,28 +219,47 @@ function renderComissoes(comissoes) {
     creditosList.innerHTML = creditItems.join('');
 }
 
-function renderAdiantamentos(adiantamentos) {
+function renderAdiantamentos(adiantamentos, debitosOS = []) {
     const debitosList = document.getElementById('debitos-list');
-    // Combina adiantamentos e débitos de OS para a contagem e renderização
-    const todosDebitos = [...(adiantamentos || [])];
 
-    document.getElementById('debitsBadge').textContent = todosDebitos.length;
-    if (todosDebitos.length === 0) {
+    const adiantamentoItems = (adiantamentos || []).map(a => `
+        <div class="commission-item" data-id="${a.id}" data-valor="${a.valor}" data-type="debit" data-adiantamento-id="${a.id}" onclick="toggleItemSelection(this)">
+            <div class="item-checkbox"><i class="fas fa-check"></i></div>
+            <div class="item-details">
+                <div class="item-title">${a.descricao || 'Adiantamento (Vale)'}</div>
+                <div class="item-subtitle">Data: ${a.data ? new Date(a.data).toLocaleDateString('pt-BR') : 'Sem data'}</div>
+            </div>
+            <span class="item-value debit">${formatCurrency(a.valor)}</span>
+        </div>
+    `).filter(Boolean);
+
+    const debitoOsItems = (debitosOS || []).map(d => {
+        const share = getWasherShare(d, selectedLavadorId);
+        if (!share) return null;
+        const placa = d.veiculo?.placa || 'S/ Placa';
+        const descricao = `Débito OS #${d.numeroOrdem} (${placa})`;
+        const dataFinalizacao = d.dataFim ? new Date(d.dataFim).toLocaleDateString('pt-BR') : 'Sem data';
+        return `
+            <div class="commission-item" data-order-id="${d.id}" data-valor="${share}" data-type="debit" onclick="toggleItemSelection(this)">
+                <div class="item-checkbox"><i class="fas fa-check"></i></div>
+                <div class="item-details">
+                    <div class="item-title">${descricao}</div>
+                    <div class="item-subtitle">Finalizada em: ${dataFinalizacao}</div>
+                </div>
+                <span class="item-value debit">${formatCurrency(share)}</span>
+            </div>
+        `;
+    }).filter(Boolean);
+
+    const allItems = [...adiantamentoItems, ...debitoOsItems];
+
+    document.getElementById('debitsBadge').textContent = allItems.length;
+    if (allItems.length === 0) {
         debitosList.innerHTML = '<div class="empty-state"><i class="fas fa-thumbs-up"></i><p>Nenhum adiantamento pendente.</p></div>';
         return;
     }
 
-    // Mapeia ambos os tipos de débito para o mesmo formato de item
-    debitosList.innerHTML = todosDebitos.map(a => `
-        <div class="commission-item" data-id="${a.id}" data-valor="${a.valor}" data-type="debit" onclick="toggleItemSelection(this)">
-            <div class="item-checkbox"><i class="fas fa-check"></i></div>
-            <div class="item-details">
-                <div class="item-title">${a.descricao || 'Adiantamento (Vale)'}</div>
-                <div class="item-subtitle">Data: ${new Date(a.data).toLocaleDateString('pt-BR')}</div>
-            </div>
-            <span class="item-value debit">${formatCurrency(a.valor)}</span>
-        </div>
-    `).join('');
+    debitosList.innerHTML = allItems.join('');
 }
 
 function toggleItemSelection(element) {
@@ -302,7 +330,9 @@ async function handleConfirmarFechamento() {
     const debitosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="debit"]'));
 
     const comissaoIds = creditosSelecionados.map(el => el.dataset.id);
-    const adiantamentoIds = debitosSelecionados.map(el => el.dataset.id);
+    const adiantamentoIds = debitosSelecionados
+        .filter(el => el.dataset.adiantamentoId)
+        .map(el => el.dataset.adiantamentoId);
 
     const totalCreditos = creditosSelecionados.reduce((sum, el) => sum + parseFloat(el.dataset.valor), 0);
     const totalDebitos = debitosSelecionados.reduce((sum, el) => sum + parseFloat(el.dataset.valor), 0);
@@ -377,9 +407,16 @@ async function showFechamentoDetails(fechamentoId) {
             return;
         }
 
-        const ordensHtml = fechamento.ordensPagas.length > 0
-            ? fechamento.ordensPagas.map(o => `<li>OS #${o.numeroOrdem} (${o.veiculo.modelo}) - ${formatCurrency(o.comissao)}</li>`).join('')
-            : '<li>Nenhuma comissão paga neste fechamento.</li>';
+        const ordensLavadores = fechamento.ordemLavadoresPagos || [];
+        const ordensHtml = ordensLavadores.length > 0
+            ? ordensLavadores.map(entry => {
+                const ordem = entry.ordem;
+                const modelo = ordem?.veiculo?.modelo || 'S/ Modelo';
+                const placa = ordem?.veiculo?.placa || 'S/ Placa';
+                const washerName = entry.lavador?.nome || 'Lavador';
+                return `<li>OS #${ordem?.numeroOrdem || '?'} (${modelo} / ${placa}) - ${washerName}</li>`;
+            }).join('')
+            : '<li>Nenhuma comissao paga neste fechamento.</li>';
 
         const adiantamentosHtml = fechamento.adiantamentosQuitados.length > 0
             ? fechamento.adiantamentosQuitados.map(a => `<li>Adiantamento - ${formatCurrency(a.valor)}</li>`).join('')

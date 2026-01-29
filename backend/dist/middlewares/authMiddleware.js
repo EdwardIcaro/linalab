@@ -48,33 +48,118 @@ const authMiddleware = async (req, res, next) => {
                 code: 'INVALID_SCOPE'
             });
         }
-        // 5. CRITICAL: Verify user still owns/belongs to this empresa
-        // This prevents access if:
-        // - User was removed from empresa
+        // 4b. Subaccount token validation
+        if (decoded.subaccountId) {
+            const subaccount = await db_1.default.subaccount.findFirst({
+                where: {
+                    id: decoded.subaccountId,
+                    empresaId: decoded.empresaId
+                },
+                include: {
+                    empresa: {
+                        select: {
+                            id: true,
+                            nome: true,
+                            ativo: true
+                        }
+                    }
+                }
+            });
+            if (!subaccount || !subaccount.empresa?.ativo) {
+                return res.status(403).json({
+                    error: 'Acesso negado: você não tem permissão para acessar esta empresa',
+                    code: 'ACCESS_DENIED'
+                });
+            }
+            const authenticatedReq = req;
+            authenticatedReq.usuarioId = subaccount.id;
+            authenticatedReq.subaccountId = subaccount.id;
+            authenticatedReq.empresaId = subaccount.empresa.id;
+            authenticatedReq.usuarioNome = subaccount.nome;
+            authenticatedReq.empresaNome = subaccount.empresa.nome;
+            next();
+            return;
+        }
+        // 4b. Subaccount token validation
+        if (decoded.subaccountId) {
+            const subaccount = await db_1.default.subaccount.findFirst({
+                where: {
+                    id: decoded.subaccountId,
+                    empresaId: decoded.empresaId
+                },
+                include: {
+                    empresa: {
+                        select: {
+                            id: true,
+                            nome: true,
+                            ativo: true
+                        }
+                    }
+                }
+            });
+            if (!subaccount || !subaccount.empresa?.ativo) {
+                return res.status(403).json({
+                    error: 'Acesso negado: você não tem permissão para acessar esta empresa',
+                    code: 'ACCESS_DENIED'
+                });
+            }
+            const authenticatedReq = req;
+            authenticatedReq.usuarioId = subaccount.id;
+            authenticatedReq.subaccountId = subaccount.id;
+            authenticatedReq.empresaId = subaccount.empresa.id;
+            authenticatedReq.usuarioNome = subaccount.nome;
+            authenticatedReq.empresaNome = subaccount.empresa.nome;
+            next();
+            return;
+        }
+        // 5. CRITICAL: TENANT ISOLATION - Verify user owns/belongs to this empresa
+        // This prevents VERTICAL PRIVILEGE ESCALATION attacks where:
+        // - User A tries to access Company B's data
+        // - User was removed from empresa after token was issued
         // - Empresa was deleted/deactivated
-        // - Token was issued for an empresa the user no longer owns
+        // - Token was forged/tampered with (prevented by JWT signature)
+        //
+        // SECURITY NOTE: This query validates THREE critical conditions:
+        // 1. Empresa exists (id match)
+        // 2. User is the owner (usuarioId match)
+        // 3. Empresa is active (ativo = true)
         const empresa = await db_1.default.empresa.findFirst({
             where: {
                 id: decoded.empresaId,
-                usuarioId: decoded.id, // Must be owner
-                ativo: true, // Must be active
+                usuarioId: decoded.id, // CRITICAL: Must be owner of this empresa
+                ativo: true, // CRITICAL: Must be active
             },
             select: {
                 id: true,
                 nome: true,
+                usuarioId: true, // Include for double-verification
             }
         });
         if (!empresa) {
-            console.warn(`[SECURITY] Access denied: User ${decoded.id} tried to access empresa ${decoded.empresaId} - not owner or inactive`);
+            console.warn(`[SECURITY VIOLATION] Tenant isolation breach attempt: ` +
+                `User ${decoded.id} (${decoded.nome}) attempted to access empresa ${decoded.empresaId} - ` +
+                `Reason: Not owner or empresa inactive/deleted`);
             return res.status(403).json({
                 error: 'Acesso negado: você não tem permissão para acessar esta empresa',
                 code: 'ACCESS_DENIED'
             });
         }
-        // 6. Attach verified data to request
+        // 6. DOUBLE VERIFICATION: Ensure usuarioId from DB matches token
+        // This is paranoid checking but adds an extra security layer
+        if (empresa.usuarioId !== decoded.id) {
+            console.error(`[SECURITY CRITICAL] Database inconsistency detected: ` +
+                `empresa.usuarioId (${empresa.usuarioId}) != token.id (${decoded.id})`);
+            return res.status(403).json({
+                error: 'Erro de validação de segurança',
+                code: 'SECURITY_ERROR'
+            });
+        }
+        // 7. Attach verified data to request
+        // IMPORTANT: Use empresa.id from database, NOT decoded.empresaId from token
+        // This ensures we're using the validated, authoritative source
         const authenticatedReq = req;
         authenticatedReq.usuarioId = decoded.id;
-        authenticatedReq.empresaId = empresa.id; // Use DB value, not token (extra safety)
+        authenticatedReq.empresaId = empresa.id; // CRITICAL: Use DB value, not token
         authenticatedReq.usuarioNome = decoded.nome;
         authenticatedReq.empresaNome = empresa.nome;
         next();

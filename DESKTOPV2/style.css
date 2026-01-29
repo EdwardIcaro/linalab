@@ -505,7 +505,9 @@ ul {
 }
 
 /* --- NOTIFICAÇÕES --- */
-.notification-wrapper { position: relative; }
+.notification-wrapper {
+    position: static; /* Static para não criar contexto de posicionamento */
+}
 
 .icon-btn {
     background-color: transparent;
@@ -546,16 +548,16 @@ ul {
 
 .notification-panel {
     display: none;
-    position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
+    position: fixed; /* Fixed para escapar completamente do container */
+    top: auto; /* Será definido via JS */
+    right: auto; /* Será definido via JS */
     width: 400px;
     max-height: 500px;
     background-color: var(--white);
     border: 1px solid var(--border-color);
     border-radius: 16px;
     box-shadow: var(--shadow-lg);
-    z-index: 200;
+    z-index: 9999; /* Z-index muito alto para ficar acima de tudo */
     overflow: hidden;
     flex-direction: column;
     opacity: 0;
@@ -567,6 +569,14 @@ ul {
     display: flex;
     opacity: 1;
     transform: translateY(0);
+}
+
+.form-control-hidden {
+    display: none !important;
+}
+
+.form-control-visible {
+    display: block !important;
 }
 
 .notification-panel-header {
@@ -677,6 +687,12 @@ ul {
     box-shadow: var(--shadow-lg);
 }
 .modal-overlay.active .modal-content { transform: scale(1); }
+
+.modal-hint {
+    margin-top: 8px;
+    color: var(--finance-text-secondary);
+    font-size: 13px;
+}
 
 /* --- Notificações (Toast) --- */
 .toast-container {
@@ -949,8 +965,26 @@ body.dark .screen-lock-overlay {
     display: flex;
     align-items: center;
     gap: 8px;
-    overflow-x: auto;
+    overflow: visible; /* Remove scroll para permitir dropdowns */
     border: 1px solid var(--border-color);
+    justify-content: space-between;
+    flex-wrap: wrap; /* Permite quebra em telas pequenas */
+}
+
+.nav-menu-links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.nav-menu-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 12px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-color);
 }
 
 .nav-menu-item {
@@ -991,6 +1025,81 @@ body.dark .screen-lock-overlay {
     opacity: 0.9;
 }
 
+/* User Profile Button */
+.nav-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+    background: var(--background-light);
+}
+
+.nav-user-profile:hover {
+    background-color: var(--primary-purple-light);
+    border-color: var(--primary-purple);
+    color: var(--primary-purple);
+}
+
+.nav-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--accent-blue) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.nav-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.nav-user-name {
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.nav-user-role {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.2;
+}
+
+/* Logout Button */
+.nav-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.05);
+    color: #dc2626;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #dc2626;
+    transform: translateY(-1px);
+}
+
 /* Dark mode support */
 body.dark .nav-menu-card {
     background: var(--white);
@@ -1002,6 +1111,21 @@ body.dark .nav-menu-card {
     .nav-menu-card {
         padding: 12px 16px;
         gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .nav-menu-links {
+        flex: 1;
+        min-width: 100%;
+    }
+
+    .nav-menu-actions {
+        padding-left: 8px;
+        border-left: none;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-color);
+        width: 100%;
+        justify-content: space-between;
     }
 
     .nav-menu-item {
@@ -1015,6 +1139,22 @@ body.dark .nav-menu-card {
 
     .nav-menu-item i {
         font-size: 1.125rem;
+    }
+
+    .nav-user-info {
+        display: none;
+    }
+
+    .nav-user-profile {
+        padding: 8px 12px;
+    }
+
+    .nav-logout-btn {
+        padding: 8px 12px;
+    }
+
+    .nav-logout-btn span {
+        display: none;
     }
 }
 

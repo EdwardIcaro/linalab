@@ -148,6 +148,9 @@ export const deleteRole = async (req: EmpresaRequest, res: Response) => {
   try {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     if (!empresaId) {
       return res.status(401).json({ error: 'Empresa n\u00e3o autenticada' });
@@ -243,6 +246,9 @@ export const updateSubaccount = async (req: EmpresaRequest, res: Response) => {
   try {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     if (!empresaId) {
       return res.status(401).json({ error: 'Empresa n\u00e3o autenticada' });
@@ -314,6 +320,9 @@ export const deleteSubaccount = async (req: EmpresaRequest, res: Response) => {
   try {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     if (!empresaId) {
       return res.status(401).json({ error: 'Empresa n\u00e3o autenticada' });

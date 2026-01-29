@@ -303,6 +303,9 @@ export const getAdicionais = async (req: EmpresaRequest, res: Response) => {
 export const getServicoById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const servico = await prisma.servico.findFirst({
       where: {
@@ -355,6 +358,9 @@ export const getServicoById = async (req: EmpresaRequest, res: Response) => {
 export const getAdicionalById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     const adicional = await prisma.adicional.findFirst({
       where: {
@@ -407,6 +413,9 @@ export const getAdicionalById = async (req: EmpresaRequest, res: Response) => {
 export const updateServico = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { nome, descricao, duracao, ativo, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo } = req.body;
 
     // 1. Coleta os IDs dos novos tipos/subtipos para conectar
@@ -466,6 +475,9 @@ export const updateServico = async (req: EmpresaRequest, res: Response) => {
 export const updateAdicional = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     const { nome, descricao, ativo, preco } = req.body;
 
     const adicional = await prisma.adicional.updateMany({
@@ -503,6 +515,9 @@ export const updateAdicional = async (req: EmpresaRequest, res: Response) => {
 export const deleteServico = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se serviço existe e pertence à empresa
     const servico = await prisma.servico.findFirst({
@@ -549,6 +564,9 @@ export const deleteServico = async (req: EmpresaRequest, res: Response) => {
 export const deleteAdicional = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
     // Verificar se serviço adicional existe e pertence à empresa
     const adicional = await prisma.adicional.findFirst({
