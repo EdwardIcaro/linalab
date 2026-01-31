@@ -25,11 +25,11 @@ export declare const deleteTipoVeiculo: (req: EmpresaRequest, res: Response) => 
 /**
  * Listar serviços associados a um tipo de veículo
  */
-export declare const getServicosByTipoVeiculo: (req: EmpresaRequest, res: Response) => Promise<void>;
+export declare const getServicosByTipoVeiculo: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
 /**
  * Listar todos os subtipos (categorias) de um tipo de veículo principal.
  * Ex: /api/tipos-veiculo/subtipos/Carro -> retorna ["Hatch", "Sedan", "SUV"]
  */
-export declare const getSubtiposByTipo: (req: EmpresaRequest, res: Response) => Promise<void>;
+export declare const getSubtiposByTipo: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
 export {};
 //# sourceMappingURL=tipoVeiculoController.d.ts.map

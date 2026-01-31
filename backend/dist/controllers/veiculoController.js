@@ -131,6 +131,9 @@ exports.getVeiculos = getVeiculos;
 const getVeiculoById = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const veiculo = await prisma.veiculo.findFirst({
             where: {
                 id,
@@ -184,7 +187,10 @@ exports.getVeiculoById = getVeiculoById;
 const getVeiculoByPlaca = async (req, res) => {
     try {
         const { placa } = req.params;
-        if (!placa) {
+        if (Array.isArray(placa)) {
+            return res.status(400).json({ error: 'Placa inválida' });
+        }
+        if (!placa || Array.isArray(placa)) {
             return res.status(400).json({ error: 'Placa é obrigatória' });
         }
         const veiculo = await prisma.veiculo.findFirst({
@@ -215,7 +221,13 @@ exports.getVeiculoByPlaca = getVeiculoByPlaca;
 const updateVeiculo = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { clienteId, placa, modelo, cor, ano } = req.body;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se veículo existe e pertence à empresa
         const existingVeiculo = await prisma.veiculo.findFirst({
             where: {
@@ -287,6 +299,9 @@ exports.updateVeiculo = updateVeiculo;
 const deleteVeiculo = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se veículo existe e pertence à empresa
         const veiculo = await prisma.veiculo.findFirst({
             where: {
@@ -295,7 +310,8 @@ const deleteVeiculo = async (req, res) => {
                     empresaId: req.empresaId
                 }
             },
-            include: {
+            select: {
+                id: true,
                 _count: {
                     select: {
                         ordens: true

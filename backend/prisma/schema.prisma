@@ -24,6 +24,7 @@ model Usuario {
 
   // Relacionamentos
   empresas  Empresa[]
+  subscriptions Subscription[]
 
   @@map("usuarios")
 }
@@ -50,6 +51,7 @@ model Empresa {
   paginaInicialPadrao          String?                @default("index.html")
   notificationPreferences      Json?
   paymentMethodsConfig         Json?
+  ordem                        Int?                   // Ordem de criação (1ª, 2ª, 3ª empresa do usuário)
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
   usuarioId                    String // Chave estrangeira para o usuário dono
@@ -473,6 +475,185 @@ model Theme {
   @@map("themes")
 }
 
+// ============================================
+// SUBSCRIPTION SYSTEM MODELS
+// ============================================
+
+// Planos de Assinatura (templates)
+model SubscriptionPlan {
+  id                String   @id @default(cuid())
+  nome              String   @unique // "Basic", "Pro", "Premium"
+  descricao         String?
+  preco             Float    // Preço mensal em centavos (ex: 8900 = R$ 89,00)
+  intervalo         String   @default("MONTHLY") // MONTHLY, YEARLY
+  ativo             Boolean  @default(true)
+  ordem             Int      @default(0) // Para ordenação na UI
+  trialDays         Int      @default(0) // Dias de trial gratuito (0 = sem trial)
+
+  // Limites do plano
+  maxEmpresas       Int      @default(1)
+  maxUsuarios       Int?     // null = ilimitado
+
+  // Features incluídas (JSON array de feature IDs)
+  features          Json     // ["vitrine", "whatsapp", "relatorios_pdf"]
+
+  // Quantidade de add-ons extras permitidos
+  maxAddons         Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relacionamentos
+  subscriptions     Subscription[]
+  promotions        Promotion[]
+  priceHistory      PriceHistory[]
+
+  @@map("subscription_plans")
+}
+
+// Assinatura do Usuário
+model Subscription {
+  id                  String              @id @default(cuid())
+  usuarioId           String              // FK para Usuario
+  planId              String              // FK para SubscriptionPlan
+
+  status              SubscriptionStatus  @default(ACTIVE)
+
+  // Controle de trial
+  isTrialUsed         Boolean             @default(false) // Já usou trial alguma vez
+  isCurrentlyTrial    Boolean             @default(false) // Está em trial agora
+  trialStartDate      DateTime?
+  trialEndDate        DateTime?
+
+  // Datas da assinatura
+  startDate           DateTime            @default(now())
+  endDate             DateTime?           // null = vitalício
+  nextBillingDate     DateTime?
+  canceledAt          DateTime?
+
+  // Pagamento
+  preco               Float               // Preço pago (pode ser diferente do plano)
+  currency            String              @default("BRL")
+
+  // Metadata para integrações
+  stripeSubscriptionId    String?         @unique
+  mercadoPagoSubscriptionId String?       @unique
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  // Relacionamentos
+  usuario             Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  plan                SubscriptionPlan    @relation(fields: [planId], references: [id])
+  payments            SubscriptionPayment[]
+  addons              SubscriptionAddon[]
+
+  @@index([usuarioId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// Pagamentos de Assinatura (histórico)
+model SubscriptionPayment {
+  id                String              @id @default(cuid())
+  subscriptionId    String
+  valor             Float
+  currency          String              @default("BRL")
+  status            PaymentStatus       @default(PENDING)
+  metodo            String?             // "CREDIT_CARD", "PIX", "BOLETO"
+
+  // Metadata
+  stripePaymentId   String?             @unique
+  mercadoPagoPaymentId String?          @unique
+
+  paidAt            DateTime?
+  failedAt          DateTime?
+  errorMessage      String?
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relacionamentos
+  subscription      Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([mercadoPagoPaymentId])
+  @@map("subscription_payments")
+}
+
+// Add-ons (features extras)
+model Addon {
+  id                String              @id @default(cuid())
+  nome              String              @unique // "Estoque", "Calculadora", "PDV"
+  descricao         String?
+  preco             Float               // Preço mensal adicional
+  ativo             Boolean             @default(true)
+  featureKey        String              @unique // "estoque_personalizado"
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relacionamentos
+  subscriptions     SubscriptionAddon[]
+
+  @@map("addons")
+}
+
+// Relação Assinatura <-> Add-ons
+model SubscriptionAddon {
+  id                String              @id @default(cuid())
+  subscriptionId    String
+  addonId           String
+  ativo             Boolean             @default(true)
+
+  addedAt           DateTime            @default(now())
+  removedAt         DateTime?
+
+  // Relacionamentos
+  subscription      Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  addon             Addon               @relation(fields: [addonId], references: [id])
+
+  @@unique([subscriptionId, addonId])
+  @@map("subscription_addons")
+}
+
+// Promoções/Descontos
+model Promotion {
+  id              String     @id @default(cuid())
+  nome            String     @unique
+  descricao       String?
+  tipo            TipoPromo  @default(PERCENTUAL)
+  valor           Float      // Percentual (0-100) ou valor em centavos
+  planId          String?    // null = aplica a todos planos
+  dataInicio      DateTime
+  dataFim         DateTime
+  ativo           Boolean    @default(true)
+  usosMaximos     Int?       // null = ilimitado
+  usosAtuais      Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  plan            SubscriptionPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@map("promotions")
+}
+
+// Histórico de Preços (Auditoria)
+model PriceHistory {
+  id              String   @id @default(cuid())
+  planId          String
+  precoAntigo     Float
+  precoNovo       Float
+  alteradoPor     String   // Email do admin
+  motivo          String?
+  createdAt       DateTime @default(now())
+
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("price_histories")
+}
+
 enum OrdemStatus {
   PENDENTE
   EM_ANDAMENTO
@@ -525,4 +706,30 @@ enum FormaPagamento {
   PIX
   CARTAO
   NA // Adicionado
+}
+
+enum TipoPromo {
+  PERCENTUAL
+  FIXO
+}
+
+enum SubscriptionStatus {
+  ACTIVE        // Assinatura ativa
+  TRIAL         // Em período de trial
+  PENDING       // Aguardando pagamento
+  PAYMENT_FAILED // Pagamento falhou
+  PAST_DUE      // Pagamento atrasado
+  CANCELED      // Cancelada pelo usuário
+  EXPIRED       // Expirada (não renovada)
+  SUSPENDED     // Suspensa pelo admin
+  LIFETIME      // Vitalícia (sem expiração)
+}
+
+enum PaymentStatus {
+  PENDING       // Aguardando pagamento
+  PROCESSING    // Processando
+  PAID          // Pago com sucesso
+  FAILED        // Falhou
+  REFUNDED      // Reembolsado
+  CANCELED      // Cancelado
 }

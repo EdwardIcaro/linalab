@@ -933,6 +933,32 @@
                         return;
                     }
 
+                    // Verificar se há plano selecionado antes do login
+                    const selectedPlanId = localStorage.getItem('selectedPlanId');
+                    if (selectedPlanId) {
+                        // Limpar storage e redirecionar de volta para planos
+                        localStorage.removeItem('selectedPlanId');
+                        localStorage.removeItem('selectedPlanName');
+                        localStorage.removeItem('selectedPlanIsTrial');
+                        window.location.href = 'planos.html';
+                        return;
+                    }
+
+                    // Verificar se usuário tem assinatura ativa
+                    try {
+                        const subResponse = await window.api.getMySubscription();
+                        if (!subResponse.hasSubscription) {
+                            // Sem assinatura, redirecionar para seleção de plano
+                            window.location.href = 'planos.html';
+                            return;
+                        }
+                    } catch (err) {
+                        // Se houver erro ao verificar assinatura, redirecionar para planos
+                        console.warn('Erro ao verificar assinatura:', err);
+                        window.location.href = 'planos.html';
+                        return;
+                    }
+
                     if (data.usuario.empresaId) {
                         localStorage.setItem('empresaId', data.usuario.empresaId);
                         window.location.href = 'index.html';

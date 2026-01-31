@@ -25,6 +25,10 @@ const getLavadorPublicData = async (req, res) => {
         if (!tokenData) {
             return res.status(401).json({ error: 'Token inválido ou inativo' });
         }
+        // Verificar se o token expirou (se não for permanente)
+        if (tokenData.expiresAt && new Date(tokenData.expiresAt) < new Date()) {
+            return res.status(401).json({ error: 'Token expirado' });
+        }
         // 2. Verificar a validade do JWT (para checar expiração)
         const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'seu_segredo_jwt_aqui');
         const lavador = tokenData.lavador;
@@ -35,23 +39,100 @@ const getLavadorPublicData = async (req, res) => {
         const trintaDiasAtras = new Date();
         trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
         trintaDiasAtras.setHours(0, 0, 0, 0);
+        // Buscar ordens onde o lavador é o principal OU está em multi-wash
         const ordens = await db_1.default.ordemServico.findMany({
             where: {
-                lavadorId: lavador.id,
+                OR: [
+                    { lavadorId: lavador.id }, // Lavador principal
+                    { ordemLavadores: { some: { lavadorId: lavador.id } } } // Multi-wash
+                ],
                 createdAt: { gte: trintaDiasAtras },
-                status: { in: ['EM_ANDAMENTO', 'FINALIZADO', 'PENDENTE', 'AGUARDANDO_PAGAMENTO'] } // Inclui pendente, andamento e aguardando pagamento para o lavador ver o que tem pra fazer
+                status: { in: ['EM_ANDAMENTO', 'FINALIZADO', 'PENDENTE', 'AGUARDANDO_PAGAMENTO'] }
             },
             include: {
                 veiculo: { select: { modelo: true, placa: true } },
-                items: { include: { servico: { select: { nome: true } }, adicional: { select: { nome: true } } } }
+                items: {
+                    include: {
+                        servico: { select: { nome: true } },
+                        adicional: { select: { nome: true } }
+                    }
+                },
+                lavador: { select: { nome: true, comissao: true } },
+                ordemLavadores: {
+                    include: {
+                        lavador: { select: { id: true, nome: true, comissao: true } }
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' },
-            take: 100 // Limita a 100 ordens para performance
+            take: 100
+        });
+        // 4. Buscar fechamentos de comissão do lavador (pagamentos recebidos)
+        const fechamentosComissao = await db_1.default.fechamentoComissao.findMany({
+            where: {
+                lavadorId: lavador.id,
+                data: { gte: trintaDiasAtras }
+            },
+            include: {
+                ordensPagas: {
+                    include: {
+                        veiculo: { select: { placa: true, modelo: true } },
+                        items: {
+                            include: {
+                                servico: { select: { nome: true } },
+                                adicional: { select: { nome: true } }
+                            }
+                        },
+                        lavador: { select: { nome: true, comissao: true } },
+                        ordemLavadores: {
+                            include: {
+                                lavador: { select: { id: true, nome: true, comissao: true } }
+                            }
+                        }
+                    }
+                },
+                ordemLavadoresPagos: {
+                    include: {
+                        lavador: { select: { id: true, nome: true, comissao: true } },
+                        ordem: {
+                            include: {
+                                veiculo: { select: { placa: true, modelo: true } },
+                                items: {
+                                    include: {
+                                        servico: { select: { nome: true } },
+                                        adicional: { select: { nome: true } }
+                                    }
+                                },
+                                lavador: { select: { nome: true, comissao: true } },
+                                ordemLavadores: {
+                                    include: {
+                                        lavador: { select: { id: true, nome: true, comissao: true } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                adiantamentosQuitados: true
+            },
+            orderBy: { data: 'desc' }
+        });
+        // 5. Buscar adiantamentos não quitados (dívida atual)
+        const adiantamentosNaoQuitados = await db_1.default.adiantamento.findMany({
+            where: {
+                lavadorId: lavador.id,
+                status: { not: 'QUITADO' }
+            },
+            orderBy: { data: 'desc' }
         });
         res.json({
+            lavadorId: lavador.id,
             nome: lavador.nome,
             comissao: lavador.comissao,
-            ordens: ordens
+            ordens: ordens,
+            fechamentos: fechamentosComissao,
+            adiantamentosNaoQuitados: adiantamentosNaoQuitados,
+            tokenExpiresAt: tokenData.expiresAt // null = permanente
         });
     }
     catch (error) {

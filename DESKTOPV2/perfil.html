@@ -246,6 +246,10 @@
                     <i class="fas fa-shield-alt"></i>
                     <span>Privacidade</span>
                 </button>
+                <button class="profile-tab" :class="{ 'active': activeTab === 'subscription' }" @click="activeTab = 'subscription'">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Minha Assinatura</span>
+                </button>
             </div>
 
             <!-- Tab Contents -->
@@ -379,6 +383,139 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Subscription Tab -->
+                <div class="profile-section" :class="{ 'active': activeTab === 'subscription' }">
+                    <div class="form-section">
+                        <h3 class="form-section-title">Minha Assinatura</h3>
+
+                        <!-- Subscription Card -->
+                        <template x-if="subscription && subscription.plan">
+                            <div style="background: linear-gradient(135deg, var(--primary-color) 0%, rgba(0, 188, 212, 0.8) 100%); color: white; padding: 32px; border-radius: 16px; margin-bottom: 24px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+                                    <!-- Left side -->
+                                    <div>
+                                        <p style="font-size: 12px; text-transform: uppercase; opacity: 0.9; letter-spacing: 1px; margin-bottom: 8px;">Plano Atual</p>
+                                        <h2 style="font-size: 36px; font-weight: 700; margin: 0 0 16px 0;" x-text="subscription.plan.nome"></h2>
+                                        <p style="font-size: 14px; opacity: 0.9; margin: 0;">
+                                            <span x-show="subscription.isCurrentlyTrial">🎉 Em período de teste</span>
+                                            <span x-show="!subscription.isCurrentlyTrial && subscription.status === 'ACTIVE'">✅ Ativo</span>
+                                            <span x-show="subscription.status === 'LIFETIME'">♾️ Vitalício</span>
+                                        </p>
+                                    </div>
+
+                                    <!-- Right side -->
+                                    <div style="text-align: right;">
+                                        <p style="font-size: 12px; text-transform: uppercase; opacity: 0.9; letter-spacing: 1px; margin-bottom: 8px;">Valor Mensal</p>
+                                        <h2 style="font-size: 36px; font-weight: 700; margin: 0 0 16px 0;">
+                                            <span x-show="!subscription.isCurrentlyTrial">R$ <span x-text="(subscription.preco / 100).toFixed(2)"></span></span>
+                                            <span x-show="subscription.isCurrentlyTrial">Grátis</span>
+                                        </h2>
+                                        <p style="font-size: 14px; opacity: 0.9; margin: 0;" x-text="subscription.plan.intervalo === 'MONTHLY' ? 'Faturamento mensal' : 'Faturamento anual'"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Subscription Details Grid -->
+                        <template x-if="subscription">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                                <!-- Empresas -->
+                                <div style="padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                        <i class="fas fa-building" style="color: var(--primary-color); font-size: 18px;"></i>
+                                        <span style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Empresas</span>
+                                    </div>
+                                    <p style="font-size: 18px; font-weight: 700; margin: 0;" x-text="`Até ${subscription.plan.maxEmpresas}`"></p>
+                                </div>
+
+                                <!-- Próxima Cobrança -->
+                                <div style="padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                        <i class="fas fa-calendar" style="color: var(--primary-color); font-size: 18px;"></i>
+                                        <span style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Próxima Cobrança</span>
+                                    </div>
+                                    <template x-if="subscription.status === 'LIFETIME'">
+                                        <p style="font-size: 16px; font-weight: 700; margin: 0; color: var(--success-color);">Nunca</p>
+                                    </template>
+                                    <template x-if="subscription.status !== 'LIFETIME'">
+                                        <p style="font-size: 16px; font-weight: 700; margin: 0;" x-text="subscription.nextBillingDate ? new Date(subscription.nextBillingDate).toLocaleDateString('pt-BR') : 'N/A'"></p>
+                                    </template>
+                                </div>
+
+                                <!-- Status -->
+                                <div style="padding: 20px; border: 1px solid var(--border-color); border-radius: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                        <i class="fas fa-info-circle" style="color: var(--primary-color); font-size: 18px;"></i>
+                                        <span style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Status</span>
+                                    </div>
+                                    <template x-if="subscription.isCurrentlyTrial">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="display: inline-block; width: 8px; height: 8px; background: #fbbf24; border-radius: 50%;"></span>
+                                            <span style="font-size: 14px; font-weight: 700;">Trial Ativo</span>
+                                        </div>
+                                    </template>
+                                    <template x-if="!subscription.isCurrentlyTrial && subscription.status === 'ACTIVE'">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+                                            <span style="font-size: 14px; font-weight: 700;">Ativo</span>
+                                        </div>
+                                    </template>
+                                    <template x-if="subscription.status === 'LIFETIME'">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="display: inline-block; width: 8px; height: 8px; background: #a855f7; border-radius: 50%;"></span>
+                                            <span style="font-size: 14px; font-weight: 700;">Vitalício</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- No Subscription Message -->
+                        <template x-if="!subscription">
+                            <div style="padding: 32px; text-align: center; background: #fef3c7; border-radius: 12px;">
+                                <i class="fas fa-inbox" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px; display: block;"></i>
+                                <h3 style="margin: 0 0 8px 0; color: #92400e;">Nenhuma Assinatura Ativa</h3>
+                                <p style="margin: 0; color: #92400e; font-size: 14px;">Você ainda não assinou nenhum plano. Clique no botão abaixo para escolher um.</p>
+                                <a href="planos.html" class="btn btn-primary" style="margin-top: 16px; display: inline-block;">
+                                    <i class="fas fa-rocket"></i> Escolher Plano
+                                </a>
+                            </div>
+                        </template>
+
+                        <!-- Add-ons Section -->
+                        <template x-if="subscription && subscription.addons && subscription.addons.length > 0">
+                            <div style="margin-top: 32px;">
+                                <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">🎁 Add-ons Ativos</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                                    <template x-for="addon in subscription.addons" :key="addon.id">
+                                        <div style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-light);">
+                                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                                <div>
+                                                    <p style="margin: 0 0 4px 0; font-weight: 600;" x-text="addon.addon.nome"></p>
+                                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);" x-text="addon.addon.descricao"></p>
+                                                </div>
+                                                <span style="font-weight: 700; color: var(--primary-color);" x-text="`R$ ${(addon.addon.preco / 100).toFixed(2)}`"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Actions -->
+                        <template x-if="subscription">
+                            <div class="form-actions" style="margin-top: 32px;">
+                                <a href="assinatura.html" class="btn btn-primary">
+                                    <i class="fas fa-cog"></i> Gerenciar Assinatura
+                                </a>
+                                <a href="addons.html" class="btn btn-secondary">
+                                    <i class="fas fa-plus-circle"></i> Gerenciar Add-ons
+                                </a>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -394,6 +531,7 @@
                 userName: '',
                 userEmail: '',
                 userRole: '',
+                subscription: null,
 
                 // Form Data
                 formData: {
@@ -414,6 +552,14 @@
                         return;
                     }
                     this.loadUserData();
+                    this.loadSubscription();
+
+                    // Restore active tab from sessionStorage if set
+                    const savedTab = sessionStorage.getItem('activeTab');
+                    if (savedTab) {
+                        this.activeTab = savedTab;
+                        sessionStorage.removeItem('activeTab');
+                    }
                 },
 
                 // Load User Data
@@ -425,6 +571,21 @@
                     // Populate form
                     this.formData.nome = this.userName;
                     this.formData.email = this.userEmail;
+                },
+
+                // Load Subscription Data
+                async loadSubscription() {
+                    try {
+                        const response = await fetchApi('/subscriptions/my-subscription');
+                        if (response.hasSubscription) {
+                            this.subscription = response.subscription;
+                        } else {
+                            this.subscription = null;
+                        }
+                    } catch (error) {
+                        console.error('Erro ao carregar assinatura:', error);
+                        this.subscription = null;
+                    }
                 },
 
                 // Get User Initials

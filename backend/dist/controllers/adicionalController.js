@@ -51,6 +51,9 @@ const getAdicionaisSimple = async (req, res) => {
 exports.getAdicionaisSimple = getAdicionaisSimple;
 const updateAdicional = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     const { nome, preco } = req.body;
     try {
         const adicional = await db_1.default.adicional.update({
@@ -66,6 +69,9 @@ const updateAdicional = async (req, res) => {
 exports.updateAdicional = updateAdicional;
 const deleteAdicional = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         await db_1.default.adicional.delete({
             where: { id, empresaId: req.empresaId },

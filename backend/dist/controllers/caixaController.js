@@ -32,7 +32,37 @@ const getResumoDia = async (req, res) => {
             },
         });
         const faturamentoDia = pagamentos.reduce((acc, p) => acc + p.valor, 0);
-        res.json({ faturamentoDia });
+        // Calcular totais por forma de pagamento
+        const totalDinheiro = pagamentos
+            .filter(p => p.metodo === 'DINHEIRO')
+            .reduce((acc, p) => acc + p.valor, 0);
+        const totalCartao = pagamentos
+            .filter(p => p.metodo === 'CARTAO')
+            .reduce((acc, p) => acc + p.valor, 0);
+        const totalPix = pagamentos
+            .filter(p => p.metodo === 'PIX')
+            .reduce((acc, p) => acc + p.valor, 0);
+        // Buscar saídas e sangrias do dia
+        const saidas = await db_1.default.caixaRegistro.findMany({
+            where: {
+                empresaId,
+                tipo: { in: ['SAIDA', 'SANGRIA'] },
+                data: { gte: start, lte: end },
+            },
+        });
+        const totalSaidas = saidas.reduce((acc, s) => acc + s.valor, 0);
+        // Calcular saldo de dinheiro (entradas - saídas)
+        const saldoDinheiro = totalDinheiro - saidas
+            .filter(s => s.formaPagamento === 'DINHEIRO')
+            .reduce((acc, s) => acc + s.valor, 0);
+        res.json({
+            faturamentoDia,
+            totalDinheiro,
+            totalCartao,
+            totalPix,
+            totalSaidas,
+            saldoDinheiro
+        });
     }
     catch (error) {
         console.error('Erro ao buscar resumo do dia:', error);
@@ -251,6 +281,9 @@ async function getPagamentosDoPeriodo(empresaId, dateFilter) {
 const getFechamentoById = async (req, res) => {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         const registroFechamento = await db_1.default.caixaRegistro.findFirst({
             where: { id, empresaId, tipo: 'FECHAMENTO' },
@@ -326,6 +359,9 @@ exports.getGanhosDoMes = getGanhosDoMes;
 const getFechamentoComissaoById = async (req, res) => {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         const fechamento = await db_1.default.fechamentoComissao.findFirst({
             where: { id, empresaId },
@@ -505,6 +541,9 @@ exports.migrarPagamentosComissaoAntigos = migrarPagamentosComissaoAntigos;
 const updateCaixaRegistro = async (req, res) => {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId } = req.body;
     try {
         let fornecedorId;
@@ -543,6 +582,9 @@ exports.updateCaixaRegistro = updateCaixaRegistro;
 const deleteCaixaRegistro = async (req, res) => {
     const empresaId = req.empresaId;
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         await db_1.default.$transaction(async (tx) => {
             await tx.adiantamento.deleteMany({

@@ -61,6 +61,9 @@ exports.getTiposVeiculo = getTiposVeiculo;
 const getTipoVeiculoById = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const tipoVeiculo = await db_1.default.tipoVeiculo.findFirst({
             where: {
                 id,
@@ -89,6 +92,9 @@ exports.getTipoVeiculoById = getTipoVeiculoById;
 const updateTipoVeiculo = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { nome, categoria, descricao, ativo } = req.body;
         const tipoVeiculoAtualizado = await db_1.default.tipoVeiculo.update({
             where: {
@@ -119,6 +125,9 @@ exports.updateTipoVeiculo = updateTipoVeiculo;
 const deleteTipoVeiculo = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se há serviços associados antes de excluir
         const servicosAssociados = await db_1.default.servico.count({
             where: {
@@ -153,6 +162,9 @@ exports.deleteTipoVeiculo = deleteTipoVeiculo;
 const getServicosByTipoVeiculo = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const servicos = await db_1.default.servico.findMany({
             where: {
                 empresaId: req.empresaId,
@@ -178,6 +190,9 @@ exports.getServicosByTipoVeiculo = getServicosByTipoVeiculo;
 const getSubtiposByTipo = async (req, res) => {
     try {
         const { categoria: nomeTipo } = req.params;
+        if (Array.isArray(nomeTipo)) {
+            return res.status(400).json({ error: 'Nome do tipo inválido' });
+        }
         const subtipos = await db_1.default.tipoVeiculo.findMany({
             where: {
                 empresaId: req.empresaId,

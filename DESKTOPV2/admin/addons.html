@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Add-ons - Admin LinaX</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header-section button, .header-section a {
+            padding: 12px 24px;
+            background: #00BCD4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-section button:hover, .header-section a:hover {
+            background: #00A0B8;
+        }
+
+        .addons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .addon-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-top: 4px solid #f59e0b;
+            transition: all 0.3s;
+        }
+
+        .addon-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-5px);
+        }
+
+        .addon-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .addon-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .addon-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: #ccc;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+            position: relative;
+            border: none;
+            padding: 0;
+        }
+
+        .toggle-switch.active {
+            background: #10b981;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 26px;
+        }
+
+        .addon-info {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .addon-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .addon-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-edit, .btn-delete {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-edit {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .btn-edit:hover {
+            background: #bae6fd;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #00BCD4;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal.primary {
+            background: #00BCD4;
+            color: white;
+        }
+
+        .btn-modal.primary:hover {
+            background: #00A0B8;
+        }
+
+        .btn-modal.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-modal.secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-modal:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message, .success-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox input {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="admin-layout">
+    <div class="container-fluid">
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i> <span id="errorText"></span>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <i class="fas fa-check-circle"></i> <span id="successText"></span>
+        </div>
+
+        <div class="header-section">
+            <div>
+                <h1><i class="fas fa-puzzle-piece"></i> Gerenciar Add-ons</h1>
+            </div>
+            <div>
+                <button onclick="openCreateModal()">
+                    <i class="fas fa-plus"></i> Novo Add-on
+                </button>
+                <a href="dashboard.html" class="btn btn-secondary" style="margin-left: 10px;">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <div id="loadingState" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Carregando add-ons...
+        </div>
+
+        <div id="mainContent" style="display: none;">
+            <div id="addonsContainer" class="addons-grid"></div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div class="modal-overlay" id="formModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header" id="formModalTitle">Novo Add-on</div>
+            <form id="addonForm" onsubmit="saveAddon(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" class="form-input" id="formNome" required placeholder="Ex: Estoque Personalizado">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <textarea class="form-textarea" id="formDescricao" placeholder="Descrição do add-on"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Preço (R$)</label>
+                    <input type="number" class="form-input" id="formPreco" step="0.01" required min="0" placeholder="39.00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Chave de Feature</label>
+                    <input type="text" class="form-input" id="formFeatureKey" required placeholder="estoque_personalizado">
+                    <small style="color: #666;">Use apenas letras, números e underscore</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox">
+                        <input type="checkbox" id="formAtivo" checked> Add-on Ativo
+                    </label>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-modal secondary" onclick="closeFormModal()">Cancelar</button>
+                    <button type="submit" class="btn-modal primary" id="submitBtn">
+                        <span id="submitBtnText">Salvar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <i class="fas fa-trash"></i> Deletar Add-on
+            </div>
+            <div class="modal-body" style="margin: 20px 0; color: #666;">
+                <p>Tem certeza que deseja deletar este add-on?</p>
+                <strong id="deleteModalAddonName"></strong>
+                <p style="margin-top: 15px; color: #999; font-size: 0.9rem;">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal secondary" onclick="closeDeleteModal()">Cancelar</button>
+                <button class="btn-modal primary" id="deleteBtn" onclick="confirmDelete()" style="background: #ef4444;">
+                    <span id="deleteBtnText"><i class="fas fa-trash"></i> Sim, Deletar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../api.js"></script>
+    <script>
+        let allAddons = [];
+        let editingAddonId = null;
+        let deletingAddonId = null;
+        let isProcessing = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+
+        async function loadData() {
+            try {
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+
+                allAddons = await fetchApi('/admin/subscriptions/addons');
+
+                renderAddons();
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+                showError('Erro ao carregar add-ons');
+            }
+        }
+
+        function renderAddons() {
+            const container = document.getElementById('addonsContainer');
+
+            if (allAddons.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhum Add-on</h3>
+                        <p>Crie seu primeiro add-on clicando em "Novo Add-on"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = allAddons.map(addon => `
+                <div class="addon-card">
+                    <div class="addon-header">
+                        <div class="addon-name">${addon.nome}</div>
+                        <div class="addon-toggle">
+                            <span style="font-size: 0.85rem; color: #666;">${addon.ativo ? 'Ativo' : 'Inativo'}</span>
+                            <button class="toggle-switch ${addon.ativo ? 'active' : ''}" onclick="toggleAddon('${addon.id}', ${!addon.ativo})"></button>
+                        </div>
+                    </div>
+
+                    <div class="addon-info">
+                        <div class="info-row">
+                            <span class="info-label">Preço</span>
+                            <span class="info-value">R$ ${(addon.preco / 100).toFixed(2).replace('.', ',')}/mês</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Chave de Feature</span>
+                            <span class="info-value" style="font-family: monospace; font-size: 0.9rem;">${addon.featureKey}</span>
+                        </div>
+                    </div>
+
+                    ${addon.descricao ? `<div class="addon-description">${addon.descricao}</div>` : ''}
+
+                    <div class="addon-actions">
+                        <button class="btn-edit" onclick="openEditModal('${addon.id}')">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn-delete" onclick="openDeleteModal('${addon.id}')">
+                            <i class="fas fa-trash"></i> Deletar
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            editingAddonId = null;
+            document.getElementById('formModalTitle').textContent = 'Novo Add-on';
+            document.getElementById('addonForm').reset();
+            document.getElementById('formAtivo').checked = true;
+            document.getElementById('submitBtnText').textContent = 'Criar Add-on';
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function openEditModal(addonId) {
+            const addon = allAddons.find(a => a.id === addonId);
+            if (!addon) return;
+
+            editingAddonId = addonId;
+            document.getElementById('formModalTitle').textContent = 'Editar Add-on';
+            document.getElementById('formNome').value = addon.nome;
+            document.getElementById('formDescricao').value = addon.descricao || '';
+            document.getElementById('formPreco').value = (addon.preco / 100).toFixed(2);
+            document.getElementById('formFeatureKey').value = addon.featureKey;
+            document.getElementById('formAtivo').checked = addon.ativo;
+            document.getElementById('submitBtnText').textContent = 'Atualizar Add-on';
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function closeFormModal() {
+            document.getElementById('formModal').classList.remove('show');
+        }
+
+        async function saveAddon(event) {
+            event.preventDefault();
+
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            const originalText = document.getElementById('submitBtnText').textContent;
+            document.getElementById('submitBtnText').textContent = 'Salvando...';
+
+            try {
+                const payload = {
+                    nome: document.getElementById('formNome').value,
+                    descricao: document.getElementById('formDescricao').value,
+                    preco: Math.round(parseFloat(document.getElementById('formPreco').value) * 100),
+                    featureKey: document.getElementById('formFeatureKey').value,
+                    ativo: document.getElementById('formAtivo').checked
+                };
+
+                if (editingAddonId) {
+                    await fetchApi(`/admin/subscriptions/addons/${editingAddonId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(payload)
+                    });
+                    showSuccess('✅ Add-on atualizado com sucesso!');
+                } else {
+                    await fetchApi('/admin/subscriptions/addons', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    showSuccess('✅ Add-on criado com sucesso!');
+                }
+
+                closeFormModal();
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                showError(error.message || error.error || 'Erro ao salvar add-on');
+            } finally {
+                isProcessing = false;
+                submitBtn.disabled = false;
+                document.getElementById('submitBtnText').textContent = originalText;
+            }
+        }
+
+        function openDeleteModal(addonId) {
+            deletingAddonId = addonId;
+            const addon = allAddons.find(a => a.id === addonId);
+            if (!addon) return;
+
+            document.getElementById('deleteModalAddonName').textContent = addon.nome;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+            deletingAddonId = null;
+        }
+
+        async function confirmDelete() {
+            if (!deletingAddonId || isProcessing) return;
+
+            isProcessing = true;
+            const deleteBtn = document.getElementById('deleteBtn');
+            deleteBtn.disabled = true;
+            const originalText = document.getElementById('deleteBtnText').innerHTML;
+            document.getElementById('deleteBtnText').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deletando...';
+
+            try {
+                await fetchApi(`/admin/subscriptions/addons/${deletingAddonId}`, {
+                    method: 'DELETE'
+                });
+
+                showSuccess('✅ Add-on deletado com sucesso!');
+                closeDeleteModal();
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                console.error('Erro ao deletar:', error);
+                showError(error.message || error.error || 'Erro ao deletar add-on');
+            } finally {
+                isProcessing = false;
+                deleteBtn.disabled = false;
+                document.getElementById('deleteBtnText').innerHTML = originalText;
+            }
+        }
+
+        async function toggleAddon(addonId, newStatus) {
+            try {
+                await fetchApi(`/admin/subscriptions/addons/${addonId}/toggle`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ ativo: newStatus })
+                });
+                showSuccess(`✅ Add-on ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                console.error('Erro ao alternar:', error);
+                showError(error.message || error.error || 'Erro ao alternar add-on');
+            }
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorMsg.classList.add('show');
+            setTimeout(() => errorMsg.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            document.getElementById('successText').textContent = message;
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 5000);
+        }
+
+        // Modal close on background click
+        document.getElementById('formModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFormModal();
+        });
+
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+    </script>
+</body>
+</html>

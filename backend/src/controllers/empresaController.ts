@@ -50,6 +50,20 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
       return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
+    // Validar limite de empresas baseado no plano de assinatura
+    const { subscriptionService } = await import('../services/subscriptionService');
+    const canCreate = await subscriptionService.canCreateMoreCompanies(usuarioId);
+
+    if (!canCreate.allowed) {
+      return res.status(403).json({
+        error: 'Limite de empresas atingido',
+        message: canCreate.reason,
+        limit: canCreate.limit,
+        current: canCreate.current,
+        code: 'COMPANY_LIMIT_REACHED'
+      });
+    }
+
     const existingEmpresa = await prisma.empresa.findFirst({
       where: { nome, usuarioId },
     });
@@ -58,10 +72,16 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
       return res.status(400).json({ error: 'Empresa com este nome já existe para este usuário' });
     }
 
+    // Calcular ordem da empresa (1ª, 2ª, 3ª, etc.)
+    const empresasCount = await prisma.empresa.count({
+      where: { usuarioId }
+    });
+
     let empresa = await prisma.empresa.create({
       data: {
         nome,
         usuarioId,
+        ordem: empresasCount + 1,
         config: JSON.stringify({
           moeda: 'BRL',
           timezone: 'America/Sao_Paulo'

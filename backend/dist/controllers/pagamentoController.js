@@ -79,6 +79,9 @@ exports.createPagamento = createPagamento;
 const getPagamentosByOrdem = async (req, res) => {
     try {
         const { ordemId } = req.params;
+        if (Array.isArray(ordemId)) {
+            return res.status(400).json({ error: 'ID da ordem inválido' });
+        }
         // Verificar se ordem existe e pertence à empresa
         const ordem = await db_1.default.ordemServico.findFirst({
             where: {
@@ -112,6 +115,9 @@ exports.getPagamentosByOrdem = getPagamentosByOrdem;
 const updatePagamentoStatus = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { status } = req.body;
         // Verificar se pagamento existe e pertence à empresa
         const pagamento = await db_1.default.pagamento.findFirst({
@@ -167,6 +173,9 @@ exports.updatePagamentoStatus = updatePagamentoStatus;
 const deletePagamento = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se pagamento existe e pertence à empresa
         const pagamento = await db_1.default.pagamento.findFirst({
             where: {

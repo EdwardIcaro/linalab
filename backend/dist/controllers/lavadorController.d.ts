@@ -21,8 +21,8 @@ export declare const toggleLavadorToken: (req: EmpresaRequest, res: Response) =>
  * Excluir token de acesso
  */
 export declare const deleteLavadorToken: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
-export declare const updateLavador: (req: EmpresaRequest, res: Response) => Promise<void>;
-export declare const deleteLavador: (req: EmpresaRequest, res: Response) => Promise<void>;
+export declare const updateLavador: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const deleteLavador: (req: EmpresaRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
 /**
  * Gera um token JWT para a página pública do lavador.
  */

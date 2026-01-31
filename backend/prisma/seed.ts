@@ -463,7 +463,214 @@ async function main() {
   console.log('✅ Expenses created: 3 transactions\n');
 
   // =====================================================
-  // 11. SUMMARY
+  // 11. CREATE SUBSCRIPTION PLANS AND ADD-ONS
+  // =====================================================
+  console.log('📦 Creating subscription plans and add-ons...');
+
+  // Plano BASIC - R$ 89/mês
+  const basicPlan = await prisma.subscriptionPlan.upsert({
+    where: { nome: 'Basic' },
+    update: {
+      descricao: 'Perfeito para pequenos negócios começando com gerenciamento digital',
+      preco: 8900,
+      maxEmpresas: 1,
+      maxUsuarios: 1,
+      maxAddons: 0,
+      features: [
+        'suporte_24_7',
+        'relatorios_pdf',
+        'gestao_vendas',
+        'controle_servicos',
+        'organizacao_financeira',
+        'personalizacao_completa',
+        'painel_administrativo',
+        'dados_ilimitados'
+      ]
+    },
+    create: {
+      nome: 'Basic',
+      descricao: 'Perfeito para pequenos negócios começando com gerenciamento digital',
+      preco: 8900,
+      intervalo: 'MONTHLY',
+      ativo: true,
+      ordem: 1,
+      maxEmpresas: 1,
+      maxUsuarios: 1,
+      maxAddons: 0,
+      features: [
+        'suporte_24_7',
+        'relatorios_pdf',
+        'gestao_vendas',
+        'controle_servicos',
+        'organizacao_financeira',
+        'personalizacao_completa',
+        'painel_administrativo',
+        'dados_ilimitados'
+      ]
+    }
+  });
+
+  // Plano PRO - R$ 169/mês
+  const proPlan = await prisma.subscriptionPlan.upsert({
+    where: { nome: 'Pro' },
+    update: {
+      descricao: 'Para negócios em crescimento que precisam gerenciar múltiplas unidades',
+      preco: 16900,
+      maxEmpresas: 2,
+      maxUsuarios: 5,
+      maxAddons: 1,
+      features: [
+        'suporte_24_7',
+        'relatorios_pdf',
+        'gestao_vendas',
+        'controle_servicos',
+        'organizacao_financeira',
+        'personalizacao_completa',
+        'painel_administrativo',
+        'dados_ilimitados',
+        'painel_vitrine',
+        'catalogo_servicos'
+      ]
+    },
+    create: {
+      nome: 'Pro',
+      descricao: 'Para negócios em crescimento que precisam gerenciar múltiplas unidades',
+      preco: 16900,
+      intervalo: 'MONTHLY',
+      ativo: true,
+      ordem: 2,
+      maxEmpresas: 2,
+      maxUsuarios: 5,
+      maxAddons: 1,
+      features: [
+        'suporte_24_7',
+        'relatorios_pdf',
+        'gestao_vendas',
+        'controle_servicos',
+        'organizacao_financeira',
+        'personalizacao_completa',
+        'painel_administrativo',
+        'dados_ilimitados',
+        'painel_vitrine',
+        'catalogo_servicos'
+      ]
+    }
+  });
+
+  // Plano PREMIUM - R$ 279/mês
+  const premiumPlan = await prisma.subscriptionPlan.upsert({
+    where: { nome: 'Premium' },
+    update: {
+      descricao: 'Solução completa para empresas consolidadas com múltiplos operacionais',
+      preco: 27900,
+      maxEmpresas: 5,
+      maxUsuarios: 20,
+      maxAddons: 2,
+      features: [
+        'suporte_24_7',
+        'relatorios_pdf',
+        'gestao_vendas',
+        'controle_servicos',
+        'organizacao_financeira',
+        'personalizacao_completa',
+        'painel_administrativo',
+        'dados_ilimitados',
+        'painel_vitrine',
+        'catalogo_servicos',
+        'lina_whatsapp',
+        'notificacoes_automaticas',
+        'prioridade_suporte',
+        'webhooks_api'
+      ]
+    },
+    create: {
+      nome: 'Premium',
+      descricao: 'Solução completa para empresas consolidadas com múltiplos operacionais',
+      preco: 27900,
+      intervalo: 'MONTHLY',
+      ativo: true,
+      ordem: 3,
+      maxEmpresas: 5,
+      maxUsuarios: 20,
+      maxAddons: 2,
+      features: [
+        'suporte_24_7',
+        'relatorios_pdf',
+        'gestao_vendas',
+        'controle_servicos',
+        'organizacao_financeira',
+        'personalizacao_completa',
+        'painel_administrativo',
+        'dados_ilimitados',
+        'painel_vitrine',
+        'catalogo_servicos',
+        'lina_whatsapp',
+        'notificacoes_automaticas',
+        'prioridade_suporte',
+        'webhooks_api'
+      ]
+    }
+  });
+
+  // Add-on: Estoque Personalizado
+  const addonEstoque = await prisma.addon.upsert({
+    where: { nome: 'Estoque Personalizado' },
+    update: {
+      descricao: 'Controle avançado de inventário com alertas de reposição',
+      preco: 3900,
+      featureKey: 'estoque_personalizado',
+      ativo: true
+    },
+    create: {
+      nome: 'Estoque Personalizado',
+      descricao: 'Controle avançado de inventário com alertas de reposição',
+      preco: 3900,
+      featureKey: 'estoque_personalizado',
+      ativo: true
+    }
+  });
+
+  // Add-on: Calculadora de Consumo
+  const addonCalculadora = await prisma.addon.upsert({
+    where: { nome: 'Calculadora de Consumo' },
+    update: {
+      descricao: 'Calcule custos de consumo por serviço e maximize margens',
+      preco: 2900,
+      featureKey: 'calculadora_consumo',
+      ativo: true
+    },
+    create: {
+      nome: 'Calculadora de Consumo',
+      descricao: 'Calcule custos de consumo por serviço e maximize margens',
+      preco: 2900,
+      featureKey: 'calculadora_consumo',
+      ativo: true
+    }
+  });
+
+  // Add-on: PDV Simples
+  const addonPDV = await prisma.addon.upsert({
+    where: { nome: 'PDV Simples' },
+    update: {
+      descricao: 'Ponto de Venda simplificado para vendas rápidas no balcão',
+      preco: 4900,
+      featureKey: 'pdv_simples',
+      ativo: true
+    },
+    create: {
+      nome: 'PDV Simples',
+      descricao: 'Ponto de Venda simplificado para vendas rápidas no balcão',
+      preco: 4900,
+      featureKey: 'pdv_simples',
+      ativo: true
+    }
+  });
+
+  console.log('✅ Subscription plans created: 3 plans');
+  console.log('✅ Add-ons created: 3 add-ons\n');
+
+  // =====================================================
+  // 12. SUMMARY
   // =====================================================
   console.log('════════════════════════════════════════════════');
   console.log('✅ SEED COMPLETED SUCCESSFULLY!');
@@ -491,6 +698,9 @@ async function main() {
   console.log(`   - EM_ANDAMENTO: ${orders.filter(o => o.status === 'EM_ANDAMENTO').length}`);
   console.log(`   - FINALIZADO: ${orders.filter(o => o.status === 'FINALIZADO').length}`);
   console.log(`💰 Expenses: 3`);
+  console.log('\n💳 SUBSCRIPTION SYSTEM:');
+  console.log(`📦 Plans: 3 (Basic R$ ${(basicPlan.preco / 100).toFixed(2)}, Pro R$ ${(proPlan.preco / 100).toFixed(2)}, Premium R$ ${(premiumPlan.preco / 100).toFixed(2)})`);
+  console.log(`🎁 Add-ons: 3 (Estoque, Calculadora de Consumo, PDV)`);
   console.log('════════════════════════════════════════════════');
   console.log('\n✅ Role system ACTIVE - Login routing by role:');
   console.log('   LINA_OWNER → admin/dashboard.html');

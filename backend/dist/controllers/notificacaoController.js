@@ -48,6 +48,9 @@ exports.getNotificacoes = getNotificacoes;
  */
 const marcarComoLida = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         const notificacao = await db_1.default.notificacao.findFirst({
             where: { id, empresaId: req.empresaId },

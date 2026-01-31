@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -49,16 +82,33 @@ const createEmpresa = async (req, res) => {
         if (!usuarioId) {
             return res.status(401).json({ error: 'Usuário não autenticado' });
         }
+        // Validar limite de empresas baseado no plano de assinatura
+        const { subscriptionService } = await Promise.resolve().then(() => __importStar(require('../services/subscriptionService')));
+        const canCreate = await subscriptionService.canCreateMoreCompanies(usuarioId);
+        if (!canCreate.allowed) {
+            return res.status(403).json({
+                error: 'Limite de empresas atingido',
+                message: canCreate.reason,
+                limit: canCreate.limit,
+                current: canCreate.current,
+                code: 'COMPANY_LIMIT_REACHED'
+            });
+        }
         const existingEmpresa = await db_1.default.empresa.findFirst({
             where: { nome, usuarioId },
         });
         if (existingEmpresa) {
             return res.status(400).json({ error: 'Empresa com este nome já existe para este usuário' });
         }
+        // Calcular ordem da empresa (1ª, 2ª, 3ª, etc.)
+        const empresasCount = await db_1.default.empresa.count({
+            where: { usuarioId }
+        });
         let empresa = await db_1.default.empresa.create({
             data: {
                 nome,
                 usuarioId,
+                ordem: empresasCount + 1,
                 config: JSON.stringify({
                     moeda: 'BRL',
                     timezone: 'America/Sao_Paulo'
@@ -152,6 +202,9 @@ exports.getEmpresas = getEmpresas;
 const getEmpresaById = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         let empresa = await db_1.default.empresa.findUnique({
             where: { id },
             select: {
@@ -195,7 +248,13 @@ exports.getEmpresaById = getEmpresaById;
 const updateEmpresa = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { nome, config, horarioAbertura, horarioFechamento, finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao, notificationPreferences, paymentMethodsConfig } = req.body;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const existingEmpresa = await db_1.default.empresa.findUnique({
             where: { id }
         });
@@ -256,6 +315,9 @@ exports.updateEmpresa = updateEmpresa;
 const toggleEmpresaStatus = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const currentEmpresa = await db_1.default.empresa.findUnique({ where: { id } });
         if (!currentEmpresa) {
             return res.status(404).json({ error: 'Empresa não encontrada' });

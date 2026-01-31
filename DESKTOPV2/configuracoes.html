@@ -1560,7 +1560,7 @@
                 async loadRolesAndUsers() {
                     try {
                         console.log('[Config] Loading roles and users...');
-                        const response = await window.api.call('GET', 'roles');
+                        const response = await fetchApi('/roles');
                         console.log('[Config] Roles API response:', response);
                         this.roles = response.roles || [];
                         this.users = response.usuarios || [];
@@ -1608,7 +1608,7 @@
                         };
 
                         console.log('[Config] Saving role:', data);
-                        await window.api.call('POST', 'roles', data);
+                        await fetchApi('/roles', { method: 'POST', body: JSON.stringify(data) });
                         showToast('Função salva com sucesso!', 'success');
                         this.closeRoleModal();
                         await this.loadRolesAndUsers();
@@ -1624,7 +1624,7 @@
                         message: `Tem certeza que deseja excluir a função "${nome}"? Apenas funções sem usuários podem ser excluídas.`,
                         onConfirm: async () => {
                             try {
-                                await window.api.call('DELETE', `roles/${id}`);
+                                await fetchApi(`/roles/${id}`, { method: 'DELETE' });
                                 showToast('Função excluída com sucesso!', 'success');
                                 await this.loadRolesAndUsers();
                             } catch (error) {
@@ -1688,10 +1688,10 @@
                         console.log('[Config] Saving user:', data);
 
                         if (this.userForm.id) {
-                            await window.api.call('PATCH', `roles/subaccount/${this.userForm.id}`, data);
+                            await fetchApi(`/roles/subaccount/${this.userForm.id}`, { method: 'PATCH', body: JSON.stringify(data) });
                             showToast('Usuário atualizado com sucesso!', 'success');
                         } else {
-                            await window.api.call('POST', 'roles/subaccount', data);
+                            await fetchApi('/roles/subaccount', { method: 'POST', body: JSON.stringify(data) });
                             showToast('Usuário criado com sucesso!', 'success');
                         }
 
@@ -1709,7 +1709,7 @@
                         message: `Tem certeza que deseja excluir o usuário "${nome}" permanentemente?`,
                         onConfirm: async () => {
                             try {
-                                await window.api.call('DELETE', `roles/subaccount/${id}`);
+                                await fetchApi(`/roles/subaccount/${id}`, { method: 'DELETE' });
                                 showToast('Usuário excluído com sucesso!', 'success');
                                 await this.loadRolesAndUsers();
                             } catch (error) {

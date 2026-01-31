@@ -213,14 +213,25 @@
 
             document.getElementById('empresaDetailsForm').addEventListener('submit', saveEmpresaDetails);
             document.getElementById('userCredentialsForm').addEventListener('submit', saveUserCredentials);
-            document.getElementById('roleForm').addEventListener('submit', saveRole);
-            document.getElementById('userForm').addEventListener('submit', saveUser);
+
+            // Only bind role/user forms if endpoints are available
+            const roleForm = document.getElementById('roleForm');
+            const userForm = document.getElementById('userForm');
+            if (roleForm) roleForm.addEventListener('submit', saveRole);
+            if (userForm) userForm.addEventListener('submit', saveUser);
         });
 
         async function loadEmpresaDetails() {
             try {
-                const { empresa } = await window.api.call('GET', `admin/empresas/${empresaId}/details`);
-                
+                const data = await fetchApi(`/admin/empresas/${empresaId}/details`);
+                const empresa = data.empresa || data;
+
+                if (!empresa || !empresa.nome) {
+                    showToast('Erro: Dados da empresa inválidos.', 'error');
+                    console.error('Invalid empresa data:', data);
+                    return;
+                }
+
                 // Preenche informações da empresa
                 document.getElementById('headerEmpresaNome').textContent = empresa.nome;
                 document.getElementById('empresaId').textContent = empresa.id;
@@ -229,12 +240,14 @@
                 document.getElementById('empresaNomeInput').value = empresa.nome;
 
                 // Preenche informações do usuário
-                document.getElementById('userId').value = empresa.usuario.id;
-                document.getElementById('userLoginName').value = empresa.usuario.nome;
-                document.getElementById('userEmail').value = empresa.usuario.email;
+                if (empresa.usuario) {
+                    document.getElementById('userId').value = empresa.usuario.id;
+                    document.getElementById('userLoginName').value = empresa.usuario.nome;
+                    document.getElementById('userEmail').value = empresa.usuario.email;
+                }
 
                 // Carrega dados de usuários e funções
-                await loadRolesAndUsers();
+                // await loadRolesAndUsers(); // Comentado enquanto os endpoints não estão implementados
 
             } catch (error) {
                 showToast('Erro ao carregar detalhes da empresa.', 'error');
@@ -246,7 +259,7 @@
             event.preventDefault();
             const novoNome = document.getElementById('empresaNomeInput').value;
             try {
-                await window.api.call('PATCH', `admin/empresas/${empresaId}/update`, { nome: novoNome });
+                await fetchApi(`/admin/empresas/${empresaId}`, { method: 'PATCH', body: JSON.stringify({ nome: novoNome }) });
                 showToast('Nome da empresa atualizado com sucesso!', 'success');
                 document.getElementById('headerEmpresaNome').textContent = novoNome;
             } catch (error) {
@@ -271,7 +284,7 @@
             }
 
             try {
-                await window.api.call('PATCH', `admin/users/${userId}/update-credentials`, data);
+                await fetchApi(`/admin/usuarios/${userId}`, { method: 'PATCH', body: JSON.stringify(data) });
                 showToast('Credenciais do usuário atualizadas com sucesso!', 'success');
                 document.getElementById('userNewPassword').value = ''; // Limpa o campo de senha
             } catch (error) {
@@ -311,7 +324,9 @@
 
         async function loadRolesAndUsers() {
             try {
-                const { roles, usuarios } = await window.api.call('GET', `admin/empresas/${empresaId}/roles`);
+                const data = await fetchApi(`/admin/empresas/${empresaId}/roles`);
+                const roles = data.roles || [];
+                const usuarios = data.usuarios || [];
                 renderRoles(roles);
                 renderUsers(usuarios);
                 populateRoleSelect(roles);
@@ -472,7 +487,7 @@
                 permissoes: Array.from(document.querySelectorAll('input[name="permissoes"]:checked')).map(cb => cb.value)
             };
             try {
-                await window.api.call('POST', 'roles', data); 
+                await fetchApi(`/roles`, { method: 'POST', body: JSON.stringify(data) });
                 showToast('Função salva com sucesso!', 'success');
                 closeModal('roleModal');
                 loadRolesAndUsers();
@@ -492,10 +507,10 @@
 
             try {
                 if (id) {
-                    await window.api.call('PATCH', `roles/subaccount/${id}`, data);
+                    await fetchApi(`/roles/subaccount/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
                     showToast('Usuário atualizado com sucesso!', 'success');
                 } else {
-                    await window.api.call('POST', 'roles/subaccount', data);
+                    await fetchApi(`/roles/subaccount`, { method: 'POST', body: JSON.stringify(data) });
                     showToast('Usuário criado com sucesso!', 'success');
                 }
                 closeModal('userModal');
@@ -509,7 +524,7 @@
                 message: 'Tem certeza que deseja excluir esta função? Apenas funções sem usuários podem ser excluídas.',
                 onConfirm: async () => {
                     try {
-                        await window.api.call('DELETE', `roles/${id}`);
+                        await fetchApi(`/roles/${id}`, { method: 'DELETE' });
                         showToast('Função excluída com sucesso!', 'success');
                         loadRolesAndUsers();
                     } catch (error) { showToast(error.message || 'Erro ao excluir função.', 'error'); }
@@ -523,7 +538,7 @@
                 message: 'Tem certeza que deseja excluir este usuário permanentemente?',
                 onConfirm: async () => {
                     try {
-                        await window.api.call('DELETE', `roles/subaccount/${id}`);
+                        await fetchApi(`/roles/subaccount/${id}`, { method: 'DELETE' });
                         showToast('Usuário excluído com sucesso!', 'success');
                         loadRolesAndUsers();
                     } catch (error) { showToast(error.message || 'Erro ao excluir usuário.', 'error'); }
@@ -546,7 +561,8 @@
                 localStorage.setItem('original_admin_session', JSON.stringify(adminSession));
 
                 // 2. Pede um token de impersonação para o backend
-                const { token, usuario } = await window.api.call('POST', `admin/impersonate/${userId}`);
+                const result = await fetchApi(`/admin/impersonate/${userId}`, { method: 'POST' });
+                const { token, usuario } = result;
 
                 // 3. Define a nova sessão no localStorage
                 localStorage.setItem('token', token);

@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Assinaturas - Admin Lina Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #00BCD4;
+        }
+
+        .stat-card.active {
+            border-left-color: #10b981;
+        }
+
+        .stat-card.trial {
+            border-left-color: #f59e0b;
+        }
+
+        .stat-card.expired {
+            border-left-color: #ef4444;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #333;
+        }
+
+        .stat-subtitle {
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .filters-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #333;
+            min-width: 80px;
+        }
+
+        .filter-group select {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #00BCD4;
+        }
+
+        .subscriptions-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f9f9f9;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-trial {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-lifetime {
+            background: #e9d5ff;
+            color: #6b21a8;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-info {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .btn-info:hover {
+            background: #bae6fd;
+        }
+
+        .btn-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .btn-success:hover {
+            background: #bbf7d0;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+        .btn-small:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 30px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal.primary {
+            background: #00BCD4;
+            color: white;
+        }
+
+        .btn-modal.primary:hover {
+            background: #00A0B8;
+        }
+
+        .btn-modal.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-modal.secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-modal:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #00BCD4;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body class="admin-layout">
+    <div class="container-fluid">
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i> <span id="errorText"></span>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <i class="fas fa-check-circle"></i> <span id="successText"></span>
+        </div>
+
+        <div class="header-section">
+            <div>
+                <h1><i class="fas fa-credit-card"></i> Gerenciar Assinaturas</h1>
+            </div>
+            <div>
+                <a href="dashboard.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <div id="loadingState" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Carregando assinaturas...
+        </div>
+
+        <div id="mainContent" style="display: none;">
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total de Assinaturas</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-label">Ativas</div>
+                    <div class="stat-value" id="statActive">0</div>
+                    <div class="stat-subtitle" id="statMRR">MRR: R$ 0,00</div>
+                </div>
+                <div class="stat-card trial">
+                    <div class="stat-label">Em Trial</div>
+                    <div class="stat-value" id="statTrial">0</div>
+                </div>
+                <div class="stat-card expired">
+                    <div class="stat-label">Expiradas</div>
+                    <div class="stat-value" id="statExpired">0</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select id="filterStatus" onchange="loadData()">
+                        <option value="">Todos</option>
+                        <option value="ACTIVE">Ativa</option>
+                        <option value="TRIAL">Trial</option>
+                        <option value="EXPIRED">Expirada</option>
+                        <option value="CANCELED">Cancelada</option>
+                        <option value="LIFETIME">Vitalícia</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Plano:</label>
+                    <select id="filterPlan" onchange="loadData()">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Subscriptions Table -->
+            <div class="subscriptions-table">
+                <div id="tableContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal-overlay" id="detailsModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <i class="fas fa-info-circle"></i> Detalhes da Assinatura
+            </div>
+            <div class="modal-body" id="detailsContent"></div>
+            <div class="modal-buttons">
+                <button class="btn-modal secondary" onclick="closeDetailsModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suspend Modal -->
+    <div class="modal-overlay" id="suspendModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle"></i> Suspender Assinatura
+            </div>
+            <div class="modal-body" id="suspendMessage"></div>
+            <div class="modal-buttons">
+                <button class="btn-modal secondary" onclick="closeSuspendModal()">Cancelar</button>
+                <button class="btn-modal primary" id="confirmSuspendBtn" onclick="confirmSuspendSubscription()">
+                    <span id="suspendBtnText">Sim, Suspender</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../api.js"></script>
+    <script>
+        let allSubscriptions = [];
+        let allPlans = [];
+        let selectedSubscriptionId = null;
+        let isProcessing = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+
+        async function loadData() {
+            try {
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+
+                const [subscriptions, plans] = await Promise.all([
+                    fetchApi('/admin/subscriptions/subscriptions'),
+                    fetchApi('/admin/subscriptions/plans')
+                ]);
+
+                allSubscriptions = subscriptions;
+                allPlans = plans;
+
+                populatePlansFilter();
+                applyFilters();
+                calculateStats();
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+                showError('Erro ao carregar assinaturas');
+            }
+        }
+
+        function populatePlansFilter() {
+            const filterPlan = document.getElementById('filterPlan');
+            const currentValue = filterPlan.value;
+
+            allPlans.forEach(plan => {
+                if (!document.querySelector(`#filterPlan option[value="${plan.id}"]`)) {
+                    const option = document.createElement('option');
+                    option.value = plan.id;
+                    option.textContent = plan.nome;
+                    filterPlan.appendChild(option);
+                }
+            });
+
+            filterPlan.value = currentValue;
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('filterStatus').value;
+            const planFilter = document.getElementById('filterPlan').value;
+
+            let filtered = allSubscriptions;
+
+            if (statusFilter) {
+                filtered = filtered.filter(s => s.status === statusFilter);
+            }
+            if (planFilter) {
+                filtered = filtered.filter(s => s.planId === planFilter);
+            }
+
+            renderTable(filtered);
+        }
+
+        function renderTable(subscriptions) {
+            const container = document.getElementById('tableContainer');
+
+            if (subscriptions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhuma Assinatura</h3>
+                        <p>Nenhuma assinatura encontrada com os filtros selecionados.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Plano</th>
+                            <th>Status</th>
+                            <th>Preço</th>
+                            <th>Data Início</th>
+                            <th>Próxima Cobrança</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            subscriptions.forEach(sub => {
+                const statusClass = getStatusClass(sub.status);
+                const statusText = getStatusText(sub.status);
+                const preco = (sub.preco / 100).toFixed(2).replace('.', ',');
+                const startDate = formatDate(sub.startDate);
+                const nextBillingDate = sub.nextBillingDate ? formatDate(sub.nextBillingDate) : '-';
+
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${sub.usuario.nome}</strong><br>
+                            <small style="color: #999;">${sub.usuario.email}</small>
+                        </td>
+                        <td>${sub.plan.nome}</td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>R$ ${preco}</td>
+                        <td>${startDate}</td>
+                        <td>${nextBillingDate}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-small btn-info" onclick="openDetailsModal('${sub.id}')">
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                                <button class="btn-small btn-success" onclick="grantLifetime('${sub.id}')" ${sub.status === 'LIFETIME' ? 'disabled' : ''}>
+                                    <i class="fas fa-star"></i> Vitalício
+                                </button>
+                                <button class="btn-small btn-danger" onclick="openSuspendModal('${sub.id}')" ${sub.status === 'CANCELED' ? 'disabled' : ''}>
+                                    <i class="fas fa-ban"></i> Suspender
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function calculateStats() {
+            const stats = {
+                total: allSubscriptions.length,
+                active: allSubscriptions.filter(s => s.status === 'ACTIVE').length,
+                trial: allSubscriptions.filter(s => s.status === 'TRIAL').length,
+                expired: allSubscriptions.filter(s => ['EXPIRED', 'CANCELED', 'PAST_DUE'].includes(s.status)).length,
+                mrr: allSubscriptions
+                    .filter(s => ['ACTIVE', 'LIFETIME'].includes(s.status))
+                    .reduce((sum, s) => sum + (s.preco / 100), 0)
+            };
+
+            document.getElementById('statTotal').textContent = stats.total;
+            document.getElementById('statActive').textContent = stats.active;
+            document.getElementById('statTrial').textContent = stats.trial;
+            document.getElementById('statExpired').textContent = stats.expired;
+            document.getElementById('statMRR').textContent = `MRR: R$ ${stats.mrr.toFixed(2).replace('.', ',')}`;
+        }
+
+        function openDetailsModal(subscriptionId) {
+            const sub = allSubscriptions.find(s => s.id === subscriptionId);
+            if (!sub) return;
+
+            const preco = (sub.preco / 100).toFixed(2).replace('.', ',');
+
+            document.getElementById('detailsContent').innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Usuário</div>
+                        <div class="detail-value">${sub.usuario.nome}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value">${sub.usuario.email}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Plano</div>
+                        <div class="detail-value">${sub.plan.nome}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">
+                            <span class="status-badge ${getStatusClass(sub.status)}">${getStatusText(sub.status)}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Preço Mensal</div>
+                        <div class="detail-value">R$ ${preco}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Moeda</div>
+                        <div class="detail-value">${sub.currency}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Data de Contratação</div>
+                        <div class="detail-value">${formatDate(sub.startDate)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Próxima Cobrança</div>
+                        <div class="detail-value">${sub.nextBillingDate ? formatDate(sub.nextBillingDate) : '-'}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('detailsModal').classList.add('show');
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').classList.remove('show');
+        }
+
+        function openSuspendModal(subscriptionId) {
+            selectedSubscriptionId = subscriptionId;
+            const sub = allSubscriptions.find(s => s.id === subscriptionId);
+            if (!sub) return;
+
+            document.getElementById('suspendMessage').innerHTML = `
+                <p>Tem certeza que deseja suspender esta assinatura?</p>
+                <p><strong>${sub.usuario.nome}</strong></p>
+            `;
+
+            document.getElementById('suspendModal').classList.add('show');
+        }
+
+        function closeSuspendModal() {
+            document.getElementById('suspendModal').classList.remove('show');
+            selectedSubscriptionId = null;
+        }
+
+        async function confirmSuspendSubscription() {
+            if (!selectedSubscriptionId || isProcessing) return;
+
+            isProcessing = true;
+            const btn = document.getElementById('confirmSuspendBtn');
+            btn.disabled = true;
+            const originalText = document.getElementById('suspendBtnText').textContent;
+            document.getElementById('suspendBtnText').textContent = 'Suspendendo...';
+
+            try {
+                await fetchApi(`/admin/subscriptions/subscriptions/${selectedSubscriptionId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status: 'CANCELED' })
+                });
+
+                showSuccess('✅ Assinatura suspendida com sucesso!');
+                closeSuspendModal();
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                showError(error.message || error.error || 'Erro ao suspender assinatura');
+            } finally {
+                isProcessing = false;
+                btn.disabled = false;
+                document.getElementById('suspendBtnText').textContent = originalText;
+            }
+        }
+
+        async function grantLifetime(subscriptionId) {
+            if (!confirm('Conceder assinatura vitalícia para este usuário?')) return;
+
+            try {
+                await fetchApi(`/admin/subscriptions/subscriptions/lifetime`, {
+                    method: 'POST',
+                    body: JSON.stringify({ subscriptionId })
+                });
+
+                showSuccess('✅ Assinatura vitalícia concedida com sucesso!');
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                showError(error.message || error.error || 'Erro ao conceder assinatura vitalícia');
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'ACTIVE': 'status-active',
+                'TRIAL': 'status-trial',
+                'EXPIRED': 'status-expired',
+                'CANCELED': 'status-expired',
+                'PAST_DUE': 'status-expired',
+                'LIFETIME': 'status-lifetime'
+            };
+            return map[status] || 'status-expired';
+        }
+
+        function getStatusText(status) {
+            const map = {
+                'ACTIVE': '✅ Ativa',
+                'TRIAL': '⏳ Trial',
+                'EXPIRED': '❌ Expirada',
+                'CANCELED': '❌ Cancelada',
+                'PAST_DUE': '⚠️ Pendente',
+                'LIFETIME': '⭐ Vitalícia'
+            };
+            return map[status] || status;
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorMsg.classList.add('show');
+            setTimeout(() => errorMsg.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            document.getElementById('successText').textContent = message;
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 5000);
+        }
+
+        // Modal close on background click
+        document.getElementById('detailsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDetailsModal();
+        });
+
+        document.getElementById('suspendModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSuspendModal();
+        });
+    </script>
+</body>
+</html>

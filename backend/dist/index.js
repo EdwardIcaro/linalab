@@ -27,10 +27,17 @@ const notificacao_1 = __importDefault(require("./routes/notificacao"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const themeRoutes_1 = __importDefault(require("./routes/themeRoutes"));
 const roles_1 = __importDefault(require("./routes/roles"));
+const subscription_1 = __importDefault(require("./routes/subscription"));
+const subscriptionAdmin_1 = __importDefault(require("./routes/subscriptionAdmin"));
+const promotionRoutes_1 = __importDefault(require("./routes/promotionRoutes"));
+const payment_1 = __importDefault(require("./routes/payment"));
+const db_1 = __importDefault(require("./db")); // Importa a instância do Prisma
+const subscriptionService_1 = require("./services/subscriptionService");
 // Importar middleware
 const authMiddleware_1 = __importDefault(require("./middlewares/authMiddleware"));
 const userAuthMiddleware_1 = __importDefault(require("./middlewares/userAuthMiddleware"));
 const adminMiddleware_1 = __importDefault(require("./middlewares/adminMiddleware"));
+const subscriptionMiddleware_1 = require("./middlewares/subscriptionMiddleware");
 // Carregar variáveis de ambiente
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -47,13 +54,59 @@ app.get('/', (_req, res) => {
 });
 // Rotas públicas (cadastro e login de usuário)
 app.use('/api/usuarios', usuario_1.default);
-// Rota pública para visualização do lavador
+// Rotas públicas para visualização
 app.get('/api/public/lavador/:id/ordens', publicController_1.getOrdensByLavadorPublic);
 app.post('/api/public/lavador-data', publicController_1.getLavadorPublicData);
+// Endpoints públicos de subscriptions (para ver planos e promoções antes de fazer login)
+app.get('/api/subscriptions/plans', async (_req, _res) => {
+    try {
+        const plans = await db_1.default.subscriptionPlan.findMany({
+            where: { ativo: true },
+            orderBy: { ordem: 'asc' }
+        });
+        _res.json(plans);
+    }
+    catch (error) {
+        console.error('Erro ao buscar planos:', error);
+        _res.status(500).json({ error: 'Erro ao buscar planos' });
+    }
+});
+app.get('/api/promotions/active', async (_req, _res) => {
+    try {
+        const now = new Date();
+        const promotions = await db_1.default.promotion.findMany({
+            where: {
+                ativo: true,
+                dataInicio: { lte: now },
+                dataFim: { gte: now }
+            },
+            include: {
+                plan: {
+                    select: {
+                        id: true,
+                        nome: true,
+                        preco: true
+                    }
+                }
+            },
+            orderBy: { valor: 'desc' }
+        });
+        _res.json(promotions);
+    }
+    catch (error) {
+        console.error('Erro ao buscar promoções ativas:', error);
+        _res.status(500).json({ error: 'Erro ao buscar promoções' });
+    }
+});
 // Middleware de autenticação para rotas protegidas
 app.use('/api/admin', adminMiddleware_1.default, adminRoutes_1.default); // Admin routes (LINA_OWNER only)
+app.use('/api/admin/subscriptions', adminMiddleware_1.default, subscriptionAdmin_1.default); // Admin subscription routes (LINA_OWNER only)
+app.use('/api/admin/subscriptions/promotions', adminMiddleware_1.default, promotionRoutes_1.default); // Promotion admin routes (LINA_OWNER only)
 app.use('/api/theme', authMiddleware_1.default, themeRoutes_1.default); // Theme routes (requires empresa scope)
-app.use('/api/empresas', userAuthMiddleware_1.default, empresa_1.default); // Usa middleware de usuário
+app.use('/api/subscriptions', userAuthMiddleware_1.default, subscription_1.default); // Subscription routes (user authenticated)
+app.use('/api/promotions', promotionRoutes_1.default); // Public promotion routes (get active only)
+app.use('/api/payments', payment_1.default); // Payment routes (webhooks + user auth endpoints)
+app.use('/api/empresas', userAuthMiddleware_1.default, subscriptionMiddleware_1.requireActiveSubscription, empresa_1.default); // Validates active subscription
 app.use('/api/clientes', authMiddleware_1.default, cliente_1.default); // Usa middleware de empresa
 app.use('/api/veiculos', authMiddleware_1.default, veiculo_1.default); // Usa middleware de empresa
 app.use('/api/lavadores', authMiddleware_1.default, lavador_1.default); // Usa middleware de empresa
@@ -83,6 +136,20 @@ app.use((err, _req, res, _next) => {
 node_cron_1.default.schedule('*/15 * * * *', () => {
     console.log(`[${new Date().toISOString()}] Executando verificação para finalização automática de ordens...`);
     (0, ordemController_1.processarFinalizacoesAutomaticas)();
+}, {
+    timezone: "America/Sao_Paulo"
+});
+// Cron job para verificar assinaturas expiradas (a cada 6 horas)
+node_cron_1.default.schedule('0 */6 * * *', () => {
+    console.log(`[${new Date().toISOString()}] Verificando assinaturas expiradas...`);
+    subscriptionService_1.subscriptionService.checkExpiredSubscriptions();
+}, {
+    timezone: "America/Sao_Paulo"
+});
+// Cron job para verificar trials próximos de expirar (1x ao dia às 09:00)
+node_cron_1.default.schedule('0 9 * * *', () => {
+    console.log(`[${new Date().toISOString()}] Verificando trials próximos de expirar...`);
+    subscriptionService_1.subscriptionService.checkTrialExpirationWarnings();
 }, {
     timezone: "America/Sao_Paulo"
 });

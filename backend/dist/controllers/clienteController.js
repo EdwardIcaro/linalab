@@ -155,6 +155,9 @@ exports.getClientes = getClientes;
 const getClienteById = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const cliente = await db_1.default.cliente.findFirst({
             where: {
                 id,
@@ -227,7 +230,13 @@ exports.getClienteById = getClienteById;
 const updateCliente = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { nome, telefone, email, ativo } = req.body;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se cliente existe e pertence à empresa
         const existingCliente = await db_1.default.cliente.findFirst({
             where: {
@@ -295,13 +304,17 @@ exports.updateCliente = updateCliente;
 const deleteCliente = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se cliente existe e pertence à empresa
         const cliente = await db_1.default.cliente.findFirst({
             where: {
                 id,
                 empresaId: req.empresaId
             },
-            include: {
+            select: {
+                id: true,
                 _count: {
                     select: {
                         ordens: true,
@@ -338,9 +351,12 @@ exports.deleteCliente = deleteCliente;
 const getClienteByPlaca = async (req, res) => {
     try {
         const { placa } = req.params;
+        if (Array.isArray(placa)) {
+            return res.status(400).json({ error: 'Placa inválida' });
+        }
         const veiculo = await db_1.default.veiculo.findFirst({
             where: {
-                placa: { equals: placa },
+                placa,
                 cliente: {
                     empresaId: req.empresaId
                 }
@@ -349,7 +365,7 @@ const getClienteByPlaca = async (req, res) => {
                 cliente: true
             }
         });
-        if (!veiculo) {
+        if (!veiculo || !veiculo.cliente) {
             return res.status(404).json({ error: 'Veículo não encontrado' });
         }
         res.json({

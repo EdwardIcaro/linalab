@@ -98,6 +98,9 @@ exports.getLavadorTokens = getLavadorTokens;
  */
 const updateLavadorTokenStatus = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     const { ativo } = req.body;
     if (typeof ativo !== 'boolean') {
         return res.status(400).json({ error: 'Campo \"ativo\" deve ser booleano.' });
@@ -128,6 +131,9 @@ exports.updateLavadorTokenStatus = updateLavadorTokenStatus;
  */
 const toggleLavadorToken = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         const token = await db_1.default.lavadorToken.findFirst({
             where: {
@@ -157,6 +163,9 @@ exports.toggleLavadorToken = toggleLavadorToken;
  */
 const deleteLavadorToken = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         const deleted = await db_1.default.lavadorToken.deleteMany({
             where: {
@@ -179,6 +188,9 @@ const deleteLavadorToken = async (req, res) => {
 exports.deleteLavadorToken = deleteLavadorToken;
 const updateLavador = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     const { nome, comissao } = req.body;
     try {
         const lavador = await db_1.default.lavador.update({
@@ -194,6 +206,9 @@ const updateLavador = async (req, res) => {
 exports.updateLavador = updateLavador;
 const deleteLavador = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     try {
         await db_1.default.lavador.delete({
             where: { id, empresaId: req.empresaId },
@@ -210,7 +225,11 @@ exports.deleteLavador = deleteLavador;
  */
 const gerarTokenPublico = async (req, res) => {
     const { id } = req.params;
+    if (Array.isArray(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
     const empresaId = req.empresaId;
+    const { duration } = req.body; // Duração em horas (6, 12, 24, 48, 168, etc) ou 'permanent'
     try {
         const lavador = await db_1.default.lavador.findFirst({
             where: { id, empresaId }
@@ -218,17 +237,34 @@ const gerarTokenPublico = async (req, res) => {
         if (!lavador) {
             return res.status(404).json({ error: 'Lavador não encontrado nesta empresa.' });
         }
+        // Calcular expiração baseado na duração
+        let expiresIn;
+        let expiresAt = null;
+        if (duration === 'permanent') {
+            expiresIn = '365d'; // 1 ano (máximo do JWT, mas será tratado como permanente)
+            expiresAt = null; // null = permanente no banco
+        }
+        else {
+            const hours = parseInt(duration) || 24; // Default 24h
+            if (isNaN(hours) || hours < 1) {
+                return res.status(400).json({ error: 'Duração inválida. Use um número de horas ou "permanent".' });
+            }
+            expiresIn = `${hours}h`;
+            expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
+        }
         // O token contém o ID do lavador e da empresa para validação na rota pública
-        const token = jsonwebtoken_1.default.sign({ lavadorId: lavador.id, empresaId: lavador.empresaId }, process.env.JWT_SECRET || 'seu_segredo_jwt_aqui', { expiresIn: '24h' } // O link público expira em 24 horas
-        );
+        const payload = { lavadorId: lavador.id, empresaId: lavador.empresaId };
+        const jwtSecret = process.env.JWT_SECRET || 'seu_segredo_jwt_aqui';
+        const token = jsonwebtoken_1.default.sign(payload, jwtSecret, { expiresIn: expiresIn });
         await db_1.default.lavadorToken.create({
             data: {
                 token,
                 lavadorId: lavador.id,
-                ativo: true
+                ativo: true,
+                expiresAt
             }
         });
-        res.json({ token });
+        res.json({ token, expiresAt });
     }
     catch (error) {
         console.error('Erro ao gerar token público para lavador:', error);

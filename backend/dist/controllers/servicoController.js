@@ -283,6 +283,9 @@ exports.getAdicionais = getAdicionais;
 const getServicoById = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const servico = await db_1.default.servico.findFirst({
             where: {
                 id,
@@ -333,6 +336,9 @@ exports.getServicoById = getServicoById;
 const getAdicionalById = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const adicional = await db_1.default.adicional.findFirst({
             where: {
                 id,
@@ -383,6 +389,9 @@ exports.getAdicionalById = getAdicionalById;
 const updateServico = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { nome, descricao, duracao, ativo, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo } = req.body;
         // 1. Coleta os IDs dos novos tipos/subtipos para conectar
         const tiposVeiculoParaConectar = [];
@@ -443,6 +452,9 @@ exports.updateServico = updateServico;
 const updateAdicional = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         const { nome, descricao, ativo, preco } = req.body;
         const adicional = await db_1.default.adicional.updateMany({
             where: {
@@ -477,6 +489,9 @@ exports.updateAdicional = updateAdicional;
 const deleteServico = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se serviço existe e pertence à empresa
         const servico = await db_1.default.servico.findFirst({
             where: {
@@ -519,6 +534,9 @@ exports.deleteServico = deleteServico;
 const deleteAdicional = async (req, res) => {
     try {
         const { id } = req.params;
+        if (Array.isArray(id)) {
+            return res.status(400).json({ error: 'ID inválido' });
+        }
         // Verificar se serviço adicional existe e pertence à empresa
         const adicional = await db_1.default.adicional.findFirst({
             where: {

@@ -50,6 +50,17 @@
             </div>
         </header>
 
+        <!-- Alert Box -->
+        <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 15px;">
+                <div style="font-size: 24px; color: #F59E0B;">⚠️</div>
+                <div>
+                    <h3 style="margin: 0 0 8px 0; color: #92400E; font-weight: 600;">Recurso em Desenvolvimento</h3>
+                    <p style="margin: 0; color: #92400E; font-size: 14px;">O endpoint para salvar temas ainda não foi implementado. Este recurso será adicionado em breve.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Container para as notificações (toasts) -->
         <div id="toast-container"></div>
 
@@ -104,7 +115,7 @@
             </div>
 
             <div class="modal-actions" style="border-top: 1px solid var(--border-color); margin-top: 24px; padding-top: 24px;">
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> <span>Salvar Tema</span></button>
+                <button type="submit" class="btn-primary" disabled title="Recurso em desenvolvimento"><i class="fas fa-save"></i> <span>Salvar Tema</span></button>
             </div>
         </form>
     </main>
@@ -157,7 +168,7 @@
             };
 
             try {
-                await window.api.call('PATCH', `admin/theme/config/${empresaId}`, themeData);
+                await fetchApi(`/theme/${empresaId}`, { method: 'PATCH', body: JSON.stringify(themeData) });
                 showToast('Tema salvo com sucesso!', 'success');
             } catch (error) {
                 console.error('Erro ao salvar tema:', error);

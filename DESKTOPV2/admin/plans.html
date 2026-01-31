@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Planos - Admin Lina Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header-section button, .header-section a {
+            padding: 12px 24px;
+            background: #00BCD4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-section button:hover, .header-section a:hover {
+            background: #00A0B8;
+        }
+
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .plan-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-top: 4px solid #00BCD4;
+            transition: all 0.3s;
+        }
+
+        .plan-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-5px);
+        }
+
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .plan-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: #ccc;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+            position: relative;
+            border: none;
+            padding: 0;
+        }
+
+        .toggle-switch.active {
+            background: #10b981;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 26px;
+        }
+
+        .plan-info {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .features-list {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .features-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feature-tag {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        .plan-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-edit, .btn-delete {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-edit {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .btn-edit:hover {
+            background: #bae6fd;
+        }
+
+        .btn-delete {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .btn-delete:hover {
+            background: #fde68a;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .error-message, .success-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #00BCD4;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal.primary {
+            background: #00BCD4;
+            color: white;
+        }
+
+        .btn-modal.primary:hover {
+            background: #00A0B8;
+        }
+
+        .btn-modal.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-modal.secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-modal:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="admin-layout">
+    <div class="container-fluid">
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i> <span id="errorText"></span>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <i class="fas fa-check-circle"></i> <span id="successText"></span>
+        </div>
+
+        <div class="header-section">
+            <div>
+                <h1><i class="fas fa-layer-group"></i> Gerenciar Planos</h1>
+            </div>
+            <div>
+                <button onclick="openCreateModal()">
+                    <i class="fas fa-plus"></i> Novo Plano
+                </button>
+                <a href="dashboard.html" class="btn btn-secondary" style="margin-left: 10px;">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <div id="loadingState" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Carregando planos...
+        </div>
+
+        <div id="mainContent" style="display: none;">
+            <div id="plansContainer" class="plans-grid"></div>
+        </div>
+    </div>
+
+    <!-- Form Modal -->
+    <div class="modal-overlay" id="formModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header" id="formModalTitle">Novo Plano</div>
+            <form id="planForm" onsubmit="savePlan(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" class="form-input" id="formNome" required placeholder="Ex: Basic">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <textarea class="form-textarea" id="formDescricao" placeholder="Descrição do plano"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Preço (R$)</label>
+                        <input type="number" class="form-input" id="formPreco" step="0.01" required placeholder="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ordem</label>
+                        <input type="number" class="form-input" id="formOrdem" min="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Máx. Empresas</label>
+                        <input type="number" class="form-input" id="formMaxEmpresas" min="1" required placeholder="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Máx. Add-ons</label>
+                        <input type="number" class="form-input" id="formMaxAddons" min="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Features (uma por linha)</label>
+                    <textarea class="form-textarea" id="formFeatures" placeholder="suporte_24_7&#10;relatorios_pdf"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="formAtivo" checked> Ativo
+                    </label>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-modal secondary" onclick="closeFormModal()">Cancelar</button>
+                    <button type="submit" class="btn-modal primary" id="submitBtn" disabled>
+                        <span id="submitBtnText">Salvar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../api.js"></script>
+    <script>
+        let allPlans = [];
+        let editingPlanId = null;
+        let isProcessing = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+
+        async function loadData() {
+            try {
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+
+                allPlans = await fetchApi('/admin/subscriptions/plans');
+
+                renderPlans();
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+                showError('Erro ao carregar planos');
+            }
+        }
+
+        function renderPlans() {
+            const container = document.getElementById('plansContainer');
+
+            if (allPlans.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhum Plano</h3>
+                        <p>Crie seu primeiro plano clicando em "Novo Plano"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = allPlans.map(plan => `
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <div class="plan-name">${plan.nome}</div>
+                        <div class="plan-toggle">
+                            <span style="font-size: 0.85rem; color: #666;">${plan.ativo ? 'Ativo' : 'Inativo'}</span>
+                            <button class="toggle-switch ${plan.ativo ? 'active' : ''}" onclick="togglePlan('${plan.id}', ${!plan.ativo})"></button>
+                        </div>
+                    </div>
+
+                    <div class="plan-info">
+                        <div class="info-row">
+                            <span class="info-label">Preço</span>
+                            <span class="info-value">R$ ${(plan.preco / 100).toFixed(2).replace('.', ',')}/mês</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Empresas</span>
+                            <span class="info-value">${plan.maxEmpresas}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Add-ons</span>
+                            <span class="info-value">${plan.maxAddons}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ordem</span>
+                            <span class="info-value">${plan.ordem || '-'}</span>
+                        </div>
+                    </div>
+
+                    ${renderFeatures(plan)}
+
+                    <div class="plan-actions">
+                        <button class="btn-edit" onclick="openEditModal('${plan.id}')">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFeatures(plan) {
+            if (!plan.features || plan.features.length === 0) return '';
+
+            const features = plan.features.slice(0, 3).map(f => `<span class="feature-tag">${formatFeature(f)}</span>`).join('');
+            const extra = plan.features.length > 3 ? `<span class="feature-tag">+${plan.features.length - 3} mais</span>` : '';
+
+            return `
+                <div class="features-list">
+                    <div class="features-label">Features</div>
+                    ${features}
+                    ${extra}
+                </div>
+            `;
+        }
+
+        function formatFeature(feature) {
+            const map = {
+                'suporte_24_7': 'Suporte 24/7',
+                'relatorios_pdf': 'Relatórios em PDF',
+                'gestao_vendas': 'Gestão de Vendas',
+                'controle_servicos': 'Controle de Serviços',
+                'organizacao_financeira': 'Organização Financeira',
+                'personalizacao_completa': 'Personalização Completa',
+                'painel_vitrine': 'Painel Vitrine',
+                'catalogo_servicos': 'Catálogo de Serviços',
+                'lina_whatsapp': 'Lina WhatsApp',
+                'notificacoes_automaticas': 'Notificações Automáticas',
+                'prioridade_suporte': 'Prioridade no Suporte'
+            };
+            return map[feature] || feature;
+        }
+
+        function openCreateModal() {
+            editingPlanId = null;
+            document.getElementById('formModalTitle').textContent = 'Novo Plano';
+            document.getElementById('planForm').reset();
+            document.getElementById('formAtivo').checked = true;
+            document.getElementById('submitBtnText').textContent = 'Criar Plano';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function openEditModal(planId) {
+            const plan = allPlans.find(p => p.id === planId);
+            if (!plan) return;
+
+            editingPlanId = planId;
+            document.getElementById('formModalTitle').textContent = 'Editar Plano';
+            document.getElementById('formNome').value = plan.nome;
+            document.getElementById('formDescricao').value = plan.descricao || '';
+            document.getElementById('formPreco').value = (plan.preco / 100).toFixed(2);
+            document.getElementById('formOrdem').value = plan.ordem || 0;
+            document.getElementById('formMaxEmpresas').value = plan.maxEmpresas;
+            document.getElementById('formMaxAddons').value = plan.maxAddons;
+            document.getElementById('formAtivo').checked = plan.ativo;
+            document.getElementById('formFeatures').value = (plan.features || []).join('\n');
+            document.getElementById('submitBtnText').textContent = 'Atualizar Plano';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function closeFormModal() {
+            document.getElementById('formModal').classList.remove('show');
+        }
+
+        async function savePlan(event) {
+            event.preventDefault();
+
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            const originalText = document.getElementById('submitBtnText').textContent;
+            document.getElementById('submitBtnText').textContent = 'Salvando...';
+
+            try {
+                const features = document.getElementById('formFeatures').value
+                    .split('\n')
+                    .map(f => f.trim())
+                    .filter(f => f.length > 0);
+
+                const payload = {
+                    nome: document.getElementById('formNome').value,
+                    descricao: document.getElementById('formDescricao').value,
+                    preco: Math.round(parseFloat(document.getElementById('formPreco').value) * 100),
+                    ordem: parseInt(document.getElementById('formOrdem').value),
+                    maxEmpresas: parseInt(document.getElementById('formMaxEmpresas').value),
+                    maxAddons: parseInt(document.getElementById('formMaxAddons').value),
+                    ativo: document.getElementById('formAtivo').checked,
+                    features
+                };
+
+                if (editingPlanId) {
+                    await fetchApi(`/admin/subscriptions/plans/${editingPlanId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(payload)
+                    });
+                    showSuccess('✅ Plano atualizado com sucesso!');
+                } else {
+                    await fetchApi('/admin/subscriptions/plans', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    showSuccess('✅ Plano criado com sucesso!');
+                }
+
+                closeFormModal();
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                showError(error.message || error.error || 'Erro ao salvar plano');
+            } finally {
+                isProcessing = false;
+                submitBtn.disabled = false;
+                document.getElementById('submitBtnText').textContent = originalText;
+            }
+        }
+
+        async function togglePlan(planId, newStatus) {
+            try {
+                await fetchApi(`/admin/subscriptions/plans/${planId}/toggle`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ ativo: newStatus })
+                });
+                showSuccess(`✅ Plano ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                console.error('Erro ao alternar:', error);
+                showError(error.message || error.error || 'Erro ao alternar plano');
+            }
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorMsg.classList.add('show');
+            setTimeout(() => errorMsg.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            document.getElementById('successText').textContent = message;
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 5000);
+        }
+
+        // Modal close on background click
+        document.getElementById('formModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFormModal();
+        });
+    </script>
+</body>
+</html>

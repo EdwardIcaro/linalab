@@ -25,6 +25,42 @@ async function fetchApi(endpoint, options = {}) {
     }
     const errorBody = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
     console.error('Erro do backend:', errorBody);
+
+    // Tratamento de erros específicos de assinatura
+    if (errorBody.code === 'NO_ACTIVE_SUBSCRIPTION') {
+      alert('Você precisa de uma assinatura ativa para acessar este recurso.\n\nRedireccionando para seleção de plano...');
+      window.location.href = 'planos.html';
+      return; // Prevent further execution
+    }
+
+    if (errorBody.code === 'COMPANY_LIMIT_REACHED') {
+      const message = errorBody.message || 'Você atingiu o limite de empresas do seu plano.';
+      alert(`${message}\n\nFaça upgrade do seu plano para criar mais empresas.`);
+      sessionStorage.setItem('activeTab', 'subscription');
+      window.location.href = 'perfil.html';
+      return;
+    }
+
+    if (errorBody.code === 'FEATURE_NOT_AVAILABLE') {
+      const feature = errorBody.feature || 'Esta funcionalidade';
+      alert(`${feature} não está disponível no seu plano atual.\n\nFaça upgrade para acessar esta feature.`);
+      sessionStorage.setItem('activeTab', 'subscription');
+      window.location.href = 'perfil.html';
+      return;
+    }
+
+    if (errorBody.code === 'TRIAL_ALREADY_USED') {
+      alert('Você já utilizou seu período de teste.\n\nEscolha um plano pago para continuar usando a plataforma.');
+      window.location.href = 'planos.html';
+      return;
+    }
+
+    if (errorBody.code === 'INVALID_PLAN') {
+      alert('Plano inválido ou não disponível.\n\nEscolha um plano válido.');
+      window.location.href = 'planos.html';
+      return;
+    }
+
     throw errorBody;
   }
 
@@ -292,6 +328,33 @@ const api = {
   // ===== THEME =====
   getThemeConfig: () => fetchApi('/theme/config'),
   updateThemeConfig: (data) => fetchApi('/theme/config', { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // ===== SUBSCRIPTIONS =====
+  getAvailablePlans: () => fetchApi('/subscriptions/plans'),
+  getMySubscription: () => fetchApi('/subscriptions/my-subscription'),
+  createSubscription: (planId, isTrial = true) => fetchApi('/subscriptions/subscribe', {
+    method: 'POST',
+    body: JSON.stringify({ planId, isTrial })
+  }),
+  cancelSubscription: () => fetchApi('/subscriptions/cancel', { method: 'POST' }),
+  upgradePlan: (newPlanId) => fetchApi('/subscriptions/upgrade', {
+    method: 'POST',
+    body: JSON.stringify({ newPlanId })
+  }),
+  downgradePlan: (newPlanId) => fetchApi('/subscriptions/downgrade', {
+    method: 'POST',
+    body: JSON.stringify({ newPlanId })
+  }),
+  getAvailableAddons: () => fetchApi('/subscriptions/addons'),
+  addAddon: (addonId) => fetchApi('/subscriptions/addons', {
+    method: 'POST',
+    body: JSON.stringify({ addonId })
+  }),
+  removeAddon: (addonId) => fetchApi(`/subscriptions/addons/${addonId}`, { method: 'DELETE' }),
+  getPricingBreakdown: () => fetchApi('/subscriptions/pricing-breakdown'),
+  renewSubscription: () => fetchApi('/subscriptions/renew', { method: 'POST' }),
+  getPaymentHistory: () => fetchApi('/subscriptions/payment-history'),
+  getActivePromotions: () => fetchPublicApi('/promotions/active'),
 
   // ===== ADMIN =====
   getAdminStats: () => api.call('GET', 'admin/stats'),
