@@ -467,6 +467,33 @@ async function main() {
   // =====================================================
   console.log('📦 Creating subscription plans and add-ons...');
 
+  // Plano FREE - Gratuito permanente
+  const freePlan = await prisma.subscriptionPlan.upsert({
+    where: { nome: 'FREE' },
+    update: {
+      descricao: 'Plano gratuito permanente',
+      preco: 0,
+      maxEmpresas: 1,
+      maxUsuarios: null,
+      maxAddons: 0,
+      trialDays: 0,
+      features: ['gestao_basica', 'clientes', 'ordens']
+    },
+    create: {
+      nome: 'FREE',
+      descricao: 'Plano gratuito permanente',
+      preco: 0,
+      intervalo: 'MONTHLY',
+      ativo: true,
+      ordem: 0,
+      trialDays: 0,
+      maxEmpresas: 1,
+      maxUsuarios: null,
+      maxAddons: 0,
+      features: ['gestao_basica', 'clientes', 'ordens']
+    }
+  });
+
   // Plano BASIC - R$ 89/mês
   const basicPlan = await prisma.subscriptionPlan.upsert({
     where: { nome: 'Basic' },
@@ -476,6 +503,7 @@ async function main() {
       maxEmpresas: 1,
       maxUsuarios: 1,
       maxAddons: 0,
+      trialDays: 7,
       features: [
         'suporte_24_7',
         'relatorios_pdf',
@@ -494,6 +522,7 @@ async function main() {
       intervalo: 'MONTHLY',
       ativo: true,
       ordem: 1,
+      trialDays: 7,
       maxEmpresas: 1,
       maxUsuarios: 1,
       maxAddons: 0,
@@ -519,6 +548,7 @@ async function main() {
       maxEmpresas: 2,
       maxUsuarios: 5,
       maxAddons: 1,
+      trialDays: 14,
       features: [
         'suporte_24_7',
         'relatorios_pdf',
@@ -539,6 +569,7 @@ async function main() {
       intervalo: 'MONTHLY',
       ativo: true,
       ordem: 2,
+      trialDays: 14,
       maxEmpresas: 2,
       maxUsuarios: 5,
       maxAddons: 1,
@@ -566,6 +597,7 @@ async function main() {
       maxEmpresas: 5,
       maxUsuarios: 20,
       maxAddons: 2,
+      trialDays: 30,
       features: [
         'suporte_24_7',
         'relatorios_pdf',
@@ -590,6 +622,7 @@ async function main() {
       intervalo: 'MONTHLY',
       ativo: true,
       ordem: 3,
+      trialDays: 30,
       maxEmpresas: 5,
       maxUsuarios: 20,
       maxAddons: 2,
@@ -666,7 +699,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Subscription plans created: 3 plans');
+  console.log('✅ Subscription plans created: 4 plans (FREE, Basic, Pro, Premium)');
   console.log('✅ Add-ons created: 3 add-ons\n');
 
   // =====================================================

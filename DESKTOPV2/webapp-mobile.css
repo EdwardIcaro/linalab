@@ -1,0 +1,663 @@
+/* ============================================================
+   WEBAPP MOBILE - BOTTOM NAVIGATION (Web App de Verdade)
+   Detecta mobile e mostra interface mobile-first com bottom nav
+   ============================================================ */
+
+/* === APENAS EM MOBILE (<768px) === */
+
+@media (max-width: 768px) {
+    /* === LAYOUT WRAPPER === */
+    html {
+        height: 100%;
+        width: 100%;
+    }
+
+    body {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background-color: var(--background-color);
+    }
+
+    /* === ESTRUTURA PRINCIPAL === */
+    .top-bar-v2 {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 56px !important;
+        z-index: 100 !important;
+        padding: 0 12px !important;
+        flex-shrink: 0;
+    }
+
+    /* === MAIN CONTENT AREA === */
+    .main-content {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 56px !important;
+        margin-bottom: 60px !important;
+        padding: 12px 12px 20px !important;
+        width: 100% !important;
+    }
+
+    /* === MAIN TAG SUPPORT (for pages without .main-content) === */
+    main {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 60px !important;
+        width: 100% !important;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* === HIDE DESKTOP NAVIGATION === */
+    .nav-menu-card {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        background: white !important;
+        z-index: 999 !important;
+        display: none !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding: 60px 16px 80px 16px !important;
+    }
+
+    .nav-menu-card.open {
+        display: flex !important;
+    }
+
+    .nav-menu-card.open .nav-menu-links {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0 !important;
+    }
+
+    .nav-menu-card.open .nav-menu-item {
+        padding: 16px 12px !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        width: 100% !important;
+        text-align: left !important;
+        gap: 12px !important;
+        flex-direction: row !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    .nav-menu-card.open .nav-menu-item span {
+        display: inline !important;
+        font-size: 16px !important;
+        color: var(--text-primary) !important;
+    }
+
+    .nav-menu-card.open .nav-menu-item i {
+        margin-right: 12px !important;
+    }
+
+    .nav-menu-card.open .nav-menu-actions {
+        margin-top: auto !important;
+        padding-top: 16px !important;
+        border-top: 1px solid var(--border-color) !important;
+        display: flex !important;
+        gap: 12px !important;
+    }
+
+    /* Hide nav-menu-actions when menu is not open */
+    .nav-menu-card:not(.open) .nav-menu-actions {
+        display: none !important;
+    }
+
+    /* Hide nav-menu-links when menu is not open */
+    .nav-menu-card:not(.open) .nav-menu-links {
+        display: none !important;
+    }
+
+    /* === QUICK ACCESS SECTION === */
+    .nav-menu-card.open::before {
+        content: 'Acessos Rápidos';
+        display: block;
+        padding: 16px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid var(--primary-color);
+        margin-bottom: 8px;
+    }
+
+    /* Quick access icon buttons */
+    .nav-menu-quick-access {
+        display: none;
+    }
+
+    .nav-menu-card.open .nav-menu-quick-access {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 12px !important;
+        padding: 12px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .quick-access-btn {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 16px 12px !important;
+        background: var(--background-color) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+        font-size: 12px !important;
+        color: var(--text-primary) !important;
+        text-decoration: none !important;
+    }
+
+    .quick-access-btn i {
+        font-size: 24px !important;
+        margin-bottom: 8px !important;
+        color: var(--primary-color) !important;
+    }
+
+    .quick-access-btn:hover,
+    .quick-access-btn:active {
+        background: var(--primary-color) !important;
+        color: white !important;
+        border-color: var(--primary-color) !important;
+    }
+
+    .quick-access-btn:hover i,
+    .quick-access-btn:active i {
+        color: white !important;
+    }
+
+    .nav-menu-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(0, 0, 0, 0.5) !important;
+        z-index: 998 !important;
+        display: none !important;
+    }
+
+    .nav-menu-overlay.active {
+        display: block !important;
+    }
+
+    .hamburger-menu {
+        display: none !important;
+    }
+
+    /* === SHOW BOTTOM NAVIGATION === */
+    .bottom-navigation {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 60px !important;
+        z-index: 101 !important;
+        display: flex !important;
+        align-items: stretch !important;
+        background-color: var(--white) !important;
+        border-top: 1px solid var(--border-color) !important;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* === BOTTOM NAV ITEMS === */
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 6px 8px;
+        cursor: pointer;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 10px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        position: relative;
+        border: none;
+        background: none;
+        min-height: 60px;
+    }
+
+    .bottom-nav-item:active {
+        background-color: rgba(0, 188, 212, 0.05);
+    }
+
+    .bottom-nav-item.active {
+        color: var(--primary-color);
+    }
+
+    .bottom-nav-item.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background-color: var(--primary-color);
+    }
+
+    .bottom-nav-item i {
+        font-size: 22px;
+        display: block;
+    }
+
+    .bottom-nav-item span {
+        display: block;
+        font-size: 9px;
+    }
+
+    /* Badge para notificações */
+    .bottom-nav-item .badge {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        width: 18px;
+        height: 18px;
+        background-color: #dc3545;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        font-weight: 700;
+    }
+
+    /* === TOPO COMPACTO === */
+    .top-bar-v2__left {
+        gap: 8px;
+    }
+
+    .top-bar-v2__title {
+        font-size: 16px !important;
+        font-weight: 600;
+    }
+
+    .top-bar-v2__right {
+        gap: 8px;
+    }
+
+    .top-bar-v2__avatar {
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 12px !important;
+    }
+
+    .top-bar-v2__username {
+        display: none !important;
+    }
+
+    /* === DASHBOARD HERO === */
+    .dashboard-hero {
+        flex-direction: column !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .hero-greeting h1 {
+        font-size: 20px !important;
+        font-weight: 700;
+    }
+
+    .hero-date {
+        justify-content: flex-start !important;
+        font-size: 11px !important;
+    }
+
+    /* === KPI GRID === */
+    .kpi-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    @media (min-width: 480px) {
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+
+    .kpi-card {
+        padding: 12px !important;
+        gap: 10px !important;
+        border-radius: 10px !important;
+    }
+
+    .kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 16px !important;
+        border-radius: 6px !important;
+    }
+
+    .kpi-label {
+        font-size: 10px !important;
+    }
+
+    .kpi-value {
+        font-size: 16px !important;
+        font-weight: 700;
+    }
+
+    .kpi-subtext {
+        font-size: 10px !important;
+    }
+
+    /* === CARDS === */
+    .card,
+    .chart-card,
+    .quick-actions-card {
+        padding: 12px !important;
+        border-radius: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .card-title {
+        font-size: 14px !important;
+        font-weight: 600;
+        gap: 6px !important;
+    }
+
+    .card-title-icon {
+        font-size: 16px !important;
+    }
+
+    /* === QUICK ACTIONS === */
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    @media (max-width: 480px) {
+        .quick-actions-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    .action-btn {
+        padding: 10px !important;
+        font-size: 10px !important;
+        min-height: 40px !important;
+        border-radius: 6px !important;
+        gap: 4px !important;
+    }
+
+    .action-btn i {
+        font-size: 16px !important;
+    }
+
+    /* === ACTIVITY === */
+    .activity-item {
+        padding: 8px 0 !important;
+        gap: 8px !important;
+    }
+
+    .activity-icon {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 12px !important;
+    }
+
+    .activity-details p {
+        font-size: 11px !important;
+    }
+
+    .activity-value strong {
+        font-size: 12px !important;
+    }
+
+    /* === FORMS === */
+    .form-group {
+        margin-bottom: 10px !important;
+    }
+
+    .form-label {
+        font-size: 11px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        font-size: 16px !important;
+        padding: 10px 12px !important;
+        min-height: 44px !important;
+        border-radius: 8px !important;
+    }
+
+    /* === BUTTONS === */
+    .btn,
+    .btn-primary,
+    .btn-secondary {
+        padding: 10px 16px !important;
+        min-height: 44px !important;
+        font-size: 12px !important;
+        border-radius: 8px !important;
+    }
+
+    .btn-sm {
+        padding: 8px 12px !important;
+        min-height: 36px !important;
+        font-size: 10px !important;
+    }
+
+    .btn-group {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .btn-group .btn {
+        width: 100% !important;
+    }
+
+    /* === TABLES === */
+    table {
+        display: none !important;
+    }
+
+    .table-wrapper {
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* === MOBILE CARDS === */
+    .mobile-card {
+        border-radius: 8px !important;
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .mobile-card-title {
+        font-size: 12px !important;
+    }
+
+    .mobile-card-body {
+        gap: 6px !important;
+    }
+
+    .mobile-card-actions {
+        gap: 6px !important;
+    }
+
+    .mobile-card-actions .btn {
+        padding: 6px 10px !important;
+        font-size: 10px !important;
+        min-height: 32px !important;
+    }
+
+    /* === MODALS === */
+    .modal-overlay {
+        padding: 16px !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .modal-content {
+        width: 90% !important;
+        max-width: 90% !important;
+        border-radius: 16px !important;
+        padding: 20px 16px !important;
+        max-height: 85vh !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .modal-header {
+        margin-bottom: 12px !important;
+    }
+
+    .modal-header h2 {
+        font-size: 15px !important;
+    }
+
+    /* === PREVENT HORIZONTAL SCROLL === */
+    .notification-panel {
+        width: calc(100vw - 16px) !important;
+        max-width: 100% !important;
+        bottom: 70px !important;
+        top: auto !important;
+        right: 8px !important;
+    }
+
+    .user-menu-dropdown {
+        width: calc(100vw - 16px) !important;
+        max-width: 100% !important;
+    }
+
+    /* === CONTAINER === */
+    .container {
+        width: 100% !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .container-fluid {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    /* === CONTENT GRID === */
+    .content-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .bottom-section {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        margin-top: 0 !important;
+    }
+
+    .sidebar-stack {
+        order: -1;
+    }
+
+    /* === ICON BUTTONS === */
+    .icon-btn {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 6px !important;
+    }
+
+    .icon-btn i {
+        font-size: 16px !important;
+    }
+
+    /* === SCROLL PARA MAIN CONTENT === */
+    .main-content::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .main-content::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .main-content::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+    }
+
+    .main-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    /* === MOBILE LAYOUT CONTAINER === */
+    /* Removed position: fixed - allows scroll to work */
+
+    /* === MOBILE HAMBURGER === */
+    .mobile-menu-btn {
+        display: flex !important;
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+    }
+
+    .mobile-menu-btn span {
+        width: 20px !important;
+        height: 2px !important;
+    }
+
+    /* === MOBILE DRAWER === */
+    .mobile-nav-drawer {
+        width: 85vw !important;
+        max-width: 300px !important;
+        z-index: 102 !important;
+    }
+
+    .mobile-nav-overlay {
+        z-index: 101 !important;
+    }
+}
+
+/* === DESKTOP (>768px) === */
+@media (min-width: 769px) {
+    /* Hide bottom navigation on desktop */
+    .bottom-navigation {
+        display: none !important;
+    }
+
+    /* Desktop layout normal */
+    body {
+        height: auto;
+    }
+
+    html {
+        height: auto;
+    }
+
+    .main-content {
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+        overflow-y: auto !important;
+    }
+
+    /* Restore desktop nav */
+    .nav-menu-card {
+        display: flex !important;
+    }
+}

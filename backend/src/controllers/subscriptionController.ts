@@ -412,6 +412,21 @@ export const getPaymentHistory = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Criar assinatura FREE (fallback para usuários sem assinatura)
+ * POST /api/subscriptions/create-free
+ */
+export const createFreeForCurrentUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const usuarioId = req.usuarioId!;
+    const subscription = await subscriptionService.createFreeSubscriptionForNewUser(usuarioId);
+    res.status(201).json({ message: 'FREE criado com sucesso', subscription });
+  } catch (error: any) {
+    console.error('Erro ao criar FREE:', error);
+    res.status(400).json({ error: error.message || 'Erro ao criar plano FREE' });
+  }
+};
+
 export default {
   getAvailablePlans,
   getMySubscription,
@@ -424,5 +439,6 @@ export default {
   addAddon,
   removeAddon,
   renewSubscription,
-  getPaymentHistory
+  getPaymentHistory,
+  createFreeForCurrentUser
 };

@@ -11,7 +11,8 @@ import {
   addAddon,
   removeAddon,
   renewSubscription,
-  getPaymentHistory
+  getPaymentHistory,
+  createFreeForCurrentUser
 } from '../controllers/subscriptionController';
 
 const router: Router = Router();
@@ -30,6 +31,7 @@ router.get('/pricing-breakdown', getPricingBreakdown);
 router.post('/subscribe', createSubscription);
 router.post('/renew', renewSubscription);
 router.post('/cancel', cancelMySubscription);
+router.post('/create-free', createFreeForCurrentUser);
 
 // Upgrade/Downgrade
 router.post('/upgrade', upgradePlan);

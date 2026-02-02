@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../db';
+import { subscriptionService } from '../services/subscriptionService';
 
 
 /**
@@ -29,6 +30,14 @@ export const createUsuario = async (req: Request, res: Response) => {
       data: { nome, email, senha: hashedSenha },
       select: { id: true, nome: true, email: true, createdAt: true },
     });
+
+    // Criar assinatura FREE automaticamente
+    try {
+      await subscriptionService.createFreeSubscriptionForNewUser(usuario.id);
+    } catch (error) {
+      console.error('Erro ao criar assinatura FREE:', error);
+      // Não interromper signup, apenas logar
+    }
 
     res.status(201).json({ message: 'Usuário criado com sucesso', usuario });
   } catch (error) {

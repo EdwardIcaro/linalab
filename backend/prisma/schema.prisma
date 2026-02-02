@@ -1,173 +1,141 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  // For SQLite (development): provider = "sqlite"
-  // For PostgreSQL (production): provider = "postgresql"
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Modelo de Usuários (NOVO)
 model Usuario {
-  id        String    @id @default(cuid())
-  nome      String    @unique // Nome de usuário para login
-  email     String    @unique
-  senha     String
-  role      UserRole  @default(USER) // Role-based access control
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Relacionamentos
-  empresas  Empresa[]
+  id            String         @id @default(cuid())
+  nome          String         @unique
+  email         String         @unique
+  senha         String
+  role          UserRole       @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  empresas      Empresa[]
   subscriptions Subscription[]
 
   @@map("usuarios")
 }
 
-// Enum de Roles para controle de acesso
-enum UserRole {
-  LINA_OWNER  // SaaS Super Admin - Access to admin/*
-  OWNER       // Company Owner - Access to company dashboard
-  MANAGER     // Manager - Limited company access
-  USER        // Regular User - Basic access
-}
-
-// Modelo principal de Empresas (Multi-tenancy)
 model Empresa {
-  id                           String                 @id @default(cuid())
-  nome                         String                 @unique
-  cnpj                         String?                @unique
-  ativo                        Boolean                @default(true)
-  config                       Json?
-  horarioAbertura              String?
-  horarioFechamento            String?
-  finalizacaoAutomatica        Boolean?               @default(false)
-  exigirLavadorParaFinalizar   Boolean?               @default(false)
-  paginaInicialPadrao          String?                @default("index.html")
-  notificationPreferences      Json?
-  paymentMethodsConfig         Json?
-  ordem                        Int?                   // Ordem de criação (1ª, 2ª, 3ª empresa do usuário)
-  createdAt                    DateTime               @default(now())
-  updatedAt                    DateTime               @updatedAt
-  usuarioId                    String // Chave estrangeira para o usuário dono
-  // Relacionamentos
-  clientes                     Cliente[]
-  lavadores                    Lavador[]
-  servicos                     Servico[]
-  adicionais                   Adicional[]
-  adiantamentos                Adiantamento[]
-  ordens                       OrdemServico[]
-  pagamentos                   Pagamento[]
-  tipoVeiculos                 TipoVeiculo[]
-  fornecedores                 Fornecedor[]
-  fechamentosCaixa             FechamentoCaixa[]
-  caixaRegistros               CaixaRegistro[]
-  fechamentosComissao          FechamentoComissao[]
-  roles                        Role[]
-  subaccounts                  Subaccount[]
-  usuario                      Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  notificacoes                 Notificacao[]
-  theme                        Theme?
+  id                         String               @id @default(cuid())
+  nome                       String               @unique
+  cnpj                       String?              @unique
+  ativo                      Boolean              @default(true)
+  config                     Json?
+  horarioAbertura            String?
+  horarioFechamento          String?
+  finalizacaoAutomatica      Boolean?             @default(false)
+  exigirLavadorParaFinalizar Boolean?             @default(false)
+  paginaInicialPadrao        String?              @default("index.html")
+  notificationPreferences    Json?
+  paymentMethodsConfig       Json?
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  usuarioId                  String
+  ordem                      Int?
+  caixaRegistros             CaixaRegistro[]
+  adiantamentos              Adiantamento[]
+  adicionais                 Adicional[]
+  clientes                   Cliente[]
+  usuario                    Usuario              @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  fechamentosCaixa           FechamentoCaixa[]
+  fechamentosComissao        FechamentoComissao[]
+  fornecedores               Fornecedor[]
+  lavadores                  Lavador[]
+  notificacoes               Notificacao[]
+  ordens                     OrdemServico[]
+  pagamentos                 Pagamento[]
+  roles                      Role[]
+  servicos                   Servico[]
+  subaccounts                Subaccount[]
+  theme                      Theme?
+  tipoVeiculos               TipoVeiculo[]
 
   @@map("empresas")
 }
 
-// Modelo de Notificações (NOVO)
 model Notificacao {
   id        String   @id @default(cuid())
   empresaId String
   mensagem  String
   lida      Boolean  @default(false)
-  type      String   @default("info") // 'ordemCriada', 'ordemEditada', 'finalizacaoAutomatica', etc.
+  type      String   @default("info")
   link      String?
   createdAt DateTime @default(now())
-
   empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("notificacoes")
 }
 
-// Modelo de Clientes
 model Cliente {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   empresaId String
   nome      String
   telefone  String?
-  email     String?  @unique
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  empresa  Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  veiculos Veiculo[]
-  ordens   OrdemServico[]
+  email     String?        @unique
+  ativo     Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  empresa   Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens    OrdemServico[]
+  veiculos  Veiculo[]
 
   @@map("clientes")
 }
 
-// Modelo de Veículos
 model Veiculo {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   clienteId String
-  placa     String   @unique
+  placa     String         @unique
   modelo    String?
   cor       String?
   ano       Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  cliente Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  ordens  OrdemServico[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  ordens    OrdemServico[]
+  cliente   Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("veiculos")
 }
 
-// Modelo de Lavadores
 model Lavador {
-  id                  String               @id @default(cuid())
+  id                  String                @id @default(cuid())
   empresaId           String
   nome                String
-  comissao            Float // Porcentagem de comissão (ex: 15.5 para 15.5%)
-  ativo               Boolean              @default(true)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  // Relacionamentos
-  empresa             Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  ordens              OrdemServico[]
-  ordemLavadores      OrdemServicoLavador[]
-  tokens              LavadorToken[]
+  comissao            Float
+  ativo               Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
   caixaRegistros      CaixaRegistro[]
   adiantamentos       Adiantamento[]
   fechamentosComissao FechamentoComissao[]
+  tokens              LavadorToken[]
+  empresa             Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens              OrdemServico[]
+  ordemLavadores      OrdemServicoLavador[]
 
   @@unique([nome, empresaId])
   @@map("lavadores")
 }
 
-// Modelo de Tokens de Acesso para Lavadores (NOVO)
 model LavadorToken {
   id        String    @id @default(cuid())
   token     String    @unique
   ativo     Boolean   @default(true)
   lavadorId String
-  expiresAt DateTime? // Null = permanente
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-
-  // Relacionamento
-  lavador Lavador @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+  expiresAt DateTime?
+  lavador   Lavador   @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
 
   @@map("lavador_tokens")
 }
 
-// Modelo de Fornecedores (NOVO PARA CAIXA)
 model Fornecedor {
   id            String          @id @default(cuid())
   empresaId     String
@@ -176,14 +144,13 @@ model Fornecedor {
   telefone      String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  empresa       Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   caixaRegistro CaixaRegistro[]
+  empresa       Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@unique([empresaId, nome])
   @@map("fornecedores")
 }
 
-// Modelo de Fechamento de Caixa (NOVO)
 model FechamentoCaixa {
   id             String           @id @default(cuid())
   empresaId      String
@@ -197,13 +164,11 @@ model FechamentoCaixa {
   observacao     String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa        Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("fechamentos_caixa")
 }
 
-// Modelo de Registros de Caixa (Saídas, Sangrias) (NOVO)
 model CaixaRegistro {
   id             String         @id @default(cuid())
   empresaId      String
@@ -212,77 +177,64 @@ model CaixaRegistro {
   valor          Float
   formaPagamento FormaPagamento
   fornecedorId   String?
-  lavadorId      String? // Para vales
+  lavadorId      String?
   descricao      String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
-
-  empresa      Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  fornecedor   Fornecedor?   @relation(fields: [fornecedorId], references: [id])
-  lavador      Lavador?      @relation(fields: [lavadorId], references: [id], onDelete: SetNull)
-
-  // Relacionamento com Adiantamento
-  adiantamento Adiantamento?
+  empresa        Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fornecedor     Fornecedor?    @relation(fields: [fornecedorId], references: [id])
+  lavador        Lavador?       @relation(fields: [lavadorId], references: [id])
+  adiantamento   Adiantamento?
 }
 
-// Modelo de Tipos de Veículo (NOVO)
 model TipoVeiculo {
   empresaId String
-  id        String   @id @default(cuid())
-  nome      String // "Carro", "Moto", "Outros"
-  categoria String? // "Hatch", "Sedan", "SUV", "Picapé", "Caminhonete"
-  descricao String? // Descrição opcional
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  servicos Servico[]
-  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  nome      String
+  categoria String?
+  descricao String?
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  servicos  Servico[] @relation("ServicoToTipoVeiculo")
 
   @@unique([empresaId, nome, categoria])
   @@map("tipo_veiculos")
 }
 
-// Modelo de Serviços de Lavagem (MODIFICADO)
 model Servico {
-  id         String   @id @default(cuid())
-  empresaId  String
-  nome       String
-  descricao  String?
-  preco      Float
-  duracao    Int? // Duração em minutos
-  ativo      Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relacionamentos
-  empresa      Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  tiposVeiculo TipoVeiculo[] // Relação Muitos-para-Muitos
+  id           String             @id @default(cuid())
+  empresaId    String
+  nome         String
+  descricao    String?
+  preco        Float
+  duracao      Int?
+  ativo        Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
   ordemItems   OrdemServicoItem[]
+  empresa      Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tiposVeiculo TipoVeiculo[]      @relation("ServicoToTipoVeiculo")
 
   @@map("servicos")
 }
 
-// Modelo de Serviços Adicionais
 model Adicional {
-  id        String   @id @default(cuid())
-  empresaId String
-  nome      String
-  descricao String?
-  preco     Float
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
+  id         String             @id @default(cuid())
+  empresaId  String
+  nome       String
+  descricao  String?
+  preco      Float
+  ativo      Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
   empresa    Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   ordemItems OrdemServicoItem[]
 
   @@map("adicionais")
 }
 
-// Modelo Principal de Ordens de Serviço
 model OrdemServico {
   id                   String                @id @default(cuid())
   numeroOrdem          Int
@@ -300,39 +252,34 @@ model OrdemServico {
   comissaoPaga         Boolean               @default(false)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-
-  // Relacionamentos
-  empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  veiculo              Veiculo               @relation(fields: [veiculoId], references: [id], onDelete: Cascade) // Manter Cascade para consistência
-  lavador              Lavador?              @relation(fields: [lavadorId], references: [id], onDelete: SetNull)
-  items                OrdemServicoItem[]
-  pagamentos           Pagamento[]
-  ordemLavadores       OrdemServicoLavador[]
-
   fechamentoComissaoId String?
+  cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
+  lavador              Lavador?              @relation(fields: [lavadorId], references: [id])
+  veiculo              Veiculo               @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  items                OrdemServicoItem[]
+  ordemLavadores       OrdemServicoLavador[]
+  pagamentos           Pagamento[]
 
   @@unique([empresaId, numeroOrdem])
   @@map("ordens_servico")
 }
 
 model OrdemServicoLavador {
-  ordemId               String
-  lavadorId             String
-  createdAt             DateTime           @default(now())
-  comissaoPaga          Boolean            @default(false)
-  fechamentoComissaoId  String?
-
-  ordem     OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
-  lavador   Lavador      @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
-  fechamentoComissao FechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id])
+  ordemId              String
+  lavadorId            String
+  createdAt            DateTime            @default(now())
+  comissaoPaga         Boolean             @default(false)
+  fechamentoComissaoId String?
+  fechamentoComissao   FechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id])
+  lavador              Lavador             @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+  ordem                OrdemServico        @relation(fields: [ordemId], references: [id], onDelete: Cascade)
 
   @@id([ordemId, lavadorId])
   @@map("ordens_servico_lavadores")
 }
 
-// Modelo de Itens da Ordem de Serviço
 model OrdemServicoItem {
   id          String        @id @default(cuid())
   ordemId     String
@@ -343,16 +290,13 @@ model OrdemServicoItem {
   precoUnit   Float
   subtotal    Float
   createdAt   DateTime      @default(now())
-
-  // Relacionamentos
-  ordem     OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
-  servico   Servico?     @relation(fields: [servicoId], references: [id], onDelete: Cascade)
-  adicional Adicional?   @relation(fields: [adicionalId], references: [id], onDelete: Cascade)
+  adicional   Adicional?    @relation(fields: [adicionalId], references: [id], onDelete: Cascade)
+  ordem       OrdemServico  @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  servico     Servico?      @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
   @@map("ordens_servico_items")
 }
 
-// Modelo de Pagamentos
 model Pagamento {
   id          String          @id @default(cuid())
   ordemId     String
@@ -364,43 +308,36 @@ model Pagamento {
   pagoEm      DateTime?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
-
-  // Relacionamentos
-  ordem   OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
-  empresa Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa     Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordem       OrdemServico    @relation(fields: [ordemId], references: [id], onDelete: Cascade)
 
   @@map("pagamentos")
 }
 
-// Roles internas da empresa (RBAC)
 model Role {
-  id        String       @id @default(cuid())
-  nome      String
-  empresaId String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  empresa   Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  usuarios  Subaccount[]
+  id         String       @id @default(cuid())
+  nome       String
+  empresaId  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
   permissoes Permission[]
+  empresa    Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarios   Subaccount[]
 
   @@unique([empresaId, nome])
   @@map("roles")
 }
 
-// Permissoes por role
 model Permission {
-  id      String @id @default(cuid())
-  name    String
-  nome    String
-  roleId  String
-
-  role    Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  name   String
+  nome   String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@map("permissions")
 }
 
-// Subcontas (usuarios internos da empresa)
 model Subaccount {
   id          String   @id @default(cuid())
   nome        String
@@ -411,247 +348,195 @@ model Subaccount {
   empresaId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  roleInt Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  roleInt     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@map("subaccounts")
 }
 
 model Adiantamento {
-  id              String                @id @default(cuid())
-  valor           Float
-  data            DateTime              @default(now())
-  status          String                @default("PENDENTE") // PENDENTE, QUITADO
-
-  lavadorId       String
-  lavador         Lavador               @relation(fields: [lavadorId], references: [id])
-
-  empresaId       String
-  empresa         Empresa               @relation(fields: [empresaId], references: [id])
-
-  // Relacionamento com o registro de caixa que gerou a saída
-  caixaRegistroId String?               @unique
-  caixaRegistro   CaixaRegistro?        @relation(fields: [caixaRegistroId], references: [id])
-
+  id                   String              @id @default(cuid())
+  valor                Float
+  data                 DateTime            @default(now())
+  status               String              @default("PENDENTE")
+  lavadorId            String
+  empresaId            String
+  caixaRegistroId      String?             @unique
   fechamentoComissaoId String?
-  fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
+  caixaRegistro        CaixaRegistro?      @relation(fields: [caixaRegistroId], references: [id])
+  empresa              Empresa             @relation(fields: [empresaId], references: [id])
+  fechamentoComissao   FechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id])
+  lavador              Lavador             @relation(fields: [lavadorId], references: [id])
 
   @@map("adiantamentos")
 }
 
 model FechamentoComissao {
-  id                    String         @id @default(cuid())
-  data                  DateTime       @default(now())
+  id                    String                @id @default(cuid())
+  data                  DateTime              @default(now())
   valorPago             Float
-
   empresaId             String
-  empresa               Empresa        @relation(fields: [empresaId], references: [id])
-
   lavadorId             String
-  lavador               Lavador        @relation(fields: [lavadorId], references: [id])
-
-  // Relacionamentos com os itens que foram pagos/quitados neste fechamento
-  ordensPagas           OrdemServico[]
   adiantamentosQuitados Adiantamento[]
+  empresa               Empresa               @relation(fields: [empresaId], references: [id])
+  lavador               Lavador               @relation(fields: [lavadorId], references: [id])
+  ordensPagas           OrdemServico[]
   ordemLavadoresPagos   OrdemServicoLavador[]
 
   @@map("fechamentos_comissao")
 }
 
-// Modelo de Tema (Theme Customization)
 model Theme {
-  id             String   @id @default(cuid())
-  empresaId      String   @unique
-  corPrimaria    String   @default("#F59E0B") // Default: Amber/Orange
-  corSecundaria  String   @default("#1F2937") // Default: Dark Gray
-  logoUrl        String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  // Relacionamento
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  empresaId     String   @unique
+  corPrimaria   String   @default("#F59E0B")
+  corSecundaria String   @default("#1F2937")
+  logoUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("themes")
 }
 
-// ============================================
-// SUBSCRIPTION SYSTEM MODELS
-// ============================================
-
-// Planos de Assinatura (templates)
 model SubscriptionPlan {
-  id                String   @id @default(cuid())
-  nome              String   @unique // "Basic", "Pro", "Premium"
-  descricao         String?
-  preco             Float    // Preço mensal em centavos (ex: 8900 = R$ 89,00)
-  intervalo         String   @default("MONTHLY") // MONTHLY, YEARLY
-  ativo             Boolean  @default(true)
-  ordem             Int      @default(0) // Para ordenação na UI
-  trialDays         Int      @default(0) // Dias de trial gratuito (0 = sem trial)
-
-  // Limites do plano
-  maxEmpresas       Int      @default(1)
-  maxUsuarios       Int?     // null = ilimitado
-
-  // Features incluídas (JSON array de feature IDs)
-  features          Json     // ["vitrine", "whatsapp", "relatorios_pdf"]
-
-  // Quantidade de add-ons extras permitidos
-  maxAddons         Int      @default(0)
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // Relacionamentos
-  subscriptions     Subscription[]
-  promotions        Promotion[]
-  priceHistory      PriceHistory[]
+  id            String         @id @default(cuid())
+  nome          String         @unique
+  descricao     String?
+  preco         Float
+  intervalo     String         @default("MONTHLY")
+  ativo         Boolean        @default(true)
+  ordem         Int            @default(0)
+  maxEmpresas   Int            @default(1)
+  maxUsuarios   Int?
+  features      Json
+  maxAddons     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  trialDays     Int            @default(0)
+  priceHistory  PriceHistory[]
+  promotions    Promotion[]
+  subscriptions Subscription[]
 
   @@map("subscription_plans")
 }
 
-// Assinatura do Usuário
 model Subscription {
-  id                  String              @id @default(cuid())
-  usuarioId           String              // FK para Usuario
-  planId              String              // FK para SubscriptionPlan
-
-  status              SubscriptionStatus  @default(ACTIVE)
-
-  // Controle de trial
-  isTrialUsed         Boolean             @default(false) // Já usou trial alguma vez
-  isCurrentlyTrial    Boolean             @default(false) // Está em trial agora
-  trialStartDate      DateTime?
-  trialEndDate        DateTime?
-
-  // Datas da assinatura
-  startDate           DateTime            @default(now())
-  endDate             DateTime?           // null = vitalício
-  nextBillingDate     DateTime?
-  canceledAt          DateTime?
-
-  // Pagamento
-  preco               Float               // Preço pago (pode ser diferente do plano)
-  currency            String              @default("BRL")
-
-  // Metadata para integrações
-  stripeSubscriptionId    String?         @unique
-  mercadoPagoSubscriptionId String?       @unique
-
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-
-  // Relacionamentos
-  usuario             Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  plan                SubscriptionPlan    @relation(fields: [planId], references: [id])
-  payments            SubscriptionPayment[]
-  addons              SubscriptionAddon[]
+  id                        String                @id @default(cuid())
+  usuarioId                 String
+  planId                    String
+  status                    SubscriptionStatus    @default(ACTIVE)
+  isTrialUsed               Boolean               @default(false)
+  isCurrentlyTrial          Boolean               @default(false)
+  trialStartDate            DateTime?
+  trialEndDate              DateTime?
+  startDate                 DateTime              @default(now())
+  endDate                   DateTime?
+  nextBillingDate           DateTime?
+  canceledAt                DateTime?
+  preco                     Float
+  currency                  String                @default("BRL")
+  stripeSubscriptionId      String?               @unique
+  mercadoPagoSubscriptionId String?               @unique
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  addons                    SubscriptionAddon[]
+  payments                  SubscriptionPayment[]
+  plan                      SubscriptionPlan      @relation(fields: [planId], references: [id])
+  usuario                   Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([status])
   @@map("subscriptions")
 }
 
-// Pagamentos de Assinatura (histórico)
 model SubscriptionPayment {
-  id                String              @id @default(cuid())
-  subscriptionId    String
-  valor             Float
-  currency          String              @default("BRL")
-  status            PaymentStatus       @default(PENDING)
-  metodo            String?             // "CREDIT_CARD", "PIX", "BOLETO"
-
-  // Metadata
-  stripePaymentId   String?             @unique
-  mercadoPagoPaymentId String?          @unique
-
-  paidAt            DateTime?
-  failedAt          DateTime?
-  errorMessage      String?
-
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  // Relacionamentos
-  subscription      Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  id                   String        @id @default(cuid())
+  subscriptionId       String
+  valor                Float
+  currency             String        @default("BRL")
+  status               PaymentStatus @default(PENDING)
+  metodo               String?
+  stripePaymentId      String?       @unique
+  mercadoPagoPaymentId String?       @unique
+  paidAt               DateTime?
+  failedAt             DateTime?
+  errorMessage         String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  subscription         Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionId])
   @@index([mercadoPagoPaymentId])
   @@map("subscription_payments")
 }
 
-// Add-ons (features extras)
 model Addon {
-  id                String              @id @default(cuid())
-  nome              String              @unique // "Estoque", "Calculadora", "PDV"
-  descricao         String?
-  preco             Float               // Preço mensal adicional
-  ativo             Boolean             @default(true)
-  featureKey        String              @unique // "estoque_personalizado"
-
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  // Relacionamentos
-  subscriptions     SubscriptionAddon[]
+  id            String              @id @default(cuid())
+  nome          String              @unique
+  descricao     String?
+  preco         Float
+  ativo         Boolean             @default(true)
+  featureKey    String              @unique
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  subscriptions SubscriptionAddon[]
 
   @@map("addons")
 }
 
-// Relação Assinatura <-> Add-ons
 model SubscriptionAddon {
-  id                String              @id @default(cuid())
-  subscriptionId    String
-  addonId           String
-  ativo             Boolean             @default(true)
-
-  addedAt           DateTime            @default(now())
-  removedAt         DateTime?
-
-  // Relacionamentos
-  subscription      Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  addon             Addon               @relation(fields: [addonId], references: [id])
+  id             String       @id @default(cuid())
+  subscriptionId String
+  addonId        String
+  ativo          Boolean      @default(true)
+  addedAt        DateTime     @default(now())
+  removedAt      DateTime?
+  addon          Addon        @relation(fields: [addonId], references: [id])
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@unique([subscriptionId, addonId])
   @@map("subscription_addons")
 }
 
-// Promoções/Descontos
 model Promotion {
-  id              String     @id @default(cuid())
-  nome            String     @unique
-  descricao       String?
-  tipo            TipoPromo  @default(PERCENTUAL)
-  valor           Float      // Percentual (0-100) ou valor em centavos
-  planId          String?    // null = aplica a todos planos
-  dataInicio      DateTime
-  dataFim         DateTime
-  ativo           Boolean    @default(true)
-  usosMaximos     Int?       // null = ilimitado
-  usosAtuais      Int        @default(0)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-
-  plan            SubscriptionPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  id          String            @id @default(cuid())
+  nome        String            @unique
+  descricao   String?
+  tipo        TipoPromo         @default(PERCENTUAL)
+  valor       Float
+  planId      String?
+  dataInicio  DateTime
+  dataFim     DateTime
+  ativo       Boolean           @default(true)
+  usosMaximos Int?
+  usosAtuais  Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  plan        SubscriptionPlan? @relation(fields: [planId], references: [id])
 
   @@map("promotions")
 }
 
-// Histórico de Preços (Auditoria)
 model PriceHistory {
-  id              String   @id @default(cuid())
-  planId          String
-  precoAntigo     Float
-  precoNovo       Float
-  alteradoPor     String   // Email do admin
-  motivo          String?
-  createdAt       DateTime @default(now())
-
-  plan            SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id          String           @id @default(cuid())
+  planId      String
+  precoAntigo Float
+  precoNovo   Float
+  alteradoPor String
+  motivo      String?
+  createdAt   DateTime         @default(now())
+  plan        SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@index([planId])
   @@map("price_histories")
+}
+
+enum UserRole {
+  LINA_OWNER
+  OWNER
+  MANAGER
+  USER
 }
 
 enum OrdemStatus {
@@ -689,15 +574,15 @@ enum StatusFechamento {
   PENDENTE
   CONCLUIDO
   DIVERGENCIA
-  CONFERIDO // Adicionado para compatibilidade
-  DIVERGENTE // Adicionado para compatibilidade
+  CONFERIDO
+  DIVERGENTE
 }
 
 enum TipoCaixa {
   ENTRADA
   SAIDA
   SANGRIA
-  VALE // Mantido
+  VALE
   FECHAMENTO
 }
 
@@ -705,7 +590,7 @@ enum FormaPagamento {
   DINHEIRO
   PIX
   CARTAO
-  NA // Adicionado
+  NA
 }
 
 enum TipoPromo {
@@ -714,22 +599,22 @@ enum TipoPromo {
 }
 
 enum SubscriptionStatus {
-  ACTIVE        // Assinatura ativa
-  TRIAL         // Em período de trial
-  PENDING       // Aguardando pagamento
-  PAYMENT_FAILED // Pagamento falhou
-  PAST_DUE      // Pagamento atrasado
-  CANCELED      // Cancelada pelo usuário
-  EXPIRED       // Expirada (não renovada)
-  SUSPENDED     // Suspensa pelo admin
-  LIFETIME      // Vitalícia (sem expiração)
+  ACTIVE
+  TRIAL
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  SUSPENDED
+  LIFETIME
+  PENDING
+  PAYMENT_FAILED
 }
 
 enum PaymentStatus {
-  PENDING       // Aguardando pagamento
-  PROCESSING    // Processando
-  PAID          // Pago com sucesso
-  FAILED        // Falhou
-  REFUNDED      // Reembolsado
-  CANCELED      // Cancelado
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELED
 }

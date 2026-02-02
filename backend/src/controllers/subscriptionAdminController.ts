@@ -287,7 +287,8 @@ export const createPlan = async (req: Request, res: Response) => {
       maxUsuarios,
       features,
       maxAddons,
-      ordem
+      ordem,
+      trialDays
     } = req.body;
 
     if (!nome || preco === undefined || !maxEmpresas) {
@@ -306,7 +307,8 @@ export const createPlan = async (req: Request, res: Response) => {
         maxUsuarios,
         features: features || [],
         maxAddons: maxAddons || 0,
-        ordem: ordem || 0
+        ordem: ordem || 0,
+        trialDays: trialDays || 0
       }
     });
 
