@@ -46,7 +46,7 @@ const PORT = process.env.PORT || 3001;
 
 // CORS Configuration - Allow frontend domain
 const corsOptions = {
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // In development, allow localhost
     const allowedOrigins = [
       'http://localhost:3000',
