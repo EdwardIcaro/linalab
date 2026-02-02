@@ -17,8 +17,11 @@ RUN npm run build
 # Gerar Prisma Client
 RUN npx prisma generate
 
+# Tornar script de startup executável
+RUN chmod +x /app/backend/start.sh
+
 # Expor porta
 EXPOSE 3001
 
-# Rodar aplicação
-CMD ["npm", "run", "start"]
+# Rodar aplicação com migrations
+CMD ["/app/backend/start.sh"]

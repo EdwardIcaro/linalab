@@ -7,6 +7,7 @@ exports.authenticateUsuario = exports.generateScopedToken = exports.createUsuari
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = __importDefault(require("../db"));
+const subscriptionService_1 = require("../services/subscriptionService");
 /**
  * Criar novo usuário
  */
@@ -27,6 +28,14 @@ const createUsuario = async (req, res) => {
             data: { nome, email, senha: hashedSenha },
             select: { id: true, nome: true, email: true, createdAt: true },
         });
+        // Criar assinatura FREE automaticamente
+        try {
+            await subscriptionService_1.subscriptionService.createFreeSubscriptionForNewUser(usuario.id);
+        }
+        catch (error) {
+            console.error('Erro ao criar assinatura FREE:', error);
+            // Não interromper signup, apenas logar
+        }
         res.status(201).json({ message: 'Usuário criado com sucesso', usuario });
     }
     catch (error) {
