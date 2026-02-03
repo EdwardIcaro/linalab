@@ -17,11 +17,8 @@ RUN npm run build
 # Gerar Prisma Client
 RUN npx prisma generate
 
-# Tornar script de startup executável
-RUN chmod +x /app/backend/start.sh
-
 # Expor porta
 EXPOSE 3001
 
 # Rodar aplicação com migrations
-CMD ["/app/backend/start.sh"]
+CMD sh -c "npx prisma db push --accept-data-loss && npm run start"
