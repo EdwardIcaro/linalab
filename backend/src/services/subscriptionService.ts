@@ -767,22 +767,21 @@ export class SubscriptionService {
 
   /**
    * Criar assinatura FREE automaticamente no signup
-   * Plano FREE é permanente (sem trial, sem cobrança)
+   * Plano FREE é permanente (sem trial, sem cobrança, status ACTIVE forever)
    */
   async createFreeSubscriptionForNewUser(usuarioId: string) {
     // Buscar plano FREE (preco = 0, ativo = true)
     const freePlan = await prisma.subscriptionPlan.findFirst({
       where: {
+        nome: 'FREE',
         preco: 0,
         ativo: true
-      },
-      orderBy: {
-        ordem: 'asc'
       }
     });
 
     if (!freePlan) {
-      throw new Error('Plano FREE não encontrado');
+      console.error(`[Subscription] Plano FREE não encontrado para usuário ${usuarioId}`);
+      throw new Error('Plano FREE não encontrado. Execute o seed primeiro: POST /api/admin-setup/seed');
     }
 
     // Verificar se já tem assinatura
@@ -791,19 +790,32 @@ export class SubscriptionService {
     });
 
     if (existing) {
-      console.warn(`[Subscription] Usuário ${usuarioId} já possui assinatura`);
+      console.warn(`[Subscription] Usuário ${usuarioId} já possui assinatura, retornando a existente`);
       return existing;
     }
 
-    // Criar assinatura FREE (sem trial, permanente)
-    const subscription = await this.createSubscription({
-      usuarioId,
-      planId: freePlan.id,
-      isTrial: false,
-      isLifetime: false
+    // Criar assinatura FREE (status ACTIVE, sem expiração)
+    const now = new Date();
+    const subscription = await prisma.subscription.create({
+      data: {
+        usuarioId,
+        planId: freePlan.id,
+        status: 'ACTIVE', // ← IMPORTANTE: FREE é sempre ACTIVE
+        isTrialUsed: false,
+        isCurrentlyTrial: false,
+        trialStartDate: null,
+        trialEndDate: null,
+        startDate: now,
+        endDate: null, // ← IMPORTANTE: null = forever (sem expiração)
+        nextBillingDate: null, // FREE não tem cobrança
+        preco: 0
+      },
+      include: {
+        plan: true
+      }
     });
 
-    console.log(`[Subscription] FREE plan criado para usuário ${usuarioId}`);
+    console.log(`[Subscription] FREE plan criado para usuário ${usuarioId} - Status: ACTIVE, Forever`);
     return subscription;
   }
 }

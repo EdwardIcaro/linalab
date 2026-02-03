@@ -935,31 +935,8 @@
                         return;
                     }
 
-                    // Verificar se há plano selecionado antes do login
-                    const selectedPlanId = localStorage.getItem('selectedPlanId');
-                    if (selectedPlanId) {
-                        // Limpar storage e redirecionar de volta para planos
-                        localStorage.removeItem('selectedPlanId');
-                        localStorage.removeItem('selectedPlanName');
-                        localStorage.removeItem('selectedPlanIsTrial');
-                        window.location.href = 'planos.html';
-                        return;
-                    }
-
-                    // Verificar se usuário tem assinatura ativa
-                    try {
-                        const subResponse = await window.api.getMySubscription();
-                        if (!subResponse.hasSubscription) {
-                            // Sem assinatura, redirecionar para seleção de plano
-                            window.location.href = 'planos.html';
-                            return;
-                        }
-                    } catch (err) {
-                        // Se houver erro ao verificar assinatura, redirecionar para planos
-                        console.warn('Erro ao verificar assinatura:', err);
-                        window.location.href = 'planos.html';
-                        return;
-                    }
+                    // FLUXO NORMAL: Todo usuário é criado com plano FREE automaticamente
+                    // Não é necessário checar subscrição - pular direto para criar empresa
 
                     if (data.usuario.empresaId) {
                         localStorage.setItem('empresaId', data.usuario.empresaId);
@@ -972,10 +949,13 @@
                         if (empresas && empresas.length > 0) {
                             window.location.href = 'selecionar-empresa.html';
                         } else {
+                            // Novo usuário - ir direto para criar empresa (fluxo normal)
                             window.location.href = 'nova-empresa.html';
                         }
                     } catch (err) {
-                        window.location.href = 'selecionar-empresa.html';
+                        console.error('Erro ao buscar empresas:', err);
+                        // Se houver erro, redirecionar para criar empresa anyway
+                        window.location.href = 'nova-empresa.html';
                     }
                 }
             };
