@@ -29,13 +29,16 @@ interface PaymentInfo {
  * Integração com o gateway de pagamento Mercado Pago
  */
 export class MercadoPagoService {
-  private client: MercadoPagoConfig;
+  private client: MercadoPagoConfig | null;
 
   constructor() {
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
 
+    // Se não houver token, inicializar como null (não quebra o app)
     if (!accessToken) {
-      throw new Error('MERCADO_PAGO_ACCESS_TOKEN não configurada');
+      console.warn('⚠️  MERCADO_PAGO_ACCESS_TOKEN não configurada - Pagamentos desativados');
+      this.client = null;
+      return;
     }
 
     this.client = new MercadoPagoConfig({
@@ -44,6 +47,7 @@ export class MercadoPagoService {
         timeout: 5000,
       }
     });
+    console.log('✅ Mercado Pago configurado com sucesso');
   }
 
   /**
