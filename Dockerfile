@@ -20,5 +20,5 @@ RUN npx prisma generate
 # Expor porta
 EXPOSE 3001
 
-# Rodar aplicação com migrations
-CMD sh -c "npx prisma db push --accept-data-loss && npm run start"
+# Rodar aplicação com migrations (opcional)
+CMD sh -c "npx prisma db push --accept-data-loss 2>/dev/null; npm run start"
