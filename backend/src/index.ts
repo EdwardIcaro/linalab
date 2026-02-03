@@ -57,9 +57,14 @@ const corsOptions = {
       'http://127.0.0.1:3001'
     ];
 
-    // In production on Railway, allow the public domain
+    // In production on Railway, Vercel, or custom domain
     if (process.env.FRONTEND_URL) {
       allowedOrigins.push(process.env.FRONTEND_URL);
+    }
+
+    // Also allow the app's own domain on Vercel
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      allowedOrigins.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
     }
 
     // Allow requests without origin (mobile apps, Postman, etc)
