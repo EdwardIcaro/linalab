@@ -74,6 +74,36 @@ router.get('/health', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/admin-setup/debug
+ * Mostra configuração do servidor e variáveis críticas
+ */
+router.get('/debug', async (req: Request, res: Response) => {
+  try {
+    const checks = {
+      JWT_SECRET_CONFIGURED: !!process.env.JWT_SECRET,
+      JWT_SECRET_LENGTH: process.env.JWT_SECRET?.length || 0,
+      DATABASE_URL_CONFIGURED: !!process.env.DATABASE_URL,
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      FRONTEND_URL: process.env.FRONTEND_URL,
+      MERCADO_PAGO_CONFIGURED: !!process.env.MERCADO_PAGO_ACCESS_TOKEN,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      checks,
+      message: 'JWT_SECRET is ' + (checks.JWT_SECRET_CONFIGURED ? 'CONFIGURED ✅' : 'MISSING ❌')
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/admin-setup/seed
  * Executa o seed do banco de dados para popular planos e dados iniciais
  */
