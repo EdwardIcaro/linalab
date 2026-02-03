@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import cron from 'node-cron';
 
+import { waitForDatabase } from './waitForDb';
 import { getOrdensByLavadorPublic, getLavadorPublicData } from './controllers/publicController';
 import { processarFinalizacoesAutomaticas } from './controllers/ordemController';
 
@@ -195,9 +196,22 @@ cron.schedule('0 9 * * *', () => {
   timezone: "America/Sao_Paulo"
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor Lina X rodando na porta ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log('🕒 Agendador de finalização de ordens ativado para rodar a cada 15 minutos.');
-});
+// Iniciar servidor com aguardo do banco de dados
+async function startServer() {
+  try {
+    // Aguardar banco de dados estar pronto
+    await waitForDatabase();
+
+    // Iniciar servidor
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor Lina X rodando na porta ${PORT}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/health`);
+      console.log('🕒 Agendador de finalização de ordens ativado para rodar a cada 15 minutos.');
+    });
+  } catch (error) {
+    console.error('❌ Erro ao iniciar servidor:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
