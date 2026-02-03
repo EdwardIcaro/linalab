@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'https://linacraft.up.railway.app/api';
 
 // Função auxiliar para fazer requisições
 // SECURITY: empresaId is now embedded in the JWT token (not sent as header)
