@@ -23,6 +23,7 @@ import pagamentoRoutes from './routes/pagamento';
 import tipoVeiculoRoutes from './routes/tipoVeiculo';
 import notificacaoRoutes from './routes/notificacao';
 import adminRoutes from './routes/adminRoutes';
+import adminSetupRoutes from './routes/admin';
 import themeRoutes from './routes/themeRoutes';
 import roleRoutes from './routes/roles';
 import subscriptionRoutes from './routes/subscription';
@@ -134,6 +135,9 @@ app.get('/api/promotions/active', async (_req, _res) => {
     _res.status(500).json({ error: 'Erro ao buscar promoções' });
   }
 });
+
+// Admin setup routes (para inicialização do banco de dados - sem proteção por enquanto)
+app.use('/api/admin-setup', adminSetupRoutes); // Setup routes (database initialization)
 
 // Middleware de autenticação para rotas protegidas
 app.use('/api/admin', adminMiddleware, adminRoutes); // Admin routes (LINA_OWNER only)
