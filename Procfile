@@ -1,1 +1,1 @@
-web: cd backend && pnpm run start
+web: cd backend && npm run start
