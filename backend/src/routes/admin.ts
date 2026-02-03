@@ -104,8 +104,55 @@ router.get('/debug', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/admin-setup/init-database
+ * Inicializa o banco: cria tabelas + executa seed
+ * ORDEM IMPORTANTE: 1) prisma db push  2) prisma db seed
+ */
+router.post('/init-database', async (req: Request, res: Response) => {
+  try {
+    console.log('📊 Iniciando inicialização completa do banco...\n');
+
+    // PASSO 1: Criar tabelas
+    console.log('1️⃣  Criando tabelas com Prisma...');
+    const pushResult = await execAsync('npx prisma db push --accept-data-loss --skip-generate', {
+      cwd: process.cwd(),
+      env: process.env,
+      timeout: 120000
+    });
+    console.log('✅ Tabelas criadas!');
+
+    // PASSO 2: Executar seed
+    console.log('\n2️⃣  Executando seed para popular dados...');
+    const seedResult = await execAsync('npx prisma db seed', {
+      cwd: process.cwd(),
+      env: process.env,
+      timeout: 120000
+    });
+    console.log('✅ Seed executado com sucesso!');
+
+    res.json({
+      success: true,
+      message: '✅ Banco de dados inicializado com sucesso! Tabelas criadas + dados populados.',
+      steps: [
+        { step: 'Create Tables', status: 'SUCCESS' },
+        { step: 'Seed Database', status: 'SUCCESS' }
+      ],
+      output: pushResult.stdout + '\n' + seedResult.stdout
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao inicializar banco:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao inicializar banco de dados',
+      error: error.message,
+      stderr: error.stderr || ''
+    });
+  }
+});
+
+/**
  * POST /api/admin-setup/seed
- * Executa o seed do banco de dados para popular planos e dados iniciais
+ * Executa apenas o seed (use após criar tabelas com /init-database)
  */
 router.post('/seed', async (req: Request, res: Response) => {
   try {
