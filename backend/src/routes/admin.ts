@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import prisma from '../db';
 
 const router = Router();
 const execAsync = promisify(exec);
@@ -73,17 +74,49 @@ router.get('/health', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/admin-setup/seed
+ * Executa o seed do banco de dados para popular planos e dados iniciais
+ */
+router.post('/seed', async (req: Request, res: Response) => {
+  try {
+    console.log('🌱 Iniciando execução do seed...');
+
+    // Executar seed via Prisma
+    const { stdout, stderr } = await execAsync('npx prisma db seed', {
+      cwd: process.cwd(),
+      env: process.env,
+      timeout: 120000 // 2 minutos de timeout
+    });
+
+    console.log('✅ Seed executado com sucesso!');
+    console.log('Output:', stdout);
+
+    res.json({
+      success: true,
+      message: 'Seed executado com sucesso! Planos e dados iniciais foram criados.',
+      output: stdout
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao executar seed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao executar seed',
+      error: error.message,
+      stderr: error.stderr || ''
+    });
+  }
+});
+
+/**
  * POST /api/admin-setup/create-free-plan
- * Cria o plano FREE se não existir
+ * Cria o plano FREE se não existir (alternativa rápida do seed)
  */
 router.post('/create-free-plan', async (req: Request, res: Response) => {
   try {
-    const prisma = require('../db').default;
-
     // Verificar se já existe plano FREE
     const existingFreePlan = await prisma.subscriptionPlan.findFirst({
       where: {
-        preco: 0,
+        nome: 'FREE',
         ativo: true
       }
     });
@@ -100,17 +133,16 @@ router.post('/create-free-plan', async (req: Request, res: Response) => {
     const freePlan = await prisma.subscriptionPlan.create({
       data: {
         nome: 'FREE',
-        descricao: 'Plano gratuito com 7 dias de trial',
+        descricao: 'Plano gratuito permanente',
         preco: 0,
-        trialDays: 7,
+        trialDays: 0,
         maxEmpresas: 1,
-        maxUsuarios: 1,
-        maxClientes: 50,
-        maxVeiculos: 20,
-        maxServicos: 10,
+        maxUsuarios: null,
+        maxAddons: 0,
+        intervalo: 'MONTHLY',
         ativo: true,
-        ordem: 1,
-        features: ['basic_orders', 'basic_clients', 'basic_vehicles']
+        ordem: 0,
+        features: ['gestao_basica', 'clientes', 'ordens']
       }
     });
 
