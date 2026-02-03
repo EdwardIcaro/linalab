@@ -72,4 +72,61 @@ router.get('/health', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/admin-setup/create-free-plan
+ * Cria o plano FREE se não existir
+ */
+router.post('/create-free-plan', async (req: Request, res: Response) => {
+  try {
+    const prisma = require('../db').default;
+
+    // Verificar se já existe plano FREE
+    const existingFreePlan = await prisma.subscriptionPlan.findFirst({
+      where: {
+        preco: 0,
+        ativo: true
+      }
+    });
+
+    if (existingFreePlan) {
+      return res.json({
+        success: true,
+        message: 'Plano FREE já existe',
+        plan: existingFreePlan
+      });
+    }
+
+    // Criar plano FREE
+    const freePlan = await prisma.subscriptionPlan.create({
+      data: {
+        nome: 'FREE',
+        descricao: 'Plano gratuito com 7 dias de trial',
+        preco: 0,
+        trialDays: 7,
+        maxEmpresas: 1,
+        maxUsuarios: 1,
+        maxClientes: 50,
+        maxVeiculos: 20,
+        maxServicos: 10,
+        ativo: true,
+        ordem: 1,
+        features: ['basic_orders', 'basic_clients', 'basic_vehicles']
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Plano FREE criado com sucesso',
+      plan: freePlan
+    });
+  } catch (error: any) {
+    console.error('Erro ao criar plano FREE:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao criar plano FREE',
+      error: error.message
+    });
+  }
+});
+
 export default router;
