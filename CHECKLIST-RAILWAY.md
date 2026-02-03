@@ -6,10 +6,10 @@ Siga este checklist **NA ORDEM** para configurar o LinaX corretamente no Railway
 
 ## Passo 1: Criar Projeto Railway
 
-- [ ] Abra https://railway.app
-- [ ] Faça login com GitHub
-- [ ] Clique "New Project" → "Deploy from GitHub repo"
-- [ ] Selecione repositório: `EdwardIcaro/linalab`
+- [x] Abra https://railway.app
+- [x] Faça login com GitHub
+- [x] Clique "New Project" → "Deploy from GitHub repo"
+- [x] Selecione repositório: `EdwardIcaro/linalab`
 
 ✅ **Status**: Projeto criado
 
@@ -38,10 +38,10 @@ Siga este checklist **NA ORDEM** para configurar o LinaX corretamente no Railway
 4. Procure por: `DATABASE_URL`
 
 Se **DATABASE_URL não aparecer**:
-- [ ] Clique "+ New Variable"
-- [ ] Name: `DATABASE_URL`
-- [ ] Clique na **PostgreSQL Service** na lateral
-- [ ] Selecione `DATABASE_URL` (Railway vai copiar automaticamente)
+- [x] Clique "+ New Variable"
+- [x] Name: `DATABASE_URL`
+- [x] Clique na **PostgreSQL Service** na lateral
+- [x] Selecione `DATABASE_URL` (Railway vai copiar automaticamente)
 
 ✅ **DATABASE_URL está configurada?** (OBRIGATÓRIO!)
 
@@ -97,10 +97,10 @@ PAYMENT_PENDING_URL=${{RAILWAY_PUBLIC_DOMAIN}}/pagamento-retorno.html
 
 Railway Dashboard → Logs:
 
-- [ ] Procurar por: "npm install" (começou)
-- [ ] Procurar por: "tsc" (compilando TypeScript)
-- [ ] Procurar por: "Prisma Client" (gerando)
-- [ ] Procurar por: "Servidor Lina X rodando" (sucesso!)
+- [X] Procurar por: "npm install" (começou)
+- [X] Procurar por: "tsc" (compilando TypeScript)
+- [X] Procurar por: "Prisma Client" (gerando)
+- [X] Procurar por: "Servidor Lina X rodando" (sucesso!)
 
 ⚠️ **Se vir erros**:
 - Verifique DATABASE_URL está configurada
