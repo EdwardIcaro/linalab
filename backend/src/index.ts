@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
 import cron from 'node-cron';
 
 import { waitForDatabase } from './waitForDb';
@@ -83,15 +82,6 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
-
-// Servir arquivos estáticos do frontend
-const frontendPath = path.resolve(__dirname, '..', '..', 'DESKTOPV2');
-app.use(express.static(frontendPath));
-
-// Redireciona a rota raiz para a página de login
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(frontendPath, 'login.html'));
-});
 
 // Rotas públicas (cadastro e login de usuário)
 app.use('/api/usuarios', usuarioRoutes);
