@@ -842,23 +842,37 @@
         const dashboardMini = document.getElementById('dashboardMini');
         dashboardMini.classList.add('active');
 
-        // Simulated API call - Replace with actual API call
-        const data = {
-          totalOrdens: 24,
-          totalClientes: 156,
-          faturamento: 'R$ 12.540,00'
-        };
+        // Load real data from API
+        const statsPromise = window.api.getOrdensStats ? window.api.getOrdensStats() : Promise.resolve({});
+        const clientesPromise = window.api.getClientes ? window.api.getClientes(1, 1) : Promise.resolve({ total: 0 });
 
-        document.getElementById('totalOrdens').textContent = data.totalOrdens;
-        document.getElementById('totalClientes').textContent = data.totalClientes;
-        document.getElementById('faturamento').textContent = data.faturamento;
+        const [stats, clientes] = await Promise.all([statsPromise, clientesPromise]);
 
-        // Uncomment when API is ready:
-        // const data = await window.api.getDashboard();
+        // Update stats
+        const totalOrdens = stats.total || 0;
+        const totalClientes = clientes.total || 0;
+        const faturamento = stats.faturamentoDia || stats.faturamento || 0;
+
+        document.getElementById('totalOrdens').textContent = totalOrdens;
+        document.getElementById('totalClientes').textContent = totalClientes;
+        document.getElementById('faturamento').textContent = formatCurrency(faturamento);
+
       } catch (error) {
         console.error('Erro ao carregar dashboard:', error);
-        document.getElementById('dashboardMini').classList.remove('active');
+        // Show fallback message
+        document.getElementById('totalOrdens').textContent = '-';
+        document.getElementById('totalClientes').textContent = '-';
+        document.getElementById('faturamento').textContent = '-';
       }
+    }
+
+    // ===== FORMAT CURRENCY =====
+    function formatCurrency(value) {
+      if (!value) return 'R$ 0,00';
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value);
     }
 
     // ===== UPDATE MOBILE NAV VISIBILITY =====
