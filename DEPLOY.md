@@ -8,18 +8,20 @@
 
 ## Variáveis de ambiente (prod)
 ### Backend (Railway)
-- `DATABASE_URL` = `postgresql://neondb_owner:npg_xMoSQ02kGscr@ep-weathered-hill-ahnzplv8-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=10`
-- `JWT_SECRET` = `f11de4fb89831ac5db2d8a23110fd8ae56666c504b27d9fa1e36fe4934e414e3`
+> **⚠️ NUNCA commitar credenciais!** Use Railway secrets ou Vercel environment variables.
+
+- `DATABASE_URL` = (Neon PostgreSQL connection string com pooler)
+- `JWT_SECRET` = (Chave aleatória de 256+ caracteres)
 - `BCRYPT_SALT_ROUNDS` = `12`
-- `MERCADO_PAGO_ACCESS_TOKEN` = `TEST-5277956129999284-013022-a0433da8a4d2e282840ab5a3cd96efa0-182616510`
-- `MERCADO_PAGO_PUBLIC_KEY` = `TEST-2e6d0347-0e5c-40fe-8502-b371cd766ee2`
-- `MERCADO_PAGO_WEBHOOK_SECRET` = `db9ff2381b84a19f9c3ddd8e9e7fdf864277b6f65f4a12008a9ed1b3203e1b16`
-- `SENDGRID_API_KEY` = `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`
-- `EMAIL_FROM` = `linawcraft@gmail.com`
-- `FRONTEND_URL` = `https://linaforge.vercel.app`
-- `PAYMENT_SUCCESS_URL` = `https://linaforge.vercel.app/pagamento-retorno.html`
-- `PAYMENT_FAILURE_URL` = `https://linaforge.vercel.app/pagamento-retorno.html`
-- `PAYMENT_PENDING_URL` = `https://linaforge.vercel.app/pagamento-retorno.html`
+- `MERCADO_PAGO_ACCESS_TOKEN` = (Token de produção do Mercado Pago)
+- `MERCADO_PAGO_PUBLIC_KEY` = (Chave pública do Mercado Pago)
+- `MERCADO_PAGO_WEBHOOK_SECRET` = (Secret do webhook do Mercado Pago)
+- `SENDGRID_API_KEY` = (API Key do SendGrid)
+- `EMAIL_FROM` = (Email validado no SendGrid)
+- `FRONTEND_URL` = `https://seu-dominio.vercel.app`
+- `PAYMENT_SUCCESS_URL` = `https://seu-dominio.vercel.app/pagamento-retorno.html`
+- `PAYMENT_FAILURE_URL` = `https://seu-dominio.vercel.app/pagamento-retorno.html`
+- `PAYMENT_PENDING_URL` = `https://seu-dominio.vercel.app/pagamento-retorno.html`
 - `NODE_ENV` = `production`
 - (Remover `PORT`; Railway injeta automaticamente)
 
