@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina X - Serviços</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066cc;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --info: #17a2b8;
+      --light: #f8f9fa;
+      --dark: #333;
+      --border: #ddd;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    /* HEADER */
+    .header-funcionario {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .logo-link {
+      text-decoration: none;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+
+    .page-info h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .page-info p {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--dark);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .icon-btn:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    /* MAIN */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    /* SECTION HEADER */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    .btn-novo {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-novo:hover {
+      background: #0052a3;
+      transform: translateY(-2px);
+    }
+
+    /* CARDS GRID */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .service-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .service-card:hover {
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .service-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+
+    .service-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--dark);
+      flex: 1;
+    }
+
+    .service-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .service-info-item {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .service-info-label {
+      font-weight: 500;
+      color: var(--dark);
+    }
+
+    .service-price {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--success);
+      margin: 12px 0;
+    }
+
+    .service-veiculo {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(0, 102, 204, 0.1);
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .service-actions {
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+
+    .btn-action {
+      flex: 1;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--primary);
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-action:hover {
+      background: var(--light);
+      border-color: var(--primary);
+    }
+
+    .btn-action-danger {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .btn-action-danger:hover {
+      background: rgba(220, 53, 69, 0.1);
+      border-color: var(--danger);
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      color: #ddd;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .empty-state h2 {
+      font-size: 20px;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+    }
+
+    /* LOADING */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 4px solid var(--light);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--dark);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.3s;
+    }
+
+    .modal-close:hover {
+      color: var(--primary);
+    }
+
+    /* FORM */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      color: var(--dark);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .form-input,
+    .form-select {
+      width: 100%;
+      background-color: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--dark);
+      font-size: 14px;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    .checkbox-item label {
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--dark);
+      margin: 0;
+    }
+
+    .form-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      background: var(--light);
+      color: var(--dark);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-cancel:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-confirm {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-confirm:hover {
+      background: #0052a3;
+    }
+
+    /* MENU */
+    .menu-dropdown {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 200px;
+      z-index: 999;
+      animation: slideUp 0.3s ease;
+    }
+
+    .menu-dropdown.active {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .menu-dropdown a,
+    .menu-dropdown button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--dark);
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .menu-dropdown a:hover,
+    .menu-dropdown button:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    .menu-dropdown button:last-child {
+      color: var(--danger);
+    }
+
+    .menu-dropdown button:last-child:hover {
+      background: rgba(220, 53, 69, 0.1);
+    }
+
+    /* OVERLAY */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    /* MOBILE NAV */
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      height: 70px;
+      z-index: 999;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #666;
+      font-size: 11px;
+      gap: 4px;
+      transition: all 0.3s;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-top: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      border-top-color: var(--primary);
+    }
+
+    .nav-item i {
+      font-size: 24px;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 20px;
+      right: 20px;
+      max-width: 400px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1001;
+      transform: translateY(120px);
+      transition: transform 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast-success i {
+      color: var(--success);
+    }
+
+    .toast-error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .toast-error i {
+      color: var(--danger);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 16px;
+        padding-bottom: 100px;
+      }
+
+      .section-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-novo {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .services-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-info h1 {
+        font-size: 14px;
+      }
+
+      .modal-content {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div id="header"></div>
+
+  <!-- MENU -->
+  <div id="menu"></div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-container">
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">Serviços</h1>
+        <p class="section-subtitle">Crie e gerencie os serviços disponíveis</p>
+      </div>
+      <button class="btn-novo" onclick="openServiceModal()">
+        <i class="fas fa-plus"></i>
+        Novo Serviço
+      </button>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content"></div>
+  </main>
+
+  <!-- MOBILE NAV -->
+  <nav id="mobileNav"></nav>
+
+  <!-- SERVICE MODAL -->
+  <div class="modal-overlay" id="serviceModal">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title" id="serviceModalTitle">Novo Serviço</h2>
+        <button class="modal-close" onclick="closeServiceModal()">&times;</button>
+      </div>
+      <form id="serviceForm" onsubmit="saveService(event)">
+        <div class="form-group">
+          <label for="serviceName" class="form-label">Nome do Serviço</label>
+          <input
+            type="text"
+            id="serviceName"
+            class="form-input"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="servicePrice" class="form-label">Preço (R$)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            id="servicePrice"
+            class="form-input"
+            required
+          >
+          <p class="form-info">
+            <i class="fas fa-info-circle"></i>
+            O preço deve ser maior que zero
+          </p>
+        </div>
+        <div class="form-group">
+          <label for="serviceTipoPrincipal" class="form-label">Tipo de Veículo</label>
+          <select
+            id="serviceTipoPrincipal"
+            class="form-select"
+            onchange="updateSubtipoOptions()"
+            required
+          >
+            <option value="">Selecione...</option>
+            <option value="CARRO">Carro</option>
+            <option value="MOTO">Moto</option>
+          </select>
+        </div>
+        <div class="form-group" id="subtipoGroup" style="display: none;">
+          <label class="form-label">Categorias (Subtipos)</label>
+          <p class="form-info">Selecione as categorias de carro para este serviço</p>
+          <div class="checkbox-group" id="subtipoCheckboxes"></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeServiceModal()">Cancelar</button>
+          <button type="submit" class="btn-confirm">
+            <i class="fas fa-save"></i>
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="../api.js"></script>
+  <script src="utils-funcionario.js"></script>
+
+  <script>
+    // PAGE CONFIGURATION
+    const PAGE_TITLE = 'Serviços';
+    const PAGE_ACTIVE = 'servicos';
+
+    let serviceForm = {
+      id: null,
+      nome: '',
+      preco: '',
+      tipoVeiculo: '',
+      subtiposVeiculo: []
+    };
+
+    const subtipoOptions = {
+      CARRO: [
+        { categoria: 'Pequeno' },
+        { categoria: 'Médio' },
+        { categoria: 'Grande' },
+        { categoria: 'SUV' }
+      ],
+      MOTO: []
+    };
+
+    // INITIALIZE
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!validateFuncionarioAccess()) return;
+
+      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+      if (!permissoes.includes('config_ver_servicos')) {
+        showToast('Você não tem permissão para gerenciar serviços', 'error');
+        setTimeout(() => {
+          window.location.href = '../index-funcionario.html';
+        }, 1500);
+        return;
+      }
+
+      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
+      document.getElementById('menu').innerHTML = createFuncionarioMenu();
+      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+
+      loadUserInfo();
+      await loadServicos();
+    });
+
+    // LOAD SERVICOS
+    async function loadServicos() {
+      const content = document.getElementById('content');
+
+      try {
+        content.innerHTML = createLoading();
+
+        const response = await window.api.getServicos();
+        const servicos = response.servicos || [];
+
+        if (servicos.length === 0) {
+          content.innerHTML = createEmptyState(
+            'fa-wrench',
+            'Nenhum serviço cadastrado',
+            'Crie seu primeiro serviço clicando em "Novo Serviço".',
+            'Novo Serviço',
+            "openServiceModal()"
+          );
+          return;
+        }
+
+        let html = '<div class="services-grid">';
+
+        servicos.forEach(servico => {
+          const subtipos = servico.subtiposVeiculo?.join(', ') || 'Todos';
+          html += `
+            <div class="service-card">
+              <div class="service-header">
+                <div class="service-title">${servico.nome}</div>
+              </div>
+              <div class="service-veiculo">${servico.tipoVeiculo}</div>
+              <div class="service-info">
+                <div class="service-info-item">
+                  <span class="service-info-label">Categorias:</span> ${subtipos}
+                </div>
+              </div>
+              <div class="service-price">${formatCurrency(servico.preco)}</div>
+              <div class="service-actions">
+                <button class="btn-action" onclick="editService('${servico.id}', '${servico.nome}', ${servico.preco}, '${servico.tipoVeiculo}', '${JSON.stringify(servico.subtiposVeiculo || [])}')">
+                  <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn-action btn-action-danger" onclick="deleteService('${servico.id}', '${servico.nome}')">
+                  <i class="fas fa-trash"></i> Deletar
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+        content.innerHTML = html;
+
+      } catch (error) {
+        console.error('Erro ao carregar serviços:', error);
+        content.innerHTML = createEmptyState(
+          'fa-exclamation-triangle',
+          'Erro ao carregar',
+          'Houve um erro ao carregar os serviços. Tente novamente.',
+          'Tentar novamente',
+          'loadServicos()'
+        );
+      }
+    }
+
+    // OPEN SERVICE MODAL
+    function openServiceModal() {
+      serviceForm = {
+        id: null,
+        nome: '',
+        preco: '',
+        tipoVeiculo: '',
+        subtiposVeiculo: []
+      };
+      document.getElementById('serviceForm').reset();
+      document.getElementById('serviceModalTitle').textContent = 'Novo Serviço';
+      document.getElementById('subtipoGroup').style.display = 'none';
+      document.getElementById('serviceModal').classList.add('active');
+    }
+
+    // CLOSE SERVICE MODAL
+    function closeServiceModal() {
+      document.getElementById('serviceModal').classList.remove('active');
+      document.getElementById('serviceForm').reset();
+    }
+
+    // EDIT SERVICE
+    function editService(id, nome, preco, tipoVeiculo, subtiposStr) {
+      serviceForm = {
+        id: id,
+        nome: nome,
+        preco: preco,
+        tipoVeiculo: tipoVeiculo,
+        subtiposVeiculo: JSON.parse(subtiposStr)
+      };
+
+      document.getElementById('serviceModalTitle').textContent = 'Editar Serviço';
+      document.getElementById('serviceName').value = nome;
+      document.getElementById('servicePrice').value = preco;
+      document.getElementById('serviceTipoPrincipal').value = tipoVeiculo;
+
+      updateSubtipoOptions();
+
+      // Check the subtipo checkboxes
+      setTimeout(() => {
+        const checkboxes = document.querySelectorAll('#subtipoCheckboxes input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = serviceForm.subtiposVeiculo.includes(checkbox.value);
+        });
+      }, 100);
+
+      document.getElementById('serviceModal').classList.add('active');
+    }
+
+    // DELETE SERVICE
+    function deleteService(id, nome) {
+      showConfirm(
+        'Excluir Serviço',
+        `Tem certeza que deseja excluir o serviço "${nome}"?`,
+        `deleteServiceConfirmed('${id}')`
+      );
+    }
+
+    async function deleteServiceConfirmed(id) {
+      try {
+        await window.api.deleteServico(id);
+        showToast('Serviço excluído com sucesso!', 'success');
+        await loadServicos();
+      } catch (error) {
+        console.error('Erro ao excluir serviço:', error);
+        showToast('Erro ao excluir serviço. Tente novamente.', 'error');
+      }
+    }
+
+    // UPDATE SUBTIPO OPTIONS
+    function updateSubtipoOptions() {
+      const tipoVeiculo = document.getElementById('serviceTipoPrincipal').value;
+      const subtipoGroup = document.getElementById('subtipoGroup');
+      const checkboxesContainer = document.getElementById('subtipoCheckboxes');
+
+      if (tipoVeiculo === 'CARRO') {
+        subtipoGroup.style.display = 'block';
+        checkboxesContainer.innerHTML = '';
+
+        subtipoOptions.CARRO.forEach(subtipo => {
+          const checkbox = document.createElement('div');
+          checkbox.className = 'checkbox-item';
+          checkbox.innerHTML = `
+            <input
+              type="checkbox"
+              id="subtipo-${subtipo.categoria}"
+              value="${subtipo.categoria}"
+              onchange="updateSubtiposSelection()"
+            >
+            <label for="subtipo-${subtipo.categoria}">${subtipo.categoria}</label>
+          `;
+          checkboxesContainer.appendChild(checkbox);
+        });
+      } else {
+        subtipoGroup.style.display = 'none';
+        serviceForm.subtiposVeiculo = [];
+      }
+    }
+
+    function updateSubtiposSelection() {
+      const checkboxes = document.querySelectorAll('#subtipoCheckboxes input[type="checkbox"]');
+      serviceForm.subtiposVeiculo = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    }
+
+    // SAVE SERVICE
+    async function saveService(event) {
+      event.preventDefault();
+
+      const nome = document.getElementById('serviceName').value;
+      const preco = parseFloat(document.getElementById('servicePrice').value);
+      const tipoVeiculo = document.getElementById('serviceTipoPrincipal').value;
+
+      updateSubtiposSelection();
+
+      if (!nome || !preco || !tipoVeiculo) {
+        showToast('Preencha todos os campos obrigatórios', 'error');
+        return;
+      }
+
+      if (preco <= 0) {
+        showToast('O preço deve ser maior que zero', 'error');
+        return;
+      }
+
+      const payload = {
+        nome: nome,
+        preco: preco,
+        tipoVeiculo: tipoVeiculo,
+        subtiposVeiculo: serviceForm.subtiposVeiculo
+      };
+
+      try {
+        if (serviceForm.id) {
+          await window.api.updateServico(serviceForm.id, payload);
+          showToast('Serviço atualizado com sucesso!', 'success');
+        } else {
+          await window.api.createServico(payload);
+          showToast('Serviço criado com sucesso!', 'success');
+        }
+
+        closeServiceModal();
+        await loadServicos();
+      } catch (error) {
+        console.error('Erro ao salvar serviço:', error);
+        showToast('Erro ao salvar serviço. Tente novamente.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

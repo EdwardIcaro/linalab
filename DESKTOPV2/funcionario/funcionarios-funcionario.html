@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina X - Equipe</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066cc;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --info: #17a2b8;
+      --light: #f8f9fa;
+      --dark: #333;
+      --border: #ddd;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    /* HEADER */
+    .header-funcionario {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .logo-link {
+      text-decoration: none;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+
+    .page-info h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .page-info p {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--dark);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .icon-btn:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    /* MAIN */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    /* SECTION HEADER */
+    .section-header {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    /* TABLE */
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--light);
+      border-bottom: 2px solid var(--border);
+    }
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--dark);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: var(--light);
+    }
+
+    /* STATUS BADGE */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-active {
+      background: rgba(40, 167, 69, 0.2);
+      color: var(--success);
+    }
+
+    .status-inactive {
+      background: rgba(220, 53, 69, 0.2);
+      color: var(--danger);
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      color: #ddd;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .empty-state h2 {
+      font-size: 20px;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+    }
+
+    /* LOADING */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 4px solid var(--light);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes loading {
+      0%, 100% { background-position: 200% 0; }
+      50% { background-position: -200% 0; }
+    }
+
+    /* MENU */
+    .menu-dropdown {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 200px;
+      z-index: 999;
+      animation: slideUp 0.3s ease;
+    }
+
+    .menu-dropdown.active {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .menu-dropdown a,
+    .menu-dropdown button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--dark);
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .menu-dropdown a:hover,
+    .menu-dropdown button:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    .menu-dropdown button:last-child {
+      color: var(--danger);
+    }
+
+    .menu-dropdown button:last-child:hover {
+      background: rgba(220, 53, 69, 0.1);
+    }
+
+    /* OVERLAY */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    /* MOBILE NAV */
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      height: 70px;
+      z-index: 999;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #666;
+      font-size: 11px;
+      gap: 4px;
+      transition: all 0.3s;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-top: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      border-top-color: var(--primary);
+    }
+
+    .nav-item i {
+      font-size: 24px;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 20px;
+      right: 20px;
+      max-width: 400px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1001;
+      transform: translateY(120px);
+      transition: transform 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast-success i {
+      color: var(--success);
+    }
+
+    .toast-error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .toast-error i {
+      color: var(--danger);
+    }
+
+    /* CONFIRM DIALOG */
+    .confirm-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .confirm-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .confirm-box {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .confirm-box h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .confirm-box p {
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel,
+    .btn-confirm {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-cancel {
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    .btn-cancel:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-confirm {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-confirm:hover {
+      background: #0052a3;
+    }
+
+    /* ACTION BUTTON */
+    .btn-copy-link {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+
+    .btn-copy-link:hover {
+      background: rgba(0, 102, 204, 0.1);
+      border-color: var(--primary);
+    }
+
+    /* MODAL FORM */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      color: var(--dark);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .form-input,
+    .form-select {
+      width: 100%;
+      background-color: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--dark);
+      font-size: 14px;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .link-container {
+      background-color: var(--light);
+      padding: 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      word-break: break-all;
+    }
+
+    .link-text {
+      flex: 1;
+      font-size: 12px;
+      color: #666;
+      font-family: monospace;
+    }
+
+    .btn-link-copy {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .btn-link-copy:hover {
+      background: #0052a3;
+    }
+
+    .form-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 16px;
+        padding-bottom: 100px;
+      }
+
+      .page-info h1 {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+
+      .status-badge {
+        padding: 2px 8px;
+        font-size: 10px;
+      }
+
+      .link-container {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .btn-link-copy {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div id="header"></div>
+
+  <!-- MENU -->
+  <div id="menu"></div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-container">
+    <div class="section-header">
+      <h1 class="section-title">Equipe</h1>
+      <p class="section-subtitle">Visualize a equipe de funcionários</p>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content"></div>
+  </main>
+
+  <!-- MOBILE NAV -->
+  <nav id="mobileNav"></nav>
+
+  <!-- TOKEN MODAL -->
+  <div class="confirm-dialog" id="tokenModal" style="display: none;">
+    <div class="confirm-overlay" onclick="closeTokenModal()"></div>
+    <div class="confirm-box">
+      <h2 id="tokenModalTitle">Gerar Link de Acesso</h2>
+      <form id="tokenForm" onsubmit="generateAndCopyToken(event)">
+        <div class="form-group">
+          <label for="tokenDuration" class="form-label">Duração do Link</label>
+          <select id="tokenDuration" class="form-select" required>
+            <option value="24">24 horas</option>
+            <option value="48">48 horas</option>
+            <option value="72">72 horas</option>
+            <option value="168">1 semana</option>
+          </select>
+          <p class="form-info">O link expirará após o tempo selecionado</p>
+        </div>
+        <div class="form-group" id="linkResult" style="display: none;">
+          <label class="form-label">Link de Acesso</label>
+          <div class="link-container">
+            <span class="link-text" id="linkText"></span>
+            <button type="button" class="btn-link-copy" onclick="copyToClipboard()">
+              <i class="fas fa-copy"></i> Copiar
+            </button>
+          </div>
+        </div>
+        <div class="confirm-buttons">
+          <button type="button" class="btn-cancel" onclick="closeTokenModal()">Fechar</button>
+          <button type="submit" class="btn-confirm" id="submitTokenBtn">Gerar Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="../api.js"></script>
+  <script src="utils-funcionario.js"></script>
+
+  <script>
+    // PAGE CONFIGURATION
+    const PAGE_TITLE = 'Equipe';
+    const PAGE_ACTIVE = 'funcionarios';
+
+    // INITIALIZE
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!validateFuncionarioAccess()) return;
+
+      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+      if (!permissoes.includes('gerenciar_funcionarios')) {
+        showToast('Você não tem permissão para visualizar funcionários', 'error');
+        setTimeout(() => {
+          window.location.href = '../index-funcionario.html';
+        }, 1500);
+        return;
+      }
+
+      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
+      document.getElementById('menu').innerHTML = createFuncionarioMenu();
+      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+
+      loadUserInfo();
+      await loadFuncionarios();
+    });
+
+    // LOAD FUNCIONARIOS
+    async function loadFuncionarios() {
+      const content = document.getElementById('content');
+
+      try {
+        content.innerHTML = createLoading();
+
+        const response = await window.api.getLavadores();
+        const funcionarios = response.lavadores || [];
+
+        if (funcionarios.length === 0) {
+          content.innerHTML = createEmptyState(
+            'fa-users',
+            'Nenhum funcionário',
+            'Não há funcionários cadastrados no momento.'
+          );
+          return;
+        }
+
+        let html = `
+          <div class="table-container">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Comissão (%)</th>
+                    <th>Ordens (Mês)</th>
+                    <th>Comissão (Mês)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        funcionarios.forEach(funcionario => {
+          const statusClass = funcionario.ativo ? 'status-active' : 'status-inactive';
+          const statusText = funcionario.ativo ? 'Ativo' : 'Inativo';
+          const comissaoMes = funcionario.comissaoMesAtual || 0;
+          const ordensMes = funcionario.ordensMesAtual || 0;
+
+          html += `
+            <tr>
+              <td>${funcionario.nome || '-'}</td>
+              <td>${funcionario.comissao || 0}%</td>
+              <td>${ordensMes}</td>
+              <td>${formatCurrency(comissaoMes)}</td>
+              <td>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span class="status-badge ${statusClass}">${statusText}</span>
+                  ${funcionario.ativo ? `<button class="btn-copy-link" onclick="copyLavadorLink('${funcionario.id}', '${funcionario.nome}')" title="Copiar link de acesso">
+                    <i class="fas fa-link"></i>
+                  </button>` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        content.innerHTML = html;
+
+      } catch (error) {
+        console.error('Erro ao carregar funcionários:', error);
+        content.innerHTML = createEmptyState(
+          'fa-exclamation-triangle',
+          'Erro ao carregar',
+          'Houve um erro ao carregar os funcionários. Tente novamente em alguns segundos.',
+          'Tentar novamente',
+          'loadFuncionarios()'
+        );
+      }
+    }
+
+    // COPY LAVADOR LINK
+    let currentLavadorId = null;
+
+    function copyLavadorLink(lavadorId, lavadorNome) {
+      currentLavadorId = lavadorId;
+      document.getElementById('tokenModalTitle').textContent = `Gerar Link - ${lavadorNome}`;
+      document.getElementById('linkResult').style.display = 'none';
+      document.getElementById('submitTokenBtn').style.display = 'inline-block';
+      document.getElementById('tokenModal').style.display = 'flex';
+    }
+
+    function closeTokenModal() {
+      document.getElementById('tokenModal').style.display = 'none';
+      document.getElementById('tokenForm').reset();
+      currentLavadorId = null;
+    }
+
+    async function generateAndCopyToken(event) {
+      event.preventDefault();
+
+      if (!currentLavadorId) {
+        showToast('Erro: ID do funcionário não encontrado', 'error');
+        return;
+      }
+
+      const duration = document.getElementById('tokenDuration').value;
+      const submitBtn = document.getElementById('submitTokenBtn');
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+        const response = await window.api.gerarTokenLavador(currentLavadorId, duration);
+        const token = response.token;
+        const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
+
+        document.getElementById('linkText').textContent = link;
+        document.getElementById('linkResult').style.display = 'block';
+        document.getElementById('submitTokenBtn').style.display = 'none';
+
+        showToast('Link gerado com sucesso!', 'success');
+
+      } catch (error) {
+        console.error('Erro ao gerar token:', error);
+        showToast('Erro ao gerar link. Tente novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Gerar Link';
+      }
+    }
+
+    function copyToClipboard() {
+      const linkText = document.getElementById('linkText').textContent;
+      navigator.clipboard.writeText(linkText).then(() => {
+        showToast('Link copiado para a área de transferência!', 'success');
+      }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        showToast('Erro ao copiar link', 'error');
+      });
+    }
+  </script>
+</body>
+</html>

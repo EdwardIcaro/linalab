@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina X - Clientes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #0066cc; --success: #28a745; --danger: #dc3545; --light: #f8f9fa; --dark: #333;
+      --border: #ddd; --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--light); color: var(--dark); }
+    .header-funcionario { background: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; border-bottom: 2px solid var(--primary); }
+    .header-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+    .logo { width: 40px; height: 40px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+    .page-info h1 { font-size: 16px; font-weight: 600; margin: 0; }
+    .page-info p { font-size: 12px; color: #666; margin: 0; }
+    .icon-btn { background: none; border: none; font-size: 20px; color: var(--dark); cursor: pointer; padding: 8px 12px; border-radius: 6px; transition: all 0.3s; }
+    .icon-btn:hover { background: var(--light); color: var(--primary); }
+    .main-container { max-width: 1200px; margin: 0 auto; padding: 20px; padding-bottom: 100px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .section-title { font-size: 18px; font-weight: 600; }
+    .clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+    .client-card { background: white; padding: 20px; border-radius: 12px; box-shadow: var(--shadow); transition: all 0.3s; cursor: pointer; }
+    .client-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .client-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .client-info { font-size: 13px; color: #666; margin: 4px 0; }
+    .client-info i { width: 20px; color: var(--primary); }
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-state i { font-size: 64px; color: #ddd; margin-bottom: 20px; display: block; }
+    .empty-state h2 { font-size: 20px; color: var(--dark); margin-bottom: 8px; }
+    .loading-container { text-align: center; padding: 60px 20px; }
+    .spinner { border: 4px solid var(--light); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .menu-dropdown { display: none; position: fixed; bottom: 80px; right: 20px; background: white; border-radius: 8px; box-shadow: var(--shadow); min-width: 200px; z-index: 999; }
+    .menu-dropdown.active { display: block; }
+    .menu-dropdown a, .menu-dropdown button { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--dark); text-decoration: none; border: none; background: none; width: 100%; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--light); color: var(--primary); }
+    .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 998; }
+    .overlay.active { display: block; }
+    .mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; height: 70px; z-index: 999; box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #666; font-size: 11px; gap: 4px; transition: all 0.3s; border: none; background: none; cursor: pointer; border-top: 3px solid transparent; }
+    .nav-item:hover { color: var(--primary); }
+    .nav-item.active { color: var(--primary); border-top-color: var(--primary); }
+    .nav-item i { font-size: 24px; }
+    .toast { position: fixed; bottom: 100px; left: 20px; right: 20px; max-width: 400px; background: white; padding: 16px; border-radius: 8px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 1001; transform: translateY(120px); transition: transform 0.3s ease; }
+    .toast.show { transform: translateY(0); }
+    .toast-success { border-left: 4px solid var(--success); }
+    .toast-error { border-left: 4px solid var(--danger); }
+    @media (max-width: 768px) { .main-container { padding: 16px; padding-bottom: 100px; } .clients-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="header"></div>
+  <div id="menu"></div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <main class="main-container">
+    <div class="section-header">
+      <h1 class="section-title">Clientes</h1>
+    </div>
+    <div id="content"></div>
+  </main>
+
+  <nav id="mobileNav"></nav>
+
+  <script src="../api.js"></script>
+  <script src="utils-funcionario.js"></script>
+  <script>
+    const PAGE_TITLE = 'Clientes';
+    const PAGE_ACTIVE = 'clientes';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!validateFuncionarioAccess()) return;
+      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
+      document.getElementById('menu').innerHTML = createFuncionarioMenu();
+      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+      loadUserInfo();
+      await loadClientes();
+    });
+
+    async function loadClientes() {
+      const content = document.getElementById('content');
+      try {
+        content.innerHTML = createLoading();
+        const response = await window.api.getClientes(1, 100);
+        const clientes = response.data || response.clientes || [];
+
+        if (clientes.length === 0) {
+          content.innerHTML = createEmptyState('fa-users', 'Nenhum cliente', 'Você ainda não tem clientes cadastrados.');
+          return;
+        }
+
+        let html = '<div class="clients-grid">';
+        clientes.forEach(cliente => {
+          html += `
+            <div class="client-card">
+              <div class="client-name"><i class="fas fa-user"></i> ${cliente.nome}</div>
+              ${cliente.telefone ? `<div class="client-info"><i class="fas fa-phone"></i> ${formatPhone(cliente.telefone)}</div>` : ''}
+              ${cliente.email ? `<div class="client-info"><i class="fas fa-envelope"></i> ${cliente.email}</div>` : ''}
+              <div class="client-info"><i class="fas fa-calendar"></i> ${cliente.veiculo ? cliente.veiculo.length + ' veículo(s)' : '0 veículos'}</div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        content.innerHTML = html;
+      } catch (error) {
+        console.error('Erro:', error);
+        content.innerHTML = createEmptyState('fa-exclamation-triangle', 'Erro', 'Erro ao carregar clientes. Tente novamente.', 'Tentar', 'loadClientes()');
+      }
+    }
+  </script>
+</body>
+</html>

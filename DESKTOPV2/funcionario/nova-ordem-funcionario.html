@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina X - Nova Ordem</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066cc;
+      --success: #28a745;
+      --danger: #dc3545;
+      --light: #f8f9fa;
+      --dark: #333;
+      --border: #ddd;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    /* HEADER */
+    .header-funcionario {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .logo-link {
+      text-decoration: none;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+
+    .page-info h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .page-info p {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--dark);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .icon-btn:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    /* MAIN */
+    .main-container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .form-card h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--dark);
+    }
+
+    .form-card h2 i {
+      color: var(--primary);
+      font-size: 18px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--dark);
+    }
+
+    label .required {
+      color: var(--danger);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.3s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* BUTTONS */
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+    }
+
+    .btn-secondary {
+      background: var(--light);
+      color: var(--dark);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #e9ecef;
+    }
+
+    /* LOADING */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 4px solid var(--light);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* MENU */
+    .menu-dropdown {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 200px;
+      z-index: 999;
+    }
+
+    .menu-dropdown.active {
+      display: block;
+    }
+
+    .menu-dropdown a,
+    .menu-dropdown button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--dark);
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .menu-dropdown a:hover,
+    .menu-dropdown button:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    /* OVERLAY */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    /* MOBILE NAV */
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      height: 70px;
+      z-index: 999;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #666;
+      font-size: 11px;
+      gap: 4px;
+      transition: all 0.3s;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-top: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      border-top-color: var(--primary);
+    }
+
+    .nav-item i {
+      font-size: 24px;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 20px;
+      right: 20px;
+      max-width: 400px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1001;
+      transform: translateY(120px);
+      transition: transform 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast-success i {
+      color: var(--success);
+    }
+
+    .toast-error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .toast-error i {
+      color: var(--danger);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 16px;
+        padding-bottom: 100px;
+      }
+
+      .form-card {
+        padding: 16px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div id="header"></div>
+
+  <!-- MENU -->
+  <div id="menu"></div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-container">
+    <form id="ordemForm" onsubmit="handleSubmit(event)">
+      <!-- CLIENTE -->
+      <div class="form-card">
+        <h2><i class="fas fa-user"></i> Dados do Cliente</h2>
+
+        <div class="form-group">
+          <label for="clienteId">Selecione o Cliente <span class="required">*</span></label>
+          <select id="clienteId" required>
+            <option value="">-- Selecione um cliente --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="novoCliente">Ou criar novo cliente</label>
+          <input type="text" id="novoCliente" placeholder="Digite o nome do novo cliente">
+        </div>
+      </div>
+
+      <!-- VEÍCULO -->
+      <div class="form-card">
+        <h2><i class="fas fa-car"></i> Veículo</h2>
+
+        <div class="form-group">
+          <label for="veiculoId">Veículo <span class="required">*</span></label>
+          <select id="veiculoId" required>
+            <option value="">-- Selecione o veículo --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="novoVeiculo">Ou registrar novo veículo</label>
+          <input type="text" id="novoVeiculo" placeholder="Placa do veículo (ex: ABC1234)">
+        </div>
+      </div>
+
+      <!-- SERVIÇOS -->
+      <div class="form-card">
+        <h2><i class="fas fa-broom"></i> Serviços</h2>
+
+        <div id="servicosContainer">
+          <div class="form-group">
+            <label for="servico0">Serviço <span class="required">*</span></label>
+            <select id="servico0" required onchange="updateServicos()">
+              <option value="">-- Selecione um serviço --</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-secondary" onclick="addServicoField()" style="width: 100%; margin-top: 12px;">
+          <i class="fas fa-plus"></i> Adicionar Outro Serviço
+        </button>
+      </div>
+
+      <!-- ADICIONAIS -->
+      <div class="form-card">
+        <h2><i class="fas fa-plus-circle"></i> Adicionais</h2>
+
+        <div id="adicionaisContainer"></div>
+
+        <button type="button" class="btn btn-secondary" onclick="addAdicionalField()" style="width: 100%; margin-top: 12px;">
+          <i class="fas fa-plus"></i> Adicionar Adicional
+        </button>
+      </div>
+
+      <!-- PAGAMENTO -->
+      <div class="form-card">
+        <h2><i class="fas fa-credit-card"></i> Forma de Pagamento</h2>
+
+        <div class="form-group">
+          <label for="metodoPagamento">Método de Pagamento <span class="required">*</span></label>
+          <select id="metodoPagamento" required>
+            <option value="">-- Selecione --</option>
+            <option value="DINHEIRO">Dinheiro</option>
+            <option value="CARTAO">Cartão</option>
+            <option value="PIX">PIX</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- OBSERVAÇÕES -->
+      <div class="form-card">
+        <h2><i class="fas fa-note-sticky"></i> Observações</h2>
+
+        <div class="form-group">
+          <label for="observacoes">Observações</label>
+          <textarea id="observacoes" placeholder="Alguma observação sobre a ordem?"></textarea>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="form-card">
+        <h2><i class="fas fa-calculator"></i> Resumo</h2>
+
+        <div style="display: grid; gap: 12px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Subtotal:</span>
+            <strong id="subtotal">R$ 0,00</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border);">
+            <span style="font-weight: 600;">Total:</span>
+            <strong style="color: var(--primary); font-size: 18px;" id="total">R$ 0,00</strong>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i> Voltar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-check"></i> Criar Ordem
+          </button>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <!-- MOBILE NAV -->
+  <nav id="mobileNav"></nav>
+
+  <!-- SCRIPTS -->
+  <script src="../api.js"></script>
+  <script src="utils-funcionario.js"></script>
+
+  <script>
+    // PAGE CONFIGURATION
+    const PAGE_TITLE = 'Nova Ordem';
+    const PAGE_ACTIVE = 'ordens';
+
+    let servicosCount = 1;
+    let adicionaisCount = 0;
+    let clientes = [];
+    let servicos = [];
+    let adicionais = [];
+
+    // INITIALIZE
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!validateFuncionarioAccess()) return;
+
+      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
+      document.getElementById('menu').innerHTML = createFuncionarioMenu();
+      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+
+      loadUserInfo();
+      await loadClientes();
+      await loadServicos();
+      await loadAdicionais();
+    });
+
+    // LOAD CLIENTES
+    async function loadClientes() {
+      try {
+        const response = await window.api.getClientes(1, 100);
+        clientes = response.data || response.clientes || [];
+
+        const select = document.getElementById('clienteId');
+        clientes.forEach(cliente => {
+          const option = document.createElement('option');
+          option.value = cliente.id;
+          option.textContent = cliente.nome;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+      }
+    }
+
+    // LOAD SERVIÇOS
+    async function loadServicos() {
+      try {
+        const response = await window.api.getServicos();
+        servicos = response.data || response.servicos || [];
+
+        const select = document.getElementById('servico0');
+        servicos.forEach(servico => {
+          const option = document.createElement('option');
+          option.value = servico.id;
+          option.textContent = `${servico.nome} - ${formatCurrency(servico.preco)}`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar serviços:', error);
+      }
+    }
+
+    // LOAD ADICIONAIS
+    async function loadAdicionais() {
+      try {
+        const response = await window.api.getAdicionais();
+        adicionais = response.data || response.adicionais || [];
+      } catch (error) {
+        console.error('Erro ao carregar adicionais:', error);
+      }
+    }
+
+    // ADD SERVIÇO FIELD
+    function addServicoField() {
+      const container = document.getElementById('servicosContainer');
+      const html = `
+        <div class="form-group" id="servicoField${servicosCount}">
+          <label for="servico${servicosCount}">Serviço</label>
+          <div style="display: flex; gap: 8px;">
+            <select id="servico${servicosCount}" style="flex: 1;" onchange="updateServicos()">
+              <option value="">-- Selecione --</option>
+              ${servicos.map(s => `<option value="${s.id}">${s.nome} - ${formatCurrency(s.preco)}</option>`).join('')}
+            </select>
+            <button type="button" class="btn btn-secondary" onclick="removeServicoField(${servicosCount})" style="width: 50px;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+      servicosCount++;
+    }
+
+    // REMOVE SERVIÇO FIELD
+    function removeServicoField(index) {
+      const field = document.getElementById(`servicoField${index}`);
+      if (field) {
+        field.remove();
+        updateServicos();
+      }
+    }
+
+    // ADD ADICIONAL FIELD
+    function addAdicionalField() {
+      const container = document.getElementById('adicionaisContainer');
+      const html = `
+        <div class="form-group" id="adicionalField${adicionaisCount}">
+          <label for="adicional${adicionaisCount}">Adicional</label>
+          <div style="display: flex; gap: 8px;">
+            <select id="adicional${adicionaisCount}" style="flex: 1;" onchange="updateServicos()">
+              <option value="">-- Selecione --</option>
+              ${adicionais.map(a => `<option value="${a.id}">${a.nome} - ${formatCurrency(a.preco)}</option>`).join('')}
+            </select>
+            <button type="button" class="btn btn-secondary" onclick="removeAdicionalField(${adicionaisCount})" style="width: 50px;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+      adicionaisCount++;
+    }
+
+    // REMOVE ADICIONAL FIELD
+    function removeAdicionalField(index) {
+      const field = document.getElementById(`adicionalField${index}`);
+      if (field) {
+        field.remove();
+        updateServicos();
+      }
+    }
+
+    // UPDATE TOTAL
+    function updateServicos() {
+      let total = 0;
+
+      // Serviços
+      for (let i = 0; i < servicosCount; i++) {
+        const select = document.getElementById(`servico${i}`);
+        if (select && select.value) {
+          const servico = servicos.find(s => s.id === select.value);
+          if (servico) total += parseFloat(servico.preco) || 0;
+        }
+      }
+
+      // Adicionais
+      for (let i = 0; i < adicionaisCount; i++) {
+        const select = document.getElementById(`adicional${i}`);
+        if (select && select.value) {
+          const adicional = adicionais.find(a => a.id === select.value);
+          if (adicional) total += parseFloat(adicional.preco) || 0;
+        }
+      }
+
+      document.getElementById('subtotal').textContent = formatCurrency(total);
+      document.getElementById('total').textContent = formatCurrency(total);
+    }
+
+    // HANDLE SUBMIT
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      const clienteId = document.getElementById('clienteId').value;
+      const metodoPagamento = document.getElementById('metodoPagamento').value;
+      const observacoes = document.getElementById('observacoes').value;
+
+      if (!clienteId || !metodoPagamento) {
+        showToast('Preencha todos os campos obrigatórios', 'error');
+        return;
+      }
+
+      try {
+        const servicosIds = [];
+        for (let i = 0; i < servicosCount; i++) {
+          const val = document.getElementById(`servico${i}`)?.value;
+          if (val) servicosIds.push(val);
+        }
+
+        if (servicosIds.length === 0) {
+          showToast('Selecione pelo menos um serviço', 'error');
+          return;
+        }
+
+        const data = {
+          clienteId,
+          servicosIds,
+          metodoPagamento,
+          observacoes
+        };
+
+        const response = await window.api.createOrdem(data);
+        showToast('Ordem criada com sucesso!', 'success');
+
+        setTimeout(() => {
+          window.location.href = 'ordens-funcionario.html';
+        }, 1500);
+
+      } catch (error) {
+        console.error('Erro ao criar ordem:', error);
+        showToast('Erro ao criar ordem. Tente novamente.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
