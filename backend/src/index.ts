@@ -58,7 +58,7 @@ const corsOptions = {
 
     // In production on Railway, Vercel, or custom domain
     if (process.env.FRONTEND_URL) {
-      allowedOrigins.push(process.env.FRONTEND_URL);
+      allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, '')); // remove trailing slash
     }
 
     // Also allow the app's own domain on Vercel
@@ -66,12 +66,15 @@ const corsOptions = {
       allowedOrigins.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
     }
 
-    // Allow requests without origin (mobile apps, Postman, etc)
-    if (!origin || allowedOrigins.includes(origin)) {
+    const isAllowed =
+      !origin ||
+      allowedOrigins.some((o) => origin === o || origin === `${o}/` || origin.startsWith(`${o}-`)); // handles vercel previews
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked origin: ${origin}`);
-      callback(null, true); // Allow for now, can restrict later
+      callback(null, false);
     }
   },
   credentials: true,
