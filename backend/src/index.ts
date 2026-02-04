@@ -145,7 +145,7 @@ app.use('/api/theme', authMiddleware, themeRoutes); // Theme routes (requires em
 app.use('/api/subscriptions', userAuthMiddleware, subscriptionRoutes); // Subscription routes (user authenticated)
 app.use('/api/promotions', promotionRoutes); // Public promotion routes (get active only)
 app.use('/api/payments', paymentRoutes); // Payment routes (webhooks + user auth endpoints)
-app.use('/api/empresas', userAuthMiddleware, requireActiveSubscription, empresaRoutes); // Validates active subscription
+app.use('/api/empresas', userAuthMiddleware, empresaRoutes); // User authenticated
 app.use('/api/clientes', authMiddleware, clienteRoutes); // Usa middleware de empresa
 app.use('/api/veiculos', authMiddleware, veiculoRoutes); // Usa middleware de empresa
 app.use('/api/lavadores', authMiddleware, lavadorRoutes); // Usa middleware de empresa
