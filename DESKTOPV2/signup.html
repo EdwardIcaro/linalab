@@ -830,6 +830,7 @@
                     this.isLoading = true;
 
                     try {
+                        // 1) Cria usuário
                         await fetchApi('/usuarios', {
                             method: 'POST',
                             body: JSON.stringify({
@@ -839,11 +840,24 @@
                             })
                         });
 
-                        showToast('✨ Conta criada com sucesso! Escolha seu plano...', 'success');
+                        // 2) Login automático
+                        const data = await window.api.login(this.email, this.senha);
 
+                        // Persistir dados de sessão (mesma lógica do login)
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('usuarioNome', data.usuario.nome);
+                        const resolvedRole = (data.usuario.role === 'LINA_OWNER')
+                            ? 'LINA_OWNER'
+                            : (data.usuario.empresas && data.usuario.empresas.length > 0 ? 'OWNER' : data.usuario.role);
+                        localStorage.setItem('userRole', resolvedRole);
+                        localStorage.setItem('permissoes', JSON.stringify(data.usuario.permissoes || []));
+
+                        showToast('✨ Conta criada! Vamos criar sua empresa...', 'success');
+
+                        // 3) Ir direto para criação de empresa (primeiro acesso)
                         setTimeout(() => {
-                            window.location.href = 'planos.html';
-                        }, 1500);
+                            window.location.href = 'nova-empresa.html';
+                        }, 1000);
 
                     } catch (error) {
                         console.error('Signup error:', error);

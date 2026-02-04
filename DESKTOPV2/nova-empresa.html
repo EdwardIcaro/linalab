@@ -96,8 +96,23 @@
             const cnpj = document.getElementById('cnpj').value;
 
             try {
-                await window.api.createEmpresa({ nome, cnpj });
-                alert('Empresa criada com sucesso!');
+                const empresa = await window.api.createEmpresa({ nome, cnpj });
+                const empresaId = empresa?.id || empresa?.empresa?.id;
+                const empresaNome = empresa?.nome || empresa?.empresa?.nome || nome;
+
+                // Obter token scoped com a nova empresa e já ir para o dashboard
+                if (empresaId) {
+                    const scoped = await window.api.generateScopedToken(empresaId);
+                    localStorage.setItem('token', scoped.token);
+                    localStorage.setItem('empresaId', scoped.empresa?.id || empresaId);
+                    localStorage.setItem('empresaNome', scoped.empresa?.nome || empresaNome);
+                    alert('Empresa criada com sucesso!');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Fallback se não retornou id: volta para seleção
+                alert('Empresa criada, selecione-a para continuar.');
                 window.location.href = 'selecionar-empresa.html';
             } catch (error) {
                 console.error('Erro ao criar empresa:', error);
