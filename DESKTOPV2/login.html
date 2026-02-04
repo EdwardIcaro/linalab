@@ -930,16 +930,29 @@
                 },
 
                 async handleRedirect(data) {
+                    // Admin (LINA_OWNER)
                     if (data.usuario.role === 'LINA_OWNER') {
                         window.location.href = 'admin/dashboard.html';
                         return;
                     }
 
-                    // FLUXO NORMAL: Todo usuário é criado com plano FREE automaticamente
-                    // Não é necessário checar subscrição - pular direto para criar empresa
+                    // Subaccount (role-based user) - USER com empresaId atribuída
+                    if (data.usuario.role === 'USER' && data.usuario.empresaId) {
+                        localStorage.setItem('empresaId', data.usuario.empresaId);
+                        if (data.usuario.empresaNome) {
+                            localStorage.setItem('empresaNome', data.usuario.empresaNome);
+                        }
+                        // ← NOVO: Redireciona para painel customizado do funcionário
+                        window.location.href = 'index-funcionario.html';
+                        return;
+                    }
 
+                    // Main user (OWNER) - fluxo normal
                     if (data.usuario.empresaId) {
                         localStorage.setItem('empresaId', data.usuario.empresaId);
+                        if (data.usuario.empresaNome) {
+                            localStorage.setItem('empresaNome', data.usuario.empresaNome);
+                        }
                         window.location.href = 'index.html';
                         return;
                     }
