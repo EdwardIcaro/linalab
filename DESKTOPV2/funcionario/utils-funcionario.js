@@ -35,6 +35,12 @@ function createFuncionarioHeader(pageTitle) {
       </div>
 
       <div class="header-right">
+        <a href="../perfil.html" class="icon-btn" title="Meu Perfil">
+          <i class="fas fa-user-circle"></i>
+        </a>
+        <button class="icon-btn" onclick="logout()" title="Sair">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
         <button class="icon-btn" onclick="toggleMenu()" title="Menu">
           <i class="fas fa-ellipsis-v"></i>
         </button>

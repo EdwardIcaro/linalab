@@ -1,733 +1,1788 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lina X - Nova Ordem</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinaX - Nova Ordem</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js via CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+    <style>
+        /* ==========================================
+           CSS VARIABLES & RESET
+           ========================================== */
+        :root {
+            --wizard-primary: #00bcd4;
+            --wizard-primary-dark: #0097a7;
+            --wizard-primary-light: rgba(0, 188, 212, 0.1);
+            --wizard-success: #10b981;
+            --wizard-warning: #f59e0b;
+            --wizard-danger: #ef4444;
+            --wizard-bg: #f8fafc;
+            --wizard-card: #ffffff;
+            --wizard-text: #1e293b;
+            --wizard-text-light: #64748b;
+            --wizard-border: #e2e8f0;
+            --wizard-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --wizard-shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --wizard-radius: 16px;
+            --wizard-radius-sm: 12px;
+        }
 
-    :root {
-      --primary: #0066cc;
-      --success: #28a745;
-      --danger: #dc3545;
-      --light: #f8f9fa;
-      --dark: #333;
-      --border: #ddd;
-      --shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+        /* Alpine.js cloak */
+        [x-cloak] { display: none !important; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--light);
-      color: var(--dark);
-    }
+        /* ==========================================
+           PROGRESS BAR
+           ========================================== */
+        .wizard-progress {
+            background: var(--wizard-card);
+            border-bottom: 1px solid var(--wizard-border);
+            padding: 16px 24px;
+            position: sticky;
+            top: 60px;
+            z-index: 50;
+        }
 
-    /* HEADER */
-    .header-funcionario {
-      background: white;
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--shadow);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      border-bottom: 2px solid var(--primary);
-    }
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-    }
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--wizard-text-light);
+            background: var(--wizard-bg);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
 
-    .logo-link {
-      text-decoration: none;
-    }
+        .progress-step.active {
+            background: var(--wizard-primary-light);
+            color: var(--wizard-primary-dark);
+            border-color: var(--wizard-primary);
+        }
 
-    .logo {
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-    }
+        .progress-step.completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--wizard-success);
+        }
 
-    .page-info h1 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-    }
+        .progress-step-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--wizard-border);
+            color: var(--wizard-text-light);
+        }
 
-    .page-info p {
-      font-size: 12px;
-      color: #666;
-      margin: 0;
-    }
+        .progress-step.active .progress-step-number {
+            background: var(--wizard-primary);
+            color: white;
+        }
 
-    .icon-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      color: var(--dark);
-      cursor: pointer;
-      padding: 8px 12px;
-      border-radius: 6px;
-      transition: all 0.3s;
-    }
+        /* ==========================================
+           MAIN WIZARD CONTAINER
+           ========================================== */
+        .wizard-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--wizard-bg);
+            min-height: 100vh;
+            padding: 24px;
+        }
 
-    .icon-btn:hover {
-      background: var(--light);
-      color: var(--primary);
-    }
+        .wizard-steps {
+            background: var(--wizard-card);
+            border-radius: var(--wizard-radius);
+            box-shadow: var(--wizard-shadow-lg);
+            overflow: hidden;
+        }
 
-    /* MAIN */
-    .main-container {
-      max-width: 700px;
-      margin: 0 auto;
-      padding: 20px;
-      padding-bottom: 100px;
-    }
+        .wizard-step {
+            padding: 40px;
+            animation: fadeIn 0.3s ease;
+        }
 
-    .form-card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-      margin-bottom: 20px;
-    }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
-    .form-card h2 {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--dark);
-    }
+        /* ==========================================
+           STEP 1: IDENTIFICATION - SMART SEARCH
+           ========================================== */
+        .smart-search-box {
+            position: relative;
+            margin-bottom: 32px;
+        }
 
-    .form-card h2 i {
-      color: var(--primary);
-      font-size: 18px;
-    }
+        .search-input-wrapper {
+            position: relative;
+        }
 
-    .form-group {
-      margin-bottom: 16px;
-    }
+        .smart-search-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            border: 2px solid var(--wizard-border);
+            border-radius: var(--wizard-radius-sm);
+            transition: all 0.3s ease;
+            background: white;
+        }
 
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--dark);
-    }
+        .smart-search-input:focus {
+            outline: none;
+            border-color: var(--wizard-primary);
+            box-shadow: 0 0 0 3px var(--wizard-primary-light);
+        }
 
-    label .required {
-      color: var(--danger);
-    }
+        .search-spinner {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--wizard-border);
+            border-top-color: var(--wizard-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
 
-    input,
-    select,
-    textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-      font-family: inherit;
-      transition: all 0.3s;
-    }
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
 
-    input:focus,
-    select:focus,
-    textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
-    }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--wizard-card);
+            border: 2px solid var(--wizard-border);
+            border-top: none;
+            border-radius: 0 0 var(--wizard-radius-sm) var(--wizard-radius-sm);
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
 
-    textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
+        .search-result-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--wizard-border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
+        .search-result-item:hover {
+            background: var(--wizard-primary-light);
+        }
 
-    /* BUTTONS */
-    .form-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-    }
+        .search-result-item.new {
+            background: rgba(16, 185, 129, 0.05);
+        }
 
-    .btn {
-      padding: 10px 20px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.3s;
-    }
+        .search-result-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
 
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
+        .search-result-content {
+            flex: 1;
+        }
 
-    .btn-primary:hover {
-      background: #0052a3;
-    }
+        .search-result-title {
+            font-weight: 600;
+            color: var(--wizard-text);
+            margin-bottom: 2px;
+        }
 
-    .btn-secondary {
-      background: var(--light);
-      color: var(--dark);
-      border: 1px solid var(--border);
-    }
+        .search-result-subtitle {
+            font-size: 13px;
+            color: var(--wizard-text-light);
+        }
 
-    .btn-secondary:hover {
-      background: #e9ecef;
-    }
+        /* ==========================================
+           VEHICLE TYPE & CATEGORY SELECTION
+           ========================================== */
+        .vehicle-type-section {
+            margin-bottom: 32px;
+        }
 
-    /* LOADING */
-    .loading-container {
-      text-align: center;
-      padding: 60px 20px;
-    }
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--wizard-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-    .spinner {
-      border: 4px solid var(--light);
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
+        .vehicle-type-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+        .vehicle-type-card {
+            padding: 16px;
+            border: 2px solid var(--wizard-border);
+            border-radius: var(--wizard-radius-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
 
-    /* MENU */
-    .menu-dropdown {
-      display: none;
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      min-width: 200px;
-      z-index: 999;
-    }
+        .vehicle-type-card:hover {
+            border-color: var(--wizard-primary);
+        }
 
-    .menu-dropdown.active {
-      display: block;
-    }
+        .vehicle-type-card.selected {
+            background: var(--wizard-primary-light);
+            border-color: var(--wizard-primary);
+        }
 
-    .menu-dropdown a,
-    .menu-dropdown button {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      color: var(--dark);
-      text-decoration: none;
-      border: none;
-      background: none;
-      width: 100%;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.3s;
-    }
+        .vehicle-type-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            color: var(--wizard-text);
+        }
 
-    .menu-dropdown a:hover,
-    .menu-dropdown button:hover {
-      background: var(--light);
-      color: var(--primary);
-    }
+        .vehicle-type-card.selected .vehicle-type-icon {
+            color: var(--wizard-primary);
+        }
 
-    /* OVERLAY */
-    .overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 998;
-    }
+        .vehicle-type-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--wizard-text);
+        }
 
-    .overlay.active {
-      display: block;
-    }
+        .vehicle-category-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
 
-    /* MOBILE NAV */
-    .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-around;
-      height: 70px;
-      z-index: 999;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-    }
+        @media (max-width: 640px) {
+            .vehicle-category-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
 
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      color: #666;
-      font-size: 11px;
-      gap: 4px;
-      transition: all 0.3s;
-      border: none;
-      background: none;
-      cursor: pointer;
-      border-top: 3px solid transparent;
-    }
+        .category-btn {
+            padding: 12px;
+            border: 2px solid var(--wizard-border);
+            border-radius: var(--wizard-radius-sm);
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 600;
+        }
 
-    .nav-item:hover {
-      color: var(--primary);
-    }
+        .category-btn:hover {
+            border-color: var(--wizard-primary);
+        }
 
-    .nav-item.active {
-      color: var(--primary);
-      border-top-color: var(--primary);
-    }
+        .category-btn.selected {
+            background: var(--wizard-primary);
+            color: white;
+            border-color: var(--wizard-primary);
+        }
 
-    .nav-item i {
-      font-size: 24px;
-    }
+        /* ==========================================
+           QUICK REGISTER SECTION
+           ========================================== */
+        .quick-register-section {
+            background: var(--wizard-bg);
+            padding: 24px;
+            border-radius: var(--wizard-radius-sm);
+            margin-bottom: 24px;
+        }
 
-    /* TOAST */
-    .toast {
-      position: fixed;
-      bottom: 100px;
-      left: 20px;
-      right: 20px;
-      max-width: 400px;
-      background: white;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      z-index: 1001;
-      transform: translateY(120px);
-      transition: transform 0.3s ease;
-    }
+        .form-group {
+            margin-bottom: 16px;
+        }
 
-    .toast.show {
-      transform: translateY(0);
-    }
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
 
-    .toast-success {
-      border-left: 4px solid var(--success);
-    }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--wizard-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
 
-    .toast-success i {
-      color: var(--success);
-    }
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--wizard-border);
+            border-radius: var(--wizard-radius-sm);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
 
-    .toast-error {
-      border-left: 4px solid var(--danger);
-    }
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--wizard-primary);
+            box-shadow: 0 0 0 3px var(--wizard-primary-light);
+        }
 
-    .toast-error i {
-      color: var(--danger);
-    }
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
 
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      .main-container {
-        padding: 16px;
-        padding-bottom: 100px;
-      }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
 
-      .form-card {
-        padding: 16px;
-      }
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
 
-      .form-row {
-        grid-template-columns: 1fr;
-      }
+        .required-marker {
+            color: var(--wizard-danger);
+        }
 
-      .form-actions {
-        flex-direction: column;
-      }
+        /* ==========================================
+           STEP 2: SERVICE SELECTION
+           ========================================== */
+        .services-section {
+            margin-bottom: 40px;
+        }
 
-      .btn {
-        width: 100%;
-      }
-    }
-  </style>
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .service-card {
+            padding: 16px;
+            border: 2px solid var(--wizard-border);
+            border-radius: var(--wizard-radius-sm);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            position: relative;
+            text-align: center;
+        }
+
+        .service-card:hover {
+            border-color: var(--wizard-primary);
+            box-shadow: var(--wizard-shadow);
+        }
+
+        .service-card.selected {
+            background: var(--wizard-primary-light);
+            border-color: var(--wizard-primary);
+        }
+
+        .service-check {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--wizard-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .service-card.selected .service-check {
+            opacity: 1;
+        }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--wizard-text);
+            margin-bottom: 8px;
+        }
+
+        .service-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--wizard-primary);
+        }
+
+        .service-duration {
+            font-size: 12px;
+            color: var(--wizard-text-light);
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .details-section {
+            background: var(--wizard-bg);
+            padding: 24px;
+            border-radius: var(--wizard-radius-sm);
+        }
+
+        /* ==========================================
+           STEP 3: REVIEW
+           ========================================== */
+        .review-section {
+            padding: 20px;
+            border: 2px solid var(--wizard-border);
+            border-radius: var(--wizard-radius-sm);
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        .review-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .review-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .review-icon.client {
+            background: rgba(0, 188, 212, 0.1);
+            color: var(--wizard-primary);
+        }
+
+        .review-icon.vehicle {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--wizard-warning);
+        }
+
+        .review-icon.services {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--wizard-success);
+        }
+
+        .review-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--wizard-text);
+            margin-bottom: 4px;
+        }
+
+        .review-subtitle {
+            font-size: 14px;
+            color: var(--wizard-text-light);
+        }
+
+        .review-items {
+            background: var(--wizard-bg);
+            border-radius: var(--wizard-radius-sm);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .review-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--wizard-border);
+            font-size: 14px;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+        .review-item-name {
+            color: var(--wizard-text);
+            font-weight: 500;
+        }
+
+        .review-item-price {
+            color: var(--wizard-primary);
+            font-weight: 700;
+        }
+
+        .review-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--wizard-primary-light);
+            border-radius: var(--wizard-radius-sm);
+            margin-top: 16px;
+        }
+
+        .review-total-label {
+            font-weight: 600;
+            color: var(--wizard-text);
+        }
+
+        .review-total-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--wizard-primary);
+        }
+
+        /* ==========================================
+           BUTTONS & ACTIONS
+           ========================================== */
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 24px 40px;
+            border-top: 1px solid var(--wizard-border);
+            background: white;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--wizard-radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+        }
+
+        .btn-secondary {
+            background: var(--wizard-bg);
+            color: var(--wizard-text);
+            border: 2px solid var(--wizard-border);
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            border-color: var(--wizard-text-light);
+        }
+
+        .btn-primary {
+            background: var(--wizard-primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--wizard-primary-dark);
+            box-shadow: var(--wizard-shadow-lg);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: var(--wizard-success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--wizard-danger);
+            color: white;
+        }
+
+        /* ==========================================
+           SUCCESS MODAL
+           ========================================== */
+        .success-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .success-modal-content {
+            background: white;
+            border-radius: var(--wizard-radius);
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: var(--wizard-success);
+            margin: 0 auto 20px;
+        }
+
+        .success-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--wizard-text);
+            margin-bottom: 8px;
+        }
+
+        .success-subtitle {
+            font-size: 14px;
+            color: var(--wizard-text-light);
+            margin-bottom: 24px;
+        }
+
+        /* ==========================================
+           EMPTY STATE & LOADING
+           ========================================== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--wizard-text-light);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+        @media (max-width: 768px) {
+            .wizard-container {
+                padding: 12px;
+            }
+
+            .wizard-step {
+                padding: 20px;
+            }
+
+            .wizard-actions {
+                padding: 16px 20px;
+                flex-direction: column-reverse;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .progress-steps {
+                flex-wrap: wrap;
+            }
+
+            .search-results {
+                max-height: 300px;
+            }
+        }
+    </style>
 </head>
-<body>
-  <!-- HEADER -->
-  <div id="header"></div>
-
-  <!-- MENU -->
-  <div id="menu"></div>
-  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
-
-  <!-- MAIN CONTENT -->
-  <main class="main-container">
-    <form id="ordemForm" onsubmit="handleSubmit(event)">
-      <!-- CLIENTE -->
-      <div class="form-card">
-        <h2><i class="fas fa-user"></i> Dados do Cliente</h2>
-
-        <div class="form-group">
-          <label for="clienteId">Selecione o Cliente <span class="required">*</span></label>
-          <select id="clienteId" required>
-            <option value="">-- Selecione um cliente --</option>
-          </select>
+<body x-cloak x-data="orderWizard()" @init="init()" class="theme-light">
+    <header class="navbar" style="position: sticky; top: 0; z-index: 100; background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 20px; display: flex; align-items: center; gap: 12px; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="../index-funcionario.html" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #f1f5f9; border-radius: 8px; color: #0066cc; font-size: 18px;">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 style="font-size: 18px; font-weight: 700; color: #1e293b;">Nova Ordem</h1>
+                <p style="font-size: 12px; color: #64748b; margin-top: 2px;" x-text="empresaNome">Carregando...</p>
+            </div>
         </div>
-
-        <div class="form-group">
-          <label for="novoCliente">Ou criar novo cliente</label>
-          <input type="text" id="novoCliente" placeholder="Digite o nome do novo cliente">
-        </div>
-      </div>
-
-      <!-- VEÍCULO -->
-      <div class="form-card">
-        <h2><i class="fas fa-car"></i> Veículo</h2>
-
-        <div class="form-group">
-          <label for="veiculoId">Veículo <span class="required">*</span></label>
-          <select id="veiculoId" required>
-            <option value="">-- Selecione o veículo --</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="novoVeiculo">Ou registrar novo veículo</label>
-          <input type="text" id="novoVeiculo" placeholder="Placa do veículo (ex: ABC1234)">
-        </div>
-      </div>
-
-      <!-- SERVIÇOS -->
-      <div class="form-card">
-        <h2><i class="fas fa-broom"></i> Serviços</h2>
-
-        <div id="servicosContainer">
-          <div class="form-group">
-            <label for="servico0">Serviço <span class="required">*</span></label>
-            <select id="servico0" required onchange="updateServicos()">
-              <option value="">-- Selecione um serviço --</option>
-            </select>
-          </div>
-        </div>
-
-        <button type="button" class="btn btn-secondary" onclick="addServicoField()" style="width: 100%; margin-top: 12px;">
-          <i class="fas fa-plus"></i> Adicionar Outro Serviço
-        </button>
-      </div>
-
-      <!-- ADICIONAIS -->
-      <div class="form-card">
-        <h2><i class="fas fa-plus-circle"></i> Adicionais</h2>
-
-        <div id="adicionaisContainer"></div>
-
-        <button type="button" class="btn btn-secondary" onclick="addAdicionalField()" style="width: 100%; margin-top: 12px;">
-          <i class="fas fa-plus"></i> Adicionar Adicional
-        </button>
-      </div>
-
-      <!-- PAGAMENTO -->
-      <div class="form-card">
-        <h2><i class="fas fa-credit-card"></i> Forma de Pagamento</h2>
-
-        <div class="form-group">
-          <label for="metodoPagamento">Método de Pagamento <span class="required">*</span></label>
-          <select id="metodoPagamento" required>
-            <option value="">-- Selecione --</option>
-            <option value="DINHEIRO">Dinheiro</option>
-            <option value="CARTAO">Cartão</option>
-            <option value="PIX">PIX</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- OBSERVAÇÕES -->
-      <div class="form-card">
-        <h2><i class="fas fa-note-sticky"></i> Observações</h2>
-
-        <div class="form-group">
-          <label for="observacoes">Observações</label>
-          <textarea id="observacoes" placeholder="Alguma observação sobre a ordem?"></textarea>
-        </div>
-      </div>
-
-      <!-- SUMMARY -->
-      <div class="form-card">
-        <h2><i class="fas fa-calculator"></i> Resumo</h2>
-
-        <div style="display: grid; gap: 12px; margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Subtotal:</span>
-            <strong id="subtotal">R$ 0,00</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border);">
-            <span style="font-weight: 600;">Total:</span>
-            <strong style="color: var(--primary); font-size: 18px;" id="total">R$ 0,00</strong>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="window.history.back()">
-            <i class="fas fa-arrow-left"></i> Voltar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-check"></i> Criar Ordem
-          </button>
-        </div>
-      </div>
-    </form>
-  </main>
-
-  <!-- MOBILE NAV -->
-  <nav id="mobileNav"></nav>
-
-  <!-- SCRIPTS -->
-  <script src="../api.js"></script>
-  <script src="utils-funcionario.js"></script>
-
-  <script>
-    // PAGE CONFIGURATION
-    const PAGE_TITLE = 'Nova Ordem';
-    const PAGE_ACTIVE = 'ordens';
-
-    let servicosCount = 1;
-    let adicionaisCount = 0;
-    let clientes = [];
-    let servicos = [];
-    let adicionais = [];
-
-    // INITIALIZE
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!validateFuncionarioAccess()) return;
-
-      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
-      document.getElementById('menu').innerHTML = createFuncionarioMenu();
-      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
-
-      loadUserInfo();
-      await loadClientes();
-      await loadServicos();
-      await loadAdicionais();
-    });
-
-    // LOAD CLIENTES
-    async function loadClientes() {
-      try {
-        const response = await window.api.getClientes(1, 100);
-        clientes = response.data || response.clientes || [];
-
-        const select = document.getElementById('clienteId');
-        clientes.forEach(cliente => {
-          const option = document.createElement('option');
-          option.value = cliente.id;
-          option.textContent = cliente.nome;
-          select.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Erro ao carregar clientes:', error);
-      }
-    }
-
-    // LOAD SERVIÇOS
-    async function loadServicos() {
-      try {
-        const response = await window.api.getServicos();
-        servicos = response.data || response.servicos || [];
-
-        const select = document.getElementById('servico0');
-        servicos.forEach(servico => {
-          const option = document.createElement('option');
-          option.value = servico.id;
-          option.textContent = `${servico.nome} - ${formatCurrency(servico.preco)}`;
-          select.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Erro ao carregar serviços:', error);
-      }
-    }
-
-    // LOAD ADICIONAIS
-    async function loadAdicionais() {
-      try {
-        const response = await window.api.getAdicionais();
-        adicionais = response.data || response.adicionais || [];
-      } catch (error) {
-        console.error('Erro ao carregar adicionais:', error);
-      }
-    }
-
-    // ADD SERVIÇO FIELD
-    function addServicoField() {
-      const container = document.getElementById('servicosContainer');
-      const html = `
-        <div class="form-group" id="servicoField${servicosCount}">
-          <label for="servico${servicosCount}">Serviço</label>
-          <div style="display: flex; gap: 8px;">
-            <select id="servico${servicosCount}" style="flex: 1;" onchange="updateServicos()">
-              <option value="">-- Selecione --</option>
-              ${servicos.map(s => `<option value="${s.id}">${s.nome} - ${formatCurrency(s.preco)}</option>`).join('')}
-            </select>
-            <button type="button" class="btn btn-secondary" onclick="removeServicoField(${servicosCount})" style="width: 50px;">
-              <i class="fas fa-trash"></i>
+        <div style="display: flex; gap: 8px;">
+            <a href="servicos-funcionario.html" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #f1f5f9; border-radius: 8px; color: #0066cc; font-size: 18px; text-decoration: none; cursor: pointer;" title="Serviços">
+                <i class="fas fa-wrench"></i>
+            </a>
+            <button onclick="logout()" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #f1f5f9; border-radius: 8px; color: #0066cc; font-size: 18px; border: none; cursor: pointer;" title="Sair">
+                <i class="fas fa-sign-out-alt"></i>
             </button>
-          </div>
         </div>
-      `;
-      container.insertAdjacentHTML('beforeend', html);
-      servicosCount++;
-    }
+    </header>
 
-    // REMOVE SERVIÇO FIELD
-    function removeServicoField(index) {
-      const field = document.getElementById(`servicoField${index}`);
-      if (field) {
-        field.remove();
-        updateServicos();
-      }
-    }
+    <main class="wizard-container">
+        <!-- Progress Bar -->
+        <div class="wizard-progress">
+            <div class="progress-steps">
+                <div class="progress-step" :class="{ 'active': step === 1, 'completed': step > 1 }" @click="goToStep(1)">
+                    <div class="progress-step-number">1</div>
+                    <span>Identificação</span>
+                </div>
+                <div class="progress-step" :class="{ 'active': step === 2, 'completed': step > 2 }" @click="goToStep(2)" style="pointer-events: none; opacity: 0.5;">
+                    <div class="progress-step-number">2</div>
+                    <span>Serviços</span>
+                </div>
+                <div class="progress-step" :class="{ 'active': step === 3 }" @click="goToStep(3)" style="pointer-events: none; opacity: 0.5;">
+                    <div class="progress-step-number">3</div>
+                    <span>Revisar</span>
+                </div>
+            </div>
+        </div>
 
-    // ADD ADICIONAL FIELD
-    function addAdicionalField() {
-      const container = document.getElementById('adicionaisContainer');
-      const html = `
-        <div class="form-group" id="adicionalField${adicionaisCount}">
-          <label for="adicional${adicionaisCount}">Adicional</label>
-          <div style="display: flex; gap: 8px;">
-            <select id="adicional${adicionaisCount}" style="flex: 1;" onchange="updateServicos()">
-              <option value="">-- Selecione --</option>
-              ${adicionais.map(a => `<option value="${a.id}">${a.nome} - ${formatCurrency(a.preco)}</option>`).join('')}
-            </select>
-            <button type="button" class="btn btn-secondary" onclick="removeAdicionalField(${adicionaisCount})" style="width: 50px;">
-              <i class="fas fa-trash"></i>
+        <!-- Wizard Steps -->
+        <div class="wizard-steps">
+            <!-- ==========================================
+                 STEP 1: IDENTIFICATION
+                 ========================================== -->
+            <div class="wizard-step" x-show="step === 1" x-transition>
+                <!-- Smart Search -->
+                <div class="smart-search-box">
+                    <h2 style="font-size: 18px; font-weight: 700; color: var(--wizard-text); margin-bottom: 16px;">
+                        <i class="fas fa-search" style="margin-right: 8px;"></i>
+                        Buscar Cliente ou Veículo
+                    </h2>
+                    <p style="font-size: 14px; color: var(--wizard-text-light); margin-bottom: 16px;">
+                        Digite a placa do veículo ou o nome do cliente. O sistema irá localizar ou permitir criar novo.
+                    </p>
+
+                    <div class="search-input-wrapper">
+                        <input
+                            type="text"
+                            x-ref="searchInput"
+                            @input.debounce.300ms="performSearch()"
+                            @keydown.enter="handleSearchEnter()"
+                            x-model="searchQuery"
+                            placeholder="Digite placa (ex: ABC1234) ou nome do cliente..."
+                            class="smart-search-input"
+                        >
+                        <div class="search-spinner" x-show="isSearching"></div>
+                    </div>
+
+                    <div class="search-results" x-show="showSearchResults && searchResults.length > 0">
+                        <template x-for="result in searchResults" :key="result.id">
+                            <div class="search-result-item" :class="{ 'new': result.isNew }" @click="selectSearchResult(result)">
+                                <div style="display: flex; align-items: center;">
+                                    <div class="search-result-icon">
+                                        <i :class="result.icon"></i>
+                                    </div>
+                                    <div class="search-result-content">
+                                        <div class="search-result-title" x-text="result.title"></div>
+                                        <div class="search-result-subtitle" x-text="result.subtitle"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Vehicle Type & Category Selection -->
+                <div class="vehicle-type-section">
+                    <div class="section-title">
+                        <i class="fas fa-car"></i>
+                        <span>Tipo de Veículo</span>
+                        <span style="font-weight: 400; color: var(--wizard-text-light); font-size: 13px; margin-left: auto;">
+                            Obrigatório <span class="required-marker">*</span>
+                        </span>
+                    </div>
+
+                    <div class="vehicle-type-grid">
+                        <div
+                            class="vehicle-type-card"
+                            :class="{ 'selected': vehicleType === 'CARRO' }"
+                            @click="selectVehicleType('CARRO')"
+                        >
+                            <div class="vehicle-type-icon">🚗</div>
+                            <div class="vehicle-type-name">Carro</div>
+                        </div>
+                        <div
+                            class="vehicle-type-card"
+                            :class="{ 'selected': vehicleType === 'MOTO' }"
+                            @click="selectVehicleType('MOTO')"
+                        >
+                            <div class="vehicle-type-icon">🏍️</div>
+                            <div class="vehicle-type-name">Moto</div>
+                        </div>
+                    </div>
+
+                    <template x-if="vehicleType === 'CARRO'">
+                        <div>
+                            <div class="section-title" style="margin-top: 24px; margin-bottom: 16px;">
+                                <i class="fas fa-list"></i>
+                                <span>Categoria do Carro</span>
+                            </div>
+                            <div class="vehicle-category-grid">
+                                <button
+                                    type="button"
+                                    class="category-btn"
+                                    :class="{ 'selected': vehicleCategory === 'HATCH' }"
+                                    @click="selectVehicleCategory('HATCH')"
+                                >
+                                    Hatch
+                                </button>
+                                <button
+                                    type="button"
+                                    class="category-btn"
+                                    :class="{ 'selected': vehicleCategory === 'SEDAN' }"
+                                    @click="selectVehicleCategory('SEDAN')"
+                                >
+                                    Sedan
+                                </button>
+                                <button
+                                    type="button"
+                                    class="category-btn"
+                                    :class="{ 'selected': vehicleCategory === 'SUV' }"
+                                    @click="selectVehicleCategory('SUV')"
+                                >
+                                    SUV
+                                </button>
+                                <button
+                                    type="button"
+                                    class="category-btn"
+                                    :class="{ 'selected': vehicleCategory === 'PICKUP' }"
+                                    @click="selectVehicleCategory('PICKUP')"
+                                >
+                                    Pick-up
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Quick Register Section -->
+                <div class="quick-register-section" x-show="!client || !vehicle">
+                    <div class="section-title">
+                        <i class="fas fa-edit"></i>
+                        <span x-text="client ? 'Informações do Veículo' : 'Informações do Cliente e Veículo'"></span>
+                    </div>
+
+                    <div class="form-row" x-show="!client">
+                        <div class="form-group">
+                            <label class="form-label">Nome do Cliente</label>
+                            <input
+                                type="text"
+                                x-model="quickRegister.clientName"
+                                placeholder="Ex: João Silva"
+                                class="form-input"
+                                x-ref="quickRegisterName"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Telefone (Opcional)</label>
+                            <input
+                                type="tel"
+                                x-model="quickRegister.clientPhone"
+                                placeholder="(11) 98765-4321"
+                                class="form-input"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Placa do Veículo <span class="required-marker">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            x-model="quickRegister.vehiclePlate"
+                            placeholder="Ex: ABC1234"
+                            class="form-input"
+                            @input="syncQuickRegister()"
+                        >
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Modelo do Veículo (Opcional)</label>
+                            <input
+                                type="text"
+                                x-model="quickRegister.vehicleModel"
+                                placeholder="Ex: Honda Civic"
+                                class="form-input"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cor (Opcional)</label>
+                            <input
+                                type="text"
+                                x-model="quickRegister.vehicleColor"
+                                placeholder="Ex: Preto"
+                                class="form-input"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input
+                                type="checkbox"
+                                x-model="semPlaca"
+                            >
+                            <span style="font-size: 14px; color: var(--wizard-text);">Veículo sem placa (carro novo, etc)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 STEP 2: SERVICE SELECTION
+                 ========================================== -->
+            <div class="wizard-step" x-show="step === 2" x-transition>
+                <!-- Main Service -->
+                <div class="services-section">
+                    <div class="section-title">
+                        <i class="fas fa-soap"></i>
+                        <span>Serviço Principal</span>
+                        <span style="font-weight: 400; color: var(--wizard-text-light); font-size: 13px; margin-left: auto;">
+                            Selecione um serviço
+                        </span>
+                    </div>
+
+                    <!-- Loading Skeleton -->
+                    <div class="services-grid" x-show="isLoadingServices">
+                        <template x-for="i in 4" :key="'skel-' + i">
+                            <div class="service-card" style="pointer-events: none;">
+                                <div class="skeleton" style="height: 18px; width: 70%; margin-bottom: 12px;"></div>
+                                <div class="skeleton" style="height: 28px; width: 50%;"></div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Services Grid -->
+                    <div class="services-grid" x-show="!isLoadingServices">
+                        <template x-if="filteredServices.length === 0">
+                            <div class="empty-state" style="grid-column: 1 / -1;">
+                                <i class="fas fa-inbox"></i>
+                                <p>Nenhum serviço disponível para esta categoria</p>
+                            </div>
+                        </template>
+
+                        <template x-for="service in filteredServices" :key="service.id">
+                            <div
+                                class="service-card"
+                                :class="{ 'selected': selectedService?.id === service.id }"
+                                @click="selectService(service)"
+                            >
+                                <div class="service-check">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="service-name" x-text="service.nome"></div>
+                                <div class="service-price" x-text="formatCurrency(getServicePrice(service))"></div>
+                                <div class="service-duration" x-show="service.duracao">
+                                    <i class="fas fa-clock"></i>
+                                    <span x-text="service.duracao + ' min'"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Additionals -->
+                <div class="services-section">
+                    <div class="section-title">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Adicionais</span>
+                        <span style="font-weight: 400; color: var(--wizard-text-light); font-size: 13px; margin-left: auto;">
+                            Opcional
+                        </span>
+                    </div>
+
+                    <div class="services-grid" x-show="!isLoadingServices">
+                        <template x-if="adicionais.length === 0">
+                            <div class="empty-state" style="grid-column: 1 / -1; padding: 20px;">
+                                <p style="margin: 0;">Nenhum adicional disponível</p>
+                            </div>
+                        </template>
+
+                        <template x-for="adicional in adicionais" :key="adicional.id">
+                            <div
+                                class="service-card"
+                                :class="{ 'selected': selectedAdicionais.some(a => a.id === adicional.id) }"
+                                @click="toggleAdicional(adicional)"
+                            >
+                                <div class="service-check">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="service-name" x-text="adicional.nome"></div>
+                                <div class="service-price" x-text="formatCurrency(adicional.preco)"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Details Section -->
+                <div class="details-section">
+                    <div class="section-title">
+                        <i class="fas fa-cog"></i>
+                        <span>Detalhes Adicionais</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Observações (Opcional)</label>
+                        <textarea
+                            class="form-textarea"
+                            placeholder="Ex: Cliente pediu atenção especial nas rodas..."
+                            x-model="observacoes"
+                        ></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 STEP 3: REVIEW
+                 ========================================== -->
+            <div class="wizard-step" x-show="step === 3" x-transition>
+                <!-- Client Info -->
+                <div class="review-section">
+                    <div class="review-header">
+                        <div class="review-icon client">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="review-title" x-text="client?.nome || quickRegister.clientName || 'Novo Cliente'"></div>
+                            <div class="review-subtitle" x-text="client?.telefone || quickRegister.clientPhone || 'Sem telefone'"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Info -->
+                <div class="review-section">
+                    <div class="review-header">
+                        <div class="review-icon vehicle">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div>
+                            <div class="review-title" x-text="semPlaca ? '🚗 Veículo sem placa' : (vehicle?.placa || quickRegister.vehiclePlate || 'Nova Placa')"></div>
+                            <div class="review-subtitle">
+                                <span x-text="vehicle?.modelo || quickRegister.vehicleModel || 'Modelo não informado'"></span>
+                                <span x-text="' - ' + getCategoryLabel()"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Summary -->
+                <div class="review-section">
+                    <div class="review-header">
+                        <div class="review-icon services">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div>
+                            <div class="review-title">Serviços Selecionados</div>
+                            <div class="review-subtitle" x-text="getItemsCount() + ' item(s)'"></div>
+                        </div>
+                    </div>
+
+                    <div class="review-items">
+                        <!-- Main Service -->
+                        <div class="review-item" x-show="selectedService">
+                            <span class="review-item-name" x-text="selectedService?.nome"></span>
+                            <span class="review-item-price" x-text="formatCurrency(getServicePrice(selectedService))"></span>
+                        </div>
+
+                        <!-- Adicionais -->
+                        <template x-for="adicional in selectedAdicionais" :key="adicional.id">
+                            <div class="review-item">
+                                <span class="review-item-name" x-text="adicional.nome"></span>
+                                <span class="review-item-price" x-text="formatCurrency(adicional.preco)"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="review-total">
+                        <span class="review-total-label">Total a Pagar</span>
+                        <span class="review-total-value" x-text="formatCurrency(total)"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="wizard-actions">
+            <button
+                v-show="step > 1"
+                class="btn btn-secondary"
+                @click="prevStep()"
+            >
+                <i class="fas fa-arrow-left"></i>
+                Voltar
             </button>
-          </div>
+
+            <div style="flex: 1; display: flex; gap: 12px; justify-content: flex-end;">
+                <button
+                    v-show="step < 3"
+                    class="btn btn-primary"
+                    :disabled="!canProceedStep1"
+                    @click="nextStep()"
+                    style="min-width: 200px;"
+                >
+                    <i class="fas fa-arrow-right"></i>
+                    Próximo
+                </button>
+
+                <button
+                    x-show="step === 2"
+                    class="btn btn-primary"
+                    @click="nextStep()"
+                    style="min-width: 200px;"
+                >
+                    Revisar
+                </button>
+
+                <button
+                    x-show="step === 3"
+                    class="btn btn-success"
+                    @click="createOrder()"
+                    :disabled="isCreatingOrder || !selectedService"
+                    style="min-width: 200px;"
+                >
+                    <i class="fas" :class="isCreatingOrder ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                    <span x-text="isCreatingOrder ? 'Criando...' : 'Criar Ordem'"></span>
+                </button>
+            </div>
         </div>
-      `;
-      container.insertAdjacentHTML('beforeend', html);
-      adicionaisCount++;
-    }
+    </main>
 
-    // REMOVE ADICIONAL FIELD
-    function removeAdicionalField(index) {
-      const field = document.getElementById(`adicionalField${index}`);
-      if (field) {
-        field.remove();
-        updateServicos();
-      }
-    }
+    <!-- Success Modal -->
+    <div class="success-modal" x-show="showSuccessModal">
+        <div class="success-modal-content">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="success-title">Ordem Criada!</div>
+            <div class="success-subtitle">
+                <span>Ordem <strong>#<span x-text="createdOrderNumber"></span></strong> foi criada com sucesso.</span>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-primary" @click="createAnother()" style="flex: 1;">
+                    <i class="fas fa-plus"></i>
+                    Criar Outra
+                </button>
+                <button class="btn btn-secondary" @click="goToOrders()" style="flex: 1;">
+                    <i class="fas fa-list"></i>
+                    Ver Ordens
+                </button>
+            </div>
+        </div>
+    </div>
 
-    // UPDATE TOTAL
-    function updateServicos() {
-      let total = 0;
+    <div id="toast-container" class="toast-container"></div>
 
-      // Serviços
-      for (let i = 0; i < servicosCount; i++) {
-        const select = document.getElementById(`servico${i}`);
-        if (select && select.value) {
-          const servico = servicos.find(s => s.id === select.value);
-          if (servico) total += parseFloat(servico.preco) || 0;
+    <script src="../utils.js"></script>
+    <script src="../api.js"></script>
+    <script src="utils-funcionario.js"></script>
+    <script>
+        /**
+         * ============================================================
+         * Alpine.js Component: Order Wizard (Employee Version)
+         * ============================================================
+         *
+         * A unified, single-page wizard for creating orders optimized
+         * for high-speed data entry by car wash attendants.
+         *
+         * Adapted for employees (funcionários) with the same
+         * smart search functionality as the admin version.
+         *
+         * ARCHITECTURE:
+         * - Step 1: Identification (Client + Vehicle + Category)
+         * - Step 2: Service Selection (with category-based pricing)
+         * - Step 3: Review & Confirm
+         *
+         * ============================================================
+         */
+        function orderWizard() {
+            return {
+                // ==========================================
+                // WIZARD STATE
+                // ==========================================
+                step: 1,
+                empresaNome: 'Carregando...',
+
+                // ==========================================
+                // SEARCH STATE
+                // ==========================================
+                searchQuery: '',
+                isSearching: false,
+                showSearchResults: false,
+                searchResults: [],
+                searchDebounceTimer: null,
+
+                // ==========================================
+                // CLIENT & VEHICLE STATE
+                // ==========================================
+                client: null,           // Selected client object
+                vehicle: null,          // Selected vehicle object
+                vehicleType: 'CARRO',   // CARRO or MOTO
+                vehicleCategory: null,  // HATCH, SEDAN, SUV, PICKUP (for cars)
+                semPlaca: false,        // Ordem sem placa (carros novos, etc)
+
+                quickRegister: {
+                    clientName: '',
+                    clientPhone: '',
+                    vehiclePlate: '',
+                    vehicleModel: '',
+                    vehicleColor: ''
+                },
+
+                // ==========================================
+                // SERVICES STATE
+                // ==========================================
+                services: [],           // All services from API
+                adicionais: [],         // All adicionais from API
+                isLoadingServices: true,
+
+                selectedService: null,        // Single main service
+                selectedAdicionais: [],       // Multiple adicionais
+                observacoes: '',
+
+                // ==========================================
+                // ORDER STATE
+                // ==========================================
+                isCreatingOrder: false,
+                showSuccessModal: false,
+                createdOrderNumber: null,
+
+                // ==========================================
+                // COMPUTED: Total Price
+                // ==========================================
+                get total() {
+                    let sum = 0;
+
+                    if (this.selectedService) {
+                        sum += this.getServicePrice(this.selectedService);
+                    }
+
+                    for (const adicional of this.selectedAdicionais) {
+                        sum += adicional.preco;
+                    }
+
+                    return sum;
+                },
+
+                // ==========================================
+                // COMPUTED: Filtered Services by Category
+                // ==========================================
+                get filteredServices() {
+                    return this.services;
+                },
+
+                // ==========================================
+                // COMPUTED: Can Proceed from Step 1
+                // ==========================================
+                get canProceedStep1() {
+                    const hasExisting = this.client && this.vehicle;
+                    const quickName = (this.quickRegister.clientName || '').trim();
+                    const quickPlate = (this.quickRegister.vehiclePlate || '').trim();
+
+                    const hasQuickRegister = this.semPlaca ? quickName : (quickName && quickPlate);
+                    const hasCategory = this.vehicleType === 'MOTO' || this.vehicleCategory;
+
+                    return (hasExisting || hasQuickRegister) && hasCategory;
+                },
+
+                // ==========================================
+                // LIFECYCLE
+                // ==========================================
+                async init() {
+                    // Check authentication
+                    if (!window.api.isAuthenticated()) {
+                        window.location.href = '../login.html';
+                        return;
+                    }
+
+                    // Validate employee access
+                    if (!validateFuncionarioAccess()) {
+                        return;
+                    }
+
+                    // Load user info
+                    loadUserInfo();
+                    this.empresaNome = localStorage.getItem('empresaNome') || 'Empresa';
+
+                    // Check URL params for pre-selected type/category
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.get('tipo')) {
+                        this.vehicleType = params.get('tipo');
+                    }
+                    if (params.get('subtipo')) {
+                        this.vehicleCategory = params.get('subtipo');
+                    }
+                    if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
+                        this.vehicleCategory = 'HATCH';
+                    }
+
+                    // Focus search input
+                    this.$nextTick(() => {
+                        this.$refs.searchInput?.focus();
+                    });
+
+                    // Normalize quick register values (if any)
+                    this.syncQuickRegister();
+                },
+
+                // ==========================================
+                // NAVIGATION
+                // ==========================================
+                goToStep(targetStep) {
+                    if (targetStep < this.step) {
+                        this.step = targetStep;
+                    }
+                },
+
+                async nextStep() {
+                    if (this.step === 1) {
+                        await this.loadServices();
+                        this.step = 2;
+                    } else if (this.step === 2) {
+                        this.step = 3;
+                    }
+                },
+
+                prevStep() {
+                    if (this.step > 1) {
+                        this.step--;
+                    }
+                },
+
+                // ==========================================
+                // SMART SEARCH
+                // ==========================================
+                async performSearch() {
+                    const query = this.searchQuery.trim();
+
+                    if (query.length < 2) {
+                        this.searchResults = [];
+                        this.showSearchResults = false;
+                        return;
+                    }
+
+                    this.isSearching = true;
+
+                    try {
+                        const isPlateSearch = /\d/.test(query);
+
+                        if (isPlateSearch) {
+                            // Search by plate
+                            const cleanPlate = query.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                            try {
+                                const response = await window.api.getVeiculoByPlaca(cleanPlate);
+                                if (response && response.veiculo && response.cliente) {
+                                    this.searchResults = [{
+                                        id: response.veiculo.id,
+                                        type: 'vehicle',
+                                        icon: 'fas fa-car',
+                                        title: response.veiculo.placa,
+                                        subtitle: `${response.cliente.nome} - ${response.veiculo.modelo || 'Modelo N/A'}`,
+                                        client: response.cliente,
+                                        vehicle: response.veiculo
+                                    }];
+                                } else {
+                                    this.searchResults = [{
+                                        id: 'new-' + cleanPlate,
+                                        type: 'new',
+                                        isNew: true,
+                                        icon: 'fas fa-plus',
+                                        title: `Cadastrar placa ${cleanPlate}`,
+                                        subtitle: 'Clique para cadastrar novo cliente e veículo',
+                                        plate: cleanPlate
+                                    }];
+                                }
+                            } catch (e) {
+                                this.searchResults = [{
+                                    id: 'new-' + cleanPlate,
+                                    type: 'new',
+                                    isNew: true,
+                                    icon: 'fas fa-plus',
+                                    title: `Cadastrar placa ${cleanPlate}`,
+                                    subtitle: 'Clique para cadastrar novo cliente e veículo',
+                                    plate: cleanPlate
+                                }];
+                            }
+                        } else {
+                            // Search by client name
+                            const data = await window.api.getClientes(1, 5, query);
+                            this.searchResults = [];
+
+                            if (data.clientes && data.clientes.length > 0) {
+                                for (const cliente of data.clientes) {
+                                    if (cliente.veiculos && cliente.veiculos.length > 0) {
+                                        for (const veiculo of cliente.veiculos) {
+                                            this.searchResults.push({
+                                                id: veiculo.id,
+                                                type: 'vehicle',
+                                                icon: 'fas fa-car',
+                                                title: cliente.nome,
+                                                subtitle: `${veiculo.placa} - ${veiculo.modelo || 'Modelo N/A'}`,
+                                                client: cliente,
+                                                vehicle: veiculo
+                                            });
+                                        }
+                                    } else {
+                                        this.searchResults.push({
+                                            id: cliente.id,
+                                            type: 'client',
+                                            icon: 'fas fa-user',
+                                            title: cliente.nome,
+                                            subtitle: cliente.telefone || 'Sem telefone',
+                                            client: cliente
+                                        });
+                                    }
+                                }
+                            }
+
+                            this.searchResults.push({
+                                id: 'new-client',
+                                type: 'new',
+                                isNew: true,
+                                icon: 'fas fa-plus',
+                                title: `Cadastrar "${query}"`,
+                                subtitle: 'Clique para cadastrar novo cliente',
+                                name: query
+                            });
+                        }
+
+                        this.showSearchResults = true;
+                    } catch (error) {
+                        console.error('Search error:', error);
+                    } finally {
+                        this.isSearching = false;
+                    }
+                },
+
+                async selectSearchResult(result) {
+                    if (result.type === 'vehicle') {
+                        this.client = result.client;
+                        this.vehicle = result.vehicle;
+                        this.searchQuery = result.vehicle.placa;
+
+                        this.closeSearchResults();
+                        await this.loadServices();
+                        this.step = 2;
+                        return;
+                    } else if (result.type === 'client') {
+                        this.client = result.client;
+                        this.vehicle = null;
+                        this.quickRegister.clientName = result.client.nome;
+                        this.quickRegister.clientPhone = result.client.telefone || '';
+                        this.$nextTick(() => {
+                            this.$refs.quickRegisterName?.focus();
+                        });
+                    } else if (result.type === 'new') {
+                        this.quickRegister.vehiclePlate = result.plate || '';
+                        this.quickRegister.clientName = result.name || '';
+                        this.$nextTick(() => {
+                            this.$refs.quickRegisterName?.focus();
+                        });
+                    }
+
+                    this.closeSearchResults();
+                },
+
+                handleSearchEnter() {
+                    if (this.searchResults.length === 1) {
+                        this.selectSearchResult(this.searchResults[0]);
+                    } else if (this.searchResults.length > 1) {
+                        const existing = this.searchResults.find(r => r.type !== 'new');
+                        this.selectSearchResult(existing || this.searchResults[0]);
+                    }
+                },
+
+                closeSearchResults() {
+                    this.showSearchResults = false;
+                },
+
+                // ==========================================
+                // VEHICLE TYPE/CATEGORY SELECTION
+                // ==========================================
+                selectVehicleType(type) {
+                    this.vehicleType = type;
+                    if (type === 'MOTO') {
+                        this.vehicleCategory = null;
+                    } else if (!this.vehicleCategory) {
+                        this.vehicleCategory = 'HATCH';
+                    }
+                    this.syncQuickRegister();
+                },
+
+                selectVehicleCategory(category) {
+                    this.vehicleCategory = category;
+                    this.syncQuickRegister();
+                },
+
+                getCategoryLabel() {
+                    if (this.vehicleType === 'MOTO') {
+                        return 'Moto';
+                    }
+                    const labels = {
+                        'HATCH': 'Carro Hatch',
+                        'SEDAN': 'Carro Sedan',
+                        'SUV': 'SUV',
+                        'PICKUP': 'Pick-up'
+                    };
+                    return labels[this.vehicleCategory] || 'Carro';
+                },
+
+                // ==========================================
+                // QUICK REGISTER (INLINE)
+                // ==========================================
+                syncQuickRegister() {
+                    this.quickRegister.clientName = (this.quickRegister.clientName || '').trim();
+                    this.quickRegister.vehiclePlate = (this.quickRegister.vehiclePlate || '').trim().toUpperCase();
+                    if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
+                        this.vehicleCategory = 'HATCH';
+                    }
+                },
+
+                // ==========================================
+                // DATA LOADING
+                // ==========================================
+                async loadServices() {
+                    this.isLoadingServices = true;
+
+                    try {
+                        const [servicosData, adicionaisData] = await Promise.all([
+                            window.api.getServicos({
+                                tipoVeiculo: this.vehicleType,
+                                subtipoVeiculo: this.vehicleCategory
+                            }),
+                            window.api.getAdicionaisSimple()
+                        ]);
+
+                        this.services = servicosData.servicos || [];
+                        this.adicionais = adicionaisData.adicionais || [];
+
+                        this.selectedService = null;
+                        this.selectedAdicionais = [];
+                    } catch (error) {
+                        console.error('Error loading services:', error);
+                        showToast('Erro ao carregar serviços', 'error');
+                    } finally {
+                        this.isLoadingServices = false;
+                    }
+                },
+
+                // ==========================================
+                // SERVICE SELECTION
+                // ==========================================
+                getServicePrice(service) {
+                    if (!service) return 0;
+                    return service.preco;
+                },
+
+                selectService(service) {
+                    this.selectedService = service;
+                },
+
+                toggleAdicional(adicional) {
+                    const index = this.selectedAdicionais.findIndex(a => a.id === adicional.id);
+                    if (index > -1) {
+                        this.selectedAdicionais.splice(index, 1);
+                    } else {
+                        this.selectedAdicionais.push(adicional);
+                    }
+                },
+
+                // ==========================================
+                // HELPERS
+                // ==========================================
+                getItemsCount() {
+                    let count = 0;
+                    if (this.selectedService) count++;
+                    count += this.selectedAdicionais.length;
+                    return count;
+                },
+
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    }).format(value || 0);
+                },
+
+                // ==========================================
+                // ORDER CREATION
+                // ==========================================
+                async createOrder() {
+                    if (!this.selectedService) {
+                        showToast('Selecione um serviço', 'error');
+                        return;
+                    }
+
+                    this.isCreatingOrder = true;
+
+                    const items = [];
+
+                    items.push({
+                        tipo: 'SERVICO',
+                        itemId: this.selectedService.id,
+                        nome: this.selectedService.nome,
+                        preco: this.getServicePrice(this.selectedService),
+                        quantidade: 1,
+                        lavadores: []
+                    });
+
+                    for (const adicional of this.selectedAdicionais) {
+                        items.push({
+                            tipo: 'ADICIONAL',
+                            itemId: adicional.id,
+                            nome: adicional.nome,
+                            preco: adicional.preco,
+                            quantidade: 1
+                        });
+                    }
+
+                    const orderData = {
+                        clienteId: this.client?.id || null,
+                        veiculoId: this.vehicle?.id || null,
+                        lavadorId: null,
+                        lavadorIds: [],
+                        itens: items,
+                        observacoes: this.observacoes.trim(),
+                        forcarCriacao: false
+                    };
+
+                    if (!this.vehicle) {
+                        orderData.novoCliente = {
+                            nome: this.quickRegister.clientName,
+                            telefone: this.quickRegister.clientPhone || null
+                        };
+                        orderData.novoVeiculo = {
+                            placa: this.semPlaca ? `SEM-PLACA-${Date.now()}` : this.quickRegister.vehiclePlate.toUpperCase(),
+                            modelo: this.quickRegister.vehicleModel || null,
+                            cor: this.quickRegister.vehicleColor || null
+                        };
+                    }
+
+                    try {
+                        const response = await window.api.createOrdem(orderData);
+                        this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                        this.showSuccessModal = true;
+                        showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
+                        setTimeout(() => {
+                            if (this.showSuccessModal) {
+                                window.location.href = 'ordens-funcionario.html';
+                            }
+                        }, 2000);
+                    } catch (error) {
+                        console.error('Error creating order:', error);
+
+                        if (error.code === 'ACTIVE_ORDER_EXISTS') {
+                            if (confirm('Já existe uma ordem ativa para este veículo. Deseja criar mesmo assim?')) {
+                                orderData.forcarCriacao = true;
+                                try {
+                                    const response = await window.api.createOrdem(orderData);
+                                    this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                                    this.showSuccessModal = true;
+                                    showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
+                                    setTimeout(() => {
+                                        if (this.showSuccessModal) {
+                                            window.location.href = 'ordens-funcionario.html';
+                                        }
+                                    }, 2000);
+                                } catch (retryError) {
+                                    showToast('Erro ao criar ordem: ' + (retryError.details || retryError.error || 'Erro desconhecido'), 'error');
+                                }
+                            }
+                        } else {
+                            showToast('Erro ao criar ordem: ' + (error.details || error.error || 'Erro desconhecido'), 'error');
+                        }
+                    } finally {
+                        this.isCreatingOrder = false;
+                    }
+                },
+
+                // ==========================================
+                // POST-CREATION ACTIONS
+                // ==========================================
+                createAnother() {
+                    this.step = 1;
+                    this.client = null;
+                    this.vehicle = null;
+                    this.vehicleCategory = null;
+                    this.searchQuery = '';
+                    this.selectedService = null;
+                    this.selectedAdicionais = [];
+                    this.observacoes = '';
+                    this.quickRegister = {
+                        clientName: '',
+                        clientPhone: '',
+                        vehiclePlate: '',
+                        vehicleModel: '',
+                        vehicleColor: ''
+                    };
+                    this.showSuccessModal = false;
+
+                    this.$nextTick(() => {
+                        this.$refs.searchInput?.focus();
+                    });
+                },
+
+                goToOrders() {
+                    window.location.href = 'ordens-funcionario.html';
+                }
+            };
         }
-      }
-
-      // Adicionais
-      for (let i = 0; i < adicionaisCount; i++) {
-        const select = document.getElementById(`adicional${i}`);
-        if (select && select.value) {
-          const adicional = adicionais.find(a => a.id === select.value);
-          if (adicional) total += parseFloat(adicional.preco) || 0;
-        }
-      }
-
-      document.getElementById('subtotal').textContent = formatCurrency(total);
-      document.getElementById('total').textContent = formatCurrency(total);
-    }
-
-    // HANDLE SUBMIT
-    async function handleSubmit(event) {
-      event.preventDefault();
-
-      const clienteId = document.getElementById('clienteId').value;
-      const metodoPagamento = document.getElementById('metodoPagamento').value;
-      const observacoes = document.getElementById('observacoes').value;
-
-      if (!clienteId || !metodoPagamento) {
-        showToast('Preencha todos os campos obrigatórios', 'error');
-        return;
-      }
-
-      try {
-        const servicosIds = [];
-        for (let i = 0; i < servicosCount; i++) {
-          const val = document.getElementById(`servico${i}`)?.value;
-          if (val) servicosIds.push(val);
-        }
-
-        if (servicosIds.length === 0) {
-          showToast('Selecione pelo menos um serviço', 'error');
-          return;
-        }
-
-        const data = {
-          clienteId,
-          servicosIds,
-          metodoPagamento,
-          observacoes
-        };
-
-        const response = await window.api.createOrdem(data);
-        showToast('Ordem criada com sucesso!', 'success');
-
-        setTimeout(() => {
-          window.location.href = 'ordens-funcionario.html';
-        }, 1500);
-
-      } catch (error) {
-        console.error('Erro ao criar ordem:', error);
-        showToast('Erro ao criar ordem. Tente novamente.', 'error');
-      }
-    }
-  </script>
+    </script>
 </body>
 </html>
