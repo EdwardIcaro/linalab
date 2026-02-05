@@ -1318,24 +1318,36 @@
                 initChart() {
                     // Wait for DOM to be fully ready
                     this.$nextTick(() => {
-                        setTimeout(() => {
-                            // STEP 1: Destroy existing chart instance before creating new one
-                            // This prevents "Canvas is already in use" error
-                            if (this.chartInstance) {
-                                try {
-                                    this.chartInstance.destroy();
-                                } catch (e) {
-                                    console.warn('Failed to destroy chart instance:', e);
-                                }
-                                this.chartInstance = null;
-                            }
+                        // Add retry logic for canvas initialization
+                        let chartRetries = 0;
+                        const maxChartRetries = 3;
 
-                            // STEP 2: Canvas validation - ensure canvas element exists
-                            const canvas = this.$refs.chartCanvas;
-                            if (!canvas) {
-                                console.warn('[Chart] Canvas element not found');
-                                return;
-                            }
+                        const attemptChartInit = () => {
+                            chartRetries++;
+                            setTimeout(() => {
+                                try {
+                                    // STEP 1: Destroy existing chart instance before creating new one
+                                    // This prevents "Canvas is already in use" error
+                                    if (this.chartInstance) {
+                                        try {
+                                            this.chartInstance.destroy();
+                                        } catch (e) {
+                                            console.warn('Failed to destroy chart instance:', e);
+                                        }
+                                        this.chartInstance = null;
+                                    }
+
+                                    // STEP 2: Canvas validation - ensure canvas element exists
+                                    const canvas = this.$refs.chartCanvas;
+                                    if (!canvas) {
+                                        if (chartRetries < maxChartRetries) {
+                                            console.warn(`[Chart] Canvas element not found - retrying (${chartRetries}/${maxChartRetries})`);
+                                            attemptChartInit();
+                                            return;
+                                        }
+                                        console.warn('[Chart] Canvas element not found after retries - skipping chart initialization');
+                                        return;
+                                    }
 
                             // CRITICAL FIX: Stop infinite recursion when canvas is not visible
                             // Check if canvas has dimensions (is visible)
@@ -1461,12 +1473,16 @@
                                     }
                                 });
 
-                            console.log('[Chart] ✅ Initialized successfully with', cleanData.length, 'data points');
-                        } catch (error) {
-                            console.error('[Chart] ❌ Failed to initialize:', error);
-                            this.chartInstance = null;
-                        }
-                        }, 150); // 150ms delay for canvas stability
+                                    console.log('[Chart] ✅ Initialized successfully with', cleanData.length, 'data points');
+                                } catch (error) {
+                                    console.error('[Chart] ❌ Failed to initialize:', error);
+                                    this.chartInstance = null;
+                                }
+                            }, 150); // 150ms delay for canvas stability
+                        };
+
+                        // Start chart initialization attempt
+                        attemptChartInit();
                     });
                 },
 
@@ -1849,9 +1865,12 @@
 
             console.log('[Layout] ✅ No top bar - full screen dashboard layout');
 
-            // Check Alpine.js initialization after a short delay
-            setTimeout(() => {
-                console.log('[Diagnostics] Checking Alpine.js initialization...');
+            // Check Alpine.js initialization with retry logic
+            let retries = 0;
+            const maxRetries = 5;
+            const checkAlpineInit = () => {
+                retries++;
+                console.log(`[Diagnostics] Checking Alpine.js initialization (attempt ${retries}/${maxRetries})...`);
 
                 if (typeof Alpine === 'undefined') {
                     console.error('[Alpine] ❌ Alpine.js not loaded!');
@@ -1862,7 +1881,14 @@
                 const mainContent = document.querySelector('.main-content');
                 if (mainContent) {
                     if (mainContent.hasAttribute('x-cloak')) {
-                        console.error('[Alpine] ❌ x-cloak still present! Alpine.js failed to initialize.');
+                        // Alpine might still be initializing - retry
+                        if (retries < maxRetries) {
+                            console.warn(`[Alpine] ⏳ x-cloak still present - retrying (${retries}/${maxRetries})...`);
+                            setTimeout(checkAlpineInit, 500);
+                            return;
+                        }
+
+                        console.error('[Alpine] ❌ x-cloak still present after retries! Alpine.js failed to initialize.');
                         console.error('[Alpine] This means the dashboard() function likely threw an error.');
                         console.error('[Alpine] Check console for errors in dashboard init()');
 
@@ -1873,9 +1899,18 @@
                         console.log('[Alpine] ✅ x-cloak removed - Alpine.js initialized successfully');
                     }
                 } else {
-                    console.error('[Alpine] ❌ Main content element not found!');
+                    // Element not found - might be redirecting
+                    if (retries < maxRetries) {
+                        console.warn(`[Alpine] ⏳ Main content element not found - retrying (${retries}/${maxRetries})...`);
+                        setTimeout(checkAlpineInit, 500);
+                        return;
+                    }
+                    console.error('[Alpine] ❌ Main content element not found after retries - page may have redirected');
                 }
-            }, 1000);
+            };
+
+            // Start checking after a short delay to let page load
+            setTimeout(checkAlpineInit, 1000);
         });
     </script>
     <script src="nav-menu-helper.js"></script>
