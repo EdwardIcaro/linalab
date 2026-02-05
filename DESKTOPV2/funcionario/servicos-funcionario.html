@@ -1070,19 +1070,17 @@
       showConfirm(
         'Excluir Serviço',
         `Tem certeza que deseja excluir o serviço "${nome}"?`,
-        `deleteServiceConfirmed('${id}')`
+        async () => {
+          try {
+            await window.api.deleteServico(id);
+            showToast('Serviço excluído com sucesso!', 'success');
+            await loadServicosAndAdicionais();
+          } catch (error) {
+            console.error('Erro ao excluir serviço:', error);
+            showToast('Erro ao excluir serviço. Tente novamente.', 'error');
+          }
+        }
       );
-    }
-
-    async function deleteServiceConfirmed(id) {
-      try {
-        await window.api.deleteServico(id);
-        showToast('Serviço excluído com sucesso!', 'success');
-        await loadServicosAndAdicionais();
-      } catch (error) {
-        console.error('Erro ao excluir serviço:', error);
-        showToast('Erro ao excluir serviço. Tente novamente.', 'error');
-      }
     }
 
     // UPDATE SUBTIPO OPTIONS

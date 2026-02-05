@@ -106,10 +106,6 @@ function createMobileNav(activePage) {
         <i class="fas fa-user-tie"></i>
         <span>Equipe</span>
       </a>
-      <a href="comissoes-funcionario.html" class="nav-item ${activePage === 'comissoes' ? 'active' : ''}" title="Comissões">
-        <i class="fas fa-coins"></i>
-        <span>Comissões</span>
-      </a>
     `;
   }
 
