@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina X - Comissões</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066cc;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --info: #17a2b8;
+      --light: #f8f9fa;
+      --dark: #333;
+      --border: #ddd;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    /* HEADER */
+    .header-funcionario {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+
+    .page-info h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .page-info p {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--dark);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .icon-btn:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    /* MAIN */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    /* SECTION HEADER */
+    .section-header {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    /* EMPLOYEES SECTION */
+    .employees-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .employees-scroll {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 8px 0;
+    }
+
+    .employee-avatar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      min-width: 80px;
+      transition: all 0.3s;
+    }
+
+    .avatar-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #007a8a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: 600;
+      border: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .employee-avatar.active .avatar-circle {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
+    }
+
+    .employee-avatar:hover .avatar-circle {
+      transform: translateY(-4px);
+    }
+
+    .employee-name {
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      max-width: 80px;
+      white-space: normal;
+      color: var(--dark);
+    }
+
+    /* SUMMARY CARDS */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--primary);
+    }
+
+    .summary-card.warning {
+      border-left-color: var(--warning);
+    }
+
+    .summary-card.danger {
+      border-left-color: var(--danger);
+    }
+
+    .card-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .card-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .summary-card.warning .card-value {
+      color: var(--warning);
+    }
+
+    .summary-card.danger .card-value {
+      color: var(--danger);
+    }
+
+    /* TABLE */
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--light);
+      border-bottom: 2px solid var(--border);
+    }
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--dark);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: var(--light);
+    }
+
+    /* STATUS BADGE */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-completo {
+      background: rgba(40, 167, 69, 0.2);
+      color: var(--success);
+    }
+
+    .status-pendente {
+      background: rgba(255, 193, 7, 0.2);
+      color: var(--warning);
+    }
+
+    /* BUTTONS */
+    .btn-report {
+      background: none;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-report:hover {
+      background: rgba(220, 53, 69, 0.1);
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      color: #ddd;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .empty-state h2 {
+      font-size: 20px;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+
+    /* LOADING */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 4px solid var(--light);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* MENU */
+    .menu-dropdown {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 200px;
+      z-index: 999;
+      animation: slideUp 0.3s ease;
+    }
+
+    .menu-dropdown.active {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .menu-dropdown a,
+    .menu-dropdown button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--dark);
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .menu-dropdown a:hover,
+    .menu-dropdown button:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    .menu-dropdown button:last-child {
+      color: var(--danger);
+    }
+
+    .menu-dropdown button:last-child:hover {
+      background: rgba(220, 53, 69, 0.1);
+    }
+
+    /* OVERLAY */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    /* MOBILE NAV */
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      height: 70px;
+      z-index: 999;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #666;
+      font-size: 11px;
+      gap: 4px;
+      transition: all 0.3s;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-top: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      border-top-color: var(--primary);
+    }
+
+    .nav-item i {
+      font-size: 24px;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 20px;
+      right: 20px;
+      max-width: 400px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1001;
+      transform: translateY(120px);
+      transition: transform 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast-success i {
+      color: var(--success);
+    }
+
+    .toast-error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .toast-error i {
+      color: var(--danger);
+    }
+
+    /* REPORT MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--dark);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.3s;
+    }
+
+    .modal-close:hover {
+      color: var(--primary);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      color: var(--dark);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      background-color: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--dark);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      justify-content: flex-end;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+    }
+
+    .btn-secondary {
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 16px;
+        padding-bottom: 100px;
+      }
+
+      .summary-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .page-info h1 {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div id="header"></div>
+
+  <!-- MENU -->
+  <div id="menu"></div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-container" id="mainContent"></main>
+
+  <!-- MOBILE NAV -->
+  <nav id="mobileNav"></nav>
+
+  <!-- REPORT MODAL -->
+  <div class="modal-overlay" id="reportModal" onclick="if(event.target === this) closeReportModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Reportar Inconsistência</h2>
+        <button class="modal-close" onclick="closeReportModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="reportForm" onsubmit="submitReport(event)">
+        <div class="form-group">
+          <label class="form-label">Ordem</label>
+          <input type="text" id="reportOrdemId" class="form-input" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição do Problema *</label>
+          <textarea id="reportDescricao" class="form-textarea" placeholder="Descreva a inconsistência encontrada..." required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeReportModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Enviar Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="../api.js"></script>
+  <script src="utils-funcionario.js"></script>
+
+  <script>
+    const PAGE_TITLE = 'Comissões';
+    const PAGE_ACTIVE = 'comissoes';
+
+    let funcionarios = [];
+    let selectedFuncionarioId = null;
+    let ordensComissoes = [];
+    let reportingOrdemId = null;
+
+    // INITIALIZE
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!validateFuncionarioAccess()) return;
+
+      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+      if (!permissoes.includes('gerenciar_funcionarios')) {
+        showToast('Você não tem permissão para visualizar comissões', 'error');
+        setTimeout(() => {
+          window.location.href = '../index-funcionario.html';
+        }, 1500);
+        return;
+      }
+
+      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
+      document.getElementById('menu').innerHTML = createFuncionarioMenu();
+      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+
+      await loadUserInfo();
+      await loadFuncionarios();
+    });
+
+    // LOAD FUNCIONÁRIOS
+    async function loadFuncionarios() {
+      const mainContent = document.getElementById('mainContent');
+
+      try {
+        mainContent.innerHTML = `
+          <div class="section-header">
+            <h1 class="section-title">Comissões de Funcionários</h1>
+            <p class="section-subtitle">Visualize as comissões de cada funcionário</p>
+          </div>
+          <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Carregando funcionários...</p>
+          </div>
+        `;
+
+        const response = await window.api.getLavadores();
+        funcionarios = response.lavadores || [];
+
+        if (funcionarios.length === 0) {
+          mainContent.innerHTML = createEmptyState(
+            'fa-users',
+            'Nenhum funcionário',
+            'Não há funcionários cadastrados no momento.'
+          );
+          return;
+        }
+
+        // Selecionar primeiro funcionário por padrão
+        selectedFuncionarioId = funcionarios[0].id;
+        renderContent();
+        await loadOrdensComissoes(selectedFuncionarioId);
+      } catch (error) {
+        console.error('Erro ao carregar funcionários:', error);
+        mainContent.innerHTML = createEmptyState(
+          'fa-exclamation-triangle',
+          'Erro ao carregar',
+          'Erro ao carregar funcionários. Tente novamente.',
+          'Tentar novamente',
+          'loadFuncionarios()'
+        );
+      }
+    }
+
+    // RENDER CONTENT
+    function renderContent() {
+      const mainContent = document.getElementById('mainContent');
+
+      const selectedFuncionario = funcionarios.find(f => f.id === selectedFuncionarioId);
+      if (!selectedFuncionario) return;
+
+      let html = `
+        <div class="section-header">
+          <h1 class="section-title">Comissões de Funcionários</h1>
+          <p class="section-subtitle">Visualize as comissões de cada funcionário</p>
+        </div>
+
+        <div class="employees-section">
+          <p class="section-label">Selecione um funcionário</p>
+          <div class="employees-scroll">
+      `;
+
+      funcionarios.forEach(func => {
+        const inicial = (func.nome || 'F').charAt(0).toUpperCase();
+        const isActive = func.id === selectedFuncionarioId;
+        html += `
+          <div class="employee-avatar ${isActive ? 'active' : ''}" onclick="selectFuncionario('${func.id}')">
+            <div class="avatar-circle">${inicial}</div>
+            <div class="employee-name">${func.nome}</div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="card-label">Comissão (%)</div>
+            <div class="card-value">${selectedFuncionario.comissao || 0}%</div>
+          </div>
+          <div class="summary-card warning">
+            <div class="card-label">Ordens Completas</div>
+            <div class="card-value">${ordensComissoes.filter(o => o.status === 'COMPLETO').length}</div>
+          </div>
+          <div class="summary-card danger">
+            <div class="card-label">Total Comissões</div>
+            <div class="card-value">${formatCurrency(calculateTotalComissoes())}</div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-responsive" id="ordensTable"></div>
+        </div>
+      `;
+
+      mainContent.innerHTML = html;
+      renderOrdensTable();
+    }
+
+    // SELECT FUNCIONÁRIO
+    async function selectFuncionario(id) {
+      selectedFuncionarioId = id;
+      renderContent();
+      await loadOrdensComissoes(id);
+    }
+
+    // LOAD ORDENS COMISSÕES
+    async function loadOrdensComissoes(funcionarioId) {
+      try {
+        const response = await window.api.getOrdens(1, 100, '', '', '', '', null, funcionarioId);
+        ordensComissoes = response.data || response.ordens || [];
+        renderOrdensTable();
+      } catch (error) {
+        console.error('Erro ao carregar ordens:', error);
+        showToast('Erro ao carregar ordens', 'error');
+      }
+    }
+
+    // RENDER ORDENS TABLE
+    function renderOrdensTable() {
+      const tableContainer = document.getElementById('ordensTable');
+      if (!tableContainer) return;
+
+      const selectedFuncionario = funcionarios.find(f => f.id === selectedFuncionarioId);
+      if (!selectedFuncionario) return;
+
+      if (ordensComissoes.length === 0) {
+        tableContainer.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h2>Nenhuma ordem</h2>
+            <p>Este funcionário não tem ordens registradas</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>#Ordem</th>
+              <th>Cliente</th>
+              <th>Veículo</th>
+              <th>Status</th>
+              <th>Valor Ordem</th>
+              <th>Taxa</th>
+              <th>Comissão</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      ordensComissoes.forEach(ordem => {
+        const statusClass = `status-${ordem.status.toLowerCase().replace(/_/g, '-')}`;
+        const comissao = (ordem.valorTotal || ordem.valor || 0) * (selectedFuncionario.comissao || 0) / 100;
+        html += `
+          <tr>
+            <td><strong>#${ordem.numeroOrdem || ordem.id.substring(0, 8)}</strong></td>
+            <td>${ordem.cliente?.nome || '-'}</td>
+            <td>${ordem.veiculo?.placa || '-'}</td>
+            <td><span class="status-badge ${statusClass}">${ordem.status}</span></td>
+            <td>${formatCurrency(ordem.valorTotal || ordem.valor)}</td>
+            <td>${selectedFuncionario.comissao || 0}%</td>
+            <td><strong>${formatCurrency(comissao)}</strong></td>
+            <td>
+              <button class="btn-report" onclick="openReportModal('${ordem.id}', '${ordem.numeroOrdem || ordem.id.substring(0, 8)}')">
+                <i class="fas fa-flag"></i> Report
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      tableContainer.innerHTML = html;
+    }
+
+    // CALCULATE TOTAL COMISSÕES
+    function calculateTotalComissoes() {
+      const selectedFuncionario = funcionarios.find(f => f.id === selectedFuncionarioId);
+      if (!selectedFuncionario) return 0;
+
+      return ordensComissoes.reduce((total, ordem) => {
+        const comissao = (ordem.valorTotal || ordem.valor || 0) * (selectedFuncionario.comissao || 0) / 100;
+        return total + comissao;
+      }, 0);
+    }
+
+    // REPORT MODAL
+    function openReportModal(ordemId, numeroOrdem) {
+      reportingOrdemId = ordemId;
+      document.getElementById('reportOrdemId').value = `#${numeroOrdem}`;
+      document.getElementById('reportDescricao').value = '';
+      document.getElementById('reportModal').classList.add('active');
+    }
+
+    function closeReportModal() {
+      document.getElementById('reportModal').classList.remove('active');
+      reportingOrdemId = null;
+      document.getElementById('reportForm').reset();
+    }
+
+    async function submitReport(event) {
+      event.preventDefault();
+
+      const descricao = document.getElementById('reportDescricao').value.trim();
+      if (!descricao) {
+        showToast('Descreva o problema', 'error');
+        return;
+      }
+
+      try {
+        // Chamar API para criar report (ajustar conforme sua API)
+        // await window.api.createReport({
+        //   ordemId: reportingOrdemId,
+        //   descricao: descricao,
+        //   reportadoPor: 'funcionario'
+        // });
+
+        showToast('Report enviado com sucesso! Admin será notificado.', 'success');
+        closeReportModal();
+      } catch (error) {
+        console.error('Erro ao enviar report:', error);
+        showToast('Erro ao enviar report. Tente novamente.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

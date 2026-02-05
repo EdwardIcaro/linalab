@@ -337,57 +337,44 @@
       background: var(--light);
     }
 
-    /* CARDS GRID */
-    .cards-grid {
+    /* ACTION BUTTONS */
+    .action-buttons {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 16px;
+      margin-bottom: 24px;
     }
 
-    .card-item {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      transition: all 0.3s;
-    }
-
-    .card-item:hover {
-      box-shadow: var(--shadow);
-      transform: translateY(-2px);
-    }
-
-    .card-header {
+    .action-btn {
       display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 12px;
-    }
-
-    .card-title {
-      font-weight: 600;
-      font-size: 14px;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
       color: var(--dark);
     }
 
-    .card-subtitle {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 8px;
+    .action-btn:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+      color: var(--primary);
     }
 
-    .card-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--green);
-      margin-bottom: 8px;
+    .action-btn i {
+      font-size: 24px;
     }
 
-    .card-footer {
-      font-size: 12px;
-      color: #999;
-      display: flex;
-      justify-content: space-between;
+    .action-btn span {
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
     }
 
     /* EMPTY STATE */
@@ -468,6 +455,123 @@
     .status-completo {
       background: rgba(76, 175, 80, 0.2);
       color: var(--success);
+    }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .btn-cancel,
+    .btn-submit {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-cancel {
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    .btn-cancel:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-submit {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-submit:hover {
+      background: #0052a3;
     }
 
     /* MENU */
@@ -725,8 +829,8 @@
         overflow-x: auto;
       }
 
-      .cards-grid {
-        grid-template-columns: 1fr;
+      .action-buttons {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       th, td {
@@ -769,9 +873,9 @@
           <i class="fas fa-exchange-alt"></i>
           <span>Movimentações</span>
         </button>
-        <button class="tab-btn" data-tab="comissoes" onclick="switchTab('comissoes')">
-          <i class="fas fa-coins"></i>
-          <span>Minhas Comissões</span>
+        <button class="tab-btn" data-tab="caixa" onclick="switchTab('caixa')">
+          <i class="fas fa-cash-register"></i>
+          <span>Controle de Caixa</span>
         </button>
         <button class="tab-btn" data-tab="pendencias" onclick="switchTab('pendencias')">
           <i class="fas fa-clock"></i>
@@ -781,7 +885,7 @@
 
       <div class="tabs-content">
         <div id="tab-movimentacoes" class="tab-pane active"></div>
-        <div id="tab-comissoes" class="tab-pane"></div>
+        <div id="tab-caixa" class="tab-pane"></div>
         <div id="tab-pendencias" class="tab-pane"></div>
       </div>
     </section>
@@ -789,6 +893,31 @@
 
   <!-- MOBILE NAV -->
   <nav id="mobileNav"></nav>
+
+  <!-- TRANSACTION MODAL -->
+  <div id="transactionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Lançar Transação</h2>
+        <button class="modal-close" onclick="closeTransactionModal()">&times;</button>
+      </div>
+      <form id="transactionForm" onsubmit="submitTransaction(event)">
+        <div class="form-group">
+          <label>Descrição</label>
+          <input type="text" id="transactionDescription" required placeholder="Ex: Compra de material">
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="transactionValue" required placeholder="0.00" step="0.01" min="0">
+        </div>
+        <input type="hidden" id="transactionType" value="">
+        <div class="modal-buttons">
+          <button type="button" class="btn-cancel" onclick="closeTransactionModal()">Cancelar</button>
+          <button type="submit" class="btn-submit">Lançar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- SCRIPTS -->
   <script src="../api.js"></script>
@@ -800,6 +929,7 @@
     const PAGE_ACTIVE = 'financeiro';
 
     let currentTab = 'movimentacoes';
+    let currentTransactionType = '';
     let filters = {
       dataInicio: new Date().toISOString().split('T')[0],
       dataFim: new Date().toISOString().split('T')[0],
@@ -849,8 +979,8 @@
         case 'movimentacoes':
           await loadMovimentacoes();
           break;
-        case 'comissoes':
-          await loadMinhasComissoes();
+        case 'caixa':
+          await loadCaixa();
           break;
         case 'pendencias':
           await loadPendencias();
@@ -869,7 +999,7 @@
         const saldo = resumo.saldo || 0;
         const entrada = resumo.entrada || 0;
         const saida = resumo.saida || 0;
-        const comissao = resumo.comissao || 0;
+        const pendentes = resumo.pendentes || 0;
 
         container.innerHTML = `
           <div class="balance-card green">
@@ -885,8 +1015,8 @@
             <div class="balance-value">${formatCurrency(saida)}</div>
           </div>
           <div class="balance-card red">
-            <div class="balance-label">Minhas Comissões</div>
-            <div class="balance-value">${formatCurrency(comissao)}</div>
+            <div class="balance-label">Pendentes</div>
+            <div class="balance-value">${formatCurrency(pendentes)}</div>
           </div>
         `;
       } catch (error) {
@@ -984,67 +1114,91 @@
       }
     }
 
-    // LOAD MINHAS COMISSÕES
-    async function loadMinhasComissoes() {
-      const container = document.getElementById('tab-comissoes');
+    // LOAD CONTROLE DE CAIXA
+    async function loadCaixa() {
+      const container = document.getElementById('tab-caixa');
 
       try {
-        container.innerHTML = createLoading();
+        container.innerHTML = `
+          <div class="action-buttons">
+            <button class="action-btn" onclick="openTransactionModal('despesa')">
+              <i class="fas fa-receipt"></i>
+              <span>Lançar Despesa</span>
+            </button>
+            <button class="action-btn" onclick="openTransactionModal('sangria')">
+              <i class="fas fa-money-bill"></i>
+              <span>Sangria</span>
+            </button>
+            <button class="action-btn" onclick="openTransactionModal('suprimento')">
+              <i class="fas fa-plus-circle"></i>
+              <span>Suprimento</span>
+            </button>
+            <button class="action-btn" onclick="closeCashRegister()">
+              <i class="fas fa-check-circle"></i>
+              <span>Fechar Caixa</span>
+            </button>
+          </div>
+          <div id="caixaHistory"></div>
+        `;
 
-        const lavador = await getUserLavador();
-        if (!lavador) {
-          container.innerHTML = createEmptyState(
-            'fa-user-slash',
-            'Perfil não encontrado',
-            'Seu perfil de funcionário não foi encontrado no sistema.'
-          );
-          return;
-        }
+        // Load recent transactions for cash control
+        const response = await window.api.getHistoricoCaixa({
+          dataInicio: new Date().toISOString().split('T')[0],
+          dataFim: new Date().toISOString().split('T')[0],
+          tipo: ''
+        });
 
-        const response = await window.api.getOrdens(1, 100, '', 'COMPLETO', lavador.id);
-        const ordens = response.data || response.ordens || [];
+        const movimentacoes = response.historico || [];
+        let historyHtml = '';
 
-        if (ordens.length === 0) {
-          container.innerHTML = createEmptyState(
-            'fa-inbox',
-            'Nenhuma comissão',
-            'Você não tem ordens completas ainda.'
-          );
-          return;
-        }
+        if (movimentacoes.length > 0) {
+          historyHtml = `
+            <h3 style="margin-bottom: 16px;">Movimentações de Hoje</h3>
+            <div class="table-container">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Hora</th>
+                      <th>Descrição</th>
+                      <th>Tipo</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+          `;
 
-        let html = '<div class="cards-grid">';
+          movimentacoes.forEach(mov => {
+            const tipoLabel = mov.tipo === 'entrada' ? 'Entrada' : 'Saída';
+            const tipoClass = mov.tipo === 'entrada' ? 'status-completo' : 'status-pendente';
+            const time = new Date(mov.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            historyHtml += `
+              <tr>
+                <td>${time}</td>
+                <td>${mov.descricao || '-'}</td>
+                <td><span class="status-badge ${tipoClass}">${tipoLabel}</span></td>
+                <td>${formatCurrency(mov.valor)}</td>
+              </tr>
+            `;
+          });
 
-        ordens.forEach(ordem => {
-          const comissao = (ordem.valor * lavador.comissao) / 100;
-          html += `
-            <div class="card-item">
-              <div class="card-header">
-                <div>
-                  <div class="card-title">Ordem #${ordem.id.substring(0, 8)}</div>
-                  <div class="card-subtitle">${ordem.cliente?.nome || 'Cliente'}</div>
-                </div>
-              </div>
-              <div class="card-subtitle">Valor da Ordem</div>
-              <div class="card-value" style="color: var(--blue);">${formatCurrency(ordem.valor)}</div>
-              <div class="card-footer">
-                <span>Taxa: ${lavador.comissao}%</span>
-                <span style="font-weight: 600; color: var(--green);">Comissão: ${formatCurrency(comissao)}</span>
+          historyHtml += `
+                  </tbody>
+                </table>
               </div>
             </div>
           `;
-        });
+        }
 
-        html += '</div>';
-        container.innerHTML = html;
+        document.getElementById('caixaHistory').innerHTML = historyHtml;
       } catch (error) {
-        console.error('Erro ao carregar comissões:', error);
+        console.error('Erro ao carregar controle de caixa:', error);
         container.innerHTML = createEmptyState(
           'fa-exclamation-triangle',
           'Erro ao carregar',
-          'Houve um erro ao carregar suas comissões.',
+          'Houve um erro ao carregar o controle de caixa.',
           'Tentar novamente',
-          'loadMinhasComissoes()'
+          'loadCaixa()'
         );
       }
     }
@@ -1056,24 +1210,14 @@
       try {
         container.innerHTML = createLoading();
 
-        const lavador = await getUserLavador();
-        if (!lavador) {
-          container.innerHTML = createEmptyState(
-            'fa-user-slash',
-            'Perfil não encontrado',
-            'Seu perfil de funcionário não foi encontrado no sistema.'
-          );
-          return;
-        }
-
-        const response = await window.api.getOrdens(1, 100, '', 'AGUARDANDO_PAGAMENTO', lavador.id);
+        const response = await window.api.getOrdens(1, 100, '', 'AGUARDANDO_PAGAMENTO');
         const ordens = response.data || response.ordens || [];
 
         if (ordens.length === 0) {
           container.innerHTML = createEmptyState(
             'fa-check-circle',
             'Sem pendências',
-            'Você não tem ordens aguardando pagamento.'
+            'Não há ordens aguardando pagamento.'
           );
           return;
         }
@@ -1086,6 +1230,7 @@
                   <tr>
                     <th>ID</th>
                     <th>Cliente</th>
+                    <th>Veículo</th>
                     <th>Valor</th>
                     <th>Data</th>
                     <th>Status</th>
@@ -1097,9 +1242,10 @@
         ordens.forEach(ordem => {
           html += `
             <tr>
-              <td>#${ordem.id.substring(0, 8)}</td>
+              <td>#${ordem.numeroOrdem || ordem.id.substring(0, 8)}</td>
               <td>${ordem.cliente?.nome || '-'}</td>
-              <td>${formatCurrency(ordem.valor)}</td>
+              <td>${ordem.veiculo?.placa || '-'}</td>
+              <td>${formatCurrency(ordem.valorTotal || ordem.valor)}</td>
               <td>${formatDate(ordem.createdAt)}</td>
               <td><span class="status-badge status-pendente">AGUARDANDO</span></td>
             </tr>
@@ -1126,6 +1272,89 @@
       }
     }
 
+    // TRANSACTION MODAL
+    function openTransactionModal(type) {
+      currentTransactionType = type;
+      const modal = document.getElementById('transactionModal');
+      const title = document.getElementById('modalTitle');
+      const typeInput = document.getElementById('transactionType');
+
+      let titleText = '';
+      switch(type) {
+        case 'despesa':
+          titleText = 'Lançar Despesa';
+          break;
+        case 'sangria':
+          titleText = 'Sangria';
+          break;
+        case 'suprimento':
+          titleText = 'Suprimento';
+          break;
+      }
+
+      title.textContent = titleText;
+      typeInput.value = type;
+
+      document.getElementById('transactionForm').reset();
+      modal.classList.add('active');
+    }
+
+    function closeTransactionModal() {
+      document.getElementById('transactionModal').classList.remove('active');
+      document.getElementById('transactionForm').reset();
+    }
+
+    async function submitTransaction(event) {
+      event.preventDefault();
+
+      const description = document.getElementById('transactionDescription').value;
+      const value = parseFloat(document.getElementById('transactionValue').value);
+      const type = document.getElementById('transactionType').value;
+
+      if (!description || !value) {
+        showToast('Preencha todos os campos', 'error');
+        return;
+      }
+
+      try {
+        const transactionData = {
+          descricao: description,
+          valor: value,
+          tipo: type === 'despesa' ? 'saida' : 'entrada',
+          data: new Date().toISOString(),
+          tipo_transacao: type
+        };
+
+        await window.api.createCaixaMovimento(transactionData);
+
+        showToast('Transação lançada com sucesso!', 'success');
+        closeTransactionModal();
+        await loadBalanceCards();
+        await loadCaixa();
+      } catch (error) {
+        console.error('Erro ao lançar transação:', error);
+        showToast('Erro ao lançar transação', 'error');
+      }
+    }
+
+    async function closeCashRegister() {
+      showConfirm(
+        'Fechar Caixa',
+        'Tem certeza que deseja fechar o caixa? Esta ação não pode ser desfeita.',
+        async () => {
+          try {
+            await window.api.closeCaixa();
+            showToast('Caixa fechado com sucesso!', 'success');
+            await loadBalanceCards();
+            await loadCaixa();
+          } catch (error) {
+            console.error('Erro ao fechar caixa:', error);
+            showToast('Erro ao fechar caixa', 'error');
+          }
+        }
+      );
+    }
+
     // FILTER FUNCTIONS
     function updateDateFilter() {
       filters.dataInicio = document.getElementById('dataInicio').value;
@@ -1145,8 +1374,10 @@
       filters.dataFim = dates.dataFim;
       filters.preset = preset;
 
-      document.getElementById('dataInicio').value = dates.dataInicio;
-      document.getElementById('dataFim').value = dates.dataFim;
+      const dataInicioInput = document.getElementById('dataInicio');
+      const dataFimInput = document.getElementById('dataFim');
+      if (dataInicioInput) dataInicioInput.value = dates.dataInicio;
+      if (dataFimInput) dataFimInput.value = dates.dataFim;
 
       // Update preset button states
       document.querySelectorAll('.preset-btn').forEach(btn => {

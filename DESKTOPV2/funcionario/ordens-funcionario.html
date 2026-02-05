@@ -1138,11 +1138,11 @@
           const statusClass = `status-${ordem.status.toLowerCase().replace(/_/g, '-')}`;
           html += `
             <tr>
-              <td>#${ordem.id.substring(0, 8)}</td>
+              <td>#${ordem.numeroOrdem || ordem.id.substring(0, 8)}</td>
               <td>${ordem.cliente?.nome || '-'}</td>
               <td>${ordem.veiculo?.placa || '-'}</td>
               <td><span class="status-badge ${statusClass}">${ordem.status}</span></td>
-              <td>${formatCurrency(ordem.valor)}</td>
+              <td>${formatCurrency(ordem.valorTotal || ordem.valor)}</td>
               <td>${formatDate(ordem.createdAt)}</td>
               <td>
                 <div class="action-btns">
@@ -1270,7 +1270,7 @@
 
           <div class="detail-header">
             <div class="detail-info">
-              <div class="detail-title">Ordem #${currentOrdem.id.substring(0, 8)}</div>
+              <div class="detail-title">Ordem #${currentOrdem.numeroOrdem || currentOrdem.id.substring(0, 8)}</div>
               <div class="detail-grid">
                 <div class="detail-item">
                   <div class="detail-item-label">Cliente</div>
@@ -1286,7 +1286,7 @@
                 </div>
                 <div class="detail-item">
                   <div class="detail-item-label">Valor Total</div>
-                  <div class="detail-item-value" style="color: var(--primary); font-size: 16px;">${formatCurrency(currentOrdem.valor)}</div>
+                  <div class="detail-item-value" style="color: var(--primary); font-size: 16px;">${formatCurrency(currentOrdem.valorTotal || currentOrdem.valor)}</div>
                 </div>
                 <div class="detail-item">
                   <div class="detail-item-label">Data</div>
@@ -1398,7 +1398,7 @@
 
       // Inicializa estado do modal
       paymentModal.orderId = order.id;
-      paymentModal.total = order.valor || order.valorTotal || 0;
+      paymentModal.total = order.valorTotal || order.valor || 0;
       paymentModal.paid = (order.pagamentos || [])
         .filter(p => p.status === 'PAGO')
         .reduce((sum, p) => sum + p.valor, 0);

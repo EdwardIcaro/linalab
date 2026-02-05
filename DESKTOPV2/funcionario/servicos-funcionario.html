@@ -940,7 +940,9 @@
           html += '<div class="services-grid">';
 
           servicos.forEach(servico => {
-            const subtipos = servico.subtiposVeiculo?.join(', ') || 'Todos';
+            const subtipos = (servico.subtiposVeiculo && servico.subtiposVeiculo.length > 0)
+              ? servico.subtiposVeiculo.map(s => s.categoria || s).join(', ')
+              : 'Todos';
             const tipoVeiculo = servico.tipoVeiculo || 'Não especificado';
             html += `
               <div class="service-card">
@@ -1076,7 +1078,7 @@
       try {
         await window.api.deleteServico(id);
         showToast('Serviço excluído com sucesso!', 'success');
-        await loadServicos();
+        await loadServicosAndAdicionais();
       } catch (error) {
         console.error('Erro ao excluir serviço:', error);
         showToast('Erro ao excluir serviço. Tente novamente.', 'error');
@@ -1159,7 +1161,7 @@
         }
 
         closeServiceModal();
-        await loadServicos();
+        await loadServicosAndAdicionais();
       } catch (error) {
         console.error('Erro ao salvar serviço:', error);
         showToast('Erro ao salvar serviço. Tente novamente.', 'error');

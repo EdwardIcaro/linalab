@@ -67,37 +67,40 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
     const { start, end } = getWorkdayRange(today, horarioAbertura);
 
     try {
-        const pagamentos = await prisma.pagamento.findMany({
-            where: {
-                empresaId,
-                status: 'PAGO',
-                pagoEm: { gte: start, lte: end },
-            },
-        });
+        // ✅ OTIMIZAÇÃO: Executar ambas as queries em paralelo com Promise.all()
+        const [pagamentos, saidas] = await Promise.all([
+            prisma.pagamento.findMany({
+                where: {
+                    empresaId,
+                    status: 'PAGO',
+                    pagoEm: { gte: start, lte: end },
+                },
+                select: { valor: true, metodo: true } // ✅ Select otimizado - só campos necessários
+            }),
+            prisma.caixaRegistro.findMany({
+                where: {
+                    empresaId,
+                    tipo: { in: ['SAIDA', 'SANGRIA'] },
+                    data: { gte: start, lte: end },
+                },
+                select: { valor: true, formaPagamento: true } // ✅ Select otimizado
+            })
+        ]);
 
-        const faturamentoDia = pagamentos.reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
+        const faturamentoDia = pagamentos.reduce((acc: number, p) => acc + p.valor, 0);
 
         // Calcular totais por forma de pagamento
         const totalDinheiro = pagamentos
             .filter(p => p.metodo === 'DINHEIRO')
-            .reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
+            .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalCartao = pagamentos
             .filter(p => p.metodo === 'CARTAO')
-            .reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
+            .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalPix = pagamentos
             .filter(p => p.metodo === 'PIX')
-            .reduce((acc: number, p: Pagamento) => acc + p.valor, 0);
-
-        // Buscar saídas e sangrias do dia
-        const saidas = await prisma.caixaRegistro.findMany({
-            where: {
-                empresaId,
-                tipo: { in: ['SAIDA', 'SANGRIA'] },
-                data: { gte: start, lte: end },
-            },
-        });
+            .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalSaidas = saidas.reduce((acc: number, s) => acc + s.valor, 0);
 
@@ -253,18 +256,58 @@ export const createSangria = async (req: EmpresaRequest, res: Response) => {
     }
 };
 
+// ✅ OTIMIZAÇÃO: Função auxiliar otimizada - sem OR complexo
+async function getPagamentosDoPeriodoOptimizado(
+    empresaId: string,
+    dateFilter: Prisma.DateTimeFilter | undefined,
+    tipo?: string | string[]
+) {
+    if (!dateFilter) {
+        return [];
+    }
+
+    // ✅ Fazer duas queries em paralelo ao invés de usar OR
+    const [pagos, pendentes] = await Promise.all([
+        prisma.pagamento.findMany({
+            where: { empresaId, status: 'PAGO', pagoEm: dateFilter },
+            select: {
+                id: true,
+                valor: true,
+                metodo: true,
+                pagoEm: true,
+                ordem: { select: { veiculo: { select: { placa: true, modelo: true } } } }
+            },
+        }),
+        prisma.pagamento.findMany({
+            where: { empresaId, status: 'PENDENTE', createdAt: dateFilter },
+            select: {
+                id: true,
+                valor: true,
+                metodo: true,
+                createdAt: true,
+                ordem: { select: { veiculo: { select: { placa: true, modelo: true } } } }
+            },
+        })
+    ]);
+
+    return [...pagos, ...pendentes].map((p: any) => ({
+        id: p.id,
+        tipo: p.pagoEm ? 'PAGAMENTO' : 'PENDENTE',
+        data: p.pagoEm || p.createdAt,
+        valor: p.valor,
+        formaPagamento: p.metodo,
+        descricao: `Pagamento OS: ${p.ordem.veiculo.modelo} (${p.ordem.veiculo.placa})`,
+    }));
+}
+
 export const getHistorico = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { dataInicio, dataFim, tipo } = req.query;
 
-    const where: Prisma.CaixaRegistroWhereInput = { empresaId };
-
-    if (tipo) {
-        where.tipo = tipo as any;
-    }
-
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     const horarioAbertura = empresa?.horarioAbertura || '07:00';
+
+    let dateRange: Prisma.DateTimeFilter | undefined;
 
     if (dataInicio && dataFim) {
         const startDateString = (dataInicio as string).split('T')[0];
@@ -275,30 +318,34 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
         end.setDate(end.getDate() + 1);
         end.setMilliseconds(end.getMilliseconds() - 1);
 
-        where.data = {
-            gte: start,
-            lte: end,
-        };
+        dateRange = { gte: start, lte: end };
     }
 
     try {
-        let registrosPagamento: any[] = [];
-        let outrosRegistros: RegistroComDependencias[] = [];
-
-        if (!tipo || tipo === 'PAGAMENTO' || tipo === '') {
-            registrosPagamento = await getPagamentosDoPeriodo(empresaId, where.data as Prisma.DateTimeFilter);
-        }
-
-        if (!tipo || tipo === 'SAIDA' || tipo === 'SANGRIA' || tipo === 'FECHAMENTO' || tipo === '') {
-            outrosRegistros = await prisma.caixaRegistro.findMany({
-                where,
-                include: {
-                    fornecedor: true,
-                    lavador: true,
+        // ✅ OTIMIZAÇÃO: Rodar ambas as queries em paralelo
+        const [registrosPagamento, outrosRegistros] = await Promise.all([
+            getPagamentosDoPeriodoOptimizado(empresaId, dateRange, tipo),
+            prisma.caixaRegistro.findMany({
+                where: {
+                    empresaId,
+                    ...(tipo && tipo !== 'PAGAMENTO' ? { tipo: tipo as any } : {}),
+                    ...(dateRange ? { data: dateRange } : {}),
                 },
-            });
-        }
+                select: {
+                    id: true,
+                    tipo: true,
+                    data: true,
+                    valor: true,
+                    formaPagamento: true,
+                    descricao: true,
+                    fornecedor: { select: { nome: true } },
+                    lavador: { select: { nome: true } },
+                },
+                orderBy: { data: 'desc' }, // ✅ Ordenar no banco ao invés de JavaScript
+            })
+        ]);
 
+        // ✅ Combinar e ordenar uma vez no final
         const todosRegistros = [...registrosPagamento, ...outrosRegistros].sort((a: { data: Date | null }, b: { data: Date | null }) =>
             new Date(b.data!).getTime() - new Date(a.data!).getTime()
         );
@@ -328,32 +375,6 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
     }
 };
 
-async function getPagamentosDoPeriodo(empresaId: string, dateFilter: Prisma.DateTimeFilter | undefined) {
-    const pagamentos = await prisma.pagamento.findMany({
-        where: {
-            empresaId,
-            OR: [
-                { status: 'PAGO', pagoEm: dateFilter },
-                { status: 'PENDENTE', createdAt: dateFilter }
-            ]
-        },
-        select: {
-            id: true, valor: true, metodo: true, status: true, pagoEm: true, createdAt: true,
-            ordem: { select: { id: true, veiculo: { select: { placa: true, modelo: true } } } }
-        }
-    });
-
-    return pagamentos.map((p: any) => ({
-        id: p.id,
-        tipo: p.status === 'PAGO' ? 'PAGAMENTO' : 'PENDENTE',
-        data: p.status === 'PAGO' ? p.pagoEm : p.createdAt,
-        valor: p.valor,
-        formaPagamento: p.metodo,
-        ordemId: p.ordem.id,
-        descricao: `Pagamento OS: ${p.ordem.veiculo.modelo} (${p.ordem.veiculo.placa})`,
-    }));
-}
-
 export const getFechamentoById = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { id } = req.params;
@@ -375,7 +396,7 @@ export const getFechamentoById = async (req: EmpresaRequest, res: Response) => {
 
         const fechamento = await prisma.fechamentoCaixa.findFirst({
             where: { empresaId, data: { gte: getWorkdayRange(registroFechamento.data, horarioAbertura).start, lte: getWorkdayRange(registroFechamento.data, horarioAbertura).end } },
-        }); 
+        });
 
         if (!fechamento) return res.status(404).json({ error: 'Detalhes do fechamento não encontrados para esta data.' });
 

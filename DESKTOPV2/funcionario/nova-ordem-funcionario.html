@@ -1359,6 +1359,8 @@
                 isCreatingOrder: false,
                 showSuccessModal: false,
                 createdOrderNumber: null,
+                editingOrderId: null,
+                isLoadingExistingOrder: false,
 
                 // ==========================================
                 // COMPUTED: Total Price
@@ -1419,14 +1421,23 @@
 
                     // Check URL params for pre-selected type/category
                     const params = new URLSearchParams(window.location.search);
-                    if (params.get('tipo')) {
-                        this.vehicleType = params.get('tipo');
-                    }
-                    if (params.get('subtipo')) {
-                        this.vehicleCategory = params.get('subtipo');
-                    }
-                    if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
-                        this.vehicleCategory = 'HATCH';
+
+                    // Check if editing existing order
+                    const editId = params.get('edit');
+                    if (editId) {
+                        this.editingOrderId = editId;
+                        await this.loadExistingOrder(editId);
+                    } else {
+                        // Only set defaults for new orders
+                        if (params.get('tipo')) {
+                            this.vehicleType = params.get('tipo');
+                        }
+                        if (params.get('subtipo')) {
+                            this.vehicleCategory = params.get('subtipo');
+                        }
+                        if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
+                            this.vehicleCategory = 'HATCH';
+                        }
                     }
 
                     // Focus search input
@@ -1653,6 +1664,64 @@
                 },
 
                 // ==========================================
+                // LOAD EXISTING ORDER FOR EDITING
+                // ==========================================
+                async loadExistingOrder(ordemId) {
+                    this.isLoadingExistingOrder = true;
+                    try {
+                        const response = await window.api.getOrdemById(ordemId);
+                        const ordem = response.data || response;
+
+                        // Set client
+                        if (ordem.cliente) {
+                            this.client = ordem.cliente;
+                            this.searchQuery = ordem.cliente.nome;
+                        }
+
+                        // Set vehicle
+                        if (ordem.veiculo) {
+                            this.vehicle = ordem.veiculo;
+                            this.vehicleType = ordem.veiculo.tipo || 'CARRO';
+                            this.vehicleCategory = ordem.veiculo.subtipo || 'HATCH';
+                        }
+
+                        // Load services and adicionais
+                        await this.loadServices();
+
+                        // Set selected service
+                        if (ordem.servicos && ordem.servicos.length > 0) {
+                            const mainService = ordem.servicos[0];
+                            this.selectedService = this.services.find(s => s.id === mainService.id) || mainService;
+                        }
+
+                        // Set selected adicionais
+                        if (ordem.adicionais && ordem.adicionais.length > 0) {
+                            this.selectedAdicionais = ordem.adicionais;
+                        }
+
+                        // Set selected washers/lavadores
+                        if (ordem.lavadorIds && ordem.lavadorIds.length > 0) {
+                            this.selectedWasherIds = ordem.lavadorIds;
+                        } else if (ordem.lavadores && ordem.lavadores.length > 0) {
+                            this.selectedWasherIds = ordem.lavadores.map(l => l.id || l);
+                        }
+
+                        // Set observations
+                        this.observacoes = ordem.observacoes || '';
+
+                        // Set step to review (since we're editing)
+                        this.step = 3;
+
+                        showToast('Ordem carregada para edição', 'success');
+                    } catch (error) {
+                        console.error('Erro ao carregar ordem:', error);
+                        showToast('Erro ao carregar ordem para edição. Tente novamente.', 'error');
+                    } finally {
+                        this.isLoadingExistingOrder = false;
+                    }
+                },
+
+                // ==========================================
                 // DATA LOADING
                 // ==========================================
                 async loadServices() {
@@ -1791,19 +1860,30 @@
                     }
 
                     try {
-                        const response = await window.api.createOrdem(orderData);
-                        this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
-                        this.showSuccessModal = true;
-                        showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
+                        let response;
+                        if (this.editingOrderId) {
+                            // Editando ordem existente
+                            response = await window.api.updateOrdem(this.editingOrderId, orderData);
+                            this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                            this.showSuccessModal = true;
+                            showToast(`Ordem #${this.createdOrderNumber} atualizada com sucesso!`, 'success');
+                        } else {
+                            // Criando nova ordem
+                            response = await window.api.createOrdem(orderData);
+                            this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                            this.showSuccessModal = true;
+                            showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
+                        }
+
                         setTimeout(() => {
                             if (this.showSuccessModal) {
                                 window.location.href = 'ordens-funcionario.html';
                             }
                         }, 2000);
                     } catch (error) {
-                        console.error('Error creating order:', error);
+                        console.error('Error saving order:', error);
 
-                        if (error.code === 'ACTIVE_ORDER_EXISTS') {
+                        if (!this.editingOrderId && error.code === 'ACTIVE_ORDER_EXISTS') {
                             if (confirm('Já existe uma ordem ativa para este veículo. Deseja criar mesmo assim?')) {
                                 orderData.forcarCriacao = true;
                                 try {
@@ -1821,7 +1901,8 @@
                                 }
                             }
                         } else {
-                            showToast('Erro ao criar ordem: ' + (error.details || error.error || 'Erro desconhecido'), 'error');
+                            const action = this.editingOrderId ? 'atualizar' : 'criar';
+                            showToast(`Erro ao ${action} ordem: ` + (error.details || error.error || 'Erro desconhecido'), 'error');
                         }
                     } finally {
                         this.isCreatingOrder = false;
