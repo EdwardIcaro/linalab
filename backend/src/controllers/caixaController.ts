@@ -302,16 +302,20 @@ async function getPagamentosDoPeriodoOptimizado(
 
 export const getHistorico = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { dataInicio, dataFim, tipo } = req.query;
+    const { dataInicio, dataFim } = req.query;
+    const tipo = req.query.tipo as string | string[] | undefined;
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     const horarioAbertura = empresa?.horarioAbertura || '07:00';
 
     let dateRange: Prisma.DateTimeFilter | undefined;
 
-    if (dataInicio && dataFim) {
-        const startDateString = (dataInicio as string).split('T')[0];
-        const endDateString = (dataFim as string).split('T')[0];
+    const dataInicioStr = dataInicio as string | undefined;
+    const dataFimStr = dataFim as string | undefined;
+
+    if (dataInicioStr && dataFimStr) {
+        const startDateString = dataInicioStr.split('T')[0];
+        const endDateString = dataFimStr.split('T')[0];
 
         const start = new Date(`${startDateString}T${horarioAbertura}:00`);
         const end = new Date(`${endDateString}T${horarioAbertura}:00`);
