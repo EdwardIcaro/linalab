@@ -1118,6 +1118,20 @@
                         <span>Detalhes Adicionais</span>
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Lavadores (Opcional)</label>
+                            <div>
+                                <template x-for="washer in washers" :key="washer.id">
+                                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                        <input type="checkbox" :value="washer.id" x-model="selectedWasherIds">
+                                        <span x-text="washer.nome"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Observações (Opcional)</label>
                         <textarea
@@ -1335,6 +1349,8 @@
 
                 selectedService: null,        // Single main service
                 selectedAdicionais: [],       // Multiple adicionais
+                washers: [],                  // All washers/lavadores from API
+                selectedWasherIds: [],        // Multiple selected washers
                 observacoes: '',
 
                 // ==========================================
@@ -1643,19 +1659,22 @@
                     this.isLoadingServices = true;
 
                     try {
-                        const [servicosData, adicionaisData] = await Promise.all([
+                        const [servicosData, adicionaisData, lavadoresData] = await Promise.all([
                             window.api.getServicos({
                                 tipoVeiculo: this.vehicleType,
                                 subtipoVeiculo: this.vehicleCategory
                             }),
-                            window.api.getAdicionaisSimple()
+                            window.api.getAdicionaisSimple(),
+                            window.api.getLavadores()
                         ]);
 
                         this.services = servicosData.servicos || [];
                         this.adicionais = adicionaisData.adicionais || [];
+                        this.washers = lavadoresData.lavadores || [];
 
                         this.selectedService = null;
                         this.selectedAdicionais = [];
+                        this.selectedWasherIds = [];
                     } catch (error) {
                         console.error('Error loading services:', error);
                         showToast('Erro ao carregar serviços', 'error');
@@ -1743,11 +1762,13 @@
                         });
                     }
 
+                    const primaryWasherId = this.selectedWasherIds[0] || null;
                     const orderData = {
                         clienteId: this.client?.id || null,
                         veiculoId: this.vehicle?.id || null,
-                        lavadorId: null,
-                        lavadorIds: [],
+                        lavadorId: primaryWasherId,
+                        lavadorIds: [...this.selectedWasherIds],
+                        valor: this.total,
                         itens: items,
                         observacoes: this.observacoes.trim(),
                         forcarCriacao: false

@@ -968,6 +968,16 @@
               <td>${formatDate(ordem.createdAt)}</td>
               <td>
                 <div class="action-btns">
+                  ${ordem.status === 'PENDENTE' || ordem.status === 'EM_ANDAMENTO' ? `
+                    <button class="btn-small" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir Lavagem">
+                      <i class="fas fa-flag-checkered"></i>
+                    </button>
+                  ` : ''}
+                  ${ordem.status === 'AGUARDANDO_PAGAMENTO' ? `
+                    <button class="btn-small" onclick="openPaymentModalFromTable('${ordem.id}')" title="Registrar Pagamento">
+                      <i class="fas fa-check"></i>
+                    </button>
+                  ` : ''}
                   <button class="btn-small" onclick="viewOrdem('${ordem.id}')" title="Visualizar">
                     <i class="fas fa-eye"></i>
                   </button>
@@ -1108,6 +1118,12 @@
                   <div class="detail-item-label">Método Pagamento</div>
                   <div class="detail-item-value">${currentOrdem.metodoPagamento || '-'}</div>
                 </div>
+                ${currentOrdem.lavadores && currentOrdem.lavadores.length > 0 ? `
+                <div class="detail-item">
+                  <div class="detail-item-label">Lavadores</div>
+                  <div class="detail-item-value">${currentOrdem.lavadores.map(l => l.nome || l).join(', ')}</div>
+                </div>
+                ` : ''}
               </div>
             </div>
             <div class="detail-actions">
@@ -1140,15 +1156,41 @@
       }
     }
 
-    // MARK AS COMPLETE
+    // MARK AS COMPLETE (from detail view)
     async function markAsComplete() {
       if (!currentOrdem) return;
 
       showConfirm(
         'Marcar como Concluído',
         'Tem certeza que deseja marcar esta ordem como concluída?',
-        `updateOrdemStatus('AGUARDANDO_PAGAMENTO')`
+        () => {
+          updateOrdemStatus('AGUARDANDO_PAGAMENTO');
+        }
       );
+    }
+
+    // MARK ORDER COMPLETED (from table view)
+    async function markOrderCompletedFromTable(ordemId) {
+      try {
+        const response = await window.api.getOrdemById(ordemId);
+        currentOrdem = response.data || response;
+        markAsComplete();
+      } catch (error) {
+        console.error('Erro ao carregar ordem:', error);
+        showToast('Erro ao carregar ordem. Tente novamente.', 'error');
+      }
+    }
+
+    // OPEN PAYMENT MODAL (from table view)
+    async function openPaymentModalFromTable(ordemId) {
+      try {
+        const response = await window.api.getOrdemById(ordemId);
+        currentOrdem = response.data || response;
+        openPaymentModal();
+      } catch (error) {
+        console.error('Erro ao carregar ordem:', error);
+        showToast('Erro ao carregar ordem. Tente novamente.', 'error');
+      }
     }
 
     // UPDATE ORDEM STATUS

@@ -3,53 +3,766 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lina X - Clientes</title>
+  <title>Lina Forge - CRM de Clientes</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --primary: #0066cc; --success: #28a745; --danger: #dc3545; --light: #f8f9fa; --dark: #333;
-      --border: #ddd; --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--light); color: var(--dark); }
-    .header-funcionario { background: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; border-bottom: 2px solid var(--primary); }
-    .header-left { display: flex; align-items: center; gap: 12px; flex: 1; }
-    .logo { width: 40px; height: 40px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
-    .page-info h1 { font-size: 16px; font-weight: 600; margin: 0; }
-    .page-info p { font-size: 12px; color: #666; margin: 0; }
-    .icon-btn { background: none; border: none; font-size: 20px; color: var(--dark); cursor: pointer; padding: 8px 12px; border-radius: 6px; transition: all 0.3s; }
-    .icon-btn:hover { background: var(--light); color: var(--primary); }
-    .main-container { max-width: 1200px; margin: 0 auto; padding: 20px; padding-bottom: 100px; }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .section-title { font-size: 18px; font-weight: 600; }
-    .clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-    .client-card { background: white; padding: 20px; border-radius: 12px; box-shadow: var(--shadow); transition: all 0.3s; cursor: pointer; }
-    .client-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
-    .client-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-    .client-info { font-size: 13px; color: #666; margin: 4px 0; }
-    .client-info i { width: 20px; color: var(--primary); }
-    .empty-state { text-align: center; padding: 60px 20px; }
-    .empty-state i { font-size: 64px; color: #ddd; margin-bottom: 20px; display: block; }
-    .empty-state h2 { font-size: 20px; color: var(--dark); margin-bottom: 8px; }
-    .loading-container { text-align: center; padding: 60px 20px; }
-    .spinner { border: 4px solid var(--light); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .menu-dropdown { display: none; position: fixed; bottom: 80px; right: 20px; background: white; border-radius: 8px; box-shadow: var(--shadow); min-width: 200px; z-index: 999; }
-    .menu-dropdown.active { display: block; }
-    .menu-dropdown a, .menu-dropdown button { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--dark); text-decoration: none; border: none; background: none; width: 100%; cursor: pointer; font-size: 14px; transition: all 0.3s; }
-    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--light); color: var(--primary); }
-    .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 998; }
-    .overlay.active { display: block; }
-    .mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; height: 70px; z-index: 999; box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); }
-    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #666; font-size: 11px; gap: 4px; transition: all 0.3s; border: none; background: none; cursor: pointer; border-top: 3px solid transparent; }
-    .nav-item:hover { color: var(--primary); }
-    .nav-item.active { color: var(--primary); border-top-color: var(--primary); }
-    .nav-item i { font-size: 24px; }
-    .toast { position: fixed; bottom: 100px; left: 20px; right: 20px; max-width: 400px; background: white; padding: 16px; border-radius: 8px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 1001; transform: translateY(120px); transition: transform 0.3s ease; }
-    .toast.show { transform: translateY(0); }
-    .toast-success { border-left: 4px solid var(--success); }
-    .toast-error { border-left: 4px solid var(--danger); }
-    @media (max-width: 768px) { .main-container { padding: 16px; padding-bottom: 100px; } .clients-grid { grid-template-columns: 1fr; } }
+
+    :root {
+      --primary: #0066cc;
+      --primary-dark: #0052a3;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --info: #17a2b8;
+      --light: #f8f9fa;
+      --dark: #333;
+      --border: #ddd;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    /* ===== HEADER ===== */
+    .header-funcionario {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+    }
+
+    .page-info h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .page-info p {
+      font-size: 13px;
+      color: #666;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--dark);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-btn:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    /* ===== MAIN CONTAINER ===== */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    /* ===== SECTION HEADER ===== */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    .btn-novo {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-novo:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    /* ===== SEARCH ===== */
+    .search-container {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .search-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+    }
+
+    .search-wrapper i {
+      color: #999;
+      font-size: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      background: none;
+    }
+
+    .search-input::placeholder {
+      color: #999;
+    }
+
+    .search-hint {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    /* ===== TABLE ===== */
+    .table-wrapper {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--light);
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      color: #666;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    tbody tr:hover {
+      background: var(--light);
+    }
+
+    .whatsapp-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background-color: #25D366;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .whatsapp-btn:hover {
+      background-color: #1da851;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(37, 211, 102, 0.3);
+    }
+
+    .whatsapp-btn i {
+      font-size: 14px;
+    }
+
+    /* ===== ACTIONS ===== */
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-small {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--primary);
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .btn-small:hover {
+      background: var(--light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    .btn-small.danger {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .btn-small.danger:hover {
+      background: rgba(220, 53, 69, 0.1);
+      border-color: var(--danger);
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      color: #ddd;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .empty-state h2 {
+      font-size: 20px;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: #999;
+      margin-bottom: 20px;
+    }
+
+    /* ===== LOADING ===== */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 4px solid var(--light);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: #999;
+      cursor: pointer;
+      transition: color 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+    }
+
+    .modal-close:hover {
+      color: var(--dark);
+    }
+
+    /* ===== FORM ===== */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--dark);
+      font-size: 14px;
+    }
+
+    .form-input,
+    .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .form-info {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    /* ===== VEHICLE LIST ===== */
+    .vehicle-list {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--light);
+      border-radius: 8px;
+    }
+
+    .vehicle-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 12px;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .vehicle-item input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .vehicle-item button {
+      padding: 8px 12px;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+
+    .vehicle-item button:hover {
+      background: #c82333;
+      transform: scale(1.05);
+    }
+
+    .add-vehicle-btn {
+      width: 100%;
+      padding: 10px;
+      background: none;
+      border: 2px dashed var(--border);
+      border-radius: 6px;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .add-vehicle-btn:hover {
+      border-color: var(--primary);
+      background: rgba(0, 102, 204, 0.05);
+    }
+
+    /* ===== MODAL ACTIONS ===== */
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--light);
+      color: var(--dark);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #e9ecef;
+    }
+
+    /* ===== DETAILS MODAL ===== */
+    .details-section {
+      margin-bottom: 24px;
+    }
+
+    .details-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      color: #999;
+      font-weight: 600;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: var(--dark);
+      font-weight: 500;
+    }
+
+    .vehicle-card {
+      padding: 12px;
+      background: var(--light);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .vehicle-card .plate {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .vehicle-card .model {
+      font-size: 12px;
+      color: #999;
+    }
+
+    /* ===== MENU ===== */
+    .menu-dropdown {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 200px;
+      z-index: 999;
+      animation: slideUp 0.3s ease;
+    }
+
+    .menu-dropdown.active {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .menu-dropdown a,
+    .menu-dropdown button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--dark);
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .menu-dropdown a:hover,
+    .menu-dropdown button:hover {
+      background: var(--light);
+      color: var(--primary);
+    }
+
+    .menu-dropdown button:last-child {
+      color: var(--danger);
+    }
+
+    .menu-dropdown button:last-child:hover {
+      background: rgba(220, 53, 69, 0.1);
+    }
+
+    /* ===== OVERLAY ===== */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    /* ===== MOBILE NAV ===== */
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      height: 70px;
+      z-index: 999;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #666;
+      font-size: 11px;
+      gap: 4px;
+      transition: all 0.3s;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-top: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      border-top-color: var(--primary);
+    }
+
+    .nav-item i {
+      font-size: 24px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 16px;
+        padding-bottom: 100px;
+      }
+
+      .section-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-novo {
+        width: 100%;
+        justify-content: center;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      th, td {
+        padding: 12px;
+      }
+
+      .modal-content {
+        max-width: 95%;
+        padding: 20px;
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -59,57 +772,557 @@
 
   <main class="main-container">
     <div class="section-header">
-      <h1 class="section-title">Clientes</h1>
+      <div>
+        <h1 class="section-title">CRM de Clientes</h1>
+        <p class="section-subtitle">Gerencie clientes e veículos</p>
+      </div>
+      <button class="btn-novo" onclick="openClientModal()">
+        <i class="fas fa-plus"></i>
+        Novo Cliente
+      </button>
     </div>
-    <div id="content"></div>
+
+    <!-- Search -->
+    <div class="search-container">
+      <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Buscar por nome, telefone ou placa do veículo..."
+          class="search-input"
+          onkeyup="filterClientes()"
+        >
+      </div>
+      <small class="search-hint">
+        <i class="fas fa-info-circle"></i>
+        Dica: Digite a placa de qualquer veículo para encontrar o dono
+      </small>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+      <div id="content"></div>
+    </div>
   </main>
 
   <nav id="mobileNav"></nav>
 
+  <!-- Client Modal -->
+  <div class="modal-overlay" id="clientModal">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title" id="clientModalTitle">Novo Cliente</h2>
+        <button class="modal-close" onclick="closeClientModal()">&times;</button>
+      </div>
+
+      <form onsubmit="saveClient(event)">
+        <div class="form-group">
+          <label for="clientName" class="form-label">Nome *</label>
+          <input
+            type="text"
+            id="clientName"
+            class="form-input"
+            placeholder="Digite o nome do cliente"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="clientPhone" class="form-label">Telefone</label>
+          <input
+            type="tel"
+            id="clientPhone"
+            class="form-input"
+            placeholder="(00) 00000-0000"
+          >
+        </div>
+
+        <div class="vehicle-list">
+          <label class="form-label">
+            <i class="fas fa-car"></i> Veículos da Frota
+          </label>
+          <div id="vehiclesList"></div>
+          <button type="button" class="add-vehicle-btn" onclick="addVehicleField()">
+            <i class="fas fa-plus"></i> Adicionar Veículo
+          </button>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeClientModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">
+            <i class="fas fa-save"></i> Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title" id="detailsTitle">Detalhes do Cliente</h2>
+        <button class="modal-close" onclick="closeDetailsModal()">&times;</button>
+      </div>
+
+      <div id="detailsContent"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeDetailsModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../api.js"></script>
   <script src="utils-funcionario.js"></script>
+
   <script>
     const PAGE_TITLE = 'Clientes';
     const PAGE_ACTIVE = 'clientes';
 
+    let allClientes = [];
+    let editingClientId = null;
+    let vehicleCount = 0;
+
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
+
+      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+      if (!permissoes.includes('gerenciar_clientes')) {
+        showToast('Você não tem permissão para gerenciar clientes', 'error');
+        setTimeout(() => {
+          window.location.href = '../index-funcionario.html';
+        }, 1500);
+        return;
+      }
+
       document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
       document.getElementById('menu').innerHTML = createFuncionarioMenu();
       document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+
       loadUserInfo();
       await loadClientes();
     });
 
+    // LOAD CLIENTES
     async function loadClientes() {
       const content = document.getElementById('content');
-      try {
-        content.innerHTML = createLoading();
-        const response = await window.api.getClientes(1, 100);
-        const clientes = response.data || response.clientes || [];
 
-        if (clientes.length === 0) {
-          content.innerHTML = createEmptyState('fa-users', 'Nenhum cliente', 'Você ainda não tem clientes cadastrados.');
-          return;
+      try {
+        content.innerHTML = '<div class="loading-container"><div class="spinner"></div><p>Carregando clientes...</p></div>';
+
+        const response = await window.api.getClientes(1, 100, '');
+        allClientes = response.clientes || response.data || [];
+
+        renderClientesTable();
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        content.innerHTML = createEmptyState(
+          'fa-exclamation-triangle',
+          'Erro ao carregar',
+          'Houve um erro ao carregar os clientes. Tente novamente.',
+          'Tentar novamente',
+          'loadClientes()'
+        );
+      }
+    }
+
+    // RENDER TABLE
+    function renderClientesTable() {
+      const content = document.getElementById('content');
+
+      if (allClientes.length === 0) {
+        content.innerHTML = createEmptyState(
+          'fa-users',
+          'Nenhum cliente cadastrado',
+          'Crie seu primeiro cliente clicando em "Novo Cliente".'
+        );
+        return;
+      }
+
+      let html = `
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Telefone/WhatsApp</th>
+                <th>Veículos</th>
+                <th>Total Gasto</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      allClientes.forEach(cliente => {
+        const veiculosCount = cliente.veiculos?.length || 0;
+        const veiculosPlacas = cliente.veiculos?.map(v => v.placa).join(', ') || '';
+        const totalGasto = cliente._sum?.valorTotal || 0;
+
+        html += `
+          <tr>
+            <td>${cliente.nome}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span>${cliente.telefone || 'N/A'}</span>
+                ${cliente.telefone ? `
+                  <a href="https://wa.me/55${cleanPhone(cliente.telefone)}" target="_blank" class="whatsapp-btn" title="Abrir WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                  </a>
+                ` : ''}
+              </div>
+            </td>
+            <td>
+              <span>${veiculosCount}</span>
+              ${veiculosCount > 0 ? `<small style="display: block; color: #999; font-size: 11px;">(${veiculosPlacas})</small>` : ''}
+            </td>
+            <td>${formatCurrency(totalGasto)}</td>
+            <td>
+              <div class="action-btns">
+                <button class="btn-small" onclick="showClientDetails('${cliente.id}')" title="Detalhes">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-small" onclick="openClientModal('${cliente.id}')" title="Editar">
+                  <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="btn-small danger" onclick="deleteClient('${cliente.id}', '${cliente.nome}')" title="Deletar">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    // FILTER CLIENTES
+    function filterClientes() {
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+      const filtered = allClientes.filter(cliente => {
+        if (cliente.nome.toLowerCase().includes(searchQuery)) return true;
+        if (cliente.telefone?.toLowerCase().includes(searchQuery)) return true;
+        if (cliente.veiculos?.some(v => v.placa?.toLowerCase().includes(searchQuery))) return true;
+        return false;
+      });
+
+      const content = document.getElementById('content');
+
+      if (filtered.length === 0) {
+        content.innerHTML = createEmptyState(
+          'fa-users-slash',
+          'Nenhum cliente encontrado',
+          'Nenhum cliente corresponde aos critérios de busca.'
+        );
+        return;
+      }
+
+      let html = `
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Telefone/WhatsApp</th>
+                <th>Veículos</th>
+                <th>Total Gasto</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      filtered.forEach(cliente => {
+        const veiculosCount = cliente.veiculos?.length || 0;
+        const veiculosPlacas = cliente.veiculos?.map(v => v.placa).join(', ') || '';
+        const totalGasto = cliente._sum?.valorTotal || 0;
+
+        html += `
+          <tr>
+            <td>${cliente.nome}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span>${cliente.telefone || 'N/A'}</span>
+                ${cliente.telefone ? `
+                  <a href="https://wa.me/55${cleanPhone(cliente.telefone)}" target="_blank" class="whatsapp-btn" title="Abrir WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                  </a>
+                ` : ''}
+              </div>
+            </td>
+            <td>
+              <span>${veiculosCount}</span>
+              ${veiculosCount > 0 ? `<small style="display: block; color: #999; font-size: 11px;">(${veiculosPlacas})</small>` : ''}
+            </td>
+            <td>${formatCurrency(totalGasto)}</td>
+            <td>
+              <div class="action-btns">
+                <button class="btn-small" onclick="showClientDetails('${cliente.id}')" title="Detalhes">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-small" onclick="openClientModal('${cliente.id}')" title="Editar">
+                  <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="btn-small danger" onclick="deleteClient('${cliente.id}', '${cliente.nome}')" title="Deletar">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    // OPEN CLIENT MODAL
+    async function openClientModal(clientId = null) {
+      editingClientId = clientId;
+      vehicleCount = 0;
+      document.getElementById('vehiclesList').innerHTML = '';
+      document.getElementById('clientName').value = '';
+      document.getElementById('clientPhone').value = '';
+
+      if (clientId) {
+        document.getElementById('clientModalTitle').textContent = 'Editar Cliente';
+
+        try {
+          const response = await window.api.getClienteById(clientId);
+          const cliente = response.data || response;
+
+          document.getElementById('clientName').value = cliente.nome || '';
+          document.getElementById('clientPhone').value = cliente.telefone || '';
+
+          if (cliente.veiculos && cliente.veiculos.length > 0) {
+            cliente.veiculos.forEach(veiculo => {
+              addVehicleField(veiculo.placa, veiculo.modelo);
+            });
+          } else {
+            addVehicleField();
+          }
+        } catch (error) {
+          console.error('Erro ao carregar cliente:', error);
+          showToast('Erro ao carregar dados do cliente', 'error');
+        }
+      } else {
+        document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
+        addVehicleField();
+      }
+
+      document.getElementById('clientModal').classList.add('active');
+    }
+
+    // CLOSE CLIENT MODAL
+    function closeClientModal() {
+      document.getElementById('clientModal').classList.remove('active');
+      editingClientId = null;
+    }
+
+    // ADD VEHICLE FIELD
+    function addVehicleField(placa = '', modelo = '') {
+      vehicleCount++;
+      const vehiclesList = document.getElementById('vehiclesList');
+
+      const vehicleHtml = `
+        <div class="vehicle-item" id="vehicle-${vehicleCount}">
+          <input type="text" placeholder="Placa (ABC1234)" value="${placa}" class="vehicle-placa">
+          <input type="text" placeholder="Modelo" value="${modelo}" class="vehicle-modelo">
+          <button type="button" onclick="removeVehicleField(${vehicleCount})">
+            <i class="fas fa-trash"></i> Remover
+          </button>
+        </div>
+      `;
+
+      vehiclesList.innerHTML += vehicleHtml;
+    }
+
+    // REMOVE VEHICLE FIELD
+    function removeVehicleField(id) {
+      document.getElementById(`vehicle-${id}`).remove();
+    }
+
+    // SAVE CLIENT
+    async function saveClient(event) {
+      event.preventDefault();
+
+      const nome = document.getElementById('clientName').value.trim();
+      const telefone = document.getElementById('clientPhone').value.trim() || null;
+
+      if (!nome) {
+        showToast('Nome do cliente é obrigatório', 'error');
+        return;
+      }
+
+      try {
+        const data = { nome, telefone };
+
+        if (editingClientId) {
+          await window.api.updateCliente(editingClientId, data);
+          showToast('Cliente atualizado com sucesso!', 'success');
+        } else {
+          const response = await window.api.createCliente(data);
+          const clienteId = response.id;
+
+          // Create vehicles
+          const veiculoInputs = document.querySelectorAll('.vehicle-item');
+          for (const item of veiculoInputs) {
+            const placa = item.querySelector('.vehicle-placa').value.trim();
+            const modelo = item.querySelector('.vehicle-modelo').value.trim();
+
+            if (placa) {
+              await window.api.createVeiculo({
+                clienteId,
+                placa: placa.toUpperCase(),
+                modelo: modelo || null,
+                cor: null
+              });
+            }
+          }
+
+          showToast('Cliente criado com sucesso!', 'success');
         }
 
-        let html = '<div class="clients-grid">';
-        clientes.forEach(cliente => {
+        closeClientModal();
+        await loadClientes();
+      } catch (error) {
+        console.error('Erro ao salvar cliente:', error);
+        showToast('Erro ao salvar cliente. Tente novamente.', 'error');
+      }
+    }
+
+    // DELETE CLIENT
+    async function deleteClient(clientId, clientName) {
+      if (!confirm(`Tem certeza que deseja excluir o cliente "${clientName}"? Esta ação não pode ser desfeita.`)) {
+        return;
+      }
+
+      try {
+        await window.api.deleteCliente(clientId);
+        showToast('Cliente deletado com sucesso!', 'success');
+        await loadClientes();
+      } catch (error) {
+        console.error('Erro ao deletar cliente:', error);
+        showToast('Erro ao deletar cliente. Tente novamente.', 'error');
+      }
+    }
+
+    // SHOW CLIENT DETAILS
+    async function showClientDetails(clientId) {
+      try {
+        const response = await window.api.getClienteById(clientId);
+        const cliente = response.data || response;
+
+        document.getElementById('detailsTitle').textContent = `Detalhes de ${cliente.nome}`;
+
+        let html = `
+          <div class="details-section">
+            <h3>Informações do Cliente</h3>
+            <div class="details-grid">
+              <div class="detail-item">
+                <span class="detail-label">Nome</span>
+                <span class="detail-value">${cliente.nome}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Telefone</span>
+                <span class="detail-value">${cliente.telefone || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Total de Ordens</span>
+                <span class="detail-value">${cliente.ordens?.length || 0}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Total Gasto</span>
+                <span class="detail-value">${formatCurrency(cliente._sum?.valorTotal || 0)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        if (cliente.veiculos && cliente.veiculos.length > 0) {
           html += `
-            <div class="client-card">
-              <div class="client-name"><i class="fas fa-user"></i> ${cliente.nome}</div>
-              ${cliente.telefone ? `<div class="client-info"><i class="fas fa-phone"></i> ${formatPhone(cliente.telefone)}</div>` : ''}
-              ${cliente.email ? `<div class="client-info"><i class="fas fa-envelope"></i> ${cliente.email}</div>` : ''}
-              <div class="client-info"><i class="fas fa-calendar"></i> ${cliente.veiculo ? cliente.veiculo.length + ' veículo(s)' : '0 veículos'}</div>
+            <div class="details-section">
+              <h3>Veículos</h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+          `;
+
+          cliente.veiculos.forEach(veiculo => {
+            html += `
+              <div class="vehicle-card">
+                <div class="plate">${veiculo.placa}</div>
+                <div class="model">${veiculo.modelo || 'Modelo não informado'}</div>
+              </div>
+            `;
+          });
+
+          html += `
+              </div>
             </div>
           `;
-        });
-        html += '</div>';
-        content.innerHTML = html;
+        }
+
+        document.getElementById('detailsContent').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('active');
       } catch (error) {
-        console.error('Erro:', error);
-        content.innerHTML = createEmptyState('fa-exclamation-triangle', 'Erro', 'Erro ao carregar clientes. Tente novamente.', 'Tentar', 'loadClientes()');
+        console.error('Erro ao carregar detalhes:', error);
+        showToast('Erro ao carregar detalhes do cliente', 'error');
       }
+    }
+
+    // CLOSE DETAILS MODAL
+    function closeDetailsModal() {
+      document.getElementById('detailsModal').classList.remove('active');
+    }
+
+    // CLEAN PHONE
+    function cleanPhone(phone) {
+      return phone.replace(/\D/g, '');
+    }
+
+    // TOGGLE MENU
+    function toggleMenu() {
+      const menu = document.getElementById('menu');
+      const overlay = document.getElementById('overlay');
+
+      if (menu && overlay) {
+        menu.classList.toggle('active');
+        overlay.classList.toggle('active');
+      }
+    }
+
+    // CLOSE MENU
+    function closeMenu() {
+      const menu = document.getElementById('menu');
+      const overlay = document.getElementById('overlay');
+
+      if (menu && overlay) {
+        menu.classList.remove('active');
+        overlay.classList.remove('active');
+      }
+    }
+
+    // FORMAT CURRENCY
+    function formatCurrency(value) {
+      if (!value) return 'R$ 0,00';
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value);
     }
   </script>
 </body>
