@@ -799,7 +799,7 @@
 
   <script>
     // ===== INITIALIZATION =====
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       // Check authentication
       const token = localStorage.getItem('token');
       if (!token) {
@@ -811,7 +811,7 @@
       detectMobile();
 
       // Load user data
-      loadUserData();
+      await loadUserData();
 
       // Load and render permission cards
       renderPermissionCards();
@@ -841,14 +841,26 @@
     window.addEventListener('resize', detectMobile);
 
     // ===== LOAD USER DATA =====
-    function loadUserData() {
+    async function loadUserData() {
       const usuarioNome = localStorage.getItem('usuarioNome') || 'Usuário';
       let empresaNome = localStorage.getItem('empresaNome');
 
-      // Se não tiver empresa no localStorage, tentar buscar do token ou usar padrão
+      // Se não tiver empresa no localStorage, buscar via API
       if (!empresaNome) {
-        // Tentar extrair do token ou usar valor padrão
-        empresaNome = 'Minha Empresa';
+        const empresaId = localStorage.getItem('empresaId');
+        if (empresaId) {
+          try {
+            const empresaData = await window.api.getEmpresaById(empresaId);
+            empresaNome = empresaData.nome || empresaData.name || 'Minha Empresa';
+            // Salva para próximas vezes
+            localStorage.setItem('empresaNome', empresaNome);
+          } catch (error) {
+            console.error('Erro ao carregar dados da empresa:', error);
+            empresaNome = 'Minha Empresa';
+          }
+        } else {
+          empresaNome = 'Minha Empresa';
+        }
       }
 
       // Atualizar elementos

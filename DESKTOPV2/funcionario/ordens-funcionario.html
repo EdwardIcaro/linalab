@@ -531,6 +531,135 @@
       justify-content: flex-end;
     }
 
+    /* PAYMENT MODAL STYLES */
+    .payment-header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .remaining-amount {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 8px 0;
+    }
+
+    .payment-header p {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .payment-input-group {
+      position: relative;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    .currency-symbol {
+      position: absolute;
+      left: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    #paymentValueInput {
+      font-size: 28px;
+      font-weight: 700;
+      text-align: right;
+      padding: 16px 20px 16px 50px;
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+    }
+
+    #paymentValueInput:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .payment-method-btn {
+      padding: 12px;
+      border: 2px solid var(--border);
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .payment-method-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(0, 102, 204, 0.05);
+    }
+
+    .payment-method-btn.pending {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fbbf24;
+    }
+
+    .payment-method-btn.pending:hover {
+      background: #fce8b0;
+    }
+
+    .payment-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--light);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .payment-list-item button {
+      background: none;
+      border: none;
+      color: var(--dark);
+      cursor: pointer;
+      padding: 0;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    .payment-list-item button:hover {
+      color: var(--danger);
+    }
+
+    @media (max-width: 600px) {
+      .payment-methods {
+        grid-template-columns: 1fr;
+      }
+
+      #paymentValueInput {
+        font-size: 20px;
+      }
+
+      .remaining-amount {
+        font-size: 20px;
+      }
+    }
+
     /* EMPTY STATE */
     .empty-state {
       text-align: center;
@@ -818,32 +947,71 @@
   <nav id="mobileNav"></nav>
 
   <!-- PAYMENT MODAL -->
-  <div class="modal-overlay" id="paymentModal">
+  <div class="modal-overlay" id="paymentModal" onclick="if(event.target === this) closePaymentModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">Registrar Pagamento</h2>
-        <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+        <button class="modal-close" onclick="closePaymentModal()" title="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <form id="paymentForm" onsubmit="submitPayment(event)">
-        <div class="form-group">
-          <label class="form-label">Adicionar pagamento como:</label>
-          <select id="paymentMethod" class="form-select" required>
-            <option value="">-- Selecione --</option>
-            <option value="DINHEIRO">Dinheiro</option>
-            <option value="CARTAO">Cartão</option>
-            <option value="PIX">PIX</option>
-          </select>
-        </div>
 
-        <div id="paymentsList" class="payment-list" style="display:none;"></div>
+      <div class="payment-header">
+        <p style="font-size: 14px; color: var(--text-secondary);">Valor Restante</p>
+        <p class="remaining-amount" id="remainingAmount">R$ 0,00</p>
+        <p style="font-size: 14px; color: var(--text-secondary);">
+          Total: <span id="totalAmount">R$ 0,00</span> |
+          Pago: <span id="paidAmount">R$ 0,00</span>
+        </p>
+      </div>
 
-        <div class="modal-actions">
-          <button type="button" class="btn-primary" style="background: var(--light); color: var(--dark); border: 1px solid var(--border);" onclick="closePaymentModal()">Cancelar</button>
-          <button type="submit" class="btn-primary">
-            <span id="submitText">Finalizar Ordem</span>
-          </button>
-        </div>
-      </form>
+      <div class="payment-input-group">
+        <span class="currency-symbol">R$</span>
+        <input
+          type="text"
+          class="form-input"
+          placeholder="0,00"
+          id="paymentValueInput"
+          oninput="formatPaymentInput(event)"
+        >
+      </div>
+
+      <button type="button" class="btn-primary" style="width: 100%; margin-bottom: 16px;" onclick="fillRemainingAmount()">
+        Preencher Valor Restante
+      </button>
+
+      <p class="form-label">Adicionar pagamento como:</p>
+      <div class="payment-methods">
+        <button type="button" class="payment-method-btn" onclick="addPayment('DINHEIRO')" title="Dinheiro">
+          <i class="fas fa-money-bill-wave"></i>
+          <span>Dinheiro</span>
+        </button>
+        <button type="button" class="payment-method-btn" onclick="addPayment('PIX')" title="PIX">
+          <i class="fab fa-pix"></i>
+          <span>PIX</span>
+        </button>
+        <button type="button" class="payment-method-btn" onclick="addPayment('CARTAO')" title="Cartão">
+          <i class="fas fa-credit-card"></i>
+          <span>Cartão</span>
+        </button>
+        <button type="button" class="payment-method-btn pending" onclick="addPayment('PENDENTE')" title="Pendente">
+          <i class="fas fa-clock"></i>
+          <span>Pendente</span>
+        </button>
+      </div>
+
+      <div id="paymentsList" style="margin-top: 16;">
+        <!-- Payments added will be shown here -->
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" style="background: var(--light); color: var(--dark); border: 1px solid var(--border);" onclick="closePaymentModal()">
+          Cancelar
+        </button>
+        <button type="button" class="btn-primary" id="submitPaymentBtn" onclick="submitPayments()" disabled>
+          Finalizar Ordem
+        </button>
+      </div>
     </div>
   </div>
 
@@ -857,7 +1025,17 @@
     const PAGE_ACTIVE = 'ordens';
 
     let currentOrdem = null;
-    let payments = [];
+    let paymentModal = {
+      isOpen: false,
+      isProcessing: false,
+      orderId: null,
+      total: 0,
+      paid: 0,
+      remaining: 0,
+      inputValue: '',
+      payments: []
+    };
+    let paymentKeydownHandler = null;
 
     // INITIALIZE
     document.addEventListener('DOMContentLoaded', async () => {
@@ -868,7 +1046,7 @@
       document.getElementById('menu').innerHTML = createFuncionarioMenu();
       document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
 
-      loadUserInfo();
+      await loadUserInfo();
 
       const urlParams = new URLSearchParams(window.location.search);
       const ordemId = urlParams.get('id');
@@ -1039,7 +1217,7 @@
 
         if (currentOrdem.status === 'AGUARDANDO_PAGAMENTO') {
           actionButtons += `
-            <button class="btn-large btn-large-success" onclick="openPaymentModal()">
+            <button class="btn-large btn-large-success" onclick="openPaymentModal(currentOrdem)">
               <i class="fas fa-credit-card"></i> Finalizar Pagamento
             </button>
           `;
@@ -1182,11 +1360,12 @@
     }
 
     // OPEN PAYMENT MODAL (from table view)
+    // OPEN PAYMENT MODAL FROM TABLE
     async function openPaymentModalFromTable(ordemId) {
       try {
         const response = await window.api.getOrdemById(ordemId);
         currentOrdem = response.data || response;
-        openPaymentModal();
+        openPaymentModal(currentOrdem);
       } catch (error) {
         console.error('Erro ao carregar ordem:', error);
         showToast('Erro ao carregar ordem. Tente novamente.', 'error');
@@ -1208,117 +1387,245 @@
     }
 
     // OPEN PAYMENT MODAL
-    function openPaymentModal() {
-      if (!currentOrdem) return;
-      payments = [];
-      document.getElementById('paymentForm').reset();
-      document.getElementById('paymentsList').style.display = 'none';
-      document.getElementById('paymentsList').innerHTML = '';
+    function openPaymentModal(order) {
+      if (!order) return;
+
+      // Validação: Status deve ser AGUARDANDO_PAGAMENTO
+      if (order.status !== 'AGUARDANDO_PAGAMENTO') {
+        showToast('Marque a lavagem como concluida antes de receber o pagamento', 'error');
+        return;
+      }
+
+      // Inicializa estado do modal
+      paymentModal.orderId = order.id;
+      paymentModal.total = order.valor || order.valorTotal || 0;
+      paymentModal.paid = (order.pagamentos || [])
+        .filter(p => p.status === 'PAGO')
+        .reduce((sum, p) => sum + p.valor, 0);
+      paymentModal.remaining = paymentModal.total - paymentModal.paid;
+      paymentModal.inputValue = '';
+      paymentModal.payments = [];
+      paymentModal.isOpen = true;
+
+      // Atualiza UI
+      updatePaymentModalUI();
       document.getElementById('paymentModal').classList.add('active');
+
+      // Foca no input
+      setTimeout(() => {
+        const input = document.getElementById('paymentValueInput');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
+
+      // Bind hotkeys
+      bindPaymentHotkeys();
     }
 
     // CLOSE PAYMENT MODAL
     function closePaymentModal() {
+      paymentModal.isOpen = false;
+      paymentModal.payments = [];
+      paymentModal.inputValue = '';
       document.getElementById('paymentModal').classList.remove('active');
-      payments = [];
+      unbindPaymentHotkeys();
     }
 
-    // SUBMIT PAYMENT
-    async function submitPayment(event) {
-      event.preventDefault();
+    // UPDATE PAYMENT MODAL UI
+    function updatePaymentModalUI() {
+      document.getElementById('remainingAmount').textContent = formatCurrency(paymentModal.remaining);
+      document.getElementById('totalAmount').textContent = formatCurrency(paymentModal.total);
+      document.getElementById('paidAmount').textContent = formatCurrency(paymentModal.paid);
+      document.getElementById('paymentValueInput').value = paymentModal.inputValue;
 
-      const methodSelect = document.getElementById('paymentMethod');
-      const method = methodSelect.value;
+      // Renderizar lista de pagamentos
+      const listDiv = document.getElementById('paymentsList');
+      if (paymentModal.payments.length === 0) {
+        listDiv.innerHTML = '';
+        document.getElementById('submitPaymentBtn').disabled = true;
+      } else {
+        let html = '<p class="form-label" style="margin-bottom: 12px;">Pagamentos adicionados:</p>';
+        paymentModal.payments.forEach((payment, index) => {
+          html += `
+            <div class="payment-list-item">
+              <span>${payment.method} - ${formatCurrency(payment.amount)}</span>
+              <button type="button" onclick="removePayment(${index})" title="Remover">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          `;
+        });
+        listDiv.innerHTML = html;
+        document.getElementById('submitPaymentBtn').disabled = false;
+      }
+    }
 
-      if (!method) {
-        showToast('Selecione um método de pagamento', 'error');
+    // FORMAT PAYMENT INPUT
+    function formatPaymentInput(event) {
+      let value = event.target.value.replace(/\D/g, '');
+      value = (parseInt(value, 10) / 100).toFixed(2);
+      if (isNaN(value)) value = "0.00";
+      paymentModal.inputValue = value.replace('.', ',');
+      event.target.value = paymentModal.inputValue;
+    }
+
+    // FILL REMAINING AMOUNT
+    function fillRemainingAmount() {
+      paymentModal.inputValue = paymentModal.remaining.toFixed(2).replace('.', ',');
+      document.getElementById('paymentValueInput').value = paymentModal.inputValue;
+    }
+
+    // ADD PAYMENT
+    function addPayment(method) {
+      let amount = parseFloat(paymentModal.inputValue.replace(',', '.')) || 0;
+
+      // Para PENDENTE, preenche com valor restante se input vazio
+      if (method === 'PENDENTE' && amount === 0) {
+        amount = paymentModal.remaining > 0 ? paymentModal.remaining : 0;
+      }
+
+      // Validações
+      if (amount <= 0) {
+        showToast('Valor deve ser maior que zero', 'error');
         return;
       }
 
-      payments.push({
-        metodo: method,
-        valor: currentOrdem.valor
-      });
+      if (amount > paymentModal.remaining + 0.01) {
+        showToast('Valor maior que o restante', 'error');
+        return;
+      }
 
-      const paymentsList = document.getElementById('paymentsList');
-      let html = '<strong>Pagamentos a registrar:</strong>';
-      payments.forEach((p, idx) => {
-        html += `
-          <div class="payment-item">
-            <div>
-              <span class="payment-method">${p.metodo}</span>
-              <span style="margin-left: 8px;">${formatCurrency(p.valor)}</span>
-            </div>
-            <button type="button" class="payment-remove" onclick="removePayment(${idx})">Remover</button>
-          </div>
-        `;
-      });
-      paymentsList.innerHTML = html;
-      paymentsList.style.display = 'block';
+      // Adiciona pagamento
+      paymentModal.payments.push({ method, amount });
+      paymentModal.remaining -= amount;
+      paymentModal.inputValue = '';
 
-      methodSelect.value = '';
-
-      const submitBtn = event.target.querySelector('[type="submit"]');
-      submitBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Finalização';
-
-      // Update form to submit
-      const form = document.getElementById('paymentForm');
-      form.onsubmit = function(e) {
-        e.preventDefault();
-        if (payments.length === 0) {
-          showToast('Adicione pelo menos um pagamento', 'error');
-          return;
-        }
-        finalizeOrdem();
-      };
+      // Atualiza UI
+      updatePaymentModalUI();
     }
 
     // REMOVE PAYMENT
-    function removePayment(idx) {
-      payments.splice(idx, 1);
-      const paymentsList = document.getElementById('paymentsList');
-      if (payments.length === 0) {
-        paymentsList.style.display = 'none';
-        paymentsList.innerHTML = '';
-        const form = document.getElementById('paymentForm');
-        form.onsubmit = submitPayment;
-        document.getElementById('paymentMethod').value = '';
-        const submitBtn = document.querySelector('#paymentForm [type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-credit-card"></i> Finalizar Ordem';
-      } else {
-        submitPayment({preventDefault: () => {}});
+    function removePayment(index) {
+      const removed = paymentModal.payments.splice(index, 1);
+      if (removed.length > 0) {
+        paymentModal.remaining += removed[0].amount;
+      }
+      updatePaymentModalUI();
+    }
+
+    // BIND PAYMENT HOTKEYS
+    function bindPaymentHotkeys() {
+      unbindPaymentHotkeys();
+      paymentKeydownHandler = (event) => {
+        if (!paymentModal.isOpen) return;
+        const target = event.target;
+        const isEditable = target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        );
+        if (isEditable && target.id !== 'paymentValueInput') {
+          return;
+        }
+
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closePaymentModal();
+          return;
+        }
+
+        if (event.key === 'Backspace') {
+          event.preventDefault();
+          updatePaymentInputByKey('BACKSPACE');
+          return;
+        }
+
+        if (/^[0-9]$/.test(event.key)) {
+          event.preventDefault();
+          updatePaymentInputByKey(event.key);
+        }
+      };
+      document.addEventListener('keydown', paymentKeydownHandler);
+    }
+
+    // UNBIND PAYMENT HOTKEYS
+    function unbindPaymentHotkeys() {
+      if (paymentKeydownHandler) {
+        document.removeEventListener('keydown', paymentKeydownHandler);
+        paymentKeydownHandler = null;
       }
     }
 
-    // FINALIZE ORDEM
-    async function finalizeOrdem() {
-      if (!currentOrdem || payments.length === 0) return;
+    // UPDATE PAYMENT INPUT BY KEY
+    function updatePaymentInputByKey(key) {
+      const input = document.getElementById('paymentValueInput');
+      if (!input) return;
+      let digits = (input.value || '').replace(/\D/g, '');
+      if (key === 'BACKSPACE') {
+        digits = digits.slice(0, -1);
+      } else {
+        digits += key;
+      }
+      input.value = digits;
+      formatPaymentInput({ target: input });
+      input.value = paymentModal.inputValue;
+    }
 
-      const submitBtn = document.querySelector('#paymentForm [type="submit"]');
+    // SUBMIT PAYMENTS
+    async function submitPayments() {
+      if (paymentModal.payments.length === 0) {
+        showToast('Adicione pelo menos um pagamento', 'error');
+        return;
+      }
+
+      // Se sobrou valor, oferece registrar como PENDENTE
+      if (paymentModal.remaining > 0.01) {
+        showConfirm(
+          'Saldo Pendente',
+          `Resta ${formatCurrency(paymentModal.remaining)}. Registrar como PENDENTE?`,
+          () => {
+            paymentModal.payments.push({
+              method: 'PENDENTE',
+              amount: parseFloat(paymentModal.remaining.toFixed(2))
+            });
+            processPayments();
+          }
+        );
+        return;
+      }
+
+      await processPayments();
+    }
+
+    // PROCESS PAYMENTS
+    async function processPayments() {
+      paymentModal.isProcessing = true;
+      const submitBtn = document.getElementById('submitPaymentBtn');
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
+      const payload = {
+        pagamentos: paymentModal.payments.map(p => ({
+          metodo: p.method,
+          valor: p.amount
+        }))
+      };
+
       try {
-        const payload = {
-          pagamentos: payments.map(p => ({
-            metodo: p.metodo,
-            valor: p.valor
-          }))
-        };
-
-        await window.api.finalizarOrdem(currentOrdem.id, payload);
+        await window.api.finalizarOrdem(paymentModal.orderId, payload);
         showToast('Ordem finalizada com sucesso!', 'success');
-
+        closePaymentModal();
         setTimeout(() => {
-          closePaymentModal();
           window.location.href = 'ordens-funcionario.html';
         }, 1500);
-
       } catch (error) {
         console.error('Erro ao finalizar ordem:', error);
         showToast('Erro ao finalizar ordem. Tente novamente.', 'error');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Finalização';
+        submitBtn.innerHTML = 'Finalizar Ordem';
+        paymentModal.isProcessing = false;
       }
     }
 

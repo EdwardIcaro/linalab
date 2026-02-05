@@ -272,12 +272,29 @@ function logout() {
 }
 
 // ===== LOAD USER INFO =====
-function loadUserInfo() {
+async function loadUserInfo() {
   const usuarioNome = localStorage.getItem('usuarioNome') || 'Usuário';
-  const empresaNome = localStorage.getItem('empresaNome') || 'Empresa';
+  let empresaNome = localStorage.getItem('empresaNome');
 
   const empresaElement = document.getElementById('empresaNome');
   if (empresaElement) {
+    // Se não temos empresaNome no localStorage, busca via API
+    if (!empresaNome) {
+      const empresaId = localStorage.getItem('empresaId');
+      if (empresaId) {
+        try {
+          const empresaData = await window.api.getEmpresaById(empresaId);
+          empresaNome = empresaData.nome || empresaData.name || 'Minha Empresa';
+          // Salva para próximas vezes
+          localStorage.setItem('empresaNome', empresaNome);
+        } catch (error) {
+          console.error('Erro ao carregar dados da empresa:', error);
+          empresaNome = 'Minha Empresa';
+        }
+      } else {
+        empresaNome = 'Minha Empresa';
+      }
+    }
     empresaElement.textContent = empresaNome;
   }
 
