@@ -278,6 +278,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
 
 /**
  * Listar ordens de serviço da empresa
+ * ✅ OTIMIZADO: Usa select ao invés de include, Promise.all() para queries independentes
  */
 export const getOrdens = async (req: EmpresaRequest, res: Response) => {
   try {
@@ -304,7 +305,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     if (search) {
       where.OR = [
         {
-          cliente: { 
+          cliente: {
             nome: { contains: search as string, mode: 'insensitive' } as Prisma.StringFilter
           }
         },
@@ -319,13 +320,13 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     if (status) {
       const statusString = status as string;
       if (statusString === 'ACTIVE') {
-                where.status = { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any };
+        where.status = { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any };
       } else if (statusString.includes(',')) {
-                where.status = { in: statusString.split(',') as any };
+        where.status = { in: statusString.split(',') as any };
       } else {
-                where.status = statusString as any;
-            }
-        }
+        where.status = statusString as any;
+      }
+    }
 
     if (clienteId) {
       where.clienteId = clienteId as string;
@@ -348,32 +349,43 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     }
 
     if (dataInicio && dataFim && dataInicio !== 'null' && dataFim !== 'null') {
-        // As datas já chegam no formato YYYY-MM-DD
-        const start = new Date(dataInicio as string);
-        start.setUTCHours(0, 0, 0, 0);
+      // As datas já chegam no formato YYYY-MM-DD
+      const start = new Date(dataInicio as string);
+      start.setUTCHours(0, 0, 0, 0);
 
-        const end = new Date(dataFim as string);
-        end.setUTCHours(23, 59, 59, 999);
-        end.setDate(end.getDate() + 1);
+      const end = new Date(dataFim as string);
+      end.setUTCHours(23, 59, 59, 999);
+      end.setDate(end.getDate() + 1);
 
-        where.createdAt = {
-            gte: start,
-            lte: end,
-        };
+      where.createdAt = {
+        gte: start,
+        lte: end,
+      };
     }
 
     if (metodoPagamento) {
       where.pagamentos = {
-                some: { 
+        some: {
           metodo: metodoPagamento as any
         }
       };
     }
 
+    // ✅ OTIMIZAÇÃO: Usar select ao invés de include para melhor performance
     const [ordens, total] = await Promise.all([
       prisma.ordemServico.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          numeroOrdem: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          dataFim: true,
+          valorTotal: true,
+          comissao: true,
+          observacoes: true,
+          // Cliente - apenas campos necessários
           cliente: {
             select: {
               id: true,
@@ -381,6 +393,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               telefone: true
             }
           },
+          // Veículo - apenas campos necessários
           veiculo: {
             select: {
               id: true,
@@ -389,6 +402,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               cor: true
             }
           },
+          // Lavador principal
           lavador: {
             select: {
               id: true,
@@ -396,8 +410,12 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               comissao: true
             }
           },
+          // Items - otimizado
           items: {
-            include: {
+            select: {
+              id: true,
+              quantidade: true,
+              precoUnit: true,
               servico: {
                 select: {
                   id: true,
@@ -412,8 +430,10 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               }
             }
           },
+          // OrdemLavadores - otimizado
           ordemLavadores: {
-            include: {
+            select: {
+              lavadorId: true,
               lavador: {
                 select: {
                   id: true,
@@ -422,7 +442,16 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               }
             }
           },
+          // Pagamentos - apenas o essencial
           pagamentos: {
+            select: {
+              id: true,
+              status: true,
+              valor: true,
+              metodo: true,
+              pagoEm: true,
+              createdAt: true
+            },
             orderBy: {
               createdAt: 'asc'
             }
@@ -434,6 +463,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
         skip,
         take: Number(limit)
       }),
+      // ✅ Count rodando em paralelo (com índice otimizado)
       prisma.ordemServico.count({ where })
     ]);
 

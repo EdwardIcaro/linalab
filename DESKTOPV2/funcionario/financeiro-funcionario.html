@@ -238,6 +238,188 @@
       to { opacity: 1; }
     }
 
+    /* COMISSÕES SECTION */
+    .comissoes-filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .comissoes-filters {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comissoes-filters label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .comissoes-filters input {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .comissoes-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .comissoes-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comissoes-column {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .comissoes-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .comissoes-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+    }
+
+    .comissoes-icon.creditos {
+      background: var(--green);
+    }
+
+    .comissoes-icon.debitos {
+      background: var(--red);
+    }
+
+    .comissoes-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      flex: 1;
+      margin: 0;
+    }
+
+    .comissoes-badge {
+      background: rgba(0, 102, 204, 0.1);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .comissoes-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--light);
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+
+    .comissoes-item:hover {
+      box-shadow: var(--shadow);
+      transform: translateX(4px);
+    }
+
+    .comissoes-item-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .comissoes-item-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: var(--dark);
+    }
+
+    .comissoes-item-subtitle {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .comissoes-item-value {
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .comissoes-item-value.credito {
+      color: var(--green);
+    }
+
+    .comissoes-item-value.debito {
+      color: var(--red);
+    }
+
+    .comissoes-summary {
+      background: linear-gradient(135deg, var(--primary) 0%, #0052a3 100%);
+      border-radius: 8px;
+      padding: 24px;
+      color: white;
+      margin-bottom: 24px;
+    }
+
+    .comissoes-summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .comissoes-summary-row:last-child {
+      border-bottom: none;
+      padding-top: 16px;
+      margin-top: 8px;
+      border-top: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .comissoes-summary-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .comissoes-summary-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .comissoes-summary-total {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
     /* ACTION BUTTONS */
     .action-buttons {
       display: grid;
@@ -750,7 +932,7 @@
         </button>
         <button class="tab-btn" data-tab="comissoes" onclick="switchTab('comissoes')">
           <i class="fas fa-coins"></i>
-          <span>Minhas Comissões</span>
+          <span>Comissões</span>
         </button>
         <button class="tab-btn" data-tab="pendencias" onclick="switchTab('pendencias')">
           <i class="fas fa-clock"></i>
@@ -1098,6 +1280,7 @@
       try {
         container.innerHTML = createLoading();
 
+        // Get current user's lavador data
         const lavador = await getUserLavador();
         if (!lavador) {
           container.innerHTML = createEmptyState(
@@ -1108,41 +1291,86 @@
           return;
         }
 
-        const response = await window.api.getOrdens(1, 100, '', 'COMPLETO', lavador.id);
-        const ordens = response.data || response.ordens || [];
+        // Get commission data
+        const dataInicio = new Date();
+        dataInicio.setDate(dataInicio.getDate() - 30); // Last 30 days
+        const dataInicioStr = dataInicio.toISOString().split('T')[0];
+        const dataFimStr = new Date().toISOString().split('T')[0];
 
-        if (ordens.length === 0) {
-          container.innerHTML = createEmptyState(
-            'fa-inbox',
-            'Nenhuma comissão',
-            'Você não tem ordens completas ainda.'
-          );
-          return;
-        }
-
-        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">';
-
-        ordens.forEach(ordem => {
-          const comissao = ((ordem.valorTotal || ordem.valor) * lavador.comissao) / 100;
-          html += `
-            <div style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                <div>
-                  <div style="font-weight: 600; font-size: 14px;">Ordem #${ordem.numeroOrdem || ordem.id.substring(0, 8)}</div>
-                  <div style="font-size: 12px; color: #666;">${ordem.cliente?.nome || 'Cliente'}</div>
-                </div>
-              </div>
-              <div style="font-size: 12px; color: #666;">Valor da Ordem</div>
-              <div style="font-size: 20px; font-weight: 700; color: var(--blue); margin-bottom: 8px;">${formatCurrency(ordem.valorTotal || ordem.valor)}</div>
-              <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span>Taxa: ${lavador.comissao}%</span>
-                <span style="font-weight: 600; color: var(--green);">Comissão: ${formatCurrency(comissao)}</span>
-              </div>
-            </div>
-          `;
+        const response = await window.api.getDadosComissao({
+          lavadorId: lavador.id,
+          dataInicio: dataInicioStr,
+          dataFim: dataFimStr
         });
 
-        html += '</div>';
+        const comissoes = response.comissoes || [];
+        const adiantamentos = response.adiantamentos || [];
+        const debitosOS = response.debitosOS || [];
+
+        let html = `
+          <div class="comissoes-filters">
+            <div>
+              <label>Data Início</label>
+              <input type="date" id="comissaoDataInicio" value="${dataInicioStr}" onchange="reloadComissoes()">
+            </div>
+            <div>
+              <label>Data Fim</label>
+              <input type="date" id="comissaoDataFim" value="${dataFimStr}" onchange="reloadComissoes()">
+            </div>
+          </div>
+
+          <div class="comissoes-grid">
+            <!-- CRÉDITOS -->
+            <div class="comissoes-column">
+              <div class="comissoes-header">
+                <div class="comissoes-icon creditos">
+                  <i class="fas fa-plus"></i>
+                </div>
+                <h3>Créditos</h3>
+                <span class="comissoes-badge" id="creditsBadge">${comissoes.filter(c => hasWasherInOrder(c, lavador.id)).length}</span>
+              </div>
+              <div id="creditos-list">
+                ${renderComissoesList(comissoes, lavador.id)}
+              </div>
+            </div>
+
+            <!-- DÉBITOS -->
+            <div class="comissoes-column">
+              <div class="comissoes-header">
+                <div class="comissoes-icon debitos">
+                  <i class="fas fa-minus"></i>
+                </div>
+                <h3>Débitos</h3>
+                <span class="comissoes-badge" id="debitsBadge">${adiantamentos.length + debitosOS.filter(d => hasWasherInOrder(d, lavador.id)).length}</span>
+              </div>
+              <div id="debitos-list">
+                ${renderDebitosList(adiantamentos, debitosOS, lavador.id)}
+              </div>
+            </div>
+          </div>
+
+          <!-- RESUMO -->
+          <div class="comissoes-summary">
+            <div class="comissoes-summary-row">
+              <span class="comissoes-summary-label">Total de Comissões</span>
+              <span class="comissoes-summary-value" id="summary-creditos">${formatCurrency(calculateTotalComissoes(comissoes, lavador.id))}</span>
+            </div>
+            <div class="comissoes-summary-row">
+              <span class="comissoes-summary-label">Total de Débitos</span>
+              <span class="comissoes-summary-value" id="summary-debitos">- ${formatCurrency(calculateTotalDebitos(adiantamentos, debitosOS, lavador.id))}</span>
+            </div>
+            <div class="comissoes-summary-row">
+              <span class="comissoes-summary-label">Saldo Estimado</span>
+              <span class="comissoes-summary-total" id="summary-total">${formatCurrency(calculateSaldoComissoes(comissoes, adiantamentos, debitosOS, lavador.id))}</span>
+            </div>
+          </div>
+
+          <div style="padding: 20px; background: var(--light); border-radius: 8px; text-align: center; color: #666; font-size: 13px;">
+            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+            Este é um resumo das suas comissões. Valores finais sujeitos a confirmação administrativa.
+          </div>
+        `;
+
         container.innerHTML = html;
       } catch (error) {
         console.error('Erro ao carregar comissões:', error);
@@ -1153,6 +1381,150 @@
           'Tentar novamente',
           'loadMinhasComissoes()'
         );
+      }
+    }
+
+    // HELPER FUNCTIONS FOR COMISSÕES
+    function hasWasherInOrder(order, washerId) {
+      if (!order) return false;
+      if (order.lavadorId === washerId) return true;
+      if (Array.isArray(order.lavadores)) {
+        return order.lavadores.some(l => (l.id || l.value || l) === washerId);
+      }
+      return false;
+    }
+
+    function getWasherShare(order, washerId) {
+      if (!order || !washerId) return 0;
+
+      const washers = [];
+      if (Array.isArray(order.lavadores) && order.lavadores.length > 0) {
+        washers.push(...order.lavadores.map(lav => ({
+          id: lav.id || lav.value || lav,
+          nome: lav.nome || lav.name,
+          ganho: typeof lav.ganho === 'number' ? lav.ganho : undefined
+        })));
+      } else if (order.lavadorId) {
+        washers.push({ id: order.lavadorId, nome: order.lavador?.nome });
+      }
+
+      const existing = washers.find(w => w.id === washerId && typeof w.ganho === 'number');
+      if (existing) return existing.ganho;
+
+      if (washers.length === 0) return 0;
+
+      const percent = order?.lavador?.comissao || (order?.comissao && order?.valorTotal ? (order.comissao / order.valorTotal) * 100 : 0);
+      const totalCents = Math.round((order?.valorTotal || 0) * (percent / 100) * 100);
+      if (totalCents <= 0) return 0;
+
+      const base = Math.floor(totalCents / washers.length);
+      let remainder = totalCents % washers.length;
+
+      const shareMap = {};
+      washers.forEach(washer => {
+        let cents = base;
+        if (remainder > 0) {
+          cents += 1;
+          remainder -= 1;
+        }
+        shareMap[washer.id] = cents / 100;
+      });
+
+      return shareMap[washerId] || 0;
+    }
+
+    function renderComissoesList(comissoes, washerId) {
+      const items = (comissoes || []).map(c => {
+        const share = getWasherShare(c, washerId);
+        if (!share || share <= 0) return null;
+        return `
+          <div class="comissoes-item">
+            <div class="comissoes-item-details">
+              <div class="comissoes-item-title">OS #${c.numeroOrdem} - ${c.veiculo?.modelo || 'Sem Modelo'}</div>
+              <div class="comissoes-item-subtitle">Finalizada em: ${new Date(c.dataFim).toLocaleDateString('pt-BR')}</div>
+            </div>
+            <span class="comissoes-item-value credito">${formatCurrency(share)}</span>
+          </div>
+        `;
+      }).filter(Boolean);
+
+      return items.length > 0
+        ? items.join('')
+        : '<div style="padding: 20px; text-align: center; color: #999;"><i class="fas fa-check-circle" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>Nenhuma comissão no período.</div>';
+    }
+
+    function renderDebitosList(adiantamentos, debitosOS, washerId) {
+      const adiantamentoItems = (adiantamentos || []).map(a => `
+        <div class="comissoes-item">
+          <div class="comissoes-item-details">
+            <div class="comissoes-item-title">${a.descricao || 'Adiantamento (Vale)'}</div>
+            <div class="comissoes-item-subtitle">Data: ${a.data ? new Date(a.data).toLocaleDateString('pt-BR') : 'Sem data'}</div>
+          </div>
+          <span class="comissoes-item-value debito">${formatCurrency(a.valor)}</span>
+        </div>
+      `);
+
+      const debitoItems = (debitosOS || []).map(d => {
+        const share = getWasherShare(d, washerId);
+        if (!share || share <= 0) return null;
+        return `
+          <div class="comissoes-item">
+            <div class="comissoes-item-details">
+              <div class="comissoes-item-title">Débito OS #${d.numeroOrdem} (${d.veiculo?.placa || 'S/ Placa'})</div>
+              <div class="comissoes-item-subtitle">Finalizada em: ${new Date(d.dataFim).toLocaleDateString('pt-BR')}</div>
+            </div>
+            <span class="comissoes-item-value debito">${formatCurrency(share)}</span>
+          </div>
+        `;
+      }).filter(Boolean);
+
+      const allItems = [...adiantamentoItems, ...debitoItems];
+      return allItems.length > 0
+        ? allItems.join('')
+        : '<div style="padding: 20px; text-align: center; color: #999;"><i class="fas fa-thumbs-up" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>Nenhum débito no período.</div>';
+    }
+
+    function calculateTotalComissoes(comissoes, washerId) {
+      return (comissoes || []).reduce((total, c) => total + getWasherShare(c, washerId), 0);
+    }
+
+    function calculateTotalDebitos(adiantamentos, debitosOS, washerId) {
+      const adiantamentoTotal = (adiantamentos || []).reduce((total, a) => total + a.valor, 0);
+      const debitoOsTotal = (debitosOS || []).reduce((total, d) => total + getWasherShare(d, washerId), 0);
+      return adiantamentoTotal + debitoOsTotal;
+    }
+
+    function calculateSaldoComissoes(comissoes, adiantamentos, debitosOS, washerId) {
+      const creditos = calculateTotalComissoes(comissoes, washerId);
+      const debitos = calculateTotalDebitos(adiantamentos, debitosOS, washerId);
+      return creditos - debitos;
+    }
+
+    async function reloadComissoes() {
+      const dataInicio = document.getElementById('comissaoDataInicio')?.value || new Date().toISOString().split('T')[0];
+      const dataFim = document.getElementById('comissaoDataFim')?.value || new Date().toISOString().split('T')[0];
+
+      const container = document.getElementById('tab-comissoes');
+      container.innerHTML = createLoading();
+
+      try {
+        const lavador = await getUserLavador();
+        if (!lavador) {
+          container.innerHTML = createEmptyState('fa-user-slash', 'Perfil não encontrado', 'Seu perfil de funcionário não foi encontrado.');
+          return;
+        }
+
+        const response = await window.api.getDadosComissao({
+          lavadorId: lavador.id,
+          dataInicio,
+          dataFim
+        });
+
+        // Reload the entire aba
+        await loadMinhasComissoes();
+      } catch (error) {
+        console.error('Erro ao recarregar comissões:', error);
+        container.innerHTML = createEmptyState('fa-exclamation-triangle', 'Erro ao carregar', 'Houve um erro ao carregar suas comissões.', 'Tentar novamente', 'reloadComissoes()');
       }
     }
 
