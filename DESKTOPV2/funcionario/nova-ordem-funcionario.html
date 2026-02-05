@@ -1711,6 +1711,15 @@
                         return;
                     }
 
+                    // Validate vehicle data
+                    const plataTrim = (this.quickRegister.vehiclePlate || '').trim().toUpperCase();
+                    const nomeClienteTrim = (this.quickRegister.clientName || '').trim();
+
+                    if (!this.vehicle && !plataTrim) {
+                        showToast('Placa do veículo é obrigatória', 'error');
+                        return;
+                    }
+
                     this.isCreatingOrder = true;
 
                     const items = [];
@@ -1745,12 +1754,16 @@
                     };
 
                     if (!this.vehicle) {
-                        orderData.novoCliente = {
-                            nome: this.quickRegister.clientName,
-                            telefone: this.quickRegister.clientPhone || null
-                        };
+                        // Only include novoCliente if there's a name
+                        if (nomeClienteTrim) {
+                            orderData.novoCliente = {
+                                nome: nomeClienteTrim,
+                                telefone: this.quickRegister.clientPhone || null
+                            };
+                        }
+
                         orderData.novoVeiculo = {
-                            placa: this.semPlaca ? `SEM-PLACA-${Date.now()}` : this.quickRegister.vehiclePlate.toUpperCase(),
+                            placa: this.semPlaca ? `SEM-PLACA-${Date.now()}` : plataTrim,
                             modelo: this.quickRegister.vehicleModel || null,
                             cor: this.quickRegister.vehicleColor || null
                         };

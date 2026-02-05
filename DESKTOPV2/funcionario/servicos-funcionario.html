@@ -829,16 +829,9 @@
       subtiposVeiculo: []
     };
 
-    const subtipoOptions = {
-      CARRO: [
-        { categoria: 'HATCH' },
-        { categoria: 'SEDAN' },
-        { categoria: 'SUV' },
-        { categoria: 'PICKUP' },
-        { categoria: 'CAMINHONETE' }
-      ],
-      MOTO: []
-    };
+    // Vehicle types - will be populated from API
+    let tiposVeiculo = [];
+    const subtipoOptions = {};
 
     // INITIALIZE
     document.addEventListener('DOMContentLoaded', async () => {
@@ -858,69 +851,165 @@
       document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
 
       loadUserInfo();
-      await loadServicos();
+      await loadTiposVeiculo();
+      await loadServicosAndAdicionais();
     });
 
-    // LOAD SERVICOS
-    async function loadServicos() {
+    // LOAD VEHICLE TYPES
+    async function loadTiposVeiculo() {
+      try {
+        const response = await window.api.getTiposVeiculo();
+        tiposVeiculo = response.tiposVeiculo || response || [];
+
+        // Add CAMINHONETE if it doesn't exist
+        const hasCaminhonete = tiposVeiculo.some(t => t.categoria === 'CAMINHONETE');
+        if (!hasCaminhonete) {
+          tiposVeiculo.push({ categoria: 'CAMINHONETE' });
+        }
+
+        // Build subtipoOptions from fetched types
+        const carroSubtypes = tiposVeiculo.filter(t =>
+          ['HATCH', 'SEDAN', 'SUV', 'PICKUP', 'CAMINHONETE'].includes(t.categoria)
+        );
+        subtipoOptions.CARRO = carroSubtypes;
+        subtipoOptions.MOTO = [];
+
+        // Populate select options
+        const select = document.getElementById('serviceTipoPrincipal');
+        if (select) {
+          const mainTypes = {};
+          tiposVeiculo.forEach(t => {
+            const isCarroType = ['HATCH', 'SEDAN', 'SUV', 'PICKUP', 'CAMINHONETE'].includes(t.categoria);
+            if (isCarroType) {
+              mainTypes.CARRO = true;
+            }
+          });
+
+          select.innerHTML = '<option value="">Selecione...</option>';
+          if (mainTypes.CARRO) {
+            select.innerHTML += '<option value="CARRO">Carro</option>';
+          }
+          select.innerHTML += '<option value="MOTO">Moto</option>';
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tipos de veículo:', error);
+        // Fallback to basic types
+        subtipoOptions.CARRO = [
+          { categoria: 'HATCH' },
+          { categoria: 'SEDAN' },
+          { categoria: 'SUV' },
+          { categoria: 'PICKUP' },
+          { categoria: 'CAMINHONETE' }
+        ];
+        subtipoOptions.MOTO = [];
+      }
+    }
+
+    // LOAD SERVICOS AND ADICIONAIS
+    async function loadServicosAndAdicionais() {
       const content = document.getElementById('content');
 
       try {
         content.innerHTML = createLoading();
 
-        const response = await window.api.getServicos();
-        const servicos = response.servicos || [];
+        const [servicosResponse, adicionaisResponse] = await Promise.all([
+          window.api.getServicos(),
+          window.api.getAdicionais()
+        ]);
 
-        if (servicos.length === 0) {
+        const servicos = servicosResponse.servicos || [];
+        const adicionais = adicionaisResponse.adicionais || [];
+
+        if (servicos.length === 0 && adicionais.length === 0) {
           content.innerHTML = createEmptyState(
             'fa-wrench',
-            'Nenhum serviço cadastrado',
-            'Crie seu primeiro serviço clicando em "Novo Serviço".',
+            'Nenhum serviço ou adicional cadastrado',
+            'Crie seu primeiro serviço ou adicional para começar.',
             'Novo Serviço',
             "openServiceModal()"
           );
           return;
         }
 
-        let html = '<div class="services-grid">';
+        let html = '';
 
-        servicos.forEach(servico => {
-          const subtipos = servico.subtiposVeiculo?.join(', ') || 'Todos';
-          html += `
-            <div class="service-card">
-              <div class="service-header">
-                <div class="service-title">${servico.nome}</div>
-              </div>
-              <div class="service-veiculo">${servico.tipoVeiculo}</div>
-              <div class="service-info">
-                <div class="service-info-item">
-                  <span class="service-info-label">Categorias:</span> ${subtipos}
+        // SERVIÇOS
+        if (servicos.length > 0) {
+          html += '<div style="margin-bottom: 32px;">';
+          html += '<h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--dark);"><i class="fas fa-wrench" style="color: var(--primary); margin-right: 8px;"></i>Serviços</h2>';
+          html += '<div class="services-grid">';
+
+          servicos.forEach(servico => {
+            const subtipos = servico.subtiposVeiculo?.join(', ') || 'Todos';
+            const tipoVeiculo = servico.tipoVeiculo || 'Não especificado';
+            html += `
+              <div class="service-card">
+                <div class="service-header">
+                  <div class="service-title">${servico.nome}</div>
+                </div>
+                <div class="service-veiculo">${tipoVeiculo}</div>
+                <div class="service-info">
+                  <div class="service-info-item">
+                    <span class="service-info-label">Categorias:</span> ${subtipos}
+                  </div>
+                </div>
+                <div class="service-price">${formatCurrency(servico.preco)}</div>
+                <div class="service-actions">
+                  <button class="btn-action" onclick="editService('${servico.id}', '${servico.nome}', ${servico.preco}, '${servico.tipoVeiculo}', '${JSON.stringify(servico.subtiposVeiculo || [])}')">
+                    <i class="fas fa-edit"></i> Editar
+                  </button>
+                  <button class="btn-action btn-action-danger" onclick="deleteService('${servico.id}', '${servico.nome}')">
+                    <i class="fas fa-trash"></i> Deletar
+                  </button>
                 </div>
               </div>
-              <div class="service-price">${formatCurrency(servico.preco)}</div>
-              <div class="service-actions">
-                <button class="btn-action" onclick="editService('${servico.id}', '${servico.nome}', ${servico.preco}, '${servico.tipoVeiculo}', '${JSON.stringify(servico.subtiposVeiculo || [])}')">
-                  <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="btn-action btn-action-danger" onclick="deleteService('${servico.id}', '${servico.nome}')">
-                  <i class="fas fa-trash"></i> Deletar
-                </button>
-              </div>
-            </div>
-          `;
-        });
+            `;
+          });
 
-        html += '</div>';
+          html += '</div>';
+          html += '</div>';
+        }
+
+        // ADICIONAIS
+        if (adicionais.length > 0) {
+          html += '<div>';
+          html += '<h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--dark);"><i class="fas fa-star" style="color: #ffc107; margin-right: 8px;"></i>Adicionais</h2>';
+          html += '<div class="services-grid">';
+
+          adicionais.forEach(adicional => {
+            html += `
+              <div class="service-card">
+                <div class="service-header">
+                  <div class="service-title">${adicional.nome}</div>
+                </div>
+                ${adicional.descricao ? `<div class="service-info"><div class="service-info-item">${adicional.descricao}</div></div>` : ''}
+                <div class="service-price">${formatCurrency(adicional.preco)}</div>
+                <div class="service-actions">
+                  <button class="btn-action" onclick="editAdicional('${adicional.id}', '${adicional.nome}', ${adicional.preco}, '${adicional.descricao || ''}')">
+                    <i class="fas fa-edit"></i> Editar
+                  </button>
+                  <button class="btn-action btn-action-danger" onclick="deleteAdicional('${adicional.id}', '${adicional.nome}')">
+                    <i class="fas fa-trash"></i> Deletar
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          html += '</div>';
+          html += '</div>';
+        }
+
         content.innerHTML = html;
 
       } catch (error) {
-        console.error('Erro ao carregar serviços:', error);
+        console.error('Erro ao carregar serviços e adicionais:', error);
         content.innerHTML = createEmptyState(
           'fa-exclamation-triangle',
           'Erro ao carregar',
-          'Houve um erro ao carregar os serviços. Tente novamente.',
+          'Houve um erro ao carregar os dados. Tente novamente.',
           'Tentar novamente',
-          'loadServicos()'
+          'loadServicosAndAdicionais()'
         );
       }
     }
@@ -1005,16 +1094,18 @@
         checkboxesContainer.innerHTML = '';
 
         subtipoOptions.CARRO.forEach(subtipo => {
+          const categoria = subtipo.categoria;
+          const label = categoria.charAt(0).toUpperCase() + categoria.slice(1).toLowerCase();
           const checkbox = document.createElement('div');
           checkbox.className = 'checkbox-item';
           checkbox.innerHTML = `
             <input
               type="checkbox"
-              id="subtipo-${subtipo.categoria}"
-              value="${subtipo.categoria}"
+              id="subtipo-${categoria}"
+              value="${categoria}"
               onchange="updateSubtiposSelection()"
             >
-            <label for="subtipo-${subtipo.categoria}">${subtipo.categoria}</label>
+            <label for="subtipo-${categoria}">${label}</label>
           `;
           checkboxesContainer.appendChild(checkbox);
         });
@@ -1127,7 +1218,7 @@
             .then(() => {
               showToast('Adicional atualizado com sucesso!', 'success');
               closeAdicionalModal();
-              loadServicos();
+              loadServicosAndAdicionais();
             })
             .catch(error => {
               console.error('Erro ao atualizar adicional:', error);
@@ -1138,7 +1229,7 @@
             .then(() => {
               showToast('Adicional criado com sucesso!', 'success');
               closeAdicionalModal();
-              loadServicos();
+              loadServicosAndAdicionais();
             })
             .catch(error => {
               console.error('Erro ao criar adicional:', error);
@@ -1149,6 +1240,40 @@
         console.error('Erro ao salvar adicional:', error);
         showToast('Erro ao salvar adicional. Tente novamente.', 'error');
       }
+    }
+
+    // EDIT ADICIONAL
+    function editAdicional(id, nome, preco, descricao) {
+      adicionalForm = {
+        id: id,
+        nome: nome,
+        preco: preco,
+        descricao: descricao
+      };
+
+      document.getElementById('adicionalModalTitle').textContent = 'Editar Adicional';
+      document.getElementById('adicionalName').value = nome;
+      document.getElementById('adicionalPrice').value = preco;
+      document.getElementById('adicionalDescricao').value = descricao;
+      document.getElementById('adicionalModal').classList.add('active');
+    }
+
+    // DELETE ADICIONAL
+    function deleteAdicional(id, nome) {
+      showConfirm(
+        'Deletar Adicional',
+        `Tem certeza que deseja deletar o adicional "${nome}"?`,
+        async () => {
+          try {
+            await window.api.deleteAdicional(id);
+            showToast('Adicional deletado com sucesso!', 'success');
+            await loadServicosAndAdicionais();
+          } catch (error) {
+            console.error('Erro ao deletar adicional:', error);
+            showToast('Erro ao deletar adicional. Tente novamente.', 'error');
+          }
+        }
+      );
     }
   </script>
 </body>

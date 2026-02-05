@@ -559,6 +559,88 @@
       outline-offset: 2px;
     }
 
+    /* ===== CONFIRM DIALOG ===== */
+    .confirm-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .confirm-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .confirm-box {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .confirm-box h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .confirm-box p {
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel,
+    .btn-confirm {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+
+    .btn-cancel {
+      background: var(--secondary-color);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-cancel:hover {
+      background: #e9ecef;
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .btn-confirm {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .btn-confirm:hover {
+      background: #0052a3;
+    }
+
     /* Dark mode support */
     @media (prefers-color-scheme: dark) {
       body {
@@ -602,6 +684,9 @@
     </div>
 
     <div class="header-right">
+      <button class="icon-btn" onclick="logout()" title="Sair" aria-label="Sair da conta">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
       <button class="icon-btn" onclick="toggleMenu()" title="Menu" aria-label="Abrir menu">
         <i class="fas fa-ellipsis-v"></i>
       </button>
@@ -936,12 +1021,77 @@
       });
     }
 
+    // ===== CONFIRM DIALOG =====
+    function showConfirm(title, message, onConfirm, onCancel = null) {
+      const dialog = document.createElement('div');
+      dialog.className = 'confirm-dialog';
+      dialog.innerHTML = `
+        <div class="confirm-overlay"></div>
+        <div class="confirm-box">
+          <h2>${title}</h2>
+          <p>${message}</p>
+          <div class="confirm-buttons">
+            <button class="btn-cancel" id="confirmCancel">
+              Cancelar
+            </button>
+            <button class="btn-confirm" id="confirmConfirm">
+              Confirmar
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(dialog);
+
+      const cancelBtn = dialog.querySelector('#confirmCancel');
+      const confirmBtn = dialog.querySelector('#confirmConfirm');
+
+      cancelBtn.addEventListener('click', () => {
+        dialog.remove();
+        if (onCancel && typeof onCancel === 'function') {
+          onCancel();
+        }
+      });
+
+      confirmBtn.addEventListener('click', () => {
+        dialog.remove();
+        if (onConfirm && typeof onConfirm === 'function') {
+          onConfirm();
+        }
+      });
+    }
+
     // ===== LOGOUT =====
     function logout() {
-      if (confirm('Tem certeza que deseja sair?')) {
-        localStorage.clear();
-        window.location.href = 'login.html';
-      }
+      showConfirm(
+        'Sair',
+        'Tem certeza que deseja sair?',
+        () => {
+          // Show toast if possible
+          const existingToast = document.getElementById('toast');
+          if (existingToast) existingToast.remove();
+
+          const toast = document.createElement('div');
+          toast.id = 'toast';
+          toast.className = 'toast toast-success';
+          toast.innerHTML = `
+            <div class="toast-content">
+              <i class="fas fa-check-circle"></i>
+              <span>Até logo!</span>
+            </div>
+          `;
+          document.body.appendChild(toast);
+
+          setTimeout(() => {
+            toast.classList.add('show');
+          }, 10);
+
+          setTimeout(() => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+          }, 500);
+        }
+      );
     }
 
     // Close menu when clicking outside
