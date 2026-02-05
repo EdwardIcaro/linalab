@@ -205,10 +205,10 @@ function showConfirm(title, message, onConfirm, onCancel = null) {
       <h2>${title}</h2>
       <p>${message}</p>
       <div class="confirm-buttons">
-        <button class="btn-cancel" onclick="this.closest('.confirm-dialog').remove(); ${onCancel ? onCancel() : ''}">
+        <button class="btn-cancel" id="confirmCancel">
           Cancelar
         </button>
-        <button class="btn-confirm" onclick="this.closest('.confirm-dialog').remove(); ${onConfirm}">
+        <button class="btn-confirm" id="confirmConfirm">
           Confirmar
         </button>
       </div>
@@ -216,6 +216,23 @@ function showConfirm(title, message, onConfirm, onCancel = null) {
   `;
 
   document.body.appendChild(dialog);
+
+  const cancelBtn = dialog.querySelector('#confirmCancel');
+  const confirmBtn = dialog.querySelector('#confirmConfirm');
+
+  cancelBtn.addEventListener('click', () => {
+    dialog.remove();
+    if (onCancel && typeof onCancel === 'function') {
+      onCancel();
+    }
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    dialog.remove();
+    if (onConfirm && typeof onConfirm === 'function') {
+      onConfirm();
+    }
+  });
 }
 
 // ===== MENU FUNCTIONS =====
@@ -244,7 +261,13 @@ function logout() {
   showConfirm(
     'Sair',
     'Tem certeza que deseja sair?',
-    'localStorage.clear(); window.location.href = "../login.html";'
+    () => {
+      showToast('Até logo!', 'success');
+      setTimeout(() => {
+        localStorage.clear();
+        window.location.href = '../login.html';
+      }, 500);
+    }
   );
 }
 

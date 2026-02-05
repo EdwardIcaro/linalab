@@ -101,12 +101,18 @@
         /* ==========================================
            MAIN WIZARD CONTAINER
            ========================================== */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         .wizard-container {
             max-width: 1000px;
             margin: 0 auto;
             background: var(--wizard-bg);
-            min-height: 100vh;
-            padding: 24px;
+            min-height: calc(100vh - 60px);
+            padding: 24px 16px;
         }
 
         .wizard-steps {
@@ -117,8 +123,14 @@
         }
 
         .wizard-step {
-            padding: 40px;
+            padding: 32px;
             animation: fadeIn 0.3s ease;
+        }
+
+        @media (max-width: 640px) {
+            .wizard-step {
+                padding: 20px;
+            }
         }
 
         @keyframes fadeIn {
@@ -240,10 +252,12 @@
             color: var(--wizard-text);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--wizard-border);
         }
 
         .vehicle-type-grid {
@@ -326,13 +340,14 @@
            ========================================== */
         .quick-register-section {
             background: var(--wizard-bg);
-            padding: 24px;
+            padding: 28px;
             border-radius: var(--wizard-radius-sm);
-            margin-bottom: 24px;
+            margin-bottom: 32px;
+            border: 1px solid var(--wizard-border);
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         .form-group:last-child {
@@ -346,34 +361,44 @@
             color: var(--wizard-text);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            line-height: 1.4;
         }
 
         .form-input, .form-textarea {
             width: 100%;
-            padding: 12px;
+            padding: 13px 14px;
             border: 2px solid var(--wizard-border);
             border-radius: var(--wizard-radius-sm);
-            font-size: 14px;
-            font-family: inherit;
+            font-size: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             transition: all 0.3s ease;
+            background: white;
+            color: var(--wizard-text);
+        }
+
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: var(--wizard-text-light);
         }
 
         .form-input:focus, .form-textarea:focus {
             outline: none;
             border-color: var(--wizard-primary);
             box-shadow: 0 0 0 3px var(--wizard-primary-light);
+            background: white;
         }
 
         .form-textarea {
             resize: vertical;
             min-height: 100px;
+            line-height: 1.5;
         }
 
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
+            width: 100%;
         }
 
         @media (max-width: 640px) {
@@ -918,7 +943,7 @@
 
                     <div class="form-row" x-show="!client">
                         <div class="form-group">
-                            <label class="form-label">Nome do Cliente</label>
+                            <label class="form-label">Nome do Cliente (Opcional)</label>
                             <input
                                 type="text"
                                 x-model="quickRegister.clientName"
@@ -953,7 +978,7 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Modelo do Veículo (Opcional)</label>
+                            <label class="form-label">Modelo do Veículo <span class="required-marker">*</span></label>
                             <input
                                 type="text"
                                 x-model="quickRegister.vehicleModel"
@@ -963,12 +988,21 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cor (Opcional)</label>
-                            <input
-                                type="text"
-                                x-model="quickRegister.vehicleColor"
-                                placeholder="Ex: Preto"
-                                class="form-input"
-                            >
+                            <select x-model="quickRegister.vehicleColor" class="form-input">
+                                <option value="">-- Selecione uma cor --</option>
+                                <option value="Branco">⚪ Branco</option>
+                                <option value="Preto">⚫ Preto</option>
+                                <option value="Prata">⭕ Prata</option>
+                                <option value="Cinza">🩶 Cinza</option>
+                                <option value="Vermelho">🔴 Vermelho</option>
+                                <option value="Azul">🔵 Azul</option>
+                                <option value="Verde">🟢 Verde</option>
+                                <option value="Amarelo">🟡 Amarelo</option>
+                                <option value="Laranja">🟠 Laranja</option>
+                                <option value="Marrom">🟤 Marrom</option>
+                                <option value="Ouro">🟨 Ouro</option>
+                                <option value="Bege">🟨 Bege</option>
+                            </select>
                         </div>
                     </div>
 
@@ -1332,10 +1366,10 @@
                 // ==========================================
                 get canProceedStep1() {
                     const hasExisting = this.client && this.vehicle;
-                    const quickName = (this.quickRegister.clientName || '').trim();
                     const quickPlate = (this.quickRegister.vehiclePlate || '').trim();
+                    const quickModel = (this.quickRegister.vehicleModel || '').trim();
 
-                    const hasQuickRegister = this.semPlaca ? quickName : (quickName && quickPlate);
+                    const hasQuickRegister = this.semPlaca ? quickModel : (quickPlate && quickModel);
                     const hasCategory = this.vehicleType === 'MOTO' || this.vehicleCategory;
 
                     return (hasExisting || hasQuickRegister) && hasCategory;
