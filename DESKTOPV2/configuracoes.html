@@ -1498,6 +1498,12 @@
                     try {
                         const response = await window.api.getTiposVeiculo();
                         this.tiposVeiculo = response.tiposVeiculo || response;
+
+                        // Add CAMINHONETE if it doesn't exist
+                        const hasCaminhonete = this.tiposVeiculo.some(t => t.categoria === 'CAMINHONETE');
+                        if (!hasCaminhonete) {
+                            this.tiposVeiculo.push({ categoria: 'CAMINHONETE' });
+                        }
                     } catch (error) {
                         console.error('Erro ao carregar tipos de veículo:', error);
                     }

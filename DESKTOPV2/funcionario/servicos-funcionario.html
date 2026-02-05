@@ -676,13 +676,19 @@
   <main class="main-container">
     <div class="section-header">
       <div>
-        <h1 class="section-title">Serviços</h1>
-        <p class="section-subtitle">Crie e gerencie os serviços disponíveis</p>
+        <h1 class="section-title">Serviços e Adicionais</h1>
+        <p class="section-subtitle">Crie e gerencie os serviços e adicionais disponíveis</p>
       </div>
-      <button class="btn-novo" onclick="openServiceModal()">
-        <i class="fas fa-plus"></i>
-        Novo Serviço
-      </button>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn-novo" onclick="openServiceModal()">
+          <i class="fas fa-plus"></i>
+          Novo Serviço
+        </button>
+        <button class="btn-novo" onclick="openAdicionalModal()" style="background: #6c757d;">
+          <i class="fas fa-plus"></i>
+          Novo Adicional
+        </button>
+      </div>
     </div>
 
     <!-- CONTENT -->
@@ -753,6 +759,59 @@
     </div>
   </div>
 
+  <!-- ADICIONAL MODAL -->
+  <div class="modal-overlay" id="adicionalModal">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title" id="adicionalModalTitle">Novo Adicional</h2>
+        <button class="modal-close" onclick="closeAdicionalModal()">&times;</button>
+      </div>
+      <form id="adicionalForm" onsubmit="saveAdicional(event)">
+        <div class="form-group">
+          <label for="adicionalName" class="form-label">Nome do Adicional</label>
+          <input
+            type="text"
+            id="adicionalName"
+            class="form-input"
+            placeholder="Ex: Polimento Especial"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="adicionalPrice" class="form-label">Preço (R$)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            id="adicionalPrice"
+            class="form-input"
+            required
+          >
+          <p class="form-info">
+            <i class="fas fa-info-circle"></i>
+            O preço deve ser maior que zero
+          </p>
+        </div>
+        <div class="form-group">
+          <label for="adicionalDescricao" class="form-label">Descrição (Opcional)</label>
+          <textarea
+            id="adicionalDescricao"
+            class="form-input"
+            placeholder="Ex: Detalhes do que inclui este adicional..."
+            style="resize: vertical; min-height: 80px;"
+          ></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeAdicionalModal()">Cancelar</button>
+          <button type="submit" class="btn-confirm">
+            <i class="fas fa-save"></i>
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- SCRIPTS -->
   <script src="../api.js"></script>
   <script src="utils-funcionario.js"></script>
@@ -772,10 +831,11 @@
 
     const subtipoOptions = {
       CARRO: [
-        { categoria: 'Pequeno' },
-        { categoria: 'Médio' },
-        { categoria: 'Grande' },
-        { categoria: 'SUV' }
+        { categoria: 'HATCH' },
+        { categoria: 'SEDAN' },
+        { categoria: 'SUV' },
+        { categoria: 'PICKUP' },
+        { categoria: 'CAMINHONETE' }
       ],
       MOTO: []
     };
@@ -1012,6 +1072,82 @@
       } catch (error) {
         console.error('Erro ao salvar serviço:', error);
         showToast('Erro ao salvar serviço. Tente novamente.', 'error');
+      }
+    }
+
+    // ===== ADICIONAIS FUNCTIONS =====
+    let adicionalForm = {
+      id: null,
+      nome: '',
+      preco: '',
+      descricao: ''
+    };
+
+    // OPEN ADICIONAL MODAL
+    function openAdicionalModal() {
+      adicionalForm = {
+        id: null,
+        nome: '',
+        preco: '',
+        descricao: ''
+      };
+      document.getElementById('adicionalForm').reset();
+      document.getElementById('adicionalModalTitle').textContent = 'Novo Adicional';
+      document.getElementById('adicionalModal').classList.add('active');
+    }
+
+    // CLOSE ADICIONAL MODAL
+    function closeAdicionalModal() {
+      document.getElementById('adicionalModal').classList.remove('active');
+      document.getElementById('adicionalForm').reset();
+    }
+
+    // SAVE ADICIONAL
+    function saveAdicional(event) {
+      event.preventDefault();
+
+      const nome = document.getElementById('adicionalName').value.trim();
+      const preco = parseFloat(document.getElementById('adicionalPrice').value);
+      const descricao = document.getElementById('adicionalDescricao').value.trim();
+
+      if (!nome || preco <= 0) {
+        showToast('Preencha todos os campos obrigatórios corretamente.', 'error');
+        return;
+      }
+
+      const payload = {
+        nome: nome,
+        preco: preco,
+        descricao: descricao || null
+      };
+
+      try {
+        if (adicionalForm.id) {
+          window.api.updateAdicional(adicionalForm.id, payload)
+            .then(() => {
+              showToast('Adicional atualizado com sucesso!', 'success');
+              closeAdicionalModal();
+              loadServicos();
+            })
+            .catch(error => {
+              console.error('Erro ao atualizar adicional:', error);
+              showToast('Erro ao atualizar adicional. Tente novamente.', 'error');
+            });
+        } else {
+          window.api.createAdicional(payload)
+            .then(() => {
+              showToast('Adicional criado com sucesso!', 'success');
+              closeAdicionalModal();
+              loadServicos();
+            })
+            .catch(error => {
+              console.error('Erro ao criar adicional:', error);
+              showToast('Erro ao criar adicional. Tente novamente.', 'error');
+            });
+        }
+      } catch (error) {
+        console.error('Erro ao salvar adicional:', error);
+        showToast('Erro ao salvar adicional. Tente novamente.', 'error');
       }
     }
   </script>
