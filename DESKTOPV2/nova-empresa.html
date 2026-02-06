@@ -63,6 +63,89 @@
             flex-direction: column;
             gap: 12px;
         }
+
+        /* TOAST NOTIFICATIONS */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            animation: slideInRight 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        .toast.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .toast.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .toast.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .toast.warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .toast i {
+            font-size: 18px;
+            min-width: 20px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.hide {
+            animation: slideOutRight 0.3s ease-out forwards;
+        }
+
+        @media (max-width: 640px) {
+            .toast {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
     </style>
 <link rel="stylesheet" href="webapp-mobile.css">
 <link rel="stylesheet" href="fix-responsive.css">
@@ -90,15 +173,75 @@
     </div>
 
     <script>
+        // ===== TOAST NOTIFICATION FUNCTION =====
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+
+            toast.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${message}</span>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ===== EXTRACT ERROR MESSAGE =====
+        function getErrorMessage(error) {
+            // Se é um objeto com propriedade message
+            if (error?.message) {
+                return error.message;
+            }
+            // Se é um objeto com propriedade error
+            if (error?.error) {
+                return error.error;
+            }
+            // Se é uma string
+            if (typeof error === 'string') {
+                return error;
+            }
+            // Fallback
+            return 'Ocorreu um erro. Tente novamente.';
+        }
+
+        // ===== FORM SUBMISSION =====
         document.getElementById('novaEmpresaForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = document.getElementById('nome').value;
             const cnpj = document.getElementById('cnpj').value;
 
+            // Validar nome
+            if (!nome.trim()) {
+                showToast('Por favor, insira o nome da empresa', 'warning');
+                return;
+            }
+
+            // Desabilitar botão enquanto processa
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Criando...';
+
             try {
                 const empresa = await window.api.createEmpresa({ nome, cnpj });
                 const empresaId = empresa?.id || empresa?.empresa?.id;
                 const empresaNome = empresa?.nome || empresa?.empresa?.nome || nome;
+
+                // Sucesso ao criar empresa
+                showToast('✅ Empresa criada com sucesso!', 'success');
 
                 // Obter token scoped com a nova empresa e já ir para o dashboard
                 if (empresaId) {
@@ -106,17 +249,25 @@
                     localStorage.setItem('token', scoped.token);
                     localStorage.setItem('empresaId', scoped.empresa?.id || empresaId);
                     localStorage.setItem('empresaNome', scoped.empresa?.nome || empresaNome);
-                    alert('Empresa criada com sucesso!');
-                    window.location.href = 'index.html';
+
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
                     return;
                 }
 
                 // Fallback se não retornou id: volta para seleção
-                alert('Empresa criada, selecione-a para continuar.');
-                window.location.href = 'selecionar-empresa.html';
+                setTimeout(() => {
+                    window.location.href = 'selecionar-empresa.html';
+                }, 1500);
             } catch (error) {
                 console.error('Erro ao criar empresa:', error);
-                alert('Não foi possível criar a empresa. Tente novamente.');
+                const errorMessage = getErrorMessage(error);
+                showToast(`❌ ${errorMessage}`, 'error');
+            } finally {
+                // Reabilitar botão
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             }
         });
     </script>

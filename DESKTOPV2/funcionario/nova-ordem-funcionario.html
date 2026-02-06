@@ -1485,6 +1485,14 @@
                         return;
                     }
 
+                    // Validar formato de placa se for número
+                    if (/\d/.test(query)) {
+                        const cleanPlate = query.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (cleanPlate.length > 0 && !this.isValidPlateFormat(cleanPlate)) {
+                            showToast('⚠️ Formato de placa inválido. Ex: ABC1234 ou ABC12D34', 'warning');
+                        }
+                    }
+
                     this.isSearching = true;
 
                     try {
@@ -1557,6 +1565,11 @@
                                         });
                                     }
                                 }
+                                // Show success toast when found clients
+                                showToast(`🔍 Encontrado ${this.searchResults.length} resultado(s)`, 'success');
+                            } else {
+                                // No clients found - show info
+                                showToast('ℹ️ Cliente não encontrado. Você pode criar um novo.', 'info');
                             }
 
                             this.searchResults.push({
@@ -1585,6 +1598,7 @@
                         this.searchQuery = result.vehicle.placa;
 
                         this.closeSearchResults();
+                        showToast(`✅ Veículo ${result.vehicle.placa} localizado! Cliente: ${result.client.nome}`, 'success');
                         await this.loadServices();
                         this.step = 2;
                         return;
@@ -1593,12 +1607,14 @@
                         this.vehicle = null;
                         this.quickRegister.clientName = result.client.nome;
                         this.quickRegister.clientPhone = result.client.telefone || '';
+                        showToast(`👤 Cliente "${result.client.nome}" localizado! Selecione o veículo.`, 'success');
                         this.$nextTick(() => {
                             this.$refs.quickRegisterName?.focus();
                         });
                     } else if (result.type === 'new') {
                         this.quickRegister.vehiclePlate = result.plate || '';
                         this.quickRegister.clientName = result.name || '';
+                        showToast('➕ Pronto para registrar novo cliente e veículo', 'info');
                         this.$nextTick(() => {
                             this.$refs.quickRegisterName?.focus();
                         });
@@ -1661,6 +1677,30 @@
                     if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
                         this.vehicleCategory = 'HATCH';
                     }
+                },
+
+                // ==========================================
+                // PLATE VALIDATION
+                // ==========================================
+                isValidPlateFormat(plate) {
+                    // Aceita formatos:
+                    // - Velho: ABC1234 (3 letras + 4 números)
+                    // - Novo: ABC12D34 (3 letras + 2 números + 1 letra + 2 números)
+                    // - Com hífen: ABC-1234 ou ABC-12D34
+                    // - Sem hífen: ABC1234 ou ABC12D34
+
+                    if (!plate) return false;
+
+                    // Remove hífens para validação
+                    const cleanPlate = plate.replace('-', '');
+
+                    // Padrão placa velho: 3 letras + 4 números (ABC1234)
+                    const oldPattern = /^[A-Z]{3}\d{4}$/;
+
+                    // Padrão placa nova (Mercosul): 3 letras + 2 números + 1 letra + 2 números (ABC12D34)
+                    const newPattern = /^[A-Z]{3}\d{2}[A-Z]\d{2}$/;
+
+                    return oldPattern.test(cleanPlate) || newPattern.test(cleanPlate);
                 },
 
                 // ==========================================
@@ -1805,6 +1845,20 @@
 
                     if (!this.vehicle && !plataTrim) {
                         showToast('Placa do veículo é obrigatória', 'error');
+                        return;
+                    }
+
+                    // Validate plate format (if not "sem placa" and not existing vehicle)
+                    if (!this.vehicle && !this.semPlaca && plataTrim) {
+                        if (!this.isValidPlateFormat(plataTrim)) {
+                            showToast('❌ Formato de placa inválido. Use: ABC1234 ou ABC-1234 ou ABC12D34', 'error');
+                            return;
+                        }
+                    }
+
+                    // Validate client name if creating new vehicle
+                    if (!this.vehicle && !nomeClienteTrim) {
+                        showToast('Nome do cliente é obrigatório para novo veículo', 'error');
                         return;
                     }
 
