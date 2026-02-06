@@ -356,6 +356,13 @@ const api = {
   getPaymentHistory: () => fetchApi('/subscriptions/payment-history'),
   getActivePromotions: () => fetchPublicApi('/promotions/active'),
 
+  // ===== ADMIN SUBSCRIPTIONS =====
+  getAdminUsuarios: () => fetchApi('/admin/subscriptions/usuarios'),
+  createSubscriptionAssignment: (data) => fetchApi('/admin/subscriptions/create-assignment', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
   // ===== ADMIN =====
   getAdminStats: () => api.call('GET', 'admin/stats'),
   getAdminEmpresaById: (id) => api.call('GET', `admin/empresas/${id}/details`),

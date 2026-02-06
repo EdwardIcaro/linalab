@@ -14,7 +14,9 @@ import {
   updateAddon,
   deleteAddon,
   toggleAddonStatus,
-  getSubscriptionStats
+  getSubscriptionStats,
+  listUsuarios,
+  createSubscriptionAssignment
 } from '../controllers/subscriptionAdminController';
 
 const router: Router = Router();
@@ -31,6 +33,10 @@ router.get('/subscriptions/:id', getSubscriptionDetails);
 router.post('/subscriptions/lifetime', grantLifetimeSubscription);
 router.patch('/subscriptions/:id/status', updateSubscriptionStatus);
 router.post('/subscriptions/:id/extend', extendSubscription);
+router.post('/create-assignment', createSubscriptionAssignment);
+
+// Listar usuários para atribuição
+router.get('/usuarios', listUsuarios);
 
 // Gerenciar planos
 router.get('/plans', listPlans);

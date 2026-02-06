@@ -372,7 +372,10 @@
             <div>
                 <h1><i class="fas fa-credit-card"></i> Gerenciar Assinaturas</h1>
             </div>
-            <div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="openAssignModal()" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-plus"></i> Atribuir Assinatura
+                </button>
                 <a href="dashboard.html" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </a>
@@ -457,6 +460,80 @@
                 <button class="btn-modal secondary" onclick="closeSuspendModal()">Cancelar</button>
                 <button class="btn-modal primary" id="confirmSuspendBtn" onclick="confirmSuspendSubscription()">
                     <span id="suspendBtnText">Sim, Suspender</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Subscription Modal -->
+    <div class="modal-overlay" id="assignModal">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 600px;">
+            <div class="modal-header">
+                <i class="fas fa-plus-circle"></i> Atribuir Assinatura
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; gap: 20px;">
+                    <!-- Usuário -->
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            Usuário
+                        </label>
+                        <select id="usuarioSelect" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: 'Inter', sans-serif;">
+                            <option value="">Selecione um usuário...</option>
+                        </select>
+                    </div>
+
+                    <!-- Plano -->
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            Plano
+                        </label>
+                        <select id="planoSelect" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: 'Inter', sans-serif;">
+                            <option value="">Selecione um plano...</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Assinatura -->
+                    <div>
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #333;">
+                            Tipo de Assinatura
+                        </label>
+                        <div style="display: flex; gap: 20px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="tipoAssinatura" value="LIFETIME" checked onchange="updateTipoAssinatura()">
+                                <span>Vitalícia</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="tipoAssinatura" value="MONTHS" onchange="updateTipoAssinatura()">
+                                <span>Por Meses</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Meses (condicional) -->
+                    <div id="mesesDiv" style="display: none;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            Quantidade de Meses
+                        </label>
+                        <input type="number" id="mesesInput" min="1" max="60" value="1" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: 'Inter', sans-serif;">
+                        <small style="color: #666; margin-top: 4px; display: block;">Máximo 60 meses (5 anos)</small>
+                    </div>
+
+                    <!-- Resumo -->
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 3px solid #00BCD4;">
+                        <div style="font-size: 0.85rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">
+                            Resumo
+                        </div>
+                        <div id="resumoText" style="color: #333; font-size: 0.95rem;">
+                            Nenhuma seleção feita
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal secondary" onclick="closeAssignModal()">Cancelar</button>
+                <button class="btn-modal primary" id="assignBtn" onclick="confirmAssignment()" disabled>
+                    <span id="assignBtnText">Atribuir Assinatura</span>
                 </button>
             </div>
         </div>
@@ -780,6 +857,158 @@
             setTimeout(() => successMsg.classList.remove('show'), 5000);
         }
 
+        // ===== ASSIGN SUBSCRIPTION FUNCTIONS =====
+        let allUsuarios = [];
+
+        async function openAssignModal() {
+            try {
+                // Buscar usuários
+                const usuarios = await fetchApi('/admin/subscriptions/usuarios');
+                allUsuarios = usuarios;
+
+                // Preencher select de usuários
+                const usuarioSelect = document.getElementById('usuarioSelect');
+                usuarioSelect.innerHTML = '<option value="">Selecione um usuário...</option>';
+                usuarios.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.nome} (${user.email})`;
+                    usuarioSelect.appendChild(option);
+                });
+
+                // Preencher select de planos
+                const planoSelect = document.getElementById('planoSelect');
+                planoSelect.innerHTML = '<option value="">Selecione um plano...</option>';
+                allPlans.forEach(plan => {
+                    const option = document.createElement('option');
+                    option.value = plan.id;
+                    option.textContent = plan.nome;
+                    planoSelect.appendChild(option);
+                });
+
+                // Reset form
+                document.querySelector('input[name="tipoAssinatura"][value="LIFETIME"]').checked = true;
+                document.getElementById('mesesDiv').style.display = 'none';
+                document.getElementById('mesesInput').value = '1';
+
+                // Attach listeners
+                attachAssignModalListeners();
+                updateResumo();
+
+                document.getElementById('assignModal').classList.add('show');
+            } catch (error) {
+                showError('Erro ao carregar dados: ' + (error.message || 'Tente novamente'));
+            }
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').classList.remove('show');
+        }
+
+        function updateTipoAssinatura() {
+            const tipo = document.querySelector('input[name="tipoAssinatura"]:checked').value;
+            const mesesDiv = document.getElementById('mesesDiv');
+
+            if (tipo === 'MONTHS') {
+                mesesDiv.style.display = 'block';
+            } else {
+                mesesDiv.style.display = 'none';
+            }
+
+            updateResumo();
+        }
+
+        function updateResumo() {
+            const usuarioSelect = document.getElementById('usuarioSelect');
+            const planoSelect = document.getElementById('planoSelect');
+
+            if (!usuarioSelect || !planoSelect) return;
+
+            const usuarioId = usuarioSelect.value;
+            const planoId = planoSelect.value;
+            const tipo = document.querySelector('input[name="tipoAssinatura"]:checked').value;
+            const meses = parseInt(document.getElementById('mesesInput').value) || 0;
+
+            let resumoText = 'Nenhuma seleção feita';
+            let canAssign = false;
+
+            if (usuarioId && planoId) {
+                const usuario = allUsuarios.find(u => u.id === usuarioId);
+                const plano = allPlans.find(p => p.id === planoId);
+
+                if (usuario && plano) {
+                    if (tipo === 'LIFETIME') {
+                        resumoText = `<strong>${usuario.nome}</strong> receberá o plano <strong>${plano.nome}</strong> de forma <strong>vitalícia</strong>`;
+                    } else {
+                        resumoText = `<strong>${usuario.nome}</strong> receberá o plano <strong>${plano.nome}</strong> por <strong>${meses} mês${meses !== 1 ? 'es' : ''}</strong>`;
+                    }
+                    canAssign = true;
+                }
+            }
+
+            document.getElementById('resumoText').innerHTML = resumoText;
+            document.getElementById('assignBtn').disabled = !canAssign;
+        }
+
+        function attachAssignModalListeners() {
+            const usuarioSelect = document.getElementById('usuarioSelect');
+            const planoSelect = document.getElementById('planoSelect');
+            const mesesInput = document.getElementById('mesesInput');
+
+            usuarioSelect.removeEventListener('change', updateResumo);
+            planoSelect.removeEventListener('change', updateResumo);
+            mesesInput.removeEventListener('change', updateResumo);
+
+            usuarioSelect.addEventListener('change', updateResumo);
+            planoSelect.addEventListener('change', updateResumo);
+            mesesInput.addEventListener('change', updateResumo);
+        }
+
+        async function confirmAssignment() {
+            const usuarioId = document.getElementById('usuarioSelect').value;
+            const planoId = document.getElementById('planoSelect').value;
+            const tipo = document.querySelector('input[name="tipoAssinatura"]:checked').value;
+            const meses = parseInt(document.getElementById('mesesInput').value) || 0;
+
+            if (!usuarioId || !planoId) {
+                showError('Selecione um usuário e um plano');
+                return;
+            }
+
+            if (tipo === 'MONTHS' && meses <= 0) {
+                showError('Defina a quantidade de meses');
+                return;
+            }
+
+            const btn = document.getElementById('assignBtn');
+            btn.disabled = true;
+            const originalText = document.getElementById('assignBtnText').textContent;
+            document.getElementById('assignBtnText').textContent = 'Processando...';
+
+            try {
+                const payload = {
+                    usuarioId,
+                    planId: planoId,
+                    tipo,
+                    ...(tipo === 'MONTHS' && { meses })
+                };
+
+                await fetchApi('/admin/subscriptions/create-assignment', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                showSuccess('✅ Assinatura atribuída com sucesso!');
+                closeAssignModal();
+                setTimeout(() => loadData(), 1500);
+            } catch (error) {
+                showError(error.message || error.error || 'Erro ao atribuir assinatura');
+            } finally {
+                btn.disabled = false;
+                document.getElementById('assignBtnText').textContent = originalText;
+            }
+        }
+
         // Modal close on background click
         document.getElementById('detailsModal').addEventListener('click', function(e) {
             if (e.target === this) closeDetailsModal();
@@ -787,6 +1016,10 @@
 
         document.getElementById('suspendModal').addEventListener('click', function(e) {
             if (e.target === this) closeSuspendModal();
+        });
+
+        document.getElementById('assignModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAssignModal();
         });
     </script>
 </body>

@@ -526,9 +526,14 @@
       display: flex;
       gap: 12px;
       margin-top: 24px;
-      padding-top: 16px;
+      padding: 16px;
       border-top: 1px solid var(--border);
       justify-content: flex-end;
+      background: var(--light);
+      position: sticky;
+      bottom: 0;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+      border-radius: 0 0 8px 8px;
     }
 
     /* PAYMENT MODAL STYLES */
@@ -1590,13 +1595,25 @@
               method: 'PENDENTE',
               amount: parseFloat(paymentModal.remaining.toFixed(2))
             });
-            processPayments();
+            confirmAndProcess();
           }
         );
         return;
       }
 
-      await processPayments();
+      confirmAndProcess();
+    }
+
+    // CONFIRM AND PROCESS
+    function confirmAndProcess() {
+      const totalValue = paymentModal.payments.reduce((sum, p) => sum + p.amount, 0);
+      showConfirm(
+        'Confirmar Finalização',
+        `Tem certeza que deseja finalizar esta ordem? Total: ${formatCurrency(totalValue)}`,
+        () => {
+          processPayments();
+        }
+      );
     }
 
     // PROCESS PAYMENTS

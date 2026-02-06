@@ -548,6 +548,98 @@ export const toggleAddonStatus = async (req: Request, res: Response) => {
 };
 
 /**
+ * Listar todos os usuários para atribuição de assinaturas
+ * GET /api/admin/subscriptions/usuarios
+ */
+export const listUsuarios = async (req: Request, res: Response) => {
+  try {
+    const usuarios = await prisma.usuario.findMany({
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        subscriptions: {
+          select: {
+            id: true,
+            status: true,
+            plan: {
+              select: {
+                id: true,
+                nome: true
+              }
+            }
+          },
+          take: 1,
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Erro ao listar usuários:', error);
+    res.status(500).json({ error: 'Erro ao listar usuários' });
+  }
+};
+
+/**
+ * Criar nova assinatura para um usuário
+ * POST /api/admin/subscriptions/create-assignment
+ * Body: { usuarioId, planId, tipo: 'LIFETIME' | 'MONTHS', meses?: number }
+ */
+export const createSubscriptionAssignment = async (req: Request, res: Response) => {
+  try {
+    const { usuarioId, planId, tipo, meses } = req.body;
+
+    if (!usuarioId || !planId || !tipo) {
+      return res.status(400).json({
+        error: 'usuarioId, planId e tipo são obrigatórios'
+      });
+    }
+
+    if (tipo === 'MONTHS' && (!meses || meses <= 0)) {
+      return res.status(400).json({
+        error: 'Para tipo MONTHS, meses deve ser um número positivo'
+      });
+    }
+
+    // Verificar se usuário já tem assinatura ativa
+    const existing = await subscriptionService.getActiveSubscription(usuarioId);
+
+    if (existing) {
+      // Cancelar a existente
+      await subscriptionService.cancelSubscription(existing.id);
+    }
+
+    let subscriptionData: any = {
+      usuarioId,
+      planId
+    };
+
+    if (tipo === 'LIFETIME') {
+      subscriptionData.isLifetime = true;
+    } else if (tipo === 'MONTHS') {
+      subscriptionData.months = meses;
+    }
+
+    const subscription = await subscriptionService.createSubscription(subscriptionData);
+
+    res.status(201).json({
+      message: 'Assinatura atribuída com sucesso',
+      subscription
+    });
+  } catch (error: any) {
+    console.error('Erro ao atribuir assinatura:', error);
+    res.status(400).json({
+      error: error.message || 'Erro ao atribuir assinatura'
+    });
+  }
+};
+
+/**
  * Obter estatísticas de assinaturas
  * GET /api/admin/subscriptions/stats
  */
@@ -615,5 +707,7 @@ export default {
   updateAddon,
   deleteAddon,
   toggleAddonStatus,
-  getSubscriptionStats
+  getSubscriptionStats,
+  listUsuarios,
+  createSubscriptionAssignment
 };

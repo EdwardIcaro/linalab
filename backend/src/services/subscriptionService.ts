@@ -11,6 +11,7 @@ interface CreateSubscriptionParams {
   planId: string;
   isTrial?: boolean;
   isLifetime?: boolean;
+  months?: number;
 }
 
 interface FeatureAccess {
@@ -152,7 +153,7 @@ export class SubscriptionService {
    * Criar nova assinatura
    */
   async createSubscription(params: CreateSubscriptionParams) {
-    const { usuarioId, planId, isTrial, isLifetime } = params;
+    const { usuarioId, planId, isTrial, isLifetime, months } = params;
 
     // Validar se já tem assinatura ativa ou pendente
     const existingSubscription = await prisma.subscription.findFirst({
@@ -200,8 +201,25 @@ export class SubscriptionService {
       ? new Date(now.getTime() + plan.trialDays * 24 * 60 * 60 * 1000)
       : null;
 
+    // Calcular endDate se houver duração em meses
+    let endDate: Date | null = null;
+    if (months && months > 0) {
+      endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + months);
+    }
+
     // Verificar se é plano pago (não é trial, não é lifetime, e tem preço > 0)
     const requiresPayment = !isTrial && !isLifetime && plan.preco > 0;
+
+    // Calcular nextBillingDate
+    let nextBillingDate: Date;
+    if (isTrial && trialEndDate) {
+      nextBillingDate = trialEndDate;
+    } else if (endDate) {
+      nextBillingDate = endDate;
+    } else {
+      nextBillingDate = this.calculateNextBillingDate(now);
+    }
 
     const subscription = await prisma.subscription.create({
       data: {
@@ -213,8 +231,8 @@ export class SubscriptionService {
         trialStartDate: isTrial ? now : null,
         trialEndDate,
         startDate: now,
-        endDate: isLifetime ? null : (isTrial ? trialEndDate : null),
-        nextBillingDate: isTrial ? trialEndDate : this.calculateNextBillingDate(now),
+        endDate: isLifetime ? null : endDate,
+        nextBillingDate,
         preco: isTrial ? 0 : plan.preco
       },
       include: {
