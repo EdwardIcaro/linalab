@@ -638,12 +638,24 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
+    // ✅ OTIMIZAÇÃO: Usar select ao invés de include para evitar N+1 queries
     const ordem = await prisma.ordemServico.findFirst({
       where: {
         id,
         empresaId: req.empresaId
       },
-      include: {
+      select: {
+        id: true,
+        numeroOrdem: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        dataFim: true,
+        valorTotal: true,
+        comissao: true,
+        observacoes: true,
+        pago: true,
+        // Cliente - apenas campos necessários
         cliente: {
           select: {
             id: true,
@@ -652,6 +664,7 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             email: true
           }
         },
+        // Veículo - apenas campos necessários
         veiculo: {
           select: {
             id: true,
@@ -661,6 +674,7 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             ano: true
           }
         },
+        // Lavador principal
         lavador: {
           select: {
             id: true,
@@ -668,12 +682,18 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             comissao: true
           }
         },
+        // Items - otimizado com select
         items: {
-          include: {
+          select: {
+            id: true,
+            tipo: true,
+            quantidade: true,
+            precoUnit: true,
+            subtotal: true,
             servico: {
               select: {
                 id: true,
-                  nome: true
+                nome: true
               }
             },
             adicional: {
@@ -684,8 +704,10 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             }
           }
         },
+        // OrdemLavadores - otimizado com select
         ordemLavadores: {
-          include: {
+          select: {
+            lavadorId: true,
             lavador: {
               select: {
                 id: true,
@@ -694,7 +716,16 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             }
           }
         },
+        // Pagamentos - otimizado
         pagamentos: {
+          select: {
+            id: true,
+            status: true,
+            valor: true,
+            metodo: true,
+            pagoEm: true,
+            createdAt: true
+          },
           orderBy: {
             createdAt: 'asc'
           }
