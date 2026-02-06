@@ -1499,10 +1499,21 @@
     async function updateOrdemStatus(newStatus) {
       try {
         await window.api.updateOrdem(currentOrdem.id, { status: newStatus });
+
+        // ✅ OTIMIZAÇÃO: Atualizar estado local em vez de recarregar página
+        currentOrdem.status = newStatus;
+
         showToast('Ordem atualizada com sucesso!', 'success');
+
+        // Atualizar a visualização do detalhe se estiver aberta
+        if (currentOrdem) {
+          showOrdemDetails(currentOrdem);
+        }
+
+        // Recarregar lista em background (sem bloquear UI)
         setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+          loadOrdensList();
+        }, 500);
       } catch (error) {
         console.error('Erro ao atualizar ordem:', error);
         showToast('Erro ao atualizar ordem. Tente novamente.', 'error');
@@ -1752,9 +1763,18 @@
         await window.api.finalizarOrdem(paymentModal.orderId, payload);
         showToast('Ordem finalizada com sucesso!', 'success');
         closePaymentModal();
+
+        // ✅ OTIMIZAÇÃO: Atualizar estado local em vez de fazer redirect
+        // Se estamos vendo o detalhe, voltar para a lista
+        if (currentOrdem?.id === paymentModal.orderId) {
+          goBack();
+        }
+
+        // Recarregar lista em background para garantir sincronização
+        // (sem bloquear UI - usuário vê feedback imediato)
         setTimeout(() => {
-          window.location.href = 'ordens-funcionario.html';
-        }, 1500);
+          loadOrdensList();
+        }, 300);
       } catch (error) {
         console.error('Erro ao finalizar ordem:', error);
         showToast('Erro ao finalizar ordem. Tente novamente.', 'error');
