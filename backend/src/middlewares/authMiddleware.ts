@@ -115,42 +115,6 @@ const authMiddleware = async (
       return;
     }
 
-    // 4b. Subaccount token validation
-    if (decoded.subaccountId) {
-      const subaccount = await prisma.subaccount.findFirst({
-        where: {
-          id: decoded.subaccountId,
-          empresaId: decoded.empresaId
-        },
-        include: {
-          empresa: {
-            select: {
-              id: true,
-              nome: true,
-              ativo: true
-            }
-          }
-        }
-      });
-
-      if (!subaccount || !subaccount.empresa?.ativo) {
-        return res.status(403).json({
-          error: 'Acesso negado: você não tem permissão para acessar esta empresa',
-          code: 'ACCESS_DENIED'
-        });
-      }
-
-      const authenticatedReq = req as AuthenticatedRequest;
-      authenticatedReq.usuarioId = subaccount.id;
-      authenticatedReq.subaccountId = subaccount.id;
-      authenticatedReq.empresaId = subaccount.empresa.id;
-      authenticatedReq.usuarioNome = subaccount.nome;
-      authenticatedReq.empresaNome = subaccount.empresa.nome;
-
-      next();
-      return;
-    }
-
     // 5. CRITICAL: TENANT ISOLATION - Verify user owns/belongs to this empresa
     // This prevents VERTICAL PRIVILEGE ESCALATION attacks where:
     // - User A tries to access Company B's data

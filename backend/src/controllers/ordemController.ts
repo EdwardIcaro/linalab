@@ -264,22 +264,24 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         throw new Error("ID do cliente ou do veículo não pôde ser determinado.");
       }
 
+      // ✅ OTIMIZAÇÃO: Paralelizar lookups do lavador e número da ordem (sem dependência)
+      const [lavador, ultimaOrdem] = await Promise.all([
+        lavadorId ? tx.lavador.findUnique({ where: { id: lavadorId } }) : Promise.resolve(null),
+        tx.ordemServico.findFirst({
+          where: { empresaId },
+          orderBy: { numeroOrdem: 'desc' },
+          select: { numeroOrdem: true },
+        })
+      ]);
+
       // 5. Calcular comissão
       let comissaoCalculada = 0;
-      if (lavadorId) {
-        const lavador = await tx.lavador.findUnique({ where: { id: lavadorId } });
-        if (lavador && lavador.comissao > 0) {
-          // A comissão é uma porcentagem do valor total da ordem
-          comissaoCalculada = calculatedValorTotal * (lavador.comissao / 100);
-        }
+      if (lavador && lavador.comissao > 0) {
+        // A comissão é uma porcentagem do valor total da ordem
+        comissaoCalculada = calculatedValorTotal * (lavador.comissao / 100);
       }
 
       // 6. Gerar o número da ordem
-      const ultimaOrdem = await tx.ordemServico.findFirst({
-        where: { empresaId },
-        orderBy: { numeroOrdem: 'desc' },
-        select: { numeroOrdem: true },
-      });
       const proximoNumeroOrdem = (ultimaOrdem?.numeroOrdem || 0) + 1;
 
       // 7. Cria a ordem de serviço
