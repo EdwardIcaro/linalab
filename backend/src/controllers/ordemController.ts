@@ -4,6 +4,58 @@ import prisma from '../db';
 import { createNotification } from '../services/notificationService';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 
+// ✅ CACHE SIMPLES EM MEMÓRIA
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  ttl: number;
+}
+
+const queryCache = new Map<string, CacheEntry>();
+
+function getCacheKey(empresaId: string, params: Record<string, any>): string {
+  // Cria chave de cache baseada em empresaId e parametros
+  const paramStr = JSON.stringify({
+    page: params.page,
+    limit: params.limit,
+    status: params.status,
+    clienteId: params.clienteId,
+    lavadorId: params.lavadorId,
+    dataInicio: params.dataInicio,
+    dataFim: params.dataFim
+  });
+  return `ordens:${empresaId}:${Buffer.from(paramStr).toString('base64')}`;
+}
+
+function getCachedData(key: string): any | null {
+  const entry = queryCache.get(key);
+  if (!entry) return null;
+
+  const now = Date.now();
+  if (now - entry.timestamp > entry.ttl) {
+    queryCache.delete(key);
+    return null;
+  }
+
+  return entry.data;
+}
+
+function setCachedData(key: string, data: any, ttlMs: number = 60000): void {
+  queryCache.set(key, {
+    data,
+    timestamp: Date.now(),
+    ttl: ttlMs
+  });
+}
+
+function invalidateCache(empresaId: string): void {
+  // Remove todas as entradas de cache dessa empresa
+  for (const [key] of queryCache) {
+    if (key.includes(`ordens:${empresaId}:`)) {
+      queryCache.delete(key);
+    }
+  }
+}
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -260,6 +312,9 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       type: 'ordemCriada'
     });
 
+    // ✅ CACHE: Invalida cache desta empresa quando ordem é criada
+    invalidateCache(empresaId);
+
     res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem: ordemFinal });
   } catch (error: any) {
     if (error.code === 'ACTIVE_ORDER_EXISTS') {
@@ -298,23 +353,80 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     const limit = Number(limitQuery) || 10;
     const skip = (page - 1) * limit;
 
+    // ✅ CACHE: Se não há search ou filtros complexos, tenta usar cache
+    // Cache é valido apenas para queries simples sem search/filtros dinâmicos
+    const shouldCache = !search && (!metodoPagamento || metodoPagamento === '');
+    let cacheKey = '';
+    if (shouldCache) {
+      cacheKey = getCacheKey(req.empresaId!, {
+        page,
+        limit,
+        status: status || '',
+        clienteId: clienteId || '',
+        lavadorId: lavadorId || '',
+        dataInicio: dataInicio || '',
+        dataFim: dataFim || ''
+      });
+
+      const cachedResult = getCachedData(cacheKey);
+      if (cachedResult) {
+        console.log(`[CACHE HIT] Ordens da empresa ${req.empresaId}`);
+        return res.json(cachedResult);
+      }
+    }
+
     const where: Prisma.OrdemServicoWhereInput = {
       empresaId: req.empresaId,
     };
 
+    // ✅ OTIMIZAÇÃO: Se há search, primeiro busca na tabela de clientes/veiculos
+    // Isso evita JOINs complexos na query principal
+    let clienteIds: string[] = [];
+    let veiculoIds: string[] = [];
+
     if (search) {
-      where.OR = [
-        {
-          cliente: {
-            nome: { contains: search as string, mode: 'insensitive' } as Prisma.StringFilter
+      const searchString = search as string;
+
+      // Busca paralela em clientes e veiculos
+      const [clientesEncontrados, veiculosEncontrados] = await Promise.all([
+        prisma.cliente.findMany({
+          where: {
+            empresaId: req.empresaId,
+            nome: { contains: searchString, mode: 'insensitive' }
+          },
+          select: { id: true },
+          take: 100
+        }),
+        prisma.veiculo.findMany({
+          where: {
+            placa: { contains: searchString, mode: 'insensitive' }
+          },
+          select: { id: true },
+          take: 100
+        })
+      ]);
+
+      clienteIds = clientesEncontrados.map(c => c.id);
+      veiculoIds = veiculosEncontrados.map(v => v.id);
+
+      // Se encontrou resultados, adiciona ao filtro
+      if (clienteIds.length > 0 || veiculoIds.length > 0) {
+        where.OR = [
+          ...(clienteIds.length > 0 ? [{ clienteId: { in: clienteIds } }] : []),
+          ...(veiculoIds.length > 0 ? [{ veiculoId: { in: veiculoIds } }] : [])
+        ];
+      } else {
+        // Nenhum cliente ou veículo encontrado, retorna vazio
+        return res.json({
+          ordens: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0
           }
-        },
-        {
-          veiculo: {
-            placa: { contains: search as string, mode: 'insensitive' } as Prisma.StringFilter
-          }
-        }
-      ];
+        });
+      }
     }
 
     if (status) {
@@ -363,12 +475,40 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
       };
     }
 
+    // ✅ OTIMIZAÇÃO: Filtro de metodoPagamento também busca as IDs primeiro
     if (metodoPagamento) {
-      where.pagamentos = {
-        some: {
+      const pagamentosEncontrados = await prisma.pagamento.findMany({
+        where: {
+          empresaId: req.empresaId,
           metodo: metodoPagamento as any
-        }
-      };
+        },
+        distinct: ['ordemId'],
+        select: { ordemId: true },
+        take: 10000
+      });
+
+      const ordemIds = pagamentosEncontrados.map(p => p.ordemId);
+
+      if (ordemIds.length === 0) {
+        return res.json({
+          ordens: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+
+      // Adiciona ao filtro
+      if (where.AND && Array.isArray(where.AND)) {
+        where.AND.push({ id: { in: ordemIds } });
+      } else if (where.AND) {
+        where.AND = [where.AND, { id: { in: ordemIds } }];
+      } else {
+        where.id = { in: ordemIds };
+      }
     }
 
     // ✅ OTIMIZAÇÃO: Usar select ao invés de include para melhor performance
@@ -468,7 +608,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     ]);
 
     const enrichedOrders = ordens.map(order => formatOrderWithLavadores(order));
-    res.json({
+    const result = {
       ordens: enrichedOrders,
       pagination: {
         page: Number(page),
@@ -476,7 +616,15 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
         total,
         pages: Math.ceil(total / Number(limit))
       }
-    });
+    };
+
+    // ✅ CACHE: Salva resultado em cache (60 segundos) se for uma query simples
+    if (shouldCache && cacheKey) {
+      setCachedData(cacheKey, result, 60000); // Cache por 60 segundos
+      console.log(`[CACHE SET] Ordens da empresa ${req.empresaId} (TTL: 60s)`);
+    }
+
+    res.json(result);
   } catch (error) {
     console.error('Erro ao listar ordens de serviço:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -712,6 +860,9 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       link: `ordens.html?id=${ordemFinal.id}`,
       type: 'ordemEditada'
     });
+
+    // ✅ CACHE: Invalida cache desta empresa quando ordem é atualizada
+    invalidateCache(req.empresaId!);
 
     res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: ordemFinal });
   } catch (error: any) {
@@ -1238,6 +1389,9 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       link: `ordens.html?id=${ordem.id}`,
       type: 'ordemEditada'
     });
+
+    // ✅ CACHE: Invalida cache desta empresa quando ordem é finalizada
+    invalidateCache(empresaId);
 
     // Resposta de sucesso
     res.status(200).json({
