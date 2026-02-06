@@ -1768,27 +1768,42 @@
                     this.isLoadingServices = true;
 
                     try {
-                        const [servicosData, adicionaisData, lavadoresData] = await Promise.all([
+                        // ✅ OTIMIZAÇÃO: Remover getLavadores() daqui - foi removido para melhorar performance
+                        // Lavadores serão carregados sob demanda (lazy load) quando Step 2 for renderizado
+                        const [servicosData, adicionaisData] = await Promise.all([
                             window.api.getServicos({
                                 tipoVeiculo: this.vehicleType,
                                 subtipoVeiculo: this.vehicleCategory
                             }),
-                            window.api.getAdicionaisSimple(),
-                            window.api.getLavadores()
+                            window.api.getAdicionaisSimple()
                         ]);
 
                         this.services = servicosData.servicos || [];
                         this.adicionais = adicionaisData.adicionais || [];
-                        this.washers = lavadoresData.lavadores || [];
 
                         this.selectedService = null;
                         this.selectedAdicionais = [];
                         this.selectedWasherIds = [];
+
+                        // ✅ Carregar lavadores de forma assíncrona em background (lazy load)
+                        this.loadWashersLazy();
                     } catch (error) {
                         console.error('Error loading services:', error);
                         showToast('Erro ao carregar serviços', 'error');
                     } finally {
                         this.isLoadingServices = false;
+                    }
+                },
+
+                // ✅ OTIMIZAÇÃO: Lazy load dos lavadores - executa em background sem bloquear Step 2
+                async loadWashersLazy() {
+                    try {
+                        const lavadoresData = await window.api.getLavadores();
+                        this.washers = lavadoresData.lavadores || [];
+                    } catch (error) {
+                        console.error('Error loading washers:', error);
+                        // Silently fail - washers are optional for order creation
+                        this.washers = [];
                     }
                 },
 
