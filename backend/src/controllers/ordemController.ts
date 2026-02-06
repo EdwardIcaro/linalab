@@ -191,55 +191,73 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         }
       }
 
-      // 4. Calcula o valor total e prepara os itens da ordem
+      // ✅ OTIMIZAÇÃO: Calcula o valor total e prepara os itens da ordem
+      // Busca todos os serviços e adicionais em uma única query ao invés de uma por item
       let calculatedValorTotal = 0;
-      const ordemItemsData = await Promise.all(
-        itens.map(async (item: OrdemItemInput) => {
-          let precoUnit = 0;
-          let itemData;
 
-                if (item.tipo === 'SERVICO') {
-            const servico = await tx.servico.findUnique({ where: { id: item.itemId } });
-            if (servico) {
-              precoUnit = servico.preco;
-            } else {
-              // Lançar um erro se o serviço não for encontrado pode ajudar a debugar
-              throw new Error(`Serviço com ID ${item.itemId} não encontrado.`);
-            }
-            const subtotal = precoUnit * item.quantidade;
-            calculatedValorTotal += subtotal;
-            itemData = {
-                        tipo: 'SERVICO',
-              quantidade: item.quantidade,
-              precoUnit,
-              subtotal,
-              servicoId: item.itemId
-            };
-                } else if (item.tipo === 'ADICIONAL') {
-            const adicional = await tx.adicional.findUnique({ where: { id: item.itemId } });
-            if (adicional) {
-              precoUnit = adicional.preco;
-            } else {
-               // Lançar um erro se o adicional não for encontrado
-              throw new Error(`Adicional com ID ${item.itemId} não encontrado.`);
-            }
-            const subtotal = precoUnit * item.quantidade;
-            calculatedValorTotal += subtotal;
-            itemData = {
-                        tipo: 'ADICIONAL',
-              quantidade: item.quantidade,
-              precoUnit,
-              subtotal,
-              adicionalId: item.itemId
-            };
-          } else {
-            // Se o tipo não for nem SERVICO nem ADICIONAL, lança um erro.
-            throw new Error(`Tipo de item desconhecido: ${item.tipo}`);
+      // Separar IDs de serviços e adicionais
+      const servicoIds = itens
+        .filter((item: OrdemItemInput) => item.tipo === 'SERVICO')
+        .map((item: OrdemItemInput) => item.itemId);
+      const adicionalIds = itens
+        .filter((item: OrdemItemInput) => item.tipo === 'ADICIONAL')
+        .map((item: OrdemItemInput) => item.itemId);
+
+      // Buscar todos de uma vez (paralelo)
+      const [servicos, adicionais] = await Promise.all([
+        servicoIds.length > 0
+          ? tx.servico.findMany({ where: { id: { in: servicoIds } } })
+          : Promise.resolve([]),
+        adicionalIds.length > 0
+          ? tx.adicional.findMany({ where: { id: { in: adicionalIds } } })
+          : Promise.resolve([])
+      ]);
+
+      // Criar mapa para lookup rápido
+      const servicoMap = new Map(servicos.map(s => [s.id, s]));
+      const adicionalMap = new Map(adicionais.map(a => [a.id, a]));
+
+      // Preparar items com lookup do mapa
+      const ordemItemsData = itens.map((item: OrdemItemInput) => {
+        let precoUnit = 0;
+        let itemData;
+
+        if (item.tipo === 'SERVICO') {
+          const servico = servicoMap.get(item.itemId);
+          if (!servico) {
+            throw new Error(`Serviço com ID ${item.itemId} não encontrado.`);
           }
-          
-          return itemData;
-        })
-      );
+          precoUnit = servico.preco;
+          const subtotal = precoUnit * item.quantidade;
+          calculatedValorTotal += subtotal;
+          itemData = {
+            tipo: 'SERVICO',
+            quantidade: item.quantidade,
+            precoUnit,
+            subtotal,
+            servicoId: item.itemId
+          };
+        } else if (item.tipo === 'ADICIONAL') {
+          const adicional = adicionalMap.get(item.itemId);
+          if (!adicional) {
+            throw new Error(`Adicional com ID ${item.itemId} não encontrado.`);
+          }
+          precoUnit = adicional.preco;
+          const subtotal = precoUnit * item.quantidade;
+          calculatedValorTotal += subtotal;
+          itemData = {
+            tipo: 'ADICIONAL',
+            quantidade: item.quantidade,
+            precoUnit,
+            subtotal,
+            adicionalId: item.itemId
+          };
+        } else {
+          throw new Error(`Tipo de item desconhecido: ${item.tipo}`);
+        }
+
+        return itemData;
+      });
 
       // Add a final validation check before creating the order
       if (!finalClienteId || !finalVeiculoId) {
@@ -289,14 +307,58 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         });
       }
 
+      // ✅ OTIMIZAÇÃO: Usar select() ao invés de include() para apenas campos necessários
       const ordemComLavadores = await tx.ordemServico.findUnique({
         where: { id: novaOrdem.id },
-        include: {
-          cliente: true,
-          veiculo: true,
-          lavador: true,
-          items: { include: { servico: true, adicional: true } },
-          ordemLavadores: { include: { lavador: true } }
+        select: {
+          id: true,
+          numeroOrdem: true,
+          empresaId: true,
+          clienteId: true,
+          veiculoId: true,
+          lavadorId: true,
+          valorTotal: true,
+          comissao: true,
+          status: true,
+          observacoes: true,
+          createdAt: true,
+          updatedAt: true,
+          cliente: {
+            select: { id: true, nome: true, telefone: true, email: true, empresaId: true }
+          },
+          veiculo: {
+            select: { id: true, placa: true, modelo: true, cor: true, ano: true, clienteId: true }
+          },
+          lavador: {
+            select: { id: true, nome: true, comissao: true, ativo: true, empresaId: true }
+          },
+          items: {
+            select: {
+              id: true,
+              tipo: true,
+              quantidade: true,
+              precoUnit: true,
+              subtotal: true,
+              ordemId: true,
+              servicoId: true,
+              adicionalId: true,
+              servico: {
+                select: { id: true, nome: true, descricao: true, preco: true }
+              },
+              adicional: {
+                select: { id: true, nome: true, descricao: true, preco: true }
+              }
+            }
+          },
+          ordemLavadores: {
+            select: {
+              ordemId: true,
+              lavadorId: true,
+              lavador: {
+                select: { id: true, nome: true, comissao: true, ativo: true, empresaId: true }
+              }
+            }
+          }
         }
       });
 
@@ -304,18 +366,25 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
     });
     const ordemFinal = formatOrderWithLavadores(ordem);
 
-    // Enviar notificação APÓS a transação para garantir que os dados estão corretos
-    await createNotification({
-      empresaId: empresaId,
-      mensagem: `Nova ordem #${ordem.numeroOrdem} (${ordemFinal.cliente.nome}) foi criada.`,
-      link: `ordens.html?id=${ordem.id}`,
-      type: 'ordemCriada'
-    });
-
     // ✅ CACHE: Invalida cache desta empresa quando ordem é criada
     invalidateCache(empresaId);
 
+    // ✅ Enviar resposta SEM BLOQUEAR
     res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem: ordemFinal });
+
+    // ✅ OTIMIZAÇÃO: Enviar notificação em background (não bloqueia a resposta)
+    setImmediate(async () => {
+      try {
+        await createNotification({
+          empresaId: empresaId,
+          mensagem: `Nova ordem #${ordem.numeroOrdem} (${ordemFinal.cliente.nome}) foi criada.`,
+          link: `ordens.html?id=${ordem.id}`,
+          type: 'ordemCriada'
+        });
+      } catch (notificationError) {
+        console.error('Erro ao criar notificação:', notificationError);
+      }
+    });
   } catch (error: any) {
     if (error.code === 'ACTIVE_ORDER_EXISTS') {
       return res.status(409).json({
