@@ -1500,15 +1500,10 @@
       try {
         await window.api.updateOrdem(currentOrdem.id, { status: newStatus });
 
-        // ✅ OTIMIZAÇÃO: Atualizar estado local em vez de recarregar página
-        currentOrdem.status = newStatus;
-
         showToast('Ordem atualizada com sucesso!', 'success');
 
-        // Atualizar a visualização do detalhe se estiver aberta
-        if (currentOrdem) {
-          showOrdemDetails(currentOrdem);
-        }
+        // ✅ OTIMIZAÇÃO: Re-renderizar detalhe com novo status (sem page reload)
+        await loadOrdemDetail(currentOrdem.id);
 
         // Recarregar lista em background (sem bloquear UI)
         setTimeout(() => {
