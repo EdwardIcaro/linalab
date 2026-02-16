@@ -102,6 +102,10 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             .filter(p => p.metodo === 'PIX')
             .reduce((acc: number, p) => acc + p.valor, 0);
 
+        const totalNfe = pagamentos
+            .filter(p => p.metodo === 'NFE')
+            .reduce((acc: number, p) => acc + p.valor, 0);
+
         const totalSaidas = saidas.reduce((acc: number, s) => acc + s.valor, 0);
 
         // Calcular saldo de dinheiro (entradas - saídas)
@@ -114,6 +118,7 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             totalDinheiro,
             totalCartao,
             totalPix,
+            totalNfe,
             totalSaidas,
             saldoDinheiro
         });

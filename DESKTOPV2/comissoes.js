@@ -306,6 +306,8 @@ function openFechamentoComissaoModal() {
                 <select id="formaPagamentoComissao" class="form-select">
                     <option value="DINHEIRO">Dinheiro</option>
                     <option value="PIX">PIX</option>
+                    <option value="CARTAO">Cartão</option>
+                    <option value="NFE">NFe</option>
                 </select>
             </div>
         `;

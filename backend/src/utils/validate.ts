@@ -238,7 +238,7 @@ export function validateFinalizarOrdem(data: any): ValidationResult {
   // Validate each payment
   data.pagamentos.forEach((pag: any, index: number) => {
     // Validate payment method
-    const validMethods = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
+    const validMethods = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
     if (!validMethods.includes(pag.metodo)) {
       errors.push(
         `pagamentos[${index}].metodo deve ser um dos seguintes: ${validMethods.join(', ')}`

@@ -96,6 +96,7 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
           DINHEIRO: true,
           PIX: true,
           CARTAO: true,
+          NFE: true,
           DEBITO_FUNCIONARIO: true
         })
       },
