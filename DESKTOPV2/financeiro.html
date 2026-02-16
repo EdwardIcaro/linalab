@@ -1180,9 +1180,9 @@
                                         <td x-text="formatDate(pend.dataFinalizado || pend.createdAt)"></td>
                                         <td style="text-align: right;" class="value-pending" x-text="formatCurrency(pend.valorTotal)"></td>
                                         <td>
-                                            <a :href="'ordens.html?id=' + pend.id" class="btn btn-primary" style="padding: 8px 16px;">
-                                                Ver Ordem
-                                            </a>
+                                            <button @click="abrirModalQuitarPendencia(pend)" class="btn btn-primary" style="padding: 8px 16px;">
+                                                <i class="fas fa-money-bill-wave" style="margin-right: 6px;"></i> Quitar
+                                            </button>
                                         </td>
                                     </tr>
                                 </template>
@@ -1381,6 +1381,110 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal: Quitar Pendencia -->
+        <div
+            class="modal-overlay"
+            :class="{ active: quitarModal.isOpen }"
+            x-show="quitarModal.isOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click.self="closeQuitarModal()"
+        >
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-money-bill-wave"></i>
+                        Quitar Pendência
+                    </h2>
+                    <button type="button" class="modal-close" @click="closeQuitarModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <template x-if="quitarModal.ordem">
+                    <div>
+                        <!-- Detalhes da Ordem -->
+                        <div style="margin-bottom: 24px; padding: 16px; background: var(--finance-blue-light); border-radius: var(--radius-md);">
+                            <h3 style="margin-bottom: 12px; color: var(--finance-text); font-size: 14px; font-weight: 600;">
+                                <i class="fas fa-info-circle" style="margin-right: 8px; color: var(--finance-blue);"></i>
+                                Detalhes da Ordem
+                            </h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: var(--finance-text);">
+                                <div><strong>Número:</strong> <span x-text="'OS #' + quitarModal.ordem.numeroOrdem"></span></div>
+                                <div><strong>Cliente:</strong> <span x-text="quitarModal.ordem.cliente?.nome || 'N/A'"></span></div>
+                                <div><strong>Veículo:</strong> <span x-text="quitarModal.ordem.veiculo?.placa || 'N/A'"></span></div>
+                                <div><strong>Modelo:</strong> <span x-text="quitarModal.ordem.veiculo?.modelo || 'N/A'"></span></div>
+                                <div style="grid-column: 1/-1;"><strong>Status:</strong> <span x-text="quitarModal.ordem.status"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Valor -->
+                        <div style="margin-bottom: 24px; padding: 16px; background: var(--finance-green-light); border-radius: var(--radius-md); text-align: center;">
+                            <p style="color: var(--finance-text-secondary); margin-bottom: 8px; font-size: 13px;">Valor Pendente</p>
+                            <h2 style="color: var(--finance-green); font-size: 32px; font-weight: 700;">
+                                <span x-text="formatCurrency(quitarModal.ordem.valorTotal)"></span>
+                            </h2>
+                        </div>
+
+                        <!-- Método de Pagamento -->
+                        <p style="margin-bottom: 16px; color: var(--finance-text); font-weight: 600;">
+                            <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
+                            Escolha a forma de pagamento:
+                        </p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                            <button
+                                @click="processarQuitarPendencia(quitarModal.ordem.id, 'DINHEIRO')"
+                                class="btn btn-primary"
+                                style="padding: 14px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                                :disabled="quitarModal.isProcessing"
+                            >
+                                <i class="fas fa-money-bill-wave"></i> Dinheiro
+                            </button>
+                            <button
+                                @click="processarQuitarPendencia(quitarModal.ordem.id, 'PIX')"
+                                class="btn btn-primary"
+                                style="padding: 14px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                                :disabled="quitarModal.isProcessing"
+                            >
+                                <i class="fab fa-pix"></i> PIX
+                            </button>
+                            <button
+                                @click="processarQuitarPendencia(quitarModal.ordem.id, 'CARTAO')"
+                                class="btn btn-primary"
+                                style="padding: 14px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                                :disabled="quitarModal.isProcessing"
+                            >
+                                <i class="fas fa-credit-card"></i> Cartão
+                            </button>
+                            <button
+                                @click="processarQuitarPendencia(quitarModal.ordem.id, 'NFE')"
+                                class="btn btn-primary"
+                                style="padding: 14px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                                :disabled="quitarModal.isProcessing"
+                            >
+                                <i class="fas fa-file-invoice"></i> NFe
+                            </button>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="closeQuitarModal()"
+                                :disabled="quitarModal.isProcessing"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
     </main>
 
     <!-- Toast Container -->
@@ -1499,6 +1603,13 @@
                         totalSaidas: 0,
                         saldoDinheiro: 0
                     }
+                },
+
+                // Quitar Pendencia Modal
+                quitarModal: {
+                    isOpen: false,
+                    isProcessing: false,
+                    ordem: null
                 },
 
                 // ==========================================
@@ -2114,6 +2225,63 @@
                         showToast('Erro ao fechar o caixa.', 'error');
                     } finally {
                         this.fechamentoModal.isClosing = false;
+                    }
+                },
+
+                // ==========================================
+                // QUITAR PENDENCIA MODAL
+                // ==========================================
+                abrirModalQuitarPendencia(pendencia) {
+                    console.log('[financeDashboard] abrirModalQuitarPendencia', pendencia);
+                    this.quitarModal.ordem = pendencia;
+                    this.quitarModal.isOpen = true;
+                },
+
+                closeQuitarModal() {
+                    this.quitarModal.isOpen = false;
+                    this.quitarModal.ordem = null;
+                    this.quitarModal.isProcessing = false;
+                },
+
+                async processarQuitarPendencia(ordemId, metodo) {
+                    console.log('[financeDashboard] processarQuitarPendencia', ordemId, metodo);
+
+                    if (!ordemId) {
+                        showToast('Ordem não encontrada.', 'error');
+                        return;
+                    }
+
+                    this.quitarModal.isProcessing = true;
+
+                    try {
+                        // Encontrar o pagamento PENDENTE da ordem
+                        const ordem = this.quitarModal.ordem;
+                        if (!ordem || !ordem.pagamentos) {
+                            showToast('Pagamento não encontrado.', 'error');
+                            return;
+                        }
+
+                        const pagamentoPendente = ordem.pagamentos.find(p => p.metodo === 'PENDENTE');
+                        if (!pagamentoPendente) {
+                            showToast('Pagamento pendente não encontrado.', 'error');
+                            return;
+                        }
+
+                        // Chamar a API para quitar a pendência
+                        await window.api.quitarPendencia(ordemId, pagamentoPendente.id, metodo);
+
+                        showToast(`Pendência quitada com sucesso via ${metodo}!`, 'success');
+                        this.closeQuitarModal();
+
+                        // Recarregar dados
+                        await this.loadPendencias();
+                        await this.loadTransactions();
+
+                    } catch (error) {
+                        console.error('Erro ao quitar pendência:', error);
+                        showToast(`Erro ao quitar pendência: ${error.message || 'Tente novamente.'}`, 'error');
+                    } finally {
+                        this.quitarModal.isProcessing = false;
                     }
                 },
 
