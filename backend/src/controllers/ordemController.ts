@@ -1450,13 +1450,26 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       });
 
       // 2. Criar registros de pagamento
+      // ✅ Validar métodos de pagamento permitidos
+      const METODOS_VALIDOS = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
+
+      // Validar cada pagamento antes de criar
+      for (const pag of pagamentos) {
+        if (!pag.metodo || !METODOS_VALIDOS.includes(pag.metodo)) {
+          throw new Error(`Método de pagamento inválido: "${pag.metodo}". Valores válidos: ${METODOS_VALIDOS.join(', ')}`);
+        }
+        if (!pag.valor || pag.valor <= 0) {
+          throw new Error(`Valor de pagamento inválido: ${pag.valor}. Deve ser maior que zero.`);
+        }
+      }
+
       const pagamentosCriados = await Promise.all(
         pagamentos.map((pag: any) =>
           tx.pagamento.create({
             data: {
               empresaId,
               ordemId: id,
-              metodo: pag.metodo,
+              metodo: pag.metodo as any, // ✅ Type assertion com validação anterior
               valor: pag.valor,
               status: 'PAGO',
               pagoEm: new Date(),

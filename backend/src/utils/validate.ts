@@ -236,25 +236,33 @@ export function validateFinalizarOrdem(data: any): ValidationResult {
   }
 
   // Validate each payment
+  const validMethods = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
+
   data.pagamentos.forEach((pag: any, index: number) => {
-    // Validate payment method
-    const validMethods = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
-    if (!validMethods.includes(pag.metodo)) {
+    // ✅ Normalizar método: aceita tanto 'metodo' quanto 'method', converte para maiúsculas
+    const metodo = (pag.metodo || pag.method || '').toUpperCase().trim();
+
+    if (!metodo || !validMethods.includes(metodo)) {
       errors.push(
-        `pagamentos[${index}].metodo deve ser um dos seguintes: ${validMethods.join(', ')}`
+        `pagamentos[${index}].metodo inválido: "${pag.metodo || pag.method}". Valores válidos: ${validMethods.join(', ')}`
       );
     }
 
     // Validate payment value
-    const valorError = validators.isPositiveNumber(pag.valor, `pagamentos[${index}].valor`);
-    if (valorError) errors.push(valorError);
+    const valor = parseFloat(pag.valor || pag.amount);
+    if (isNaN(valor) || valor <= 0) {
+      errors.push(
+        `pagamentos[${index}].valor inválido: "${pag.valor || pag.amount}". Deve ser um número maior que zero.`
+      );
+    }
   });
 
   // Sanitize observacoes in payments
   const sanitizedData = {
     ...data,
     pagamentos: data.pagamentos.map((pag: any) => ({
-      ...pag,
+      metodo: (pag.metodo || pag.method || '').toUpperCase().trim(), // ✅ Normalizar
+      valor: parseFloat(pag.valor || pag.amount),
       observacoes: pag.observacoes ? validators.sanitizeString(pag.observacoes) : null,
     })),
   };

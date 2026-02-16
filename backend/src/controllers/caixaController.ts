@@ -103,7 +103,7 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalNfe = pagamentos
-            .filter(p => p.metodo === 'NFE')
+            .filter(p => (p.metodo as string) === 'NFE')
             .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalSaidas = saidas.reduce((acc: number, s) => acc + s.valor, 0);
@@ -548,14 +548,19 @@ interface FecharComissaoBody {
     adiantamentoIds: string[];
     valorPago: number;
     formaPagamento?: string;
+    observacao?: string;
 }
 
 export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { lavadorId, comissaoIds, adiantamentoIds, valorPago, formaPagamento } = req.body as FecharComissaoBody;
+    const { lavadorId, comissaoIds, adiantamentoIds, valorPago, formaPagamento, observacao } = req.body as FecharComissaoBody;
 
-    if (!lavadorId || !comissaoIds || !adiantamentoIds || valorPago === undefined) {
+    if (!lavadorId || !Array.isArray(comissaoIds) || !Array.isArray(adiantamentoIds) || valorPago === undefined) {
         return res.status(400).json({ error: 'Dados insuficientes para fechar a comissão.' });
+    }
+
+    if (comissaoIds.length === 0 && adiantamentoIds.length === 0) {
+        return res.status(400).json({ error: 'Selecione pelo menos uma comissão ou adiantamento para fechar.' });
     }
 
     if (valorPago > 0 && !formaPagamento) {
@@ -563,6 +568,12 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
     }
 
     try {
+        // Validar que o lavador existe
+        const lavador = await prisma.lavador.findUnique({ where: { id: lavadorId } });
+        if (!lavador) {
+            return res.status(404).json({ error: 'Funcionário não encontrado.' });
+        }
+
         const resultado = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             const fechamento = await tx.fechamentoComissao.create({
                 data: {
@@ -620,27 +631,39 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
             }
 
             if (valorPago > 0) {
-                const lavador = await tx.lavador.findUnique({ where: { id: lavadorId } });
+                const descricao = observacao
+                    ? `Pagamento de comissão para ${lavador.nome}: ${observacao}`
+                    : `Pagamento de comissão para ${lavador.nome}`;
+
                 await tx.caixaRegistro.create({
                     data: {
                         empresaId,
                         tipo: 'SAIDA',
                         valor: valorPago,
                         formaPagamento: formaPagamento as any,
-                        descricao: `Pagamento de comissão para ${lavador?.nome || 'Funcionário'}`,
+                        descricao: descricao,
                         lavadorId,
                     },
                 });
             }
 
-            return { message: 'Fechamento de comissão realizado com sucesso.' };
+            return {
+                message: 'Fechamento de comissão realizado com sucesso.',
+                fechamentoId: fechamento.id,
+            };
         });
 
         res.status(200).json(resultado);
 
     } catch (error) {
         console.error('Erro ao fechar comissão:', error);
-        res.status(500).json({ error: 'Erro interno ao processar o pagamento da comissão.' });
+
+        // Melhor logging do erro real
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        res.status(500).json({
+            error: 'Erro interno ao processar o pagamento da comissão.',
+            details: errorMessage, // Remover em produção se necessário
+        });
     }
 };
 

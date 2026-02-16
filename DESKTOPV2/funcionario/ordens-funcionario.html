@@ -1746,6 +1746,24 @@
 
     // PROCESS PAYMENTS
     async function processPayments() {
+      // ✅ Validação do frontend: Verificar se há pagamentos adicionados
+      if (!paymentModal.payments || paymentModal.payments.length === 0) {
+        showToast('Adicione pelo menos um método de pagamento', 'error');
+        return;
+      }
+
+      // ✅ Validação: Verificar se todos os pagamentos têm método e valor válidos
+      for (const payment of paymentModal.payments) {
+        if (!payment.method || typeof payment.method !== 'string' || payment.method.trim() === '') {
+          showToast(`Método de pagamento inválido: ${payment.method}`, 'error');
+          return;
+        }
+        if (!payment.amount || payment.amount <= 0) {
+          showToast(`Valor de pagamento inválido: ${payment.amount}`, 'error');
+          return;
+        }
+      }
+
       paymentModal.isProcessing = true;
       const submitBtn = document.getElementById('submitPaymentBtn');
       submitBtn.disabled = true;
@@ -1753,8 +1771,8 @@
 
       const payload = {
         pagamentos: paymentModal.payments.map(p => ({
-          metodo: p.method,
-          valor: p.amount
+          metodo: p.method.toUpperCase().trim(), // ✅ Normalizar método (maiúsculas, sem espaços)
+          valor: parseFloat(p.amount).toFixed(2) // ✅ Garantir que valor é numérico válido
         }))
       };
 
@@ -1776,7 +1794,7 @@
         }, 300);
       } catch (error) {
         console.error('Erro ao finalizar ordem:', error);
-        showToast('Erro ao finalizar ordem. Tente novamente.', 'error');
+        showToast(`Erro ao finalizar ordem: ${error.error || 'Tente novamente.'}`, 'error');
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Finalizar Ordem';
         paymentModal.isProcessing = false;
