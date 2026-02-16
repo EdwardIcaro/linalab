@@ -340,6 +340,83 @@ async function verificarStatusPagamentoOrdem(ordemId: string) {
   });
 }
 
+/**
+ * Quitar Pendência - Versão Simples (Nova - Frontend atual)
+ * Aceita: ordemId, pagamentoId, metodo
+ * Usado por: historico.html, financeiro.html
+ */
+export const quitarPendenciaSimples = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = req.empresaId!;
+  const { ordemId, pagamentoId, metodo } = req.body as {
+    ordemId: string;
+    pagamentoId: string;
+    metodo: string;
+  };
+
+  // ✅ Validação melhorada
+  if (!ordemId || !pagamentoId || !metodo) {
+    return res.status(400).json({
+      error: 'Dados insuficientes para quitar a pendência.',
+      details: `Faltam: ${!ordemId ? 'ordemId' : ''} ${!pagamentoId ? 'pagamentoId' : ''} ${!metodo ? 'metodo' : ''}`
+    });
+  }
+
+  try {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Verificar se o pagamento pendente existe
+      const pagamentoPendente = await tx.pagamento.findFirst({
+        where: {
+          id: pagamentoId,
+          ordemId,
+          empresaId,
+          metodo: 'PENDENTE' as any
+        }
+      });
+
+      if (!pagamentoPendente) {
+        throw new Error('Pagamento pendente não encontrado');
+      }
+
+      // 2. Obter valor do pagamento para criar novo registro
+      const valor = pagamentoPendente.valor;
+
+      // 3. Deletar o pagamento pendente antigo
+      await tx.pagamento.delete({
+        where: { id: pagamentoId }
+      });
+
+      // 4. Criar novo registro com método fornecido
+      await tx.pagamento.create({
+        data: {
+          ordemId,
+          empresaId,
+          metodo: metodo as any,
+          valor: valor,
+          status: 'PAGO',
+          pagoEm: new Date()
+        }
+      });
+    });
+
+    res.status(200).json({
+      message: 'Pendência quitada com sucesso.',
+      metodo: metodo
+    });
+  } catch (error) {
+    console.error('Erro ao quitar pendência:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Erro ao quitar pendência.';
+    res.status(500).json({
+      error: errorMsg,
+      details: errorMsg
+    });
+  }
+};
+
+/**
+ * Quitar Pendência - Versão com Array (Legacy)
+ * Aceita: ordemId, pagamentos (array com method e amount)
+ * Mantida para compatibilidade
+ */
 export const quitarPendencia = async (req: EmpresaRequest, res: Response) => {
   const empresaId = req.empresaId!;
   const { ordemId, pagamentos } = req.body as { ordemId: string; pagamentos: PagamentoInput[] };
@@ -353,7 +430,7 @@ export const quitarPendencia = async (req: EmpresaRequest, res: Response) => {
       // 1. Encontrar e deletar o pagamento pendente antigo
       const pagamentoPendente = await tx.pagamento.findFirst({
         where: {
-          ordemId, 
+          ordemId,
           empresaId,
           metodo: 'PENDENTE' as any,
         },

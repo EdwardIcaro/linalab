@@ -5,7 +5,8 @@ import {
   updatePagamentoStatus,
   deletePagamento,
   getPaymentStats,
-  quitarPendencia
+  quitarPendencia,
+  quitarPendenciaSimples
 } from '../controllers/pagamentoController';
 
 const router: Router = Router();
@@ -15,7 +16,13 @@ const router: Router = Router();
  * POST /api/pagamentos
  */
 router.post('/', createPagamento);
-router.post('/quitar-pendencia', quitarPendencia);
+
+/**
+ * Quitar pendência - Novo formato (recomendado)
+ * POST /api/pagamentos/quitar-pendencia
+ * Body: { ordemId, pagamentoId, metodo }
+ */
+router.post('/quitar-pendencia', quitarPendenciaSimples);
 
 /**
  * Listar pagamentos de uma ordem
