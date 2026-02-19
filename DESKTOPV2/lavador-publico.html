@@ -1137,6 +1137,7 @@
       let ganhoSemana = 0;
       let ganhoMes = 0;
       let totalCreditos = 0;
+      let totalCreditosNaoPagos = 0;
 
       // Calcular ganhos das ordens
       lavadorData.ordens.forEach(ordem => {
@@ -1145,6 +1146,11 @@
           const ordemDate = new Date(ordem.createdAt);
 
           totalCreditos += ganho;
+
+          // Apenas contar comissões NÃO PAGAS para o saldo disponível
+          if (!ordem.comissaoPaga) {
+            totalCreditosNaoPagos += ganho;
+          }
 
           if (ordemDate >= weekStart) {
             ganhoSemana += ganho;
@@ -1161,8 +1167,8 @@
         dividaTotal = lavadorData.adiantamentosNaoQuitados.reduce((sum, a) => sum + a.valor, 0);
       }
 
-      // Saldo é apenas os créditos (não descontamos nada aqui, pois só mostramos pagamentos já feitos)
-      const saldoTotal = totalCreditos;
+      // Saldo Disponível = Comissões não pagas + Dívidas (adiantamentos)
+      const saldoTotal = totalCreditosNaoPagos + dividaTotal;
 
       document.getElementById('ganhoSemana').textContent = formatCurrency(ganhoSemana);
       document.getElementById('ganhoMes').textContent = formatCurrency(ganhoMes);
@@ -1172,6 +1178,7 @@
       console.log('[calculatePeriodSummary]', {
         ganhoSemana,
         ganhoMes,
+        totalCreditosNaoPagos,
         dividaTotal,
         saldoTotal
       });
