@@ -118,7 +118,9 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
 
   try {
     // Utiliza uma transação para garantir a atomicidade da operação
-    const ordem = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Aumenta timeout para 30 segundos (padrão é 5s) - transação tem múltiplas queries
+    const ordem = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
       let finalClienteId: string | undefined = clienteId;
       let finalVeiculoId: string | undefined = veiculoId;
 
@@ -365,7 +367,11 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       });
 
       return ordemComLavadores!;
-    });
+      },
+      {
+        timeout: 30000 // 30 segundos - transação tem múltiplas queries consecutivas
+      }
+    );
     const ordemFinal = formatOrderWithLavadores(ordem);
 
     // ✅ CACHE: Invalida cache desta empresa quando ordem é criada
