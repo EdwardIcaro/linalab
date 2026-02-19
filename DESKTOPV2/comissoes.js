@@ -323,6 +323,7 @@ function openFechamentoComissaoModal() {
     showCustomConfirm({
         title: 'Confirmar Fechamento',
         message: content,
+        isHtml: true,
         onConfirm: handleConfirmarFechamento
     });
 }
