@@ -606,7 +606,7 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
                     });
                     if (pendingLavadores === 0) {
                         await tx.ordemServico.update({
-                            where: { id: ordemId, empresaId },
+                            where: { id: ordemId },
                             data: {
                                 comissaoPaga: true,
                                 fechamentoComissaoId: fechamento.id,
