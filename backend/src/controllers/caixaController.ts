@@ -574,7 +574,9 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
             return res.status(404).json({ error: 'Funcionário não encontrado.' });
         }
 
-        const resultado = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // ✅ Aumentar timeout para 30 segundos - transação tem múltiplas queries
+        const resultado = await prisma.$transaction(
+            async (tx: Prisma.TransactionClient) => {
             const fechamento = await tx.fechamentoComissao.create({
                 data: {
                     valorPago: valorPago > 0 ? valorPago : 0,
@@ -651,7 +653,11 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
                 message: 'Fechamento de comissão realizado com sucesso.',
                 fechamentoId: fechamento.id,
             };
-        });
+            },
+            {
+                timeout: 30000  // 30 segundos
+            }
+        );
 
         res.status(200).json(resultado);
 
