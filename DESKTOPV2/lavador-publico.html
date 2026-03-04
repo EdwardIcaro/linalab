@@ -947,13 +947,17 @@
 
       // ✅ Validar que ordemLavadores é array e itens têm lavador
       if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
-        return order.ordemLavadores
-          .filter(ol => ol?.lavador?.id)  // Pula itens sem lavador
-          .map(ol => ({
-            id: ol.lavador.id,
-            nome: ol.lavador.nome || 'N/A',
-            comissao: parseFloat(ol.lavador.comissao) || 0
-          }));
+        const normalizados = order.ordemLavadores
+          .filter(ol => ol?.lavador)  // Apenas pula se não tiver lavador
+          .map(ol => {
+            const id = ol.lavador?.id || ol.lavador?.lavadorId || ol.lavadorId;
+            return {
+              id: id,
+              nome: ol.lavador?.nome || 'N/A',
+              comissao: parseFloat(ol.lavador?.comissao) || 0
+            };
+          });
+        if (normalizados.length > 0) return normalizados;
       }
 
       // ✅ Validar que lavadorId e lavador existem
@@ -988,19 +992,38 @@
 
     function getWasherShare(order, washerId, lavadorComissao) {
       const washers = normalizeOrderWashers(order);
-      if (!washers.length || !washerId) return 0;
+      if (!washers.length || !washerId) {
+        // Debug: log quando retorna 0
+        if (order && !washers.length) {
+          console.warn('[getWasherShare] Nenhum lavador normalizado:', {
+            ordemLavadores: order.ordemLavadores,
+            lavadorId: order.lavadorId,
+            lavador: order.lavador
+          });
+        }
+        return 0;
+      }
 
       // ✅ Garantir que valorTotal é number
       const valorTotal = parseFloat(order?.valorTotal || 0);
-      if (!isFinite(valorTotal) || valorTotal <= 0) return 0;
+      if (!isFinite(valorTotal) || valorTotal <= 0) {
+        console.warn('[getWasherShare] ValorTotal inválido:', valorTotal);
+        return 0;
+      }
 
       if (washers.length === 1) {
-        const percent = parseFloat(lavadorComissao) || getCommissionPercent(order);
+        // ✅ Corrigir lógica: se lavadorComissao existir, usar; senão, calcular
+        const percent = (lavadorComissao !== undefined && lavadorComissao !== null)
+          ? parseFloat(lavadorComissao)
+          : getCommissionPercent(order);
         if (!isFinite(percent)) return 0;
         return valorTotal * (percent / 100);
       }
 
-      const percent = parseFloat(lavadorComissao) || getCommissionPercent(order);
+      // ✅ Corrigir lógica: se lavadorComissao existir, usar; senão, calcular
+      const percent = (lavadorComissao !== undefined && lavadorComissao !== null)
+        ? parseFloat(lavadorComissao)
+        : getCommissionPercent(order);
       if (!isFinite(percent)) return 0;
       const totalCents = Math.round(valorTotal * (percent / 100) * 100);
       if (totalCents <= 0) return 0;
@@ -1166,7 +1189,7 @@
           // ✅ Validar que ganho é um número válido (não NaN ou Infinity)
           if (!isFinite(ganho) || ganho < 0) {
             console.warn('[calculatePeriodSummary] Ganho inválido:', { ordemId: ordem.id, ganho });
-            return;  // Pula ordem com ganho inválido
+            return;  // continue em forEach pulando para próxima ordem
           }
 
           totalCreditos += ganho;
