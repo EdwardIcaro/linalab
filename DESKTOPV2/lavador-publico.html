@@ -945,19 +945,23 @@
     function normalizeOrderWashers(order) {
       if (!order) return [];
 
+      // ✅ Validar que ordemLavadores é array e itens têm lavador
       if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
-        return order.ordemLavadores.map(ol => ({
-          id: ol.lavador.id,
-          nome: ol.lavador.nome,
-          comissao: ol.lavador.comissao
-        }));
+        return order.ordemLavadores
+          .filter(ol => ol?.lavador?.id)  // Pula itens sem lavador
+          .map(ol => ({
+            id: ol.lavador.id,
+            nome: ol.lavador.nome || 'N/A',
+            comissao: parseFloat(ol.lavador.comissao) || 0
+          }));
       }
 
-      if (order.lavadorId && order.lavador) {
+      // ✅ Validar que lavadorId e lavador existem
+      if (order.lavadorId && order.lavador?.id) {
         return [{
           id: order.lavadorId,
-          nome: order.lavador.nome,
-          comissao: order.lavador.comissao
+          nome: order.lavador.nome || 'N/A',
+          comissao: parseFloat(order.lavador.comissao) || 0
         }];
       }
 
@@ -965,11 +969,19 @@
     }
 
     function getCommissionPercent(order) {
+      // ✅ Validar tipo de comissao
       if (order?.lavador?.comissao) {
-        return order.lavador.comissao;
+        const comissao = parseFloat(order.lavador.comissao);
+        return isFinite(comissao) ? comissao : 0;
       }
       if (order?.comissao && order?.valorTotal) {
-        return (order.comissao / order.valorTotal) * 100;
+        const comissao = parseFloat(order.comissao);
+        const valorTotal = parseFloat(order.valorTotal);
+        // ✅ Validar tipos e evitar divisão por zero
+        if (!isFinite(comissao) || !isFinite(valorTotal) || valorTotal === 0) {
+          return 0;
+        }
+        return (comissao / valorTotal) * 100;
       }
       return 0;
     }
@@ -978,13 +990,19 @@
       const washers = normalizeOrderWashers(order);
       if (!washers.length || !washerId) return 0;
 
+      // ✅ Garantir que valorTotal é number
+      const valorTotal = parseFloat(order?.valorTotal || 0);
+      if (!isFinite(valorTotal) || valorTotal <= 0) return 0;
+
       if (washers.length === 1) {
-        const percent = lavadorComissao || getCommissionPercent(order);
-        return (order.valorTotal || 0) * (percent / 100);
+        const percent = parseFloat(lavadorComissao) || getCommissionPercent(order);
+        if (!isFinite(percent)) return 0;
+        return valorTotal * (percent / 100);
       }
 
-      const percent = lavadorComissao || getCommissionPercent(order);
-      const totalCents = Math.round((order?.valorTotal || 0) * (percent / 100) * 100);
+      const percent = parseFloat(lavadorComissao) || getCommissionPercent(order);
+      if (!isFinite(percent)) return 0;
+      const totalCents = Math.round(valorTotal * (percent / 100) * 100);
       if (totalCents <= 0) return 0;
 
       const base = Math.floor(totalCents / washers.length);
@@ -1145,6 +1163,12 @@
           const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
           const ordemDate = new Date(ordem.createdAt);
 
+          // ✅ Validar que ganho é um número válido (não NaN ou Infinity)
+          if (!isFinite(ganho) || ganho < 0) {
+            console.warn('[calculatePeriodSummary] Ganho inválido:', { ordemId: ordem.id, ganho });
+            return;  // Pula ordem com ganho inválido
+          }
+
           totalCreditos += ganho;
 
           // Apenas contar comissões NÃO PAGAS para o saldo disponível
@@ -1196,11 +1220,18 @@
           const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
 
           if (ganho > 0) {
+            // ✅ Validar que items é array antes de usar .map()
+            const items = Array.isArray(ordem.items) ? ordem.items : [];
+            const subtitle = items
+              .map(i => i?.servico?.nome || i?.adicional?.nome)
+              .filter(Boolean)
+              .join(', ') || 'Sem itens';
+
             transactions.push({
               type: 'credit',
               date: ordem.createdAt,
               title: ordem.veiculo?.modelo || 'Veículo',
-              subtitle: ordem.items.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', '),
+              subtitle: subtitle,
               value: ganho,
               status: ordem.status,
               isMultiWash: isMultiWash(ordem),
@@ -1328,7 +1359,9 @@
       if (fechamento.adiantamentosQuitados && Array.isArray(fechamento.adiantamentosQuitados)) {
         totalAdiantamentos = fechamento.adiantamentosQuitados.reduce((sum, a) => {
           console.log('[modal] Adiantamento:', a);
-          return sum + (a.valor || 0);
+          // ✅ Validar tipo de valor
+          const valor = parseFloat(a.valor || 0);
+          return isFinite(valor) ? sum + valor : sum;
         }, 0);
       }
 
@@ -1364,9 +1397,16 @@
             comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
           } else {
             // Ordem solo - lavador principal ganha comissão total
-            comissao = (ordem.valorTotal || 0) * ((lavadorData.comissao || 0) / 100);
+            const valorTotal = parseFloat(ordem.valorTotal || 0);
+            const comissaoPercent = parseFloat(lavadorData.comissao || 0);
+            comissao = valorTotal * (comissaoPercent / 100);
           }
 
+          // ✅ Validar que comissão é número válido
+          if (!isFinite(comissao) || comissao < 0) {
+            console.warn('[modal] Comissão inválida:', comissao);
+            comissao = 0;
+          }
           totalComissaoCalculada += comissao;
 
           const services = ordem.items?.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
@@ -1374,13 +1414,17 @@
 
           console.log('[modal] Ordem comissão calculada:', comissao);
 
+          // ✅ Validar que items é array
+          const itemsServicos = Array.isArray(ordem.items) ? ordem.items : [];
+          const servicos = itemsServicos.map(i => i?.servico?.nome || i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
+
           ordersList.innerHTML += `
             <div class="modal-order-item">
               <div class="modal-order-header">
                 <div class="modal-order-title">${ordem.veiculo?.modelo || 'Veículo'}</div>
                 <div class="modal-order-value">${formatCurrency(comissao)}</div>
               </div>
-              <div class="modal-order-services">${services}</div>
+              <div class="modal-order-services">${servicos}</div>
               <div class="modal-order-meta">
                 ${isMulti ? `<span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${ordem.ordemLavadores.length}x</span>` : ''}
                 <span class="badge status-badge FINALIZADO">FINALIZADO</span>
@@ -1398,10 +1442,18 @@
           const ordem = ol.ordem;
 
           // Calcular comissão dividida
-          const comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+          let comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+
+          // ✅ Validar que comissão é número válido
+          if (!isFinite(comissao) || comissao < 0) {
+            console.warn('[modal] Comissão multi-wash inválida:', comissao);
+            comissao = 0;
+          }
           totalComissaoCalculada += comissao;
 
-          const services = ordem.items?.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
+          // ✅ Validar que items é array antes de usar .map()
+          const items = Array.isArray(ordem.items) ? ordem.items : [];
+          const services = items.map(i => i?.servico?.nome || i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
           const washersCount = normalizeOrderWashers(ordem).length;
 
           console.log('[modal] Multi-wash comissão calculada:', comissao);
