@@ -945,10 +945,10 @@
     function normalizeOrderWashers(order) {
       if (!order) return [];
 
-      // ✅ Validar que ordemLavadores é array e itens têm lavador
+      // ✅ Tentar multi-wash (ordemLavadores)
       if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
         const normalizados = order.ordemLavadores
-          .filter(ol => ol?.lavador)  // Apenas pula se não tiver lavador
+          .filter(ol => ol?.lavador)
           .map(ol => {
             const id = ol.lavador?.id || ol.lavador?.lavadorId || ol.lavadorId;
             return {
@@ -960,12 +960,21 @@
         if (normalizados.length > 0) return normalizados;
       }
 
-      // ✅ Validar que lavadorId e lavador existem
-      if (order.lavadorId && order.lavador?.id) {
+      // ✅ Fallback: usar lavador principal (ordem.lavadorId + ordem.lavador)
+      // Ser muito tolerante com a estrutura dos dados
+      if (order.lavadorId) {
+        // Tenta encontrar dados do lavador em múltiplos locais
+        let lavadorData = order.lavador || {};
+
+        // Se lavadorData não tem ID, tenta encontrar em outros campos
+        const id = lavadorData?.id || lavadorData?.lavadorId || order.lavadorId;
+        const nome = lavadorData?.nome || order.lavador?.nome || 'N/A';
+        const comissao = parseFloat(lavadorData?.comissao || order.lavador?.comissao || 0) || 0;
+
         return [{
-          id: order.lavadorId,
-          nome: order.lavador.nome || 'N/A',
-          comissao: parseFloat(order.lavador.comissao) || 0
+          id: id,
+          nome: nome,
+          comissao: comissao
         }];
       }
 
@@ -993,13 +1002,19 @@
     function getWasherShare(order, washerId, lavadorComissao) {
       const washers = normalizeOrderWashers(order);
       if (!washers.length || !washerId) {
-        // Debug: log quando retorna 0
+        // Debug: log mais detalhado quando retorna 0
         if (order && !washers.length) {
           console.warn('[getWasherShare] Nenhum lavador normalizado:', {
+            numeroOrdem: order.numeroOrdem,
             ordemLavadores: order.ordemLavadores,
             lavadorId: order.lavadorId,
-            lavador: order.lavador
+            lavadorIdExists: !!order.lavadorId,
+            lavadorExists: !!order.lavador,
+            lavadorKeys: order.lavador ? Object.keys(order.lavador) : [],
           });
+        }
+        if (!washerId) {
+          console.warn('[getWasherShare] washerId não fornecido');
         }
         return 0;
       }
