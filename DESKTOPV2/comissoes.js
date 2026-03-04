@@ -10,7 +10,11 @@ function checkAuthentication() {
     }
 }
 
-const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+const formatCurrency = (value) => {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    if (!isFinite(num)) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+};
 
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
@@ -33,6 +37,8 @@ function showToast(message, type = 'success') {
 }
 
 let selectedLavadorId = null;
+let cachedTotalCreditos = 0;  // ✅ Armazenar valor real calculado
+let cachedTotalDebitos = 0;   // ✅ Armazenar valor real calculado
 
 async function initializePage() {
     const dataInicioInput = document.getElementById('dataInicio');
@@ -271,10 +277,20 @@ function calculateSummary() {
     const creditosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="credit"]'));
     const debitosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="debit"]'));
 
-    const totalCreditos = creditosSelecionados.reduce((sum, el) => sum + parseFloat(el.dataset.valor), 0);
-    const totalDebitos = debitosSelecionados.reduce((sum, el) => sum + parseFloat(el.dataset.valor), 0);
+    const totalCreditos = creditosSelecionados.reduce((sum, el) => {
+        const valor = parseFloat(el.dataset.valor);
+        return isNaN(valor) ? sum : sum + valor;
+    }, 0);
+    const totalDebitos = debitosSelecionados.reduce((sum, el) => {
+        const valor = parseFloat(el.dataset.valor);
+        return isNaN(valor) ? sum : sum + valor;
+    }, 0);
 
     const saldoFinal = totalCreditos - totalDebitos;
+
+    // ✅ Armazenar valores reais em variáveis globais (não no DOM)
+    cachedTotalCreditos = totalCreditos;
+    cachedTotalDebitos = totalDebitos;
 
     document.getElementById('summary-creditos').textContent = formatCurrency(totalCreditos);
     document.getElementById('summary-debitos').textContent = `- ${formatCurrency(totalDebitos)}`;
@@ -286,9 +302,16 @@ function calculateSummary() {
 }
 
 function openFechamentoComissaoModal() {
-    const totalCreditos = parseFloat(document.getElementById('summary-creditos').textContent.replace(/[R$\s.]/g, '').replace(',', '.'));
-    const totalDebitos = parseFloat(document.getElementById('summary-debitos').textContent.replace(/[-R$\s.]/g, '').replace(',', '.'));
+    // ✅ Usar valores cached ao invés de parsear do DOM (mais confiável)
+    const totalCreditos = cachedTotalCreditos;
+    const totalDebitos = cachedTotalDebitos;
     const saldoFinal = totalCreditos - totalDebitos;
+
+    // Validar que valores são válidos
+    if (!isFinite(totalCreditos) || !isFinite(totalDebitos)) {
+        showToast('Erro ao carregar valores. Tente novamente.', 'error');
+        return;
+    }
 
     let content = `
         <p class="mb-4">Você está prestes a fechar a comissão com os seguintes valores:</p>
@@ -332,17 +355,48 @@ async function handleConfirmarFechamento() {
     const creditosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="credit"]'));
     const debitosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="debit"]'));
 
+    // ✅ Validar se há itens selecionados
+    if (creditosSelecionados.length === 0 && debitosSelecionados.length === 0) {
+        showToast('Selecione pelo menos um item para fechar.', 'error');
+        return;
+    }
+
     const comissaoIds = creditosSelecionados.map(el => el.dataset.id);
     const adiantamentoIds = debitosSelecionados
         .filter(el => el.dataset.adiantamentoId)
         .map(el => el.dataset.adiantamentoId);
 
-    const totalCreditos = creditosSelecionados.reduce((sum, el) => sum + parseFloat(el.dataset.valor), 0);
-    const totalDebitos = debitosSelecionados.reduce((sum, el) => sum + parseFloat(el.dataset.valor), 0);
+    // ✅ Validar valores com NaN checks
+    const totalCreditos = creditosSelecionados.reduce((sum, el) => {
+        const valor = parseFloat(el.dataset.valor);
+        return isNaN(valor) ? sum : sum + valor;
+    }, 0);
+    const totalDebitos = debitosSelecionados.reduce((sum, el) => {
+        const valor = parseFloat(el.dataset.valor);
+        return isNaN(valor) ? sum : sum + valor;
+    }, 0);
     const valorPago = totalCreditos - totalDebitos;
 
-    const formaPagamentoSelect = document.getElementById('formaPagamentoComissao');
-    const formaPagamento = valorPago > 0 && formaPagamentoSelect ? formaPagamentoSelect.value : 'NA';
+    // ✅ Validar que valorPago é válido
+    if (!isFinite(valorPago)) {
+        showToast('Erro ao calcular valor. Tente novamente.', 'error');
+        return;
+    }
+
+    // ✅ Validar forma de pagamento se há valor a pagar
+    let formaPagamento = 'NA';
+    if (valorPago > 0) {
+        const formaPagamentoSelect = document.getElementById('formaPagamentoComissao');
+        if (!formaPagamentoSelect) {
+            showToast('Erro: Campo de forma de pagamento não encontrado.', 'error');
+            return;
+        }
+        formaPagamento = formaPagamentoSelect.value;
+        if (!formaPagamento) {
+            showToast('Selecione uma forma de pagamento.', 'error');
+            return;
+        }
+    }
     const observacao = document.getElementById('observacaoFechamento')?.value || '';
 
     const payload = {
