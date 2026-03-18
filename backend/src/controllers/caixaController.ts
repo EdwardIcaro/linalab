@@ -786,36 +786,43 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { lavadorId, dataInicio, dataFim } = req.query;
 
-    if (!lavadorId || !dataInicio || !dataFim) {
-        return res.status(400).json({ error: 'Funcionário e período são obrigatórios.' });
+    // ✅ MODIFICADO: Apenas lavadorId é obrigatório; datas são opcionais (para "Em aberto")
+    if (!lavadorId) {
+        return res.status(400).json({ error: 'Funcionário é obrigatório.' });
     }
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     const horarioAbertura = empresa?.horarioAbertura || '07:00';
 
-    const start = new Date(`${dataInicio}T${horarioAbertura}:00`);
-
-    const end = new Date(`${dataFim}T${horarioAbertura}:00`);
-    end.setDate(end.getDate() + 1);
-    end.setMilliseconds(end.getMilliseconds() - 1);
+    // ✅ NOVO: Aplicar filtro de data apenas se ambas forem fornecidas
+    let dateFilter: any = undefined;
+    if (dataInicio && dataFim) {
+        const start = new Date(`${dataInicio}T${horarioAbertura}:00`);
+        const end = new Date(`${dataFim}T${horarioAbertura}:00`);
+        end.setDate(end.getDate() + 1);
+        end.setMilliseconds(end.getMilliseconds() - 1);
+        dateFilter = { gte: start, lte: end };
+    }
 
     try {
+        // ✅ CORRIGIDO: Buscar ALL ordens com lavador EXCETO as com status PENDENTE
+        // Se houver datas, filtrar por período; caso contrário, mostrar TODAS
         const comissoesPendentes = await prisma.ordemServico.findMany({
             where: {
                 empresaId,
-                dataFim: { gte: start, lte: end },
+                status: { not: 'PENDENTE' as any }, // ✅ NÃO mostrar ordens pendentes
+                comissaoPaga: false, // ✅ Mas comissão ainda não foi paga
+                ...(dateFilter && { createdAt: dateFilter }), // ✅ NOVO: Filtrar por createdAt se datas fornecidas
                 OR: [
                     {
                         ordemLavadores: {
                             some: {
                                 lavadorId: lavadorId as string,
-                                comissaoPaga: false
                             }
                         }
                     },
                     {
                         lavadorId: lavadorId as string,
-                        comissaoPaga: false
                     }
                 ]
             },
@@ -838,10 +845,13 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
             },
         });
 
+        // ✅ CORRIGIDO: Buscar débitos com mesmo critério (status != PENDENTE, comissão não paga)
         const debitosPendentes = await prisma.ordemServico.findMany({
             where: {
                 empresaId,
-                dataFim: { gte: start, lte: end },
+                status: { not: 'PENDENTE' as any }, // ✅ NÃO mostrar ordens pendentes
+                comissaoPaga: false, // ✅ Mas comissão ainda não foi paga
+                ...(dateFilter && { createdAt: dateFilter }), // ✅ NOVO: Filtrar por createdAt se datas fornecidas
                 pagamentos: {
                     some: {
                         metodo: 'DEBITO_FUNCIONARIO'
@@ -852,13 +862,11 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
                         ordemLavadores: {
                             some: {
                                 lavadorId: lavadorId as string,
-                                comissaoPaga: false
                             }
                         }
                     },
                     {
                         lavadorId: lavadorId as string,
-                        comissaoPaga: false
                     }
                 ]
             },

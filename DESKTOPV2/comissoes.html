@@ -143,6 +143,37 @@
             box-shadow: var(--shadow);
         }
 
+        /* ✅ NOVO: Filtros rápidos */
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
         .date-inputs {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -234,6 +265,29 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: 700;
+        }
+
+        /* ✅ NOVO: Botão Selecionar Todas */
+        .btn-select-all {
+            padding: 6px 12px;
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--primary-color);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            margin-left: auto;
+        }
+
+        .btn-select-all:hover {
+            background: var(--primary-color-light);
+        }
+
+        .btn-select-all:active {
+            transform: scale(0.98);
         }
 
         /* Commission Items */
@@ -566,7 +620,17 @@
             <!-- Date Range -->
             <div class="date-range-section">
                 <div class="section-label">Período de Análise</div>
-                <div class="date-inputs">
+
+                <!-- ✅ NOVO: Botões rápidos de filtro -->
+                <div class="filter-buttons">
+                    <button class="filter-btn active" id="filter-7" onclick="setQuickFilter(7)">7 dias</button>
+                    <button class="filter-btn" id="filter-15" onclick="setQuickFilter(15)">15 dias</button>
+                    <button class="filter-btn" id="filter-30" onclick="setQuickFilter(30)">30 dias</button>
+                    <button class="filter-btn" id="filter-open" onclick="setOpenFilter()">Em aberto</button>
+                </div>
+
+                <!-- Inputs de data (período customizado) -->
+                <div class="date-inputs" id="dateInputsContainer">
                     <div class="date-group">
                         <label>Data Início</label>
                         <input type="date" id="dataInicio" class="date-input">
@@ -589,6 +653,10 @@
                             </div>
                             <h3>Créditos</h3>
                             <span class="column-badge" id="creditsBadge">0</span>
+                            <!-- ✅ NOVO: Botão Selecionar Todas -->
+                            <button class="btn-select-all" id="selectAllCreditsBtn" onclick="toggleSelectAllCredits()">
+                                <i class="fas fa-check-double"></i> Todas
+                            </button>
                         </div>
                         <div id="creditos-list">
                             <!-- Credit items will be loaded here -->

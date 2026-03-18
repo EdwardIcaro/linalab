@@ -39,11 +39,10 @@ function showToast(message, type = 'success') {
 let selectedLavadorId = null;
 let cachedTotalCreditos = 0;  // ✅ Armazenar valor real calculado
 let cachedTotalDebitos = 0;   // ✅ Armazenar valor real calculado
+let autoRefreshInterval = null;  // ✅ Armazenar intervalo de refresh automático
+let activeFilter = '7';  // ✅ NOVO: Rastrear filtro ativo (7, 15, 30 ou 'open')
 
 async function initializePage() {
-    const dataInicioInput = document.getElementById('dataInicio');
-    const dataFimInput = document.getElementById('dataFim');
-
     // Carregar funcionários no seletor de avatar
     try {
         const { lavadores } = await window.api.getLavadoresSimple();
@@ -53,16 +52,12 @@ async function initializePage() {
         document.getElementById('employeesScroll').innerHTML = '<p class="text-secondary">Erro ao carregar funcionários.</p>';
     }
 
-    // Definir período padrão (últimos 7 dias)
-    const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 6);
-    dataFimInput.valueAsDate = today;
-    dataInicioInput.valueAsDate = sevenDaysAgo;
+    // ✅ NOVO: Definir filtro padrão (7 dias)
+    setQuickFilter(7);
 
-    // Adicionar event listeners para carregar os dados
-    dataInicioInput.addEventListener('change', loadCommissionData);
-    dataFimInput.addEventListener('change', loadCommissionData);
+    // Adicionar event listeners para carregar os dados quando alterar inputs de data manualmente
+    document.getElementById('dataInicio').addEventListener('change', loadCommissionData);
+    document.getElementById('dataFim').addEventListener('change', loadCommissionData);
     document.getElementById('fecharComissaoBtn').addEventListener('click', openFechamentoComissaoModal);
 }
 
@@ -99,18 +94,21 @@ function selectEmployee(lavadorId) {
         el.classList.toggle('active', el.dataset.id === lavadorId);
     });
     loadCommissionData();
+    startAutoRefresh();  // ✅ NOVO: Iniciar auto-refresh quando seleciona um lavador
 }
 
 async function loadCommissionData() {
-    const dataInicio = document.getElementById('dataInicio').value;
-    const dataFim = document.getElementById('dataFim').value;
+    // ✅ NOVO: Suportar "Em aberto" sem datas
+    const dataInicio = activeFilter === 'open' ? undefined : document.getElementById('dataInicio').value;
+    const dataFim = activeFilter === 'open' ? undefined : document.getElementById('dataFim').value;
 
     const contentDiv = document.getElementById('commission-content');
     const placeholderDiv = document.getElementById('commission-placeholder');
     const creditosList = document.getElementById('creditos-list');
     const debitosList = document.getElementById('debitos-list');
 
-    if (!selectedLavadorId || !dataInicio || !dataFim) {
+    // ✅ NOVO: Se "Em aberto", não precisa de datas; caso contrário, precisa
+    if (!selectedLavadorId || (activeFilter !== 'open' && (!dataInicio || !dataFim))) {
         contentDiv.style.display = 'none';
         placeholderDiv.style.display = 'block';
         return;
@@ -122,11 +120,19 @@ async function loadCommissionData() {
     debitosList.innerHTML = '<p class="text-center p-4">Carregando adiantamentos...</p>';
 
     try {
-        const { comissoes, adiantamentos, debitosOS } = await window.api.getDadosComissao({ lavadorId: selectedLavadorId, dataInicio, dataFim });
+        // ✅ NOVO: Passar datas opcionais (undefined para "Em aberto")
+        const apiParams = {
+            lavadorId: selectedLavadorId,
+        };
+        if (dataInicio) apiParams.dataInicio = dataInicio;
+        if (dataFim) apiParams.dataFim = dataFim;
+
+        const { comissoes, adiantamentos, debitosOS } = await window.api.getDadosComissao(apiParams);
         console.log('DEBUG loadCommissionData response', {
             selectedLavadorId,
             dataInicio,
             dataFim,
+            activeFilter,
             comissoes,
             adiantamentos,
             debitosOS,
@@ -218,6 +224,11 @@ function renderComissoes(comissoes) {
         `;
     }).filter(Boolean);
     document.getElementById('creditsBadge').textContent = creditItems.length;
+
+    // ✅ NOVO: Resetar botão "Selecionar Todas"
+    const btn = document.getElementById('selectAllCreditsBtn');
+    if (btn) btn.innerHTML = '<i class="fas fa-check-double"></i> Todas';
+
     if (!creditItems.length) {
         creditosList.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Nenhuma comissão pendente no período.</p></div>';
         return;
@@ -270,6 +281,30 @@ function renderAdiantamentos(adiantamentos, debitosOS = []) {
 
 function toggleItemSelection(element) {
     element.classList.toggle('selected');
+    calculateSummary();
+}
+
+// ✅ NOVO: Selecionar/deselecionar todos os créditos
+function toggleSelectAllCredits() {
+    const items = Array.from(document.querySelectorAll('#creditos-list .commission-item'));
+    if (items.length === 0) return;
+
+    const allSelected = items.every(el => el.classList.contains('selected'));
+    const btn = document.getElementById('selectAllCreditsBtn');
+
+    items.forEach(el => {
+        if (allSelected) {
+            el.classList.remove('selected');
+        } else {
+            el.classList.add('selected');
+        }
+    });
+
+    // Atualizar texto do botão
+    btn.innerHTML = allSelected
+        ? '<i class="fas fa-check-double"></i> Todas'
+        : '<i class="fas fa-times"></i> Desmarcar';
+
     calculateSummary();
 }
 
@@ -454,6 +489,73 @@ async function loadHistoricoComissoes() {
         console.error('Erro ao carregar histórico de comissões:', error);
         container.innerHTML = '<p class="text-center p-4 text-red-500">Erro ao carregar histórico.</p>';
     }
+}
+
+// ✅ NOVO: Auto-refresh de comissões a cada 5 segundos
+function startAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+
+    // Fazer refresh a cada 5 segundos quando uma ordem está selecionada
+    autoRefreshInterval = setInterval(() => {
+        if (selectedLavadorId && document.getElementById('dataInicio').value && document.getElementById('dataFim').value) {
+            console.log('[Auto-refresh] Atualizando comissões do lavador:', selectedLavadorId);
+            loadCommissionData();
+        }
+    }, 5000); // 5 segundos
+
+    // Parar o refresh quando a página perde o foco
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            console.log('[Auto-refresh] Página ocultada, pausando refresh');
+            stopAutoRefresh();
+        } else {
+            console.log('[Auto-refresh] Página visível novamente, retomando refresh');
+            startAutoRefresh();
+        }
+    });
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// ✅ NOVO: Filtros rápidos de período
+function setQuickFilter(days) {
+    activeFilter = String(days);
+    document.getElementById('dateInputsContainer').style.display = 'grid';
+
+    const today = new Date();
+    const start = new Date();
+    start.setDate(today.getDate() - (days - 1));
+
+    document.getElementById('dataInicio').valueAsDate = start;
+    document.getElementById('dataFim').valueAsDate = today;
+
+    updateFilterButtons();
+    loadCommissionData();
+}
+
+function setOpenFilter() {
+    activeFilter = 'open';
+    // Esconder inputs de data quando "Em aberto"
+    document.getElementById('dateInputsContainer').style.display = 'none';
+
+    updateFilterButtons();
+    loadCommissionData();
+}
+
+function updateFilterButtons() {
+    ['7', '15', '30', 'open'].forEach(id => {
+        const btn = document.getElementById(`filter-${id}`);
+        if (btn) {
+            btn.classList.toggle('active', activeFilter === id);
+        }
+    });
 }
 
 async function showFechamentoDetails(fechamentoId) {
