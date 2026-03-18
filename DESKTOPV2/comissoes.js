@@ -41,6 +41,7 @@ let cachedTotalCreditos = 0;  // ✅ Armazenar valor real calculado
 let cachedTotalDebitos = 0;   // ✅ Armazenar valor real calculado
 let autoRefreshInterval = null;  // ✅ Armazenar intervalo de refresh automático
 let activeFilter = '7';  // ✅ NOVO: Rastrear filtro ativo (7, 15, 30 ou 'open')
+let autoRefreshPausedUntil = 0;  // ✅ NOVO: Pausar refresh até este timestamp
 
 async function initializePage() {
     // Carregar funcionários no seletor de avatar
@@ -56,8 +57,14 @@ async function initializePage() {
     setQuickFilter(7);
 
     // Adicionar event listeners para carregar os dados quando alterar inputs de data manualmente
-    document.getElementById('dataInicio').addEventListener('change', loadCommissionData);
-    document.getElementById('dataFim').addEventListener('change', loadCommissionData);
+    document.getElementById('dataInicio').addEventListener('change', () => {
+        pauseAutoRefresh(30);  // ✅ NOVO: Pausar quando muda data
+        loadCommissionData();
+    });
+    document.getElementById('dataFim').addEventListener('change', () => {
+        pauseAutoRefresh(30);  // ✅ NOVO: Pausar quando muda data
+        loadCommissionData();
+    });
     document.getElementById('fecharComissaoBtn').addEventListener('click', openFechamentoComissaoModal);
 }
 
@@ -491,19 +498,32 @@ async function loadHistoricoComissoes() {
     }
 }
 
-// ✅ NOVO: Auto-refresh de comissões a cada 5 segundos
+// ✅ NOVO: Auto-refresh de comissões a cada 10 segundos
 function startAutoRefresh() {
     if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
     }
 
-    // Fazer refresh a cada 5 segundos quando uma ordem está selecionada
+    // Fazer refresh a cada 10 segundos (aumentado de 5 para dar mais tempo de seleção)
     autoRefreshInterval = setInterval(() => {
+        // ✅ NOVO: Não fazer refresh se estiver pausado
+        if (Date.now() < autoRefreshPausedUntil) {
+            console.log('[Auto-refresh] Pausado até:', new Date(autoRefreshPausedUntil).toLocaleTimeString('pt-BR'));
+            return;
+        }
+
+        // ✅ NOVO: Não fazer refresh se há itens selecionados (usuário está selecionando)
+        const selectedItems = document.querySelectorAll('.commission-item.selected');
+        if (selectedItems.length > 0) {
+            console.log('[Auto-refresh] Pausado - há itens selecionados:', selectedItems.length);
+            return;
+        }
+
         if (selectedLavadorId && document.getElementById('dataInicio').value && document.getElementById('dataFim').value) {
             console.log('[Auto-refresh] Atualizando comissões do lavador:', selectedLavadorId);
             loadCommissionData();
         }
-    }, 5000); // 5 segundos
+    }, 10000); // ✅ 10 segundos (aumentado de 5)
 
     // Parar o refresh quando a página perde o foco
     document.addEventListener('visibilitychange', () => {
@@ -524,6 +544,12 @@ function stopAutoRefresh() {
     }
 }
 
+// ✅ NOVO: Pausar auto-refresh por N segundos (para dar tempo de selecionar)
+function pauseAutoRefresh(segundos = 30) {
+    autoRefreshPausedUntil = Date.now() + (segundos * 1000);
+    console.log(`[Auto-refresh] Pausado por ${segundos} segundos`);
+}
+
 // ✅ NOVO: Filtros rápidos de período
 function setQuickFilter(days) {
     activeFilter = String(days);
@@ -537,6 +563,7 @@ function setQuickFilter(days) {
     document.getElementById('dataFim').valueAsDate = today;
 
     updateFilterButtons();
+    pauseAutoRefresh(30);  // ✅ NOVO: Pausar refresh por 30 segundos
     loadCommissionData();
 }
 
@@ -546,6 +573,7 @@ function setOpenFilter() {
     document.getElementById('dateInputsContainer').style.display = 'none';
 
     updateFilterButtons();
+    pauseAutoRefresh(30);  // ✅ NOVO: Pausar refresh por 30 segundos
     loadCommissionData();
 }
 
