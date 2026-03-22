@@ -794,13 +794,21 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     const horarioAbertura = empresa?.horarioAbertura || '07:00';
 
-    // ✅ NOVO: Aplicar filtro de data apenas se ambas forem fornecidas
+    // ✅ NOVO: Se datas não forem fornecidas, usar últimos 30 dias (padrão do lavador-publico)
     let dateFilter: any = undefined;
     if (dataInicio && dataFim) {
         const start = new Date(`${dataInicio}T${horarioAbertura}:00`);
         const end = new Date(`${dataFim}T${horarioAbertura}:00`);
         end.setDate(end.getDate() + 1);
         end.setMilliseconds(end.getMilliseconds() - 1);
+        dateFilter = { gte: start, lte: end };
+    } else {
+        // ✅ NOVO: Padrão = últimos 30 dias (igual a lavador-publico)
+        const end = new Date();
+        end.setHours(23, 59, 59, 999);
+        const start = new Date();
+        start.setDate(start.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
         dateFilter = { gte: start, lte: end };
     }
 

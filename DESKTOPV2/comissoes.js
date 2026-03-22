@@ -53,8 +53,8 @@ async function initializePage() {
         document.getElementById('employeesScroll').innerHTML = '<p class="text-secondary">Erro ao carregar funcionários.</p>';
     }
 
-    // ✅ NOVO: Definir filtro padrão (7 dias)
-    setQuickFilter(7);
+    // ✅ NOVO: Definir filtro padrão (últimos 30 dias - mesmo que lavador-publico)
+    setQuickFilter(30);
 
     // Adicionar event listeners para carregar os dados quando alterar inputs de data manualmente
     document.getElementById('dataInicio').addEventListener('change', () => {
@@ -105,7 +105,7 @@ function selectEmployee(lavadorId) {
 }
 
 async function loadCommissionData() {
-    // ✅ NOVO: Suportar "Em aberto" sem datas
+    // ✅ NOVO: "Em aberto" não passa datas (backend usa últimos 30 dias por padrão)
     const dataInicio = activeFilter === 'open' ? undefined : document.getElementById('dataInicio').value;
     const dataFim = activeFilter === 'open' ? undefined : document.getElementById('dataFim').value;
 
@@ -114,8 +114,8 @@ async function loadCommissionData() {
     const creditosList = document.getElementById('creditos-list');
     const debitosList = document.getElementById('debitos-list');
 
-    // ✅ NOVO: Se "Em aberto", não precisa de datas; caso contrário, precisa
-    if (!selectedLavadorId || (activeFilter !== 'open' && (!dataInicio || !dataFim))) {
+    // ✅ NOVO: Apenas precisa de lavador selecionado
+    if (!selectedLavadorId) {
         contentDiv.style.display = 'none';
         placeholderDiv.style.display = 'block';
         return;
