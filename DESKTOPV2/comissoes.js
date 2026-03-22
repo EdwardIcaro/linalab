@@ -215,7 +215,11 @@ function getWasherShare(order, washerId) {
 
 function renderComissoes(comissoes) {
     const creditosList = document.getElementById('creditos-list');
-        const creditItems = (comissoes || []).map(c => {
+
+    // ✅ NOVO: Ordenar por número de OS (crescente)
+    const comissoesOrdenadas = [...(comissoes || [])].sort((a, b) => a.numeroOrdem - b.numeroOrdem);
+
+    const creditItems = comissoesOrdenadas.map(c => {
             const share = getWasherShare(c, selectedLavadorId);
             console.log('DEBUG washer share', c.numeroOrdem, share, c.lavadores);
             if (!share) return null;
@@ -257,7 +261,10 @@ function renderAdiantamentos(adiantamentos, debitosOS = []) {
         </div>
     `).filter(Boolean);
 
-    const debitoOsItems = (debitosOS || []).map(d => {
+    // ✅ NOVO: Ordenar débitos de OS por número de OS
+    const debitosOSOrdenados = [...(debitosOS || [])].sort((a, b) => a.numeroOrdem - b.numeroOrdem);
+
+    const debitoOsItems = debitosOSOrdenados.map(d => {
         const share = getWasherShare(d, selectedLavadorId);
         if (!share) return null;
         const placa = d.veiculo?.placa || 'S/ Placa';
