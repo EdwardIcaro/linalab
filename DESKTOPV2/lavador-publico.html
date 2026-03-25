@@ -213,6 +213,32 @@
       background: rgba(16, 185, 129, 0.2);
     }
 
+    /* Indicador de dívida no card de saldo */
+    .debt-indicator {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .debt-indicator.hidden {
+      display: none;
+    }
+
+    .debt-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .debt-value {
+      color: #ef4444;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
     /* =================== PERIOD SUMMARY =================== */
     .period-summary {
       padding: 16px 20px;
@@ -766,6 +792,12 @@
         </div>
         <div id="saldoTotal" class="balance-value">R$ 0,00</div>
 
+        <!-- Desconto por Dívida (adiantamentos) -->
+        <div id="debtIndicator" class="debt-indicator hidden">
+          <div class="debt-label">Desconto (adiantamentos):</div>
+          <div id="debtValue" class="debt-value">-R$ 0,00</div>
+        </div>
+
         <!-- Token Timer -->
         <div id="tokenTimer" class="token-timer hidden">
           <i class="fas fa-clock"></i>
@@ -859,11 +891,23 @@
 
   <script>
     // ==================== UTILS ====================
+    // Tradução amigável de status
+    const STATUS_LABELS = {
+      'EM_ANDAMENTO': 'Em Andamento',
+      'FINALIZADO': 'Finalizado',
+      'AGUARDANDO_PAGAMENTO': 'Ag. Pagamento',
+      'PENDENTE': 'Pendente'
+    };
+
     function formatCurrency(value) {
       return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
       }).format(value || 0);
+    }
+
+    function getStatusLabel(status) {
+      return STATUS_LABELS[status] || status.replace(/_/g, ' ');
     }
 
     function formatDate(dateStr) {
@@ -894,14 +938,6 @@
       const todayOnly = new Date(todayYear, todayMonth, todayDay);
       const yesterdayOnly = new Date(todayYear, todayMonth, todayDay - 1);
 
-      console.log('[formatDate] Debug:', {
-        input: dateStr,
-        dateStr: `${dateDay}/${dateMonth+1}/${dateYear}`,
-        todayStr: `${todayDay}/${todayMonth+1}/${todayYear}`,
-        dateTime: dateOnly.getTime(),
-        todayTime: todayOnly.getTime(),
-        diff: (dateOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24)
-      });
 
       if (dateOnly.getTime() === todayOnly.getTime()) {
         return 'Hoje';
@@ -1082,13 +1118,6 @@
           lavadorData = data;
           // Usar o lavadorId retornado pelo backend
           currentLavadorId = data.lavadorId;
-          console.log('[lavador-publico] Dados carregados:', {
-            lavadorId: currentLavadorId,
-            nome: data.nome,
-            ordens: data.ordens.length,
-            fechamentos: data.fechamentos?.length || 0,
-            adiantamentosNaoQuitados: data.adiantamentosNaoQuitados?.length || 0
-          });
           renderUI();
         } else {
           showError();
@@ -1226,24 +1255,35 @@
       // Calcular dívida total (adiantamentos não quitados)
       let dividaTotal = 0;
       if (lavadorData.adiantamentosNaoQuitados) {
-        dividaTotal = lavadorData.adiantamentosNaoQuitados.reduce((sum, a) => sum + a.valor, 0);
+        dividaTotal = lavadorData.adiantamentosNaoQuitados.reduce((sum, a) => sum + (parseFloat(a.valor) || 0), 0);
       }
 
-      // Saldo Disponível = Comissões não pagas + Dívidas (adiantamentos)
-      const saldoTotal = totalCreditosNaoPagos + dividaTotal;
+      // Saldo Disponível = Comissões não pagas - Dívidas (adiantamentos)
+      const saldoTotal = totalCreditosNaoPagos - dividaTotal;
 
       document.getElementById('ganhoSemana').textContent = formatCurrency(ganhoSemana);
       document.getElementById('ganhoMes').textContent = formatCurrency(ganhoMes);
       document.getElementById('dividaTotal').textContent = formatCurrency(dividaTotal);
-      document.getElementById('saldoTotal').textContent = formatCurrency(saldoTotal);
 
-      console.log('[calculatePeriodSummary]', {
-        ganhoSemana,
-        ganhoMes,
-        totalCreditosNaoPagos,
-        dividaTotal,
-        saldoTotal
-      });
+      const saldoElement = document.getElementById('saldoTotal');
+      saldoElement.textContent = formatCurrency(saldoTotal);
+
+      // MELHORIA 3: Indicador visual de dívida e saldo negativo
+      const debtIndicator = document.getElementById('debtIndicator');
+      if (dividaTotal > 0) {
+        debtIndicator.classList.remove('hidden');
+        document.getElementById('debtValue').textContent = formatCurrency(-dividaTotal);
+      } else {
+        debtIndicator.classList.add('hidden');
+      }
+
+      // Indicador de saldo negativo em vermelho
+      if (saldoTotal < 0) {
+        saldoElement.style.color = '#ef4444';
+      } else {
+        saldoElement.style.color = '';
+      }
+
     }
 
     function renderTransactions() {
@@ -1267,7 +1307,7 @@
 
             transactions.push({
               type: 'credit',
-              date: ordem.createdAt,
+              date: ordem.status === 'FINALIZADO' && ordem.updatedAt ? ordem.updatedAt : ordem.createdAt,
               title: ordem.veiculo?.modelo || 'Veículo',
               subtitle: subtitle,
               value: ganho,
@@ -1352,7 +1392,7 @@
             badges.push(`<span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${t.washersCount}x</span>`);
           }
           if (t.status) {
-            const statusText = t.status.replace('_', ' ');
+            const statusText = getStatusLabel(t.status);
             badges.push(`<span class="badge status-badge ${t.status}">${statusText}</span>`);
           }
 
@@ -1386,9 +1426,6 @@
     function openPaymentModal(fechamento) {
       const modal = document.getElementById('paymentModal');
 
-      console.log('[openPaymentModal] Fechamento completo:', fechamento);
-      console.log('[openPaymentModal] adiantamentosQuitados:', fechamento.adiantamentosQuitados);
-
       // Calcular totais
       const totalOrdens = (fechamento.ordensPagas?.length || 0) + (fechamento.ordemLavadoresPagos?.length || 0);
 
@@ -1396,24 +1433,15 @@
       let totalAdiantamentos = 0;
       if (fechamento.adiantamentosQuitados && Array.isArray(fechamento.adiantamentosQuitados)) {
         totalAdiantamentos = fechamento.adiantamentosQuitados.reduce((sum, a) => {
-          console.log('[modal] Adiantamento:', a);
           // ✅ Validar tipo de valor
           const valor = parseFloat(a.valor || 0);
           return isFinite(valor) ? sum + valor : sum;
         }, 0);
       }
 
-      console.log('[openPaymentModal] Total adiantamentos calculado:', totalAdiantamentos);
-
       document.getElementById('modalTotalOrdens').textContent = totalOrdens;
       document.getElementById('modalTotalAdiantamentos').textContent = formatCurrency(totalAdiantamentos);
       document.getElementById('modalValorPago').textContent = formatCurrency(fechamento.valorPago);
-
-      console.log('[openPaymentModal] Totais finais:', {
-        totalOrdens,
-        totalAdiantamentos,
-        valorPago: fechamento.valorPago
-      });
 
       // Renderizar ordens
       const ordersList = document.getElementById('modalOrdersList');
@@ -1424,8 +1452,6 @@
       // Ordens principais (onde o lavador é o principal)
       if (fechamento.ordensPagas && Array.isArray(fechamento.ordensPagas)) {
         fechamento.ordensPagas.forEach(ordem => {
-          console.log('[modal] Ordem principal:', ordem);
-
           // Para ordens principais, o lavador é o principal da ordem
           // Calcular a comissão usando o valorTotal e a comissão do lavador
           let comissao = 0;
@@ -1447,10 +1473,7 @@
           }
           totalComissaoCalculada += comissao;
 
-          const services = ordem.items?.map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
           const isMulti = Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length > 1;
-
-          console.log('[modal] Ordem comissão calculada:', comissao);
 
           // ✅ Validar que items é array
           const itemsServicos = Array.isArray(ordem.items) ? ordem.items : [];
@@ -1475,8 +1498,6 @@
       // Ordens multi-wash (onde o lavador é secundário)
       if (fechamento.ordemLavadoresPagos && Array.isArray(fechamento.ordemLavadoresPagos)) {
         fechamento.ordemLavadoresPagos.forEach(ol => {
-          console.log('[modal] Ordem multi-wash:', ol);
-
           const ordem = ol.ordem;
 
           // Calcular comissão dividida
@@ -1494,8 +1515,6 @@
           const services = items.map(i => i?.servico?.nome || i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
           const washersCount = normalizeOrderWashers(ordem).length;
 
-          console.log('[modal] Multi-wash comissão calculada:', comissao);
-
           ordersList.innerHTML += `
             <div class="modal-order-item">
               <div class="modal-order-header">
@@ -1511,8 +1530,6 @@
           `;
         });
       }
-
-      console.log('[modal] Total comissão calculada:', totalComissaoCalculada);
 
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
