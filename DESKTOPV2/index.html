@@ -653,9 +653,531 @@
                 font-size: 24px;
             }
         }
+
+        /* ==========================================
+           SIDEBAR & WEB APP LAYOUT
+           ========================================== */
+        body {
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Sidebar */
+        .app-sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--dashboard-card);
+            border-right: 1px solid var(--dashboard-border);
+            transition: width 0.25s ease, transform 0.25s ease;
+            z-index: 200;
+            overflow: hidden;
+        }
+
+        .app-sidebar.collapsed {
+            width: 64px;
+        }
+
+        .app-sidebar.collapsed .sidebar-logo-text,
+        .app-sidebar.collapsed .sidebar-user-info,
+        .app-sidebar.collapsed .sidebar-item > span {
+            display: none;
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            border-bottom: 1px solid var(--dashboard-border);
+        }
+
+        .sidebar-toggle {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: var(--dashboard-card-hover);
+            border-radius: 6px;
+            color: var(--dashboard-text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--dashboard-border);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dashboard-text);
+            flex: 1;
+        }
+
+        .sidebar-logo i {
+            font-size: 20px;
+            color: var(--accent-cyan);
+        }
+
+        /* Sidebar Profile */
+        .sidebar-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: var(--dashboard-text);
+            transition: all 0.2s;
+        }
+
+        .sidebar-profile:hover {
+            background: var(--dashboard-card-hover);
+        }
+
+        .sidebar-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-user-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .sidebar-user-info > span:first-child {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dashboard-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-user-info > span:last-child {
+            font-size: 11px;
+            color: var(--dashboard-text-secondary);
+        }
+
+        /* Sidebar Nav */
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+            background: var(--dashboard-border);
+            border-radius: 2px;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dashboard-text-secondary);
+            transition: all 0.2s;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .sidebar-item:hover {
+            background: var(--dashboard-card-hover);
+            color: var(--dashboard-text);
+        }
+
+        .sidebar-item.active {
+            background: var(--accent-cyan);
+            color: white;
+        }
+
+        .sidebar-item--highlight {
+            background: var(--accent-cyan-light);
+            color: var(--accent-cyan);
+        }
+
+        .sidebar-item--highlight:hover {
+            background: rgba(6, 182, 212, 0.2);
+        }
+
+        .sidebar-item--danger {
+            color: #ef4444;
+        }
+
+        .sidebar-item--danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .sidebar-item i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-footer {
+            padding: 8px;
+            border-top: 1px solid var(--dashboard-border);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* Sidebar Overlay (mobile) */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 150;
+            display: none;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        /* Topbar (mobile) */
+        .app-topbar {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--dashboard-card);
+            border-bottom: 1px solid var(--dashboard-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            font-weight: 600;
+            color: var(--dashboard-text);
+        }
+
+        .app-topbar button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: var(--dashboard-card-hover);
+            border-radius: 6px;
+            color: var(--dashboard-text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* Main content */
+        .app-main {
+            margin-left: 260px;
+            flex: 1;
+            transition: margin-left 0.25s ease;
+        }
+
+        .app-content {
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Content Greeting */
+        .content-greeting {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .greeting-time {
+            text-align: right;
+            min-width: 180px;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--dashboard-text);
+            line-height: 1;
+        }
+
+        /* Quick Actions Grid */
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            background: var(--dashboard-card);
+            box-shadow: var(--dashboard-shadow);
+            text-decoration: none;
+            color: var(--dashboard-text);
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            min-height: 96px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--dashboard-shadow-hover);
+        }
+
+        .action-btn i {
+            font-size: 28px;
+            flex-shrink: 0;
+            color: var(--accent-blue);
+        }
+
+        .action-btn strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .action-btn small {
+            display: block;
+            font-size: 12px;
+            color: var(--dashboard-text-muted);
+        }
+
+        .action-btn--primary {
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            color: #fff;
+        }
+
+        .action-btn--primary i {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .action-btn--primary small {
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        /* Hide old nav-menu-card */
+        .nav-menu-card {
+            display: none !important;
+        }
+
+        .dashboard-container {
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        .main-content {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Adjust dashboard hero in new layout */
+        .dashboard-hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .hero-greeting p {
+            display: none;
+        }
+
+        .hero-datetime button {
+            display: none;
+        }
+
+        /* Mobile Responsividade */
+        @media (max-width: 1024px) {
+            .app-sidebar {
+                transform: translateX(-260px);
+                width: 260px !important;
+            }
+
+            .app-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .app-main {
+                margin-left: 0 !important;
+            }
+
+            .app-topbar {
+                display: flex !important;
+            }
+
+            .sidebar-overlay.active {
+                display: block !important;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .action-btn {
+                padding: 16px;
+                min-height: 80px;
+                gap: 12px;
+            }
+
+            .action-btn i {
+                font-size: 24px;
+            }
+
+            .action-btn strong {
+                font-size: 14px;
+            }
+
+            .action-btn small {
+                font-size: 11px;
+            }
+
+            .app-content {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-content {
+                padding: 12px;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                margin-bottom: 16px;
+            }
+
+            .action-btn {
+                padding: 16px;
+                min-height: auto;
+            }
+        }
     </style>
 </head>
 <body data-permission="ver_dashboard">
+    <!-- Sidebar Lateral -->
+    <aside class="app-sidebar" id="appSidebar">
+        <div class="sidebar-header">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="sidebar-logo">
+                <i class="fas fa-car-wash"></i>
+                <span class="sidebar-logo-text">LinaX</span>
+            </div>
+        </div>
+
+        <a href="perfil.html" class="sidebar-profile">
+            <div class="sidebar-avatar" x-text="getUserInitials()"></div>
+            <div class="sidebar-user-info">
+                <span x-text="getUserName()"></span>
+                <span x-text="getUserRole()"></span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <a href="index.html" class="sidebar-item active" data-permission="ver_dashboard">
+                <i class="fas fa-home"></i><span>Dashboard</span>
+            </a>
+            <a href="ordens.html" class="sidebar-item" data-permission="gerenciar_ordens">
+                <i class="fas fa-list-alt"></i><span>Ordens</span>
+            </a>
+            <a href="novaordem.html" class="sidebar-item sidebar-item--highlight" data-permission="gerenciar_ordens">
+                <i class="fas fa-plus-circle"></i><span>Nova Ordem</span>
+            </a>
+            <a href="clientes.html" class="sidebar-item" data-permission="gerenciar_clientes">
+                <i class="fas fa-users"></i><span>Clientes</span>
+            </a>
+            <a href="funcionarios.html" class="sidebar-item" data-permission="gerenciar_funcionarios">
+                <i class="fas fa-user-tie"></i><span>Funcionários</span>
+            </a>
+            <a href="financeiro.html" class="sidebar-item" data-permission="ver_financeiro">
+                <i class="fas fa-chart-pie"></i><span>Financeiro</span>
+            </a>
+            <a href="comissoes.html" class="sidebar-item" data-permission="gerenciar_funcionarios">
+                <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="configuracoes.html" class="sidebar-item" data-permission="gerenciar_configuracoes">
+                <i class="fas fa-cog"></i><span>Configurações</span>
+            </a>
+            <button class="sidebar-item" id="notification-bell-sidebar" onclick="openNotifications()">
+                <i class="fas fa-bell"></i><span>Notificações</span>
+                <span id="notification-badge-sidebar" class="sidebar-badge" style="display:none; position:absolute; right:10px; background:#ef4444; color:white; border-radius:50%; width:20px; height:20px; font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:700;"></span>
+            </button>
+            <button class="sidebar-item sidebar-item--danger" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i><span>Sair</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Overlay mobile da sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Topbar mobile -->
+    <header class="app-topbar" id="appTopbar">
+        <button onclick="openSidebar()"><i class="fas fa-bars"></i></button>
+        <span>LinaX</span>
+        <div style="margin-left: auto;">
+            <button onclick="openNotifications()" style="background: none; border: none; font-size: 18px; color: var(--dashboard-text); cursor: pointer;">
+                <i class="fas fa-bell"></i>
+            </button>
+        </div>
+    </header>
+
     <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
     <div id="screenLockModal" class="screen-lock-overlay">
         <div class="screen-lock-content">
@@ -666,8 +1188,9 @@
     </div>
 
     <!-- Main Dashboard Content -->
-    <main class="main-content" x-data="dashboard()" x-init="init()" x-cloak>
-        <div class="dashboard-container">
+    <main class="app-main" x-data="dashboard()" x-init="init()" x-cloak>
+        <div class="app-content">
+            <div class="dashboard-container">
             <!-- Hero Header -->
             <div class="dashboard-hero">
                 <div class="hero-greeting">
@@ -681,25 +1204,47 @@
                     <p>Acompanhe os principais indicadores da sua operacao hoje.</p>
                 </div>
                 <div class="hero-datetime">
-                    <div class="hero-time" x-text="currentTime">--:--</div>
+                    <div class="greeting-time" x-text="currentTime">--:--</div>
                     <div class="hero-date">
                         <i class="fas fa-calendar-day"></i>
                         <span x-text="currentDate"></span>
                     </div>
-                    <!-- Logout Button -->
-                    <button
-                        onclick="logout()"
-                        class="btn-secondary"
-                        style="margin-top: 12px; display: flex; align-items: center; gap: 8px;"
-                        title="Sair do sistema"
-                    >
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Sair</span>
-                    </button>
                 </div>
             </div>
 
-            <!-- Navigation Menu -->
+            <!-- Quick Actions Grid -->
+            <section class="quick-actions-grid">
+                <a href="novaordem.html" class="action-btn action-btn--primary" data-permission="gerenciar_ordens">
+                    <i class="fas fa-plus-circle"></i>
+                    <div>
+                        <strong>Nova Ordem</strong>
+                        <small>Iniciar novo serviço</small>
+                    </div>
+                </a>
+                <a href="ordens.html" class="action-btn" data-permission="gerenciar_ordens">
+                    <i class="fas fa-list-check"></i>
+                    <div>
+                        <strong>Ver Ordens</strong>
+                        <small>Gerenciar serviços</small>
+                    </div>
+                </a>
+                <a href="clientes.html" class="action-btn" data-permission="gerenciar_clientes">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <strong>Clientes</strong>
+                        <small>Cadastros e histórico</small>
+                    </div>
+                </a>
+                <a href="financeiro.html" class="action-btn" data-permission="ver_financeiro">
+                    <i class="fas fa-chart-pie"></i>
+                    <div>
+                        <strong>Financeiro</strong>
+                        <small>Caixa e relatórios</small>
+                    </div>
+                </a>
+            </section>
+
+            <!-- Navigation Menu (hidden) -->
             <nav class="nav-menu-card">
                 <!-- Quick Access Section -->
                 <div class="nav-menu-quick-access">
@@ -995,6 +1540,7 @@
                     </div>
                 </div>
             </section>
+            </div>
         </div>
     </main>
 
@@ -1878,6 +2424,85 @@
             }, 1000);
         });
     </script>
+
+    <!-- Sidebar Toggle Functions -->
+    <script>
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const collapsed = sidebar.classList.toggle('collapsed');
+            const main = document.querySelector('.app-main');
+
+            if (window.innerWidth > 1024) {
+                if (collapsed) {
+                    main.style.marginLeft = '64px';
+                } else {
+                    main.style.marginLeft = '260px';
+                }
+            }
+
+            localStorage.setItem('sidebarCollapsed', collapsed);
+        }
+
+        // Open Sidebar (mobile)
+        function openSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close Sidebar (mobile)
+        function closeSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Open Notifications (placeholder)
+        function openNotifications() {
+            // This would open notification panel - can be expanded later
+            const sidebar = document.querySelector('.app-sidebar');
+            if (window.innerWidth <= 1024) {
+                closeSidebar();
+            }
+            // TODO: Integrate with existing notification system
+        }
+
+        // Restore sidebar state on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.innerWidth > 1024) {
+                if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                    const sidebar = document.getElementById('appSidebar');
+                    const main = document.querySelector('.app-main');
+                    sidebar.classList.add('collapsed');
+                    main.style.marginLeft = '64px';
+                }
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const sidebar = document.getElementById('appSidebar');
+            const main = document.querySelector('.app-main');
+
+            if (window.innerWidth > 1024) {
+                sidebar.classList.remove('open');
+                document.getElementById('sidebarOverlay').classList.remove('active');
+                if (sidebar.classList.contains('collapsed')) {
+                    main.style.marginLeft = '64px';
+                } else {
+                    main.style.marginLeft = '260px';
+                }
+            } else {
+                main.style.marginLeft = '0';
+            }
+        });
+    </script>
+
     <script src="nav-menu-helper.js"></script>
     <script src="mobile-nav.js"></script>
     <script src="webapp-bottom-nav.js"></script>
