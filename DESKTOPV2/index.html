@@ -683,8 +683,8 @@
         }
 
         .floating-menu-toggle {
-            width: 40px;
-            height: 40px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             background: var(--accent-cyan);
             color: white;
@@ -693,20 +693,22 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
-            margin-bottom: 8px;
+            font-size: 24px;
+            margin-bottom: 12px;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
         }
 
         .floating-menu-toggle:hover {
-            transform: scale(1.1);
+            transform: scale(1.08);
             background: var(--accent-blue);
+            box-shadow: 0 6px 24px rgba(6, 182, 212, 0.4);
         }
 
         .floating-menu-item {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
             border: none;
             background: var(--dashboard-card-hover);
             color: var(--dashboard-text-secondary);
@@ -714,14 +716,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 20px;
             position: relative;
             transition: all 0.2s ease;
             text-decoration: none;
         }
 
         .floating-menu-item:hover {
-            transform: scale(1.15);
+            transform: scale(1.12);
             background: var(--accent-cyan-light);
             color: var(--accent-cyan);
         }
@@ -850,21 +852,22 @@
             animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        /* KPI Cards Row — 3 Estatísticas */
+        /* KPI Cards Row — 3 Estatísticas (Minimalista) */
         .kpi-cards-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(3, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+            max-width: 650px;
         }
 
         .kpi-card {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px;
+            gap: 10px;
+            padding: 12px 14px;
             background: var(--dashboard-card);
-            border-radius: var(--radius-md);
+            border-radius: 10px;
             box-shadow: var(--dashboard-shadow);
             border-left: 3px solid;
             position: relative;
@@ -877,39 +880,39 @@
         }
 
         .kpi-card .kpi-icon {
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
             flex-shrink: 0;
         }
 
         .kpi-card .kpi-content {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 1px;
         }
 
         .kpi-card .kpi-label {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--dashboard-text-secondary);
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.3px;
         }
 
         .kpi-card .kpi-big-value {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
             color: var(--dashboard-text);
             line-height: 1;
         }
 
         .kpi-card .kpi-subtext {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--dashboard-text-muted);
         }
 
@@ -1689,9 +1692,10 @@
                         ]);
 
                         // Initialize chart after data is ready
-                        this.$nextTick(() => {
-                            this.initChart();
-                        });
+                        // NOTE: Chart canvas was removed in minimalista layout (Phase 3b)
+                        // this.$nextTick(() => {
+                        //     this.initChart();
+                        // });
 
                         // Load notifications
                         this.initNotifications();
@@ -1875,7 +1879,8 @@
                         this.recentOrders = response.ordens || [];
 
                         // Build hourly data from recent orders for chart
-                        this.buildHourlyData(response.ordens || []);
+                        // NOTE: Chart was removed in minimalista layout
+                        // this.buildHourlyData(response.ordens || []);
                     } catch (error) {
                         console.error('Error loading recent orders:', error);
                     } finally {
@@ -2439,7 +2444,7 @@
                 }
 
                 // Check if x-cloak was removed from main content
-                const mainContent = document.querySelector('.main-content');
+                const mainContent = document.querySelector('.app-content');
                 if (mainContent) {
                     if (mainContent.hasAttribute('x-cloak')) {
                         console.error('[Alpine] ❌ x-cloak still present! Alpine.js failed to initialize.');

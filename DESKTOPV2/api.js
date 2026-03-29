@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://linacraft.up.railway.app/api';
+// Use relative URL so Vercel rewrites /api/* to the Railway backend
+const API_BASE_URL = '/api';
 
 // Função auxiliar para fazer requisições
 // SECURITY: empresaId is now embedded in the JWT token (not sent as header)
