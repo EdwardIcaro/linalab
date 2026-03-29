@@ -940,67 +940,119 @@
             line-height: 1;
         }
 
-        /* Quick Actions Grid */
+        /* Quick Action Cards — Estilo App */
         .quick-actions-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
         }
 
-        .action-btn {
+        .action-card {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 16px;
-            padding: 24px;
-            border-radius: var(--radius-lg);
-            background: var(--dashboard-card);
-            box-shadow: var(--dashboard-shadow);
+            justify-content: center;
+            gap: 12px;
+            padding: 28px 16px;
+            border-radius: 20px;
             text-decoration: none;
-            color: var(--dashboard-text);
-            transition: all 0.2s;
+            color: #fff;
             cursor: pointer;
             border: none;
-            font-size: 14px;
-            font-weight: 500;
-            min-height: 96px;
+            position: relative;
+            overflow: hidden;
+            min-height: 140px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--dashboard-shadow-hover);
+        /* Efeito de brilho nos cantos */
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 50%;
+            pointer-events: none;
         }
 
-        .action-btn i {
-            font-size: 28px;
-            flex-shrink: 0;
-            color: var(--accent-blue);
+        .action-card::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: -10px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 50%;
+            pointer-events: none;
         }
 
-        .action-btn strong {
-            display: block;
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 2px;
+        .action-card:hover {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
         }
 
-        .action-btn small {
-            display: block;
-            font-size: 12px;
-            color: var(--dashboard-text-muted);
+        .action-card:active {
+            transform: translateY(-1px) scale(1.01);
         }
 
-        .action-btn--primary {
-            background: linear-gradient(135deg, #06b6d4, #3b82f6);
-            color: #fff;
+        .action-card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(4px);
         }
 
-        .action-btn--primary i {
-            color: rgba(255, 255, 255, 0.9);
+        .action-card-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            line-height: 1.3;
+            letter-spacing: 0.2px;
         }
 
-        .action-btn--primary small {
-            color: rgba(255, 255, 255, 0.75);
+        /* Gradientes individuais */
+        .action-card--nova-ordem {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.35);
+        }
+
+        .action-card--ordens {
+            background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+            box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
+        }
+
+        .action-card--clientes {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
+        }
+
+        .action-card--funcionarios {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+        }
+
+        .action-card--financeiro {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            box-shadow: 0 8px 24px rgba(5, 150, 105, 0.35);
+        }
+
+        .action-card--comissoes {
+            background: linear-gradient(135deg, #ec4899 0%, #ef4444 100%);
+            box-shadow: 0 8px 24px rgba(236, 72, 153, 0.35);
         }
 
         /* Hide old nav-menu-card */
@@ -1037,7 +1089,14 @@
             display: none;
         }
 
-        /* Mobile Responsividade */
+        /* Responsividade Desktop Grande */
+        @media (max-width: 1200px) {
+            .quick-actions-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Responsividade Tablet */
         @media (max-width: 1024px) {
             .app-sidebar {
                 transform: translateX(-260px);
@@ -1061,25 +1120,23 @@
             }
 
             .quick-actions-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .action-btn {
-                padding: 16px;
-                min-height: 80px;
+                grid-template-columns: repeat(3, 1fr);
                 gap: 12px;
             }
 
-            .action-btn i {
-                font-size: 24px;
+            .action-card {
+                min-height: 120px;
+                padding: 20px 12px;
             }
 
-            .action-btn strong {
-                font-size: 14px;
+            .action-card-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 22px;
             }
 
-            .action-btn small {
-                font-size: 11px;
+            .action-card-label {
+                font-size: 12px;
             }
 
             .app-content {
@@ -1087,20 +1144,54 @@
             }
         }
 
+        /* Responsividade Mobile */
         @media (max-width: 768px) {
             .app-content {
                 padding: 12px;
             }
 
             .quick-actions-grid {
-                grid-template-columns: 1fr;
-                gap: 8px;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
                 margin-bottom: 16px;
             }
 
-            .action-btn {
-                padding: 16px;
-                min-height: auto;
+            .action-card {
+                min-height: 110px;
+                padding: 16px 8px;
+            }
+
+            .action-card-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+
+            .action-card-label {
+                font-size: 10px;
+            }
+        }
+
+        /* Responsividade Mobile Pequeno */
+        @media (max-width: 420px) {
+            .quick-actions-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .action-card {
+                min-height: 100px;
+                padding: 12px 6px;
+            }
+
+            .action-card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .action-card-label {
+                font-size: 9px;
             }
         }
     </style>
@@ -1212,35 +1303,43 @@
                 </div>
             </div>
 
-            <!-- Quick Actions Grid -->
+            <!-- Quick Actions Grid — Estilo App -->
             <section class="quick-actions-grid">
-                <a href="novaordem.html" class="action-btn action-btn--primary" data-permission="gerenciar_ordens">
-                    <i class="fas fa-plus-circle"></i>
-                    <div>
-                        <strong>Nova Ordem</strong>
-                        <small>Iniciar novo serviço</small>
+                <a href="novaordem.html" class="action-card action-card--nova-ordem" data-permission="gerenciar_ordens" title="Nova Ordem">
+                    <div class="action-card-icon">
+                        <i class="fas fa-car-wash"></i>
                     </div>
+                    <span class="action-card-label">Nova Ordem</span>
                 </a>
-                <a href="ordens.html" class="action-btn" data-permission="gerenciar_ordens">
-                    <i class="fas fa-list-check"></i>
-                    <div>
-                        <strong>Ver Ordens</strong>
-                        <small>Gerenciar serviços</small>
+                <a href="ordens.html" class="action-card action-card--ordens" data-permission="gerenciar_ordens" title="Ver Ordens">
+                    <div class="action-card-icon">
+                        <i class="fas fa-list-check"></i>
                     </div>
+                    <span class="action-card-label">Ver Ordens</span>
                 </a>
-                <a href="clientes.html" class="action-btn" data-permission="gerenciar_clientes">
-                    <i class="fas fa-users"></i>
-                    <div>
-                        <strong>Clientes</strong>
-                        <small>Cadastros e histórico</small>
+                <a href="clientes.html" class="action-card action-card--clientes" data-permission="gerenciar_clientes" title="Clientes">
+                    <div class="action-card-icon">
+                        <i class="fas fa-users"></i>
                     </div>
+                    <span class="action-card-label">Clientes</span>
                 </a>
-                <a href="financeiro.html" class="action-btn" data-permission="ver_financeiro">
-                    <i class="fas fa-chart-pie"></i>
-                    <div>
-                        <strong>Financeiro</strong>
-                        <small>Caixa e relatórios</small>
+                <a href="funcionarios.html" class="action-card action-card--funcionarios" data-permission="gerenciar_funcionarios" title="Funcionários">
+                    <div class="action-card-icon">
+                        <i class="fas fa-user-tie"></i>
                     </div>
+                    <span class="action-card-label">Funcionários</span>
+                </a>
+                <a href="financeiro.html" class="action-card action-card--financeiro" data-permission="ver_financeiro" title="Financeiro">
+                    <div class="action-card-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <span class="action-card-label">Financeiro</span>
+                </a>
+                <a href="comissoes.html" class="action-card action-card--comissoes" data-permission="gerenciar_funcionarios" title="Comissões">
+                    <div class="action-card-icon">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <span class="action-card-label">Comissões</span>
                 </a>
             </section>
 
