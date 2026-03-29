@@ -87,9 +87,9 @@
         .dashboard-hero {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 32px;
-            gap: 24px;
+            gap: 32px;
             flex-wrap: wrap;
         }
 
@@ -118,14 +118,51 @@
             margin-bottom: 4px;
         }
 
+        .hero-greeting {
+            flex: 1;
+            min-width: 200px;
+        }
+
         .hero-greeting p {
+            display: none;
+        }
+
+        /* KPI Stats no Header */
+        .kpi-stats-header {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .kpi-stat-small {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            min-width: 120px;
+        }
+
+        .kpi-stat-small .kpi-stat-label {
+            font-size: 11px;
             color: var(--dashboard-text-secondary);
-            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .kpi-stat-value-small {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--dashboard-text);
+            line-height: 1;
         }
 
         .hero-datetime {
             text-align: right;
-            min-width: 180px;
+            min-width: 160px;
+            flex-shrink: 0;
         }
 
         .hero-time {
@@ -897,23 +934,56 @@
             100% { transform: scale(1); }
         }
 
-        /* Responsividade KPI Stats */
+        /* Responsividade KPI Stats Header */
+        @media (max-width: 1200px) {
+            .dashboard-hero {
+                gap: 24px;
+            }
+
+            .kpi-stats-header {
+                gap: 30px;
+            }
+
+            .kpi-stat-value-small {
+                font-size: 32px;
+            }
+        }
+
         @media (max-width: 1024px) {
-            .kpi-stats-top {
-                grid-template-columns: repeat(2, 1fr);
+            .dashboard-hero {
+                flex-wrap: wrap;
+                align-items: flex-start;
                 gap: 20px;
+            }
+
+            .kpi-stats-header {
+                order: 3;
+                width: 100%;
+                justify-content: flex-start;
+                gap: 24px;
+            }
+
+            .hero-datetime {
+                order: 2;
             }
         }
 
         @media (max-width: 768px) {
-            .kpi-stats-top {
-                grid-template-columns: 1fr;
-                gap: 16px;
+            .dashboard-hero {
                 margin-bottom: 24px;
             }
 
-            .kpi-stat-value {
-                font-size: 40px;
+            .kpi-stats-header {
+                gap: 20px;
+                width: 100%;
+            }
+
+            .kpi-stat-value-small {
+                font-size: 28px;
+            }
+
+            .kpi-stat-small {
+                min-width: 100px;
             }
         }
 
@@ -1325,8 +1395,50 @@
                     <h1>
                         <span x-text="getGreeting()"></span>, <span x-text="userName || 'Usuario'"></span>!
                     </h1>
-                    <p>Acompanhe os principais indicadores da sua operacao hoje.</p>
                 </div>
+
+                <!-- KPI Stats no Topo -->
+                <div class="kpi-stats-header">
+                    <div class="kpi-stat-small">
+                        <span class="kpi-stat-label">Em Andamento</span>
+                        <template x-if="isLoading">
+                            <div class="kpi-skeleton" style="height: 40px; width: 80px;"></div>
+                        </template>
+                        <template x-if="!isLoading">
+                            <div style="display: flex; align-items: baseline; gap: 6px;">
+                                <div class="kpi-stat-value-small" x-text="stats.inProgress">0</div>
+                                <i class="fas fa-hourglass-half kpi-stat-icon orange"></i>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="kpi-stat-small">
+                        <span class="kpi-stat-label">Finalizado</span>
+                        <template x-if="isLoading">
+                            <div class="kpi-skeleton" style="height: 40px; width: 80px;"></div>
+                        </template>
+                        <template x-if="!isLoading">
+                            <div style="display: flex; align-items: baseline; gap: 6px;">
+                                <div class="kpi-stat-value-small" x-text="stats.completed">0</div>
+                                <i class="fas fa-check-circle kpi-stat-icon green"></i>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="kpi-stat-small">
+                        <span class="kpi-stat-label">Valor Total</span>
+                        <template x-if="isLoading">
+                            <div class="kpi-skeleton" style="height: 40px; width: 130px;"></div>
+                        </template>
+                        <template x-if="!isLoading">
+                            <div style="display: flex; align-items: baseline; gap: 6px;">
+                                <div class="kpi-stat-value-small" x-text="formatCurrency(stats.revenue)">R$ 0,00</div>
+                                <i class="fas fa-dollar-sign kpi-stat-icon blue"></i>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
                 <div class="hero-datetime">
                     <div class="greeting-time" x-text="currentTime">--:--</div>
                     <div class="hero-date">
@@ -1480,47 +1592,6 @@
                 </div>
             </nav>
 
-            <!-- KPI Stats — Números Grandes no Topo -->
-            <section class="kpi-stats-top">
-                <div class="kpi-stat">
-                    <span class="kpi-stat-label">Em Andamento</span>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 54px; width: 120px;"></div>
-                    </template>
-                    <template x-if="!isLoading">
-                        <div style="display: flex; align-items: baseline; gap: 8px;">
-                            <div class="kpi-stat-value" x-text="stats.inProgress">0</div>
-                            <i class="fas fa-hourglass-half kpi-stat-icon orange"></i>
-                        </div>
-                    </template>
-                </div>
-
-                <div class="kpi-stat">
-                    <span class="kpi-stat-label">Finalizado</span>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 54px; width: 120px;"></div>
-                    </template>
-                    <template x-if="!isLoading">
-                        <div style="display: flex; align-items: baseline; gap: 8px;">
-                            <div class="kpi-stat-value" x-text="stats.completed">0</div>
-                            <i class="fas fa-check-circle kpi-stat-icon green"></i>
-                        </div>
-                    </template>
-                </div>
-
-                <div class="kpi-stat">
-                    <span class="kpi-stat-label">Valor Total</span>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 54px; width: 180px;"></div>
-                    </template>
-                    <template x-if="!isLoading">
-                        <div style="display: flex; align-items: baseline; gap: 8px;">
-                            <div class="kpi-stat-value" x-text="formatCurrency(stats.revenue)">R$ 0,00</div>
-                            <i class="fas fa-dollar-sign kpi-stat-icon blue"></i>
-                        </div>
-                    </template>
-                </div>
-            </section>
             </div>
         </div>
     </main>
