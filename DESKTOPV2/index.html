@@ -665,260 +665,188 @@
             padding: 0;
         }
 
-        /* Sidebar */
-        .app-sidebar {
-            width: 260px;
-            height: 100vh;
+        /* Floating Menu Animado */
+        .floating-menu {
             position: fixed;
-            left: 0;
-            top: 0;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
             display: flex;
             flex-direction: column;
+            gap: 8px;
+            padding: 12px 8px;
             background: var(--dashboard-card);
-            border-right: 1px solid var(--dashboard-border);
-            transition: width 0.25s ease, transform 0.25s ease;
-            z-index: 200;
-            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            z-index: 150;
+            border: 1px solid var(--dashboard-border);
         }
 
-        .app-sidebar.collapsed {
-            width: 64px;
-        }
-
-        .app-sidebar.collapsed .sidebar-logo-text,
-        .app-sidebar.collapsed .sidebar-user-info,
-        .app-sidebar.collapsed .sidebar-item > span {
-            display: none;
-        }
-
-        /* Sidebar Header */
-        .sidebar-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 16px;
-            border-bottom: 1px solid var(--dashboard-border);
-        }
-
-        .sidebar-toggle {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: var(--dashboard-card-hover);
-            border-radius: 6px;
-            color: var(--dashboard-text);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            font-size: 16px;
-        }
-
-        .sidebar-toggle:hover {
-            background: var(--dashboard-border);
-        }
-
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--dashboard-text);
-            flex: 1;
-        }
-
-        .sidebar-logo i {
-            font-size: 20px;
-            color: var(--accent-cyan);
-        }
-
-        /* Sidebar Profile */
-        .sidebar-profile {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            text-decoration: none;
-            color: var(--dashboard-text);
-            transition: all 0.2s;
-        }
-
-        .sidebar-profile:hover {
-            background: var(--dashboard-card-hover);
-        }
-
-        .sidebar-avatar {
+        .floating-menu-toggle {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             background: var(--accent-cyan);
             color: white;
+            border: none;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            flex-shrink: 0;
+            font-size: 16px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
         }
 
-        .sidebar-user-info {
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
+        .floating-menu-toggle:hover {
+            transform: scale(1.1);
+            background: var(--accent-blue);
         }
 
-        .sidebar-user-info > span:first-child {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--dashboard-text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .sidebar-user-info > span:last-child {
-            font-size: 11px;
+        .floating-menu-item {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: none;
+            background: var(--dashboard-card-hover);
             color: var(--dashboard-text-secondary);
-        }
-
-        /* Sidebar Nav */
-        .sidebar-nav {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .sidebar-nav::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .sidebar-nav::-webkit-scrollbar-thumb {
-            background: var(--dashboard-border);
-            border-radius: 2px;
-        }
-
-        .sidebar-item {
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--dashboard-text-secondary);
-            transition: all 0.2s;
+            justify-content: center;
+            font-size: 16px;
+            position: relative;
+            transition: all 0.2s ease;
             text-decoration: none;
-            cursor: pointer;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
         }
 
-        .sidebar-item:hover {
-            background: var(--dashboard-card-hover);
-            color: var(--dashboard-text);
-        }
-
-        .sidebar-item.active {
-            background: var(--accent-cyan);
-            color: white;
-        }
-
-        .sidebar-item--highlight {
+        .floating-menu-item:hover {
+            transform: scale(1.15);
             background: var(--accent-cyan-light);
             color: var(--accent-cyan);
         }
 
-        .sidebar-item--highlight:hover {
-            background: rgba(6, 182, 212, 0.2);
+        .floating-menu-item.active {
+            background: var(--accent-cyan);
+            color: white;
         }
 
-        .sidebar-item--danger {
-            color: #ef4444;
-        }
-
-        .sidebar-item--danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-        }
-
-        .sidebar-item i {
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .sidebar-footer {
-            padding: 8px;
-            border-top: 1px solid var(--dashboard-border);
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        /* Sidebar Overlay (mobile) */
-        .sidebar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 150;
-            display: none;
-        }
-
-        .sidebar-overlay.active {
-            display: block;
-        }
-
-        /* Topbar (mobile) */
-        .app-topbar {
-            display: none;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            background: var(--dashboard-card);
-            border-bottom: 1px solid var(--dashboard-border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        .floating-menu-label {
+            position: absolute;
+            left: 56px;
+            font-size: 12px;
             font-weight: 600;
-            color: var(--dashboard-text);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
         }
 
-        .app-topbar button {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: var(--dashboard-card-hover);
-            border-radius: 6px;
-            color: var(--dashboard-text);
-            cursor: pointer;
+        .floating-menu-item:hover .floating-menu-label {
+            opacity: 1;
+        }
+
+        .floating-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            font-size: 10px;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
         }
 
         /* Main content */
         .app-main {
-            margin-left: 260px;
+            margin-left: 0;
             flex: 1;
-            transition: margin-left 0.25s ease;
+            padding-left: 100px;
         }
 
         .app-content {
             padding: 24px;
             max-width: 1600px;
             margin: 0 auto;
+        }
+
+        /* Quick KPI Section — Card único */
+        .quick-kpi-section {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            max-width: 600px;
+        }
+
+        .quick-kpi-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 24px;
+            background: var(--dashboard-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--dashboard-shadow);
+            border-left: 4px solid var(--accent-orange);
+            flex: 1;
+            position: relative;
+        }
+
+        .quick-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--accent-orange-light);
+            color: var(--accent-orange);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .quick-kpi-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quick-kpi-label {
+            font-size: 12px;
+            color: var(--dashboard-text-secondary);
+            font-weight: 500;
+        }
+
+        .quick-kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dashboard-text);
+        }
+
+        .quick-kpi-subtext {
+            font-size: 11px;
+            color: var(--dashboard-text-muted);
+        }
+
+        .quick-kpi-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
         }
 
         /* Content Greeting */
@@ -1076,7 +1004,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 0;
+            margin-bottom: 24px;
             gap: 24px;
             flex-wrap: wrap;
         }
@@ -1089,36 +1017,26 @@
             display: none;
         }
 
+        body {
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
         /* Responsividade Desktop Grande */
         @media (max-width: 1200px) {
             .quick-actions-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
+            .app-main {
+                padding-left: 80px;
+            }
         }
 
         /* Responsividade Tablet */
         @media (max-width: 1024px) {
-            .app-sidebar {
-                transform: translateX(-260px);
-                width: 260px !important;
-            }
-
-            .app-sidebar.open {
-                transform: translateX(0);
-            }
-
-            .app-main {
-                margin-left: 0 !important;
-            }
-
-            .app-topbar {
-                display: flex !important;
-            }
-
-            .sidebar-overlay.active {
-                display: block !important;
-            }
-
             .quick-actions-grid {
                 grid-template-columns: repeat(3, 1fr);
                 gap: 12px;
@@ -1142,12 +1060,20 @@
             .app-content {
                 padding: 16px;
             }
+
+            .floating-menu {
+                left: 12px;
+            }
         }
 
         /* Responsividade Mobile */
         @media (max-width: 768px) {
             .app-content {
                 padding: 12px;
+            }
+
+            .app-main {
+                padding-left: 70px;
             }
 
             .quick-actions-grid {
@@ -1169,6 +1095,28 @@
 
             .action-card-label {
                 font-size: 10px;
+            }
+
+            .floating-menu {
+                left: 10px;
+                width: 50px;
+                padding: 10px 6px;
+            }
+
+            .floating-menu-item {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+
+            .quick-kpi-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .quick-kpi-badge {
+                top: 8px;
+                right: 8px;
             }
         }
 
@@ -1193,81 +1141,66 @@
             .action-card-label {
                 font-size: 9px;
             }
+
+            .app-main {
+                padding-left: 60px;
+            }
+
+            .floating-menu {
+                left: 8px;
+            }
         }
     </style>
 </head>
 <body data-permission="ver_dashboard">
-    <!-- Sidebar Lateral -->
-    <aside class="app-sidebar" id="appSidebar">
-        <div class="sidebar-header">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="sidebar-logo">
-                <i class="fas fa-car-wash"></i>
-                <span class="sidebar-logo-text">LinaX</span>
-            </div>
+    <!-- Menu Flutuante Animado -->
+    <nav class="floating-menu" id="floatingMenu">
+        <div class="floating-menu-toggle" onclick="toggleFloatingMenu()" title="Menu">
+            <i class="fas fa-chevron-right"></i>
         </div>
-
-        <a href="perfil.html" class="sidebar-profile">
-            <div class="sidebar-avatar" x-text="getUserInitials()"></div>
-            <div class="sidebar-user-info">
-                <span x-text="getUserName()"></span>
-                <span x-text="getUserRole()"></span>
-            </div>
+        <a href="index.html" class="floating-menu-item active" data-permission="ver_dashboard" title="Dashboard">
+            <i class="fas fa-home"></i>
+            <span class="floating-menu-label">Dashboard</span>
         </a>
-
-        <nav class="sidebar-nav">
-            <a href="index.html" class="sidebar-item active" data-permission="ver_dashboard">
-                <i class="fas fa-home"></i><span>Dashboard</span>
-            </a>
-            <a href="ordens.html" class="sidebar-item" data-permission="gerenciar_ordens">
-                <i class="fas fa-list-alt"></i><span>Ordens</span>
-            </a>
-            <a href="novaordem.html" class="sidebar-item sidebar-item--highlight" data-permission="gerenciar_ordens">
-                <i class="fas fa-plus-circle"></i><span>Nova Ordem</span>
-            </a>
-            <a href="clientes.html" class="sidebar-item" data-permission="gerenciar_clientes">
-                <i class="fas fa-users"></i><span>Clientes</span>
-            </a>
-            <a href="funcionarios.html" class="sidebar-item" data-permission="gerenciar_funcionarios">
-                <i class="fas fa-user-tie"></i><span>Funcionários</span>
-            </a>
-            <a href="financeiro.html" class="sidebar-item" data-permission="ver_financeiro">
-                <i class="fas fa-chart-pie"></i><span>Financeiro</span>
-            </a>
-            <a href="comissoes.html" class="sidebar-item" data-permission="gerenciar_funcionarios">
-                <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
-            </a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <a href="configuracoes.html" class="sidebar-item" data-permission="gerenciar_configuracoes">
-                <i class="fas fa-cog"></i><span>Configurações</span>
-            </a>
-            <button class="sidebar-item" id="notification-bell-sidebar" onclick="openNotifications()">
-                <i class="fas fa-bell"></i><span>Notificações</span>
-                <span id="notification-badge-sidebar" class="sidebar-badge" style="display:none; position:absolute; right:10px; background:#ef4444; color:white; border-radius:50%; width:20px; height:20px; font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:700;"></span>
-            </button>
-            <button class="sidebar-item sidebar-item--danger" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i><span>Sair</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Overlay mobile da sidebar -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-    <!-- Topbar mobile -->
-    <header class="app-topbar" id="appTopbar">
-        <button onclick="openSidebar()"><i class="fas fa-bars"></i></button>
-        <span>LinaX</span>
-        <div style="margin-left: auto;">
-            <button onclick="openNotifications()" style="background: none; border: none; font-size: 18px; color: var(--dashboard-text); cursor: pointer;">
-                <i class="fas fa-bell"></i>
-            </button>
-        </div>
-    </header>
+        <a href="ordens.html" class="floating-menu-item" data-permission="gerenciar_ordens" title="Ordens">
+            <i class="fas fa-list-alt"></i>
+            <span class="floating-menu-label">Ordens</span>
+        </a>
+        <a href="novaordem.html" class="floating-menu-item" data-permission="gerenciar_ordens" title="Nova Ordem">
+            <i class="fas fa-plus-circle"></i>
+            <span class="floating-menu-label">Nova Ordem</span>
+        </a>
+        <a href="clientes.html" class="floating-menu-item" data-permission="gerenciar_clientes" title="Clientes">
+            <i class="fas fa-users"></i>
+            <span class="floating-menu-label">Clientes</span>
+        </a>
+        <a href="funcionarios.html" class="floating-menu-item" data-permission="gerenciar_funcionarios" title="Funcionários">
+            <i class="fas fa-user-tie"></i>
+            <span class="floating-menu-label">Funcionários</span>
+        </a>
+        <a href="financeiro.html" class="floating-menu-item" data-permission="ver_financeiro" title="Financeiro">
+            <i class="fas fa-chart-pie"></i>
+            <span class="floating-menu-label">Financeiro</span>
+        </a>
+        <a href="comissoes.html" class="floating-menu-item" data-permission="gerenciar_funcionarios" title="Comissões">
+            <i class="fas fa-hand-holding-usd"></i>
+            <span class="floating-menu-label">Comissões</span>
+        </a>
+        <hr style="margin: 8px 0; border: none; height: 1px; background: var(--dashboard-border);">
+        <a href="configuracoes.html" class="floating-menu-item" data-permission="gerenciar_configuracoes" title="Configurações">
+            <i class="fas fa-cog"></i>
+            <span class="floating-menu-label">Configurações</span>
+        </a>
+        <button class="floating-menu-item" id="notification-bell-float" onclick="openNotifications()" title="Notificações">
+            <i class="fas fa-bell"></i>
+            <span class="floating-menu-label">Notificações</span>
+            <span id="notification-badge-float" class="floating-badge" style="display:none;">●</span>
+        </button>
+        <button class="floating-menu-item" onclick="logout()" title="Sair">
+            <i class="fas fa-sign-out-alt"></i>
+            <span class="floating-menu-label">Sair</span>
+        </button>
+    </nav>
 
     <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
     <div id="screenLockModal" class="screen-lock-overlay">
@@ -1441,202 +1374,25 @@
                 </div>
             </nav>
 
-            <!-- KPI Cards Grid -->
-            <section class="kpi-grid">
-                <!-- Revenue Card -->
-                <div class="kpi-card green">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-                        <div class="kpi-trend up" x-show="!isLoading && stats.revenue > 0">
-                            <i class="fas fa-arrow-up"></i>
-                            <span>Hoje</span>
-                        </div>
+            <!-- KPI Único — Em Andamento -->
+            <section class="quick-kpi-section">
+                <div class="quick-kpi-card">
+                    <div class="quick-kpi-icon">
+                        <i class="fas fa-hourglass-half"></i>
                     </div>
-                    <div class="kpi-label">Faturamento Hoje</div>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 38px; width: 120px;"></div>
-                    </template>
-                    <template x-if="!isLoading">
-                        <div class="kpi-value" x-text="formatCurrency(stats.revenue)"></div>
-                    </template>
-                    <div class="kpi-subtext">Ordens finalizadas e pagas</div>
-                </div>
-
-                <!-- Vehicles Washed Card -->
-                <div class="kpi-card blue">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">
-                            <i class="fas fa-car"></i>
-                        </div>
+                    <div class="quick-kpi-content">
+                        <span class="quick-kpi-label">Em Andamento</span>
+                        <template x-if="isLoading">
+                            <div class="kpi-skeleton" style="height: 32px; width: 60px;"></div>
+                        </template>
+                        <template x-if="!isLoading">
+                            <div class="quick-kpi-value" x-text="stats.inProgress">0</div>
+                        </template>
+                        <span class="quick-kpi-subtext">Aguardando conclusão</span>
                     </div>
-                    <div class="kpi-label">Veiculos Lavados</div>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 38px; width: 60px;"></div>
+                    <template x-if="!isLoading && stats.inProgress > 0">
+                        <div class="quick-kpi-badge">✓</div>
                     </template>
-                    <template x-if="!isLoading">
-                        <div class="kpi-value" x-text="stats.completed"></div>
-                    </template>
-                    <div class="kpi-subtext">Finalizados hoje</div>
-                </div>
-
-                <!-- Average Ticket Card -->
-                <div class="kpi-card purple">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">
-                            <i class="fas fa-receipt"></i>
-                        </div>
-                    </div>
-                    <div class="kpi-label">Ticket Medio</div>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 38px; width: 80px;"></div>
-                    </template>
-                    <template x-if="!isLoading">
-                        <div class="kpi-value" x-text="formatCurrency(stats.averageTicket)"></div>
-                    </template>
-                    <div class="kpi-subtext">Por veiculo</div>
-                </div>
-
-                <!-- In Progress Card -->
-                <div class="kpi-card orange">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <div class="kpi-trend up" x-show="!isLoading && stats.inProgress > 0" style="background: var(--accent-orange-light); color: var(--accent-orange);">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Ativo</span>
-                        </div>
-                    </div>
-                    <div class="kpi-label">Em Andamento</div>
-                    <template x-if="isLoading">
-                        <div class="kpi-skeleton" style="height: 38px; width: 40px;"></div>
-                    </template>
-                    <template x-if="!isLoading">
-                        <div class="kpi-value" x-text="stats.inProgress"></div>
-                    </template>
-                    <div class="kpi-subtext">Aguardando conclusao</div>
-                </div>
-            </section>
-
-            <!-- Main Content Grid -->
-            <section class="content-grid">
-                <!-- Chart Section -->
-                <div class="chart-card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <div class="card-title-icon">
-                                <i class="fas fa-chart-area"></i>
-                            </div>
-                            <div>
-                                <h3>Veiculos por Hora</h3>
-                                <p>Distribuicao de atendimentos hoje</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="vehiclesChart" x-ref="chartCanvas"></canvas>
-                    </div>
-                </div>
-
-                <!-- Sidebar Stack -->
-                <div class="sidebar-stack">
-                    <!-- Quick Actions -->
-                    <div class="quick-actions-card">
-                        <div class="card-header" style="margin-bottom: 16px;">
-                            <div class="card-title">
-                                <div class="card-title-icon" style="background: var(--accent-purple-light); color: var(--accent-purple);">
-                                    <i class="fas fa-bolt"></i>
-                                </div>
-                                <div>
-                                    <h3>Acoes Rapidas</h3>
-                                    <p>Acesso direto</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="quick-actions-grid">
-                            <a href="novaordem.html" class="action-btn primary" data-permission="gerenciar_ordens">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>Nova Ordem</span>
-                            </a>
-                            <a href="clientes.html" class="action-btn" data-permission="gerenciar_clientes">
-                                <i class="fas fa-user-plus"></i>
-                                <span>Novo Cliente</span>
-                            </a>
-                            <a href="comissoes.html" class="action-btn" data-permission="ver_financeiro">
-                                <i class="fas fa-hand-holding-usd"></i>
-                                <span>Comissoes</span>
-                            </a>
-                            <a href="financeiro.html" class="action-btn" data-permission="ver_financeiro">
-                                <i class="fas fa-cash-register"></i>
-                                <span>Fechar Caixa</span>
-                            </a>
-                            <a href="ordens.html" class="action-btn" data-permission="gerenciar_ordens">
-                                <i class="fas fa-list-check"></i>
-                                <span>Ver Ordens</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Recent Orders -->
-                    <div class="recent-card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <div class="card-title-icon" style="background: var(--accent-green-light); color: var(--accent-green);">
-                                    <i class="fas fa-clock-rotate-left"></i>
-                                </div>
-                                <div>
-                                    <h3>Atividade Recente</h3>
-                                    <p>Ultimas 5 ordens</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Loading State -->
-                        <div class="recent-list" x-show="isLoadingRecent">
-                            <template x-for="i in 3" :key="'skel-' + i">
-                                <div class="recent-skeleton">
-                                    <div class="skeleton-circle kpi-skeleton"></div>
-                                    <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-                                        <div class="skeleton-line w-3/4 kpi-skeleton"></div>
-                                        <div class="skeleton-line w-1/2 kpi-skeleton"></div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-
-                        <!-- Recent List -->
-                        <div class="recent-list" x-show="!isLoadingRecent">
-                            <template x-if="recentOrders.length === 0">
-                                <div class="empty-state">
-                                    <i class="fas fa-inbox"></i>
-                                    <p>Nenhuma ordem hoje ainda</p>
-                                </div>
-                            </template>
-
-                            <template x-for="order in recentOrders" :key="order.id">
-                                <div class="recent-item">
-                                    <div class="recent-status" :class="getStatusClass(order.status)">
-                                        <i :class="getStatusIcon(order.status)"></i>
-                                    </div>
-                                    <div class="recent-info">
-                                        <div class="plate" x-text="order.veiculo?.placa || 'S/ Placa'"></div>
-                                        <div class="service" x-text="getMainService(order)"></div>
-                                    </div>
-                                    <div class="recent-value">
-                                        <div class="price" x-text="formatCurrency(order.valorTotal)"></div>
-                                        <div class="time" x-text="formatTime(order.createdAt)"></div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-
-                        <a href="ordens.html" class="view-all-link" x-show="recentOrders.length > 0">
-                            <span>Ver todas as ordens</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </div>
                 </div>
             </section>
             </div>
@@ -2524,81 +2280,37 @@
         });
     </script>
 
-    <!-- Sidebar Toggle Functions -->
+    <!-- Floating Menu Functions -->
     <script>
-        // Toggle Sidebar
-        function toggleSidebar() {
-            const sidebar = document.getElementById('appSidebar');
-            const collapsed = sidebar.classList.toggle('collapsed');
-            const main = document.querySelector('.app-main');
-
-            if (window.innerWidth > 1024) {
-                if (collapsed) {
-                    main.style.marginLeft = '64px';
-                } else {
-                    main.style.marginLeft = '260px';
-                }
-            }
-
-            localStorage.setItem('sidebarCollapsed', collapsed);
-        }
-
-        // Open Sidebar (mobile)
-        function openSidebar() {
-            const sidebar = document.getElementById('appSidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.add('open');
-            overlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close Sidebar (mobile)
-        function closeSidebar() {
-            const sidebar = document.getElementById('appSidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-            document.body.style.overflow = '';
+        // Toggle Floating Menu
+        function toggleFloatingMenu() {
+            const menu = document.getElementById('floatingMenu');
+            const isCollapsed = menu.classList.toggle('collapsed');
+            localStorage.setItem('floatingMenuCollapsed', isCollapsed);
         }
 
         // Open Notifications (placeholder)
         function openNotifications() {
-            // This would open notification panel - can be expanded later
-            const sidebar = document.querySelector('.app-sidebar');
-            if (window.innerWidth <= 1024) {
-                closeSidebar();
-            }
             // TODO: Integrate with existing notification system
+            console.log('Notificações clicado');
         }
 
-        // Restore sidebar state on page load
+        // Restore floating menu state on page load
         document.addEventListener('DOMContentLoaded', () => {
-            if (window.innerWidth > 1024) {
-                if (localStorage.getItem('sidebarCollapsed') === 'true') {
-                    const sidebar = document.getElementById('appSidebar');
-                    const main = document.querySelector('.app-main');
-                    sidebar.classList.add('collapsed');
-                    main.style.marginLeft = '64px';
-                }
+            const menu = document.getElementById('floatingMenu');
+            if (localStorage.getItem('floatingMenuCollapsed') === 'true') {
+                menu.classList.add('collapsed');
             }
-        });
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            const sidebar = document.getElementById('appSidebar');
-            const main = document.querySelector('.app-main');
-
-            if (window.innerWidth > 1024) {
-                sidebar.classList.remove('open');
-                document.getElementById('sidebarOverlay').classList.remove('active');
-                if (sidebar.classList.contains('collapsed')) {
-                    main.style.marginLeft = '64px';
+            // Update active link based on current page
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.floating-menu-item').forEach(item => {
+                if (item.href && item.href.includes(currentPath)) {
+                    item.classList.add('active');
                 } else {
-                    main.style.marginLeft = '260px';
+                    item.classList.remove('active');
                 }
-            } else {
-                main.style.marginLeft = '0';
-            }
+            });
         });
     </script>
 
