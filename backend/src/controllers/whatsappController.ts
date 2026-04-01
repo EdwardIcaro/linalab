@@ -182,10 +182,8 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
     // Verificar status atual na Evolution API
     const evolutionStatus = await getInstanceStatus(instance.instanceName);
 
-    let status = instance.status;
+    // Se Evolution reporta 'open', definitivamente conectado
     if (evolutionStatus === 'open') {
-      status = 'connected';
-
       // Obter número do proprietário
       const info = await getInstanceInfo(instance.instanceName);
       const ownerPhone = info?.wid?.user || null;
@@ -205,15 +203,23 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
         ownerPhone,
         message: 'WhatsApp conectado com sucesso'
       });
-    } else if (evolutionStatus === 'connecting') {
-      status = 'qr_code';
-    } else {
-      status = 'disconnected';
     }
 
+    // Se banco diz 'qr_code' (aguardando escaneamento), mantém esse status
+    // independente do estado da Evolution (pode ser 'close' enquanto aguarda)
+    if (instance.status === 'qr_code' && instance.qrCode) {
+      return res.json({
+        status: 'qr_code',
+        qrCode: instance.qrCode,
+        ownerPhone: null,
+        message: 'Aguardando escaneamento do QR code'
+      });
+    }
+
+    // Caso padrão: desconectado
     return res.json({
-      status,
-      qrCode: instance.qrCode || null,
+      status: 'disconnected',
+      qrCode: null,
       ownerPhone: instance.ownerPhone || null
     });
   } catch (error) {
