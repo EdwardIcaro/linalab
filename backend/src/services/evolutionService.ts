@@ -93,23 +93,42 @@ export async function getQRCode(instanceName: string): Promise<string | null> {
       console.log('[Evolution] Instância encontrada:', {
         name: instance.name,
         connectionStatus: instance.connectionStatus,
-        temQrcode: !!instance.qrcode
+        temQrcode: !!instance.qrcode,
+        todasAsPropriedades: Object.keys(instance)
       });
+
+      // Debug completo
+      console.log('[Evolution] Objeto completo da instância:', JSON.stringify(instance, null, 2));
 
       // Evolution retorna QR em instance.qrcode quando em estado de "connecting"
       if (instance.qrcode) {
-        console.log('[Evolution] QR code encontrado:', {
-          base64: !!instance.qrcode.base64,
-          qr: !!instance.qrcode.qr
-        });
-        return instance.qrcode.base64 || instance.qrcode.qr || null;
+        console.log('[Evolution] Propriedades de qrcode:', Object.keys(instance.qrcode));
+        console.log('[Evolution] QR code completo:', JSON.stringify(instance.qrcode, null, 2));
+
+        // Tentar múltiplas propriedades
+        const qrValue =
+          instance.qrcode.base64 ||
+          instance.qrcode.qr ||
+          instance.qrcode.code ||
+          instance.qrcode.pairingCode ||
+          (typeof instance.qrcode === 'string' ? instance.qrcode : null);
+
+        if (qrValue) {
+          console.log('[Evolution] QR code encontrado em propriedade!');
+          return qrValue;
+        } else {
+          console.log('[Evolution] qrcode existe mas nenhuma propriedade tem valor');
+        }
+      }
+
+      // Se connectionStatus é 'connecting', QR pode estar sendo gerado
+      if (instance.connectionStatus === 'connecting') {
+        console.log('[Evolution] Instância em status "connecting" - QR pode estar sendo gerado');
       }
 
       // Se connectionStatus é 'close', QR ainda não foi gerado
-      // Precisa conectar ou ativar a instância
       if (instance.connectionStatus === 'close') {
         console.log('[Evolution] Instância em status "close" - QR não foi gerado ainda');
-        console.log('[Evolution] A instância precisa ser ativada para gerar QR code');
       }
 
       return null;
