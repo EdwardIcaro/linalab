@@ -54,10 +54,12 @@ export async function createInstance(
 ): Promise<any> {
   return apiCall('POST', '/instance/create', {
     instanceName,
+    integration: 'WHATSAPP-BAILEYS',
     qrcode: true,
-    webhook: webhookUrl,
-    webhookByEvents: true,
-    ignoreMessages: false
+    webhook: {
+      url: webhookUrl,
+      byEvents: true
+    }
   });
 }
 
