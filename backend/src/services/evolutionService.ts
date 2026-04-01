@@ -60,11 +60,19 @@ export async function createInstance(
 
 /**
  * Ativa/conecta uma instância para gerar QR code
+ * RETORNA O QR CODE NA RESPOSTA!
  */
 export async function startInstance(instanceName: string): Promise<any> {
   try {
     console.log('[Evolution] Ativando instância:', instanceName);
-    return await apiCall('GET', `/instance/connect/${instanceName}`);
+    const response = await apiCall('GET', `/instance/connect/${instanceName}`);
+
+    console.log('[Evolution] Resposta do connect:');
+    console.log('[Evolution] Tipo:', typeof response);
+    console.log('[Evolution] Propriedades:', response ? Object.keys(response) : 'null');
+    console.log('[Evolution] Completo:', JSON.stringify(response, null, 2));
+
+    return response;
   } catch (error) {
     console.warn('[Evolution] Aviso ao ativar instância:', error);
     // Pode falhar se já está ativada, isso é ok

@@ -91,22 +91,39 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
 
     // Ativar instância para gerar QR code
     console.log('[WhatsApp Setup] Ativando instância para gerar QR code...');
-    await startInstance(instanceName);
+    const connectResponse = await startInstance(instanceName);
 
-    // Aguardar a instância gerar o QR code (pode demorar até 10 segundos)
-    console.log('[WhatsApp Setup] Aguardando geração do QR code (até 10 segundos)...');
-
-    // Tentar obter QR code com retries
+    // Tentar extrair QR code da resposta do connect (qrcode é retornado direto)
     let qrCode = null;
-    for (let i = 0; i < 5; i++) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos entre tentativas
-
-      console.log(`[WhatsApp Setup] Tentativa ${i + 1}/5 de obter QR code...`);
-      qrCode = await getQRCode(instanceName);
+    if (connectResponse) {
+      // O QR code pode estar em diferentes propriedades
+      qrCode =
+        connectResponse.qrcode ||
+        connectResponse.base64 ||
+        connectResponse.qr ||
+        connectResponse.code ||
+        (typeof connectResponse === 'string' ? connectResponse : null);
 
       if (qrCode) {
-        console.log('[WhatsApp Setup] QR code obtido com sucesso!');
-        break;
+        console.log('[WhatsApp Setup] QR code extraído da resposta do connect!');
+      } else {
+        console.log('[WhatsApp Setup] QR code não encontrado na resposta do connect. Propriedades:', Object.keys(connectResponse));
+      }
+    }
+
+    // Se não conseguiu da resposta do connect, tentar com retry (fallback)
+    if (!qrCode) {
+      console.log('[WhatsApp Setup] Tentando obter QR code com retry...');
+      for (let i = 0; i < 5; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos entre tentativas
+
+        console.log(`[WhatsApp Setup] Tentativa ${i + 1}/5 de obter QR code via endpoint...`);
+        qrCode = await getQRCode(instanceName);
+
+        if (qrCode) {
+          console.log('[WhatsApp Setup] QR code obtido com sucesso via endpoint!');
+          break;
+        }
       }
     }
 
