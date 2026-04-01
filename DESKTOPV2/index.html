@@ -2075,7 +2075,7 @@
                 async loadWhatsappStatus() {
                     try {
                         this.whatsappLoading = true;
-                        const response = await window.api.request('/api/whatsapp/status', 'GET');
+                        const response = await window.api.call('GET', '/whatsapp/status');
 
                         if (response && response.status) {
                             this.whatsappStatus = response.status;
@@ -2108,7 +2108,7 @@
                         }
 
                         this.whatsappLoading = true;
-                        const response = await window.api.request('/api/whatsapp/setup', 'POST');
+                        const response = await window.api.call('POST', '/whatsapp/setup');
 
                         if (response && response.status === 'qr_code') {
                             this.whatsappStatus = 'qr_code';
@@ -2141,7 +2141,7 @@
                         }
 
                         this.whatsappLoading = true;
-                        await window.api.request('/api/whatsapp/disconnect', 'DELETE');
+                        await window.api.call('DELETE', '/whatsapp/disconnect');
 
                         this.whatsappStatus = 'disconnected';
                         this.whatsappStatusText = '❌ Desconectado';
