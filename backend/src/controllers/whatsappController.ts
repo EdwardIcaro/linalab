@@ -21,8 +21,10 @@ interface AuthenticatedRequest extends Request {
 export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
   try {
     const empresaId = req.empresaId;
+    console.log('[WhatsApp Setup] Iniciando setup para empresa:', empresaId);
 
     if (!empresaId) {
+      console.error('[WhatsApp Setup] Empresa não identificada');
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
@@ -32,6 +34,7 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     });
 
     if (existente && existente.status === 'connected') {
+      console.warn('[WhatsApp Setup] Instância já conectada para empresa:', empresaId);
       return res.status(400).json({ error: 'Já existe uma instância conectada para esta empresa' });
     }
 
@@ -42,19 +45,31 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     });
 
     if (!empresa) {
+      console.error('[WhatsApp Setup] Empresa não encontrada:', empresaId);
       return res.status(404).json({ error: 'Empresa não encontrada' });
     }
+
+    console.log('[WhatsApp Setup] Empresa:', empresa.nome);
 
     // Usar timestamp para garantir nome único (Evolution API não permite reutilizar nomes)
     const timestamp = Date.now();
     const instanceName = `lina-${empresaId.substring(0, 8)}-${timestamp}`.toLowerCase();
     const webhookUrl = `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/whatsapp/webhook/evolution`;
 
+    console.log('[WhatsApp Setup] Criando instância:', instanceName);
+    console.log('[WhatsApp Setup] Webhook URL:', webhookUrl);
+
     // Criar instância na Evolution API
     const evolutionResponse = await createInstance(instanceName, webhookUrl);
 
+    console.log('[WhatsApp Setup] Resposta Evolution API:', evolutionResponse);
+
     if (!evolutionResponse || evolutionResponse.error) {
-      return res.status(500).json({ error: 'Falha ao criar instância na Evolution API' });
+      console.error('[WhatsApp Setup] Erro da Evolution API:', evolutionResponse);
+      return res.status(500).json({
+        error: 'Falha ao criar instância na Evolution API',
+        details: evolutionResponse?.error || evolutionResponse
+      });
     }
 
     // Salvar ou atualizar no banco
@@ -72,16 +87,24 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
       }
     });
 
-    // Aguardar um pouco e obter QR code
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('[WhatsApp Setup] Instância salva no banco');
 
+    // Aguardar um pouco e obter QR code
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    console.log('[WhatsApp Setup] Obtendo QR code para:', instanceName);
     const qrCode = await getQRCode(instanceName);
+
+    console.log('[WhatsApp Setup] QR code obtido:', qrCode ? 'sim' : 'não');
 
     if (qrCode) {
       await prisma.whatsappInstance.update({
         where: { empresaId },
         data: { qrCode }
       });
+      console.log('[WhatsApp Setup] QR code salvo no banco');
+    } else {
+      console.warn('[WhatsApp Setup] QR code não foi obtido, pode não estar pronto ainda');
     }
 
     return res.json({
@@ -91,8 +114,12 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
       message: 'Instância criada. Escaneie o QR code com seu WhatsApp.'
     });
   } catch (error) {
-    console.error('[WhatsApp Setup] Erro:', error);
-    return res.status(500).json({ error: 'Erro ao configurar WhatsApp' });
+    console.error('[WhatsApp Setup] Erro fatal:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({
+      error: 'Erro ao configurar WhatsApp',
+      details: errorMessage
+    });
   }
 }
 

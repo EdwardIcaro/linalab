@@ -2075,7 +2075,10 @@
                 async loadWhatsappStatus() {
                     try {
                         this.whatsappLoading = true;
+                        console.log('[WhatsApp] Carregando status...');
+
                         const response = await window.api.call('GET', '/whatsapp/status');
+                        console.log('[WhatsApp] Resposta status:', response);
 
                         if (response && response.status) {
                             this.whatsappStatus = response.status;
@@ -2090,7 +2093,9 @@
                             };
                             this.whatsappStatusText = statusMap[response.status] || 'Desconhecido';
 
-                            console.log('[WhatsApp] Status atualizado:', response.status);
+                            console.log('[WhatsApp] Status:', response.status, '| QR:', this.qrCodeUrl ? 'sim' : 'não', '| Phone:', this.ownerPhone);
+                        } else {
+                            console.warn('[WhatsApp] Resposta sem status:', response);
                         }
                     } catch (error) {
                         console.error('[WhatsApp] Erro ao carregar status:', error);
@@ -2108,12 +2113,19 @@
                         }
 
                         this.whatsappLoading = true;
+                        console.log('[WhatsApp Setup] Iniciando...');
+
                         const response = await window.api.call('POST', '/whatsapp/setup');
 
+                        console.log('[WhatsApp Setup] Resposta recebida:', response);
+
                         if (response && response.status === 'qr_code') {
+                            console.log('[WhatsApp Setup] QR code gerado:', response.qrCode ? 'sim' : 'não');
                             this.whatsappStatus = 'qr_code';
                             this.whatsappStatusText = '📱 Aguardando escaneamento';
                             this.qrCodeUrl = response.qrCode;
+
+                            console.log('[WhatsApp Setup] Status atualizado, QR exibido');
 
                             if (typeof showToast === 'function') {
                                 showToast('Código QR gerado! Escaneie com seu WhatsApp.', 'success');
@@ -2122,12 +2134,16 @@
                             // Start polling for connection
                             this.pollWhatsappStatus();
                         } else {
-                            throw new Error('Erro ao gerar código QR');
+                            console.error('[WhatsApp Setup] Resposta inválida:', response);
+                            throw new Error('Resposta inválida do servidor: ' + JSON.stringify(response));
                         }
                     } catch (error) {
-                        console.error('[WhatsApp Setup] Erro:', error);
+                        console.error('[WhatsApp Setup] Erro completo:', error);
+                        const errorMsg = error?.message || JSON.stringify(error);
+                        console.error('[WhatsApp Setup] Mensagem de erro:', errorMsg);
+
                         if (typeof showToast === 'function') {
-                            showToast('Erro ao configurar WhatsApp: ' + error.message, 'error');
+                            showToast('Erro ao configurar WhatsApp: ' + errorMsg, 'error');
                         }
                     } finally {
                         this.whatsappLoading = false;
