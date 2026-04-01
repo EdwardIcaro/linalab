@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { createInstance, getQRCode, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo } from '../services/evolutionService';
+import { createInstance, getQRCode, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo, updateInstanceWebhook } from '../services/evolutionService';
 import { handleIncomingMessage } from '../services/whatsappCommandHandler';
 
 // Type para requisição autenticada
@@ -51,8 +51,16 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     // Criar instância na Evolution API
     const evolutionResponse = await createInstance(instanceName, webhookUrl);
 
-    if (evolutionResponse.status !== 'success') {
+    if (!evolutionResponse || evolutionResponse.error) {
       return res.status(500).json({ error: 'Falha ao criar instância na Evolution API' });
+    }
+
+    // Atualizar webhook da instância
+    try {
+      await updateInstanceWebhook(instanceName, webhookUrl);
+    } catch (webhookError) {
+      console.warn('[WhatsApp] Aviso ao atualizar webhook:', webhookError);
+      // Continua mesmo se webhook falhar
     }
 
     // Salvar ou atualizar no banco

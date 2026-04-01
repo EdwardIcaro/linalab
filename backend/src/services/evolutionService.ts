@@ -54,12 +54,7 @@ export async function createInstance(
 ): Promise<any> {
   return apiCall('POST', '/instance/create', {
     instanceName,
-    integration: 'WHATSAPP-BAILEYS',
-    qrcode: true,
-    webhook: {
-      url: webhookUrl,
-      byEvents: true
-    }
+    integration: 'WHATSAPP-BAILEYS'
   });
 }
 
@@ -142,6 +137,19 @@ export async function sendTextMessage(
  */
 export async function deleteInstance(instanceName: string): Promise<any> {
   return apiCall('DELETE', `/instance/delete/${instanceName}`);
+}
+
+/**
+ * Atualiza webhook da instância
+ */
+export async function updateInstanceWebhook(
+  instanceName: string,
+  webhookUrl: string
+): Promise<any> {
+  return apiCall('POST', `/instance/webhook/${instanceName}`, {
+    url: webhookUrl,
+    byEvents: true
+  });
 }
 
 /**
