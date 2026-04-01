@@ -82,11 +82,15 @@ export async function getQRCode(instanceName: string): Promise<string | null> {
 
     const response = await apiCall('GET', `/instance/fetchInstances?instanceName=${instanceName}`);
 
-    console.log('[Evolution] Resposta fetchInstances:', JSON.stringify(response, null, 2));
+    console.log('[Evolution] Tipo da resposta:', typeof response);
+    console.log('[Evolution] É array?', Array.isArray(response));
+    console.log('[Evolution] Resposta completa:', JSON.stringify(response, null, 2));
 
     // Response pode ser array ou objeto com .data
     const instances = Array.isArray(response) ? response : (response.data || []);
+
     console.log('[Evolution] Instâncias encontradas:', instances.length);
+    console.log('[Evolution] Instâncias:', JSON.stringify(instances, null, 2));
 
     if (instances.length > 0) {
       const instance = instances[0];
