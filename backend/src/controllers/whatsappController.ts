@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { createInstance, getQRCode, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo } from '../services/evolutionService';
+import { createInstance, startInstance, getQRCode, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo } from '../services/evolutionService';
 import { handleIncomingMessage } from '../services/whatsappCommandHandler';
 
 // Type para requisição autenticada
@@ -89,8 +89,12 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
 
     console.log('[WhatsApp Setup] Instância salva no banco');
 
-    // Aguardar um pouco e obter QR code
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Ativar instância para gerar QR code
+    console.log('[WhatsApp Setup] Ativando instância para gerar QR code...');
+    await startInstance(instanceName);
+
+    // Aguardar a instância gerar o QR code
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     console.log('[WhatsApp Setup] Obtendo QR code para:', instanceName);
     const qrCode = await getQRCode(instanceName);

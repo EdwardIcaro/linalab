@@ -59,6 +59,20 @@ export async function createInstance(
 }
 
 /**
+ * Ativa/conecta uma instância para gerar QR code
+ */
+export async function startInstance(instanceName: string): Promise<any> {
+  try {
+    console.log('[Evolution] Ativando instância:', instanceName);
+    return await apiCall('GET', `/instance/connect/${instanceName}`);
+  } catch (error) {
+    console.warn('[Evolution] Aviso ao ativar instância:', error);
+    // Pode falhar se já está ativada, isso é ok
+    return null;
+  }
+}
+
+/**
  * Obtém código QR em base64 para conectar WhatsApp
  * Retorna null se a instância já está conectada ou QR ainda não foi gerado
  */
@@ -70,26 +84,37 @@ export async function getQRCode(instanceName: string): Promise<string | null> {
 
     console.log('[Evolution] Resposta fetchInstances:', JSON.stringify(response, null, 2));
 
-    if (response.status === 'success' && response.data && response.data[0]) {
-      const instance = response.data[0];
+    // Response pode ser array ou objeto com .data
+    const instances = Array.isArray(response) ? response : (response.data || []);
+    console.log('[Evolution] Instâncias encontradas:', instances.length);
+
+    if (instances.length > 0) {
+      const instance = instances[0];
       console.log('[Evolution] Instância encontrada:', {
-        instanceName: instance.instanceName,
-        status: instance.status || instance.connectionStatus,
+        name: instance.name,
+        connectionStatus: instance.connectionStatus,
         temQrcode: !!instance.qrcode
       });
 
-      if (instance.qrcode && instance.qrcode.qr) {
-        console.log('[Evolution] QR code encontrado!');
-        return instance.qrcode.qr; // Base64 do QR code
-      } else if (instance.qrcode) {
-        console.log('[Evolution] qrcode existe mas sem .qr:', instance.qrcode);
-        // Tentar outras propriedades possíveis
-        return instance.qrcode.base64 || instance.qrcode.base64Data || instance.qrcode.code || null;
-      } else {
-        console.log('[Evolution] Sem propriedade qrcode na instância');
+      // Evolution retorna QR em instance.qrcode quando em estado de "connecting"
+      if (instance.qrcode) {
+        console.log('[Evolution] QR code encontrado:', {
+          base64: !!instance.qrcode.base64,
+          qr: !!instance.qrcode.qr
+        });
+        return instance.qrcode.base64 || instance.qrcode.qr || null;
       }
+
+      // Se connectionStatus é 'close', QR ainda não foi gerado
+      // Precisa conectar ou ativar a instância
+      if (instance.connectionStatus === 'close') {
+        console.log('[Evolution] Instância em status "close" - QR não foi gerado ainda');
+        console.log('[Evolution] A instância precisa ser ativada para gerar QR code');
+      }
+
+      return null;
     } else {
-      console.log('[Evolution] Resposta inesperada:', response);
+      console.log('[Evolution] Nenhuma instância encontrada com este nome');
     }
 
     return null;
