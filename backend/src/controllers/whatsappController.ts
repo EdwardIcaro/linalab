@@ -93,11 +93,22 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     console.log('[WhatsApp Setup] Ativando instância para gerar QR code...');
     await startInstance(instanceName);
 
-    // Aguardar a instância gerar o QR code
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Aguardar a instância gerar o QR code (pode demorar até 10 segundos)
+    console.log('[WhatsApp Setup] Aguardando geração do QR code (até 10 segundos)...');
 
-    console.log('[WhatsApp Setup] Obtendo QR code para:', instanceName);
-    const qrCode = await getQRCode(instanceName);
+    // Tentar obter QR code com retries
+    let qrCode = null;
+    for (let i = 0; i < 5; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos entre tentativas
+
+      console.log(`[WhatsApp Setup] Tentativa ${i + 1}/5 de obter QR code...`);
+      qrCode = await getQRCode(instanceName);
+
+      if (qrCode) {
+        console.log('[WhatsApp Setup] QR code obtido com sucesso!');
+        break;
+      }
+    }
 
     console.log('[WhatsApp Setup] QR code obtido:', qrCode ? 'sim' : 'não');
 
@@ -108,7 +119,8 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
       });
       console.log('[WhatsApp Setup] QR code salvo no banco');
     } else {
-      console.warn('[WhatsApp Setup] QR code não foi obtido, pode não estar pronto ainda');
+      console.warn('[WhatsApp Setup] QR code ainda não foi obtido após 10 segundos');
+      console.warn('[WhatsApp Setup] Evolution API pode estar tendo dificuldade para se conectar ao WhatsApp');
     }
 
     return res.json({
