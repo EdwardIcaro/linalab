@@ -140,19 +140,6 @@ export async function deleteInstance(instanceName: string): Promise<any> {
 }
 
 /**
- * Atualiza webhook da instância
- */
-export async function updateInstanceWebhook(
-  instanceName: string,
-  webhookUrl: string
-): Promise<any> {
-  return apiCall('POST', `/instance/webhook/${instanceName}`, {
-    url: webhookUrl,
-    byEvents: true
-  });
-}
-
-/**
  * Lista todas as instâncias
  */
 export async function fetchInstances(): Promise<any> {
