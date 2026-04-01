@@ -29,6 +29,7 @@ import subscriptionRoutes from './routes/subscription';
 import subscriptionAdminRoutes from './routes/subscriptionAdmin';
 import promotionRoutes from './routes/promotionRoutes';
 import paymentRoutes from './routes/payment';
+import whatsappRoutes, { webhookRouter } from './routes/whatsapp';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
@@ -158,6 +159,10 @@ app.use('/api/pagamentos', authMiddleware, pagamentoRoutes); // Usa middleware d
 app.use('/api/tipos-veiculo', authMiddleware, tipoVeiculoRoutes); // Usa middleware de empresa
 app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middleware de empresa
 app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
+
+// Rotas WhatsApp Bot
+app.use('/api/whatsapp/webhook', webhookRouter); // Webhook público (sem auth)
+app.use('/api/whatsapp', authMiddleware, whatsappRoutes); // Rotas protegidas (com auth)
 
 // Rota de saúde
 app.get('/health', (_req: express.Request, res: express.Response) => {

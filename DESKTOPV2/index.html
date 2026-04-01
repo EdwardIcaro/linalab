@@ -1136,6 +1136,166 @@
             box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
         }
 
+        /* WhatsApp Bot Card Styles */
+        .whatsapp-bot-card {
+            grid-column: 1 / -1;
+            background: var(--dashboard-card);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--dashboard-border);
+            box-shadow: var(--dashboard-shadow);
+            transition: all 0.3s ease;
+        }
+
+        .whatsapp-bot-card.whatsapp-status-connected {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+        }
+
+        .whatsapp-bot-card.whatsapp-status-qr_code {
+            border-color: rgba(217, 119, 6, 0.3);
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.05) 0%, rgba(245, 158, 11, 0.3) 100%);
+        }
+
+        .whatsapp-card-header {
+            margin-bottom: 16px;
+        }
+
+        .whatsapp-status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dashboard-text);
+        }
+
+        .whatsapp-status-badge i {
+            font-size: 20px;
+        }
+
+        .whatsapp-card-content {
+            text-align: center;
+            margin: 16px 0;
+        }
+
+        .whatsapp-qr-label {
+            font-size: 14px;
+            color: var(--dashboard-text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .whatsapp-qr-code {
+            max-width: 200px;
+            width: 100%;
+            border-radius: 8px;
+            border: 2px solid var(--dashboard-border);
+            padding: 8px;
+            margin: 0 auto 12px;
+            display: block;
+        }
+
+        .whatsapp-hint {
+            font-size: 13px;
+            color: var(--dashboard-text-muted);
+            margin: 8px 0;
+        }
+
+        .whatsapp-info {
+            text-align: left;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .whatsapp-info p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: var(--dashboard-text);
+        }
+
+        .whatsapp-phone {
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            color: var(--dashboard-text);
+            font-size: 16px;
+        }
+
+        .whatsapp-card-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        /* Button Styles */
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--dashboard-border);
+            color: var(--dashboard-text);
+            border: 1px solid var(--dashboard-border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--dashboard-card-hover);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .text-success {
+            color: #10b981;
+        }
+
+        .text-warning {
+            color: #f59e0b;
+        }
+
+        .text-danger {
+            color: #ef4444;
+        }
+
+        .text-muted {
+            color: var(--dashboard-text-muted);
+        }
+
         /* Hide old nav-menu-card */
         .nav-menu-card {
             display: none !important;
@@ -1494,6 +1654,62 @@
                 </a>
             </section>
 
+            <!-- WhatsApp Bot Status Card -->
+            <div class="whatsapp-bot-card" :class="'whatsapp-status-' + whatsappStatus">
+                <div class="whatsapp-card-header">
+                    <div class="whatsapp-status-badge">
+                        <i :class="'fas ' + (whatsappStatus === 'connected' ? 'fa-check-circle text-success' : whatsappStatus === 'qr_code' ? 'fa-mobile-alt text-warning' : 'fa-times-circle text-muted')"></i>
+                        <span x-text="whatsappStatusText"></span>
+                    </div>
+                </div>
+
+                <!-- QR Code Display (when waiting for connection) -->
+                <template x-if="whatsappStatus === 'qr_code' && qrCodeUrl">
+                    <div class="whatsapp-card-content">
+                        <p class="whatsapp-qr-label">Escaneie com seu WhatsApp:</p>
+                        <img :src="qrCodeUrl" :alt="'QR Code para conectar WhatsApp'" class="whatsapp-qr-code">
+                        <p class="whatsapp-hint">Use o WhatsApp de seu telefone para escanear este código</p>
+                    </div>
+                </template>
+
+                <!-- Connected Status -->
+                <template x-if="whatsappStatus === 'connected'">
+                    <div class="whatsapp-card-content">
+                        <div class="whatsapp-info">
+                            <p><strong>Número conectado:</strong></p>
+                            <p class="whatsapp-phone" x-text="ownerPhone ? '+' + ownerPhone : 'Carregando...'"></p>
+                        </div>
+                        <p class="whatsapp-hint">💬 O bot responde automáticamente a comandos no WhatsApp</p>
+                    </div>
+                </template>
+
+                <!-- Disconnected Status -->
+                <template x-if="whatsappStatus === 'disconnected'">
+                    <div class="whatsapp-card-content">
+                        <p class="whatsapp-hint">Nenhuma instância de WhatsApp conectada</p>
+                    </div>
+                </template>
+
+                <!-- Card Footer with Actions -->
+                <div class="whatsapp-card-footer">
+                    <template x-if="whatsappStatus === 'disconnected'">
+                        <button @click="setupWhatsapp()" class="btn btn-primary btn-sm" :disabled="whatsappLoading">
+                            <i class="fas fa-plus-circle"></i> Configurar Bot
+                        </button>
+                    </template>
+                    <template x-if="whatsappStatus === 'qr_code'">
+                        <button @click="loadWhatsappStatus()" class="btn btn-secondary btn-sm" :disabled="whatsappLoading">
+                            <i class="fas fa-sync"></i> Verificar
+                        </button>
+                    </template>
+                    <template x-if="whatsappStatus === 'connected'">
+                        <button @click="disconnectWhatsapp()" class="btn btn-danger btn-sm" :disabled="whatsappLoading">
+                            <i class="fas fa-power-off"></i> Desconectar
+                        </button>
+                    </template>
+                </div>
+            </div>
+
             <!-- Navigation Menu (hidden) -->
             <nav class="nav-menu-card">
                 <!-- Quick Access Section -->
@@ -1672,6 +1888,14 @@
                 chartInstance: null,
                 hourlyData: [],
 
+                // WhatsApp Bot
+                whatsappStatus: 'disconnected', // disconnected | qr_code | connected | loading
+                whatsappStatusText: 'Desconectado',
+                qrCodeUrl: null,
+                ownerPhone: null,
+                whatsappLoading: false,
+                whatsappStatusInterval: null,
+
                 // ==========================================
                 // LIFECYCLE
                 // ==========================================
@@ -1714,6 +1938,14 @@
 
                         // Load notifications
                         this.initNotifications();
+
+                        // Load WhatsApp bot status
+                        await this.loadWhatsappStatus();
+
+                        // Check WhatsApp status every 30 seconds
+                        this.whatsappStatusInterval = setInterval(() => {
+                            this.loadWhatsappStatus();
+                        }, 30000);
 
                         // Refresh data every 60 seconds
                         setInterval(() => {
@@ -1835,6 +2067,111 @@
                             window.api.logout();
                         }
                     }
+                },
+
+                // ==========================================
+                // WHATSAPP BOT MANAGEMENT
+                // ==========================================
+                async loadWhatsappStatus() {
+                    try {
+                        this.whatsappLoading = true;
+                        const response = await window.api.request('/api/whatsapp/status', 'GET');
+
+                        if (response && response.status) {
+                            this.whatsappStatus = response.status;
+                            this.qrCodeUrl = response.qrCode || null;
+                            this.ownerPhone = response.ownerPhone || null;
+
+                            // Update status text
+                            const statusMap = {
+                                'connected': '✅ Conectado',
+                                'qr_code': '📱 Aguardando escaneamento',
+                                'disconnected': '❌ Desconectado'
+                            };
+                            this.whatsappStatusText = statusMap[response.status] || 'Desconhecido';
+
+                            console.log('[WhatsApp] Status atualizado:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('[WhatsApp] Erro ao carregar status:', error);
+                        this.whatsappStatus = 'disconnected';
+                        this.whatsappStatusText = '❌ Erro ao carregar';
+                    } finally {
+                        this.whatsappLoading = false;
+                    }
+                },
+
+                async setupWhatsapp() {
+                    try {
+                        if (!confirm('Deseja configurar o bot WhatsApp? Você receberá um código QR para escanear.')) {
+                            return;
+                        }
+
+                        this.whatsappLoading = true;
+                        const response = await window.api.request('/api/whatsapp/setup', 'POST');
+
+                        if (response && response.status === 'qr_code') {
+                            this.whatsappStatus = 'qr_code';
+                            this.whatsappStatusText = '📱 Aguardando escaneamento';
+                            this.qrCodeUrl = response.qrCode;
+
+                            if (typeof showToast === 'function') {
+                                showToast('Código QR gerado! Escaneie com seu WhatsApp.', 'success');
+                            }
+
+                            // Start polling for connection
+                            this.pollWhatsappStatus();
+                        } else {
+                            throw new Error('Erro ao gerar código QR');
+                        }
+                    } catch (error) {
+                        console.error('[WhatsApp Setup] Erro:', error);
+                        if (typeof showToast === 'function') {
+                            showToast('Erro ao configurar WhatsApp: ' + error.message, 'error');
+                        }
+                    } finally {
+                        this.whatsappLoading = false;
+                    }
+                },
+
+                async disconnectWhatsapp() {
+                    try {
+                        if (!confirm('Deseja desconectar o WhatsApp? Você precisará configurar novamente.')) {
+                            return;
+                        }
+
+                        this.whatsappLoading = true;
+                        await window.api.request('/api/whatsapp/disconnect', 'DELETE');
+
+                        this.whatsappStatus = 'disconnected';
+                        this.whatsappStatusText = '❌ Desconectado';
+                        this.qrCodeUrl = null;
+                        this.ownerPhone = null;
+
+                        if (typeof showToast === 'function') {
+                            showToast('WhatsApp desconectado com sucesso', 'success');
+                        }
+                    } catch (error) {
+                        console.error('[WhatsApp Disconnect] Erro:', error);
+                        if (typeof showToast === 'function') {
+                            showToast('Erro ao desconectar: ' + error.message, 'error');
+                        }
+                    } finally {
+                        this.whatsappLoading = false;
+                    }
+                },
+
+                pollWhatsappStatus() {
+                    // Poll a cada 5 segundos enquanto aguarda escaneamento
+                    let pollCount = 0;
+                    const pollInterval = setInterval(() => {
+                        if (this.whatsappStatus === 'connected' || pollCount > 24) {
+                            clearInterval(pollInterval); // Máximo 2 minutos
+                            return;
+                        }
+                        this.loadWhatsappStatus();
+                        pollCount++;
+                    }, 5000);
                 },
 
                 // ==========================================

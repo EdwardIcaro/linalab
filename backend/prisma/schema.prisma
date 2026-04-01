@@ -22,27 +22,27 @@ model Usuario {
 }
 
 model Empresa {
-  id                         String               @id @default(cuid())
-  nome                       String               @unique
-  cnpj                       String?              @unique
-  ativo                      Boolean              @default(true)
+  id                         String                @id @default(cuid())
+  nome                       String                @unique
+  cnpj                       String?               @unique
+  ativo                      Boolean               @default(true)
   config                     Json?
   horarioAbertura            String?
   horarioFechamento          String?
-  finalizacaoAutomatica      Boolean?             @default(false)
-  exigirLavadorParaFinalizar Boolean?             @default(false)
-  paginaInicialPadrao        String?              @default("index.html")
+  finalizacaoAutomatica      Boolean?              @default(false)
+  exigirLavadorParaFinalizar Boolean?              @default(false)
+  paginaInicialPadrao        String?               @default("index.html")
   notificationPreferences    Json?
   paymentMethodsConfig       Json?
-  createdAt                  DateTime             @default(now())
-  updatedAt                  DateTime             @updatedAt
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
   usuarioId                  String
   ordem                      Int?
   caixaRegistros             CaixaRegistro[]
   adiantamentos              Adiantamento[]
   adicionais                 Adicional[]
   clientes                   Cliente[]
-  usuario                    Usuario              @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario                    Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   fechamentosCaixa           FechamentoCaixa[]
   fechamentosComissao        FechamentoComissao[]
   fornecedores               Fornecedor[]
@@ -55,6 +55,7 @@ model Empresa {
   subaccounts                Subaccount[]
   theme                      Theme?
   tipoVeiculos               TipoVeiculo[]
+  whatsappInstance           WhatsappInstance?
 
   @@map("empresas")
 }
@@ -397,6 +398,38 @@ model Theme {
   empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("themes")
+}
+
+model WhatsappInstance {
+  id           String              @id @default(cuid())
+  empresaId    String              @unique
+  instanceName String              @unique
+  status       String              @default("disconnected") // connected | disconnected | qr_code
+  qrCode       String?
+  ownerPhone   String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  empresa   Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  messages  WhatsappMessage[]
+
+  @@map("whatsapp_instances")
+}
+
+model WhatsappMessage {
+  id          String   @id @default(cuid())
+  instanceId  String
+  direction   String   // INCOMING | OUTGOING
+  phoneNumber String
+  senderName  String?
+  message     String
+  response    String?
+  status      String   @default("processed") // processed | error | ignored
+  createdAt   DateTime @default(now())
+
+  instance WhatsappInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_messages")
 }
 
 model SubscriptionPlan {
