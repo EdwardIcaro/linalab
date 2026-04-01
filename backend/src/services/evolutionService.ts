@@ -60,21 +60,41 @@ export async function createInstance(
 
 /**
  * Obtém código QR em base64 para conectar WhatsApp
- * Retorna null se a instância já está conectada
+ * Retorna null se a instância já está conectada ou QR ainda não foi gerado
  */
 export async function getQRCode(instanceName: string): Promise<string | null> {
   try {
+    console.log('[Evolution] Obtendo QR code para:', instanceName);
+
     const response = await apiCall('GET', `/instance/fetchInstances?instanceName=${instanceName}`);
+
+    console.log('[Evolution] Resposta fetchInstances:', JSON.stringify(response, null, 2));
 
     if (response.status === 'success' && response.data && response.data[0]) {
       const instance = response.data[0];
-      if (instance.qrcode) {
+      console.log('[Evolution] Instância encontrada:', {
+        instanceName: instance.instanceName,
+        status: instance.status || instance.connectionStatus,
+        temQrcode: !!instance.qrcode
+      });
+
+      if (instance.qrcode && instance.qrcode.qr) {
+        console.log('[Evolution] QR code encontrado!');
         return instance.qrcode.qr; // Base64 do QR code
+      } else if (instance.qrcode) {
+        console.log('[Evolution] qrcode existe mas sem .qr:', instance.qrcode);
+        // Tentar outras propriedades possíveis
+        return instance.qrcode.base64 || instance.qrcode.base64Data || instance.qrcode.code || null;
+      } else {
+        console.log('[Evolution] Sem propriedade qrcode na instância');
       }
+    } else {
+      console.log('[Evolution] Resposta inesperada:', response);
     }
+
     return null;
   } catch (error) {
-    console.error('Erro ao obter QR code:', error);
+    console.error('[Evolution] Erro ao obter QR code:', error);
     return null;
   }
 }
