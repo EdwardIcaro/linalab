@@ -1222,6 +1222,142 @@
             font-size: 16px;
         }
 
+        /* WhatsApp Discrete Button */
+        .whatsapp-discrete-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .whatsapp-discrete-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
+        }
+
+        .whatsapp-discrete-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* WhatsApp Modal */
+        .whatsapp-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .whatsapp-modal.active {
+            display: flex;
+        }
+
+        .whatsapp-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .whatsapp-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 16px;
+        }
+
+        .whatsapp-modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .whatsapp-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .whatsapp-modal-close:hover {
+            color: #1f2937;
+        }
+
+        .whatsapp-modal-body {
+            text-align: center;
+        }
+
+        .whatsapp-modal-qr {
+            margin: 24px 0;
+        }
+
+        .whatsapp-modal-qr img {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .whatsapp-modal-hint {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 16px 0;
+        }
+
+        .whatsapp-modal-footer {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+        }
+
+        .whatsapp-modal-footer button {
+            flex: 1;
+        }
+
         .whatsapp-card-footer {
             display: flex;
             gap: 12px;
@@ -1654,8 +1790,8 @@
                 </a>
             </section>
 
-            <!-- WhatsApp Bot Status Card -->
-            <div class="whatsapp-bot-card" :class="'whatsapp-status-' + whatsappStatus">
+            <!-- WhatsApp Bot Status Card - HIDDEN -->
+            <div class="whatsapp-bot-card" :class="'whatsapp-status-' + whatsappStatus" style="display: none;">
                 <div class="whatsapp-card-header">
                     <div class="whatsapp-status-badge">
                         <i :class="'fas ' + (whatsappStatus === 'connected' ? 'fa-check-circle text-success' : whatsappStatus === 'qr_code' ? 'fa-mobile-alt text-warning' : 'fa-times-circle text-muted')"></i>
@@ -1707,6 +1843,75 @@
                             <i class="fas fa-power-off"></i> Desconectar
                         </button>
                     </template>
+                </div>
+            </div>
+
+            <!-- WhatsApp Discrete Button -->
+            <button class="whatsapp-discrete-btn" @click="whatsappModalOpen = true" title="Configurar WhatsApp Bot">
+                <i class="fab fa-whatsapp"></i>
+            </button>
+
+            <!-- WhatsApp Modal -->
+            <div class="whatsapp-modal" :class="{ active: whatsappModalOpen }" @click.self="whatsappModalOpen = false">
+                <div class="whatsapp-modal-content">
+                    <div class="whatsapp-modal-header">
+                        <h2>WhatsApp Bot</h2>
+                        <button class="whatsapp-modal-close" @click="whatsappModalOpen = false">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="whatsapp-modal-body">
+                        <!-- Status Badge -->
+                        <div class="whatsapp-status-badge" style="justify-content: center; margin-bottom: 16px;">
+                            <i :class="'fas ' + (whatsappStatus === 'connected' ? 'fa-check-circle text-success' : whatsappStatus === 'qr_code' ? 'fa-mobile-alt text-warning' : 'fa-times-circle text-muted')"></i>
+                            <span x-text="whatsappStatusText"></span>
+                        </div>
+
+                        <!-- QR Code Display -->
+                        <template x-if="whatsappStatus === 'qr_code' && qrCodeUrl">
+                            <div class="whatsapp-modal-qr">
+                                <p class="whatsapp-modal-hint">Escaneie com seu WhatsApp:</p>
+                                <img :src="qrCodeUrl" :alt="'QR Code para conectar WhatsApp'" style="width: 280px; height: 280px;">
+                                <p class="whatsapp-modal-hint">Use o WhatsApp de seu telefone para escanear este código</p>
+                            </div>
+                        </template>
+
+                        <!-- Connected Status -->
+                        <template x-if="whatsappStatus === 'connected'">
+                            <div style="padding: 16px; background: #f0fdf4; border-radius: 12px; margin: 16px 0;">
+                                <p style="margin: 0 0 8px 0; font-weight: 600; color: #15803d;">Número conectado:</p>
+                                <p class="whatsapp-phone" x-text="ownerPhone ? '+' + ownerPhone : 'Carregando...'" style="margin: 0; font-size: 18px; color: #16a34a;"></p>
+                                <p class="whatsapp-modal-hint">💬 O bot responde automáticamente a comandos</p>
+                            </div>
+                        </template>
+
+                        <!-- Disconnected Status -->
+                        <template x-if="whatsappStatus === 'disconnected'">
+                            <div style="padding: 16px; background: #f3f4f6; border-radius: 12px; margin: 16px 0;">
+                                <p class="whatsapp-modal-hint">Nenhuma instância de WhatsApp conectada</p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Modal Footer with Actions -->
+                    <div class="whatsapp-modal-footer">
+                        <template x-if="whatsappStatus === 'disconnected'">
+                            <button @click="setupWhatsapp(); whatsappModalOpen = false;" class="btn btn-primary btn-sm" :disabled="whatsappLoading" style="flex: 1;">
+                                <i class="fas fa-plus-circle"></i> Configurar
+                            </button>
+                        </template>
+                        <template x-if="whatsappStatus === 'qr_code'">
+                            <button @click="loadWhatsappStatus()" class="btn btn-secondary btn-sm" :disabled="whatsappLoading" style="flex: 1;">
+                                <i class="fas fa-sync"></i> Verificar
+                            </button>
+                        </template>
+                        <template x-if="whatsappStatus === 'connected'">
+                            <button @click="disconnectWhatsapp(); whatsappModalOpen = false;" class="btn btn-danger btn-sm" :disabled="whatsappLoading" style="flex: 1;">
+                                <i class="fas fa-power-off"></i> Desconectar
+                            </button>
+                        </template>
+                    </div>
                 </div>
             </div>
 
@@ -1895,6 +2100,7 @@
                 ownerPhone: null,
                 whatsappLoading: false,
                 whatsappStatusInterval: null,
+                whatsappModalOpen: false,
 
                 // ==========================================
                 // LIFECYCLE
