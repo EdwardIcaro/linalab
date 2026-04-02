@@ -184,14 +184,21 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
     const evolutionStatus = await getInstanceStatus(instance.instanceName);
     console.log('[WhatsApp Status] Status retornado:', evolutionStatus);
 
-    // Se Evolution reporta 'open', definitivamente conectado
-    if (evolutionStatus === 'open') {
-      console.log('[WhatsApp Status] Conexão detectada! Obtendo número...');
-      // Obter número do proprietário
+    // Tentar obter info da instância - se tiver wid.user, está conectado
+    // (Bug do Baileys: às vezes fica em estado 'connecting' mesmo conectado)
+    let ownerPhone = null;
+    try {
       const info = await getInstanceInfo(instance.instanceName);
-      const ownerPhone = info?.wid?.user || null;
+      ownerPhone = info?.wid?.user || null;
+      console.log('[WhatsApp Status] wid.user obtido:', ownerPhone);
+    } catch (error) {
+      console.warn('[WhatsApp Status] Erro ao obter info:', error);
+    }
 
-      console.log('[WhatsApp Status] Número obtido:', ownerPhone);
+    // Se tem número de WhatsApp, definitivamente conectado
+    // (mesmo que status diga 'connecting' - bug conhecido do Baileys)
+    if (ownerPhone) {
+      console.log('[WhatsApp Status] CONECTADO! wid.user disponível:', ownerPhone);
 
       // Atualizar no banco
       await prisma.whatsappInstance.update({
@@ -206,6 +213,26 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
       return res.json({
         status: 'connected',
         ownerPhone,
+        message: 'WhatsApp conectado com sucesso'
+      });
+    }
+
+    // Se Evolution reporta 'open' (sem wid.user), também conectado
+    if (evolutionStatus === 'open') {
+      console.log('[WhatsApp Status] Conexão detectada via connectionState!');
+
+      await prisma.whatsappInstance.update({
+        where: { empresaId },
+        data: {
+          status: 'connected',
+          ownerPhone: null,
+          qrCode: null
+        }
+      });
+
+      return res.json({
+        status: 'connected',
+        ownerPhone: null,
         message: 'WhatsApp conectado com sucesso'
       });
     }
