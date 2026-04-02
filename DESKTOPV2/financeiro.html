@@ -761,6 +761,458 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* ==========================================
+           REPORT STYLES
+           ========================================== */
+
+        /* Modal Overlay */
+        .report-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .report-modal-overlay.active {
+            display: flex;
+        }
+
+        .report-modal-content {
+            background: var(--finance-card);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--finance-shadow-lg);
+        }
+
+        .report-step-period, .report-step-loading, .report-step-results {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* Modal Header */
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--finance-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--finance-text);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--finance-text-muted);
+            transition: color 0.2s;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: var(--finance-text);
+        }
+
+        /* Modal Body */
+        .modal-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .modal-body-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--finance-border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Report Presets */
+        .report-preset-section {
+            margin-bottom: 24px;
+        }
+
+        .report-preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .report-preset-btn {
+            padding: 12px 16px;
+            border: 2px solid var(--finance-border);
+            border-radius: var(--radius-md);
+            background: var(--finance-card);
+            color: var(--finance-text);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .report-preset-btn:hover {
+            border-color: var(--finance-cyan);
+            color: var(--finance-cyan);
+        }
+
+        .report-preset-btn.active {
+            background: var(--finance-cyan-light);
+            border-color: var(--finance-cyan);
+            color: var(--finance-cyan);
+        }
+
+        .report-preset-btn i {
+            font-size: 18px;
+        }
+
+        /* Custom Dates */
+        .report-custom-dates .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* Loading State */
+        .report-loading-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            gap: 16px;
+        }
+
+        .report-loading-content .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--finance-cyan-light);
+            border-top-color: var(--finance-cyan);
+            border-radius: 50%;
+        }
+
+        .report-loading-content h3 {
+            margin: 0;
+            color: var(--finance-text);
+            font-size: 18px;
+        }
+
+        .report-loading-content p {
+            margin: 0;
+            color: var(--finance-text-secondary);
+            font-size: 14px;
+        }
+
+        /* Results - Summary Cards */
+        .report-summary-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .report-summary-card {
+            background: var(--finance-card);
+            border: 1px solid var(--finance-border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .report-summary-card.green::before { background: var(--finance-green); }
+        .report-summary-card.blue::before { background: var(--finance-blue); }
+        .report-summary-card.red::before { background: var(--finance-red); }
+        .report-summary-card.orange::before { background: var(--finance-orange); }
+
+        .card-label {
+            font-size: 13px;
+            color: var(--finance-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--finance-text);
+        }
+
+        /* Report Section */
+        .report-section {
+            margin-bottom: 24px;
+        }
+
+        .report-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--finance-text);
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .report-section-title i {
+            color: var(--finance-cyan);
+        }
+
+        /* Services List */
+        .report-services-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .report-service-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .service-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .service-name {
+            font-weight: 500;
+            color: var(--finance-text);
+        }
+
+        .service-meta {
+            font-size: 12px;
+            color: var(--finance-text-secondary);
+        }
+
+        .service-bar {
+            height: 20px;
+            background: var(--finance-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--finance-cyan);
+            transition: width 0.3s ease;
+        }
+
+        /* Payment Breakdown */
+        .report-payment-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .payment-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            background: var(--finance-bg);
+            border-radius: var(--radius-md);
+            gap: 8px;
+        }
+
+        .payment-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+        }
+
+        .payment-icon.dinheiro { background: var(--finance-green); }
+        .payment-icon.pix { background: var(--finance-blue); }
+        .payment-icon.cartao { background: var(--finance-cyan); }
+
+        .payment-label {
+            font-size: 12px;
+            color: var(--finance-text-secondary);
+        }
+
+        .payment-amount {
+            font-weight: 600;
+            color: var(--finance-text);
+            font-size: 14px;
+        }
+
+        /* Workers Ranking */
+        .report-workers-ranking {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--finance-bg);
+            border-radius: var(--radius-md);
+        }
+
+        .ranking-position {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--finance-cyan);
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .ranking-info {
+            flex: 1;
+        }
+
+        .worker-name {
+            font-weight: 500;
+            color: var(--finance-text);
+            margin-bottom: 4px;
+        }
+
+        .worker-stats {
+            font-size: 12px;
+            color: var(--finance-text-secondary);
+        }
+
+        .ranking-commission {
+            font-weight: 600;
+            color: var(--finance-green);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        /* Saídas by Category */
+        .report-saidas-categories {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .saida-category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--finance-bg);
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--finance-red);
+        }
+
+        .category-name {
+            font-weight: 500;
+            color: var(--finance-text);
+        }
+
+        .category-amount {
+            font-weight: 600;
+            color: var(--finance-text);
+        }
+
+        .category-count {
+            font-size: 12px;
+            color: var(--finance-text-secondary);
+            margin-left: auto;
+            padding-left: 12px;
+        }
+
+        /* Meta Card */
+        .report-meta-card {
+            background: linear-gradient(135deg, var(--finance-blue-light) 0%, var(--finance-cyan-light) 100%);
+            border: 1px solid var(--finance-blue);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .meta-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--finance-blue);
+            margin-bottom: 16px;
+        }
+
+        .meta-content {
+            color: var(--finance-text);
+            line-height: 1.6;
+        }
+
+        .meta-content p {
+            margin: 8px 0;
+        }
+
+        @media (max-width: 768px) {
+            .report-modal-content {
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 0;
+            }
+
+            .report-summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .report-payment-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 <link rel="stylesheet" href="webapp-mobile.css">
 <link rel="stylesheet" href="fix-responsive.css">
@@ -938,6 +1390,10 @@
                 </div>
 
                 <div class="tabs-extra-actions">
+                    <button @click="openReportModal()" class="btn btn-primary">
+                        <i class="fas fa-chart-bar"></i>
+                        Relatório
+                    </button>
                     <a href="comissoes.html" class="btn btn-primary">
                         <i class="fas fa-coins"></i>
                         Ver comissões
@@ -1196,6 +1652,289 @@
         <!-- ==========================================
              MODALS
              ========================================== -->
+
+        <!-- Report Modal (Relatório Financeiro) -->
+        <div
+            class="report-modal-overlay"
+            :class="{ active: reportModalOpen }"
+            x-show="reportModalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click.self="closeReportModal()"
+            @keydown.escape.window="closeReportModal()"
+        >
+            <div class="report-modal-content">
+                <!-- FASE 1: Seleção de Período -->
+                <template x-if="reportStep === 'period'">
+                    <div class="report-step-period">
+                        <div class="modal-header">
+                            <h2 class="modal-title">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Selecionar Período</span>
+                            </h2>
+                            <button type="button" class="modal-close" @click="closeReportModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="report-preset-section">
+                                <label class="form-label">Período Pré-definido:</label>
+                                <div class="report-preset-buttons">
+                                    <button
+                                        type="button"
+                                        class="report-preset-btn"
+                                        :class="{ active: reportPreset === 'week' }"
+                                        @click="reportPreset = 'week'; reportDates = getReportDateRange('week')"
+                                    >
+                                        <i class="fas fa-calendar-week"></i>
+                                        Esta Semana
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="report-preset-btn"
+                                        :class="{ active: reportPreset === 'month' }"
+                                        @click="reportPreset = 'month'; reportDates = getReportDateRange('month')"
+                                    >
+                                        <i class="fas fa-calendar"></i>
+                                        Este Mês
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="report-preset-btn"
+                                        :class="{ active: reportPreset === 'lastmonth' }"
+                                        @click="reportPreset = 'lastmonth'; reportDates = getReportDateRange('lastmonth')"
+                                    >
+                                        <i class="fas fa-history"></i>
+                                        Mês Passado
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="report-preset-btn"
+                                        :class="{ active: reportPreset === 'custom' }"
+                                        @click="reportPreset = 'custom'"
+                                    >
+                                        <i class="fas fa-sliders-h"></i>
+                                        Personalizado
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Inputs de data customizada -->
+                            <template x-if="reportPreset === 'custom'">
+                                <div class="report-custom-dates" style="margin-top: 24px;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Data Início</label>
+                                            <input
+                                                type="date"
+                                                class="form-input"
+                                                x-model="reportDates.inicio"
+                                            >
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Data Fim</label>
+                                            <input
+                                                type="date"
+                                                class="form-input"
+                                                x-model="reportDates.fim"
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="closeReportModal()"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                @click="generateReport()"
+                                :disabled="reportPreset === 'custom' && (!reportDates.inicio || !reportDates.fim)"
+                            >
+                                <i class="fas fa-arrow-right" style="margin-right: 8px;"></i>
+                                Gerar →
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- FASE 2: Carregando -->
+                <template x-if="reportStep === 'loading'">
+                    <div class="report-step-loading">
+                        <div class="report-loading-content">
+                            <div class="spinner"></div>
+                            <h3>Analisando seus dados...</h3>
+                            <p>Isso pode levar alguns segundos</p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- FASE 3: Resultados -->
+                <template x-if="reportStep === 'results'">
+                    <div class="report-step-results">
+                        <div class="modal-header">
+                            <h2 class="modal-title">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Relatório Financeiro</span>
+                            </h2>
+                            <button type="button" class="modal-close" @click="closeReportModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="modal-body-scroll">
+                            <!-- 1. Cards de Resumo (4 cards) -->
+                            <div class="report-summary-cards">
+                                <div class="report-summary-card green">
+                                    <div class="card-label">💰 Faturamento Bruto</div>
+                                    <div class="card-value" x-text="formatCurrency(reportData?.stats?.valorTotal || 0)"></div>
+                                </div>
+                                <div class="report-summary-card blue">
+                                    <div class="card-label">💵 Líquido</div>
+                                    <div class="card-value" x-text="formatCurrency(calcLiquidoSaidas())"></div>
+                                </div>
+                                <div class="report-summary-card red">
+                                    <div class="card-label">📤 Saídas</div>
+                                    <div class="card-value" x-text="formatCurrency(reportData?.historico?.totais?.totalSaidas || 0)"></div>
+                                </div>
+                                <div class="report-summary-card orange">
+                                    <div class="card-label">⏳ Pendente</div>
+                                    <div class="card-value" x-text="formatCurrency(reportData?.stats?.valorPendente || 0)"></div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Serviços Mais Realizados -->
+                            <div class="report-section">
+                                <h4 class="report-section-title">
+                                    <i class="fas fa-list-check"></i>
+                                    Serviços Mais Realizados
+                                </h4>
+                                <div class="report-services-list">
+                                    <template x-for="(servico, idx) in (reportData?.stats?.topServicos || []).slice(0, 5)" :key="'svc-' + idx">
+                                        <div class="report-service-item">
+                                            <div class="service-info">
+                                                <div class="service-name" x-text="servico.servico?.nome || 'Serviço'"></div>
+                                                <div class="service-meta">
+                                                    <span x-text="servico._sum?.quantidade || 0 + 'x'"></span>
+                                                    •
+                                                    <span x-text="'R$ ' + (servico._sum?.quantidade || 0) + ' unidades'"></span>
+                                                </div>
+                                            </div>
+                                            <div class="service-bar">
+                                                <div class="bar-fill" :style="{
+                                                    width: ((servico._sum?.quantidade || 0) / (reportData?.stats?.topServicos?.[0]?._sum?.quantidade || 1) * 100) + '%'
+                                                }"></div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 3. Breakdown Pagamentos -->
+                            <div class="report-section">
+                                <h4 class="report-section-title">
+                                    <i class="fas fa-credit-card"></i>
+                                    Métodos de Pagamento
+                                </h4>
+                                <div class="report-payment-breakdown">
+                                    <template x-for="pagto in getPaymentBreakdown()" :key="'pagto-' + pagto.metodo">
+                                        <div class="payment-item">
+                                            <div class="payment-icon" :class="pagto.metodo.toLowerCase()">
+                                                <i :class="getPaymentIcon(pagto.metodo)"></i>
+                                            </div>
+                                            <div class="payment-info">
+                                                <div class="payment-label" x-text="pagto.metodo"></div>
+                                                <div class="payment-amount" x-text="formatCurrency(pagto.valor || 0)"></div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 4. Top Lavadores -->
+                            <div class="report-section">
+                                <h4 class="report-section-title">
+                                    <i class="fas fa-users"></i>
+                                    Top Lavadores
+                                </h4>
+                                <div class="report-workers-ranking">
+                                    <template x-for="(lavador, idx) in (reportData?.stats?.topLavadores || []).slice(0, 5)" :key="'lav-' + idx">
+                                        <div class="ranking-item">
+                                            <div class="ranking-position" x-text="idx + 1"></div>
+                                            <div class="ranking-info">
+                                                <div class="worker-name" x-text="lavador.lavador?.nome || 'Lavador'"></div>
+                                                <div class="worker-stats">
+                                                    <span x-text="(lavador._count?.id || 0) + ' ordens'"></span>
+                                                    •
+                                                    <span x-text="formatCurrency(lavador._sum?.valorTotal || 0)"></span>
+                                                </div>
+                                            </div>
+                                            <div class="ranking-commission" x-text="'Comissão: ' + formatCurrency((lavador._sum?.valorTotal || 0) * (lavador.lavador?.comissao || 0) / 100)"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 5. Saídas por Categoria -->
+                            <div class="report-section">
+                                <h4 class="report-section-title">
+                                    <i class="fas fa-receipt"></i>
+                                    Saídas por Categoria
+                                </h4>
+                                <div class="report-saidas-categories">
+                                    <template x-for="(categoria, cat) in groupSaidasByCategory()" :key="'cat-' + cat">
+                                        <div class="saida-category-item">
+                                            <div class="category-name" x-text="cat"></div>
+                                            <div class="category-amount" x-text="formatCurrency(categoria.total || 0)"></div>
+                                            <div class="category-count" x-text="'(' + (categoria.count || 0) + ' movimentações)'"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 6. Previsão de Meta -->
+                            <div class="report-meta-card">
+                                <div class="meta-header">
+                                    <i class="fas fa-target"></i>
+                                    <span>Previsão de Meta</span>
+                                </div>
+                                <div class="meta-content" x-html="getMetaMessage()"></div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="reportStep = 'period'"
+                            >
+                                <i class="fas fa-arrow-left" style="margin-right: 8px;"></i>
+                                Voltar
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                @click="closeReportModal()"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
 
         <!-- Transaction Modal (Saida/Sangria/Suprimento) -->
         <div
@@ -1611,6 +2350,13 @@
                     isProcessing: false,
                     ordem: null
                 },
+
+                // Report Modal
+                reportModalOpen: false,
+                reportStep: 'period', // 'period' | 'loading' | 'results'
+                reportPreset: 'month', // 'week' | 'month' | 'lastmonth' | 'custom'
+                reportDates: { inicio: '', fim: '' },
+                reportData: null, // { stats, historico, prevMonth }
 
                 // ==========================================
                 // LIFECYCLE
@@ -2317,6 +3063,179 @@
                 getTypeLabel(tipo, formaPagamento) {
                     if (formaPagamento === 'DEBITO_FUNCIONARIO') return 'DEBITO OS';
                     return tipo;
+                },
+
+                // ==========================================
+                // REPORT METHODS
+                // ==========================================
+                openReportModal() {
+                    this.reportModalOpen = true;
+                    this.reportStep = 'period';
+                    this.reportPreset = 'month';
+                    this.reportDates = this.getReportDateRange('month');
+                    this.reportData = null;
+                },
+
+                closeReportModal() {
+                    this.reportModalOpen = false;
+                    this.reportStep = 'period';
+                    this.reportData = null;
+                },
+
+                getReportDateRange(preset) {
+                    const today = new Date();
+                    let inicio, fim;
+
+                    switch(preset) {
+                        case 'week':
+                            // Segunda a domingo desta semana
+                            const dayOfWeek = today.getDay();
+                            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                            inicio = new Date(today.setDate(diff));
+                            fim = new Date(today.setDate(diff + 6));
+                            break;
+                        case 'month':
+                            // Este mês
+                            inicio = new Date(today.getFullYear(), today.getMonth(), 1);
+                            fim = today;
+                            break;
+                        case 'lastmonth':
+                            // Mês anterior (completo)
+                            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                            inicio = lastMonth;
+                            fim = new Date(today.getFullYear(), today.getMonth(), 0);
+                            break;
+                        default:
+                            return { inicio: '', fim: '' };
+                    }
+
+                    return {
+                        inicio: inicio.toISOString().split('T')[0],
+                        fim: fim.toISOString().split('T')[0]
+                    };
+                },
+
+                async generateReport() {
+                    if (!this.reportDates.inicio || !this.reportDates.fim) return;
+
+                    this.reportStep = 'loading';
+
+                    try {
+                        // Chamar 3 APIs em paralelo
+                        const [stats, historico, prevMonth] = await Promise.all([
+                            window.api.getOrdensStats({
+                                dataInicio: this.reportDates.inicio,
+                                dataFim: this.reportDates.fim
+                            }),
+                            window.api.getHistoricoCaixa({
+                                dataInicio: this.reportDates.inicio,
+                                dataFim: this.reportDates.fim
+                            }),
+                            this.getPreviousMonthData()
+                        ]);
+
+                        // Simular delay mínimo de 1s para animação
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+
+                        this.reportData = { stats, historico, prevMonth };
+                        this.reportStep = 'results';
+                    } catch (error) {
+                        console.error('[Report] Erro ao gerar relatório:', error);
+                        alert('Erro ao gerar relatório. Tente novamente.');
+                        this.reportStep = 'period';
+                    }
+                },
+
+                async getPreviousMonthData() {
+                    try {
+                        const today = new Date();
+                        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+                        const stats = await window.api.getOrdensStats({
+                            dataInicio: lastMonth.toISOString().split('T')[0],
+                            dataFim: lastMonthEnd.toISOString().split('T')[0]
+                        });
+
+                        return stats;
+                    } catch (error) {
+                        console.warn('[Report] Erro ao buscar dados do mês anterior:', error);
+                        return null;
+                    }
+                },
+
+                calcLiquidoSaidas() {
+                    const bruto = this.reportData?.stats?.valorTotal || 0;
+                    const saidas = this.reportData?.historico?.totais?.totalSaidas || 0;
+                    return bruto - saidas;
+                },
+
+                groupSaidasByCategory() {
+                    const registros = this.reportData?.historico?.registros || [];
+                    const saidasMap = {};
+
+                    registros.filter(r => r.tipo === 'SAIDA' || r.tipo === 'SANGRIA').forEach(r => {
+                        // Extrair categoria do padrão "[Categoria] Descrição"
+                        let categoria = 'Outras';
+                        const match = r.descricao?.match(/^\[([^\]]+)\]/);
+                        if (match) categoria = match[1];
+
+                        if (!saidasMap[categoria]) {
+                            saidasMap[categoria] = { total: 0, count: 0 };
+                        }
+                        saidasMap[categoria].total += r.valor || 0;
+                        saidasMap[categoria].count += 1;
+                    });
+
+                    return saidasMap;
+                },
+
+                getPaymentBreakdown() {
+                    const pagamentos = this.reportData?.stats?.pagamentosPorMetodo || [];
+                    return pagamentos.map(p => ({
+                        metodo: p.metodo || 'Desconhecido',
+                        valor: p._sum?.valor || 0
+                    }));
+                },
+
+                getPaymentIcon(metodo) {
+                    const icons = {
+                        'DINHEIRO': 'fas fa-money-bill-wave',
+                        'PIX': 'fas fa-qrcode',
+                        'CARTAO': 'fas fa-credit-card',
+                        'NFE': 'fas fa-receipt'
+                    };
+                    return icons[metodo] || 'fas fa-money-bill';
+                },
+
+                getMetaMessage() {
+                    const stats = this.reportData?.stats;
+                    const prevStats = this.reportData?.prevMonth;
+
+                    if (!stats || !prevStats) {
+                        return '<p>Dados insuficientes para comparação com mês anterior.</p>';
+                    }
+
+                    const ordemAtual = stats.ordensFinalizadas || 0;
+                    const faturamentoAtual = stats.valorTotal || 0;
+                    const ordemPassada = prevStats.ordensFinalizadas || 0;
+                    const faturamentoPassado = prevStats.valorTotal || 0;
+
+                    if (ordemPassada === 0) {
+                        return `<p><strong>Neste período:</strong> ${ordemAtual} ordens (${this.formatCurrency(faturamentoAtual)})</p>
+                                <p><i>Sem dados do período anterior para comparação.</i></p>`;
+                    }
+
+                    const ordensFaltando = Math.max(0, ordemPassada - ordemAtual);
+                    const porcento = ((ordemAtual / ordemPassada) * 100).toFixed(1);
+
+                    return `<p><strong>Este período:</strong> ${ordemAtual} ordens (${this.formatCurrency(faturamentoAtual)})</p>
+                            <p><strong>Período anterior:</strong> ${ordemPassada} ordens (${this.formatCurrency(faturamentoPassado)})</p>
+                            <p style="margin-top: 12px; font-weight: 600; color: ${ordensFaltando > 0 ? '#ef4444' : '#10b981'};">
+                                ${ordensFaltando > 0
+                                    ? `⚠️ Faltam ${ordensFaltando} ordens para bater a meta do período anterior!`
+                                    : `✅ Meta atingida! ${porcento}% do período anterior`}
+                            </p>`;
                 },
 
                 getValueClass(tipo) {
