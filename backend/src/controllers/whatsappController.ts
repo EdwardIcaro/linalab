@@ -205,15 +205,43 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
       });
     }
 
-    // Se banco diz 'qr_code' (aguardando escaneamento), mantém esse status
-    // independente do estado da Evolution (pode ser 'close' enquanto aguarda)
-    if (instance.status === 'qr_code' && instance.qrCode) {
-      return res.json({
-        status: 'qr_code',
-        qrCode: instance.qrCode,
-        ownerPhone: null,
-        message: 'Aguardando escaneamento do QR code'
-      });
+    // Se banco diz 'qr_code' (aguardando escaneamento), busca QR ATUAL da Evolution
+    // A Evolution pode ter gerado um novo QR, então não retorna o cached do banco
+    if (instance.status === 'qr_code') {
+      try {
+        // Tentar obter QR mais recente da Evolution
+        const currentQR = await getQRCode(instance.instanceName);
+
+        if (currentQR) {
+          // Atualizar banco com QR novo (se foi gerado)
+          if (currentQR !== instance.qrCode) {
+            console.log('[WhatsApp Status] QR atualizado na Evolution, salvando no banco');
+            await prisma.whatsappInstance.update({
+              where: { empresaId },
+              data: { qrCode: currentQR }
+            });
+          }
+
+          return res.json({
+            status: 'qr_code',
+            qrCode: currentQR,
+            ownerPhone: null,
+            message: 'Aguardando escaneamento do QR code'
+          });
+        }
+      } catch (error) {
+        console.warn('[WhatsApp Status] Erro ao buscar QR atual, usando cached:', error);
+      }
+
+      // Fallback: retornar QR cached se não conseguir obter novo
+      if (instance.qrCode) {
+        return res.json({
+          status: 'qr_code',
+          qrCode: instance.qrCode,
+          ownerPhone: null,
+          message: 'Aguardando escaneamento do QR code'
+        });
+      }
     }
 
     // Caso padrão: desconectado
