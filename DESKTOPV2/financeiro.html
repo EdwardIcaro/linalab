@@ -790,17 +790,20 @@
             background: var(--finance-card);
             border-radius: var(--radius-lg);
             width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
+            max-width: 650px;
+            height: 85vh;
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
             box-shadow: var(--finance-shadow-lg);
+            overflow: hidden;
         }
 
         .report-step-period, .report-step-loading, .report-step-results {
             display: flex;
             flex-direction: column;
             height: 100%;
+            min-height: 0;
         }
 
         /* Modal Header */
@@ -846,12 +849,15 @@
             flex: 1;
             padding: 24px;
             overflow-y: auto;
+            min-height: 0;
         }
 
         .modal-body-scroll {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 24px;
+            min-height: 0;
         }
 
         /* Modal Footer */
@@ -1151,6 +1157,14 @@
             background: var(--finance-bg);
             border-radius: var(--radius-md);
             border-left: 3px solid var(--finance-red);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .saida-category-item:hover {
+            background: var(--finance-border);
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .category-name {
@@ -1198,6 +1212,61 @@
             margin: 8px 0;
         }
 
+        /* Saídas Detail Table */
+        .saidas-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .saidas-detail-table thead {
+            background: var(--finance-bg);
+            border-bottom: 2px solid var(--finance-border);
+        }
+
+        .saidas-detail-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--finance-text);
+        }
+
+        .saidas-detail-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--finance-border);
+            color: var(--finance-text);
+        }
+
+        .saidas-detail-table tbody tr:hover {
+            background: var(--finance-bg);
+        }
+
+        .saidas-detail-table .text-right {
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .saidas-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 12px;
+            background: var(--finance-bg);
+            border-top: 2px solid var(--finance-border);
+            margin-top: 12px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+        }
+
+        .saidas-total strong {
+            color: var(--finance-text);
+        }
+
+        .saidas-total strong:last-child {
+            color: var(--finance-red);
+            font-size: 16px;
+        }
+
         @media (max-width: 768px) {
             .report-modal-content {
                 max-width: 100%;
@@ -1211,6 +1280,15 @@
 
             .report-payment-breakdown {
                 grid-template-columns: 1fr;
+            }
+
+            .saidas-detail-table {
+                font-size: 12px;
+            }
+
+            .saidas-detail-table th,
+            .saidas-detail-table td {
+                padding: 8px;
             }
         }
     </style>
@@ -1895,7 +1973,7 @@
                                 </h4>
                                 <div class="report-saidas-categories">
                                     <template x-for="(categoria, cat) in groupSaidasByCategory()" :key="'cat-' + cat">
-                                        <div class="saida-category-item">
+                                        <div class="saida-category-item" @click="openSaidasModal(cat)" title="Clique para ver detalhes">
                                             <div class="category-name" x-text="cat"></div>
                                             <div class="category-amount" x-text="formatCurrency(categoria.total || 0)"></div>
                                             <div class="category-count" x-text="'(' + (categoria.count || 0) + ' movimentações)'"></div>
@@ -1933,6 +2011,84 @@
                         </div>
                     </div>
                 </template>
+            </div>
+        </div>
+
+        <!-- Saídas Detail Modal -->
+        <div
+            class="report-modal-overlay"
+            :class="{ active: saidasModalOpen }"
+            x-show="saidasModalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click.self="closeSaidasModal()"
+            @keydown.escape.window="closeSaidasModal()"
+        >
+            <div class="report-modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-list"></i>
+                        <span x-text="'Saídas - ' + (saidasCategoriaSelecionada || 'Todas')"></span>
+                    </h2>
+                    <button type="button" class="modal-close" @click="closeSaidasModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body-scroll">
+                    <!-- Tabela de Saídas -->
+                    <table class="saidas-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Forma Pagto</th>
+                                <th class="text-right">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="saidasListaFiltrada.length === 0">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 24px; color: var(--finance-text-secondary);">
+                                        Nenhuma saída encontrada
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="saida in saidasListaFiltrada" :key="'saida-' + saida.id">
+                                <tr>
+                                    <td x-text="formatDate(saida.data)"></td>
+                                    <td>
+                                        <span class="type-badge" :class="getTypeBadgeClass(saida.tipo)" x-text="saida.tipo"></span>
+                                    </td>
+                                    <td x-text="saida.descricao"></td>
+                                    <td x-text="saida.formaPagamento || '-'"></td>
+                                    <td class="text-right" x-text="formatCurrency(saida.valor || 0)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+
+                    <!-- Total -->
+                    <div class="saidas-total">
+                        <strong>Total:</strong>
+                        <strong x-text="formatCurrency(saidasListaFiltrada.reduce((sum, s) => sum + (s.valor || 0), 0))"></strong>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        @click="closeSaidasModal()"
+                    >
+                        Fechar
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -2357,6 +2513,11 @@
                 reportPreset: 'month', // 'week' | 'month' | 'lastmonth' | 'custom'
                 reportDates: { inicio: '', fim: '' },
                 reportData: null, // { stats, historico, prevMonth }
+
+                // Saídas Modal
+                saidasModalOpen: false,
+                saidasCategoriaSelecionada: null,
+                saidasListaFiltrada: []
 
                 // ==========================================
                 // LIFECYCLE
@@ -3236,6 +3397,29 @@
                                     ? `⚠️ Faltam ${ordensFaltando} ordens para bater a meta do período anterior!`
                                     : `✅ Meta atingida! ${porcento}% do período anterior`}
                             </p>`;
+                },
+
+                openSaidasModal(categoria) {
+                    this.saidasCategoriaSelecionada = categoria;
+                    const registros = this.reportData?.historico?.registros || [];
+                    this.saidasListaFiltrada = registros.filter(r => {
+                        const isSaida = r.tipo === 'SAIDA' || r.tipo === 'SANGRIA';
+                        if (!categoria) return isSaida;
+
+                        // Extrair categoria do padrão "[Categoria] Descrição"
+                        let cat = 'Outras';
+                        const match = r.descricao?.match(/^\[([^\]]+)\]/);
+                        if (match) cat = match[1];
+
+                        return isSaida && cat === categoria;
+                    });
+                    this.saidasModalOpen = true;
+                },
+
+                closeSaidasModal() {
+                    this.saidasModalOpen = false;
+                    this.saidasCategoriaSelecionada = null;
+                    this.saidasListaFiltrada = [];
                 },
 
                 getValueClass(tipo) {
