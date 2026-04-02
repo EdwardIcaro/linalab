@@ -179,14 +179,19 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
       });
     }
 
-    // Verificar status atual na Evolution API
+    // Verificar status atual na Evolution API PRIMEIRO
+    console.log('[WhatsApp Status] Verificando status para:', instance.instanceName);
     const evolutionStatus = await getInstanceStatus(instance.instanceName);
+    console.log('[WhatsApp Status] Status retornado:', evolutionStatus);
 
     // Se Evolution reporta 'open', definitivamente conectado
     if (evolutionStatus === 'open') {
+      console.log('[WhatsApp Status] Conexão detectada! Obtendo número...');
       // Obter número do proprietário
       const info = await getInstanceInfo(instance.instanceName);
       const ownerPhone = info?.wid?.user || null;
+
+      console.log('[WhatsApp Status] Número obtido:', ownerPhone);
 
       // Atualizar no banco
       await prisma.whatsappInstance.update({
@@ -206,8 +211,9 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
     }
 
     // Se banco diz 'qr_code' (aguardando escaneamento), busca QR REAL da Evolution
-    // Chamamos /instance/connect para obter o QR MAIS RECENTE (não genérico)
-    if (instance.status === 'qr_code') {
+    // NÃO busca QR se evolutionStatus for 'connecting' (para evitar spam)
+    if (instance.status === 'qr_code' && evolutionStatus !== 'connecting') {
+      console.log('[WhatsApp Status] Status qr_code mas não está "connecting", buscando QR...');
       try {
         // Obter QR REAL via /instance/connect (não fetch genérico)
         const realQR = await getQRCodeReal(instance.instanceName);

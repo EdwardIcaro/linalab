@@ -198,12 +198,30 @@ export async function getInstanceStatus(
   try {
     const response = await apiCall('GET', `/instance/connectionState/${instanceName}`);
 
+    console.log('[Evolution] Resposta connectionState:', JSON.stringify(response, null, 2));
+
     if (response.status === 'success' && response.data) {
-      return response.data.instance?.state || 'close';
+      const state = response.data.instance?.state;
+      console.log('[Evolution] Estado da instância:', state);
+      return state || 'close';
     }
+
+    // Fallback: tentar /instance/fetchInstances para verificar connectionStatus
+    console.log('[Evolution] connectionState falhou, tentando fetchInstances...');
+    const fetchResponse = await apiCall('GET', `/instance/fetchInstances?instanceName=${instanceName}`);
+    const instances = Array.isArray(fetchResponse) ? fetchResponse : (fetchResponse.data || []);
+
+    if (instances.length > 0) {
+      const connectionStatus = instances[0].connectionStatus;
+      console.log('[Evolution] connectionStatus via fetchInstances:', connectionStatus);
+      // Map Evolution statuses to our expected values
+      if (connectionStatus === 'open') return 'open';
+      if (connectionStatus === 'connecting') return 'connecting';
+    }
+
     return 'close';
   } catch (error) {
-    console.error('Erro ao verificar status:', error);
+    console.error('[Evolution] Erro ao verificar status:', error);
     return 'close';
   }
 }
