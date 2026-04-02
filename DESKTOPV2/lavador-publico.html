@@ -924,24 +924,36 @@
 
       const todayParts = formatter.formatToParts(new Date());
       const todayYear = parseInt(todayParts.find(p => p.type === 'year').value);
-      const todayMonth = parseInt(todayParts.find(p => p.type === 'month').value) - 1;
+      const todayMonth = parseInt(todayParts.find(p => p.type === 'month').value);
       const todayDay = parseInt(todayParts.find(p => p.type === 'day').value);
 
       // Converter data recebida para São Paulo
       const dateParts = formatter.formatToParts(date);
       const dateYear = parseInt(dateParts.find(p => p.type === 'year').value);
-      const dateMonth = parseInt(dateParts.find(p => p.type === 'month').value) - 1;
+      const dateMonth = parseInt(dateParts.find(p => p.type === 'month').value);
       const dateDay = parseInt(dateParts.find(p => p.type === 'day').value);
 
-      // Criar datas apenas com dia/mês/ano para comparação
-      const dateOnly = new Date(dateYear, dateMonth, dateDay);
-      const todayOnly = new Date(todayYear, todayMonth, todayDay);
-      const yesterdayOnly = new Date(todayYear, todayMonth, todayDay - 1);
+      // Comparar como strings (YYYY-MM-DD) para evitar problemas com timezone
+      const dateStr_formatted = `${dateYear}-${String(dateMonth).padStart(2, '0')}-${String(dateDay).padStart(2, '0')}`;
+      const todayStr_formatted = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
 
+      // Calcular ontem
+      const yesterdayDate = new Date(todayYear, todayMonth - 1, todayDay - 1);
+      const yesterdayFormatter = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const yesterdayParts = yesterdayFormatter.formatToParts(yesterdayDate);
+      const yesterdayYear = parseInt(yesterdayParts.find(p => p.type === 'year').value);
+      const yesterdayMonth = parseInt(yesterdayParts.find(p => p.type === 'month').value);
+      const yesterdayDay = parseInt(yesterdayParts.find(p => p.type === 'day').value);
+      const yesterdayStr_formatted = `${yesterdayYear}-${String(yesterdayMonth).padStart(2, '0')}-${String(yesterdayDay).padStart(2, '0')}`;
 
-      if (dateOnly.getTime() === todayOnly.getTime()) {
+      if (dateStr_formatted === todayStr_formatted) {
         return 'Hoje';
-      } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+      } else if (dateStr_formatted === yesterdayStr_formatted) {
         return 'Ontem';
       } else {
         return date.toLocaleDateString('pt-BR', {
