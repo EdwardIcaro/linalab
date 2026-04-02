@@ -81,6 +81,40 @@ export async function startInstance(instanceName: string): Promise<any> {
 }
 
 /**
+ * Obtém código QR REAL da Evolution API chamando /instance/connect novamente
+ * Isso gera/retorna o QR mais recente (não usa cache)
+ */
+export async function getQRCodeReal(instanceName: string): Promise<string | null> {
+  try {
+    console.log('[Evolution] Obtendo QR code REAL via /instance/connect:', instanceName);
+    const response = await apiCall('GET', `/instance/connect/${instanceName}`);
+
+    console.log('[Evolution] Resposta do connect:', JSON.stringify(response, null, 2));
+
+    if (response) {
+      // Tentar extrair QR de múltiplas propriedades
+      const qrValue =
+        response.qrcode ||
+        response.base64 ||
+        response.qr ||
+        response.code ||
+        (typeof response === 'string' ? response : null);
+
+      if (qrValue) {
+        console.log('[Evolution] QR REAL encontrado!');
+        return qrValue;
+      }
+    }
+
+    console.log('[Evolution] QR REAL não encontrado na resposta');
+    return null;
+  } catch (error) {
+    console.error('[Evolution] Erro ao obter QR REAL:', error);
+    return null;
+  }
+}
+
+/**
  * Obtém código QR em base64 para conectar WhatsApp
  * Retorna null se a instância já está conectada ou QR ainda não foi gerado
  */

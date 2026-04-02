@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { createInstance, startInstance, getQRCode, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo } from '../services/evolutionService';
+import { createInstance, startInstance, getQRCode, getQRCodeReal, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo } from '../services/evolutionService';
 import { handleIncomingMessage } from '../services/whatsappCommandHandler';
 
 // Type para requisição autenticada
@@ -205,32 +205,32 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
       });
     }
 
-    // Se banco diz 'qr_code' (aguardando escaneamento), busca QR ATUAL da Evolution
-    // A Evolution pode ter gerado um novo QR, então não retorna o cached do banco
+    // Se banco diz 'qr_code' (aguardando escaneamento), busca QR REAL da Evolution
+    // Chamamos /instance/connect para obter o QR MAIS RECENTE (não genérico)
     if (instance.status === 'qr_code') {
       try {
-        // Tentar obter QR mais recente da Evolution
-        const currentQR = await getQRCode(instance.instanceName);
+        // Obter QR REAL via /instance/connect (não fetch genérico)
+        const realQR = await getQRCodeReal(instance.instanceName);
 
-        if (currentQR) {
-          // Atualizar banco com QR novo (se foi gerado)
-          if (currentQR !== instance.qrCode) {
-            console.log('[WhatsApp Status] QR atualizado na Evolution, salvando no banco');
+        if (realQR) {
+          // Atualizar banco com QR real (se diferente)
+          if (realQR !== instance.qrCode) {
+            console.log('[WhatsApp Status] QR REAL obtido, atualizado no banco');
             await prisma.whatsappInstance.update({
               where: { empresaId },
-              data: { qrCode: currentQR }
+              data: { qrCode: realQR }
             });
           }
 
           return res.json({
             status: 'qr_code',
-            qrCode: currentQR,
+            qrCode: realQR,
             ownerPhone: null,
-            message: 'Aguardando escaneamento do QR code'
+            message: 'Aguardando escaneamento do QR code (REAL)'
           });
         }
       } catch (error) {
-        console.warn('[WhatsApp Status] Erro ao buscar QR atual, usando cached:', error);
+        console.warn('[WhatsApp Status] Erro ao buscar QR REAL:', error);
       }
 
       // Fallback: retornar QR cached se não conseguir obter novo

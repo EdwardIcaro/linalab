@@ -1942,10 +1942,10 @@
                         // Load WhatsApp bot status
                         await this.loadWhatsappStatus();
 
-                        // Check WhatsApp status every 30 seconds
+                        // Auto-polling inteligente: mais rápido em 'qr_code', normal caso contrário
                         this.whatsappStatusInterval = setInterval(() => {
                             this.loadWhatsappStatus();
-                        }, 30000);
+                        }, 3000); // Polling a cada 3s para QR code REAL atualizar em tempo real
 
                         // Refresh data every 60 seconds
                         setInterval(() => {
@@ -2131,8 +2131,8 @@
                                 showToast('Código QR gerado! Escaneie com seu WhatsApp.', 'success');
                             }
 
-                            // Start polling for connection
-                            this.pollWhatsappStatus();
+                            // Auto-polling já iniciado no init() - não precisa chamar novamente
+                            console.log('[WhatsApp Setup] Auto-polling já ativo, QR vai atualizar a cada 3s');
                         } else {
                             console.error('[WhatsApp Setup] Resposta inválida:', response);
                             throw new Error('Resposta inválida do servidor: ' + JSON.stringify(response));
@@ -2177,18 +2177,11 @@
                     }
                 },
 
-                pollWhatsappStatus() {
-                    // Poll a cada 5 segundos enquanto aguarda escaneamento
-                    let pollCount = 0;
-                    const pollInterval = setInterval(() => {
-                        if (this.whatsappStatus === 'connected' || pollCount > 24) {
-                            clearInterval(pollInterval); // Máximo 2 minutos
-                            return;
-                        }
-                        this.loadWhatsappStatus();
-                        pollCount++;
-                    }, 5000);
-                },
+                // Deprecated: auto-polling já ativo no init()
+                // pollWhatsappStatus() {
+                //     // Mantido para compatibilidade, mas não é mais necessário
+                //     console.log('[WhatsApp] Auto-polling já ativo via init()');
+                // },
 
                 // ==========================================
                 // DATE & TIME
