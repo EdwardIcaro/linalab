@@ -164,6 +164,8 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
   try {
     const empresaId = req.empresaId;
 
+    console.log('[WhatsApp Status] empresaId:', empresaId);
+
     if (!empresaId) {
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
@@ -172,7 +174,17 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
       where: { empresaId }
     });
 
+    console.log('[WhatsApp Status] Instância encontrada?', !!instance);
+    if (instance) {
+      console.log('[WhatsApp Status] Instance data:', {
+        status: instance.status,
+        instanceName: instance.instanceName,
+        hasQrCode: !!instance.qrCode
+      });
+    }
+
     if (!instance) {
+      console.log('[WhatsApp Status] Nenhuma instância, retornando disconnected');
       return res.json({
         status: 'disconnected',
         message: 'Nenhuma instância configurada'
@@ -239,6 +251,7 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
 
     // Se banco diz 'qr_code' (aguardando escaneamento), busca QR REAL da Evolution
     // NÃO busca QR se evolutionStatus for 'connecting' (para evitar spam)
+    console.log('[WhatsApp Status] Verificando se deve buscar QR. instance.status=', instance.status, 'evolutionStatus=', evolutionStatus);
     if (instance.status === 'qr_code' && evolutionStatus !== 'connecting') {
       console.log('[WhatsApp Status] Status qr_code mas não está "connecting", buscando QR...');
       try {
@@ -268,6 +281,7 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
 
       // Fallback: retornar QR cached se não conseguir obter novo
       if (instance.qrCode) {
+        console.log('[WhatsApp Status] Usando QR cached');
         return res.json({
           status: 'qr_code',
           qrCode: instance.qrCode,
@@ -275,9 +289,22 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
           message: 'Aguardando escaneamento do QR code'
         });
       }
+
+      console.log('[WhatsApp Status] Status é qr_code mas não tem QR no banco!');
+    } else if (instance.status === 'qr_code' && evolutionStatus === 'connecting') {
+      console.log('[WhatsApp Status] É qr_code e está connecting, retornando QR cached');
+      if (instance.qrCode) {
+        return res.json({
+          status: 'qr_code',
+          qrCode: instance.qrCode,
+          ownerPhone: null,
+          message: 'Aguardando escaneamento do QR code (connecting)'
+        });
+      }
     }
 
     // Caso padrão: desconectado
+    console.log('[WhatsApp Status] Caiu no fallback desconectado. Status da instância:', instance.status, 'Evolution status:', evolutionStatus);
     return res.json({
       status: 'disconnected',
       qrCode: null,
