@@ -33,7 +33,8 @@ const logger = pino();
  */
 async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) {
   try {
-    const { BufferJSON } = await import('@whiskeysockets/baileys');
+    const dynamicImport = new Function('module', 'return import(module)');
+    const { BufferJSON } = await dynamicImport('@whiskeysockets/baileys') as any;
     const authStateJson = JSON.stringify(creds, BufferJSON.replacer);
     await prisma.whatsappInstance.update({
       where: { empresaId },
@@ -53,7 +54,8 @@ async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) 
  */
 async function loadAuthStateFromDb(empresaId: string): Promise<AuthenticationState> {
   try {
-    const { BufferJSON } = await import('@whiskeysockets/baileys');
+    const dynamicImport = new Function('module', 'return import(module)');
+    const { BufferJSON } = await dynamicImport('@whiskeysockets/baileys') as any;
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
@@ -93,10 +95,14 @@ export async function initBaileys(empresaId: string): Promise<void> {
       return;
     }
 
-    // Dynamic import (ESM modules)
-    const { default: makeWASocket, BufferJSON, isJidBroadcast } = await import('@whiskeysockets/baileys');
-    const QRCodeModule = await import('qrcode');
-    const QRCode = QRCodeModule.default || QRCodeModule;
+    // Dynamic import (ESM modules) - usar Function para forçar import real (não require)
+    const dynamicImport = new Function('module', 'return import(module)');
+    const baileysMod = await dynamicImport('@whiskeysockets/baileys') as any;
+    const qrcodeMod = await dynamicImport('qrcode') as any;
+
+    const makeWASocket = baileysMod.default;
+    const { BufferJSON, isJidBroadcast } = baileysMod;
+    const QRCode = qrcodeMod.default || qrcodeMod;
 
     // Carregar auth state do banco
     const initialState = await loadAuthStateFromDb(empresaId);
@@ -108,7 +114,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
       logger: pino({ level: 'error' }),
       browser: ['Lina X', 'Desktop', '1.0.0'],
       generateHighQualityLinkPreview: true,
-      getMessage: async (key) => {
+      getMessage: async (key: any) => {
         return {
           conversation: 'Mensagem de contexto',
         };
@@ -116,12 +122,12 @@ export async function initBaileys(empresaId: string): Promise<void> {
     });
 
     // Bind para salvar credenciais quando mudarem
-    sock.ev.on('creds.update', async () => {
+    sock.ev.on('creds.update', async (update: any) => {
       await saveAuthStateToDb(empresaId, sock.authState.creds);
     });
 
     // Evento: Conexão
-    sock.ev.on('connection.update', async (update) => {
+    sock.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr } = update;
 
       console.log(`[Baileys] connection.update para ${empresaId}:`, {
@@ -206,7 +212,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
     });
 
     // Evento: Mensagens recebidas
-    sock.ev.on('messages.upsert', async (m) => {
+    sock.ev.on('messages.upsert', async (m: any) => {
       try {
         const message = m.messages[0];
 
