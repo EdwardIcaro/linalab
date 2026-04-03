@@ -29,10 +29,11 @@ import subscriptionRoutes from './routes/subscription';
 import subscriptionAdminRoutes from './routes/subscriptionAdmin';
 import promotionRoutes from './routes/promotionRoutes';
 import paymentRoutes from './routes/payment';
-import whatsappRoutes, { webhookRouter } from './routes/whatsapp';
+import whatsappRoutes from './routes/whatsapp';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
+import { restoreActiveSessions } from './services/baileyService';
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
@@ -161,7 +162,6 @@ app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middlewa
 app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
 
 // Rotas WhatsApp Bot
-app.use('/api/whatsapp/webhook', webhookRouter); // Webhook público (sem auth)
 app.use('/api/whatsapp', authMiddleware, whatsappRoutes); // Rotas protegidas (com auth)
 
 // Rota de saúde
@@ -208,6 +208,10 @@ async function startServer() {
   try {
     // Aguardar banco de dados estar pronto
     await waitForDatabase();
+
+    // Restaurar sessões ativas do WhatsApp (Baileys)
+    console.log('🔄 Restaurando sessões ativas do WhatsApp...');
+    await restoreActiveSessions();
 
     // Iniciar servidor
     app.listen(PORT, () => {

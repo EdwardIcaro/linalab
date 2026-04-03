@@ -77,3 +77,27 @@ Backend requires `.env` file with:
 - `DATABASE_URL`: SQLite connection string (default: `file:./prisma/dev.db`)
 - `SECRET_KEY`: JWT signing secret
 - `PORT`: Server port (default: 3001)
+
+## ⚠️ Prisma Migrations - SQL Manual para Neon
+
+**IMPORTANTE:** Toda e qualquer alteração no `backend/prisma/schema.prisma` DEVE ser documentada em SQL puro para execução manual no Neon.
+
+### Por quê?
+- Neon PostgreSQL free tier pode ter problemas com migrations automáticas
+- Melhor auditoria: controle manual garante que foi executado corretamente
+- Evita surpresas em produção
+
+### Fluxo:
+1. Alterar `schema.prisma` (novo campo, tabela, tipo, etc)
+2. **Antes de fazer commit/push**, converter para SQL puro
+3. **Colocar o SQL aqui no chat** em bloco `sql`
+4. Ir para **Neon Dashboard** → **SQL Editor** → Colar SQL → Executar
+5. Depois fazer `git push`
+
+### Exemplo correto:
+```sql
+-- Adicionar campo authState para persistência de sessão Baileys em WhatsappInstance
+ALTER TABLE whatsapp_instances ADD COLUMN auth_state TEXT;
+```
+
+⚠️ Não confiar em `npx prisma db push` ou migrations automáticas no Railway/Neon.

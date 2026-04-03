@@ -1,14 +1,13 @@
 /**
- * Rotas para gerenciar bot WhatsApp
+ * Rotas para gerenciar bot WhatsApp com Baileys
  * Padrão: /api/whatsapp/*
  */
 
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import {
   setupWhatsapp,
   getWhatsappStatus,
-  disconnectWhatsapp,
-  handleEvolutionWebhook
+  disconnectWhatsapp
 } from '../controllers/whatsappController';
 
 const router = Router();
@@ -19,8 +18,3 @@ router.get('/status', getWhatsappStatus);
 router.delete('/disconnect', disconnectWhatsapp);
 
 export default router;
-
-// Rota pública para webhook (exportada separadamente)
-export const webhookRouter = Router();
-
-webhookRouter.post('/evolution', handleEvolutionWebhook);

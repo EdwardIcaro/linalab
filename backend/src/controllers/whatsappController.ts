@@ -1,12 +1,16 @@
 /**
- * Controller para gerenciar bot WhatsApp
- * Endpoints REST para setup, status e webhooks
+ * Controller para gerenciar bot WhatsApp com Baileys
+ * Endpoints REST para setup, status e disconnect
  */
 
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { createInstance, startInstance, getQRCode, getQRCodeReal, getInstanceStatus, deleteInstance, sendTextMessage, getInstanceInfo } from '../services/evolutionService';
-import { handleIncomingMessage } from '../services/whatsappCommandHandler';
+import {
+  initBaileys,
+  getQRCode,
+  getStatus,
+  disconnect as disconnectBaileys,
+} from '../services/baileyService';
 
 // Type para requisição autenticada
 interface AuthenticatedRequest extends Request {
@@ -16,7 +20,7 @@ interface AuthenticatedRequest extends Request {
 
 /**
  * POST /api/whatsapp/setup
- * Cria uma nova instância de WhatsApp
+ * Inicia conexão Baileys e gera QR code
  */
 export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
   try {
@@ -28,20 +32,25 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    // Verificar se já existe instância para esta empresa
+    // Verificar se já existe instância ativa
     const existente = await prisma.whatsappInstance.findUnique({
-      where: { empresaId }
+      where: { empresaId },
     });
 
     if (existente && existente.status === 'connected') {
-      console.warn('[WhatsApp Setup] Instância já conectada para empresa:', empresaId);
-      return res.status(400).json({ error: 'Já existe uma instância conectada para esta empresa' });
+      console.warn(
+        '[WhatsApp Setup] Instância já conectada para empresa:',
+        empresaId
+      );
+      return res.status(400).json({
+        error: 'Já existe uma instância conectada para esta empresa',
+      });
     }
 
-    // Gerar nome único para instância
+    // Verificar se empresa existe
     const empresa = await prisma.empresa.findUnique({
       where: { id: empresaId },
-      select: { nome: true }
+      select: { nome: true },
     });
 
     if (!empresa) {
@@ -51,116 +60,73 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
 
     console.log('[WhatsApp Setup] Empresa:', empresa.nome);
 
-    // Usar timestamp para garantir nome único (Evolution API não permite reutilizar nomes)
+    // Gerar nome único para instância (apenas para referência)
     const timestamp = Date.now();
     const instanceName = `lina-${empresaId.substring(0, 8)}-${timestamp}`.toLowerCase();
-    const webhookUrl = `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/whatsapp/webhook/evolution`;
 
-    console.log('[WhatsApp Setup] Criando instância:', instanceName);
-    console.log('[WhatsApp Setup] Webhook URL:', webhookUrl);
-
-    // Criar instância na Evolution API
-    const evolutionResponse = await createInstance(instanceName, webhookUrl);
-
-    console.log('[WhatsApp Setup] Resposta Evolution API:', evolutionResponse);
-
-    if (!evolutionResponse || evolutionResponse.error) {
-      console.error('[WhatsApp Setup] Erro da Evolution API:', evolutionResponse);
-      return res.status(500).json({
-        error: 'Falha ao criar instância na Evolution API',
-        details: evolutionResponse?.error || evolutionResponse
-      });
-    }
-
-    // Salvar ou atualizar no banco
+    // Criar/atualizar registro no banco
     await prisma.whatsappInstance.upsert({
       where: { empresaId },
       update: {
         instanceName,
         status: 'qr_code',
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       create: {
         empresaId,
         instanceName,
-        status: 'qr_code'
-      }
+        status: 'qr_code',
+      },
     });
 
-    console.log('[WhatsApp Setup] Instância salva no banco');
+    console.log('[WhatsApp Setup] Registro criado no banco');
 
-    // Ativar instância para gerar QR code
-    console.log('[WhatsApp Setup] Ativando instância para gerar QR code...');
-    const connectResponse = await startInstance(instanceName);
+    // Iniciar socket Baileys
+    console.log('[WhatsApp Setup] Iniciando Baileys...');
+    await initBaileys(empresaId);
 
-    // Tentar extrair QR code da resposta do connect (qrcode é retornado direto)
-    let qrCode = null;
-    if (connectResponse) {
-      // O QR code pode estar em diferentes propriedades
-      qrCode =
-        connectResponse.qrcode ||
-        connectResponse.base64 ||
-        connectResponse.qr ||
-        connectResponse.code ||
-        (typeof connectResponse === 'string' ? connectResponse : null);
+    // Aguardar QR code ser gerado (com timeout)
+    let qrCode: string | null = null;
+    let attempts = 0;
+    const maxAttempts = 15; // 15 * 500ms = 7.5 segundos
 
-      if (qrCode) {
-        console.log('[WhatsApp Setup] QR code extraído da resposta do connect!');
-      } else {
-        console.log('[WhatsApp Setup] QR code não encontrado na resposta do connect. Propriedades:', Object.keys(connectResponse));
-      }
+    while (!qrCode && attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      qrCode = await getQRCode(empresaId);
+      attempts++;
     }
 
-    // Se não conseguiu da resposta do connect, tentar com retry (fallback)
-    if (!qrCode) {
-      console.log('[WhatsApp Setup] Tentando obter QR code com retry...');
-      for (let i = 0; i < 5; i++) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos entre tentativas
-
-        console.log(`[WhatsApp Setup] Tentativa ${i + 1}/5 de obter QR code via endpoint...`);
-        qrCode = await getQRCode(instanceName);
-
-        if (qrCode) {
-          console.log('[WhatsApp Setup] QR code obtido com sucesso via endpoint!');
-          break;
-        }
-      }
-    }
-
-    console.log('[WhatsApp Setup] QR code obtido:', qrCode ? 'sim' : 'não');
-
-    if (qrCode) {
-      await prisma.whatsappInstance.update({
-        where: { empresaId },
-        data: { qrCode }
-      });
-      console.log('[WhatsApp Setup] QR code salvo no banco');
-    } else {
-      console.warn('[WhatsApp Setup] QR code ainda não foi obtido após 10 segundos');
-      console.warn('[WhatsApp Setup] Evolution API pode estar tendo dificuldade para se conectar ao WhatsApp');
-    }
+    console.log(
+      '[WhatsApp Setup] QR obtido após',
+      attempts,
+      'tentativas:',
+      !!qrCode
+    );
 
     return res.json({
       status: 'qr_code',
       qrCode,
       instanceName,
-      message: 'Instância criada. Escaneie o QR code com seu WhatsApp.'
+      message: 'Baileys iniciado. Escaneie o QR code com seu WhatsApp.',
     });
   } catch (error) {
     console.error('[WhatsApp Setup] Erro fatal:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return res.status(500).json({
       error: 'Erro ao configurar WhatsApp',
-      details: errorMessage
+      details: errorMessage,
     });
   }
 }
 
 /**
  * GET /api/whatsapp/status
- * Retorna status atual da instância
+ * Retorna status atual da instância (conectado | qr_code | desconectado)
  */
-export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response) {
+export async function getWhatsappStatus(
+  req: AuthenticatedRequest,
+  res: Response
+) {
   try {
     const empresaId = req.empresaId;
 
@@ -171,144 +137,45 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
     }
 
     const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId }
+      where: { empresaId },
     });
 
-    console.log('[WhatsApp Status] Instância encontrada?', !!instance);
-    if (instance) {
-      console.log('[WhatsApp Status] Instance data:', {
-        status: instance.status,
-        instanceName: instance.instanceName,
-        hasQrCode: !!instance.qrCode
-      });
-    }
-
     if (!instance) {
-      console.log('[WhatsApp Status] Nenhuma instância, retornando disconnected');
+      console.log('[WhatsApp Status] Nenhuma instância');
       return res.json({
         status: 'disconnected',
-        message: 'Nenhuma instância configurada'
+        message: 'Nenhuma instância configurada',
       });
     }
 
-    // Verificar status atual na Evolution API PRIMEIRO
-    console.log('[WhatsApp Status] Verificando status para:', instance.instanceName);
-    const evolutionStatus = await getInstanceStatus(instance.instanceName);
-    console.log('[WhatsApp Status] Status retornado:', evolutionStatus);
+    // Obter status do Baileys (em memória)
+    const status = getStatus(empresaId);
+    console.log('[WhatsApp Status] Status Baileys:', status);
 
-    // Tentar obter info da instância - se tiver wid.user, está conectado
-    // (Bug do Baileys: às vezes fica em estado 'connecting' mesmo conectado)
-    let ownerPhone = null;
-    try {
-      const info = await getInstanceInfo(instance.instanceName);
-      ownerPhone = info?.wid?.user || null;
-      console.log('[WhatsApp Status] wid.user obtido:', ownerPhone);
-    } catch (error) {
-      console.warn('[WhatsApp Status] Erro ao obter info:', error);
-    }
-
-    // Se tem número de WhatsApp, definitivamente conectado
-    // (mesmo que status diga 'connecting' - bug conhecido do Baileys)
-    if (ownerPhone) {
-      console.log('[WhatsApp Status] CONECTADO! wid.user disponível:', ownerPhone);
-
-      // Atualizar no banco
-      await prisma.whatsappInstance.update({
-        where: { empresaId },
-        data: {
-          status: 'connected',
-          ownerPhone,
-          qrCode: null
-        }
-      });
-
+    // Se conectado
+    if (status === 'connected') {
       return res.json({
         status: 'connected',
-        ownerPhone,
-        message: 'WhatsApp conectado com sucesso'
+        ownerPhone: instance.ownerPhone,
+        message: 'WhatsApp conectado com sucesso',
       });
     }
 
-    // Se Evolution reporta 'open' (sem wid.user), também conectado
-    if (evolutionStatus === 'open') {
-      console.log('[WhatsApp Status] Conexão detectada via connectionState!');
-
-      await prisma.whatsappInstance.update({
-        where: { empresaId },
-        data: {
-          status: 'connected',
-          ownerPhone: null,
-          qrCode: null
-        }
-      });
-
+    // Se aguardando QR code
+    if (status === 'qr_code') {
+      const qrCode = await getQRCode(empresaId);
       return res.json({
-        status: 'connected',
-        ownerPhone: null,
-        message: 'WhatsApp conectado com sucesso'
+        status: 'qr_code',
+        qrCode,
+        message: 'Aguardando escaneamento do QR code',
       });
     }
 
-    // Se banco diz 'qr_code' (aguardando escaneamento), busca QR REAL da Evolution
-    // NÃO busca QR se evolutionStatus for 'connecting' (para evitar spam)
-    console.log('[WhatsApp Status] Verificando se deve buscar QR. instance.status=', instance.status, 'evolutionStatus=', evolutionStatus);
-    if (instance.status === 'qr_code' && evolutionStatus !== 'connecting') {
-      console.log('[WhatsApp Status] Status qr_code mas não está "connecting", buscando QR...');
-      try {
-        // Obter QR REAL via /instance/connect (não fetch genérico)
-        const realQR = await getQRCodeReal(instance.instanceName);
-
-        if (realQR) {
-          // Atualizar banco com QR real (se diferente)
-          if (realQR !== instance.qrCode) {
-            console.log('[WhatsApp Status] QR REAL obtido, atualizado no banco');
-            await prisma.whatsappInstance.update({
-              where: { empresaId },
-              data: { qrCode: realQR }
-            });
-          }
-
-          return res.json({
-            status: 'qr_code',
-            qrCode: realQR,
-            ownerPhone: null,
-            message: 'Aguardando escaneamento do QR code (REAL)'
-          });
-        }
-      } catch (error) {
-        console.warn('[WhatsApp Status] Erro ao buscar QR REAL:', error);
-      }
-
-      // Fallback: retornar QR cached se não conseguir obter novo
-      if (instance.qrCode) {
-        console.log('[WhatsApp Status] Usando QR cached');
-        return res.json({
-          status: 'qr_code',
-          qrCode: instance.qrCode,
-          ownerPhone: null,
-          message: 'Aguardando escaneamento do QR code'
-        });
-      }
-
-      console.log('[WhatsApp Status] Status é qr_code mas não tem QR no banco!');
-    } else if (instance.status === 'qr_code' && evolutionStatus === 'connecting') {
-      console.log('[WhatsApp Status] É qr_code e está connecting, retornando QR cached');
-      if (instance.qrCode) {
-        return res.json({
-          status: 'qr_code',
-          qrCode: instance.qrCode,
-          ownerPhone: null,
-          message: 'Aguardando escaneamento do QR code (connecting)'
-        });
-      }
-    }
-
-    // Caso padrão: desconectado
-    console.log('[WhatsApp Status] Caiu no fallback desconectado. Status da instância:', instance.status, 'Evolution status:', evolutionStatus);
+    // Se desconectado
     return res.json({
       status: 'disconnected',
       qrCode: null,
-      ownerPhone: instance.ownerPhone || null
+      message: 'WhatsApp desconectado',
     });
   } catch (error) {
     console.error('[WhatsApp Status] Erro:', error);
@@ -318,9 +185,12 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
 
 /**
  * DELETE /api/whatsapp/disconnect
- * Desconecta e remove a instância
+ * Desconecta WhatsApp e limpa estado
  */
-export async function disconnectWhatsapp(req: AuthenticatedRequest, res: Response) {
+export async function disconnectWhatsapp(
+  req: AuthenticatedRequest,
+  res: Response
+) {
   try {
     const empresaId = req.empresaId;
 
@@ -329,141 +199,24 @@ export async function disconnectWhatsapp(req: AuthenticatedRequest, res: Respons
     }
 
     const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId }
+      where: { empresaId },
     });
 
     if (!instance) {
       return res.status(404).json({ error: 'Instância não encontrada' });
     }
 
-    // Deletar da Evolution API
+    // Desconectar Baileys
     try {
-      await deleteInstance(instance.instanceName);
+      await disconnectBaileys(empresaId);
     } catch (error) {
-      console.warn('Aviso ao deletar instância da Evolution:', error);
-      // Continuar mesmo se Evolution API falhar
+      console.warn('[WhatsApp Disconnect] Erro ao desconectar Baileys:', error);
+      // Continuar mesmo se houver erro
     }
-
-    // Deletar do banco
-    await prisma.whatsappInstance.delete({
-      where: { empresaId }
-    });
 
     return res.json({ message: 'WhatsApp desconectado com sucesso' });
   } catch (error) {
     console.error('[WhatsApp Disconnect] Erro:', error);
     return res.status(500).json({ error: 'Erro ao desconectar' });
-  }
-}
-
-/**
- * POST /api/whatsapp/webhook/evolution
- * Webhook chamado pela Evolution API para processar mensagens
- * NÃO requer autenticação - validação interna por instanceName
- */
-export async function handleEvolutionWebhook(req: Request, res: Response) {
-  try {
-    const payload = req.body;
-
-    // Validar payload
-    if (!payload.event || !payload.instance || !payload.data) {
-      return res.status(400).json({ error: 'Payload inválido' });
-    }
-
-    // Processar apenas eventos de mensagem recebida
-    if (payload.event !== 'messages.upsert') {
-      return res.json({ acknowledged: true });
-    }
-
-    const { instance: instanceName, data } = payload;
-
-    // Validar dados da mensagem
-    if (!data.key || !data.message) {
-      return res.json({ acknowledged: true });
-    }
-
-    const { remoteJid } = data.key;
-    const fromMe = data.key.fromMe === true;
-
-    // Ignorar mensagens enviadas por nós
-    if (fromMe) {
-      return res.json({ acknowledged: true });
-    }
-
-    // Extrair número do remetente
-    const from = remoteJid.replace('@s.whatsapp.net', '');
-    const senderName = data.pushName || from;
-    const message = data.message?.conversation || data.message?.text || '';
-
-    if (!message) {
-      return res.json({ acknowledged: true });
-    }
-
-    // Encontrar instância e empresa
-    const whatsappInstance = await prisma.whatsappInstance.findUnique({
-      where: { instanceName }
-    });
-
-    if (!whatsappInstance) {
-      console.warn(`[WhatsApp Webhook] Instância ${instanceName} não encontrada no banco`);
-      return res.json({ acknowledged: true });
-    }
-
-    const empresaId = whatsappInstance.empresaId;
-
-    // Registrar mensagem recebida
-    await prisma.whatsappMessage.create({
-      data: {
-        instanceId: whatsappInstance.id,
-        direction: 'INCOMING',
-        phoneNumber: from,
-        senderName,
-        message,
-        status: 'processed'
-      }
-    });
-
-    // Processar comando e obter resposta
-    let response: string;
-    try {
-      response = await handleIncomingMessage(
-        whatsappInstance.id,
-        from,
-        senderName,
-        message,
-        empresaId
-      );
-    } catch (error) {
-      console.error('[WhatsApp Message Handler] Erro:', error);
-      response = '❌ Desculpe, ocorreu um erro. Tente novamente.';
-    }
-
-    // Enviar resposta
-    try {
-      await sendTextMessage(instanceName, from, response);
-
-      // Registrar resposta enviada
-      await prisma.whatsappMessage.update({
-        where: {
-          id: (
-            await prisma.whatsappMessage.findFirst({
-              where: { phoneNumber: from },
-              orderBy: { createdAt: 'desc' }
-            })
-          )!.id
-        },
-        data: {
-          response,
-          status: 'processed'
-        }
-      });
-    } catch (error) {
-      console.error('[WhatsApp Send] Erro ao enviar resposta:', error);
-    }
-
-    return res.json({ acknowledged: true });
-  } catch (error) {
-    console.error('[WhatsApp Webhook] Erro:', error);
-    return res.status(500).json({ error: 'Erro ao processar webhook' });
   }
 }
