@@ -33,9 +33,20 @@ const logger = pino();
  */
 async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) {
   try {
-    const dynamicImport = new Function('module', 'return import(module)');
-    const { BufferJSON } = await dynamicImport('@whiskeysockets/baileys') as any;
-    const authStateJson = JSON.stringify(creds, BufferJSON.replacer);
+    // Serializar apenas os campos essenciais
+    const credsToSave = {
+      creds: creds,
+    };
+    const authStateJson = JSON.stringify(credsToSave, (key, value) => {
+      if (value instanceof Uint8Array) {
+        return {
+          type: 'Buffer',
+          data: Array.from(value),
+        };
+      }
+      return value;
+    });
+
     await prisma.whatsappInstance.update({
       where: { empresaId },
       data: { authState: authStateJson },
@@ -54,24 +65,37 @@ async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) 
  */
 async function loadAuthStateFromDb(empresaId: string): Promise<AuthenticationState> {
   try {
-    const dynamicImport = new Function('module', 'return import(module)');
-    const { BufferJSON } = await dynamicImport('@whiskeysockets/baileys') as any;
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
 
     if (instance?.authState) {
-      const creds = JSON.parse(instance.authState, BufferJSON.reviver) as AuthenticationCreds;
-      return {
-        creds,
-        keys: new Map() as any,
-      };
+      try {
+        const parsed = JSON.parse(instance.authState, (key, value) => {
+          // Converter Buffer objects de volta para Uint8Array
+          if (value && value.type === 'Buffer' && Array.isArray(value.data)) {
+            return new Uint8Array(value.data);
+          }
+          return value;
+        });
+
+        const creds = parsed.creds as AuthenticationCreds;
+        console.log(`[Baileys] Auth state carregado para ${empresaId}`);
+
+        return {
+          creds,
+          keys: new Map() as any,
+        };
+      } catch (parseError) {
+        console.error(`[Baileys] Erro ao fazer parse do auth state: ${parseError}`);
+      }
     }
   } catch (error) {
     console.error(`[Baileys] Erro ao carregar auth state: ${error}`);
   }
 
-  // Retornar estado vazio se não encontrar
+  // Retornar estado vazio se não encontrar ou erro ao carregar
+  console.log(`[Baileys] Iniciando com estado vazio para ${empresaId}`);
   return {
     creds: {} as AuthenticationCreds,
     keys: new Map() as any,
