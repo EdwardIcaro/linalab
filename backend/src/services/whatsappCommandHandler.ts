@@ -133,13 +133,13 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     });
 
     // 8. Comissões fechadas do mês (FechamentoComissao)
-    const fechamentosMes = await prisma.fechamentoComissao.findMany({
-      where: {
-        empresaId,
-        createdAt: { gte: inicioMes, lte: fimMes }
-      },
-      include: { lavador: { select: { nome: true } } }
-    }).catch(() => []); // tabela pode não existir em todas as versões
+    let fechamentosMes: { lavadorId: string; valorPago: number; data: Date; lavador: { nome: string } }[] = [];
+    try {
+      fechamentosMes = await prisma.fechamentoComissao.findMany({
+        where: { empresaId, data: { gte: inicioMes, lte: fimMes } },
+        include: { lavador: { select: { nome: true } } }
+      });
+    } catch { /* ignorar se não existir */ }
 
     // ---- MONTAR CONTEXTO ----
     let ctx = `CONTEXTO LINA X - ${empresa.nome}\n`;
@@ -210,7 +210,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     if (fechamentosMes.length > 0) {
       ctx += `Fechamentos de comissão no mês:\n`;
       for (const f of fechamentosMes) {
-        ctx += `• ${f.lavador.nome}: R$ ${(f as any).valorFinal?.toFixed(2) ?? '?'} em ${new Date((f as any).createdAt).toLocaleDateString('pt-BR')}\n`;
+        ctx += `• ${f.lavador.nome}: R$ ${f.valorPago.toFixed(2)} em ${f.data.toLocaleDateString('pt-BR')}\n`;
       }
       ctx += '\n';
     }
