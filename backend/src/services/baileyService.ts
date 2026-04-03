@@ -4,19 +4,15 @@
  * Sessão persistida no banco PostgreSQL
  */
 
-import makeWASocket, {
+import type {
   AuthenticationCreds,
   AuthenticationState,
-  BufferJSON,
-  isJidBroadcast,
-  proto,
   WASocket,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import prisma from '../db';
 import { handleIncomingMessage } from './whatsappCommandHandler';
-import QRCode from 'qrcode';
 
 // ==========================================
 // STATE INTERNO - Gerenciador de Sockets
@@ -37,6 +33,7 @@ const logger = pino();
  */
 async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) {
   try {
+    const { BufferJSON } = await import('@whiskeysockets/baileys');
     const authStateJson = JSON.stringify(creds, BufferJSON.replacer);
     await prisma.whatsappInstance.update({
       where: { empresaId },
@@ -56,6 +53,7 @@ async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) 
  */
 async function loadAuthStateFromDb(empresaId: string): Promise<AuthenticationState> {
   try {
+    const { BufferJSON } = await import('@whiskeysockets/baileys');
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
@@ -94,6 +92,11 @@ export async function initBaileys(empresaId: string): Promise<void> {
       console.log(`[Baileys] Socket já ativo para ${empresaId}`);
       return;
     }
+
+    // Dynamic import (ESM modules)
+    const { default: makeWASocket, BufferJSON, isJidBroadcast } = await import('@whiskeysockets/baileys');
+    const QRCodeModule = await import('qrcode');
+    const QRCode = QRCodeModule.default || QRCodeModule;
 
     // Carregar auth state do banco
     const initialState = await loadAuthStateFromDb(empresaId);
