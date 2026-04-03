@@ -126,14 +126,38 @@ export async function initBaileys(empresaId: string): Promise<void> {
     const baileysMod = await dynamicImport('@whiskeysockets/baileys') as any;
     const qrcodeMod = await dynamicImport('qrcode') as any;
 
-    const makeWASocket = baileysMod.default;
-    const { isJidBroadcast, initAuthCreds, makeInMemoryStore } = baileysMod;
+    const makeWASocket = baileysMod.default || baileysMod;
+    const { isJidBroadcast, initAuthCreds, DisconnectReason: BaileysDisconnectReason } = baileysMod;
     const QRCode = qrcodeMod.default || qrcodeMod;
+
+    // Implementação correta do SignalKeyStore (em memória por sessão)
+    const keyStore: Record<string, Record<string, any>> = {};
+    const keys = {
+      get: (type: string, ids: string[]) => {
+        return ids.reduce((dict: Record<string, any>, id: string) => {
+          const val = keyStore[type]?.[id];
+          if (val) dict[id] = val;
+          return dict;
+        }, {});
+      },
+      set: (data: Record<string, Record<string, any>>) => {
+        for (const [category, entries] of Object.entries(data)) {
+          keyStore[category] = keyStore[category] || {};
+          for (const [id, val] of Object.entries(entries)) {
+            if (val != null) {
+              keyStore[category][id] = val;
+            } else {
+              delete keyStore[category][id];
+            }
+          }
+        }
+      },
+    };
 
     // Iniciar com credenciais geradas pelo próprio Baileys (tem as noise keys necessárias)
     const initialState: AuthenticationState = {
       creds: initAuthCreds(),
-      keys: new Map() as any,
+      keys: keys as any,
     };
 
     // Criar socket
@@ -210,7 +234,9 @@ export async function initBaileys(empresaId: string): Promise<void> {
       // Desconectado
       if (connection === 'close') {
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+        // DisconnectReason.loggedOut = 401 no Baileys (não usar enum local)
+        const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
+        const isLoggedOut = statusCode === loggedOutCode;
         const attempts = reconnectAttempts.get(empresaId) || 0;
         const shouldReconnect = !isLoggedOut && attempts < MAX_RECONNECT;
 
@@ -405,20 +431,3 @@ export async function restoreActiveSessions(): Promise<void> {
   }
 }
 
-// ==========================================
-// HELPERS
-// ==========================================
-
-enum DisconnectReason {
-  connectionClosed = 0,
-  connectionLost = 1,
-  connectionReplaced = 2,
-  connectionHandoverInProgress = 3,
-  connectionHandoverComplete = 4,
-  restartRequired = 5,
-  malformedMessage = 6,
-  forbidden = 7,
-  connectionTimeout = 8,
-  unknown = 9,
-  loggedOut = 10,
-}
