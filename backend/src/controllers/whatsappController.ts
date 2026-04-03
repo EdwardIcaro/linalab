@@ -88,12 +88,15 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     // Aguardar QR code ser gerado (com timeout)
     let qrCode: string | null = null;
     let attempts = 0;
-    const maxAttempts = 15; // 15 * 500ms = 7.5 segundos
+    const maxAttempts = 30; // 30 * 1000ms = 30 segundos (Railway pode demorar)
 
     while (!qrCode && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       qrCode = await getQRCode(empresaId);
       attempts++;
+      if (attempts % 5 === 0) {
+        console.log(`[WhatsApp Setup] Aguardando QR... tentativa ${attempts}/${maxAttempts}`);
+      }
     }
 
     console.log(

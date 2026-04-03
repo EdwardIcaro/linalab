@@ -131,16 +131,17 @@ export async function initBaileys(empresaId: string): Promise<void> {
     const QRCode = qrcodeMod.default || qrcodeMod;
 
     // Implementação correta do SignalKeyStore (em memória por sessão)
+    // get/set DEVEM ser async — SignalKeyStore espera Promise
     const keyStore: Record<string, Record<string, any>> = {};
     const keys = {
-      get: (type: string, ids: string[]) => {
+      get: async (type: string, ids: string[]) => {
         return ids.reduce((dict: Record<string, any>, id: string) => {
           const val = keyStore[type]?.[id];
           if (val) dict[id] = val;
           return dict;
         }, {});
       },
-      set: (data: Record<string, Record<string, any>>) => {
+      set: async (data: Record<string, Record<string, any>>) => {
         for (const [category, entries] of Object.entries(data)) {
           keyStore[category] = keyStore[category] || {};
           for (const [id, val] of Object.entries(entries)) {
@@ -186,6 +187,8 @@ export async function initBaileys(empresaId: string): Promise<void> {
       console.log(`[Baileys] connection.update para ${empresaId}:`, {
         connection,
         qr: !!qr,
+        errorCode: (lastDisconnect?.error as Boom)?.output?.statusCode,
+        errorMsg: (lastDisconnect?.error as any)?.message,
       });
 
       // QR Code gerado
