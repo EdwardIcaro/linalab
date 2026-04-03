@@ -1,21 +1,19 @@
 /**
  * Serviço Baileys para WhatsApp
- * Roda instância de WhatsApp direto no backend (sem API externa)
- * Sessão persistida no banco PostgreSQL
+ * Usa useMultiFileAuthState (oficial) com /tmp + persistência no banco PostgreSQL
  */
 
-import type {
-  AuthenticationCreds,
-  AuthenticationState,
-  WASocket,
-} from '@whiskeysockets/baileys';
+import type { WASocket } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import prisma from '../db';
 import { handleIncomingMessage } from './whatsappCommandHandler';
 
 // ==========================================
-// STATE INTERNO - Gerenciador de Sockets
+// STATE INTERNO
 // ==========================================
 const sockets = new Map<string, WASocket>();
 const qrCodes = new Map<string, string>();
@@ -23,85 +21,64 @@ const statuses = new Map<string, string>();
 const reconnectAttempts = new Map<string, number>();
 const MAX_RECONNECT = 3;
 
-const logger = pino();
-
 // ==========================================
-// UTILITIES
+// AUTH STATE — DB ↔ /tmp
 // ==========================================
 
 /**
- * Carrega auth state do banco (persistência entre restarts)
- * Salva apenas as credentials - as keys são regeneradas automaticamente
+ * Caminho do diretório de auth no sistema de arquivos temporário
  */
-async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) {
-  try {
-    // Serializar apenas os campos essenciais
-    const credsToSave = {
-      creds: creds,
-    };
-    const authStateJson = JSON.stringify(credsToSave, (key, value) => {
-      if (value instanceof Uint8Array) {
-        return {
-          type: 'Buffer',
-          data: Array.from(value),
-        };
-      }
-      return value;
-    });
-
-    await prisma.whatsappInstance.update({
-      where: { empresaId },
-      data: { authState: authStateJson },
-    });
-    console.log(`[Baileys] Auth state salvo para empresa: ${empresaId}`);
-  } catch (error) {
-    console.error(
-      `[Baileys] Erro ao salvar auth state para ${empresaId}:`,
-      error
-    );
-  }
+function getAuthDir(empresaId: string): string {
+  const dir = join(tmpdir(), `baileys-${empresaId}`);
+  mkdirSync(dir, { recursive: true });
+  return dir;
 }
 
 /**
- * Carrega auth state salvo do banco
+ * Carrega auth state do banco para o diretório /tmp antes de iniciar o socket
  */
-async function loadAuthStateFromDb(empresaId: string): Promise<AuthenticationState> {
+async function restoreAuthDirFromDb(empresaId: string): Promise<void> {
   try {
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
 
-    if (instance?.authState) {
-      try {
-        const parsed = JSON.parse(instance.authState, (key, value) => {
-          // Converter Buffer objects de volta para Uint8Array
-          if (value && value.type === 'Buffer' && Array.isArray(value.data)) {
-            return new Uint8Array(value.data);
-          }
-          return value;
-        });
+    if (!instance?.authState) return;
 
-        const creds = parsed.creds as AuthenticationCreds;
-        console.log(`[Baileys] Auth state carregado para ${empresaId}`);
+    const authFiles = JSON.parse(instance.authState) as Record<string, string>;
+    const authDir = getAuthDir(empresaId);
 
-        return {
-          creds,
-          keys: new Map() as any,
-        };
-      } catch (parseError) {
-        console.error(`[Baileys] Erro ao fazer parse do auth state: ${parseError}`);
-      }
+    for (const [filename, content] of Object.entries(authFiles)) {
+      writeFileSync(join(authDir, filename), content, 'utf-8');
     }
+    console.log(`[Baileys] Auth state restaurado do banco para ${empresaId}`);
   } catch (error) {
-    console.error(`[Baileys] Erro ao carregar auth state: ${error}`);
+    console.error(`[Baileys] Erro ao restaurar auth state: ${error}`);
   }
+}
 
-  // Retornar estado vazio se não encontrar ou erro ao carregar
-  console.log(`[Baileys] Iniciando com estado vazio para ${empresaId}`);
-  return {
-    creds: {} as AuthenticationCreds,
-    keys: new Map() as any,
-  };
+/**
+ * Persiste todos os arquivos do /tmp auth dir de volta no banco
+ */
+async function persistAuthDirToDb(empresaId: string): Promise<void> {
+  try {
+    const authDir = getAuthDir(empresaId);
+    const files = readdirSync(authDir);
+
+    if (files.length === 0) return;
+
+    const authFiles: Record<string, string> = {};
+    for (const file of files) {
+      authFiles[file] = readFileSync(join(authDir, file), 'utf-8');
+    }
+
+    await prisma.whatsappInstance.update({
+      where: { empresaId },
+      data: { authState: JSON.stringify(authFiles) },
+    });
+  } catch (error) {
+    console.error(`[Baileys] Erro ao persistir auth state: ${error}`);
+  }
 }
 
 // ==========================================
@@ -121,63 +98,53 @@ export async function initBaileys(empresaId: string): Promise<void> {
       return;
     }
 
-    // Dynamic import (ESM modules) - usar Function para forçar import real (não require)
+    // Dynamic import (ESM) — new Function evita que TypeScript converta para require()
     const dynamicImport = new Function('module', 'return import(module)');
     const baileysMod = await dynamicImport('@whiskeysockets/baileys') as any;
     const qrcodeMod = await dynamicImport('qrcode') as any;
 
     const makeWASocket = baileysMod.default || baileysMod;
-    const { isJidBroadcast, initAuthCreds, DisconnectReason: BaileysDisconnectReason } = baileysMod;
+    const {
+      isJidBroadcast,
+      useMultiFileAuthState,
+      fetchLatestBaileysVersion,
+      Browsers,
+      DisconnectReason: BaileysDisconnectReason,
+    } = baileysMod;
     const QRCode = qrcodeMod.default || qrcodeMod;
 
-    // Implementação correta do SignalKeyStore (em memória por sessão)
-    // get/set DEVEM ser async — SignalKeyStore espera Promise
-    const keyStore: Record<string, Record<string, any>> = {};
-    const keys = {
-      get: async (type: string, ids: string[]) => {
-        return ids.reduce((dict: Record<string, any>, id: string) => {
-          const val = keyStore[type]?.[id];
-          if (val) dict[id] = val;
-          return dict;
-        }, {});
-      },
-      set: async (data: Record<string, Record<string, any>>) => {
-        for (const [category, entries] of Object.entries(data)) {
-          keyStore[category] = keyStore[category] || {};
-          for (const [id, val] of Object.entries(entries)) {
-            if (val != null) {
-              keyStore[category][id] = val;
-            } else {
-              delete keyStore[category][id];
-            }
-          }
-        }
-      },
-    };
+    // Restaurar auth state do banco para /tmp (se existir)
+    await restoreAuthDirFromDb(empresaId);
+    const authDir = getAuthDir(empresaId);
 
-    // Iniciar com credenciais geradas pelo próprio Baileys (tem as noise keys necessárias)
-    const initialState: AuthenticationState = {
-      creds: initAuthCreds(),
-      keys: keys as any,
-    };
+    // useMultiFileAuthState — implementação oficial do Baileys (SignalKeyStore correto)
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
-    // Criar socket
+    // Buscar versão atual do WhatsApp para evitar rejeição por versão desatualizada
+    let version: number[] = [2, 3000, 1015901307];
+    try {
+      const versionData = await fetchLatestBaileysVersion();
+      version = versionData.version;
+      console.log(`[Baileys] Versão WA: ${version.join('.')}`);
+    } catch {
+      console.warn(`[Baileys] Não conseguiu buscar versão WA, usando fallback`);
+    }
+
+    // Criar socket com configuração oficial
     const sock = makeWASocket({
-      auth: initialState,
+      version,
+      auth: state,
       printQRInTerminal: false,
-      logger: pino({ level: 'error' }),
-      browser: ['Lina X', 'Desktop', '1.0.0'],
-      generateHighQualityLinkPreview: true,
-      getMessage: async (key: any) => {
-        return {
-          conversation: 'Mensagem de contexto',
-        };
-      },
+      logger: pino({ level: 'silent' }), // suprimir logs internos do Baileys
+      browser: Browsers.ubuntu('Chrome'), // identificação correta de navegador
+      generateHighQualityLinkPreview: false,
+      getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
     });
 
-    // Bind para salvar credenciais quando mudarem
-    sock.ev.on('creds.update', async (update: any) => {
-      await saveAuthStateToDb(empresaId, sock.authState.creds);
+    // Salvar credenciais quando mudarem (em /tmp e no banco)
+    sock.ev.on('creds.update', async () => {
+      saveCreds();
+      await persistAuthDirToDb(empresaId);
     });
 
     // Evento: Conexão
@@ -200,10 +167,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
           await prisma.whatsappInstance.update({
             where: { empresaId },
-            data: {
-              status: 'qr_code',
-              qrCode: qrBase64,
-            },
+            data: { status: 'qr_code', qrCode: qrBase64 },
           });
 
           console.log(`[Baileys] QR code gerado para ${empresaId}`);
@@ -217,18 +181,14 @@ export async function initBaileys(empresaId: string): Promise<void> {
         qrCodes.delete(empresaId);
         statuses.set(empresaId, 'connected');
         sockets.set(empresaId, sock);
-        reconnectAttempts.set(empresaId, 0); // resetar contador de tentativas
+        reconnectAttempts.set(empresaId, 0);
 
         const jid = sock.user?.id;
         const phoneNumber = jid ? jid.split(':')[0] : null;
 
         await prisma.whatsappInstance.update({
           where: { empresaId },
-          data: {
-            status: 'connected',
-            qrCode: null,
-            ownerPhone: phoneNumber,
-          },
+          data: { status: 'connected', qrCode: null, ownerPhone: phoneNumber },
         });
 
         console.log(`[Baileys] ✅ Conectado para ${empresaId}:`, phoneNumber);
@@ -237,7 +197,6 @@ export async function initBaileys(empresaId: string): Promise<void> {
       // Desconectado
       if (connection === 'close') {
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        // DisconnectReason.loggedOut = 401 no Baileys (não usar enum local)
         const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
         const isLoggedOut = statusCode === loggedOutCode;
         const attempts = reconnectAttempts.get(empresaId) || 0;
@@ -254,18 +213,13 @@ export async function initBaileys(empresaId: string): Promise<void> {
             initBaileys(empresaId).catch(console.error);
           }, 3000);
         } else {
-          // Logout permanente - limpar estado
           qrCodes.delete(empresaId);
           sockets.delete(empresaId);
           statuses.set(empresaId, 'disconnected');
 
           await prisma.whatsappInstance.update({
             where: { empresaId },
-            data: {
-              status: 'disconnected',
-              authState: null,
-              qrCode: null,
-            },
+            data: { status: 'disconnected', authState: null, qrCode: null },
           });
         }
       }
@@ -276,7 +230,6 @@ export async function initBaileys(empresaId: string): Promise<void> {
       try {
         const message = m.messages[0];
 
-        // Ignorar mensagens do próprio bot e broadcasts
         if (message.key.fromMe || isJidBroadcast(message.key.remoteJid!)) {
           return;
         }
@@ -291,10 +244,8 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
         console.log(`[Baileys] Mensagem recebida de ${from}: ${text}`);
 
-        // Obter nome do remetente
         const senderName = message.pushName || 'Usuário';
 
-        // Processar comando/IA
         const response = await handleIncomingMessage(
           empresaId,
           from,
@@ -303,26 +254,25 @@ export async function initBaileys(empresaId: string): Promise<void> {
           empresaId
         );
 
-        // Salvar em banco
-        await prisma.whatsappMessage.create({
-          data: {
-            instanceId: (
-              await prisma.whatsappInstance.findUnique({
-                where: { empresaId },
-              })
-            )!.id,
-            direction: 'INCOMING',
-            phoneNumber: from,
-            senderName,
-            message: text,
-            response,
-            status: 'processed',
-          },
+        const instance = await prisma.whatsappInstance.findUnique({
+          where: { empresaId },
         });
 
-        // Enviar resposta
-        await sock.sendMessage(from, { text: response });
+        if (instance) {
+          await prisma.whatsappMessage.create({
+            data: {
+              instanceId: instance.id,
+              direction: 'INCOMING',
+              phoneNumber: from,
+              senderName,
+              message: text,
+              response,
+              status: 'processed',
+            },
+          });
+        }
 
+        await sock.sendMessage(from, { text: response });
         console.log(`[Baileys] Resposta enviada para ${from}`);
       } catch (error) {
         console.error('[Baileys] Erro ao processar mensagem:', error);
@@ -391,11 +341,7 @@ export async function disconnect(empresaId: string): Promise<void> {
 
     await prisma.whatsappInstance.update({
       where: { empresaId },
-      data: {
-        status: 'disconnected',
-        authState: null,
-        qrCode: null,
-      },
+      data: { status: 'disconnected', authState: null, qrCode: null },
     });
 
     console.log(`[Baileys] Desconectado para ${empresaId}`);
@@ -417,14 +363,9 @@ export async function restoreActiveSessions(): Promise<void> {
     });
 
     for (const instance of instances) {
-      console.log(
-        `[Baileys] Restaurando sessão para ${instance.empresaId}...`
-      );
+      console.log(`[Baileys] Restaurando sessão para ${instance.empresaId}...`);
       await initBaileys(instance.empresaId).catch((err) => {
-        console.error(
-          `[Baileys] Erro ao restaurar ${instance.empresaId}:`,
-          err
-        );
+        console.error(`[Baileys] Erro ao restaurar ${instance.empresaId}:`, err);
       });
     }
 
@@ -433,4 +374,3 @@ export async function restoreActiveSessions(): Promise<void> {
     console.error('[Baileys] Erro ao restaurar sessões:', error);
   }
 }
-
