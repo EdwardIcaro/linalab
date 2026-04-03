@@ -128,8 +128,12 @@ export async function initBaileys(empresaId: string): Promise<void> {
     const { BufferJSON, isJidBroadcast } = baileysMod;
     const QRCode = qrcodeMod.default || qrcodeMod;
 
-    // Carregar auth state do banco
-    const initialState = await loadAuthStateFromDb(empresaId);
+    // Iniciar sempre com estado limpo (força novo QR code)
+    // Isso evita handshake errors de credenciais corrompidas
+    const initialState: AuthenticationState = {
+      creds: {} as AuthenticationCreds,
+      keys: new Map() as any,
+    };
 
     // Criar socket
     const sock = makeWASocket({
