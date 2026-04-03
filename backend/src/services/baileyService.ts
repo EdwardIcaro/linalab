@@ -33,50 +33,38 @@ const logger = pino();
 
 /**
  * Carrega auth state do banco (persistência entre restarts)
+ * Salva apenas as credentials - as keys são regeneradas automaticamente
  */
-function useMultiFileAuthStateFromDB(empresaId: string) {
-  const state: AuthenticationState = {
-    creds: {} as AuthenticationCreds,
-    keys: new Map() as any,
-  };
-
-  return {
-    state,
-    saveCreds: async () => {
-      try {
-        const authStateJson = JSON.stringify({
-          creds: state.creds,
-          keys: Object.fromEntries(state.keys),
-        });
-        await prisma.whatsappInstance.update({
-          where: { empresaId },
-          data: { authState: authStateJson },
-        });
-        console.log(`[Baileys] Auth state salvo para empresa: ${empresaId}`);
-      } catch (error) {
-        console.error(
-          `[Baileys] Erro ao salvar auth state para ${empresaId}:`,
-          error
-        );
-      }
-    },
-  };
+async function saveAuthStateToDb(empresaId: string, creds: AuthenticationCreds) {
+  try {
+    const authStateJson = JSON.stringify(creds, BufferJSON.replacer);
+    await prisma.whatsappInstance.update({
+      where: { empresaId },
+      data: { authState: authStateJson },
+    });
+    console.log(`[Baileys] Auth state salvo para empresa: ${empresaId}`);
+  } catch (error) {
+    console.error(
+      `[Baileys] Erro ao salvar auth state para ${empresaId}:`,
+      error
+    );
+  }
 }
 
 /**
  * Carrega auth state salvo do banco
  */
-async function loadAuthStateFromDB(empresaId: string) {
+async function loadAuthStateFromDb(empresaId: string): Promise<AuthenticationState> {
   try {
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
 
     if (instance?.authState) {
-      const parsed = JSON.parse(instance.authState);
+      const creds = JSON.parse(instance.authState, BufferJSON.reviver) as AuthenticationCreds;
       return {
-        creds: parsed.creds || ({} as AuthenticationCreds),
-        keys: new Map(Object.entries(parsed.keys || {})) as any,
+        creds,
+        keys: new Map() as any,
       };
     }
   } catch (error) {
@@ -108,7 +96,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
     }
 
     // Carregar auth state do banco
-    const initialState = await loadAuthStateFromDB(empresaId);
+    const initialState = await loadAuthStateFromDb(empresaId);
 
     // Criar socket
     const sock = makeWASocket({
@@ -126,15 +114,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
     // Bind para salvar credenciais quando mudarem
     sock.ev.on('creds.update', async () => {
-      const authStateJson = JSON.stringify({
-        creds: sock.authState.creds,
-        keys: Object.fromEntries(sock.authState.keys),
-      });
-      await prisma.whatsappInstance.update({
-        where: { empresaId },
-        data: { authState: authStateJson },
-      });
-      console.log(`[Baileys] Credenciais atualizadas para ${empresaId}`);
+      await saveAuthStateToDb(empresaId, sock.authState.creds);
     });
 
     // Evento: Conexão
