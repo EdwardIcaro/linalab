@@ -20,6 +20,8 @@ import { handleIncomingMessage } from './whatsappCommandHandler';
 const sockets = new Map<string, WASocket>();
 const qrCodes = new Map<string, string>();
 const statuses = new Map<string, string>();
+const reconnectAttempts = new Map<string, number>();
+const MAX_RECONNECT = 3;
 
 const logger = pino();
 
@@ -125,13 +127,12 @@ export async function initBaileys(empresaId: string): Promise<void> {
     const qrcodeMod = await dynamicImport('qrcode') as any;
 
     const makeWASocket = baileysMod.default;
-    const { BufferJSON, isJidBroadcast } = baileysMod;
+    const { isJidBroadcast, initAuthCreds, makeInMemoryStore } = baileysMod;
     const QRCode = qrcodeMod.default || qrcodeMod;
 
-    // Iniciar sempre com estado limpo (força novo QR code)
-    // Isso evita handshake errors de credenciais corrompidas
+    // Iniciar com credenciais geradas pelo próprio Baileys (tem as noise keys necessárias)
     const initialState: AuthenticationState = {
-      creds: {} as AuthenticationCreds,
+      creds: initAuthCreds(),
       keys: new Map() as any,
     };
 
@@ -189,6 +190,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
         qrCodes.delete(empresaId);
         statuses.set(empresaId, 'connected');
         sockets.set(empresaId, sock);
+        reconnectAttempts.set(empresaId, 0); // resetar contador de tentativas
 
         const jid = sock.user?.id;
         const phoneNumber = jid ? jid.split(':')[0] : null;
@@ -207,16 +209,17 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
       // Desconectado
       if (connection === 'close') {
-        const shouldReconnect =
-          (lastDisconnect?.error as Boom)?.output?.statusCode !==
-          DisconnectReason.loggedOut;
+        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+        const attempts = reconnectAttempts.get(empresaId) || 0;
+        const shouldReconnect = !isLoggedOut && attempts < MAX_RECONNECT;
 
         console.log(
-          `[Baileys] Desconectado para ${empresaId}. Reconectar: ${shouldReconnect}`
+          `[Baileys] Desconectado para ${empresaId}. Reconectar: ${shouldReconnect} (tentativa ${attempts}/${MAX_RECONNECT})`
         );
 
         if (shouldReconnect) {
-          // Tentar reconectar
+          reconnectAttempts.set(empresaId, attempts + 1);
           sockets.delete(empresaId);
           setTimeout(() => {
             initBaileys(empresaId).catch(console.error);
