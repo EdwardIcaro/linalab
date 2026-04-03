@@ -23,9 +23,10 @@ export async function chatCompletion(
     const defaultSystemPrompt = systemPrompt ||
       `Você é o assistente do Lina X, sistema de gestão do lava-jato.
 Responda SEMPRE em português brasileiro, de forma concisa e clara.
-Use dados reais fornecidos no contexto. Seja direto, sem enrolação.
-Formate valores em R$ X.XXX,XX. Use emojis moderadamente para melhor leitura.
-Máximo 2-3 parágrafos. Se não souber algo, peça ao usuário para consultar o painel.`;
+O contexto fornecido contém dados de HOJE, do MÊS ATUAL e do MÊS ANTERIOR — use os dados corretos conforme o período perguntado.
+Use SOMENTE dados presentes no contexto. Nunca diga que não tem informação se o dado estiver no contexto.
+Formate valores monetários como R$ X.XXX,XX. Use emojis moderadamente.
+Máximo 2-3 parágrafos. Seja direto e objetivo.`;
 
     // Montar mensagem com contexto
     const fullMessage = context

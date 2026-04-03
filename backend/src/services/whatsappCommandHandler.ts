@@ -68,9 +68,13 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     const amanha = new Date(hoje);
     amanha.setDate(amanha.getDate() + 1);
 
-    // Início e fim do mês atual
+    // Mês atual
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+
+    // Mês anterior
+    const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
 
     // 1. Empresa
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
@@ -110,6 +114,17 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     });
     const entradasMes = caixaMes.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasMes = caixaMes.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
+
+    // 6b. Ordens e caixa do mês anterior
+    const [ordensMesAnterior, caixaMesAnterior] = await Promise.all([
+      prisma.ordemServico.findMany({
+        where: { empresaId, createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
+        include: { lavador: { select: { nome: true } } }
+      }),
+      prisma.caixaRegistro.findMany({
+        where: { empresaId, data: { gte: inicioMesAnterior, lte: fimMesAnterior } }
+      }),
+    ]);
 
     // 7. Adiantamentos pendentes (todos, sem filtro de data)
     const adiantamentos = await prisma.adiantamento.findMany({
@@ -163,6 +178,22 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       const adiant = adiantamentos.filter(a => a.lavadorId === lav.id).reduce((s, a) => s + a.valor, 0);
       const comLiquida = comMes - adiant;
       ctx += `• ${lav.nome}: ${ordsMes.length} ordem(ns), faturamento R$ ${fatMes.toFixed(2)}, comissão bruta R$ ${comMes.toFixed(2)}, adiantamentos em aberto R$ ${adiant.toFixed(2)}, comissão líquida R$ ${comLiquida.toFixed(2)}\n`;
+    }
+    ctx += '\n';
+
+    // --- MÊS ANTERIOR ---
+    const entradasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
+    const saidasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
+    ctx += `=== MÊS ANTERIOR (${inicioMesAnterior.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}) ===\n`;
+    ctx += `Ordens: ${ordensMesAnterior.length} | Faturamento: R$ ${ordensMesAnterior.reduce((s, o) => s + o.valorTotal, 0).toFixed(2)}\n`;
+    ctx += `Caixa: Entradas R$ ${entradasMesAnt.toFixed(2)} | Saídas R$ ${saidasMesAnt.toFixed(2)} | Saldo R$ ${(entradasMesAnt - saidasMesAnt).toFixed(2)}\n`;
+
+    ctx += `Comissões do mês anterior por lavador:\n`;
+    for (const lav of lavadores) {
+      const ords = ordensMesAnterior.filter(o => o.lavadorId === lav.id);
+      const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
+      const com = fat * (lav.comissao / 100);
+      ctx += `• ${lav.nome}: ${ords.length} ordem(ns), faturamento R$ ${fat.toFixed(2)}, comissão R$ ${com.toFixed(2)}\n`;
     }
     ctx += '\n';
 
