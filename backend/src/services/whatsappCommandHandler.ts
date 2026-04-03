@@ -17,46 +17,286 @@ export async function handleIncomingMessage(
   empresaId: string
 ): Promise<string> {
   try {
-    // Extrair comando (ignora maiúsculas/minúsculas, remove espaços)
     const command = message.trim().toLowerCase().replace(/\//g, '');
 
-    // Construir contexto do dia
+    // ── Relatório de data específica ─────────────────────────────────────────
+    // Detecta: "resumo de ontem", "resumo dia 02/03", "relatorio 01/04", etc.
+    const isRelatorioRequest = /resumo|relat[oó]rio|detalhe/.test(command);
+    if (isRelatorioRequest || /^ontem$/.test(command)) {
+      const date = parseDateFromMessage(message);
+      if (date) {
+        return handleRelatorioData(date, empresaId);
+      }
+    }
+
+    // ── Comissões em aberto ──────────────────────────────────────────────────
+    // Detecta: "comissoes em aberto", "comissao em aberto do carlos", etc.
+    const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
+      /(em aberto|abertas?|pendentes?)\s*(comiss[aã][eo]s?|comiss[oõ]es)/i.test(message);
+    if (isComissaoAberto) {
+      const nomeLavador = extrairNomeLavador(message);
+      return handleComissoesEmAberto(nomeLavador, empresaId);
+    }
+
+    // ── Comandos fixos ───────────────────────────────────────────────────────
     const dailyContext = await buildDailyContext(empresaId);
 
-    // Verificar comandos específicos
-    if (command === 'resumo') {
-      return handleResumoCommand(dailyContext);
-    }
+    if (command === 'resumo') return handleResumoCommand(dailyContext);
+    if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
+    if (command === 'caixa') return handleCaixaCommand(dailyContext);
+    if (command === 'pendentes') return handlePendentesCommand(dailyContext);
+    if (command === 'ajuda') return handleAjudaCommand();
 
-    if (command === 'lavadores') {
-      return handleLavadoresCommand(dailyContext);
-    }
-
-    if (command === 'caixa') {
-      return handleCaixaCommand(dailyContext);
-    }
-
-    if (command === 'pendentes') {
-      return handlePendentesCommand(dailyContext);
-    }
-
-    if (command === 'ajuda') {
-      return handleAjudaCommand();
-    }
-
-    // Verificar se é nome de um lavador específico
+    // ── Lavador por nome ─────────────────────────────────────────────────────
     const lavadorResponse = await handleLavadorEspecifico(message, empresaId, dailyContext);
-    if (lavadorResponse) {
-      return lavadorResponse;
-    }
+    if (lavadorResponse) return lavadorResponse;
 
-    // Se não é comando específico, deixar Groq interpretar com contexto
+    // ── Fallback: IA com contexto ────────────────────────────────────────────
     return await chatCompletion(message, dailyContext);
   } catch (error) {
     console.error('[WhatsApp] Erro ao processar mensagem:', error);
     return '❌ Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.';
   }
 }
+
+// ==========================================
+// PARSING DE DATA
+// ==========================================
+
+const DIAS_SEMANA = ['domingo','segunda','terça','quarta','quinta','sexta','sábado','sabado','terca'];
+
+function parseDateFromMessage(message: string): Date | null {
+  const msg = message.toLowerCase();
+
+  if (/\bontem\b/.test(msg)) {
+    const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d;
+  }
+  if (/\bhoje\b/.test(msg)) {
+    const d = new Date(); d.setHours(0,0,0,0); return d;
+  }
+
+  // dd/mm ou dd/mm/yy ou dd/mm/yyyy
+  const m = msg.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  if (m) {
+    const day = parseInt(m[1]);
+    const month = parseInt(m[2]) - 1;
+    const rawYear = m[3];
+    const year = rawYear
+      ? (rawYear.length === 2 ? 2000 + parseInt(rawYear) : parseInt(rawYear))
+      : new Date().getFullYear();
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) { d.setHours(0,0,0,0); return d; }
+  }
+
+  return null;
+}
+
+function extrairNomeLavador(message: string): string | null {
+  // "comissão em aberto do carlos" → "carlos"
+  const m = message.match(/\b(?:do|da|de)\s+([a-záéíóúâêîôûãõç]+(?:\s+[a-záéíóúâêîôûãõç]+)?)/i);
+  if (m) {
+    const nome = m[1].toLowerCase();
+    // Ignorar palavras que não são nomes
+    if (!['comissao','comissão','aberto','abertas','mes','dia','hoje'].includes(nome)) {
+      return nome;
+    }
+  }
+  return null;
+}
+
+function nomeDiaSemana(date: Date): string {
+  return ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'][date.getDay()];
+}
+
+function formatarMetodo(metodo: string): string {
+  const map: Record<string, string> = {
+    PIX: 'PIX', DINHEIRO: 'DINHEIRO', CARTAO: 'CARTÃO',
+    CARTAO_CREDITO: 'CARTÃO CRÉDITO', CARTAO_DEBITO: 'CARTÃO DÉBITO',
+    NFE: 'NFE/FROTA', OUTRO: 'OUTRO', PENDENTE: 'PENDENTE',
+    DEBITO_FUNCIONARIO: 'DÉB. FUNCIONÁRIO',
+  };
+  return map[metodo] ?? metodo;
+}
+
+// ==========================================
+// RELATÓRIO DETALHADO DE UM DIA
+// ==========================================
+
+async function handleRelatorioData(date: Date, empresaId: string): Promise<string> {
+  const inicio = new Date(date); inicio.setHours(0,0,0,0);
+  const fim    = new Date(date); fim.setHours(23,59,59,999);
+
+  const ordens = await prisma.ordemServico.findMany({
+    where: { empresaId, createdAt: { gte: inicio, lte: fim } },
+    include: {
+      veiculo:  { select: { modelo: true } },
+      lavador:  { select: { nome: true, comissao: true } },
+      ordemLavadores: { include: { lavador: { select: { nome: true, comissao: true } } } },
+      pagamentos: { select: { metodo: true, valor: true, status: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (ordens.length === 0) {
+    return `📋 Sem ordens registradas em ${inicio.toLocaleDateString('pt-BR')}.`;
+  }
+
+  const dataFmt = inicio.toLocaleDateString('pt-BR');
+  const diaSemana = nomeDiaSemana(inicio);
+
+  // Linha por ordem
+  let linhas = '';
+  for (const o of ordens) {
+    const modelo = o.veiculo.modelo ?? 'Veículo';
+    const pagMethods = o.pagamentos.length > 0
+      ? o.pagamentos.map(p => formatarMetodo(p.metodo)).join('/')
+      : 'PENDENTE';
+    linhas += `${modelo.toUpperCase()}: [${o.valorTotal.toFixed(2)}] : ${pagMethods}\n`;
+  }
+
+  const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
+
+  // Totais por método de pagamento
+  const porMetodo: Record<string, number> = {};
+  for (const o of ordens) {
+    if (o.pagamentos.length === 0) {
+      porMetodo['PENDENTE'] = (porMetodo['PENDENTE'] ?? 0) + o.valorTotal;
+    } else {
+      for (const p of o.pagamentos) {
+        const m = formatarMetodo(p.metodo);
+        porMetodo[m] = (porMetodo[m] ?? 0) + p.valor;
+      }
+    }
+  }
+  const pagamentosFmt = Object.entries(porMetodo)
+    .map(([m, v]) => `${m}: R$ ${v.toFixed(2)}`)
+    .join('\n');
+
+  // Comissões por lavador com breakdown
+  const comissoesPorLavador: Record<string, { taxa: number; total: number; itens: string[] }> = {};
+  for (const o of ordens) {
+    // Usar ordemLavadores se existir, senão o lavadorId principal
+    const lavs = o.ordemLavadores.length > 0
+      ? o.ordemLavadores.map(ol => ol.lavador)
+      : o.lavador ? [o.lavador] : [];
+
+    for (const lav of lavs) {
+      if (!comissoesPorLavador[lav.nome]) {
+        comissoesPorLavador[lav.nome] = { taxa: lav.comissao, total: 0, itens: [] };
+      }
+      const comValor = o.valorTotal * (lav.comissao / 100);
+      comissoesPorLavador[lav.nome].total += comValor;
+      comissoesPorLavador[lav.nome].itens.push(
+        `${(o.veiculo.modelo ?? 'Veículo').toUpperCase()}: ${comValor.toFixed(2)}`
+      );
+    }
+  }
+
+  let comissoesFmt = '';
+  for (const [nome, dados] of Object.entries(comissoesPorLavador)) {
+    comissoesFmt += `\n${nome.toUpperCase()}: R$ ${dados.total.toFixed(2)}\n`;
+    comissoesFmt += `(${dados.itens.join(' + ')})\n`;
+  }
+
+  return `📋 RELATÓRIO DE SERVIÇOS\n` +
+    `${dataFmt} - ${diaSemana}\n\n` +
+    `${linhas}\n` +
+    `TOTAL: R$ ${total.toFixed(2)} | ${ordens.length} lavagem(ns)\n\n` +
+    `📊 PAGAMENTOS:\n${pagamentosFmt}\n\n` +
+    `👷 COMISSÕES (por serviço):\n${comissoesFmt}`;
+}
+
+// ==========================================
+// COMISSÕES EM ABERTO
+// ==========================================
+
+async function handleComissoesEmAberto(
+  nomeLavador: string | null,
+  empresaId: string
+): Promise<string> {
+  const lavadores = await prisma.lavador.findMany({
+    where: { empresaId, ativo: true },
+  });
+
+  // Filtrar lavador se nome foi fornecido
+  const lavadoresFiltrados = nomeLavador
+    ? lavadores.filter(l =>
+        l.nome.toLowerCase().includes(nomeLavador) ||
+        nomeLavador.includes(l.nome.toLowerCase())
+      )
+    : lavadores;
+
+  if (lavadoresFiltrados.length === 0) {
+    return `❌ Lavador não encontrado: "${nomeLavador}".`;
+  }
+
+  let resultado = nomeLavador
+    ? ''
+    : `💰 COMISSÕES EM ABERTO\n\n`;
+
+  for (const lav of lavadoresFiltrados) {
+    // Ordens finalizadas sem fechamento de comissão
+    const ordens = await prisma.ordemServico.findMany({
+      where: {
+        empresaId,
+        status: 'FINALIZADO',
+        OR: [
+          // Lavador principal sem fechamento
+          { lavadorId: lav.id, fechamentoComissaoId: null },
+          // Multi-lavador: entrada na tabela pivot sem fechamento
+          {
+            ordemLavadores: {
+              some: { lavadorId: lav.id, fechamentoComissaoId: null },
+            },
+          },
+        ],
+      },
+      include: {
+        veiculo: { select: { modelo: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (ordens.length === 0) {
+      resultado += `✅ ${lav.nome.toUpperCase()}: sem comissões em aberto.\n\n`;
+      continue;
+    }
+
+    const totalFat = ordens.reduce((s, o) => s + o.valorTotal, 0);
+    const totalCom = totalFat * (lav.comissao / 100);
+
+    // Adiantamentos pendentes desse lavador
+    const adiantamentos = await prisma.adiantamento.findMany({
+      where: { lavadorId: lav.id, status: 'PENDENTE' },
+    });
+    const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
+    const comLiquida = totalCom - totalAdiant;
+
+    // Agrupar por mês
+    const porMes: Record<string, number> = {};
+    for (const o of ordens) {
+      const mes = o.createdAt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      porMes[mes] = (porMes[mes] ?? 0) + o.valorTotal * (lav.comissao / 100);
+    }
+    const porMesFmt = Object.entries(porMes)
+      .map(([m, v]) => `  ${m}: R$ ${v.toFixed(2)}`)
+      .join('\n');
+
+    resultado += `👤 ${lav.nome.toUpperCase()} (${lav.comissao}%)\n` +
+      `Ordens em aberto: ${ordens.length}\n` +
+      `Faturamento: R$ ${totalFat.toFixed(2)}\n` +
+      `Comissão bruta: R$ ${totalCom.toFixed(2)}\n` +
+      `Adiantamentos a descontar: R$ ${totalAdiant.toFixed(2)}\n` +
+      `Comissão líquida a pagar: R$ ${comLiquida.toFixed(2)}\n` +
+      `Por mês:\n${porMesFmt}\n\n`;
+  }
+
+  return resultado.trim();
+}
+
+// ==========================================
+// CONTEXTO COMPLETO PARA IA
+// ==========================================
 
 /**
  * Constrói contexto com dados do dia E do mês para a IA responder qualquer período
@@ -297,13 +537,22 @@ function handlePendentesCommand(context: string): string {
  */
 function handleAjudaCommand(): string {
   return `📚 COMANDOS DISPONÍVEIS\n\n` +
-    `/resumo - Resumo do dia\n` +
-    `/lavadores - Lista de lavadores e comissões\n` +
-    `/caixa - Entradas e saídas do dia\n` +
-    `/pendentes - Ordens em andamento\n` +
-    `/ajuda - Este menu\n\n` +
-    `Ou digite o nome de um lavador para detalhes específicos.\n` +
-    `Envie qualquer outra mensagem para perguntas em linguagem natural.`;
+    `*Dia a dia:*\n` +
+    `/resumo - Resumo de hoje\n` +
+    `/lavadores - Lavadores e comissões de hoje\n` +
+    `/caixa - Caixa do dia\n` +
+    `/pendentes - Ordens em andamento\n\n` +
+    `*Relatórios:*\n` +
+    `resumo de ontem - Relatório detalhado de ontem\n` +
+    `resumo dia 02/04 - Relatório de qualquer dia\n` +
+    `ontem - Atalho para relatório de ontem\n\n` +
+    `*Comissões:*\n` +
+    `comissões em aberto - Todas as comissões pendentes\n` +
+    `comissão em aberto do [nome] - Comissões de um lavador\n\n` +
+    `*Busca:*\n` +
+    `[nome do lavador] - Detalhes do mês do lavador\n` +
+    `[qualquer pergunta] - IA com contexto do negócio\n\n` +
+    `/ajuda - Este menu`;
 }
 
 /**
