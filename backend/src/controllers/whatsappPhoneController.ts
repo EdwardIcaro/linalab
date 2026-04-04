@@ -1,0 +1,121 @@
+/**
+ * Controller para gerenciar números de WhatsApp dos lavadores
+ */
+
+import { Request, Response } from 'express';
+import prisma from '../db';
+
+interface AuthenticatedRequest extends Request {
+  empresaId?: string;
+  usuarioId?: string;
+}
+
+/**
+ * GET /api/whatsapp/phones
+ * Listar todos os lavadores com seus números WhatsApp
+ */
+export async function listLavadorPhones(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada' });
+    }
+
+    const lavadores = await prisma.lavador.findMany({
+      where: { empresaId },
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        comissao: true,
+        ativo: true,
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    return res.json({ data: lavadores });
+  } catch (error) {
+    console.error('[WhatsApp Phones] Erro ao listar:', error);
+    return res.status(500).json({ error: 'Erro ao listar lavadores' });
+  }
+}
+
+/**
+ * PATCH /api/whatsapp/phones/:lavadorId
+ * Adicionar ou atualizar número de WhatsApp de um lavador
+ */
+export async function updateLavadorPhone(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    const lavadorId = req.params.lavadorId as string;
+    const { telefone } = req.body;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada' });
+    }
+
+    if (!telefone || typeof telefone !== 'string' || telefone.trim().length < 10) {
+      return res.status(400).json({ error: 'Número de WhatsApp inválido' });
+    }
+
+    // Verificar se lavador existe e pertence à empresa
+    const lavador = await prisma.lavador.findUnique({
+      where: { id: lavadorId },
+    });
+
+    if (!lavador || lavador.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Lavador não encontrado' });
+    }
+
+    // Atualizar telefone
+    const updated = await prisma.lavador.update({
+      where: { id: lavadorId },
+      data: { telefone: telefone.trim() },
+      select: { id: true, nome: true, telefone: true },
+    });
+
+    console.log(`[WhatsApp Phones] Telefone atualizado para ${updated.nome}: ${updated.telefone}`);
+    return res.json({ data: updated, message: 'Número de WhatsApp atualizado com sucesso' });
+  } catch (error) {
+    console.error('[WhatsApp Phones] Erro ao atualizar:', error);
+    return res.status(500).json({ error: 'Erro ao atualizar número' });
+  }
+}
+
+/**
+ * DELETE /api/whatsapp/phones/:lavadorId
+ * Remover número de WhatsApp de um lavador
+ */
+export async function deleteLavadorPhone(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    const lavadorId = req.params.lavadorId as string;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada' });
+    }
+
+    // Verificar se lavador existe e pertence à empresa
+    const lavador = await prisma.lavador.findUnique({
+      where: { id: lavadorId },
+    });
+
+    if (!lavador || lavador.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Lavador não encontrado' });
+    }
+
+    // Remover telefone (set null)
+    const updated = await prisma.lavador.update({
+      where: { id: lavadorId },
+      data: { telefone: null },
+      select: { id: true, nome: true, telefone: true },
+    });
+
+    console.log(`[WhatsApp Phones] Telefone removido para ${updated.nome}`);
+    return res.json({ data: updated, message: 'Número de WhatsApp removido' });
+  } catch (error) {
+    console.error('[WhatsApp Phones] Erro ao deletar:', error);
+    return res.status(500).json({ error: 'Erro ao remover número' });
+  }
+}

@@ -1,4 +1,4 @@
-/**
+/*
  * Parser de comandos WhatsApp e construtor de contexto
  * Identifica comandos específicos e passa para Groq quando não encontra match
  */
@@ -7,7 +7,7 @@ import prisma from '../db';
 import { chatCompletion } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type WhatsAppUser } from './whatsappAuthService';
 
-/**
+/*
  * Processa mensagem recebida do WhatsApp
  */
 export async function handleIncomingMessage(
@@ -183,7 +183,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     const pagMethods = o.pagamentos.length > 0
       ? o.pagamentos.map(p => formatarMetodo(p.metodo)).join('/')
       : 'PENDENTE';
-    linhas += `${modelo.toUpperCase()}: [**R$ ${o.valorTotal.toFixed(2)}**] : **${pagMethods}**\n`;
+    linhas += `${modelo.toUpperCase()}: [*R$ ${o.valorTotal.toFixed(2)}*] : *${pagMethods}*\n`;
   }
 
   const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
@@ -201,7 +201,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     }
   }
   const pagamentosFmt = Object.entries(porMetodo)
-    .map(([m, v]) => `${m}: **R$ ${v.toFixed(2)}**`)
+    .map(([m, v]) => `${m}: *R$ ${v.toFixed(2)}*`)
     .join('\n');
 
   // Comissões por lavador com breakdown
@@ -219,21 +219,21 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
       const comValor = o.valorTotal * (lav.comissao / 100);
       comissoesPorLavador[lav.nome].total += comValor;
       comissoesPorLavador[lav.nome].itens.push(
-        `${(o.veiculo.modelo ?? 'Veículo').toUpperCase()}: **${comValor.toFixed(2)}**`
+        `${(o.veiculo.modelo ?? 'Veículo').toUpperCase()}: *${comValor.toFixed(2)}*`
       );
     }
   }
 
   let comissoesFmt = '';
   for (const [nome, dados] of Object.entries(comissoesPorLavador)) {
-    comissoesFmt += `\n**${nome.toUpperCase()}**: **R$ ${dados.total.toFixed(2)}**\n`;
+    comissoesFmt += `\n*${nome.toUpperCase()}*: *R$ ${dados.total.toFixed(2)}*\n`;
     comissoesFmt += `(${dados.itens.join(' + ')})\n`;
   }
 
   return `📋 RELATÓRIO DE SERVIÇOS\n` +
-    `**${dataFmt}** - **${diaSemana}**\n\n` +
+    `*${dataFmt}* - *${diaSemana}*\n\n` +
     `${linhas}\n` +
-    `TOTAL: **R$ ${total.toFixed(2)}** | **${ordens.length}** lavagem(ns)\n\n` +
+    `TOTAL: *R$ ${total.toFixed(2)}* | *${ordens.length}* lavagem(ns)\n\n` +
     `📊 PAGAMENTOS:\n${pagamentosFmt}\n\n` +
     `👷 COMISSÕES (por serviço):\n${comissoesFmt}`;
 }
@@ -290,7 +290,7 @@ async function handleComissoesEmAberto(
     });
 
     if (ordens.length === 0) {
-      resultado += `✅ **${lav.nome.toUpperCase()}**: sem comissões em aberto.\n\n`;
+      resultado += `✅ *${lav.nome.toUpperCase()}*: sem comissões em aberto.\n\n`;
       continue;
     }
 
@@ -311,15 +311,15 @@ async function handleComissoesEmAberto(
       porMes[mes] = (porMes[mes] ?? 0) + o.valorTotal * (lav.comissao / 100);
     }
     const porMesFmt = Object.entries(porMes)
-      .map(([m, v]) => `  **${m}**: **R$ ${v.toFixed(2)}**`)
+      .map(([m, v]) => `  *${m}*: *R$ ${v.toFixed(2)}*`)
       .join('\n');
 
-    resultado += `👤 **${lav.nome.toUpperCase()}** (${lav.comissao}%)\n` +
-      `Ordens em aberto: **${ordens.length}**\n` +
-      `Faturamento: **R$ ${totalFat.toFixed(2)}**\n` +
-      `Comissão bruta: **R$ ${totalCom.toFixed(2)}**\n` +
-      `Adiantamentos a descontar: **R$ ${totalAdiant.toFixed(2)}**\n` +
-      `Comissão líquida a pagar: **R$ ${comLiquida.toFixed(2)}**\n` +
+    resultado += `👤 *${lav.nome.toUpperCase()}* (${lav.comissao}%)\n` +
+      `Ordens em aberto: *${ordens.length}*\n` +
+      `Faturamento: *R$ ${totalFat.toFixed(2)}*\n` +
+      `Comissão bruta: *R$ ${totalCom.toFixed(2)}*\n` +
+      `Adiantamentos a descontar: *R$ ${totalAdiant.toFixed(2)}*\n` +
+      `Comissão líquida a pagar: *R$ ${comLiquida.toFixed(2)}*\n` +
       `Por mês:\n${porMesFmt}\n\n`;
   }
 
@@ -360,11 +360,11 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
     const horarioEntrada = ordem.dataInicio?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       ?? ordem.createdAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    resultado += `🚗 **${(ordem.veiculo.modelo ?? 'Veículo').toUpperCase()}** (${ordem.veiculo.placa})\n`;
+    resultado += `🚗 *${(ordem.veiculo.modelo ?? 'Veículo').toUpperCase()}* (${ordem.veiculo.placa})\n`;
     resultado += `  Cliente: ${ordem.cliente.nome}\n`;
-    resultado += `  Entrada: **${horarioEntrada}**\n`;
+    resultado += `  Entrada: *${horarioEntrada}*\n`;
     resultado += `  Lavador: ${ordem.lavador?.nome ?? '(sem atribuição)'}\n`;
-    resultado += `  Valor: **R$ ${ordem.valorTotal.toFixed(2)}**\n\n`;
+    resultado += `  Valor: *R$ ${ordem.valorTotal.toFixed(2)}*\n\n`;
   }
 
   return resultado.trim();
@@ -374,16 +374,16 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
 // HANDLERS ESPECÍFICOS PARA LAVADOR
 // ==========================================
 
-/**
+/*
  * Resumo do dia apenas do lavador
  */
 function handleResumoLavador(lavadorId: string, empresaId: string): string {
   // Por enquanto, retorna mensagem informativa
   // Implementar busca do resumo do dia desse lavador
-  return `👤 Seu Resumo do Dia\n\nUse o comando **/status** para ver suas comissões e faturamento de hoje.`;
+  return `👤 Seu Resumo do Dia\n\nUse o comando */status* para ver suas comissões e faturamento de hoje.`;
 }
 
-/**
+/*
  * Status e comissões do lavador
  */
 async function handleStatusLavador(lavadorId: string, empresaId: string): Promise<string> {
@@ -419,18 +419,18 @@ async function handleStatusLavador(lavadorId: string, empresaId: string): Promis
   const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
   const comLiquidaMes = comBrutaMes - totalAdiant;
 
-  return `👤 **${lavador.nome.toUpperCase()}**\n\n` +
+  return `👤 *${lavador.nome.toUpperCase()}*\n\n` +
     `📅 HOJE:\n` +
-    `  Ordens: **${ordensDia.length}** | Faturamento: **R$ ${fatDia.toFixed(2)}**\n` +
-    `  Comissão: **R$ ${comDia.toFixed(2)}**\n\n` +
+    `  Ordens: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n` +
+    `  Comissão: *R$ ${comDia.toFixed(2)}*\n\n` +
     `📆 MÊS ATUAL:\n` +
-    `  Ordens: **${ordensMes.length}** | Faturamento: **R$ ${fatMes.toFixed(2)}**\n` +
-    `  Comissão bruta (${lavador.comissao}%): **R$ ${comBrutaMes.toFixed(2)}**\n` +
-    `  Adiantamentos em aberto: **R$ ${totalAdiant.toFixed(2)}**\n` +
-    `  Comissão líquida a receber: **R$ ${comLiquidaMes.toFixed(2)}**`;
+    `  Ordens: *${ordensMes.length}* | Faturamento: *R$ ${fatMes.toFixed(2)}*\n` +
+    `  Comissão bruta (${lavador.comissao}%): *R$ ${comBrutaMes.toFixed(2)}*\n` +
+    `  Adiantamentos em aberto: *R$ ${totalAdiant.toFixed(2)}*\n` +
+    `  Comissão líquida a receber: *R$ ${comLiquidaMes.toFixed(2)}*`;
 }
 
-/**
+/*
  * Suas comissões em aberto (apenas do lavador)
  */
 async function handleComissoesLavador(lavadorId: string, empresaId: string): Promise<string> {
@@ -456,7 +456,7 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
   });
 
   if (ordens.length === 0) {
-    return `✅ **${lavador.nome}**, você não possui comissões em aberto.`;
+    return `✅ *${lavador.nome}*, você não possui comissões em aberto.`;
   }
 
   const totalFat = ordens.reduce((s, o) => s + o.valorTotal, 0);
@@ -469,17 +469,17 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
     porMes[mes] = (porMes[mes] ?? 0) + o.valorTotal * (lavador.comissao / 100);
   }
   const porMesFmt = Object.entries(porMes)
-    .map(([m, v]) => `  **${m}**: **R$ ${v.toFixed(2)}**`)
+    .map(([m, v]) => `  *${m}*: *R$ ${v.toFixed(2)}*`)
     .join('\n');
 
   return `💰 SUAS COMISSÕES EM ABERTO\n\n` +
-    `Ordens finalizadas: **${ordens.length}**\n` +
-    `Faturamento total: **R$ ${totalFat.toFixed(2)}**\n` +
-    `Comissão a receber (${lavador.comissao}%): **R$ ${totalCom.toFixed(2)}**\n\n` +
+    `Ordens finalizadas: *${ordens.length}*\n` +
+    `Faturamento total: *R$ ${totalFat.toFixed(2)}*\n` +
+    `Comissão a receber (${lavador.comissao}%): *R$ ${totalCom.toFixed(2)}*\n\n` +
     `Por mês:\n${porMesFmt}`;
 }
 
-/**
+/*
  * Menu reduzido para lavador
  */
 function handleAjudaLavador(): string {
@@ -495,7 +495,7 @@ function handleAjudaLavador(): string {
 // CONTEXTO COMPLETO PARA IA
 // ==========================================
 
-/**
+/*
  * Constrói contexto com dados do dia E do mês para a IA responder qualquer período
  */
 async function buildDailyContext(empresaId: string): Promise<string> {
@@ -585,12 +585,12 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     // --- DIA ---
     ctx += `=== HOJE ===\n`;
     const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
-    ctx += `Ordens: **${ordensDia.length}** | Faturamento: **R$ ${fatDia.toFixed(2)}**\n`;
-    ctx += `Status: **${ordensDia.filter(o => o.status === 'FINALIZADO').length}** finalizadas, `;
-    ctx += `**${ordensDia.filter(o => o.status === 'EM_ANDAMENTO').length}** em andamento, `;
-    ctx += `**${ordensDia.filter(o => o.status === 'PENDENTE').length}** pendentes, `;
-    ctx += `**${ordensDia.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length}** aguardando pagamento\n`;
-    ctx += `Caixa: Entradas **R$ ${entradasDia.toFixed(2)}** | Saídas **R$ ${saidasDia.toFixed(2)}** | Saldo **R$ ${(entradasDia - saidasDia).toFixed(2)}**\n\n`;
+    ctx += `Ordens: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n`;
+    ctx += `Status: *${ordensDia.filter(o => o.status === 'FINALIZADO').length}* finalizadas, `;
+    ctx += `*${ordensDia.filter(o => o.status === 'EM_ANDAMENTO').length}* em andamento, `;
+    ctx += `*${ordensDia.filter(o => o.status === 'PENDENTE').length}* pendentes, `;
+    ctx += `*${ordensDia.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length}* aguardando pagamento\n`;
+    ctx += `Caixa: Entradas *R$ ${entradasDia.toFixed(2)}* | Saídas *R$ ${saidasDia.toFixed(2)}* | Saldo *R$ ${(entradasDia - saidasDia).toFixed(2)}*\n\n`;
 
     // Lavadores hoje
     ctx += `Lavadores hoje:\n`;
@@ -598,15 +598,15 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       const ords = ordensDia.filter(o => o.lavadorId === lav.id);
       const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
       const com = fat * (lav.comissao / 100);
-      ctx += `• **${lav.nome}**: **${ords.length}** ordem(ns), faturamento **R$ ${fat.toFixed(2)}**, comissão hoje **R$ ${com.toFixed(2)}**\n`;
+      ctx += `• *${lav.nome}*: *${ords.length}* ordem(ns), faturamento *R$ ${fat.toFixed(2)}*, comissão hoje *R$ ${com.toFixed(2)}*\n`;
     }
     ctx += '\n';
 
     // --- MÊS ---
     ctx += `=== MÊS ATUAL ===\n`;
     const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
-    ctx += `Ordens: **${ordensMes.length}** | Faturamento total: **R$ ${fatMes.toFixed(2)}**\n`;
-    ctx += `Caixa mês: Entradas **R$ ${entradasMes.toFixed(2)}** | Saídas **R$ ${saidasMes.toFixed(2)}** | Saldo **R$ ${(entradasMes - saidasMes).toFixed(2)}**\n\n`;
+    ctx += `Ordens: *${ordensMes.length}* | Faturamento total: *R$ ${fatMes.toFixed(2)}*\n`;
+    ctx += `Caixa mês: Entradas *R$ ${entradasMes.toFixed(2)}* | Saídas *R$ ${saidasMes.toFixed(2)}* | Saldo *R$ ${(entradasMes - saidasMes).toFixed(2)}*\n\n`;
 
     // Comissões do mês por lavador
     ctx += `Comissões do mês por lavador:\n`;
@@ -616,7 +616,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       const comMes = fatLav * (lav.comissao / 100);
       const adiant = adiantamentos.filter(a => a.lavadorId === lav.id).reduce((s, a) => s + a.valor, 0);
       const comLiquida = comMes - adiant;
-      ctx += `• **${lav.nome}**: **${ordsMes.length}** ordem(ns), faturamento **R$ ${fatLav.toFixed(2)}**, comissão bruta **R$ ${comMes.toFixed(2)}**, adiantamentos em aberto **R$ ${adiant.toFixed(2)}**, comissão líquida **R$ ${comLiquida.toFixed(2)}**\n`;
+      ctx += `• *${lav.nome}*: *${ordsMes.length}* ordem(ns), faturamento *R$ ${fatLav.toFixed(2)}*, comissão bruta *R$ ${comMes.toFixed(2)}*, adiantamentos em aberto *R$ ${adiant.toFixed(2)}*, comissão líquida *R$ ${comLiquida.toFixed(2)}*\n`;
     }
     ctx += '\n';
 
@@ -625,15 +625,15 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     const saidasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
     const fatMesAnt = ordensMesAnterior.reduce((s, o) => s + o.valorTotal, 0);
     ctx += `=== MÊS ANTERIOR (${inicioMesAnterior.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}) ===\n`;
-    ctx += `Ordens: **${ordensMesAnterior.length}** | Faturamento: **R$ ${fatMesAnt.toFixed(2)}**\n`;
-    ctx += `Caixa: Entradas **R$ ${entradasMesAnt.toFixed(2)}** | Saídas **R$ ${saidasMesAnt.toFixed(2)}** | Saldo **R$ ${(entradasMesAnt - saidasMesAnt).toFixed(2)}**\n`;
+    ctx += `Ordens: *${ordensMesAnterior.length}* | Faturamento: *R$ ${fatMesAnt.toFixed(2)}*\n`;
+    ctx += `Caixa: Entradas *R$ ${entradasMesAnt.toFixed(2)}* | Saídas *R$ ${saidasMesAnt.toFixed(2)}* | Saldo *R$ ${(entradasMesAnt - saidasMesAnt).toFixed(2)}*\n`;
 
     ctx += `Comissões do mês anterior por lavador:\n`;
     for (const lav of lavadores) {
       const ords = ordensMesAnterior.filter(o => o.lavadorId === lav.id);
       const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
       const com = fat * (lav.comissao / 100);
-      ctx += `• **${lav.nome}**: **${ords.length}** ordem(ns), faturamento **R$ ${fat.toFixed(2)}**, comissão **R$ ${com.toFixed(2)}**\n`;
+      ctx += `• *${lav.nome}*: *${ords.length}* ordem(ns), faturamento *R$ ${fat.toFixed(2)}*, comissão *R$ ${com.toFixed(2)}*\n`;
     }
     ctx += '\n';
 
@@ -641,7 +641,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     if (adiantamentos.length > 0) {
       ctx += `Adiantamentos pendentes (total):\n`;
       for (const a of adiantamentos) {
-        ctx += `• **${a.lavador.nome}**: **R$ ${a.valor.toFixed(2)}**\n`;
+        ctx += `• *${a.lavador.nome}*: *R$ ${a.valor.toFixed(2)}*\n`;
       }
       ctx += '\n';
     }
@@ -650,7 +650,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     if (fechamentosMes.length > 0) {
       ctx += `Fechamentos de comissão no mês:\n`;
       for (const f of fechamentosMes) {
-        ctx += `• **${f.lavador.nome}**: **R$ ${f.valorPago.toFixed(2)}** em ${f.data.toLocaleDateString('pt-BR')}\n`;
+        ctx += `• *${f.lavador.nome}*: *R$ ${f.valorPago.toFixed(2)}* em ${f.data.toLocaleDateString('pt-BR')}\n`;
       }
       ctx += '\n';
     }
@@ -662,7 +662,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
   }
 }
 
-/**
+/*
  * Handler: /resumo
  */
 function handleResumoCommand(context: string): string {
@@ -672,7 +672,7 @@ function handleResumoCommand(context: string): string {
   return `📊 RESUMO DO DIA\n\n${resumo}\n\nPara mais detalhes, acesse o painel.`;
 }
 
-/**
+/*
  * Handler: /lavadores
  */
 function handleLavadoresCommand(context: string): string {
@@ -697,7 +697,7 @@ function handleLavadoresCommand(context: string): string {
   return `👷 LAVADORES DO DIA\n\n${lavadoresSection}\n\nDigite o nome do lavador para detalhes específicos.`;
 }
 
-/**
+/*
  * Handler: /caixa
  */
 function handleCaixaCommand(context: string): string {
@@ -718,7 +718,7 @@ function handleCaixaCommand(context: string): string {
   return `💰 CAIXA DO DIA\n\n${caixaSection}`;
 }
 
-/**
+/*
  * Handler: /pendentes
  */
 function handlePendentesCommand(context: string): string {
@@ -732,7 +732,7 @@ function handlePendentesCommand(context: string): string {
   return `⏳ ORDENS PENDENTES\n\n${pendentesLine}\n\nAbra o painel para mais detalhes.`;
 }
 
-/**
+/*
  * Handler: /ajuda
  */
 function handleAjudaCommand(): string {
@@ -755,7 +755,7 @@ function handleAjudaCommand(): string {
     `/ajuda - Este menu`;
 }
 
-/**
+/*
  * Busca lavador específico por nome (parcial) — retorna dados do dia E do mês
  */
 async function handleLavadorEspecifico(
@@ -802,15 +802,15 @@ async function handleLavadorEspecifico(
     const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
     const comLiquidaMes = comBrutaMes - totalAdiant;
 
-    return `👤 **${lavador.nome.toUpperCase()}**\n\n` +
+    return `👤 *${lavador.nome.toUpperCase()}*\n\n` +
       `📅 HOJE:\n` +
-      `  Ordens: **${ordensDia.length}** | Faturamento: **R$ ${fatDia.toFixed(2)}**\n` +
-      `  Comissão: **R$ ${comDia.toFixed(2)}**\n\n` +
+      `  Ordens: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n` +
+      `  Comissão: *R$ ${comDia.toFixed(2)}*\n\n` +
       `📆 MÊS ATUAL:\n` +
-      `  Ordens: **${ordensMes.length}** | Faturamento: **R$ ${fatMes.toFixed(2)}**\n` +
-      `  Comissão bruta (${lavador.comissao}%): **R$ ${comBrutaMes.toFixed(2)}**\n` +
-      `  Adiantamentos em aberto: **R$ ${totalAdiant.toFixed(2)}**\n` +
-      `  Comissão líquida a receber: **R$ ${comLiquidaMes.toFixed(2)}**`;
+      `  Ordens: *${ordensMes.length}* | Faturamento: *R$ ${fatMes.toFixed(2)}*\n` +
+      `  Comissão bruta (${lavador.comissao}%): *R$ ${comBrutaMes.toFixed(2)}*\n` +
+      `  Adiantamentos em aberto: *R$ ${totalAdiant.toFixed(2)}*\n` +
+      `  Comissão líquida a receber: *R$ ${comLiquidaMes.toFixed(2)}*`;
   } catch (error) {
     console.error('[WhatsApp] Erro ao buscar lavador:', error);
     return null;

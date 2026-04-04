@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração de WhatsApp - Lina X</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .whatsapp-config {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--cor-primaria);
+        }
+
+        .config-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .lavadores-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .lavador-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: box-shadow 0.2s;
+        }
+
+        .lavador-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .lavador-info {
+            flex: 1;
+        }
+
+        .lavador-nome {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+
+        .lavador-details {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 0.3rem 0;
+        }
+
+        .lavador-phone {
+            font-family: monospace;
+            font-weight: 500;
+            color: #25d366;
+            margin-top: 0.5rem;
+        }
+
+        .lavador-phone.vazio {
+            color: #999;
+            font-style: italic;
+        }
+
+        .lavador-actions {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+
+        .btn-phone {
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-edit-phone {
+            background: var(--cor-primaria);
+            color: white;
+        }
+
+        .btn-edit-phone:hover {
+            opacity: 0.9;
+        }
+
+        .btn-delete-phone {
+            background: #ff4757;
+            color: white;
+        }
+
+        .btn-delete-phone:hover {
+            opacity: 0.9;
+        }
+
+        .btn-delete-phone:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px dashed #ddd;
+        }
+
+        .modal-phone {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-phone.active {
+            display: flex;
+        }
+
+        .modal-content-phone {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header-phone {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header-phone h2 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .form-group-phone {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group-phone label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group-phone input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-group-phone input:focus {
+            outline: none;
+            border-color: var(--cor-primaria);
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+
+        .modal-footer-phone {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 1rem;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn-modal {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-save-phone {
+            background: var(--cor-primaria);
+            color: white;
+        }
+
+        .btn-save-phone:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-cancel:hover {
+            background: #d0d0d0;
+        }
+
+        .helper-text {
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 0.3rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-ativo {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inativo {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--cor-primaria);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="whatsapp-config">
+            <div class="config-header">
+                <h1>📱 WhatsApp Bot - Números dos Lavadores</h1>
+            </div>
+
+            <div id="alert" class="alert" style="display: none;"></div>
+
+            <div id="loadingState" class="loading" style="display: none;">
+                <div class="spinner"></div> Carregando...
+            </div>
+
+            <div id="content" class="lavadores-grid"></div>
+        </div>
+    </div>
+
+    <!-- Modal para editar número -->
+    <div id="phoneModal" class="modal-phone">
+        <div class="modal-content-phone">
+            <div class="modal-header-phone">
+                <h2 id="modalTitle">Adicionar Número</h2>
+                <button class="close-modal" onclick="closePhoneModal()">&times;</button>
+            </div>
+
+            <form id="phoneForm" onsubmit="savePhoneNumber(event)">
+                <div class="form-group-phone">
+                    <label for="lavadorName">Lavador</label>
+                    <input type="text" id="lavadorName" disabled style="background: #f5f5f5;">
+                </div>
+
+                <div class="form-group-phone">
+                    <label for="phoneInput">Número de WhatsApp</label>
+                    <input
+                        type="tel"
+                        id="phoneInput"
+                        placeholder="(11) 99999-9999 ou 5511999999999"
+                        required
+                    >
+                    <div class="helper-text">
+                        Pode ser formato (11) 99999-9999 ou apenas números
+                    </div>
+                </div>
+
+                <div class="modal-footer-phone">
+                    <button type="button" class="btn-modal btn-cancel" onclick="closePhoneModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal btn-save-phone" id="saveBtn">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentLavador = null;
+        let lavadores = [];
+
+        // Inicializar
+        async function init() {
+            await loadLavadores();
+        }
+
+        // Carregar lista de lavadores
+        async function loadLavadores() {
+            showLoading(true);
+            try {
+                const response = await fetch('/api/whatsapp/phones', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error('Erro ao carregar lavadores');
+
+                const { data } = await response.json();
+                lavadores = data;
+                renderLavadores();
+            } catch (error) {
+                showAlert('Erro ao carregar lista de lavadores', 'error');
+                console.error(error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Renderizar lista de lavadores
+        function renderLavadores() {
+            const content = document.getElementById('content');
+
+            if (lavadores.length === 0) {
+                content.innerHTML = '<div class="empty-state">Nenhum lavador cadastrado</div>';
+                return;
+            }
+
+            content.innerHTML = lavadores.map(lav => `
+                <div class="lavador-card">
+                    <div class="lavador-info">
+                        <h3 class="lavador-nome">${lav.nome}</h3>
+                        <div class="lavador-details">
+                            Comissão: ${lav.comissao}%
+                            <span class="status-badge ${lav.ativo ? 'status-ativo' : 'status-inativo'}">
+                                ${lav.ativo ? 'Ativo' : 'Inativo'}
+                            </span>
+                        </div>
+                        <div class="lavador-phone ${lav.telefone ? '' : 'vazio'}">
+                            📱 ${lav.telefone || 'Sem número cadastrado'}
+                        </div>
+                    </div>
+                    <div class="lavador-actions">
+                        <button class="btn-phone btn-edit-phone" onclick="openPhoneModal('${lav.id}', '${lav.nome}', '${lav.telefone || ''}')">
+                            ${lav.telefone ? '✏️ Editar' : '➕ Adicionar'}
+                        </button>
+                        ${lav.telefone ? `
+                            <button class="btn-phone btn-delete-phone" onclick="deletePhoneNumber('${lav.id}', '${lav.nome}')">
+                                🗑️
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Abrir modal
+        function openPhoneModal(lavadorId, lavadorName, currentPhone) {
+            currentLavador = { id: lavadorId, nome: lavadorName };
+            document.getElementById('lavadorName').value = lavadorName;
+            document.getElementById('phoneInput').value = currentPhone;
+            document.getElementById('modalTitle').textContent = currentPhone
+                ? `Editar número - ${lavadorName}`
+                : `Adicionar número - ${lavadorName}`;
+            document.getElementById('phoneModal').classList.add('active');
+        }
+
+        // Fechar modal
+        function closePhoneModal() {
+            document.getElementById('phoneModal').classList.remove('active');
+            document.getElementById('phoneForm').reset();
+            currentLavador = null;
+        }
+
+        // Salvar número
+        async function savePhoneNumber(event) {
+            event.preventDefault();
+
+            if (!currentLavador) return;
+
+            const telefone = document.getElementById('phoneInput').value.trim();
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (!telefone) {
+                showAlert('Digite um número válido', 'error');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner"></span>';
+
+            try {
+                const response = await fetch(`/api/whatsapp/phones/${currentLavador.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telefone })
+                });
+
+                if (!response.ok) throw new Error('Erro ao salvar número');
+
+                showAlert('Número de WhatsApp atualizado com sucesso!', 'success');
+                closePhoneModal();
+                await loadLavadores();
+            } catch (error) {
+                showAlert('Erro ao salvar número', 'error');
+                console.error(error);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Salvar';
+            }
+        }
+
+        // Deletar número
+        async function deletePhoneNumber(lavadorId, lavadorName) {
+            if (!confirm(`Tem certeza que deseja remover o número de WhatsApp de ${lavadorName}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/whatsapp/phones/${lavadorId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error('Erro ao remover número');
+
+                showAlert('Número removido com sucesso', 'success');
+                await loadLavadores();
+            } catch (error) {
+                showAlert('Erro ao remover número', 'error');
+                console.error(error);
+            }
+        }
+
+        // Mostrar/esconder loading
+        function showLoading(show) {
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+            document.getElementById('content').style.display = show ? 'none' : 'grid';
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type) {
+            const alertEl = document.getElementById('alert');
+            alertEl.className = `alert alert-${type}`;
+            alertEl.textContent = message;
+            alertEl.style.display = 'block';
+            setTimeout(() => alertEl.style.display = 'none', 4000);
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('phoneModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'phoneModal') closePhoneModal();
+        });
+
+        // Inicializar
+        init();
+    </script>
+</body>
+</html>
