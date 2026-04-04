@@ -154,8 +154,12 @@ export async function initBaileys(empresaId: string): Promise<void> {
       getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
     });
 
+    // Flag: credenciais foram atualizadas (indica QR escaneado com sucesso)
+    let credsJustUpdated = false;
+
     // Salvar credenciais quando mudarem (em /tmp e no banco)
     sock.ev.on('creds.update', async () => {
+      credsJustUpdated = true;
       saveCreds();
       await persistAuthDirToDb(empresaId);
     });
@@ -225,10 +229,12 @@ export async function initBaileys(empresaId: string): Promise<void> {
         if (shouldReconnect) {
           reconnectAttempts.set(empresaId, attempts + 1);
           sockets.delete(empresaId);
-          // Durante fase QR: delay maior para QR não mudar rapidamente
-          // Durante sessão ativa: delay curto para reconectar logo
-          const reconnectDelay = wasAuthenticated ? 3000 : 15000;
-          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s...`);
+          // QR escaneado → creds atualizadas → reconectar imediatamente (1s)
+          // Sessão ativa caiu → reconectar rápido (3s)
+          // Erro durante fase QR sem scan → delay maior para QR não mudar (15s)
+          const reconnectDelay = credsJustUpdated ? 1000 : (wasAuthenticated ? 3000 : 15000);
+          credsJustUpdated = false;
+          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s... (creds=${credsJustUpdated}, auth=${wasAuthenticated})`);
           setTimeout(() => {
             initBaileys(empresaId).catch(console.error);
           }, reconnectDelay);
