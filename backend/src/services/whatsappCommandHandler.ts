@@ -5,6 +5,7 @@
 
 import prisma from '../db';
 import { chatCompletion } from './groqService';
+import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type WhatsAppUser } from './whatsappAuthService';
 
 /**
  * Processa mensagem recebida do WhatsApp
@@ -17,11 +18,23 @@ export async function handleIncomingMessage(
   empresaId: string
 ): Promise<string> {
   try {
+    // ── AUTENTICAÇÃO: Identificar usuário ────────────────────────────────────
+    const user = await identifyWhatsAppUser(from, empresaId);
+
+    // Se não cadastrado, bloqueia
+    if (user.type === 'unknown') {
+      return getDeniedAccessMessage(user);
+    }
+
     const command = message.trim().toLowerCase().replace(/\//g, '');
 
-    // ── Relatório de data específica ─────────────────────────────────────────
-    // Detecta: "resumo de ontem", "resumo dia 02/03", "relatorio 01/04", etc.
+    // ── Relatório de data específica (ADMIN ONLY) ────────────────────────────
     const isRelatorioRequest = /resumo|relat[oó]rio|detalhe/.test(command);
+    if ((isRelatorioRequest || /^ontem$/.test(command)) && !hasPermission(user, 'relatorio_data')) {
+      if (user.type === 'lavador') {
+        return getDeniedAccessMessage(user);
+      }
+    }
     if (isRelatorioRequest || /^ontem$/.test(command)) {
       const date = parseDateFromMessage(message);
       if (date) {
@@ -30,10 +43,14 @@ export async function handleIncomingMessage(
     }
 
     // ── Comissões em aberto ──────────────────────────────────────────────────
-    // Detecta: "comissoes em aberto", "comissao em aberto do carlos", etc.
     const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
       /(em aberto|abertas?|pendentes?)\s*(comiss[aã][eo]s?|comiss[oõ]es)/i.test(message);
     if (isComissaoAberto) {
+      // Lavador: apenas suas comissões
+      if (user.type === 'lavador') {
+        return handleComissoesLavador(user.lavadorId!, empresaId);
+      }
+      // Admin: todas as comissões
       const nomeLavador = extrairNomeLavador(message);
       return handleComissoesEmAberto(nomeLavador, empresaId);
     }
@@ -41,6 +58,20 @@ export async function handleIncomingMessage(
     // ── Comandos fixos ───────────────────────────────────────────────────────
     const dailyContext = await buildDailyContext(empresaId);
 
+    // Lavador: apenas resumo e comissões pessoais
+    if (user.type === 'lavador') {
+      if (command === 'resumo') return handleResumoLavador(user.lavadorId!, empresaId);
+      if (command === 'ajuda') return handleAjudaLavador();
+      if (command === 'status' || command === 'minhas-comissoes' || command === 'meu-status') {
+        return await handleStatusLavador(user.lavadorId!, empresaId);
+      }
+      if (command === 'comissoes' || command === 'comissão' || command === 'minhas-comissoes') {
+        return await handleComissoesLavador(user.lavadorId!, empresaId);
+      }
+      return getDeniedAccessMessage(user);
+    }
+
+    // Admin: acesso completo
     if (command === 'resumo') return handleResumoCommand(dailyContext);
     if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
     if (command === 'caixa') return handleCaixaCommand(dailyContext);
@@ -48,7 +79,7 @@ export async function handleIncomingMessage(
     if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
     if (command === 'ajuda') return handleAjudaCommand();
 
-    // ── Lavador por nome ─────────────────────────────────────────────────────
+    // ── Lavador por nome (ADMIN ONLY) ────────────────────────────────────────
     const lavadorResponse = await handleLavadorEspecifico(message, empresaId, dailyContext);
     if (lavadorResponse) return lavadorResponse;
 
@@ -337,6 +368,127 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
   }
 
   return resultado.trim();
+}
+
+// ==========================================
+// HANDLERS ESPECÍFICOS PARA LAVADOR
+// ==========================================
+
+/**
+ * Resumo do dia apenas do lavador
+ */
+function handleResumoLavador(lavadorId: string, empresaId: string): string {
+  // Por enquanto, retorna mensagem informativa
+  // Implementar busca do resumo do dia desse lavador
+  return `👤 Seu Resumo do Dia\n\nUse o comando **/status** para ver suas comissões e faturamento de hoje.`;
+}
+
+/**
+ * Status e comissões do lavador
+ */
+async function handleStatusLavador(lavadorId: string, empresaId: string): Promise<string> {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const amanha = new Date(hoje);
+  amanha.setDate(amanha.getDate() + 1);
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+
+  const lavador = await prisma.lavador.findUnique({
+    where: { id: lavadorId },
+  });
+
+  if (!lavador) return '❌ Erro ao buscar dados do lavador.';
+
+  const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
+    prisma.ordemServico.findMany({
+      where: { empresaId, lavadorId, createdAt: { gte: hoje, lt: amanha } },
+    }),
+    prisma.ordemServico.findMany({
+      where: { empresaId, lavadorId, createdAt: { gte: inicioMes, lte: fimMes } },
+    }),
+    prisma.adiantamento.findMany({
+      where: { lavadorId, status: 'PENDENTE' },
+    }),
+  ]);
+
+  const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+  const comDia = fatDia * (lavador.comissao / 100);
+  const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+  const comBrutaMes = fatMes * (lavador.comissao / 100);
+  const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
+  const comLiquidaMes = comBrutaMes - totalAdiant;
+
+  return `👤 **${lavador.nome.toUpperCase()}**\n\n` +
+    `📅 HOJE:\n` +
+    `  Ordens: **${ordensDia.length}** | Faturamento: **R$ ${fatDia.toFixed(2)}**\n` +
+    `  Comissão: **R$ ${comDia.toFixed(2)}**\n\n` +
+    `📆 MÊS ATUAL:\n` +
+    `  Ordens: **${ordensMes.length}** | Faturamento: **R$ ${fatMes.toFixed(2)}**\n` +
+    `  Comissão bruta (${lavador.comissao}%): **R$ ${comBrutaMes.toFixed(2)}**\n` +
+    `  Adiantamentos em aberto: **R$ ${totalAdiant.toFixed(2)}**\n` +
+    `  Comissão líquida a receber: **R$ ${comLiquidaMes.toFixed(2)}**`;
+}
+
+/**
+ * Suas comissões em aberto (apenas do lavador)
+ */
+async function handleComissoesLavador(lavadorId: string, empresaId: string): Promise<string> {
+  const lavador = await prisma.lavador.findUnique({
+    where: { id: lavadorId },
+  });
+
+  if (!lavador) return '❌ Erro ao buscar dados.';
+
+  const ordens = await prisma.ordemServico.findMany({
+    where: {
+      empresaId,
+      status: 'FINALIZADO',
+      OR: [
+        { lavadorId, fechamentoComissaoId: null },
+        {
+          ordemLavadores: {
+            some: { lavadorId, fechamentoComissaoId: null },
+          },
+        },
+      ],
+    },
+  });
+
+  if (ordens.length === 0) {
+    return `✅ **${lavador.nome}**, você não possui comissões em aberto.`;
+  }
+
+  const totalFat = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const totalCom = totalFat * (lavador.comissao / 100);
+
+  // Agrupar por mês
+  const porMes: Record<string, number> = {};
+  for (const o of ordens) {
+    const mes = o.createdAt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    porMes[mes] = (porMes[mes] ?? 0) + o.valorTotal * (lavador.comissao / 100);
+  }
+  const porMesFmt = Object.entries(porMes)
+    .map(([m, v]) => `  **${m}**: **R$ ${v.toFixed(2)}**`)
+    .join('\n');
+
+  return `💰 SUAS COMISSÕES EM ABERTO\n\n` +
+    `Ordens finalizadas: **${ordens.length}**\n` +
+    `Faturamento total: **R$ ${totalFat.toFixed(2)}**\n` +
+    `Comissão a receber (${lavador.comissao}%): **R$ ${totalCom.toFixed(2)}**\n\n` +
+    `Por mês:\n${porMesFmt}`;
+}
+
+/**
+ * Menu reduzido para lavador
+ */
+function handleAjudaLavador(): string {
+  return `📚 SEUS COMANDOS\n\n` +
+    `/status - Seu faturamento e comissão do dia e mês\n` +
+    `/comissoes - Comissões em aberto a receber\n` +
+    `/ajuda - Este menu\n\n` +
+    `Acesso limitado: você só pode ver seus dados.\n` +
+    `Para outras informações, contate o gerente.`;
 }
 
 // ==========================================
