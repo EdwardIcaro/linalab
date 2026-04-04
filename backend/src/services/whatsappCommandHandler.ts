@@ -23,14 +23,22 @@ export async function handleIncomingMessage(
 
     // Se não cadastrado, verificar configuração
     if (user.type === 'unknown') {
-      // Buscar configuração da empresa
-      const empresa = await prisma.empresa.findUnique({
-        where: { id: empresaId },
-        select: { whatsappBlockUnknown: true },
-      });
+      let blockUnknown = true;
+      try {
+        const empresa = await prisma.empresa.findUnique({
+          where: { id: empresaId },
+          select: { whatsappBlockUnknown: true },
+        });
+        if (empresa?.whatsappBlockUnknown !== undefined && empresa?.whatsappBlockUnknown !== null) {
+          blockUnknown = empresa.whatsappBlockUnknown;
+        }
+      } catch (error) {
+        // Se o campo não existir, usar padrão (true)
+        console.warn('[WhatsApp] Erro ao carregar whatsappBlockUnknown:', error);
+      }
 
       // Se blockUnknown é false, apenas ignorar (retornar string vazia)
-      if (empresa?.whatsappBlockUnknown === false) {
+      if (blockUnknown === false) {
         return ''; // Ignorar silenciosamente
       }
 

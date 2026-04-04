@@ -22,33 +22,44 @@ export async function listLavadorPhones(req: AuthenticatedRequest, res: Response
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    const [lavadores, empresa] = await Promise.all([
-      prisma.lavador.findMany({
-        where: { empresaId },
-        select: {
-          id: true,
-          nome: true,
-          telefone: true,
-          comissao: true,
-          ativo: true,
-        },
-        orderBy: { nome: 'asc' },
-      }),
-      prisma.empresa.findUnique({
+    const lavadores = await prisma.lavador.findMany({
+      where: { empresaId },
+      select: {
+        id: true,
+        nome: true,
+        telefone: true,
+        comissao: true,
+        ativo: true,
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    // Tentar carregar config, mas não falhar se o campo não existir
+    let blockUnknown = true;
+    try {
+      const empresa = await prisma.empresa.findUnique({
         where: { id: empresaId },
         select: { whatsappBlockUnknown: true },
-      }),
-    ]);
+      });
+      if (empresa?.whatsappBlockUnknown !== undefined && empresa?.whatsappBlockUnknown !== null) {
+        blockUnknown = empresa.whatsappBlockUnknown;
+      }
+    } catch (configError) {
+      console.warn('[WhatsApp Phones] Erro ao carregar config (campo pode não existir):', configError);
+      // Continuar com valor padrão
+    }
 
     return res.json({
       data: lavadores,
       config: {
-        blockUnknown: empresa?.whatsappBlockUnknown ?? true,
+        blockUnknown,
       },
     });
   } catch (error) {
     console.error('[WhatsApp Phones] Erro ao listar:', error);
-    return res.status(500).json({ error: 'Erro ao listar lavadores' });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('[WhatsApp Phones] Detalhes:', errorMsg);
+    return res.status(500).json({ error: 'Erro ao listar lavadores', details: errorMsg });
   }
 }
 
@@ -143,19 +154,34 @@ export async function getWhatsappConfig(req: AuthenticatedRequest, res: Response
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    const empresa = await prisma.empresa.findUnique({
-      where: { id: empresaId },
-      select: { whatsappBlockUnknown: true },
-    });
+    try {
+      const empresa = await prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { whatsappBlockUnknown: true },
+      });
 
-    return res.json({
-      data: {
-        blockUnknown: empresa?.whatsappBlockUnknown ?? true,
-      },
-    });
+      return res.json({
+        data: {
+          blockUnknown: empresa?.whatsappBlockUnknown ?? true,
+        },
+      });
+    } catch (queryError) {
+      // Se o campo não existir, retornar valor padrão
+      const errorMsg = String(queryError);
+      if (errorMsg.includes('whatsapp_block_unknown') || errorMsg.includes('Unknown column')) {
+        console.warn('[WhatsApp Config] Campo não existe ainda, retornando padrão');
+        return res.json({
+          data: {
+            blockUnknown: true,
+          },
+        });
+      }
+      throw queryError;
+    }
   } catch (error) {
     console.error('[WhatsApp Config] Erro ao obter config:', error);
-    return res.status(500).json({ error: 'Erro ao obter configuração' });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao obter configuração', details: errorMsg });
   }
 }
 
@@ -176,21 +202,35 @@ export async function updateWhatsappConfig(req: AuthenticatedRequest, res: Respo
       return res.status(400).json({ error: 'blockUnknown deve ser true ou false' });
     }
 
-    const updated = await prisma.empresa.update({
-      where: { id: empresaId },
-      data: { whatsappBlockUnknown: blockUnknown },
-      select: { whatsappBlockUnknown: true },
-    });
+    try {
+      const updated = await prisma.empresa.update({
+        where: { id: empresaId },
+        data: { whatsappBlockUnknown: blockUnknown },
+        select: { whatsappBlockUnknown: true },
+      });
 
-    console.log(
-      `[WhatsApp Config] Config atualizada para empresa ${empresaId}: blockUnknown=${updated.whatsappBlockUnknown}`
-    );
-    return res.json({
-      data: { blockUnknown: updated.whatsappBlockUnknown },
-      message: 'Configuração atualizada com sucesso',
-    });
+      console.log(
+        `[WhatsApp Config] Config atualizada para empresa ${empresaId}: blockUnknown=${updated.whatsappBlockUnknown}`
+      );
+      return res.json({
+        data: { blockUnknown: updated.whatsappBlockUnknown },
+        message: 'Configuração atualizada com sucesso',
+      });
+    } catch (queryError) {
+      // Se o campo não existir, ignorar erro e retornar sucesso
+      const errorMsg = String(queryError);
+      if (errorMsg.includes('whatsapp_block_unknown') || errorMsg.includes('Unknown column')) {
+        console.warn('[WhatsApp Config] Campo não existe ainda, ignorando update');
+        return res.json({
+          data: { blockUnknown },
+          message: 'Campo será criado na próxima migração',
+        });
+      }
+      throw queryError;
+    }
   } catch (error) {
     console.error('[WhatsApp Config] Erro ao atualizar config:', error);
-    return res.status(500).json({ error: 'Erro ao atualizar configuração' });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao atualizar configuração', details: errorMsg });
   }
 }
