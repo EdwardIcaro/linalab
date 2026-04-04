@@ -392,6 +392,46 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
         const senderName = message.pushName || 'Usuário';
 
+        // Verificar modo de pareamento: próxima msg de qualquer pessoa = novo admin
+        const instanceForPairing = await prisma.whatsappInstance.findUnique({
+          where: { empresaId },
+          select: { id: true, pairingMode: true, pairingNome: true },
+        });
+
+        if (instanceForPairing?.pairingMode) {
+          const lidOrPhone = rawFrom.split('@')[0];
+          const nomeAdmin = instanceForPairing.pairingNome || senderName;
+          try {
+            await prisma.whatsappAdminPhone.create({
+              data: {
+                instanceId: instanceForPairing.id,
+                // Telefone: usa número real se @s.whatsapp.net, caso contrário armazena com prefixo lid_
+                telefone: rawFrom.endsWith('@lid') ? `lid_${lidOrPhone}` : lidOrPhone,
+                jid: rawFrom, // JID real (pode ser @lid ou @s.whatsapp.net)
+                nome: nomeAdmin,
+                ativo: true,
+              },
+            });
+
+            await prisma.whatsappInstance.update({
+              where: { empresaId },
+              data: { pairingMode: false, pairingNome: null },
+            });
+
+            console.log(`[Baileys] ✅ Admin pareado: ${rawFrom} como "${nomeAdmin}"`);
+
+            await sock.sendMessage(rawFrom, {
+              text: `✅ Olá ${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+            });
+          } catch (pairError) {
+            console.error('[Baileys] Erro ao parear admin:', pairError);
+            await sock.sendMessage(rawFrom, {
+              text: '❌ Erro ao registrar como admin. Tente novamente.',
+            });
+          }
+          return; // Não processar como mensagem normal
+        }
+
         const response = await handleIncomingMessage(
           empresaId,
           from,

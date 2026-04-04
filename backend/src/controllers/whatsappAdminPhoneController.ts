@@ -238,3 +238,99 @@ export async function updateAdminPhone(req: AuthenticatedRequest, res: Response)
     return res.status(500).json({ error: 'Erro ao atualizar número', details: errorMsg });
   }
 }
+
+/**
+ * POST /api/whatsapp/admin-phones/pair
+ * Ativa modo de pareamento: próxima pessoa a mandar msg é adicionada como admin
+ */
+export async function startPairing(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    const { nome } = req.body;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada' });
+    }
+
+    const instance = await prisma.whatsappInstance.findUnique({ where: { empresaId } });
+    if (!instance) {
+      return res.status(404).json({ error: 'Instância WhatsApp não encontrada. Conecte o WhatsApp primeiro.' });
+    }
+
+    if (instance.status !== 'connected') {
+      return res.status(400).json({ error: 'WhatsApp não está conectado. Conecte primeiro para usar o pareamento.' });
+    }
+
+    await prisma.whatsappInstance.update({
+      where: { empresaId },
+      data: { pairingMode: true, pairingNome: nome?.trim() || null },
+    });
+
+    console.log(`[WhatsApp Admin] Modo de pareamento ativado para ${empresaId}, nome: ${nome || 'não definido'}`);
+    return res.json({ message: 'Modo de pareamento ativado. Peça ao admin para enviar uma mensagem.' });
+  } catch (error) {
+    console.error('[WhatsApp Admin Phones] Erro ao iniciar pareamento:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao iniciar pareamento', details: errorMsg });
+  }
+}
+
+/**
+ * DELETE /api/whatsapp/admin-phones/pair
+ * Cancela o modo de pareamento
+ */
+export async function cancelPairing(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada' });
+    }
+
+    const instance = await prisma.whatsappInstance.findUnique({ where: { empresaId } });
+    if (!instance) {
+      return res.status(404).json({ error: 'Instância não encontrada' });
+    }
+
+    await prisma.whatsappInstance.update({
+      where: { empresaId },
+      data: { pairingMode: false, pairingNome: null },
+    });
+
+    return res.json({ message: 'Pareamento cancelado' });
+  } catch (error) {
+    console.error('[WhatsApp Admin Phones] Erro ao cancelar pareamento:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao cancelar pareamento', details: errorMsg });
+  }
+}
+
+/**
+ * GET /api/whatsapp/admin-phones/pair
+ * Retorna status do modo de pareamento
+ */
+export async function getPairingStatus(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada' });
+    }
+
+    const instance = await prisma.whatsappInstance.findUnique({
+      where: { empresaId },
+      select: { pairingMode: true, pairingNome: true },
+    });
+
+    return res.json({
+      data: {
+        pairingMode: instance?.pairingMode ?? false,
+        pairingNome: instance?.pairingNome ?? null,
+      },
+    });
+  } catch (error) {
+    console.error('[WhatsApp Admin Phones] Erro ao obter status pareamento:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao obter status', details: errorMsg });
+  }
+}

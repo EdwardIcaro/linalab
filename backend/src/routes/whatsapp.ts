@@ -20,7 +20,10 @@ import {
   listAdminPhones,
   createAdminPhone,
   deleteAdminPhone,
-  updateAdminPhone
+  updateAdminPhone,
+  startPairing,
+  cancelPairing,
+  getPairingStatus,
 } from '../controllers/whatsappAdminPhoneController';
 
 const router = Router();
@@ -42,6 +45,13 @@ router.patch('/config', updateWhatsappConfig);
 // Rotas de números de admin
 router.get('/admin-phones', listAdminPhones);
 router.post('/admin-phones', createAdminPhone);
+
+// Pareamento de admin — ANTES das rotas com :adminPhoneId para evitar conflito
+router.get('/admin-phones/pair', getPairingStatus);
+router.post('/admin-phones/pair', startPairing);
+router.delete('/admin-phones/pair', cancelPairing);
+
+// Rotas com parâmetro (devem vir depois das rotas específicas)
 router.delete('/admin-phones/:adminPhoneId', deleteAdminPhone);
 router.patch('/admin-phones/:adminPhoneId', updateAdminPhone);
 

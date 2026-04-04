@@ -461,6 +461,79 @@
         .lavadores-section {
             margin-top: 3rem;
         }
+
+        /* Pareamento */
+        .pairing-waiting {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+
+        .pairing-pulse-ring {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #25d36622;
+            position: relative;
+            margin-bottom: 1.2rem;
+        }
+
+        .pairing-pulse-ring::before,
+        .pairing-pulse-ring::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid #25d366;
+            animation: pairingPulse 1.8s ease-out infinite;
+        }
+
+        .pairing-pulse-ring::after {
+            animation-delay: 0.9s;
+        }
+
+        @keyframes pairingPulse {
+            0%   { width: 70%;  height: 70%;  opacity: 1; }
+            100% { width: 160%; height: 160%; opacity: 0; }
+        }
+
+        .pairing-pulse-icon {
+            font-size: 2rem;
+            z-index: 1;
+        }
+
+        .pairing-waiting h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .pairing-waiting p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .pairing-form-hint {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #f5f5f5;
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+
+        .admin-paired-badge {
+            font-size: 0.75rem;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            margin-left: 0.4rem;
+        }
     </style>
 </head>
 <body>
@@ -506,25 +579,16 @@
         </div>
     </div>
 
-    <!-- Modal para adicionar/editar admin -->
+    <!-- Modal para adicionar admin via pareamento -->
     <div id="adminModal" class="modal-phone">
         <div class="modal-content-phone">
             <div class="modal-header-phone">
-                <h2 id="adminModalTitle">Adicionar Admin</h2>
+                <h2>Adicionar Admin</h2>
                 <button class="close-modal" onclick="closeAdminModal()">&times;</button>
             </div>
 
-            <form id="adminForm" onsubmit="saveAdminPhone(event)">
-                <div class="form-group-phone">
-                    <label for="adminPhoneInput">Número de WhatsApp</label>
-                    <input
-                        type="tel"
-                        id="adminPhoneInput"
-                        placeholder="(11) 99999-9999 ou 5511999999999"
-                        required
-                    >
-                </div>
-
+            <!-- Estado 1: Formulário inicial -->
+            <div id="pairingFormState">
                 <div class="form-group-phone">
                     <label for="adminNameInput">Nome/Descrição (opcional)</label>
                     <input
@@ -533,16 +597,35 @@
                         placeholder="Ex: Gerente João"
                     >
                 </div>
-
+                <p class="pairing-form-hint">
+                    📲 Ao clicar em "Iniciar Pareamento", a próxima pessoa que enviar qualquer mensagem para o WhatsApp do bot será adicionada automaticamente como administrador.
+                </p>
                 <div class="modal-footer-phone">
                     <button type="button" class="btn-modal btn-cancel" onclick="closeAdminModal()">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn-modal btn-save-phone" id="saveAdminBtn">
-                        Salvar
+                    <button type="button" class="btn-modal btn-save-phone" id="startPairingBtn" onclick="startPairingMode()">
+                        Iniciar Pareamento
                     </button>
                 </div>
-            </form>
+            </div>
+
+            <!-- Estado 2: Aguardando mensagem -->
+            <div id="pairingWaitingState" style="display: none;">
+                <div class="pairing-waiting">
+                    <div class="pairing-pulse-ring">
+                        <span class="pairing-pulse-icon">📱</span>
+                    </div>
+                    <h3>Aguardando mensagem...</h3>
+                    <p>Peça ao admin para enviar <strong>qualquer mensagem</strong> para o número do WhatsApp do bot.</p>
+                    <p style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">A página será atualizada automaticamente.</p>
+                </div>
+                <div class="modal-footer-phone">
+                    <button type="button" class="btn-modal btn-cancel" onclick="cancelPairingMode()">
+                        Cancelar Pareamento
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -592,6 +675,7 @@
 
         // ========== ADMINS ==========
         let adminPhones = [];
+        let pairingPollInterval = null;
 
         async function loadAdminPhones() {
             try {
@@ -611,59 +695,89 @@
                 return;
             }
 
-            container.innerHTML = adminPhones.map(admin => `
+            container.innerHTML = adminPhones.map(admin => {
+                const isPaired = admin.telefone && admin.telefone.startsWith('lid_');
+                const displayPhone = isPaired
+                    ? `<span class="admin-paired-badge">✅ Pareado</span>`
+                    : `<span style="font-family:monospace;color:#25d366">${admin.telefone}</span>`;
+                return `
                 <div class="admin-card">
                     <div class="admin-info">
-                        <div class="admin-number">📱 ${admin.telefone}</div>
-                        ${admin.nome ? `<div class="admin-name">${admin.nome}</div>` : ''}
+                        <div class="admin-number">👤 ${admin.nome || 'Admin'} ${displayPhone}</div>
                     </div>
                     <div class="admin-actions">
                         <button class="btn-sm btn-delete-admin" onclick="deleteAdminPhone('${admin.id}')">
                             Remover
                         </button>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function openAddAdminModal() {
-            document.getElementById('adminModalTitle').textContent = 'Adicionar Admin';
-            document.getElementById('adminPhoneInput').value = '';
             document.getElementById('adminNameInput').value = '';
+            document.getElementById('pairingFormState').style.display = '';
+            document.getElementById('pairingWaitingState').style.display = 'none';
             document.getElementById('adminModal').classList.add('active');
         }
 
         function closeAdminModal() {
             document.getElementById('adminModal').classList.remove('active');
-            document.getElementById('adminForm').reset();
+            stopPairingPoll();
         }
 
-        async function saveAdminPhone(event) {
-            event.preventDefault();
-
-            const telefone = document.getElementById('adminPhoneInput').value.trim();
+        async function startPairingMode() {
             const nome = document.getElementById('adminNameInput').value.trim();
-            const saveBtn = document.getElementById('saveAdminBtn');
-
-            if (!telefone) {
-                showAlert('Digite um número válido', 'error');
-                return;
-            }
-
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="spinner"></span>';
+            const btn = document.getElementById('startPairingBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
 
             try {
-                await window.api.whatsappAdminPhones.create(telefone, nome || null);
-                showAlert('Admin adicionado com sucesso!', 'success');
-                closeAdminModal();
-                await loadAdminPhones();
+                await window.api.call('POST', '/whatsapp/admin-phones/pair', { nome: nome || null });
+                // Mostrar estado de espera
+                document.getElementById('pairingFormState').style.display = 'none';
+                document.getElementById('pairingWaitingState').style.display = '';
+                startPairingPoll();
             } catch (error) {
-                showAlert('Erro ao adicionar admin', 'error');
+                const msg = error?.message || 'Erro ao iniciar pareamento';
+                showAlert(msg.includes('conectado') ? '⚠️ Conecte o WhatsApp antes de parear.' : 'Erro ao iniciar pareamento', 'error');
                 console.error(error);
             } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = 'Salvar';
+                btn.disabled = false;
+                btn.innerHTML = 'Iniciar Pareamento';
+            }
+        }
+
+        async function cancelPairingMode() {
+            try {
+                await window.api.call('DELETE', '/whatsapp/admin-phones/pair', {});
+            } catch (e) { /* silenciar */ }
+            closeAdminModal();
+        }
+
+        function startPairingPoll() {
+            stopPairingPoll();
+            const prevCount = adminPhones.length;
+            pairingPollInterval = setInterval(async () => {
+                try {
+                    const status = await window.api.call('GET', '/whatsapp/admin-phones/pair');
+                    if (!status.data.pairingMode) {
+                        // Pareamento concluído!
+                        stopPairingPoll();
+                        closeAdminModal();
+                        await loadAdminPhones();
+                        if (adminPhones.length > prevCount) {
+                            showAlert('✅ Admin adicionado com sucesso via pareamento!', 'success');
+                        }
+                    }
+                } catch (e) { /* silenciar */ }
+            }, 2000);
+        }
+
+        function stopPairingPoll() {
+            if (pairingPollInterval) {
+                clearInterval(pairingPollInterval);
+                pairingPollInterval = null;
             }
         }
 
