@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuração de WhatsApp - Lina X</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
     <style>
         .whatsapp-config {
             max-width: 900px;
@@ -293,6 +295,81 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .config-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 2rem;
+        }
+
+        .config-text h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .config-text p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            flex-shrink: 0;
+            margin-top: 0.5rem;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--cor-primaria);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -300,6 +377,20 @@
         <div class="whatsapp-config">
             <div class="config-header">
                 <h1>📱 WhatsApp Bot - Números dos Lavadores</h1>
+            </div>
+
+            <!-- Configuração de bloqueio -->
+            <div class="config-card">
+                <div class="config-item">
+                    <div class="config-text">
+                        <h3>Bloquear Números Desconhecidos</h3>
+                        <p>Se ativado, o bot não responderá a mensagens de números não cadastrados e enviará uma mensagem de acesso negado. Se desativado, o bot ignorará completamente essas mensagens.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="blockUnknownToggle" @change="updateBlockUnknown()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div id="alert" class="alert" style="display: none;"></div>
@@ -359,21 +450,43 @@
         // Inicializar
         async function init() {
             await loadLavadores();
+            await loadConfig();
+        }
+
+        // Carregar configuração
+        async function loadConfig() {
+            try {
+                const response = await window.api.whatsappConfig.get();
+                const blockUnknown = response.data.blockUnknown;
+                document.getElementById('blockUnknownToggle').checked = blockUnknown;
+            } catch (error) {
+                console.error('Erro ao carregar config:', error);
+            }
+        }
+
+        // Atualizar configuração
+        async function updateBlockUnknown() {
+            const blockUnknown = document.getElementById('blockUnknownToggle').checked;
+            try {
+                await window.api.whatsappConfig.update(blockUnknown);
+                showAlert(
+                    blockUnknown
+                        ? 'Bot agora bloqueará números desconhecidos'
+                        : 'Bot agora ignorará números desconhecidos',
+                    'success'
+                );
+            } catch (error) {
+                showAlert('Erro ao atualizar configuração', 'error');
+                console.error(error);
+            }
         }
 
         // Carregar lista de lavadores
         async function loadLavadores() {
             showLoading(true);
             try {
-                const response = await fetch('/api/whatsapp/phones', {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (!response.ok) throw new Error('Erro ao carregar lavadores');
-
-                const { data } = await response.json();
-                lavadores = data;
+                const response = await window.api.whatsappPhones.list();
+                lavadores = response.data || [];
                 renderLavadores();
             } catch (error) {
                 showAlert('Erro ao carregar lista de lavadores', 'error');
@@ -456,14 +569,7 @@
             saveBtn.innerHTML = '<span class="spinner"></span>';
 
             try {
-                const response = await fetch(`/api/whatsapp/phones/${currentLavador.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telefone })
-                });
-
-                if (!response.ok) throw new Error('Erro ao salvar número');
-
+                await window.api.whatsappPhones.update(currentLavador.id, telefone);
                 showAlert('Número de WhatsApp atualizado com sucesso!', 'success');
                 closePhoneModal();
                 await loadLavadores();
@@ -483,13 +589,7 @@
             }
 
             try {
-                const response = await fetch(`/api/whatsapp/phones/${lavadorId}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (!response.ok) throw new Error('Erro ao remover número');
-
+                await window.api.whatsappPhones.delete(lavadorId);
                 showAlert('Número removido com sucesso', 'success');
                 await loadLavadores();
             } catch (error) {
@@ -518,8 +618,12 @@
             if (e.target.id === 'phoneModal') closePhoneModal();
         });
 
-        // Inicializar
-        init();
+        // Verificar autenticação e inicializar
+        if (!window.api.isAuthenticated()) {
+            window.location.href = 'login.html';
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>

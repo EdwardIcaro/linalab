@@ -21,8 +21,20 @@ export async function handleIncomingMessage(
     // ── AUTENTICAÇÃO: Identificar usuário ────────────────────────────────────
     const user = await identifyWhatsAppUser(from, empresaId);
 
-    // Se não cadastrado, bloqueia
+    // Se não cadastrado, verificar configuração
     if (user.type === 'unknown') {
+      // Buscar configuração da empresa
+      const empresa = await prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { whatsappBlockUnknown: true },
+      });
+
+      // Se blockUnknown é false, apenas ignorar (retornar string vazia)
+      if (empresa?.whatsappBlockUnknown === false) {
+        return ''; // Ignorar silenciosamente
+      }
+
+      // Caso contrário, enviar mensagem de acesso negado
       return getDeniedAccessMessage(user);
     }
 

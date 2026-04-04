@@ -381,6 +381,25 @@ const api = {
     method: 'DELETE'
   }),
 
+  // ===== WHATSAPP =====
+  whatsappPhones: {
+    list: () => fetchApi('/whatsapp/phones'),
+    update: (lavadorId, telefone) => fetchApi(`/whatsapp/phones/${lavadorId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ telefone })
+    }),
+    delete: (lavadorId) => fetchApi(`/whatsapp/phones/${lavadorId}`, {
+      method: 'DELETE'
+    }),
+  },
+  whatsappConfig: {
+    get: () => fetchApi('/whatsapp/config'),
+    update: (blockUnknown) => fetchApi('/whatsapp/config', {
+      method: 'PATCH',
+      body: JSON.stringify({ blockUnknown })
+    }),
+  },
+
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),
   logout: () => {
