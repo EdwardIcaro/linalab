@@ -34,7 +34,7 @@ model Empresa {
   paginaInicialPadrao        String?               @default("index.html")
   notificationPreferences    Json?
   paymentMethodsConfig       Json?
-  whatsappBlockUnknown       Boolean?              @default(true)  // Bloqueia mensagens de números não cadastrados
+  whatsappBlockUnknown       Boolean?              @default(true) @map("whatsapp_block_unknown")  // Bloqueia mensagens de números não cadastrados
   createdAt                  DateTime              @default(now())
   updatedAt                  DateTime              @updatedAt
   usuarioId                  String
@@ -422,12 +422,12 @@ model WhatsappInstance {
 
 model WhatsappAdminPhone {
   id          String              @id @default(cuid())
-  instanceId  String
+  instanceId  String              @map("instance_id")
   telefone    String              // Número de WhatsApp do admin
   nome        String?             // Nome/descrição do admin (ex: "Gerente João")
   ativo       Boolean             @default(true)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
 
   instance WhatsappInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
