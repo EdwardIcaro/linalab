@@ -331,6 +331,29 @@ export async function sendMessage(
 }
 
 /**
+ * Resolve número de telefone para JID do WhatsApp (@s.whatsapp.net ou @lid)
+ * Necessário para identificar números no novo protocolo WhatsApp (@lid)
+ */
+export async function resolvePhoneToJid(empresaId: string, phone: string): Promise<string | null> {
+  const sock = sockets.get(empresaId);
+  if (!sock) return null;
+
+  try {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const results = await sock.onWhatsApp(cleanPhone);
+    const result = Array.isArray(results) ? results[0] : results;
+    if (result?.exists && result?.jid) {
+      console.log(`[Baileys] JID resolvido: ${cleanPhone} → ${result.jid}`);
+      return result.jid;
+    }
+    return null;
+  } catch (error) {
+    console.warn(`[Baileys] Não foi possível resolver JID para ${phone}:`, error);
+    return null;
+  }
+}
+
+/**
  * Desconecta e limpa estado
  */
 export async function disconnect(empresaId: string): Promise<void> {

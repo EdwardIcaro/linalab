@@ -39,10 +39,18 @@ export async function identifyWhatsAppUser(
   });
 
   if (instance) {
-    const adminPhone = instance.adminPhones.find((ap) => {
+    const adminPhone = instance.adminPhones.find((ap: any) => {
+      // 1. Comparar JID diretamente (resolve o problema do @lid)
+      if (ap.jid) {
+        if (ap.jid === phoneNumber) return true;
+        // Comparar apenas a parte numérica do JID
+        const apJidNum = ap.jid.replace(/\D/g, '');
+        if (apJidNum === rawPhone || apJidNum === normalizedPhone) return true;
+      }
+
+      // 2. Fallback: comparar por número de telefone
       const apRaw = ap.telefone.replace(/\D/g, '');
       const apLast11 = apRaw.slice(-11);
-      // Compara: número completo exato, ou um contém o outro (cobre DDI/sem DDI)
       return (
         apRaw === rawPhone ||
         apRaw === normalizedPhone ||

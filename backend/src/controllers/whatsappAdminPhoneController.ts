@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import prisma from '../db';
+import { resolvePhoneToJid } from '../services/baileyService';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -81,11 +82,15 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
       });
     }
 
+    // Tentar resolver JID real (necessário para @lid do novo protocolo WhatsApp)
+    const resolvedJid = await resolvePhoneToJid(empresaId, telefone);
+
     // Criar número de admin
     const adminPhone = await prisma.whatsappAdminPhone.create({
       data: {
         instanceId: instance.id,
         telefone: telefone.trim(),
+        jid: resolvedJid || null,
         nome: nome?.trim() || null,
         ativo: true,
       },
