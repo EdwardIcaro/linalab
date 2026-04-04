@@ -19,7 +19,7 @@ const sockets = new Map<string, WASocket>();
 const qrCodes = new Map<string, string>();
 const statuses = new Map<string, string>();
 const reconnectAttempts = new Map<string, number>();
-const MAX_RECONNECT = 3;
+const MAX_RECONNECT = 10;
 
 // Mapeamento de @lid → número de telefone (novo protocolo WhatsApp)
 // Ex: '247480411279441' → '5599981956046'
@@ -225,9 +225,13 @@ export async function initBaileys(empresaId: string): Promise<void> {
         if (shouldReconnect) {
           reconnectAttempts.set(empresaId, attempts + 1);
           sockets.delete(empresaId);
+          // Durante fase QR: delay maior para QR não mudar rapidamente
+          // Durante sessão ativa: delay curto para reconectar logo
+          const reconnectDelay = wasAuthenticated ? 3000 : 15000;
+          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s...`);
           setTimeout(() => {
             initBaileys(empresaId).catch(console.error);
-          }, 3000);
+          }, reconnectDelay);
         } else {
           qrCodes.delete(empresaId);
           sockets.delete(empresaId);
