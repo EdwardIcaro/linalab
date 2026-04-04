@@ -27,6 +27,10 @@ const lidToPhone = new Map<string, string>();
 // Store em memória por empresa (makeInMemoryStore do Baileys — mantém @lid mappings)
 const stores = new Map<string, any>();
 
+// Empresas com credenciais recém-atualizadas via creds.update (QR scan)
+// Protege /tmp de ser limpo entre o scan e o reconnect bem-sucedido
+const freshCredsSet = new Set<string>();
+
 // ==========================================
 // AUTH STATE — DB ↔ /tmp
 // ==========================================
@@ -47,20 +51,27 @@ async function restoreAuthDirFromDb(empresaId: string): Promise<void> {
   try {
     const authDir = getAuthDir(empresaId);
 
-    // Se /tmp já tem arquivos (ex: salvos por creds.update durante scan), não sobrescrever
-    // Isso evita apagar credenciais recém-salvas antes da persistência no DB terminar
-    if (existsSync(authDir)) {
-      const files = readdirSync(authDir);
-      if (files.length > 0) {
-        console.log(`[Baileys] /tmp já tem ${files.length} arquivo(s) para ${empresaId}, mantendo`);
-        return;
-      }
-    }
-
-    // /tmp vazio: tentar restaurar do banco
+    // Verificar estado no banco ANTES de decidir o que fazer com /tmp
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
+
+    if (existsSync(authDir)) {
+      const files = readdirSync(authDir);
+      if (files.length > 0) {
+        if (!instance?.authState && !freshCredsSet.has(empresaId)) {
+          // /tmp tem arquivos mas DB não tem authState e não há scan recente
+          // → arquivos stale (sessão desconectada anteriormente) — limpar
+          rmSync(authDir, { recursive: true, force: true });
+          mkdirSync(authDir, { recursive: true });
+          console.log(`[Baileys] Credenciais stale removidas para ${empresaId} (DB null, não há scan recente)`);
+        } else {
+          // /tmp tem arquivos recém-salvos por creds.update (QR scan em andamento)
+          console.log(`[Baileys] /tmp já tem ${files.length} arquivo(s) para ${empresaId}, mantendo`);
+          return;
+        }
+      }
+    }
 
     if (!instance?.authState) {
       // Sem authState no banco e /tmp vazio → início limpo, vai gerar QR
@@ -184,6 +195,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
     // Salvar credenciais quando mudarem (em /tmp e no banco)
     sock.ev.on('creds.update', async () => {
       credsJustUpdated = true;
+      freshCredsSet.add(empresaId); // Marcar como recém-atualizado (protege /tmp durante reconexão)
       saveCreds();
       await persistAuthDirToDb(empresaId);
     });
@@ -223,6 +235,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
         statuses.set(empresaId, 'connected');
         sockets.set(empresaId, sock);
         reconnectAttempts.set(empresaId, 0);
+        freshCredsSet.delete(empresaId); // Conexão estabelecida, creds já persistidos no DB
 
         const jid = sock.user?.id;
         const phoneNumber = jid ? jid.split(':')[0] : null;
@@ -266,6 +279,8 @@ export async function initBaileys(empresaId: string): Promise<void> {
           qrCodes.delete(empresaId);
           sockets.delete(empresaId);
           statuses.set(empresaId, 'disconnected');
+          reconnectAttempts.delete(empresaId); // Reset para permitir nova tentativa manual
+          freshCredsSet.delete(empresaId);
 
           await prisma.whatsappInstance.update({
             where: { empresaId },
@@ -528,6 +543,15 @@ export async function disconnect(empresaId: string): Promise<void> {
 
     qrCodes.delete(empresaId);
     statuses.set(empresaId, 'disconnected');
+    reconnectAttempts.delete(empresaId); // Reset para não bloquear nova conexão
+    freshCredsSet.delete(empresaId);
+
+    // Limpar /tmp para evitar credenciais stale na próxima conexão
+    const authDir = join(tmpdir(), `baileys-${empresaId}`);
+    if (existsSync(authDir)) {
+      rmSync(authDir, { recursive: true, force: true });
+      console.log(`[Baileys] /tmp limpo para ${empresaId}`);
+    }
 
     await prisma.whatsappInstance.update({
       where: { empresaId },
