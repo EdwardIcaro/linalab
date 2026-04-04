@@ -272,8 +272,13 @@ export async function initBaileys(empresaId: string): Promise<void> {
           });
         }
 
-        await sock.sendMessage(from, { text: response });
-        console.log(`[Baileys] Resposta enviada para ${from}`);
+        // Só envia se houver resposta (string vazia = ignorar silenciosamente)
+        if (response && response.trim()) {
+          await sock.sendMessage(from, { text: response });
+          console.log(`[Baileys] Resposta enviada para ${from}`);
+        } else {
+          console.log(`[Baileys] Mensagem ignorada silenciosamente de ${from}`);
+        }
       } catch (error) {
         console.error('[Baileys] Erro ao processar mensagem:', error);
       }

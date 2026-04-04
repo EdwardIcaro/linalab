@@ -24,8 +24,9 @@ export async function identifyWhatsAppUser(
   phoneNumber: string,
   empresaId: string
 ): Promise<WhatsAppUser> {
-  // Normalizar número: remover caracteres não-numéricos, manter apenas últimos 11 dígitos
-  const normalizedPhone = phoneNumber.replace(/\D/g, '').slice(-11);
+  // Normalizar número: extrair apenas dígitos do JID (ex: 5599981956046@s.whatsapp.net → 5599981956046)
+  const rawPhone = phoneNumber.replace(/\D/g, ''); // número completo com DDI
+  const normalizedPhone = rawPhone.slice(-11); // últimos 11 dígitos (DDD + número)
 
   // 1. Buscar admin por telefone
   const instance = await prisma.whatsappInstance.findUnique({
@@ -38,9 +39,18 @@ export async function identifyWhatsAppUser(
   });
 
   if (instance) {
-    const adminPhone = instance.adminPhones.find(
-      (ap) => ap.telefone.includes(normalizedPhone) || normalizedPhone.includes(ap.telefone.replace(/\D/g, '').slice(-11))
-    );
+    const adminPhone = instance.adminPhones.find((ap) => {
+      const apRaw = ap.telefone.replace(/\D/g, '');
+      const apLast11 = apRaw.slice(-11);
+      // Compara: número completo exato, ou um contém o outro (cobre DDI/sem DDI)
+      return (
+        apRaw === rawPhone ||
+        apRaw === normalizedPhone ||
+        apRaw.includes(normalizedPhone) ||
+        rawPhone.includes(apLast11) ||
+        normalizedPhone === apLast11
+      );
+    });
 
     if (adminPhone) {
       return {
@@ -52,14 +62,15 @@ export async function identifyWhatsAppUser(
     }
   }
 
-  // 2. Buscar lavador por telefone
+  // 2. Buscar lavador por telefone (tenta número completo e últimos 11 dígitos)
   const lavador = await prisma.lavador.findFirst({
     where: {
       empresaId,
       ativo: true,
-      telefone: {
-        contains: normalizedPhone,
-      },
+      OR: [
+        { telefone: { contains: rawPhone } },
+        { telefone: { contains: normalizedPhone } },
+      ],
     },
   });
 
