@@ -2809,6 +2809,7 @@
                         console.log('[WhatsApp] Resposta status:', response);
 
                         if (response && response.status) {
+                            const previousStatus = this.whatsappStatus;
                             this.whatsappStatus = response.status;
                             this.qrCodeUrl = response.qrCode || null;
                             this.ownerPhone = response.ownerPhone || null;
@@ -2820,6 +2821,17 @@
                                 'disconnected': '❌ Desconectado'
                             };
                             this.whatsappStatusText = statusMap[response.status] || 'Desconhecido';
+
+                            // Se estava esperando QR e voltou desconectado, reconectar automaticamente
+                            if (previousStatus === 'qr_code' && response.status === 'disconnected') {
+                                console.log('[WhatsApp] QR expirou/desconectou, reconectando em 3s...');
+                                this.whatsappStatusText = '🔄 Reconectando...';
+                                setTimeout(async () => {
+                                    try {
+                                        await window.api.call('POST', '/whatsapp/setup', {});
+                                    } catch (e) { /* ignora erro, o polling vai pegar o novo status */ }
+                                }, 3000);
+                            }
 
                             console.log('[WhatsApp] Status:', response.status, '| QR:', this.qrCodeUrl ? 'sim' : 'não', '| Phone:', this.ownerPhone);
                         } else {
