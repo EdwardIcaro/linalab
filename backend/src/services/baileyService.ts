@@ -22,8 +22,10 @@ const reconnectAttempts = new Map<string, number>();
 const MAX_RECONNECT = 10;
 
 // Mapeamento de @lid → número de telefone (novo protocolo WhatsApp)
-// Ex: '247480411279441' → '5599981956046'
 const lidToPhone = new Map<string, string>();
+
+// Store em memória por empresa (makeInMemoryStore do Baileys — mantém @lid mappings)
+const stores = new Map<string, any>();
 
 // ==========================================
 // AUTH STATE — DB ↔ /tmp
@@ -130,8 +132,16 @@ export async function initBaileys(empresaId: string): Promise<void> {
       fetchLatestBaileysVersion,
       Browsers,
       DisconnectReason: BaileysDisconnectReason,
+      makeInMemoryStore,
     } = baileysMod;
     const QRCode = qrcodeMod.default || qrcodeMod;
+
+    // Criar/reusar store em memória (persiste entre reconexões para manter @lid mappings)
+    if (!stores.has(empresaId) && makeInMemoryStore) {
+      const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
+      stores.set(empresaId, store);
+      console.log(`[Baileys] Store criado para ${empresaId}`);
+    }
 
     // Restaurar auth state do banco para /tmp (se existir)
     await restoreAuthDirFromDb(empresaId);
@@ -163,6 +173,13 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
     // Flag: credenciais foram atualizadas (indica QR escaneado com sucesso)
     let credsJustUpdated = false;
+
+    // Vincular store ao socket (popula @lid ↔ phone mappings automaticamente)
+    const store = stores.get(empresaId);
+    if (store) {
+      store.bind(sock.ev);
+      console.log(`[Baileys] Store vinculado ao socket de ${empresaId}`);
+    }
 
     // Salvar credenciais quando mudarem (em /tmp e no banco)
     sock.ev.on('creds.update', async () => {
@@ -260,30 +277,43 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
     // Evento: Sincronização de contatos (mapeia @lid → telefone)
     const processContacts = (contacts: any[]) => {
+      let added = 0;
       for (const contact of contacts) {
-        // contact.id pode ser '@s.whatsapp.net' e contact.lid é o '@lid'
-        if (contact.id?.endsWith('@s.whatsapp.net') && contact.lid) {
-          const phone = contact.id.split('@')[0];
-          const lid = contact.lid.replace('@lid', '').replace(/\D/g, '');
-          if (phone && lid) {
-            lidToPhone.set(lid, phone);
-          }
+        const id = contact.id || '';
+        const lid = contact.lid || '';
+
+        // Caso 1: id é @s.whatsapp.net e tem lid associado
+        if (id.endsWith('@s.whatsapp.net') && lid) {
+          const phone = id.split('@')[0];
+          const lidNum = lid.split('@')[0].replace(/\D/g, '');
+          if (phone && lidNum) { lidToPhone.set(lidNum, phone); added++; }
         }
-        // Também indexar se id for '@lid' e houver notify (nome) — pode ter phone em outro campo
-        if (contact.id?.endsWith('@lid') && contact.phoneNumber) {
-          const lid = contact.id.split('@')[0];
-          lidToPhone.set(lid, contact.phoneNumber.replace(/\D/g, ''));
+        // Caso 2: id é @lid e tem phoneNumber
+        if (id.endsWith('@lid') && contact.phoneNumber) {
+          const lidNum = id.split('@')[0];
+          lidToPhone.set(lidNum, contact.phoneNumber.replace(/\D/g, ''));
+          added++;
         }
       }
+      return added;
     };
 
-    sock.ev.on('contacts.set', ({ contacts }: { contacts: any[] }) => {
-      processContacts(contacts);
-      console.log(`[Baileys] Contatos sincronizados: ${lidToPhone.size} mapeamentos @lid`);
+    sock.ev.on('contacts.set', (data: any) => {
+      const contacts = Array.isArray(data) ? data : (data?.contacts || []);
+      // Log da estrutura do primeiro contato para debug
+      if (contacts.length > 0) {
+        console.log(`[Baileys] contacts.set sample:`, JSON.stringify(contacts[0]).slice(0, 200));
+      } else {
+        console.log(`[Baileys] contacts.set: array vazio (${JSON.stringify(data).slice(0, 100)})`);
+      }
+      const added = processContacts(contacts);
+      console.log(`[Baileys] Contatos sincronizados: ${contacts.length} total, ${added} @lid mapeados`);
     });
 
-    sock.ev.on('contacts.upsert', (contacts: any[]) => {
-      processContacts(contacts);
+    sock.ev.on('contacts.upsert', (data: any) => {
+      const contacts = Array.isArray(data) ? data : (data?.contacts || []);
+      const added = processContacts(contacts);
+      if (added > 0) console.log(`[Baileys] contacts.upsert: ${added} @lid mapeados`);
     });
 
     // Evento: Mensagens recebidas
@@ -303,16 +333,37 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
         if (!text.trim()) return;
 
-        // Resolver @lid para número de telefone se disponível
+        // Resolver @lid para número de telefone
         let from = rawFrom;
         if (rawFrom.endsWith('@lid')) {
           const lidNum = rawFrom.split('@')[0];
-          const resolvedPhone = lidToPhone.get(lidNum);
+
+          // 1. Verificar mapa manual lidToPhone
+          let resolvedPhone = lidToPhone.get(lidNum);
+
+          // 2. Tentar via makeInMemoryStore (contacts map)
+          if (!resolvedPhone && store?.contacts) {
+            const contact = store.contacts[rawFrom];
+            if (contact?.phoneNumber) {
+              resolvedPhone = contact.phoneNumber.replace(/\D/g, '');
+              lidToPhone.set(lidNum, resolvedPhone);
+            } else {
+              // Procurar contato @s.whatsapp.net que tenha lid = rawFrom
+              for (const [jid, c] of Object.entries(store.contacts as Record<string, any>)) {
+                if (jid.endsWith('@s.whatsapp.net') && c?.lid === rawFrom) {
+                  resolvedPhone = jid.split('@')[0];
+                  lidToPhone.set(lidNum, resolvedPhone);
+                  break;
+                }
+              }
+            }
+          }
+
           if (resolvedPhone) {
             from = `${resolvedPhone}@s.whatsapp.net`;
             console.log(`[Baileys] @lid resolvido: ${rawFrom} → ${from}`);
           } else {
-            console.log(`[Baileys] @lid sem mapeamento ainda: ${rawFrom} (${lidToPhone.size} contatos carregados)`);
+            console.log(`[Baileys] @lid sem mapeamento: ${rawFrom} (store contacts: ${Object.keys(store?.contacts || {}).length})`);
           }
         }
 
