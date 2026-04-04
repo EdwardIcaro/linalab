@@ -213,10 +213,13 @@ export async function initBaileys(empresaId: string): Promise<void> {
         const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
         const isLoggedOut = statusCode === loggedOutCode;
         const attempts = reconnectAttempts.get(empresaId) || 0;
-        const shouldReconnect = !isLoggedOut && attempts < MAX_RECONNECT;
+        // 401 durante fase QR (sem sessão ativa) = não é logout real, deve tentar novamente
+        const wasAuthenticated = statuses.get(empresaId) === 'connected';
+        const isRealLogout = isLoggedOut && wasAuthenticated;
+        const shouldReconnect = !isRealLogout && attempts < MAX_RECONNECT;
 
         console.log(
-          `[Baileys] Desconectado para ${empresaId}. Reconectar: ${shouldReconnect} (tentativa ${attempts}/${MAX_RECONNECT})`
+          `[Baileys] Desconectado para ${empresaId}. Código: ${statusCode} | Autenticado: ${wasAuthenticated} | Reconectar: ${shouldReconnect} (tentativa ${attempts}/${MAX_RECONNECT})`
         );
 
         if (shouldReconnect) {
