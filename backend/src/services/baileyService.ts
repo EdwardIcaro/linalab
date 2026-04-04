@@ -6,7 +6,7 @@
 import type { WASocket } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
@@ -47,10 +47,19 @@ async function restoreAuthDirFromDb(empresaId: string): Promise<void> {
       where: { empresaId },
     });
 
-    if (!instance?.authState) return;
+    const authDir = getAuthDir(empresaId);
+
+    if (!instance?.authState) {
+      // Sem authState no banco → limpar /tmp para forçar novo QR code
+      if (existsSync(authDir)) {
+        rmSync(authDir, { recursive: true, force: true });
+        mkdirSync(authDir, { recursive: true });
+        console.log(`[Baileys] /tmp limpo para ${empresaId} (sem authState no banco)`);
+      }
+      return;
+    }
 
     const authFiles = JSON.parse(instance.authState) as Record<string, string>;
-    const authDir = getAuthDir(empresaId);
 
     for (const [filename, content] of Object.entries(authFiles)) {
       writeFileSync(join(authDir, filename), content, 'utf-8');
