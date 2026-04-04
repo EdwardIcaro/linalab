@@ -43,24 +43,31 @@ function getAuthDir(empresaId: string): string {
  */
 async function restoreAuthDirFromDb(empresaId: string): Promise<void> {
   try {
+    const authDir = getAuthDir(empresaId);
+
+    // Se /tmp já tem arquivos (ex: salvos por creds.update durante scan), não sobrescrever
+    // Isso evita apagar credenciais recém-salvas antes da persistência no DB terminar
+    if (existsSync(authDir)) {
+      const files = readdirSync(authDir);
+      if (files.length > 0) {
+        console.log(`[Baileys] /tmp já tem ${files.length} arquivo(s) para ${empresaId}, mantendo`);
+        return;
+      }
+    }
+
+    // /tmp vazio: tentar restaurar do banco
     const instance = await prisma.whatsappInstance.findUnique({
       where: { empresaId },
     });
 
-    const authDir = getAuthDir(empresaId);
-
     if (!instance?.authState) {
-      // Sem authState no banco → limpar /tmp para forçar novo QR code
-      if (existsSync(authDir)) {
-        rmSync(authDir, { recursive: true, force: true });
-        mkdirSync(authDir, { recursive: true });
-        console.log(`[Baileys] /tmp limpo para ${empresaId} (sem authState no banco)`);
-      }
+      // Sem authState no banco e /tmp vazio → início limpo, vai gerar QR
+      mkdirSync(authDir, { recursive: true });
+      console.log(`[Baileys] Início limpo para ${empresaId} (sem credenciais)`);
       return;
     }
 
     const authFiles = JSON.parse(instance.authState) as Record<string, string>;
-
     for (const [filename, content] of Object.entries(authFiles)) {
       writeFileSync(join(authDir, filename), content, 'utf-8');
     }
