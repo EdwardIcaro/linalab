@@ -2159,6 +2159,9 @@
                     <div class="whatsapp-card-content">
                         <p class="whatsapp-qr-label">Escaneie com seu WhatsApp:</p>
                         <img :src="qrCodeUrl" :alt="'QR Code para conectar WhatsApp'" class="whatsapp-qr-code">
+                        <p class="whatsapp-hint" style="font-size:0.8rem; color: var(--text-secondary);">
+                            ⏱️ Expira em: <span x-text="qrCountdown" style="font-weight:600; color: var(--primary-color);"></span>
+                        </p>
                         <p class="whatsapp-hint">Use o WhatsApp de seu telefone para escanear este código</p>
                     </div>
                 </template>
@@ -2228,6 +2231,9 @@
                             <div class="whatsapp-modal-qr">
                                 <p class="whatsapp-modal-hint">Escaneie com seu WhatsApp:</p>
                                 <img :src="qrCodeUrl" :alt="'QR Code para conectar WhatsApp'" style="width: 280px; height: 280px;">
+                                <p class="whatsapp-modal-hint" style="font-size:0.85rem;">
+                                    ⏱️ Expira em: <span x-text="qrCountdown" style="font-weight:600; color: var(--primary-color);"></span>
+                                </p>
                                 <p class="whatsapp-modal-hint">Use o WhatsApp de seu telefone para escanear este código</p>
                             </div>
                         </template>
@@ -2610,6 +2616,9 @@
                 ownerPhone: null,
                 whatsappLoading: false,
                 whatsappStatusInterval: null,
+                qrCountdown: '5:00',
+                qrCountdownInterval: null,
+                qrGeneratedAt: null,
                 whatsappModalOpen: false,
 
                 // Patio System
@@ -2800,6 +2809,30 @@
                 // ==========================================
                 // WHATSAPP BOT MANAGEMENT
                 // ==========================================
+                startQrCountdown() {
+                    this.stopQrCountdown();
+                    const DURATION = 5 * 60; // 5 minutos em segundos
+                    let remaining = DURATION;
+                    this.qrGeneratedAt = Date.now();
+                    const update = () => {
+                        const mins = Math.floor(remaining / 60);
+                        const secs = remaining % 60;
+                        this.qrCountdown = `${mins}:${secs.toString().padStart(2, '0')}`;
+                        remaining--;
+                        if (remaining < 0) this.stopQrCountdown();
+                    };
+                    update();
+                    this.qrCountdownInterval = setInterval(update, 1000);
+                },
+
+                stopQrCountdown() {
+                    if (this.qrCountdownInterval) {
+                        clearInterval(this.qrCountdownInterval);
+                        this.qrCountdownInterval = null;
+                    }
+                    this.qrCountdown = '5:00';
+                },
+
                 async loadWhatsappStatus() {
                     try {
                         this.whatsappLoading = true;
@@ -2810,6 +2843,7 @@
 
                         if (response && response.status) {
                             const previousStatus = this.whatsappStatus;
+                            const previousQr = this.qrCodeUrl;
                             this.whatsappStatus = response.status;
                             this.qrCodeUrl = response.qrCode || null;
                             this.ownerPhone = response.ownerPhone || null;
@@ -2821,6 +2855,15 @@
                                 'disconnected': '❌ Desconectado'
                             };
                             this.whatsappStatusText = statusMap[response.status] || 'Desconhecido';
+
+                            // Iniciar/reiniciar cronômetro quando QR muda
+                            if (response.status === 'qr_code' && response.qrCode && response.qrCode !== previousQr) {
+                                this.startQrCountdown();
+                            }
+                            // Parar cronômetro quando conectado ou desconectado
+                            if (response.status !== 'qr_code') {
+                                this.stopQrCountdown();
+                            }
 
                             // Se estava esperando QR e voltou desconectado, reconectar automaticamente
                             if (previousStatus === 'qr_code' && response.status === 'disconnected') {
