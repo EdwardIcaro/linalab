@@ -21,6 +21,10 @@ const statuses = new Map<string, string>();
 const reconnectAttempts = new Map<string, number>();
 const MAX_RECONNECT = 3;
 
+// Mapeamento de @lid → número de telefone (novo protocolo WhatsApp)
+// Ex: '247480411279441' → '5599981956046'
+const lidToPhone = new Map<string, string>();
+
 // ==========================================
 // AUTH STATE — DB ↔ /tmp
 // ==========================================
@@ -225,6 +229,34 @@ export async function initBaileys(empresaId: string): Promise<void> {
       }
     });
 
+    // Evento: Sincronização de contatos (mapeia @lid → telefone)
+    const processContacts = (contacts: any[]) => {
+      for (const contact of contacts) {
+        // contact.id pode ser '@s.whatsapp.net' e contact.lid é o '@lid'
+        if (contact.id?.endsWith('@s.whatsapp.net') && contact.lid) {
+          const phone = contact.id.split('@')[0];
+          const lid = contact.lid.replace('@lid', '').replace(/\D/g, '');
+          if (phone && lid) {
+            lidToPhone.set(lid, phone);
+          }
+        }
+        // Também indexar se id for '@lid' e houver notify (nome) — pode ter phone em outro campo
+        if (contact.id?.endsWith('@lid') && contact.phoneNumber) {
+          const lid = contact.id.split('@')[0];
+          lidToPhone.set(lid, contact.phoneNumber.replace(/\D/g, ''));
+        }
+      }
+    };
+
+    sock.ev.on('contacts.set', ({ contacts }: { contacts: any[] }) => {
+      processContacts(contacts);
+      console.log(`[Baileys] Contatos sincronizados: ${lidToPhone.size} mapeamentos @lid`);
+    });
+
+    sock.ev.on('contacts.upsert', (contacts: any[]) => {
+      processContacts(contacts);
+    });
+
     // Evento: Mensagens recebidas
     sock.ev.on('messages.upsert', async (m: any) => {
       try {
@@ -234,13 +266,26 @@ export async function initBaileys(empresaId: string): Promise<void> {
           return;
         }
 
-        const from = message.key.remoteJid!;
+        const rawFrom = message.key.remoteJid!;
         const text =
           message.message?.conversation ||
           message.message?.extendedTextMessage?.text ||
           '';
 
         if (!text.trim()) return;
+
+        // Resolver @lid para número de telefone se disponível
+        let from = rawFrom;
+        if (rawFrom.endsWith('@lid')) {
+          const lidNum = rawFrom.split('@')[0];
+          const resolvedPhone = lidToPhone.get(lidNum);
+          if (resolvedPhone) {
+            from = `${resolvedPhone}@s.whatsapp.net`;
+            console.log(`[Baileys] @lid resolvido: ${rawFrom} → ${from}`);
+          } else {
+            console.log(`[Baileys] @lid sem mapeamento ainda: ${rawFrom} (${lidToPhone.size} contatos carregados)`);
+          }
+        }
 
         console.log(`[Baileys] Mensagem recebida de ${from}: ${text}`);
 
