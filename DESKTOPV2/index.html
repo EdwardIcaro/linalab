@@ -2665,10 +2665,15 @@
                         // Load WhatsApp bot status
                         await this.loadWhatsappStatus();
 
-                        // Auto-polling inteligente: mais rápido em 'qr_code', normal caso contrário
-                        this.whatsappStatusInterval = setInterval(() => {
-                            this.loadWhatsappStatus();
-                        }, 3000); // Polling a cada 3s para QR code REAL atualizar em tempo real
+                        // Auto-polling adaptativo via setTimeout recursivo
+                        const pollWhatsapp = () => {
+                            this.loadWhatsappStatus().then(() => {
+                                // 3s esperando QR, 30s nos outros estados
+                                const delay = this.whatsappStatus === 'qr_code' ? 3000 : 30000;
+                                this.whatsappStatusInterval = setTimeout(pollWhatsapp, delay);
+                            });
+                        };
+                        this.whatsappStatusInterval = setTimeout(pollWhatsapp, 5000);
 
                         // Refresh data every 60 seconds
                         setInterval(() => {
