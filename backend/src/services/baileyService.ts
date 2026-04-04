@@ -343,16 +343,22 @@ export async function initBaileys(empresaId: string): Promise<void> {
 
           // 2. Tentar via makeInMemoryStore (contacts map)
           if (!resolvedPhone && store?.contacts) {
-            const contact = store.contacts[rawFrom];
-            if (contact?.phoneNumber) {
-              resolvedPhone = contact.phoneNumber.replace(/\D/g, '');
+            const contact = store.contacts[rawFrom] as any;
+            const phoneFromContact: string | undefined = contact?.phoneNumber
+              ? String(contact.phoneNumber).replace(/\D/g, '')
+              : undefined;
+            if (phoneFromContact) {
+              resolvedPhone = phoneFromContact;
               lidToPhone.set(lidNum, resolvedPhone);
             } else {
               // Procurar contato @s.whatsapp.net que tenha lid = rawFrom
               for (const [jid, c] of Object.entries(store.contacts as Record<string, any>)) {
-                if (jid.endsWith('@s.whatsapp.net') && c?.lid === rawFrom) {
-                  resolvedPhone = jid.split('@')[0];
-                  lidToPhone.set(lidNum, resolvedPhone);
+                if (jid.endsWith('@s.whatsapp.net') && (c as any)?.lid === rawFrom) {
+                  const phone = jid.split('@')[0];
+                  if (phone) {
+                    resolvedPhone = phone;
+                    lidToPhone.set(lidNum, phone);
+                  }
                   break;
                 }
               }
