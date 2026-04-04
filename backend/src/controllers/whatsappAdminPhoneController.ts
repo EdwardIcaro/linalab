@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { resolvePhoneToJid } from '../services/baileyService';
+import { resolvePhoneToJid, sendMessageAndCaptureJid } from '../services/baileyService';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -103,6 +103,25 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     });
 
     console.log(`[WhatsApp Admin] Número de admin adicionado: ${adminPhone.telefone}`);
+
+    // Enviar mensagem de boas-vindas e capturar JID real (@lid ou @s.whatsapp.net)
+    // Isso resolve o problema do @lid — ao enviar, o Baileys retorna o JID real usado
+    const nomeAdmin = adminPhone.nome ? ` ${adminPhone.nome}` : '';
+    const actualJid = await sendMessageAndCaptureJid(
+      empresaId,
+      telefone,
+      `✅ Olá${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`
+    );
+
+    // Se o JID capturado for @lid (diferente do resolvido), atualizar no banco
+    if (actualJid && actualJid !== resolvedJid) {
+      await prisma.whatsappAdminPhone.update({
+        where: { id: adminPhone.id },
+        data: { jid: actualJid },
+      });
+      console.log(`[WhatsApp Admin] JID atualizado para ${adminPhone.telefone}: ${actualJid}`);
+    }
+
     return res.json({
       data: adminPhone,
       message: 'Número de admin adicionado com sucesso',

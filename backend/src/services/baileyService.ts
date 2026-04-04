@@ -379,6 +379,37 @@ export function getStatus(empresaId: string): string {
 }
 
 /**
+ * Envia mensagem e retorna o JID real usado pelo WhatsApp (pode ser @lid)
+ * Útil para capturar o mapeamento @lid → phone ao enviar para admins
+ */
+export async function sendMessageAndCaptureJid(
+  empresaId: string,
+  toPhone: string,
+  text: string
+): Promise<string | null> {
+  const sock = sockets.get(empresaId);
+  if (!sock) return null;
+
+  try {
+    const cleanPhone = toPhone.replace(/\D/g, '');
+    const jid = `${cleanPhone}@s.whatsapp.net`;
+    const result = await sock.sendMessage(jid, { text });
+
+    // O remoteJid retornado pode ser @lid — capturar mapeamento
+    const actualJid = result?.key?.remoteJid;
+    if (actualJid && actualJid.endsWith('@lid')) {
+      const lidNum = actualJid.split('@')[0];
+      lidToPhone.set(lidNum, cleanPhone);
+      console.log(`[Baileys] Mapeamento capturado ao enviar: ${actualJid} → ${cleanPhone}`);
+    }
+    return actualJid || jid;
+  } catch (error) {
+    console.warn(`[Baileys] Erro ao enviar mensagem para ${toPhone}:`, error);
+    return null;
+  }
+}
+
+/**
  * Envia mensagem de texto
  */
 export async function sendMessage(
