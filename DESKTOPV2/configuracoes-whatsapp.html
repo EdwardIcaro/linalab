@@ -370,6 +370,111 @@
         input:checked + .toggle-slider:before {
             transform: translateX(26px);
         }
+
+        .admin-section {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .btn-primary {
+            background: var(--cor-primaria);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .admin-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .admin-card {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-info {
+            flex: 1;
+        }
+
+        .admin-number {
+            font-family: monospace;
+            font-weight: 600;
+            color: #25d366;
+            font-size: 1rem;
+        }
+
+        .admin-name {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-delete-admin {
+            background: #ff4757;
+            color: white;
+        }
+
+        .btn-delete-admin:hover {
+            opacity: 0.9;
+        }
+
+        .empty-admin {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border: 1px dashed #ddd;
+        }
+
+        .lavadores-section {
+            margin-top: 3rem;
+        }
     </style>
 </head>
 <body>
@@ -395,11 +500,63 @@
 
             <div id="alert" class="alert" style="display: none;"></div>
 
-            <div id="loadingState" class="loading" style="display: none;">
-                <div class="spinner"></div> Carregando...
+            <!-- Seção de Admins -->
+            <div class="admin-section">
+                <div class="section-header">
+                    <h2>👨‍💼 Números de Admin</h2>
+                    <button class="btn-primary" onclick="openAddAdminModal()">+ Adicionar Admin</button>
+                </div>
+                <div id="adminPhones" class="admin-list"></div>
             </div>
 
-            <div id="content" class="lavadores-grid"></div>
+            <!-- Seção de Lavadores -->
+            <div class="lavadores-section">
+                <h2 style="margin-top: 2rem;">👷 Números dos Lavadores</h2>
+                <div id="loadingState" class="loading" style="display: none;">
+                    <div class="spinner"></div> Carregando...
+                </div>
+                <div id="content" class="lavadores-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar/editar admin -->
+    <div id="adminModal" class="modal-phone">
+        <div class="modal-content-phone">
+            <div class="modal-header-phone">
+                <h2 id="adminModalTitle">Adicionar Admin</h2>
+                <button class="close-modal" onclick="closeAdminModal()">&times;</button>
+            </div>
+
+            <form id="adminForm" onsubmit="saveAdminPhone(event)">
+                <div class="form-group-phone">
+                    <label for="adminPhoneInput">Número de WhatsApp</label>
+                    <input
+                        type="tel"
+                        id="adminPhoneInput"
+                        placeholder="(11) 99999-9999 ou 5511999999999"
+                        required
+                    >
+                </div>
+
+                <div class="form-group-phone">
+                    <label for="adminNameInput">Nome/Descrição (opcional)</label>
+                    <input
+                        type="text"
+                        id="adminNameInput"
+                        placeholder="Ex: Gerente João"
+                    >
+                </div>
+
+                <div class="modal-footer-phone">
+                    <button type="button" class="btn-modal btn-cancel" onclick="closeAdminModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal btn-save-phone" id="saveAdminBtn">
+                        Salvar
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -447,8 +604,101 @@
         let currentLavador = null;
         let lavadores = [];
 
+        // ========== ADMINS ==========
+        let adminPhones = [];
+
+        async function loadAdminPhones() {
+            try {
+                const response = await window.api.whatsappAdminPhones.list();
+                adminPhones = response.data || [];
+                renderAdminPhones();
+            } catch (error) {
+                console.error('Erro ao carregar admins:', error);
+            }
+        }
+
+        function renderAdminPhones() {
+            const container = document.getElementById('adminPhones');
+
+            if (adminPhones.length === 0) {
+                container.innerHTML = '<div class="empty-admin">Nenhum admin cadastrado. Clique em "+ Adicionar Admin" para começar.</div>';
+                return;
+            }
+
+            container.innerHTML = adminPhones.map(admin => `
+                <div class="admin-card">
+                    <div class="admin-info">
+                        <div class="admin-number">📱 ${admin.telefone}</div>
+                        ${admin.nome ? `<div class="admin-name">${admin.nome}</div>` : ''}
+                    </div>
+                    <div class="admin-actions">
+                        <button class="btn-sm btn-delete-admin" onclick="deleteAdminPhone('${admin.id}')">
+                            Remover
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAddAdminModal() {
+            document.getElementById('adminModalTitle').textContent = 'Adicionar Admin';
+            document.getElementById('adminPhoneInput').value = '';
+            document.getElementById('adminNameInput').value = '';
+            document.getElementById('adminModal').classList.add('active');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').classList.remove('active');
+            document.getElementById('adminForm').reset();
+        }
+
+        async function saveAdminPhone(event) {
+            event.preventDefault();
+
+            const telefone = document.getElementById('adminPhoneInput').value.trim();
+            const nome = document.getElementById('adminNameInput').value.trim();
+            const saveBtn = document.getElementById('saveAdminBtn');
+
+            if (!telefone) {
+                showAlert('Digite um número válido', 'error');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner"></span>';
+
+            try {
+                await window.api.whatsappAdminPhones.create(telefone, nome || null);
+                showAlert('Admin adicionado com sucesso!', 'success');
+                closeAdminModal();
+                await loadAdminPhones();
+            } catch (error) {
+                showAlert('Erro ao adicionar admin', 'error');
+                console.error(error);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Salvar';
+            }
+        }
+
+        async function deleteAdminPhone(adminId) {
+            if (!confirm('Tem certeza que deseja remover este admin?')) {
+                return;
+            }
+
+            try {
+                await window.api.whatsappAdminPhones.delete(adminId);
+                showAlert('Admin removido com sucesso', 'success');
+                await loadAdminPhones();
+            } catch (error) {
+                showAlert('Erro ao remover admin', 'error');
+                console.error(error);
+            }
+        }
+
         // Inicializar
         async function init() {
+            await loadAdminPhones();
             await loadLavadores();
             await loadConfig();
         }
@@ -613,9 +863,12 @@
             setTimeout(() => alertEl.style.display = 'none', 4000);
         }
 
-        // Fechar modal ao clicar fora
+        // Fechar modais ao clicar fora
         document.getElementById('phoneModal')?.addEventListener('click', (e) => {
             if (e.target.id === 'phoneModal') closePhoneModal();
+        });
+        document.getElementById('adminModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'adminModal') closeAdminModal();
         });
 
         // Verificar autenticação e inicializar

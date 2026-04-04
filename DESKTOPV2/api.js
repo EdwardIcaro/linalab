@@ -399,6 +399,20 @@ const api = {
       body: JSON.stringify({ blockUnknown })
     }),
   },
+  whatsappAdminPhones: {
+    list: () => fetchApi('/whatsapp/admin-phones'),
+    create: (telefone, nome) => fetchApi('/whatsapp/admin-phones', {
+      method: 'POST',
+      body: JSON.stringify({ telefone, nome })
+    }),
+    delete: (adminPhoneId) => fetchApi(`/whatsapp/admin-phones/${adminPhoneId}`, {
+      method: 'DELETE'
+    }),
+    update: (adminPhoneId, data) => fetchApi(`/whatsapp/admin-phones/${adminPhoneId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }),
+  },
 
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),

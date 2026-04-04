@@ -415,8 +415,24 @@ model WhatsappInstance {
 
   empresa   Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   messages  WhatsappMessage[]
+  adminPhones WhatsappAdminPhone[]
 
   @@map("whatsapp_instances")
+}
+
+model WhatsappAdminPhone {
+  id          String              @id @default(cuid())
+  instanceId  String
+  telefone    String              // Número de WhatsApp do admin
+  nome        String?             // Nome/descrição do admin (ex: "Gerente João")
+  ativo       Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  instance WhatsappInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, telefone])
+  @@map("whatsapp_admin_phones")
 }
 
 model WhatsappMessage {

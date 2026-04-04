@@ -6,6 +6,7 @@
 import prisma from '../db';
 
 export type WhatsAppUserType = 'admin' | 'lavador' | 'unknown';
+// Note: 'admin' aqui significa admin do bot (gerente), não LINA_OWNER do sistema
 
 export interface WhatsAppUser {
   type: WhatsAppUserType;
@@ -26,7 +27,32 @@ export async function identifyWhatsAppUser(
   // Normalizar número: remover caracteres não-numéricos, manter apenas últimos 11 dígitos
   const normalizedPhone = phoneNumber.replace(/\D/g, '').slice(-11);
 
-  // 1. Buscar lavador por telefone
+  // 1. Buscar admin por telefone
+  const instance = await prisma.whatsappInstance.findUnique({
+    where: { empresaId },
+    include: {
+      adminPhones: {
+        where: { ativo: true },
+      },
+    },
+  });
+
+  if (instance) {
+    const adminPhone = instance.adminPhones.find(
+      (ap) => ap.telefone.includes(normalizedPhone) || normalizedPhone.includes(ap.telefone.replace(/\D/g, '').slice(-11))
+    );
+
+    if (adminPhone) {
+      return {
+        type: 'admin',
+        empresaId,
+        nome: adminPhone.nome ?? 'Admin',
+        telefone: adminPhone.telefone,
+      };
+    }
+  }
+
+  // 2. Buscar lavador por telefone
   const lavador = await prisma.lavador.findFirst({
     where: {
       empresaId,
@@ -47,10 +73,7 @@ export async function identifyWhatsAppUser(
     };
   }
 
-  // 2. Buscar usuario admin/gerente da empresa (por email associado)
-  // Para agora, apenas retornar 'unknown' se não for lavador
-  // Pode ser expandido para verificar usuários com permissões
-
+  // 3. Desconhecido
   return {
     type: 'unknown',
     telefone: phoneNumber,

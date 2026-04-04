@@ -16,6 +16,12 @@ import {
   getWhatsappConfig,
   updateWhatsappConfig
 } from '../controllers/whatsappPhoneController';
+import {
+  listAdminPhones,
+  createAdminPhone,
+  deleteAdminPhone,
+  updateAdminPhone
+} from '../controllers/whatsappAdminPhoneController';
 
 const router = Router();
 
@@ -32,5 +38,11 @@ router.delete('/phones/:lavadorId', deleteLavadorPhone);
 // Rotas de configuração
 router.get('/config', getWhatsappConfig);
 router.patch('/config', updateWhatsappConfig);
+
+// Rotas de números de admin
+router.get('/admin-phones', listAdminPhones);
+router.post('/admin-phones', createAdminPhone);
+router.delete('/admin-phones/:adminPhoneId', deleteAdminPhone);
+router.patch('/admin-phones/:adminPhoneId', updateAdminPhone);
 
 export default router;

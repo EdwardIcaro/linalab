@@ -78,6 +78,23 @@ export async function handleIncomingMessage(
     // ── Comandos fixos ───────────────────────────────────────────────────────
     const dailyContext = await buildDailyContext(empresaId);
 
+    // Admin do bot: acesso completo (igual ao admin da empresa)
+    if (user.type === 'admin') {
+      // Tratar como admin normal
+      const dailyContext = await buildDailyContext(empresaId);
+      if (command === 'resumo') return handleResumoCommand(dailyContext);
+      if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
+      if (command === 'caixa') return handleCaixaCommand(dailyContext);
+      if (command === 'pendentes') return handlePendentesCommand(dailyContext);
+      if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
+      if (command === 'ajuda') return handleAjudaCommand();
+
+      const lavadorResponse = await handleLavadorEspecifico(message, empresaId, dailyContext);
+      if (lavadorResponse) return lavadorResponse;
+
+      return await chatCompletion(message, dailyContext);
+    }
+
     // Lavador: apenas resumo e comissões pessoais
     if (user.type === 'lavador') {
       if (command === 'resumo') return handleResumoLavador(user.lavadorId!, empresaId);
