@@ -17,6 +17,32 @@ export interface WhatsAppUser {
 }
 
 /**
+ * Normalização do 9-dígito brasileiro.
+ * Em BR, números móveis podem ter o "9" extra após o DDD.
+ * Ex: 5599981956046 (13 dígitos) ↔ 559981956046 (12 dígitos) = mesmo número.
+ * Retorna todas as variantes possíveis para comparação.
+ */
+function getBrPhoneVariants(digits: string): string[] {
+  const variants = new Set<string>([digits]);
+
+  // 13 dígitos com DDI 55: 55 + DDD(2) + 9 + local(8) → gerar versão sem o 9
+  if (digits.length === 13 && digits.startsWith('55') && digits[4] === '9') {
+    variants.add('55' + digits.slice(2, 4) + digits.slice(5)); // remove o 9 extra
+  }
+
+  // 12 dígitos com DDI 55: 55 + DDD(2) + local(8) → gerar versão com o 9
+  if (digits.length === 12 && digits.startsWith('55')) {
+    variants.add('55' + digits.slice(2, 4) + '9' + digits.slice(4)); // adiciona o 9
+  }
+
+  // Sempre incluir últimos 11 e 8 dígitos como fallback
+  if (digits.length >= 11) variants.add(digits.slice(-11));
+  if (digits.length >= 8)  variants.add(digits.slice(-8));
+
+  return Array.from(variants);
+}
+
+/**
  * Identifica o usuário baseado no número de telefone do WhatsApp
  * Retorna { type: 'admin' | 'lavador' | 'unknown', ... }
  */
@@ -25,8 +51,8 @@ export async function identifyWhatsAppUser(
   empresaId: string
 ): Promise<WhatsAppUser> {
   // Normalizar número: extrair apenas dígitos do JID (ex: 5599981956046@s.whatsapp.net → 5599981956046)
-  const rawPhone = phoneNumber.replace(/\D/g, ''); // número completo com DDI
-  const normalizedPhone = rawPhone.slice(-11); // últimos 11 dígitos (DDD + número)
+  const rawPhone = phoneNumber.replace(/\D/g, '');
+  const rawVariants = getBrPhoneVariants(rawPhone);
 
   // 1. Buscar admin por telefone
   const instance = await prisma.whatsappInstance.findUnique({
@@ -43,21 +69,16 @@ export async function identifyWhatsAppUser(
       // 1. Comparar JID diretamente (resolve o problema do @lid)
       if (ap.jid) {
         if (ap.jid === phoneNumber) return true;
-        // Comparar apenas a parte numérica do JID
+        // Comparar JID numérico com variantes do número recebido
         const apJidNum = ap.jid.replace(/\D/g, '');
-        if (apJidNum === rawPhone || apJidNum === normalizedPhone) return true;
+        const jidVariants = getBrPhoneVariants(apJidNum);
+        if (rawVariants.some(v => jidVariants.includes(v))) return true;
       }
 
-      // 2. Fallback: comparar por número de telefone
+      // 2. Comparar por número de telefone com variantes do 9-dígito
       const apRaw = ap.telefone.replace(/\D/g, '');
-      const apLast11 = apRaw.slice(-11);
-      return (
-        apRaw === rawPhone ||
-        apRaw === normalizedPhone ||
-        apRaw.includes(normalizedPhone) ||
-        rawPhone.includes(apLast11) ||
-        normalizedPhone === apLast11
-      );
+      const apVariants = getBrPhoneVariants(apRaw);
+      return rawVariants.some(v => apVariants.includes(v));
     });
 
     if (adminPhone) {
@@ -70,15 +91,12 @@ export async function identifyWhatsAppUser(
     }
   }
 
-  // 2. Buscar lavador por telefone (tenta número completo e últimos 11 dígitos)
+  // 2. Buscar lavador por telefone (tenta todas as variantes do 9-dígito)
   const lavador = await prisma.lavador.findFirst({
     where: {
       empresaId,
       ativo: true,
-      OR: [
-        { telefone: { contains: rawPhone } },
-        { telefone: { contains: normalizedPhone } },
-      ],
+      OR: rawVariants.map(v => ({ telefone: { contains: v } })),
     },
   });
 
