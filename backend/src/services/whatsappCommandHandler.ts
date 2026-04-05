@@ -48,14 +48,17 @@ export async function handleIncomingMessage(
 
     const command = message.trim().toLowerCase().replace(/\//g, '');
 
-    // ── Relatório de data específica (ADMIN ONLY) ────────────────────────────
-    const isRelatorioRequest = /resumo|relat[oó]rio|detalhe/.test(command);
-    if ((isRelatorioRequest || /^ontem$/.test(command)) && !hasPermission(user, 'relatorio_data')) {
-      if (user.type === 'lavador') {
-        return getDeniedAccessMessage(user);
-      }
+    // ── Relatório de período / semanal / data específica (ADMIN ONLY) ─────────
+    const isRelatorioRequest = /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
+    if ((isRelatorioRequest || /^ontem$/.test(command)) && user.type === 'lavador') {
+      return getDeniedAccessMessage(user);
     }
     if (isRelatorioRequest || /^ontem$/.test(command)) {
+      // Período tem prioridade sobre data única (detectar ANTES)
+      const range = parseDateRangeFromMessage(message);
+      if (range) {
+        return handleRelatorioPeriodo(range.inicio, range.fim, empresaId);
+      }
       const date = parseDateFromMessage(message);
       if (date) {
         return handleRelatorioData(date, empresaId);
@@ -155,6 +158,58 @@ function parseDateFromMessage(message: string): Date | null {
       : new Date().getFullYear();
     const d = new Date(year, month, day);
     if (!isNaN(d.getTime())) { d.setHours(0,0,0,0); return d; }
+  }
+
+  return null;
+}
+
+/**
+ * Extrai intervalo de datas da mensagem para relatórios de período.
+ * Suporta: "do dia 10/01 ao dia 15/01", "de 10/01 a 15/01",
+ *          "semanal", "da semana", "últimos 7 dias", "últimos N dias"
+ */
+function parseDateRangeFromMessage(message: string): { inicio: Date; fim: Date } | null {
+  const msg = message.toLowerCase();
+
+  // Semanal / últimos 7 dias / esta semana
+  if (/semanal|[uú]ltimos\s+7\s+dias|\besta\s+semana\b|\bda\s+semana\b/.test(msg)) {
+    const fim = new Date(); fim.setHours(23, 59, 59, 999);
+    const inicio = new Date(); inicio.setDate(inicio.getDate() - 6); inicio.setHours(0, 0, 0, 0);
+    return { inicio, fim };
+  }
+
+  // Últimos N dias (ex: "últimos 10 dias")
+  const nDiasMatch = msg.match(/[uú]ltimos\s+(\d+)\s+dias/);
+  if (nDiasMatch) {
+    const n = parseInt(nDiasMatch[1]);
+    if (n >= 2 && n <= 365) {
+      const fim = new Date(); fim.setHours(23, 59, 59, 999);
+      const inicio = new Date(); inicio.setDate(inicio.getDate() - (n - 1)); inicio.setHours(0, 0, 0, 0);
+      return { inicio, fim };
+    }
+  }
+
+  // Duas datas: "10/01 ao 15/01", "de 10/01 a 15/01", "do dia 10/01 até 15/01"
+  const twoDateMatch = msg.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)[\s\S]{0,20}?(?:\bao?\b|\baté\b|\ba\b)[\s\S]{0,10}?(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
+  if (twoDateMatch) {
+    const parseSingle = (s: string): Date | null => {
+      const parts = s.split('/');
+      const day = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1;
+      const rawYear = parts[2];
+      const year = rawYear
+        ? (rawYear.length === 2 ? 2000 + parseInt(rawYear) : parseInt(rawYear))
+        : new Date().getFullYear();
+      const d = new Date(year, month, day);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const d1 = parseSingle(twoDateMatch[1]);
+    const d2 = parseSingle(twoDateMatch[2]);
+    if (d1 && d2 && d1 <= d2) {
+      d1.setHours(0, 0, 0, 0);
+      d2.setHours(23, 59, 59, 999);
+      return { inicio: d1, fim: d2 };
+    }
   }
 
   return null;
@@ -273,6 +328,122 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     `TOTAL: *R$ ${total.toFixed(2)}* | *${ordens.length}* lavagem(ns)\n\n` +
     `📊 PAGAMENTOS:\n${pagamentosFmt}\n\n` +
     `👷 COMISSÕES (por serviço):\n${comissoesFmt}`;
+}
+
+// ==========================================
+// RELATÓRIO DE PERÍODO (vários dias)
+// ==========================================
+
+async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string): Promise<string> {
+  const ordens = await prisma.ordemServico.findMany({
+    where: { empresaId, createdAt: { gte: inicio, lte: fim } },
+    include: {
+      veiculo:  { select: { modelo: true } },
+      lavador:  { select: { nome: true, comissao: true } },
+      ordemLavadores: { include: { lavador: { select: { nome: true, comissao: true } } } },
+      pagamentos: { select: { metodo: true, valor: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const iniciofmt = inicio.toLocaleDateString('pt-BR');
+  const fimfmt    = fim.toLocaleDateString('pt-BR');
+  const diasCount = Math.round((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const titulo    = iniciofmt === fimfmt ? `*${iniciofmt}*` : `*${iniciofmt} a ${fimfmt}* (${diasCount} dias)`;
+
+  if (ordens.length === 0) {
+    return `📋 Sem ordens registradas de ${iniciofmt} a ${fimfmt}.`;
+  }
+
+  // Agrupamento por dia (chave: "dd/mm/yyyy")
+  const porDia = new Map<string, { date: Date; ordens: typeof ordens; total: number }>();
+  for (const o of ordens) {
+    const chave = o.createdAt.toLocaleDateString('pt-BR');
+    if (!porDia.has(chave)) porDia.set(chave, { date: o.createdAt, ordens: [], total: 0 });
+    const d = porDia.get(chave)!;
+    d.ordens.push(o);
+    d.total += o.valorTotal;
+  }
+
+  // Abreviações de dia da semana
+  const DIA_ABREV = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  // Cabeçalho
+  let r = `📊 RELATÓRIO DO PERÍODO\n${titulo}\n\n`;
+
+  // Breakdown por dia
+  r += `📅 POR DIA:\n`;
+  for (const [chave, d] of porDia) {
+    const abrev = DIA_ABREV[d.date.getDay()];
+    r += `${chave} (${abrev}): *R$ ${d.total.toFixed(2)}* | ${d.ordens.length} lavagem(ns)\n`;
+  }
+
+  // Totais gerais
+  const totalFat    = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const totalOrdens = ordens.length;
+  r += `\nTOTAL: *R$ ${totalFat.toFixed(2)}* | *${totalOrdens}* lavagem(ns)\n`;
+
+  // Faturamento por método de pagamento
+  const porMetodo: Record<string, number> = {};
+  for (const o of ordens) {
+    if (o.pagamentos.length === 0) {
+      porMetodo['PENDENTE'] = (porMetodo['PENDENTE'] ?? 0) + o.valorTotal;
+    } else {
+      for (const p of o.pagamentos) {
+        const m = formatarMetodo(p.metodo);
+        porMetodo[m] = (porMetodo[m] ?? 0) + p.valor;
+      }
+    }
+  }
+  r += `\n💳 PAGAMENTOS:\n`;
+  r += Object.entries(porMetodo).map(([m, v]) => `${m}: *R$ ${v.toFixed(2)}*`).join('\n');
+
+  // Saídas de caixa no período
+  const saidas = await prisma.caixaRegistro.findMany({
+    where: { empresaId, tipo: 'SAIDA', data: { gte: inicio, lte: fim } },
+    orderBy: { data: 'asc' },
+  });
+  const totalSaidas = saidas.reduce((s, c) => s + c.valor, 0);
+  if (totalSaidas > 0) {
+    r += `\n\n💸 SAÍDAS DE CAIXA: *R$ ${totalSaidas.toFixed(2)}*`;
+    // Listar saídas se forem poucas
+    if (saidas.length <= 6) {
+      for (const s of saidas) {
+        r += `\n  ${s.descricao}: *R$ ${s.valor.toFixed(2)}*`;
+      }
+    } else {
+      r += ` (${saidas.length} lançamentos)`;
+    }
+  }
+
+  // Lucro líquido estimado
+  const lucro = totalFat - totalSaidas;
+  r += `\n\n💰 LUCRO ESTIMADO: *R$ ${lucro.toFixed(2)}*`;
+
+  // Comissões totais por lavador no período
+  const comissoesPorLavador: Record<string, { taxa: number; total: number }> = {};
+  for (const o of ordens) {
+    const lavs = o.ordemLavadores.length > 0
+      ? o.ordemLavadores.map(ol => ol.lavador)
+      : o.lavador ? [o.lavador] : [];
+    for (const lav of lavs) {
+      if (!comissoesPorLavador[lav.nome]) {
+        comissoesPorLavador[lav.nome] = { taxa: lav.comissao, total: 0 };
+      }
+      comissoesPorLavador[lav.nome].total += o.valorTotal * (lav.comissao / 100);
+    }
+  }
+
+  if (Object.keys(comissoesPorLavador).length > 0) {
+    r += `\n\n👷 COMISSÕES DO PERÍODO:\n`;
+    for (const [nome, dados] of Object.entries(comissoesPorLavador)) {
+      r += `*${nome.toUpperCase()}* (${dados.taxa}%): *R$ ${dados.total.toFixed(2)}*\n`;
+    }
+    const totalComissoes = Object.values(comissoesPorLavador).reduce((s, d) => s + d.total, 0);
+    r += `Total: *R$ ${totalComissoes.toFixed(2)}*`;
+  }
+
+  return r.trim();
 }
 
 // ==========================================
@@ -779,10 +950,13 @@ function handleAjudaCommand(): string {
     `/lavadores - Lavadores e comissões de hoje\n` +
     `/caixa - Caixa do dia\n` +
     `/pendentes - Ordens em andamento\n\n` +
-    `*Relatórios:*\n` +
-    `resumo de ontem - Relatório detalhado de ontem\n` +
-    `resumo dia 02/04 - Relatório de qualquer dia\n` +
-    `ontem - Atalho para relatório de ontem\n\n` +
+    `*Relatórios por data:*\n` +
+    `relatório de ontem\n` +
+    `relatório dia 02/04\n` +
+    `relatório semanal _(últimos 7 dias)_\n` +
+    `relatório do dia 01/04 ao dia 07/04\n` +
+    `relatório de 01/04 a 07/04\n` +
+    `relatório dos últimos 15 dias\n\n` +
     `*Comissões:*\n` +
     `comissões em aberto - Todas as comissões pendentes\n` +
     `comissão em aberto do [nome] - Comissões de um lavador\n\n` +
