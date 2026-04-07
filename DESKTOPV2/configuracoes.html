@@ -925,8 +925,12 @@
                             required
                         >
                             <option value="">Selecione...</option>
-                            <option value="CARRO">Carro</option>
-                            <option value="MOTO">Moto</option>
+                            <option value="CARRO">🚗 Carro</option>
+                            <option value="MOTO">🏍️ Moto</option>
+                            <option value="CAMINHONETE">🛻 Caminhonete</option>
+                            <option value="VAN">🚐 Van</option>
+                            <option value="MICROONIBUS">🚌 Micro-ônibus</option>
+                            <option value="CAMINHAO">🚚 Caminhão</option>
                         </select>
                     </div>
                     <div class="form-group" x-show="serviceForm.tipoVeiculo === 'CARRO' && subtipoOptions.length > 0">
@@ -945,6 +949,25 @@
                                 </div>
                             </template>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            Comissão do Serviço (%)
+                            <span class="text-sm text-secondary" style="font-weight:400;"> — opcional</span>
+                        </label>
+                        <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max="100"
+                            class="form-input"
+                            placeholder="Ex: 40 — deixe vazio para usar % padrão do lavador"
+                            x-model="serviceForm.comissaoPercentual"
+                        >
+                        <p class="text-sm text-secondary mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Quando definida, substitui a % padrão do lavador para este serviço específico.
+                        </p>
                     </div>
                     <div class="modal-actions">
                         <button type="button" @click="closeServiceModal()" class="btn btn-secondary">Cancelar</button>
@@ -1266,7 +1289,8 @@
                     nome: '',
                     preco: '',
                     tipoVeiculo: '',
-                    subtiposVeiculo: []
+                    subtiposVeiculo: [],
+                    comissaoPercentual: ''
                 },
 
                 adicionalForm: {
@@ -1877,13 +1901,15 @@
                         } else {
                             this.serviceForm.subtiposVeiculo = [];
                         }
+                        this.serviceForm.comissaoPercentual = service.comissaoPercentual != null ? service.comissaoPercentual : '';
                     } else {
                         this.serviceForm = {
                             id: null,
                             nome: '',
                             preco: '',
                             tipoVeiculo: '',
-                            subtiposVeiculo: []
+                            subtiposVeiculo: [],
+                            comissaoPercentual: ''
                         };
                         this.subtipoOptions = [];
                     }
@@ -1897,7 +1923,8 @@
                         nome: '',
                         preco: '',
                         tipoVeiculo: '',
-                        subtiposVeiculo: []
+                        subtiposVeiculo: [],
+                        comissaoPercentual: ''
                     };
                     this.subtipoOptions = [];
                 },
@@ -1925,7 +1952,8 @@
                         const data = {
                             nome: this.serviceForm.nome,
                             preco: preco,
-                            tipoVeiculo: this.serviceForm.tipoVeiculo
+                            tipoVeiculo: this.serviceForm.tipoVeiculo,
+                            comissaoPercentual: this.serviceForm.comissaoPercentual !== '' ? parseFloat(this.serviceForm.comissaoPercentual) : null
                         };
 
                         if (this.serviceForm.tipoVeiculo === 'CARRO' && this.serviceForm.subtiposVeiculo.length > 0) {

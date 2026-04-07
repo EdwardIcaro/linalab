@@ -14,7 +14,7 @@ interface EmpresaRequest extends Request {
  */
 export const createServico = async (req: EmpresaRequest, res: Response) => {
   try {
-    const { nome, descricao, duracao, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo } = req.body;
+    const { nome, descricao, duracao, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo, comissaoPercentual } = req.body;
 
     if (!nome || preco === undefined || !tipoVeiculoNome) {
       return res.status(400).json({ 
@@ -46,7 +46,14 @@ export const createServico = async (req: EmpresaRequest, res: Response) => {
 
     const novoServico = await prisma.servico.create({
       data: {
-        nome, descricao, duracao, preco: parseFloat(preco), empresaId: req.empresaId!,
+        nome,
+        descricao,
+        duracao,
+        preco: parseFloat(preco),
+        comissaoPercentual: comissaoPercentual !== undefined && comissaoPercentual !== '' && comissaoPercentual !== null
+          ? parseFloat(comissaoPercentual)
+          : null,
+        empresaId: req.empresaId!,
         tiposVeiculo: { connect: tiposVeiculoParaConectar }
       },
     });
@@ -416,7 +423,7 @@ export const updateServico = async (req: EmpresaRequest, res: Response) => {
     if (Array.isArray(id)) {
       return res.status(400).json({ error: 'ID inválido' });
     }
-    const { nome, descricao, duracao, ativo, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo } = req.body;
+    const { nome, descricao, duracao, ativo, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo, comissaoPercentual } = req.body;
 
     // 1. Coleta os IDs dos novos tipos/subtipos para conectar
     const tiposVeiculoParaConectar: { id: string }[] = [];
@@ -451,6 +458,9 @@ export const updateServico = async (req: EmpresaRequest, res: Response) => {
         duracao,
         ativo,
         preco: preco !== undefined ? parseFloat(preco) : undefined,
+        comissaoPercentual: comissaoPercentual !== undefined
+          ? (comissaoPercentual !== '' && comissaoPercentual !== null ? parseFloat(comissaoPercentual) : null)
+          : undefined,
         // Desconecta todos os antigos e conecta os novos
         tiposVeiculo: { set: tiposVeiculoParaConectar }
       }

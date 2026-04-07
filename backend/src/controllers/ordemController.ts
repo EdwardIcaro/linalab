@@ -281,11 +281,26 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       // Mapa lavadorId → % de comissão individual
       const comissaoMap = new Map(lavadoresData.map((l: any) => [l.id, l.comissao]));
 
-      // 5. Calcular comissão total = soma das comissões individuais de cada lavador
-      // Cada lavador recebe sua própria % sobre o valor total (não divide igualmente)
-      // Ex: lavador A 35% + lavador B 40% sobre R$130 = R$45,50 + R$52,00 = R$97,50
+      // 5. Calcular comissão item a item:
+      // - Se o serviço tem comissaoPercentual definida, usa essa % para aquele item
+      // - Caso contrário, usa a % padrão do lavador
+      // Ex: Lavagem R$100 (comissaoPercentual=40%) + Adicional R$30 com lavador 35%
+      //     → ganho = 100*40% + 30*35% = R$40 + R$10,50 = R$50,50
+      const calcGanhoPorLavador = (lavadorComissaoDefault: number): number => {
+        return ordemItemsData.reduce((sum: number, item: any) => {
+          let percentual = lavadorComissaoDefault;
+          if (item.tipo === 'SERVICO' && item.servicoId) {
+            const servico = servicoMap.get(item.servicoId);
+            if ((servico as any)?.comissaoPercentual != null) {
+              percentual = (servico as any).comissaoPercentual;
+            }
+          }
+          return sum + item.subtotal * (percentual / 100);
+        }, 0);
+      };
+
       const comissaoCalculada = normalizedLavadorIds.reduce((sum, id) => {
-        return sum + calculatedValorTotal * ((comissaoMap.get(id) || 0) / 100);
+        return sum + calcGanhoPorLavador(comissaoMap.get(id) || 0);
       }, 0);
 
       // 6. Gerar o número da ordem
@@ -312,7 +327,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           data: normalizedLavadorIds.map(lavadorIdValue => ({
             ordemId: novaOrdem.id,
             lavadorId: lavadorIdValue,
-            ganho: calculatedValorTotal * ((comissaoMap.get(lavadorIdValue) || 0) / 100)
+            ganho: calcGanhoPorLavador(comissaoMap.get(lavadorIdValue) || 0)
           }))
         });
       }

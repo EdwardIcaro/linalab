@@ -1166,6 +1166,10 @@
                     <div class="chips-row">
                         <button class="type-chip" :class="{ active: vehicleType === 'CARRO' }" @click="selectVehicleType('CARRO')">🚗 Carro</button>
                         <button class="type-chip" :class="{ active: vehicleType === 'MOTO' }" @click="selectVehicleType('MOTO')">🏍️ Moto</button>
+                        <button class="type-chip" :class="{ active: vehicleType === 'CAMINHONETE' }" @click="selectVehicleType('CAMINHONETE')">🛻 Caminhonete</button>
+                        <button class="type-chip" :class="{ active: vehicleType === 'VAN' }" @click="selectVehicleType('VAN')">🚐 Van</button>
+                        <button class="type-chip" :class="{ active: vehicleType === 'MICROONIBUS' }" @click="selectVehicleType('MICROONIBUS')">🚌 Micro-ônibus</button>
+                        <button class="type-chip" :class="{ active: vehicleType === 'CAMINHAO' }" @click="selectVehicleType('CAMINHAO')">🚚 Caminhão</button>
                     </div>
 
                     <div x-show="vehicleType === 'CARRO'" x-transition style="margin-top: 12px;">
@@ -1406,6 +1410,38 @@
             </div>
         </div>
 
+        <!-- Confirmação: Criar sem lavador -->
+        <div
+            class="modal-overlay"
+            x-show="showNoLavadorModal"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+        >
+            <div class="modal-content" style="text-align: center; max-width: 380px;">
+                <div style="font-size: 48px; color: var(--wizard-warning); margin-bottom: 12px;">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <h2 style="font-size: 20px; margin-bottom: 8px;">Nenhum lavador selecionado</h2>
+                <p style="color: var(--wizard-text-light); margin-bottom: 24px; font-size: 14px;">
+                    Deseja criar a ordem sem atribuir um lavador? A ordem ficará como <strong>Pendente</strong> até ser atribuída.
+                </p>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" style="flex: 1;" @click="_noLavadorResolve && _noLavadorResolve(false); showNoLavadorModal = false;">
+                        <i class="fas fa-arrow-left"></i>
+                        Voltar
+                    </button>
+                    <button class="btn btn-success" style="flex: 1;" @click="_noLavadorResolve && _noLavadorResolve(true); showNoLavadorModal = false;">
+                        <i class="fas fa-check"></i>
+                        Criar mesmo assim
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Success Modal -->
         <div
             class="modal-overlay"
@@ -1534,6 +1570,8 @@
                 isCreatingOrder: false,
                 showSuccessModal: false,
                 createdOrderNumber: null,
+                showNoLavadorModal: false,
+                _noLavadorResolve: null,
 
                 // ==========================================
                 // COMPUTED: Total Price
@@ -1802,10 +1840,11 @@
                 // ==========================================
                 selectVehicleType(type) {
                     this.vehicleType = type;
-                    if (type === 'MOTO') {
+                    if (type === 'CARRO') {
+                        if (!this.vehicleCategory) this.vehicleCategory = 'HATCH';
+                    } else {
+                        // Moto, Caminhonete, Van, Micro-ônibus, Caminhão — sem subcategoria
                         this.vehicleCategory = null;
-                    } else if (!this.vehicleCategory) {
-                        this.vehicleCategory = 'HATCH';
                     }
                     this.syncQuickRegister();
                     // Recarregar serviços em background para nova combinação
@@ -1993,10 +2032,23 @@
                 // ==========================================
                 // ORDER CREATION
                 // ==========================================
+                confirmSemLavador() {
+                    return new Promise(resolve => {
+                        this._noLavadorResolve = resolve;
+                        this.showNoLavadorModal = true;
+                    });
+                },
+
                 async createOrder() {
                     if (!this.selectedService) {
                         showToast('Selecione um servico', 'error');
                         return;
+                    }
+
+                    // Se nenhum lavador selecionado, pedir confirmação
+                    if (this.selectedWasherIds.length === 0) {
+                        const confirmed = await this.confirmSemLavador();
+                        if (!confirmed) return;
                     }
 
                     this.isCreatingOrder = true;

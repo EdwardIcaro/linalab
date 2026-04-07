@@ -207,13 +207,14 @@ model TipoVeiculo {
 }
 
 model Servico {
-  id           String             @id @default(cuid())
-  empresaId    String
-  nome         String
-  descricao    String?
-  preco        Float
-  duracao      Int?
-  ativo        Boolean            @default(true)
+  id                 String             @id @default(cuid())
+  empresaId          String
+  nome               String
+  descricao          String?
+  preco              Float
+  duracao            Int?
+  comissaoPercentual Float?             @map("comissao_percentual") // % de comissão específica deste serviço (sobrepõe % padrão do lavador)
+  ativo              Boolean            @default(true)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   ordemItems   OrdemServicoItem[]
