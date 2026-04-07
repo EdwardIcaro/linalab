@@ -172,19 +172,21 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
 
 export const createSaida = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId } = req.body;
+    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId, dataRetroativo, comprovante } = req.body;
 
     if (!valor || !formaPagamento || !tipo) {
         return res.status(400).json({ error: 'Valor, forma de pagamento e categoria são obrigatórios.' });
     }
 
-    if (tipo === 'Adiantamento' && !lavadorId) {
+    if (tipo === 'Adiantamento' && !lavadorId && !fornecedorNome) {
         return res.status(400).json({ error: 'Para adiantamentos, o funcionário é obrigatório.' });
     }
 
     if (tipo !== 'Adiantamento' && !descricao) {
         return res.status(400).json({ error: 'A descrição é obrigatória para este tipo de saída.' });
     }
+
+    const dataRegistro = dataRetroativo ? new Date(dataRetroativo) : new Date();
 
     try {
         const registro = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -202,7 +204,7 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
             }
 
             const finalDescricao = tipo === 'Adiantamento'
-                ? `Adiantamento para funcionário`
+                ? `Adiantamento para ${fornecedorNome || 'funcionário'}`
                 : `[${tipo}] ${descricao}`;
 
             return await tx.caixaRegistro.create({
@@ -213,7 +215,9 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                     formaPagamento: formaPagamento as any,
                     descricao: finalDescricao,
                     fornecedorId,
-                    lavadorId,
+                    lavadorId: lavadorId || null,
+                    data: dataRegistro,
+                    comprovante: comprovante || null,
                 },
             });
         });
@@ -225,6 +229,7 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                     lavadorId,
                     empresaId,
                     caixaRegistroId: registro.id,
+                    data: dataRegistro,
                 }
             });
         }
@@ -718,7 +723,7 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
     if (Array.isArray(id)) {
       return res.status(400).json({ error: 'ID inválido' });
     }
-    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId } = req.body;
+    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId, dataRetroativo, comprovante } = req.body;
 
     try {
         let fornecedorId: string | undefined;
@@ -730,17 +735,24 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
             fornecedorId = fornecedor.id;
         }
 
-        const finalDescricao = tipo === 'Adiantamento' ? `Adiantamento para funcionário` : `[${tipo}] ${descricao}`;
+        const finalDescricao = tipo === 'Adiantamento'
+            ? `Adiantamento para ${fornecedorNome || 'funcionário'}`
+            : `[${tipo}] ${descricao}`;
+
+        const updateData: any = {
+            valor: valor,
+            formaPagamento: formaPagamento as any,
+            descricao: finalDescricao,
+            fornecedorId,
+            lavadorId: tipo === 'Adiantamento' ? (lavadorId || null) : null,
+        };
+
+        if (dataRetroativo) updateData.data = new Date(dataRetroativo);
+        if (comprovante !== undefined) updateData.comprovante = comprovante || null;
 
         const registroAtualizado = await prisma.caixaRegistro.update({
             where: { id, empresaId },
-            data: {
-                valor: valor,
-                formaPagamento: formaPagamento as any,
-                descricao: finalDescricao,
-                fornecedorId,
-                lavadorId: tipo === 'Adiantamento' ? lavadorId : null,
-            },
+            data: updateData,
         });
 
         if (tipo === 'Adiantamento' && lavadorId) {

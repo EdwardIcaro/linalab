@@ -616,6 +616,65 @@
             border-top: 1px solid var(--finance-border);
         }
 
+        /* Comprovante Upload */
+        .comprovante-upload-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            border: 2px dashed var(--finance-border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .comprovante-upload-area:hover {
+            border-color: var(--finance-blue);
+            background: var(--finance-blue-light);
+        }
+        .comprovante-preview-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border: 1px solid var(--finance-border);
+            border-radius: var(--radius-sm);
+            background: var(--finance-bg);
+        }
+        .comprovante-thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--finance-border);
+        }
+        .comprovante-pdf-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .comprovante-nome {
+            flex: 1;
+            font-size: 13px;
+            color: var(--finance-text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .comprovante-remove-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--finance-red);
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .comprovante-remove-btn:hover {
+            background: var(--finance-red-light);
+        }
+
         .btn {
             padding: 12px 24px;
             border-radius: var(--radius-sm);
@@ -2129,24 +2188,34 @@
                                 x-ref="transactionValor"
                             >
                         </div>
-                        <div class="form-group" x-show="transactionModal.type === 'saida'">
+                        <div class="form-group">
+                            <label class="form-label">Data do Pagamento</label>
+                            <input
+                                type="date"
+                                class="form-input"
+                                x-model="transactionModal.dataRetroativo"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row" x-show="transactionModal.type === 'saida'">
+                        <div class="form-group">
                             <label class="form-label">Forma de Pagamento</label>
                             <select class="form-select" x-model="transactionModal.formaPagamento">
                                 <option value="DINHEIRO">Dinheiro</option>
                                 <option value="PIX">PIX</option>
-                                <option value="CARTAO">Cartao</option>
+                                <option value="CARTAO">Cartão</option>
                                 <option value="NFE">NFe</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div class="form-group" x-show="transactionModal.type === 'saida'">
-                        <label class="form-label">Categoria</label>
-                        <select class="form-select" x-model="transactionModal.categoria" @change="onCategoriaChange()">
-                            <option value="Despesa">Despesa (Geral)</option>
-                            <option value="Adiantamento">Adiantamento (Vale)</option>
-                            <option value="Outro">Outro</option>
-                        </select>
+                        <div class="form-group">
+                            <label class="form-label">Categoria</label>
+                            <select class="form-select" x-model="transactionModal.categoria" @change="onCategoriaChange()">
+                                <option value="Despesa">Despesa (Geral)</option>
+                                <option value="Adiantamento">Adiantamento (Vale)</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -2160,24 +2229,56 @@
                             @input="syncResponsavelSelection()"
                             @blur="syncResponsavelSelection()"
                             @change="syncResponsavelSelection()"
-                            required
                             x-ref="transactionResponsavelInput"
                         >
                         <datalist id="responsaveis-list">
                         </datalist>
-                        <p class="modal-hint" x-show="transactionModal.categoria === 'Adiantamento'">
+                        <p class="modal-hint" x-show="transactionModal.categoria === 'Adiantamento' && transactionModal.responsavelTipo === 'lavador'">
                             Esse valor será debitado automaticamente do lavador selecionado.
+                        </p>
+                        <p class="modal-hint" x-show="transactionModal.categoria === 'Adiantamento' && transactionModal.responsavelTipo === 'subaccount'">
+                            Adiantamento registrado para funcionário com login (não afeta comissões).
                         </p>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Descricao *</label>
+                    <div class="form-group" x-show="transactionModal.type !== 'sangria'">
+                        <label class="form-label">Descrição <span x-show="transactionModal.categoria !== 'Adiantamento'">*</span></label>
                         <input
                             type="text"
                             class="form-input"
                             placeholder="Ex: Compra de material de limpeza"
                             x-model="transactionModal.descricao"
-                            required
+                            :required="transactionModal.categoria !== 'Adiantamento'"
+                        >
+                    </div>
+
+                    <!-- Comprovante — apenas para Despesa e Adiantamento -->
+                    <div class="form-group" x-show="transactionModal.type === 'saida' && (transactionModal.categoria === 'Despesa' || transactionModal.categoria === 'Adiantamento')">
+                        <label class="form-label">Comprovante <span style="color: var(--finance-text-muted); font-weight: 400;">(opcional)</span></label>
+                        <div class="comprovante-upload-area" @click="$refs.comprovanteInput.click()" x-show="!transactionModal.comprovantePreview">
+                            <i class="fas fa-paperclip" style="font-size: 20px; color: var(--finance-text-muted);"></i>
+                            <span style="color: var(--finance-text-secondary); font-size: 14px;">Anexar foto ou PDF</span>
+                        </div>
+                        <div class="comprovante-preview-area" x-show="transactionModal.comprovantePreview">
+                            <template x-if="transactionModal.comprovantePreview && transactionModal.comprovantePreview.startsWith('data:image')">
+                                <img :src="transactionModal.comprovantePreview" class="comprovante-thumb" alt="Comprovante">
+                            </template>
+                            <template x-if="transactionModal.comprovantePreview && !transactionModal.comprovantePreview.startsWith('data:image')">
+                                <div class="comprovante-pdf-icon">
+                                    <i class="fas fa-file-pdf" style="font-size: 28px; color: #ef4444;"></i>
+                                </div>
+                            </template>
+                            <span class="comprovante-nome" x-text="transactionModal.comprovanteNome"></span>
+                            <button type="button" class="comprovante-remove-btn" @click.stop="transactionModal.comprovante = null; transactionModal.comprovantePreview = null; transactionModal.comprovanteNome = ''">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            x-ref="comprovanteInput"
+                            style="display: none;"
+                            @change="handleComprovanteUpload($event)"
                         >
                     </div>
 
@@ -2429,7 +2530,12 @@
                 categoria: 'Despesa',
                 descricao: '',
                 lavadorId: '',
-                fornecedorNome: ''
+                fornecedorNome: '',
+                dataRetroativo: new Date().toISOString().slice(0, 10),
+                comprovante: null,
+                comprovanteNome: '',
+                comprovantePreview: null,
+                responsavelTipo: '' // 'lavador' | 'subaccount'
             });
 
             const component = {
@@ -2482,6 +2588,7 @@
                 // Lookups
                 lavadores: [],
                 fornecedores: [],
+                subaccounts: [],
 
                 // Transaction Modal
                 transactionModal: createTransactionModalState(),
@@ -2585,14 +2692,19 @@
 
             async loadLookups() {
                 try {
-                    const [lavadoresData, fornecedoresData] = await Promise.all([
+                    const [lavadoresData, fornecedoresData, rolesData] = await Promise.all([
                         window.api.getLavadoresSimple(),
-                        window.api.getFornecedores()
+                        window.api.getFornecedores(),
+                        window.api.getRolesAndUsers().catch(() => ({ usuarios: [] }))
                     ]);
                     this.lavadores = lavadoresData.lavadores || [];
                     this.fornecedores = fornecedoresData || [];
-                    console.log('[financeDashboard] lavadores carregados:', this.lavadores.length, this.lavadores);
-                    console.log('[financeDashboard] fornecedores carregados:', this.fornecedores.length, this.fornecedores);
+                    this.subaccounts = (rolesData.usuarios || []).map(u => ({
+                        id: u.id,
+                        nome: u.nome,
+                        cargo: u.roleInt?.nome || 'Funcionário',
+                        tipo: 'subaccount'
+                    }));
                 } catch (error) {
                     console.error('Error loading lookups:', error);
                 }
@@ -2759,14 +2871,11 @@
                 },
 
                 getResponsaveisList() {
-                    // Apenas retorna lavadores quando for Adiantamento
                     if (this.transactionModal.categoria === 'Adiantamento') {
-                        const lavadores = this.activeLavadores();
-                        console.log('[getResponsaveisList] Retornando lavadores:', lavadores.length);
-                        return lavadores;
+                        const lavadores = this.activeLavadores().map(l => ({ ...l, tipo: 'lavador', cargo: 'Lavador' }));
+                        const subaccounts = (this.subaccounts || []);
+                        return [...lavadores, ...subaccounts];
                     }
-                    // Para outras categorias, retorna fornecedores
-                    console.log('[getResponsaveisList] Retornando fornecedores:', (this.fornecedores || []).length);
                     return this.fornecedores || [];
                 },
 
@@ -2799,27 +2908,19 @@
                     }
 
                     // Criar e adicionar opções com melhor exibição
-                    lista.forEach((item, index) => {
+                    lista.forEach((item) => {
                         if (item && item.nome) {
                             const option = document.createElement('option');
-
-                            // Capitaliza o nome corretamente
                             const nomeFormatado = item.nome.trim();
                             option.value = nomeFormatado;
 
-                            // Para lavadores (Adiantamento), adiciona informações extras
                             if (isAdiantamento) {
-                                // Mostra: "Nome do Lavador - Funcionário"
-                                const label = `${nomeFormatado} - Funcionário`;
-                                option.setAttribute('label', label);
+                                const cargo = item.cargo || (item.tipo === 'subaccount' ? 'Funcionário' : 'Lavador');
+                                option.setAttribute('label', `${nomeFormatado} — ${cargo}`);
                             } else {
-                                // Para fornecedores, mostra informações adicionais se disponível
                                 let label = nomeFormatado;
-                                if (item.telefone) {
-                                    label += ` - ${item.telefone}`;
-                                } else if (item.contato) {
-                                    label += ` - ${item.contato}`;
-                                }
+                                if (item.telefone) label += ` - ${item.telefone}`;
+                                else if (item.contato) label += ` - ${item.contato}`;
                                 option.setAttribute('label', label);
                             }
 
@@ -2830,17 +2931,17 @@
                     console.log('[financeDashboard] ✓ datalist atualizado:', datalist.children.length, 'opcoes', isAdiantamento ? '(LAVADORES)' : '(FORNECEDORES)');
                 },
 
-                findLavadorByName(name) {
-                    if (!name || !Array.isArray(this.lavadores)) return null;
+                findResponsavelByName(name) {
+                    if (!name) return null;
                     const normalized = String(name).trim().toLowerCase();
-                    return this.lavadores.find((lavador) => {
-                        const lavadorName = String(lavador.nome || '').toLowerCase();
-                        return lavadorName && lavadorName.includes(normalized);
-                    }) || null;
+                    const lavador = (this.lavadores || []).find(l => String(l.nome || '').toLowerCase().includes(normalized));
+                    if (lavador) return { ...lavador, tipo: 'lavador' };
+                    const subaccount = (this.subaccounts || []).find(s => String(s.nome || '').toLowerCase().includes(normalized));
+                    if (subaccount) return { ...subaccount, tipo: 'subaccount' };
+                    return null;
                 },
 
                 onCategoriaChange() {
-                    console.log('[financeDashboard] categoria mudou', this.transactionModal.categoria);
                     const isAdiantamento = this.transactionModal.categoria === 'Adiantamento';
                     if (isAdiantamento) {
                         this.transactionModal.fornecedorNome = '';
@@ -2850,6 +2951,7 @@
                         });
                     } else {
                         this.transactionModal.lavadorId = '';
+                        this.transactionModal.responsavelTipo = '';
                         this.$nextTick(() => {
                             this.updateDatalist();
                             this.$refs.transactionValor?.focus();
@@ -2860,21 +2962,45 @@
 
                 syncResponsavelSelection() {
                     if (this.transactionModal.categoria === 'Adiantamento') {
-                        const matchedLavador = this.findLavadorByName(this.transactionModal.fornecedorNome);
-                        console.log('[financeDashboard] syncResponsavelSelection', {
-                            categoria: this.transactionModal.categoria,
-                            nome: this.transactionModal.fornecedorNome,
-                            matchedLavador
-                        });
-                        if (matchedLavador) {
-                            this.transactionModal.lavadorId = matchedLavador.id;
-                            this.transactionModal.fornecedorNome = matchedLavador.nome;
+                        const matched = this.findResponsavelByName(this.transactionModal.fornecedorNome);
+                        if (matched) {
+                            this.transactionModal.fornecedorNome = matched.nome;
+                            if (matched.tipo === 'lavador') {
+                                this.transactionModal.lavadorId = matched.id;
+                                this.transactionModal.responsavelTipo = 'lavador';
+                            } else {
+                                this.transactionModal.lavadorId = '';
+                                this.transactionModal.responsavelTipo = 'subaccount';
+                            }
                         } else {
                             this.transactionModal.lavadorId = '';
+                            this.transactionModal.responsavelTipo = '';
                         }
                     } else {
                         this.transactionModal.lavadorId = '';
+                        this.transactionModal.responsavelTipo = '';
                     }
+                },
+
+                handleComprovanteUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+                    if (file.size > MAX_SIZE) {
+                        showToast('Arquivo muito grande. Máximo: 5MB.', 'error');
+                        event.target.value = '';
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.transactionModal.comprovante = e.target.result;
+                        this.transactionModal.comprovantePreview = e.target.result;
+                        this.transactionModal.comprovanteNome = file.name;
+                    };
+                    reader.readAsDataURL(file);
+                    event.target.value = '';
                 },
 
                 openTransactionModal(type) {
@@ -2905,10 +3031,16 @@
                     modalState.editId = tx.id;
                     modalState.valor = tx.valor;
                     modalState.formaPagamento = tx.formaPagamento || 'DINHEIRO';
-                    modalState.categoria = tx.lavadorId ? 'Adiantamento' : 'Despesa';
-                    modalState.descricao = tx.descricao.replace(/\[(Despesa|Adiantamento)\]\s*/, '');
+                    modalState.categoria = tx.lavadorId ? 'Adiantamento' : (tx.categoria || 'Despesa');
+                    modalState.descricao = tx.descricao.replace(/\[(Despesa|Adiantamento|Outro)\]\s*/, '').replace(/^Adiantamento para .+$/, '');
                     modalState.lavadorId = tx.lavadorId || '';
-                    modalState.fornecedorNome = tx.fornecedor?.nome || '';
+                    modalState.fornecedorNome = tx.fornecedor?.nome || tx.lavador?.nome || '';
+                    modalState.dataRetroativo = tx.data ? tx.data.slice(0, 10) : new Date().toISOString().slice(0, 10);
+                    if (tx.comprovante) {
+                        modalState.comprovante = tx.comprovante;
+                        modalState.comprovantePreview = tx.comprovante;
+                        modalState.comprovanteNome = 'comprovante';
+                    }
                     this.transactionModal = modalState;
 
                     this.$nextTick(() => {
@@ -2969,8 +3101,8 @@
                     const modal = this.transactionModal;
 
                     // Validation
-                    if (modal.categoria === 'Adiantamento' && !modal.lavadorId) {
-                        showToast('Selecione um funcionario para o adiantamento.', 'error');
+                    if (modal.categoria === 'Adiantamento' && !modal.lavadorId && !modal.fornecedorNome) {
+                        showToast('Selecione um funcionário para o adiantamento.', 'error');
                         return;
                     }
 
@@ -3028,7 +3160,9 @@
                                 tipo: modal.categoria,
                                 descricao: modal.descricao,
                                 fornecedorNome: modal.fornecedorNome,
-                                lavadorId: modal.lavadorId
+                                lavadorId: modal.lavadorId || null,
+                                dataRetroativo: modal.dataRetroativo || null,
+                                comprovante: modal.comprovante || null,
                             };
 
                             if (modal.editId) {
