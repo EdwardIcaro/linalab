@@ -905,16 +905,24 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
             return washers;
         };
 
-        const formattedComissoes = comissoesPendentes.map(ordem => ({
-            id: ordem.id,
-            numeroOrdem: ordem.numeroOrdem,
-            valorTotal: ordem.valorTotal,
-            dataFim: ordem.dataFim,
-            comissao: ordem.comissao,
-            veiculo: ordem.veiculo,
-            lavadorId: ordem.lavadorId,
-            lavadores: normalizeOrderWashers(ordem)
-        }));
+        const formattedComissoes = comissoesPendentes.map(ordem => {
+            // Buscar o ganho individual deste lavador nesta ordem
+            const relLavador = (ordem.ordemLavadores || []).find((rel: any) => rel.lavadorId === lavadorId);
+            // Se encontrou na tabela OrdemServicoLavador usa o ganho salvo; senão fallback para comissao da ordem
+            const ganhoDoLavador = relLavador
+                ? (relLavador.ganho > 0 ? relLavador.ganho : ordem.comissao)
+                : ordem.comissao;
+            return {
+                id: ordem.id,
+                numeroOrdem: ordem.numeroOrdem,
+                valorTotal: ordem.valorTotal,
+                dataFim: ordem.dataFim,
+                comissao: ganhoDoLavador,
+                veiculo: ordem.veiculo,
+                lavadorId: ordem.lavadorId,
+                lavadores: normalizeOrderWashers(ordem)
+            };
+        });
 
         const formattedDebitos = debitosPendentes.map(ordem => ({
             id: ordem.id,

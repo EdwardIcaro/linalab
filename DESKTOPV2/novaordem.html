@@ -1969,12 +1969,11 @@
                     const serviceValue = this.getServicePrice(this.selectedService);
                     const washers = this.washers.filter(w => this.selectedWasherIds.includes(w.id));
                     if (washers.length === 0) return [];
-                    const percent = washers[0]?.comissao || 0;
-                    const totalCents = Math.round(serviceValue * 100 * (percent / 100));
-                    const base = Math.floor(totalCents / washers.length);
-                    let remainder = totalCents - base * washers.length;
-                    return washers.map((w) => {
-                        const cents = base + (remainder-- > 0 ? 1 : 0);
+                    // Cada lavador recebe sua própria % — não divide igualmente
+                    // Ex: lavador A 35% + lavador B 40% sobre R$130 = R$45,50 + R$52,00
+                    return washers.map(w => {
+                        const ganho = serviceValue * ((w.comissao || 0) / 100);
+                        const cents = Math.round(ganho * 100);
                         return {
                             id: w.id,
                             nome: w.nome,

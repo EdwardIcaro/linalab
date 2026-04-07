@@ -266,9 +266,11 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         throw new Error("ID do cliente ou do veículo não pôde ser determinado.");
       }
 
-      // ✅ OTIMIZAÇÃO: Paralelizar lookups do lavador e número da ordem (sem dependência)
-      const [lavador, ultimaOrdem] = await Promise.all([
-        lavadorId ? tx.lavador.findUnique({ where: { id: lavadorId } }) : Promise.resolve(null),
+      // ✅ OTIMIZAÇÃO: Paralelizar lookups dos lavadores e número da ordem
+      const [lavadoresData, ultimaOrdem] = await Promise.all([
+        normalizedLavadorIds.length > 0
+          ? tx.lavador.findMany({ where: { id: { in: normalizedLavadorIds } }, select: { id: true, comissao: true } })
+          : Promise.resolve([]),
         tx.ordemServico.findFirst({
           where: { empresaId },
           orderBy: { numeroOrdem: 'desc' },
@@ -276,12 +278,15 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         })
       ]);
 
-      // 5. Calcular comissão
-      let comissaoCalculada = 0;
-      if (lavador && lavador.comissao > 0) {
-        // A comissão é uma porcentagem do valor total da ordem
-        comissaoCalculada = calculatedValorTotal * (lavador.comissao / 100);
-      }
+      // Mapa lavadorId → % de comissão individual
+      const comissaoMap = new Map(lavadoresData.map((l: any) => [l.id, l.comissao]));
+
+      // 5. Calcular comissão total = soma das comissões individuais de cada lavador
+      // Cada lavador recebe sua própria % sobre o valor total (não divide igualmente)
+      // Ex: lavador A 35% + lavador B 40% sobre R$130 = R$45,50 + R$52,00 = R$97,50
+      const comissaoCalculada = normalizedLavadorIds.reduce((sum, id) => {
+        return sum + calculatedValorTotal * ((comissaoMap.get(id) || 0) / 100);
+      }, 0);
 
       // 6. Gerar o número da ordem
       const proximoNumeroOrdem = (ultimaOrdem?.numeroOrdem || 0) + 1;
@@ -306,7 +311,8 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         await tx.ordemServicoLavador.createMany({
           data: normalizedLavadorIds.map(lavadorIdValue => ({
             ordemId: novaOrdem.id,
-            lavadorId: lavadorIdValue
+            lavadorId: lavadorIdValue,
+            ganho: calculatedValorTotal * ((comissaoMap.get(lavadorIdValue) || 0) / 100)
           }))
         });
       }
@@ -852,6 +858,12 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       const normalizedLavadorIds = lavadorId ? [lavadorId, ...extraLavadores] : extraLavadores;
       const primaryLavadorId = normalizedLavadorIds[0] || null;
 
+      // Buscar % de comissão de todos os lavadores envolvidos (um único query)
+      const updateLavadoresData = normalizedLavadorIds.length > 0
+        ? await tx.lavador.findMany({ where: { id: { in: normalizedLavadorIds } }, select: { id: true, comissao: true } })
+        : [];
+      const updateComissaoMap = new Map(updateLavadoresData.map((l: any) => [l.id, l.comissao]));
+
       let valorTotal = existingOrdem.valorTotal;
       const dataToUpdate: Prisma.OrdemServicoUpdateInput = {
         observacoes,
@@ -894,30 +906,28 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         dataToUpdate.items = { create: itensData };
         dataToUpdate.valorTotal = valorTotal;
       }
-      
-      // Recalcular comissão se o lavador ou o valor total mudou
-      if (itens || lavadorId !== existingOrdem.lavadorId) {
-        let comissaoCalculada = 0;
+
+      // Recalcular comissão total (soma das % individuais de cada lavador) quando itens ou lavadores mudam
+      if (itens || lavadorId !== existingOrdem.lavadorId || lavadorIds !== undefined) {
         const valorParaCalculo = Number(dataToUpdate.valorTotal?.toString() || existingOrdem.valorTotal.toString());
-        if (lavadorId) {
-          const lavador = await tx.lavador.findUnique({ where: { id: lavadorId } });
-          if (lavador && lavador.comissao > 0) {
-            comissaoCalculada = valorParaCalculo * (lavador.comissao / 100);
-          }
-        }
-        dataToUpdate.comissao = comissaoCalculada;
+        dataToUpdate.comissao = normalizedLavadorIds.reduce((sum, id) => {
+          return sum + valorParaCalculo * ((updateComissaoMap.get(id) || 0) / 100);
+        }, 0);
       }
 
-      // Se o status está sendo mudado para FINALIZADO, recalcula a comissão final
-      // para garantir que está correta, mesmo que o lavador não tenha sido alterado.
+      // Se o status está sendo mudado para FINALIZADO, garante que a comissão final está correta
       if (status === 'FINALIZADO' && existingOrdem.status !== 'FINALIZADO') {
         const valorFinal = Number(dataToUpdate.valorTotal?.toString() || existingOrdem.valorTotal.toString());
-        const lavadorFinalId = lavadorId || existingOrdem.lavadorId;
-        if (lavadorFinalId) {
-          const lavador = await tx.lavador.findUnique({ where: { id: lavadorFinalId } });
-          if (lavador && lavador.comissao > 0) {
-            dataToUpdate.comissao = valorFinal * (lavador.comissao / 100);
-          }
+        const idsParaCalculo = normalizedLavadorIds.length > 0 ? normalizedLavadorIds : (existingOrdem.lavadorId ? [existingOrdem.lavadorId] : []);
+        if (idsParaCalculo.length > 0) {
+          // Buscar lavadores do existente se não mudaram
+          const finalLavadoresData = normalizedLavadorIds.length > 0
+            ? updateLavadoresData
+            : await tx.lavador.findMany({ where: { id: { in: idsParaCalculo } }, select: { id: true, comissao: true } });
+          const finalComissaoMap = new Map(finalLavadoresData.map((l: any) => [l.id, l.comissao]));
+          dataToUpdate.comissao = idsParaCalculo.reduce((sum, id) => {
+            return sum + valorFinal * ((finalComissaoMap.get(id) || 0) / 100);
+          }, 0);
         }
       }
 
@@ -936,12 +946,14 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         },
       });
 
+      const valorFinalParaGanho = Number(dataToUpdate.valorTotal?.toString() || existingOrdem.valorTotal.toString());
       await tx.ordemServicoLavador.deleteMany({ where: { ordemId: id } });
       if (normalizedLavadorIds.length > 0) {
         await tx.ordemServicoLavador.createMany({
           data: normalizedLavadorIds.map(lavadorIdValue => ({
             ordemId: id,
-            lavadorId: lavadorIdValue
+            lavadorId: lavadorIdValue,
+            ganho: valorFinalParaGanho * ((updateComissaoMap.get(lavadorIdValue) || 0) / 100)
           }))
         });
       }
