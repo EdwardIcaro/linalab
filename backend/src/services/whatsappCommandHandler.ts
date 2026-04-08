@@ -123,9 +123,6 @@ export async function handleIncomingMessage(
       }
     }
 
-    // ── Comandos fixos ───────────────────────────────────────────────────────
-    const dailyContext = await buildDailyContext(empresaId);
-
     // Admin do bot: acesso completo (igual ao admin da empresa)
     if (user.type === 'admin') {
       if (command === 'resumo') return handleResumoCommand(dailyContext);
