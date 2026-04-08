@@ -128,8 +128,6 @@ export async function handleIncomingMessage(
 
     // Admin do bot: acesso completo (igual ao admin da empresa)
     if (user.type === 'admin') {
-      // Tratar como admin normal
-      const dailyContext = await buildDailyContext(empresaId);
       if (command === 'resumo') return handleResumoCommand(dailyContext);
       if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
       if (command === 'caixa') return handleCaixaCommand(dailyContext);
