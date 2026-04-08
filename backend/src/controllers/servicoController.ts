@@ -24,20 +24,31 @@ export const createServico = async (req: EmpresaRequest, res: Response) => {
 
     const tiposVeiculoParaConectar: { id: string }[] = [];
 
-    if (tipoVeiculoNome === 'CARRO') {
-      // Se subtipos foram selecionados, busca os IDs deles
-      if (subtiposVeiculo && subtiposVeiculo.length > 0) {
-        const tipos = await prisma.tipoVeiculo.findMany({
-          where: { nome: 'CARRO', categoria: { in: subtiposVeiculo }, empresaId: req.empresaId! }
+    const findOrCreateTipo = async (nome: string, categoria: string | null) => {
+      let tipo = await prisma.tipoVeiculo.findFirst({
+        where: { nome, categoria: categoria ?? null, empresaId: req.empresaId! }
+      });
+      if (!tipo) {
+        tipo = await prisma.tipoVeiculo.create({
+          data: { nome, categoria, empresaId: req.empresaId! }
         });
-        tipos.forEach((t: TipoVeiculo) => tiposVeiculoParaConectar.push({ id: t.id }));
-      } else { // Se nenhum subtipo foi selecionado, associa ao tipo "CARRO" geral
-        const tipoGeral = await prisma.tipoVeiculo.findFirst({ where: { nome: 'CARRO', categoria: null, empresaId: req.empresaId! } });
-        if (tipoGeral) tiposVeiculoParaConectar.push({ id: tipoGeral.id });
       }
-    } else { // Para MOTO ou outros tipos
-      const tipo = await prisma.tipoVeiculo.findFirst({ where: { nome: tipoVeiculoNome, categoria: null, empresaId: req.empresaId! } });
-      if (tipo) tiposVeiculoParaConectar.push({ id: tipo.id });
+      return tipo;
+    };
+
+    if (tipoVeiculoNome === 'CARRO') {
+      if (subtiposVeiculo && subtiposVeiculo.length > 0) {
+        for (const categoria of subtiposVeiculo) {
+          const tipo = await findOrCreateTipo('CARRO', categoria);
+          tiposVeiculoParaConectar.push({ id: tipo.id });
+        }
+      } else {
+        const tipo = await findOrCreateTipo('CARRO', null);
+        tiposVeiculoParaConectar.push({ id: tipo.id });
+      }
+    } else {
+      const tipo = await findOrCreateTipo(tipoVeiculoNome, null);
+      tiposVeiculoParaConectar.push({ id: tipo.id });
     }
 
     if (tiposVeiculoParaConectar.length === 0) {
@@ -425,21 +436,34 @@ export const updateServico = async (req: EmpresaRequest, res: Response) => {
     }
     const { nome, descricao, duracao, ativo, preco, tipoVeiculo: tipoVeiculoNome, subtiposVeiculo, comissaoPercentual } = req.body;
 
-    // 1. Coleta os IDs dos novos tipos/subtipos para conectar
+    // 1. Coleta os IDs dos novos tipos/subtipos — cria automaticamente se não existir
     const tiposVeiculoParaConectar: { id: string }[] = [];
+
+    const findOrCreateTipoUpdate = async (nome: string, categoria: string | null) => {
+      let tipo = await prisma.tipoVeiculo.findFirst({
+        where: { nome, categoria: categoria ?? null, empresaId: req.empresaId! }
+      });
+      if (!tipo) {
+        tipo = await prisma.tipoVeiculo.create({
+          data: { nome, categoria, empresaId: req.empresaId! }
+        });
+      }
+      return tipo;
+    };
+
     if (tipoVeiculoNome === 'CARRO') {
       if (subtiposVeiculo && subtiposVeiculo.length > 0) {
-        const tipos = await prisma.tipoVeiculo.findMany({
-          where: { nome: 'CARRO', categoria: { in: subtiposVeiculo }, empresaId: req.empresaId! }
-        });
-        tipos.forEach((t: TipoVeiculo) => tiposVeiculoParaConectar.push({ id: t.id }));
+        for (const categoria of subtiposVeiculo) {
+          const tipo = await findOrCreateTipoUpdate('CARRO', categoria);
+          tiposVeiculoParaConectar.push({ id: tipo.id });
+        }
       } else {
-        const tipoGeral = await prisma.tipoVeiculo.findFirst({ where: { nome: 'CARRO', categoria: null, empresaId: req.empresaId! } });
-        if (tipoGeral) tiposVeiculoParaConectar.push({ id: tipoGeral.id });
+        const tipo = await findOrCreateTipoUpdate('CARRO', null);
+        tiposVeiculoParaConectar.push({ id: tipo.id });
       }
-    } else { // Para MOTO ou outros tipos
-      const tipo = await prisma.tipoVeiculo.findFirst({ where: { nome: tipoVeiculoNome, categoria: null, empresaId: req.empresaId! } });
-      if (tipo) tiposVeiculoParaConectar.push({ id: tipo.id });
+    } else {
+      const tipo = await findOrCreateTipoUpdate(tipoVeiculoNome, null);
+      tiposVeiculoParaConectar.push({ id: tipo.id });
     }
 
     if (tiposVeiculoParaConectar.length === 0) {
