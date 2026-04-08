@@ -7,6 +7,28 @@ import prisma from '../db';
 import { chatCompletion } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type WhatsAppUser } from './whatsappAuthService';
 
+// ==========================================
+// ESTADO DE CONFIRMAÇÃO DE SAÍDAS PENDENTES
+// ==========================================
+interface PendingSaida {
+  valor: number;
+  descricao: string;
+  formaPagamento: string;
+  categoria: string;
+  empresaId: string;
+  userName: string;
+  expiresAt: number;
+}
+const pendingSaidas = new Map<string, PendingSaida>();
+
+// Limpa confirmações expiradas a cada 5 minutos
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of pendingSaidas.entries()) {
+    if (val.expiresAt < now) pendingSaidas.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 /*
  * Processa mensagem recebida do WhatsApp
  */
@@ -76,6 +98,29 @@ export async function handleIncomingMessage(
       // Admin: todas as comissões
       const nomeLavador = extrairNomeLavador(message);
       return handleComissoesEmAberto(nomeLavador, empresaId);
+    }
+
+    // ── Comandos fixos ───────────────────────────────────────────────────────
+    const dailyContext = await buildDailyContext(empresaId);
+
+    // ── Confirmação de saída pendente ────────────────────────────────────────
+    const pendingKey = `${empresaId}:${from}`;
+    if (pendingSaidas.has(pendingKey)) {
+      const resp = command.trim();
+      if (/^sim$|^s$|^yes$|^confirmar$|^confirma$/.test(resp)) {
+        return await confirmarSaida(pendingKey, senderName);
+      } else {
+        pendingSaidas.delete(pendingKey);
+        return '❌ Lançamento cancelado.';
+      }
+    }
+
+    // ── Detecção de intenção de saída (não-lavador) ───────────────────────
+    if (user.type !== 'lavador') {
+      const isSaida = /\b(sa[íi]da|despesa|gasto|gastei|paguei|comprei|lancei|lan[çc]ar)\b/i.test(message);
+      if (isSaida) {
+        return await handleSaidaWhatsapp(message, from, senderName, empresaId);
+      }
     }
 
     // ── Comandos fixos ───────────────────────────────────────────────────────
@@ -1025,5 +1070,104 @@ async function handleLavadorEspecifico(
   } catch (error) {
     console.error('[WhatsApp] Erro ao buscar lavador:', error);
     return null;
+  }
+}
+
+// ==========================================
+// LANÇAMENTO DE SAÍDA VIA WHATSAPP
+// ==========================================
+
+/**
+ * Extrai dados de saída da mensagem usando Groq
+ */
+async function extrairDadosSaida(message: string): Promise<{ valor: number; descricao: string; formaPagamento: string; categoria: string } | null> {
+  const prompt = `Extraia os dados de uma saída financeira desta mensagem. Retorne APENAS um JSON válido sem markdown, com os campos:
+- valor: número (obrigatório)
+- descricao: string descrevendo o que foi pago (obrigatório)
+- formaPagamento: "PIX" | "DINHEIRO" | "CARTAO" | "NFE" (padrão: "DINHEIRO")
+- categoria: "Despesa" | "Adiantamento" (padrão: "Despesa")
+
+Exemplos:
+"saida 50 material de limpeza pix" → {"valor":50,"descricao":"Material de limpeza","formaPagamento":"PIX","categoria":"Despesa"}
+"gastei 120 conta de luz" → {"valor":120,"descricao":"Conta de luz","formaPagamento":"DINHEIRO","categoria":"Despesa"}
+"despesa 80 produto químico cartão" → {"valor":80,"descricao":"Produto químico","formaPagamento":"CARTAO","categoria":"Despesa"}
+
+Mensagem: "${message}"`;
+
+  try {
+    const resposta = await chatCompletion(prompt, '', 'Você é um extrator de dados JSON. Retorne APENAS o JSON, sem texto adicional, sem markdown.');
+    const json = resposta.replace(/```json?|```/g, '').trim();
+    const dados = JSON.parse(json);
+    if (!dados.valor || isNaN(Number(dados.valor))) return null;
+    return {
+      valor: Number(dados.valor),
+      descricao: dados.descricao || 'Despesa',
+      formaPagamento: dados.formaPagamento || 'DINHEIRO',
+      categoria: dados.categoria || 'Despesa',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Processa intenção de lançar saída e pede confirmação
+ */
+async function handleSaidaWhatsapp(message: string, from: string, senderName: string, empresaId: string): Promise<string> {
+  const dados = await extrairDadosSaida(message);
+
+  if (!dados) {
+    return '❓ Não consegui identificar os dados da saída. Tente: *saída [valor] [descrição] [pix/dinheiro/cartão]*\nEx: _saída 50 material de limpeza pix_';
+  }
+
+  const formaLabel: Record<string, string> = { PIX: 'PIX', DINHEIRO: 'Dinheiro', CARTAO: 'Cartão', NFE: 'NFe' };
+  const pendingKey = `${empresaId}:${from}`;
+
+  pendingSaidas.set(pendingKey, {
+    ...dados,
+    empresaId,
+    userName: senderName,
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutos
+  });
+
+  return `💸 *Confirmar lançamento?*\n\n` +
+    `  Valor: *R$ ${dados.valor.toFixed(2)}*\n` +
+    `  Descrição: ${dados.descricao}\n` +
+    `  Pagamento: ${formaLabel[dados.formaPagamento] || dados.formaPagamento}\n` +
+    `  Categoria: ${dados.categoria}\n\n` +
+    `Responda *sim* para confirmar ou *não* para cancelar.`;
+}
+
+/**
+ * Confirma e cria a saída no banco
+ */
+async function confirmarSaida(pendingKey: string, senderName: string): Promise<string> {
+  const pending = pendingSaidas.get(pendingKey);
+  if (!pending) return '❌ Confirmação expirada. Tente novamente.';
+  pendingSaidas.delete(pendingKey);
+
+  try {
+    const finalDescricao = `[${pending.categoria}] ${pending.descricao}`;
+
+    await prisma.caixaRegistro.create({
+      data: {
+        empresaId: pending.empresaId,
+        tipo: 'SAIDA',
+        valor: pending.valor,
+        formaPagamento: pending.formaPagamento as any,
+        descricao: finalDescricao,
+        origem: 'WHATSAPP',
+        lancadoPor: senderName,
+      },
+    });
+
+    return `✅ *Saída registrada com sucesso!*\n\n` +
+      `  💸 R$ ${pending.valor.toFixed(2)}\n` +
+      `  📝 ${pending.descricao}\n` +
+      `  💳 ${pending.formaPagamento}\n` +
+      `  👤 Lançado por: ${senderName}`;
+  } catch (error) {
+    console.error('[WhatsApp] Erro ao criar saída:', error);
+    return '❌ Erro ao registrar a saída. Tente novamente.';
   }
 }

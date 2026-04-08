@@ -172,7 +172,7 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
 
 export const createSaida = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId, dataRetroativo, comprovante } = req.body;
+    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId, dataRetroativo, comprovante, origem, lancadoPor } = req.body;
 
     if (!valor || !formaPagamento || !tipo) {
         return res.status(400).json({ error: 'Valor, forma de pagamento e categoria são obrigatórios.' });
@@ -218,6 +218,8 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                     lavadorId: lavadorId || null,
                     data: dataRegistro,
                     comprovante: comprovante || null,
+                    origem: origem || null,
+                    lancadoPor: lancadoPor || null,
                 },
             });
         });
@@ -352,6 +354,8 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
                     valor: true,
                     formaPagamento: true,
                     descricao: true,
+                    origem: true,
+                    lancadoPor: true,
                     fornecedor: { select: { nome: true } },
                     lavador: { select: { nome: true } },
                 },
