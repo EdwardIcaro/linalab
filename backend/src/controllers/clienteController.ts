@@ -80,9 +80,10 @@ export const getClientes = async (req: EmpresaRequest, res: Response) => {
 
     if (search) {
       where.OR = [
-        { nome: { contains: search as string } },
+        { nome: { contains: search as string, mode: 'insensitive' } },
         { telefone: { contains: search as string } },
-        { email: { contains: search as string } }
+        { email: { contains: search as string, mode: 'insensitive' } },
+        { veiculos: { some: { placa: { contains: (search as string).toUpperCase() } } } }
       ];
     }
 

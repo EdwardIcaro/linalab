@@ -412,6 +412,7 @@
                             <th>Nome</th>
                             <th>Telefone/WhatsApp</th>
                             <th>Veículos</th>
+                            <th>Última Visita</th>
                             <th>Total Gasto</th>
                             <th class="actions-cell">Ações</th>
                         </tr>
@@ -443,7 +444,10 @@
                                         </small>
                                     </template>
                                 </td>
-                                <td x-text="formatCurrency(client._sum?.valorTotal || 0)"></td>
+                                <td>
+                                    <span x-text="client.ordens && client.ordens.length > 0 ? formatDate(client.ordens[0].createdAt) : '—'"></span>
+                                </td>
+                                <td x-text="formatCurrency(calcTotalGasto(client.ordens))"></td>
                                 <td class="actions-cell">
                                     <button @click="showClientDetails(client.id)" title="Detalhes">
                                         <i class="fas fa-eye"></i>
@@ -583,10 +587,35 @@
                     <button @click="closeDetailsModal()" class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body" x-show="detailsClient">
+                    <!-- Resumo rápido -->
+                    <div class="details-summary" style="margin-bottom: 20px;">
+                        <div class="summary-item">
+                            <span class="label">Cliente desde</span>
+                            <span class="value" x-text="formatDate(detailsClient?.createdAt)"></span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Telefone</span>
+                            <span class="value" x-text="detailsClient?.telefone || 'N/A'"></span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Total de Visitas</span>
+                            <span class="value" x-text="detailsClient?._count?.ordens || 0"></span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Última Visita</span>
+                            <span class="value" x-text="detailsClient?.ordens?.length > 0 ? formatDate(detailsClient.ordens[0].createdAt) : '—'"></span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Total Gasto</span>
+                            <span class="value" x-text="formatCurrency(calcTotalGasto(detailsClient?.ordens))"></span>
+                        </div>
+                    </div>
+
+                    <!-- Veículos -->
                     <div class="details-section">
                         <h3><i class="fas fa-car"></i> Veículos</h3>
                         <template x-if="!detailsClient?.veiculos || detailsClient.veiculos.length === 0">
-                            <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            <p style="text-align: center; color: var(--text-secondary); padding: 16px;">
                                 Nenhum veículo cadastrado
                             </p>
                         </template>
@@ -596,30 +625,61 @@
                                     <div class="vehicle-card">
                                         <i class="fas fa-car icon"></i>
                                         <div class="plate" x-text="vehicle.placa"></div>
-                                        <div class="model" x-text="`${vehicle.modelo || 'N/A'} - ${vehicle.cor || 'N/A'}`"></div>
+                                        <div class="model" x-text="vehicle.modelo || 'Sem modelo'"></div>
                                     </div>
                                 </template>
                             </div>
                         </template>
                     </div>
 
-                    <div class="details-summary">
-                        <div class="summary-item">
-                            <span class="label">Criado em</span>
-                            <span class="value" x-text="formatDate(detailsClient?.createdAt)"></span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="label">Telefone</span>
-                            <span class="value" x-text="detailsClient?.telefone || 'N/A'"></span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="label">Total de Ordens</span>
-                            <span class="value" x-text="detailsClient?.ordens?.length || 0"></span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="label">Total Gasto</span>
-                            <span class="value" x-text="formatCurrency(calculateTotalSpent(detailsClient?.ordens))"></span>
-                        </div>
+                    <!-- Histórico de ordens -->
+                    <div class="details-section" style="margin-top: 20px;">
+                        <h3><i class="fas fa-history"></i> Últimas Ordens</h3>
+                        <template x-if="!detailsClient?.ordens || detailsClient.ordens.length === 0">
+                            <p style="text-align: center; color: var(--text-secondary); padding: 16px;">
+                                Nenhuma ordem encontrada
+                            </p>
+                        </template>
+                        <template x-if="detailsClient?.ordens && detailsClient.ordens.length > 0">
+                            <table style="width:100%; border-collapse: collapse; font-size: 13px; margin-top: 8px;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <th style="padding: 8px; text-align: left; color: var(--text-secondary); font-weight: 500;">Data</th>
+                                        <th style="padding: 8px; text-align: left; color: var(--text-secondary); font-weight: 500;">Veículo</th>
+                                        <th style="padding: 8px; text-align: left; color: var(--text-secondary); font-weight: 500;">Serviços</th>
+                                        <th style="padding: 8px; text-align: left; color: var(--text-secondary); font-weight: 500;">Status</th>
+                                        <th style="padding: 8px; text-align: right; color: var(--text-secondary); font-weight: 500;">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="ordem in detailsClient.ordens" :key="ordem.id">
+                                        <tr style="border-bottom: 1px solid var(--border-color);">
+                                            <td style="padding: 8px;" x-text="formatDate(ordem.createdAt)"></td>
+                                            <td style="padding: 8px;" x-text="ordem.veiculo ? `${ordem.veiculo.modelo || ''} ${ordem.veiculo.placa || ''}`.trim() : '—'"></td>
+                                            <td style="padding: 8px;">
+                                                <span x-text="(ordem.items || []).map(i => i.servico?.nome || i.adicional?.nome).filter(Boolean).join(', ') || '—'"></span>
+                                            </td>
+                                            <td style="padding: 8px;">
+                                                <span
+                                                    style="padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;"
+                                                    :style="{
+                                                        background: ordem.status === 'FINALIZADO' ? '#d1fae5' : ordem.status === 'EM_ANDAMENTO' ? '#dbeafe' : ordem.status === 'CANCELADO' ? '#fee2e2' : '#fef3c7',
+                                                        color: ordem.status === 'FINALIZADO' ? '#065f46' : ordem.status === 'EM_ANDAMENTO' ? '#1e40af' : ordem.status === 'CANCELADO' ? '#991b1b' : '#92400e'
+                                                    }"
+                                                    x-text="ordem.status"
+                                                ></span>
+                                            </td>
+                                            <td style="padding: 8px; text-align: right;" x-text="formatCurrency(ordem.valorTotal || 0)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                        <template x-if="detailsClient?._count?.ordens > 10">
+                            <p style="text-align: center; color: var(--text-secondary); font-size: 12px; margin-top: 8px; padding: 4px;">
+                                Mostrando as 10 últimas de <span x-text="detailsClient._count.ordens"></span> visitas no total
+                            </p>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -642,12 +702,13 @@
                 showDetailsModal: false,
                 editingClient: null,
                 detailsClient: null,
+                originalVehicleIds: [],
 
                 // Form Data
                 form: {
                     nome: '',
                     telefone: '',
-                    vehicles: [] // Dynamic vehicle list
+                    vehicles: []
                 },
 
                 // Initialization
@@ -700,7 +761,7 @@
                         this.clients = response.clientes || [];
                     } catch (error) {
                         console.error('Error loading clients:', error);
-                        alert('Erro ao carregar clientes');
+                        showToast('Erro ao carregar clientes.', 'error');
                     } finally {
                         this.isLoading = false;
                     }
@@ -716,14 +777,21 @@
                             const client = await window.api.getClienteById(clientId);
                             this.form.nome = client.nome;
                             this.form.telefone = client.telefone || '';
-                            this.form.vehicles = []; // Vehicles edited separately
+                            this.form.vehicles = (client.veiculos || []).map(v => ({
+                                id: v.id,
+                                placa: v.placa || '',
+                                modelo: v.modelo || '',
+                                isNew: false
+                            }));
+                            this.originalVehicleIds = (client.veiculos || []).map(v => v.id);
                         } catch (error) {
                             console.error('Error loading client:', error);
-                            alert('Erro ao carregar dados do cliente');
+                            showToast('Erro ao carregar dados do cliente', 'error');
                             return;
                         }
                     } else {
                         this.editingClient = null;
+                        this.originalVehicleIds = [];
                     }
 
                     this.showModal = true;
@@ -736,21 +804,19 @@
                     this.resetForm();
                 },
 
-                // Reset Form
                 resetForm() {
-                    this.form = {
-                        nome: '',
-                        telefone: '',
-                        vehicles: []
-                    };
+                    this.form = { nome: '', telefone: '', vehicles: [] };
+                    this.originalVehicleIds = [];
+                },
+
+                calcTotalGasto(ordens) {
+                    if (!ordens || ordens.length === 0) return 0;
+                    return ordens.reduce((sum, o) => sum + (o.valorTotal || 0), 0);
                 },
 
                 // Add Vehicle to Form
                 addVehicle() {
-                    this.form.vehicles.push({
-                        placa: '',
-                        modelo: ''
-                    });
+                    this.form.vehicles.push({ id: null, placa: '', modelo: '', isNew: true });
                 },
 
                 // Remove Vehicle from Form
@@ -768,32 +834,51 @@
                         };
 
                         if (this.editingClient) {
-                            // Update existing client
                             await window.api.updateCliente(this.editingClient, data);
-                        } else {
-                            // Create new client
-                            const newClient = await window.api.createCliente(data);
 
-                            // Create vehicles if any were added
-                            if (this.form.vehicles.length > 0) {
-                                for (const vehicle of this.form.vehicles) {
-                                    if (vehicle.placa.trim()) {
-                                        await window.api.createVeiculo({
-                                            clienteId: newClient.id,
-                                            placa: vehicle.placa.trim().toUpperCase(),
-                                            modelo: vehicle.modelo.trim() || null,
-                                            cor: null
-                                        });
-                                    }
+                            // Veículos removidos: IDs que estavam antes mas não estão mais
+                            const currentIds = this.form.vehicles.filter(v => v.id).map(v => v.id);
+                            const removedIds = this.originalVehicleIds.filter(id => !currentIds.includes(id));
+                            for (const id of removedIds) {
+                                await window.api.deleteVeiculo(id).catch(() => {});
+                            }
+
+                            // Veículos novos (sem id)
+                            for (const vehicle of this.form.vehicles) {
+                                if (vehicle.isNew && vehicle.placa.trim()) {
+                                    await window.api.createVeiculo({
+                                        clienteId: this.editingClient,
+                                        placa: vehicle.placa.trim().toUpperCase(),
+                                        modelo: vehicle.modelo.trim() || null,
+                                        cor: null
+                                    });
+                                } else if (vehicle.id && vehicle.placa.trim()) {
+                                    await window.api.updateVeiculo(vehicle.id, {
+                                        placa: vehicle.placa.trim().toUpperCase(),
+                                        modelo: vehicle.modelo.trim() || null
+                                    }).catch(() => {});
+                                }
+                            }
+                        } else {
+                            const newClient = await window.api.createCliente(data);
+                            for (const vehicle of this.form.vehicles) {
+                                if (vehicle.placa.trim()) {
+                                    await window.api.createVeiculo({
+                                        clienteId: newClient.id,
+                                        placa: vehicle.placa.trim().toUpperCase(),
+                                        modelo: vehicle.modelo.trim() || null,
+                                        cor: null
+                                    });
                                 }
                             }
                         }
 
+                        showToast('Cliente salvo com sucesso!', 'success');
                         this.closeModal();
                         await this.loadClients();
                     } catch (error) {
                         console.error('Error saving client:', error);
-                        alert(error.error || 'Erro ao salvar cliente');
+                        showToast(error.error || 'Erro ao salvar cliente', 'error');
                     } finally {
                         this.isSaving = false;
                     }
@@ -801,27 +886,37 @@
 
                 // Delete Client
                 async deleteClient(clientId) {
-                    if (!confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.')) {
-                        return;
-                    }
-
-                    try {
-                        await window.api.deleteCliente(clientId);
-                        await this.loadClients();
-                    } catch (error) {
-                        console.error('Error deleting client:', error);
-                        alert('Erro ao excluir cliente');
+                    if (typeof showCustomConfirm === 'function') {
+                        showCustomConfirm({
+                            title: 'Excluir Cliente',
+                            message: 'Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.',
+                            onConfirm: async () => {
+                                try {
+                                    await window.api.deleteCliente(clientId);
+                                    showToast('Cliente excluído com sucesso.', 'success');
+                                    await this.loadClients();
+                                } catch (error) {
+                                    showToast('Erro ao excluir cliente.', 'error');
+                                }
+                            }
+                        });
+                    } else if (confirm('Tem certeza que deseja excluir este cliente?')) {
+                        try {
+                            await window.api.deleteCliente(clientId);
+                            await this.loadClients();
+                        } catch (error) {
+                            showToast('Erro ao excluir cliente.', 'error');
+                        }
                     }
                 },
 
-                // Show Client Details
                 async showClientDetails(clientId) {
                     try {
                         this.detailsClient = await window.api.getClienteById(clientId);
                         this.showDetailsModal = true;
                     } catch (error) {
                         console.error('Error loading client details:', error);
-                        alert('Erro ao carregar detalhes do cliente');
+                        showToast('Erro ao carregar detalhes do cliente.', 'error');
                     }
                 },
 
@@ -866,10 +961,9 @@
                     return date.toLocaleDateString('pt-BR');
                 },
 
-                // Calculate Total Spent
-                calculateTotalSpent(orders) {
-                    if (!orders || orders.length === 0) return 0;
-                    return orders.reduce((sum, order) => sum + (order.valorTotal || 0), 0);
+                getStatusOrdem(status) {
+                    const map = { FINALIZADO: 'Finalizado', EM_ANDAMENTO: 'Em Andamento', PENDENTE: 'Pendente', CANCELADO: 'Cancelado', AGUARDANDO_PAGAMENTO: 'Ag. Pagamento' };
+                    return map[status] || status;
                 }
             }));
         });
