@@ -861,45 +861,40 @@
         const response = await window.api.getTiposVeiculo();
         tiposVeiculo = response.tiposVeiculo || response || [];
 
-        // Add CAMINHONETE if it doesn't exist
-        const hasCaminhonete = tiposVeiculo.some(t => t.categoria === 'CAMINHONETE');
-        if (!hasCaminhonete) {
-          tiposVeiculo.push({ categoria: 'CAMINHONETE' });
-        }
+        // Lista completa de categorias de carro (igual à configuracoes.html)
+        const ALL_CARRO_CATS = ['HATCH', 'SEDAN', 'SUV', 'PICKUP', 'CAMINHONETE', 'VAN', 'MICROONIBUS', 'CAMINHAO'];
 
-        // Build subtipoOptions from fetched types
-        const carroSubtypes = tiposVeiculo.filter(t =>
-          ['HATCH', 'SEDAN', 'SUV', 'PICKUP', 'CAMINHONETE'].includes(t.categoria)
-        );
-        subtipoOptions.CARRO = carroSubtypes;
+        // Garantir que todos os tipos existam
+        ALL_CARRO_CATS.forEach(cat => {
+          if (!tiposVeiculo.some(t => t.categoria === cat)) {
+            tiposVeiculo.push({ categoria: cat });
+          }
+        });
+
+        // Build subtipoOptions — mesma ordem da configuracoes.html
+        subtipoOptions.CARRO = ALL_CARRO_CATS.map(cat => ({ categoria: cat }));
         subtipoOptions.MOTO = [];
 
         // Populate select options
         const select = document.getElementById('serviceTipoPrincipal');
         if (select) {
-          const mainTypes = {};
-          tiposVeiculo.forEach(t => {
-            const isCarroType = ['HATCH', 'SEDAN', 'SUV', 'PICKUP', 'CAMINHONETE'].includes(t.categoria);
-            if (isCarroType) {
-              mainTypes.CARRO = true;
-            }
-          });
-
           select.innerHTML = '<option value="">Selecione...</option>';
-          if (mainTypes.CARRO) {
-            select.innerHTML += '<option value="CARRO">Carro</option>';
-          }
+          select.innerHTML += '<option value="CARRO">Carro</option>';
           select.innerHTML += '<option value="MOTO">Moto</option>';
+          select.innerHTML += '<option value="OUTROS">Outros</option>';
         }
       } catch (error) {
         console.error('Erro ao carregar tipos de veículo:', error);
-        // Fallback to basic types
+        // Fallback — lista completa igual à configuracoes.html
         subtipoOptions.CARRO = [
           { categoria: 'HATCH' },
           { categoria: 'SEDAN' },
           { categoria: 'SUV' },
           { categoria: 'PICKUP' },
-          { categoria: 'CAMINHONETE' }
+          { categoria: 'CAMINHONETE' },
+          { categoria: 'VAN' },
+          { categoria: 'MICROONIBUS' },
+          { categoria: 'CAMINHAO' }
         ];
         subtipoOptions.MOTO = [];
       }
@@ -1093,9 +1088,13 @@
         subtipoGroup.style.display = 'block';
         checkboxesContainer.innerHTML = '';
 
+        const LABELS_CATEGORIA = {
+          HATCH: 'Hatch', SEDAN: 'Sedan', SUV: 'SUV', PICKUP: 'Pickup',
+          CAMINHONETE: 'Caminhonete', VAN: 'Van', MICROONIBUS: 'Micro-ônibus', CAMINHAO: 'Caminhão'
+        };
         subtipoOptions.CARRO.forEach(subtipo => {
           const categoria = subtipo.categoria;
-          const label = categoria.charAt(0).toUpperCase() + categoria.slice(1).toLowerCase();
+          const label = LABELS_CATEGORIA[categoria] || categoria;
           const checkbox = document.createElement('div');
           checkbox.className = 'checkbox-item';
           checkbox.innerHTML = `

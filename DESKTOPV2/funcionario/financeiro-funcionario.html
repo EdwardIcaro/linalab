@@ -728,6 +728,101 @@
       background: #0052a3;
     }
 
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* FECHAMENTO GRID */
+    .fechamento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .fechamento-item {
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .fechamento-item .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .fechamento-item input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--dark);
+    }
+
+    /* RELATORIO TABLE */
+    .relatorio-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    .relatorio-table th {
+      text-align: left;
+      padding: 8px;
+      color: #666;
+      font-size: 13px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .relatorio-table th:not(:first-child) { text-align: right; }
+
+    .relatorio-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .relatorio-table td:not(:first-child) { text-align: right; }
+
+    .relatorio-table .divergente { background: #fee2e2; }
+
+    .diff-ok { color: var(--success); font-weight: 700; }
+    .diff-err { color: var(--danger); font-weight: 700; }
+
+    .status-badge-big {
+      display: inline-block;
+      padding: 8px 24px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .status-badge-big.conferido { background: #d1fae5; color: #065f46; }
+    .status-badge-big.divergente { background: #fee2e2; color: #991b1b; }
+
+    .spinner-icon {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* MENU */
     .menu-dropdown {
       display: none;
@@ -992,6 +1087,82 @@
     </div>
   </div>
 
+  <!-- MODAL: ABERTURA DE CAIXA -->
+  <div id="aberturaModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-door-open"></i> Abrir Caixa</h2>
+        <button class="modal-close" onclick="closeAberturaModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Troco inicial em dinheiro (opcional)</label>
+        <input type="number" id="aberturaValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:18px; font-weight:600;">
+        <small style="color:#666;">Deixe em branco se não houver troco no caixa.</small>
+      </div>
+      <div class="form-group">
+        <label>Responsável pela abertura</label>
+        <input type="text" id="aberturaResponsavel" placeholder="Nome do responsável" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:14px;">
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn-cancel" onclick="closeAberturaModal()">Cancelar</button>
+        <button type="button" id="btnConfirmarAbertura" class="btn-submit" onclick="confirmarAbertura()">
+          <i class="fas fa-door-open"></i> Abrir Caixa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FECHAMENTO DE CAIXA -->
+  <div id="fechamentoModal" class="modal">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h2><i class="fas fa-door-closed"></i> Fechar Caixa do Dia</h2>
+        <button class="modal-close" onclick="closeFechamentoModal()">&times;</button>
+      </div>
+      <p style="color:#666; font-size:14px; margin-bottom:20px;">
+        Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
+      </p>
+      <div class="fechamento-grid" id="fechamentoGrid">
+        <!-- Preenchido dinamicamente ao abrir o modal -->
+      </div>
+      <div style="margin:16px 0; padding:12px 16px; background:#fff3cd; border-radius:8px; text-align:center; color:#856404;">
+        <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn-cancel" onclick="closeFechamentoModal()">Cancelar</button>
+        <button type="button" id="btnConfirmarFechamento" class="btn-danger" onclick="confirmarFechamento()">
+          <i class="fas fa-lock"></i> Confirmar Fechamento
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RELATÓRIO DE FECHAMENTO -->
+  <div id="relatorioModal" class="modal">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h2><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
+        <button class="modal-close" onclick="closeRelatorioModal()">&times;</button>
+      </div>
+      <div style="text-align:center; margin-bottom:20px;" id="relatorioStatus"></div>
+      <table class="relatorio-table" id="relatorioTabela">
+        <thead>
+          <tr>
+            <th>Método</th>
+            <th style="text-align:right;">Digitado</th>
+            <th style="text-align:right;">Computado</th>
+            <th style="text-align:right;">Diferença</th>
+          </tr>
+        </thead>
+        <tbody id="relatorioTbody"></tbody>
+      </table>
+      <div id="relatorioRodape" style="font-size:13px; color:#666; margin-top:8px;"></div>
+      <div class="modal-buttons" style="margin-top:16px;">
+        <button type="button" class="btn-submit" onclick="closeRelatorioModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SCRIPTS -->
   <script src="../api.js"></script>
   <script src="utils-funcionario.js"></script>
@@ -1003,6 +1174,7 @@
 
     let currentTab = 'movimentacoes';
     let currentTransactionType = '';
+    let caixaStatus = { isOpen: false, notOpened: true, paymentMethodsConfig: { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false } };
     let filters = {
       dataInicio: new Date().toISOString().split('T')[0],
       dataFim: new Date().toISOString().split('T')[0],
@@ -1191,24 +1363,51 @@
       const container = document.getElementById('tab-caixa');
 
       try {
+        // Buscar status real do caixa
+        try {
+          const status = await window.api.getStatusCaixa();
+          caixaStatus = {
+            isOpen: status.isOpen || false,
+            notOpened: status.notOpened !== false ? (status.notOpened ?? true) : false,
+            paymentMethodsConfig: status.paymentMethodsConfig || caixaStatus.paymentMethodsConfig,
+            currentUserNome: status.currentUserNome || ''
+          };
+        } catch (e) {
+          console.warn('Erro ao buscar status do caixa:', e);
+        }
+
+        // Botões dinâmicos baseados no status
+        const btnAbrirHtml = !caixaStatus.isOpen ? `
+          <button class="action-btn" onclick="openAberturaModal()" style="background:linear-gradient(135deg,#10b981,#059669); color:white; border:none;">
+            <i class="fas fa-door-open"></i>
+            <span>Abrir Caixa</span>
+          </button>` : '';
+
+        const btnFecharHtml = caixaStatus.isOpen ? `
+          <button class="action-btn" onclick="openFechamentoModal()" style="background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none;">
+            <i class="fas fa-door-closed"></i>
+            <span>Fechar Caixa</span>
+          </button>` : '';
+
+        const btnsOperacoesHtml = caixaStatus.isOpen ? `
+          <button class="action-btn" onclick="openTransactionModal('despesa')">
+            <i class="fas fa-receipt"></i>
+            <span>Lançar Despesa</span>
+          </button>
+          <button class="action-btn" onclick="openTransactionModal('sangria')">
+            <i class="fas fa-money-bill"></i>
+            <span>Sangria</span>
+          </button>
+          <button class="action-btn" onclick="openTransactionModal('suprimento')">
+            <i class="fas fa-plus-circle"></i>
+            <span>Suprimento</span>
+          </button>` : '';
+
         container.innerHTML = `
           <div class="action-buttons">
-            <button class="action-btn" onclick="openTransactionModal('despesa')">
-              <i class="fas fa-receipt"></i>
-              <span>Lançar Despesa</span>
-            </button>
-            <button class="action-btn" onclick="openTransactionModal('sangria')">
-              <i class="fas fa-money-bill"></i>
-              <span>Sangria</span>
-            </button>
-            <button class="action-btn" onclick="openTransactionModal('suprimento')">
-              <i class="fas fa-plus-circle"></i>
-              <span>Suprimento</span>
-            </button>
-            <button class="action-btn" onclick="closeCashRegister()">
-              <i class="fas fa-check-circle"></i>
-              <span>Fechar Caixa</span>
-            </button>
+            ${btnAbrirHtml}
+            ${btnsOperacoesHtml}
+            ${btnFecharHtml}
           </div>
           <div id="caixaHistory"></div>
         `;
@@ -1668,23 +1867,136 @@
       }
     }
 
-    async function closeCashRegister() {
-      showConfirm(
-        'Fechar Caixa',
-        'Tem certeza que deseja fechar o caixa? Esta ação não pode ser desfeita.',
-        async () => {
-          try {
-            const resumo = await window.api.getResumoDia();
-            await window.api.createFechamento(resumo);
-            showToast('Caixa fechado com sucesso!', 'success');
-            await loadBalanceCards();
-            await loadCaixa();
-          } catch (error) {
-            console.error('Erro ao fechar caixa:', error);
-            showToast('Erro ao fechar caixa', 'error');
-          }
-        }
-      );
+    // ABERTURA DE CAIXA
+    function openAberturaModal() {
+      document.getElementById('aberturaValorInicial').value = '';
+      document.getElementById('aberturaResponsavel').value = caixaStatus.currentUserNome || '';
+      document.getElementById('aberturaModal').classList.add('active');
+    }
+
+    function closeAberturaModal() {
+      document.getElementById('aberturaModal').classList.remove('active');
+    }
+
+    async function confirmarAbertura() {
+      const btn = document.getElementById('btnConfirmarAbertura');
+      const valorInicial = parseFloat(document.getElementById('aberturaValorInicial').value) || 0;
+      const responsavel = document.getElementById('aberturaResponsavel').value.trim();
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner spinner-icon"></i> Abrindo...';
+
+      try {
+        await window.api.abrirCaixa({ valorInicial, abertoPor: responsavel });
+        caixaStatus.isOpen = true;
+        caixaStatus.notOpened = false;
+        closeAberturaModal();
+        showToast('Caixa aberto com sucesso!', 'success');
+        await loadCaixa();
+      } catch (error) {
+        console.error('Erro ao abrir caixa:', error);
+        showToast(error?.message || 'Erro ao abrir o caixa.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-door-open"></i> Abrir Caixa';
+      }
+    }
+
+    // FECHAMENTO DE CAIXA
+    function openFechamentoModal() {
+      const cfg = caixaStatus.paymentMethodsConfig || {};
+      const metodos = [
+        { key: 'DINHEIRO', label: '💵 Dinheiro', show: cfg.DINHEIRO !== false },
+        { key: 'PIX',      label: '📱 PIX',      show: cfg.PIX !== false },
+        { key: 'CARTAO',   label: '💳 Cartão',   show: cfg.CARTAO !== false },
+        { key: 'NFE',      label: '🧾 NFe',      show: cfg.NFE === true },
+      ];
+
+      const gridHtml = metodos
+        .filter(m => m.show)
+        .map(m => `
+          <div class="fechamento-item">
+            <div class="label">${m.label}</div>
+            <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00">
+          </div>
+        `).join('');
+
+      document.getElementById('fechamentoGrid').innerHTML = gridHtml;
+      document.getElementById('fechamentoModal').classList.add('active');
+    }
+
+    function closeFechamentoModal() {
+      document.getElementById('fechamentoModal').classList.remove('active');
+    }
+
+    async function confirmarFechamento() {
+      const btn = document.getElementById('btnConfirmarFechamento');
+      const cfg = caixaStatus.paymentMethodsConfig || {};
+
+      const valoresDigitados = {
+        DINHEIRO: cfg.DINHEIRO !== false ? (parseFloat(document.getElementById('fech_DINHEIRO')?.value) || 0) : 0,
+        PIX:      cfg.PIX !== false      ? (parseFloat(document.getElementById('fech_PIX')?.value)      || 0) : 0,
+        CARTAO:   cfg.CARTAO !== false   ? (parseFloat(document.getElementById('fech_CARTAO')?.value)   || 0) : 0,
+        NFE:      cfg.NFE === true       ? (parseFloat(document.getElementById('fech_NFE')?.value)      || 0) : 0,
+      };
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner spinner-icon"></i> Fechando...';
+
+      try {
+        const result = await window.api.createFechamento({ valoresDigitados });
+        caixaStatus.isOpen = false;
+        closeFechamentoModal();
+        showToast('Caixa fechado com sucesso!', 'success');
+        await loadBalanceCards();
+        await loadCaixa();
+        // Exibir relatório
+        exibirRelatorioFechamento(result);
+      } catch (error) {
+        console.error('Erro ao fechar caixa:', error);
+        showToast(error?.message || 'Erro ao fechar o caixa.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Confirmar Fechamento';
+      }
+    }
+
+    // RELATÓRIO DE FECHAMENTO
+    function exibirRelatorioFechamento(result) {
+      const relatorio = result.relatorio || {};
+      const status = result.fechamento?.status || '';
+      const fechadoPor = result.fechamento?.fechadoPor || '';
+      const totalSaidas = result.totalSaidas || 0;
+
+      const LABELS = { DINHEIRO: '💵 Dinheiro', PIX: '📱 PIX', CARTAO: '💳 Cartão', NFE: '🧾 NFe' };
+
+      const badgeClass = status === 'CONFERIDO' ? 'conferido' : 'divergente';
+      const badgeText = status === 'CONFERIDO' ? '✅ CONFERIDO — Tudo certo!' : '⚠️ DIVERGENTE — Há diferenças!';
+      document.getElementById('relatorioStatus').innerHTML = `<span class="status-badge-big ${badgeClass}">${badgeText}</span>`;
+
+      const tbody = document.getElementById('relatorioTbody');
+      tbody.innerHTML = Object.entries(relatorio).map(([metodo, dados]) => {
+        const diff = dados.diferenca ?? 0;
+        const rowClass = diff !== 0 ? 'divergente' : '';
+        const diffClass = diff === 0 ? 'diff-ok' : 'diff-err';
+        const diffText = (diff >= 0 ? '+' : '') + formatCurrency(diff);
+        return `<tr class="${rowClass}">
+          <td style="font-weight:600;">${LABELS[metodo] || metodo}</td>
+          <td style="text-align:right;">${formatCurrency(dados.digitado)}</td>
+          <td style="text-align:right;">${formatCurrency(dados.computado)}</td>
+          <td style="text-align:right;" class="${diffClass}">${diffText}</td>
+        </tr>`;
+      }).join('');
+
+      let rodape = fechadoPor ? `<span>Fechado por: ${fechadoPor}</span>` : '';
+      if (totalSaidas > 0) rodape += `<span style="float:right;">Saídas do dia: ${formatCurrency(totalSaidas)}</span>`;
+      document.getElementById('relatorioRodape').innerHTML = rodape;
+
+      document.getElementById('relatorioModal').classList.add('active');
+    }
+
+    function closeRelatorioModal() {
+      document.getElementById('relatorioModal').classList.remove('active');
     }
 
     // FILTER FUNCTIONS

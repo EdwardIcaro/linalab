@@ -388,13 +388,97 @@
         .toast-item.info    { background: var(--primary); }
         @keyframes slideIn { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
 
-        /* Responsive */
+        /* Responsive — tablet */
         @media (max-width: 900px) {
             .col-cliente, .col-categoria { display: none !important; }
             .fila-grid-row {
                 grid-template-columns: 32px 110px 85px 1fr 130px 95px 32px;
             }
             .header-actions-btn span { display: none; }
+        }
+
+        /* Responsive — mobile card layout */
+        @media (max-width: 600px) {
+            .main-container { padding: 12px; padding-bottom: 100px; }
+
+            .col-cliente, .col-categoria { display: block !important; }
+
+            .grid-header { display: none; }
+
+            .grid-card { border-radius: 0; border-left: none; border-right: none; }
+
+            .fila-row-wrap {
+                margin: 8px;
+                border-radius: 10px;
+                border: 1px solid var(--border);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            }
+
+            /* Substituir grid por layout de card */
+            .fila-row-wrap .fila-grid-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-areas:
+                    "num    placa"
+                    "cli    cli"
+                    "tipo   cat"
+                    "serv   serv"
+                    "lav    stat"
+                    "rem    rem";
+                gap: 8px;
+                padding: 12px;
+            }
+
+            .fila-row-wrap .fila-grid-row > *:nth-child(1) { grid-area: num; align-self: center; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(2) { grid-area: placa; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(3) { grid-area: cli; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(4) { grid-area: tipo; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(5) { grid-area: cat; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(6) { grid-area: serv; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(7) { grid-area: lav; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(8) { grid-area: stat; align-self: center; }
+            .fila-row-wrap .fila-grid-row > *:nth-child(9) { grid-area: rem; display: flex; justify-content: flex-end; align-items: center; }
+
+            /* Labels acima de cada campo via data-label */
+            .fila-cell[data-label]::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 10px;
+                font-weight: 700;
+                color: #888;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                margin-bottom: 3px;
+            }
+
+            /* Row num menor no card */
+            .row-num { font-size: 16px; font-weight: 700; color: #ccc; }
+
+            /* Inputs maiores para toque */
+            .cell-input { padding: 9px 10px; font-size: 14px; }
+            .placa-input { font-size: 15px; }
+
+            /* Toolbar scroll horizontal */
+            .toolbar { overflow-x: auto; flex-wrap: nowrap; padding: 10px 12px; }
+            .toolbar-label { font-size: 12px; }
+            .toolbar-select { font-size: 12px; }
+
+            /* Footer buttons */
+            .footer-bar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+            .footer-counter { font-size: 12px; width: 100%; }
+            .footer-spacer { display: none; }
+            .btn { font-size: 13px; padding: 9px 14px; flex: 1; justify-content: center; }
+
+            /* Status badge full width */
+            .status-badge { font-size: 11px; }
+
+            /* Legend scroll */
+            .legend { font-size: 10px; gap: 8px; }
+
+            /* Header buttons */
+            .header-actions-btn { padding: 7px 10px; }
+            .page-info h1 { font-size: 14px; }
+            .page-info p { font-size: 11px; }
         }
     </style>
 </head>
@@ -494,7 +578,7 @@
                             <div class="fila-cell center row-num" x-text="idx + 1"></div>
 
                             <!-- PLACA -->
-                            <div class="fila-cell">
+                            <div class="fila-cell" data-label="Placa">
                                 <input
                                     class="cell-input placa-input"
                                     type="text"
@@ -507,7 +591,7 @@
                             </div>
 
                             <!-- CLIENTE / VEÍCULO -->
-                            <div class="fila-cell col-cliente">
+                            <div class="fila-cell col-cliente" data-label="Cliente / Veículo">
                                 <div x-show="row.state === 'found' || row.state === 'done'">
                                     <div class="client-name" x-text="row.clienteNome || '—'"></div>
                                     <div class="client-sub"  x-text="row.veiculoDesc || ''"></div>
@@ -531,7 +615,7 @@
                             </div>
 
                             <!-- TIPO -->
-                            <div class="fila-cell">
+                            <div class="fila-cell" data-label="Tipo">
                                 <select
                                     class="cell-input"
                                     x-model="row.tipoVeiculo"
@@ -545,7 +629,7 @@
                             </div>
 
                             <!-- CATEGORIA -->
-                            <div class="fila-cell col-categoria">
+                            <div class="fila-cell col-categoria" data-label="Categoria">
                                 <select
                                     class="cell-input"
                                     x-model="row.categoriaVeiculo"
@@ -566,7 +650,7 @@
                             </div>
 
                             <!-- SERVIÇO -->
-                            <div class="fila-cell">
+                            <div class="fila-cell" data-label="Serviço">
                                 <select
                                     class="cell-input"
                                     x-model="row.servicoId"
@@ -580,7 +664,7 @@
                             </div>
 
                             <!-- LAVADOR -->
-                            <div class="fila-cell">
+                            <div class="fila-cell" data-label="Lavador">
                                 <select
                                     class="cell-input"
                                     x-model="row.lavadorId"
@@ -594,7 +678,7 @@
                             </div>
 
                             <!-- STATUS -->
-                            <div class="fila-cell">
+                            <div class="fila-cell" data-label="Status">
                                 <span class="status-badge" :class="`badge-${row.state}`">
                                     <span class="badge-dot"></span>
                                     <span x-text="stateLabel(row.state)"></span>
