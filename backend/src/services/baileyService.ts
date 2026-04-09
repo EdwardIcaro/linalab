@@ -383,6 +383,13 @@ export async function initBaileys(empresaId: string): Promise<void> {
           if (resolvedPhone) {
             from = `${resolvedPhone}@s.whatsapp.net`;
             console.log(`[Baileys] @lid resolvido: ${rawFrom} → ${from}`);
+
+            // Atualizar registro de admin que ainda tem telefone "lid_xxx" com o número real
+            const lidNum = rawFrom.split('@')[0];
+            prisma.whatsappAdminPhone.updateMany({
+              where: { jid: rawFrom, telefone: `lid_${lidNum}` },
+              data: { telefone: resolvedPhone },
+            }).catch(() => {}); // silencioso — não bloqueia o fluxo
           } else {
             console.log(`[Baileys] @lid sem mapeamento: ${rawFrom} (store contacts: ${Object.keys(store?.contacts || {}).length})`);
           }
@@ -402,11 +409,19 @@ export async function initBaileys(empresaId: string): Promise<void> {
           const lidOrPhone = rawFrom.split('@')[0];
           const nomeAdmin = instanceForPairing.pairingNome || senderName;
           try {
+            // Se o @lid já foi resolvido para o número real (from !== rawFrom),
+            // persiste o número real no banco. Isso garante que o admin seja
+            // reconhecido mesmo após reconexão (sem depender do mapa em memória).
+            const phoneToStore = (rawFrom.endsWith('@lid') && from !== rawFrom)
+              ? from.split('@')[0]                    // número real ex: "559981956046"
+              : rawFrom.endsWith('@lid')
+                ? `lid_${lidOrPhone}`                 // fallback: @lid não resolvido
+                : lidOrPhone;                         // já é número real
+
             await prisma.whatsappAdminPhone.create({
               data: {
                 instanceId: instanceForPairing.id,
-                // Telefone: usa número real se @s.whatsapp.net, caso contrário armazena com prefixo lid_
-                telefone: rawFrom.endsWith('@lid') ? `lid_${lidOrPhone}` : lidOrPhone,
+                telefone: phoneToStore,
                 jid: rawFrom, // JID real (pode ser @lid ou @s.whatsapp.net)
                 nome: nomeAdmin,
                 ativo: true,
@@ -418,7 +433,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
               data: { pairingMode: false, pairingNome: null },
             });
 
-            console.log(`[Baileys] ✅ Admin pareado: ${rawFrom} como "${nomeAdmin}"`);
+            console.log(`[Baileys] ✅ Admin pareado: ${rawFrom} como "${nomeAdmin}" (telefone: ${phoneToStore})`);
 
             await sock.sendMessage(rawFrom, {
               text: `✅ Olá ${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
