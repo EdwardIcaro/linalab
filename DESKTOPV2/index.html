@@ -789,6 +789,29 @@
             opacity: 1;
         }
 
+        /* Quick Action Items */
+        .floating-menu-item--action {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-orange);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .floating-menu-item--action:hover {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        .floating-menu-item--action.caixa-open {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .floating-menu-item--action.caixa-open:hover {
+            background: var(--accent-green);
+            color: white;
+        }
+
         .floating-badge {
             position: absolute;
             top: -4px;
@@ -1970,7 +1993,503 @@
             .patio-trigger-btn {
                 padding: 12px 8px;
             }
+
+            .notif-trigger-btn {
+                padding: 12px 8px;
+            }
+
+            .notif-trigger-label {
+                display: none;
+            }
         }
+
+        /* ==========================================
+           NOTIFICATION PANEL SYSTEM
+           ========================================== */
+
+        /* Botão trigger — posicionado acima do pátio */
+        .notif-trigger-btn {
+            position: fixed;
+            right: 0;
+            top: calc(50% - 90px);
+            z-index: 1000;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 12px 0 0 12px;
+            padding: 16px 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .notif-trigger-btn:hover {
+            background: #6d28d9;
+            box-shadow: -4px 0 12px rgba(124, 58, 237, 0.35);
+            padding-right: 14px;
+        }
+
+        .notif-trigger-btn i {
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .notif-trigger-btn.active i.fa-chevron-left {
+            transform: rotate(180deg);
+        }
+
+        .notif-trigger-label {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+        }
+
+        /* Badge numérico no botão */
+        .notif-trigger-badge {
+            background: #ef4444;
+            color: white;
+            border-radius: 10px;
+            min-width: 18px;
+            height: 18px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            animation: notif-pop 0.3s ease;
+        }
+
+        @keyframes notif-pop {
+            0%   { transform: scale(0.5); }
+            70%  { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes notif-bell-shake {
+            0%, 100% { transform: rotate(0deg); }
+            15%       { transform: rotate(15deg); }
+            30%       { transform: rotate(-12deg); }
+            45%       { transform: rotate(10deg); }
+            60%       { transform: rotate(-8deg); }
+            75%       { transform: rotate(5deg); }
+        }
+
+        .notif-trigger-btn.has-unread .fa-bell {
+            animation: notif-bell-shake 1s ease;
+        }
+
+        /* Backdrop */
+        .notif-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+
+        /* Painel slide-in */
+        .notif-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 420px;
+            height: 100vh;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.34, 1.15, 0.64, 1);
+            background: var(--dashboard-card);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .notif-panel.active {
+            transform: translateX(0);
+        }
+
+        /* Header */
+        .notif-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px 16px 14px;
+            border-bottom: 1px solid var(--dashboard-border);
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .notif-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--dashboard-text);
+        }
+
+        .notif-last-update {
+            font-size: 11px;
+            color: var(--dashboard-text-muted);
+        }
+
+        .notif-header-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .notif-btn-icon {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(124, 58, 237, 0.1);
+            color: #7c3aed;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .notif-btn-icon:hover {
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        .notif-btn-icon.spinning i {
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* Filtro tabs */
+        .notif-filter-tabs {
+            display: flex;
+            gap: 0;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--dashboard-border);
+            flex-shrink: 0;
+        }
+
+        .notif-filter-tab {
+            flex: 1;
+            padding: 7px 0;
+            border: 1px solid var(--dashboard-border);
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--dashboard-text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .notif-filter-tab:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+
+        .notif-filter-tab:last-child {
+            border-radius: 0 8px 8px 0;
+            border-left: none;
+        }
+
+        .notif-filter-tab.active {
+            background: #7c3aed;
+            color: white;
+            border-color: #7c3aed;
+        }
+
+        /* Lista */
+        .notif-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .notif-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--dashboard-border);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .notif-item:hover {
+            background: var(--dashboard-bg);
+        }
+
+        .notif-item.unread {
+            background: rgba(124, 58, 237, 0.06);
+            border-left: 3px solid #7c3aed;
+        }
+
+        .notif-item.unread:hover {
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        .notif-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .notif-item-icon.ordemCriada    { background: #d1fae5; color: #059669; }
+        .notif-item-icon.ordemEditada   { background: #dbeafe; color: #2563eb; }
+        .notif-item-icon.ordemDeletada  { background: #fee2e2; color: #dc2626; }
+        .notif-item-icon.finalizacaoAutomatica { background: #fef3c7; color: #d97706; }
+        .notif-item-icon.caixaAberto    { background: #d1fae5; color: #059669; }
+        .notif-item-icon.caixaFechado   { background: #ede9fe; color: #7c3aed; }
+        .notif-item-icon.info           { background: #f3f4f6; color: #6b7280; }
+
+        .notif-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notif-item-msg {
+            font-size: 13px;
+            color: var(--dashboard-text);
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+
+        .notif-item-time {
+            font-size: 11px;
+            color: var(--dashboard-text-muted);
+        }
+
+        .notif-item-link-arrow {
+            color: #7c3aed;
+            font-size: 12px;
+            flex-shrink: 0;
+            align-self: center;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .notif-item:hover .notif-item-link-arrow {
+            opacity: 1;
+        }
+
+        /* Footer */
+        .notif-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--dashboard-border);
+            flex-shrink: 0;
+        }
+
+        .notif-mark-all-btn {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid var(--dashboard-border);
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #7c3aed;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .notif-mark-all-btn:hover {
+            background: rgba(124, 58, 237, 0.08);
+        }
+
+        /* Empty state */
+        .notif-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--dashboard-text-muted);
+            gap: 12px;
+        }
+
+        .notif-empty i {
+            font-size: 40px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .notif-panel {
+                width: 92vw;
+            }
+
+            .notif-trigger-btn {
+                padding: 12px 8px;
+            }
+
+            .notif-trigger-label {
+                display: none;
+            }
+        }
+
+        /* ==========================================
+           QUICK ACTION MODALS
+           ========================================== */
+        .quick-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .quick-modal {
+            background: var(--dashboard-card);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: quickModalIn 0.2s ease;
+        }
+
+        @keyframes quickModalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .quick-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dashboard-text);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quick-modal-field {
+            margin-bottom: 14px;
+        }
+
+        .quick-modal-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dashboard-text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .quick-modal-field input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--dashboard-border);
+            border-radius: var(--radius-sm);
+            background: var(--dashboard-bg);
+            color: var(--dashboard-text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .quick-modal-field input:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .quick-modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+            justify-content: flex-end;
+        }
+
+        .quick-modal-btn {
+            padding: 10px 22px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .quick-modal-btn--cancel {
+            background: var(--dashboard-bg);
+            color: var(--dashboard-text-secondary);
+            border: 1px solid var(--dashboard-border);
+        }
+
+        .quick-modal-btn--cancel:hover { opacity: 0.8; }
+
+        .quick-modal-btn--primary {
+            background: var(--accent-cyan);
+            color: white;
+        }
+
+        .quick-modal-btn--primary:hover { opacity: 0.9; }
+
+        .quick-modal-btn--danger {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .quick-modal-btn--danger:hover { opacity: 0.9; }
+
+        .quick-modal-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .quick-modal-note {
+            font-size: 12px;
+            color: var(--dashboard-text-muted);
+            margin-top: 4px;
+            padding: 8px 12px;
+            background: var(--dashboard-bg);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .quick-method-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .quick-method-label {
+            width: 72px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dashboard-text-secondary);
+            flex-shrink: 0;
+        }
+
+        .quick-method-row input {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid var(--dashboard-border);
+            border-radius: var(--radius-sm);
+            background: var(--dashboard-bg);
+            color: var(--dashboard-text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .quick-method-row input:focus { border-color: var(--accent-cyan); }
     </style>
 </head>
 <body data-permission="ver_dashboard">
@@ -2007,6 +2526,15 @@
             <i class="fas fa-hand-holding-usd"></i>
             <span class="floating-menu-label">Comissões</span>
         </a>
+        <hr style="margin: 8px 0; border: none; height: 1px; background: var(--dashboard-border);">
+        <button id="caixa-quick-btn" class="floating-menu-item floating-menu-item--action" data-permission="ver_financeiro" onclick="openCaixaAction()" title="Abrir Caixa">
+            <i class="fas fa-cash-register"></i>
+            <span class="floating-menu-label">Abrir Caixa</span>
+        </button>
+        <button class="floating-menu-item floating-menu-item--action" data-permission="ver_financeiro" onclick="openSangriaRapida()" title="Sangria">
+            <i class="fas fa-money-bill-wave"></i>
+            <span class="floating-menu-label">Sangria</span>
+        </button>
         <hr style="margin: 8px 0; border: none; height: 1px; background: var(--dashboard-border);">
         <a href="configuracoes.html" class="floating-menu-item" data-permission="gerenciar_configuracoes" title="Configurações">
             <i class="fas fa-cog"></i>
@@ -2374,6 +2902,75 @@
                 </div>
             </nav>
 
+            <!-- NOTIFICATION SYSTEM: Botão Trigger -->
+            <button class="notif-trigger-btn" :class="{ active: notifOpen, 'has-unread': notifUnreadCount > 0 }" @click="openNotifPanel()">
+                <i class="fas fa-chevron-left"></i>
+                <i class="fas fa-bell"></i>
+                <span class="notif-trigger-label">Notif.</span>
+                <span class="notif-trigger-badge" x-show="notifUnreadCount > 0" x-text="notifUnreadCount > 99 ? '99+' : notifUnreadCount"></span>
+            </button>
+
+            <!-- NOTIFICATION SYSTEM: Backdrop -->
+            <div class="notif-backdrop" x-show="notifOpen" @click="closeNotifPanel()" style="display:none;"></div>
+
+            <!-- NOTIFICATION SYSTEM: Painel Principal -->
+            <div class="notif-panel" :class="{ active: notifOpen }">
+                <!-- Header -->
+                <div class="notif-header">
+                    <div style="flex:1;">
+                        <h2><i class="fas fa-bell" style="color:#7c3aed;"></i> Notificações</h2>
+                        <span class="notif-last-update" x-text="notifLastUpdate ? 'Atualizado às ' + notifLastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Carregando...'"></span>
+                    </div>
+                    <div class="notif-header-actions">
+                        <button class="notif-btn-icon" @click="refreshNotif()" :class="{ spinning: notifRefreshing }" title="Atualizar">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="notif-btn-icon" @click="closeNotifPanel()" title="Fechar">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtro -->
+                <div class="notif-filter-tabs">
+                    <button class="notif-filter-tab" :class="{ active: notifFilter === 'todas' }" @click="notifFilter = 'todas'">Todas</button>
+                    <button class="notif-filter-tab" :class="{ active: notifFilter === 'nao_lidas' }" @click="notifFilter = 'nao_lidas'">
+                        Não lidas
+                        <span x-show="notifUnreadCount > 0" x-text="' (' + notifUnreadCount + ')'" style="font-weight:700;"></span>
+                    </button>
+                </div>
+
+                <!-- Lista -->
+                <div class="notif-list">
+                    <!-- Empty state -->
+                    <div class="notif-empty" x-show="getNotifFiltered().length === 0">
+                        <i class="fas fa-bell-slash"></i>
+                        <p x-text="notifFilter === 'nao_lidas' ? 'Nenhuma notificação não lida' : 'Nenhuma notificação'"></p>
+                    </div>
+
+                    <template x-for="n in getNotifFiltered()" :key="n.id">
+                        <div class="notif-item" :class="{ unread: !n.lida }" @click="onNotifClick(n)">
+                            <div class="notif-item-icon" :class="n.type || 'info'">
+                                <i :class="'fas ' + getNotifIcon(n.type)"></i>
+                            </div>
+                            <div class="notif-item-content">
+                                <p class="notif-item-msg" x-text="n.mensagem"></p>
+                                <span class="notif-item-time" x-text="formatNotifTime(n.createdAt)"></span>
+                            </div>
+                            <i class="fas fa-arrow-right notif-item-link-arrow" x-show="!!n.link"></i>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Footer -->
+                <div class="notif-footer" x-show="notifUnreadCount > 0">
+                    <button class="notif-mark-all-btn" @click="marcarTodasLidas()">
+                        <i class="fas fa-check-double" style="margin-right:6px;"></i>
+                        Marcar todas como lidas
+                    </button>
+                </div>
+            </div>
+
             <!-- PATIO SYSTEM: Botão Trigger -->
             <button class="patio-trigger-btn" :class="{ active: patioOpen }" @click="openPatio()">
                 <i class="fas fa-chevron-left"></i>
@@ -2529,6 +3126,91 @@
             <!-- PATIO SYSTEM: Backdrop -->
             <div class="patio-backdrop" x-show="patioOpen" @click="closePatio()"></div>
 
+            <!-- QUICK ACTION: Modal Abertura de Caixa -->
+            <div class="quick-modal-backdrop" x-show="quickAberturaModal.isOpen" x-cloak @click.self="quickAberturaModal.isOpen = false" style="display:none;">
+                <div class="quick-modal">
+                    <div class="quick-modal-title">
+                        <i class="fas fa-cash-register" style="color: var(--accent-orange);"></i>
+                        Abrir Caixa
+                    </div>
+                    <div class="quick-modal-field">
+                        <label>Troco inicial (R$)</label>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" x-model="quickAberturaModal.valorInicial">
+                    </div>
+                    <div class="quick-modal-field">
+                        <label>Responsável pela abertura</label>
+                        <input type="text" placeholder="Nome do responsável" x-model="quickAberturaModal.responsavel">
+                    </div>
+                    <div class="quick-modal-actions">
+                        <button class="quick-modal-btn quick-modal-btn--cancel" @click="quickAberturaModal.isOpen = false" :disabled="quickAberturaModal.isLoading">Cancelar</button>
+                        <button class="quick-modal-btn quick-modal-btn--primary" @click="confirmarAbertura()" :disabled="quickAberturaModal.isLoading">
+                            <span x-show="!quickAberturaModal.isLoading">Abrir Caixa</span>
+                            <span x-show="quickAberturaModal.isLoading">Aguarde...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK ACTION: Modal Fechamento de Caixa -->
+            <div class="quick-modal-backdrop" x-show="quickFechamentoModal.isOpen" x-cloak @click.self="quickFechamentoModal.isOpen = false" style="display:none;">
+                <div class="quick-modal">
+                    <div class="quick-modal-title">
+                        <i class="fas fa-lock" style="color: var(--accent-green);"></i>
+                        Fechar Caixa
+                    </div>
+                    <p style="font-size:13px; color: var(--dashboard-text-secondary); margin-bottom: 16px;">Digite o valor físico em cada forma de pagamento:</p>
+                    <div x-show="caixaStatus.paymentMethodsConfig.DINHEIRO !== false" class="quick-method-row">
+                        <span class="quick-method-label">Dinheiro</span>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" x-model="quickFechamentoModal.valores.DINHEIRO">
+                    </div>
+                    <div x-show="caixaStatus.paymentMethodsConfig.PIX !== false" class="quick-method-row">
+                        <span class="quick-method-label">PIX</span>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" x-model="quickFechamentoModal.valores.PIX">
+                    </div>
+                    <div x-show="caixaStatus.paymentMethodsConfig.CARTAO !== false" class="quick-method-row">
+                        <span class="quick-method-label">Cartão</span>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" x-model="quickFechamentoModal.valores.CARTAO">
+                    </div>
+                    <div x-show="caixaStatus.paymentMethodsConfig.NFE === true" class="quick-method-row">
+                        <span class="quick-method-label">NFe</span>
+                        <input type="number" step="0.01" min="0" placeholder="0,00" x-model="quickFechamentoModal.valores.NFE">
+                    </div>
+                    <p class="quick-modal-note">O relatório completo (Digitado × Computado) estará disponível em <a href="financeiro.html" style="color: var(--accent-cyan);">Financeiro</a>.</p>
+                    <div class="quick-modal-actions">
+                        <button class="quick-modal-btn quick-modal-btn--cancel" @click="quickFechamentoModal.isOpen = false" :disabled="quickFechamentoModal.isLoading">Cancelar</button>
+                        <button class="quick-modal-btn quick-modal-btn--danger" @click="confirmarFechamento()" :disabled="quickFechamentoModal.isLoading">
+                            <span x-show="!quickFechamentoModal.isLoading">Fechar Caixa</span>
+                            <span x-show="quickFechamentoModal.isLoading">Aguarde...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK ACTION: Modal Sangria -->
+            <div class="quick-modal-backdrop" x-show="quickSangriaModal.isOpen" x-cloak @click.self="quickSangriaModal.isOpen = false" style="display:none;">
+                <div class="quick-modal">
+                    <div class="quick-modal-title">
+                        <i class="fas fa-money-bill-wave" style="color: var(--accent-orange);"></i>
+                        Nova Sangria
+                    </div>
+                    <div class="quick-modal-field">
+                        <label>Valor (R$) *</label>
+                        <input type="number" step="0.01" min="0.01" placeholder="0,00" x-model="quickSangriaModal.valor">
+                    </div>
+                    <div class="quick-modal-field">
+                        <label>Observação</label>
+                        <input type="text" placeholder="Motivo da sangria (opcional)" x-model="quickSangriaModal.observacao">
+                    </div>
+                    <div class="quick-modal-actions">
+                        <button class="quick-modal-btn quick-modal-btn--cancel" @click="quickSangriaModal.isOpen = false" :disabled="quickSangriaModal.isLoading">Cancelar</button>
+                        <button class="quick-modal-btn quick-modal-btn--primary" @click="confirmarSangria()" :disabled="quickSangriaModal.isLoading">
+                            <span x-show="!quickSangriaModal.isLoading">Registrar Sangria</span>
+                            <span x-show="quickSangriaModal.isLoading">Aguarde...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             </div>
         </div>
     </main>
@@ -2628,6 +3310,21 @@
                 patioLastUpdate: null,
                 patioInterval: null,
 
+                // Notification Panel
+                notifOpen: false,
+                notifItems: [],
+                notifUnreadCount: 0,
+                notifFilter: 'todas',
+                notifRefreshing: false,
+                notifLastUpdate: null,
+                notifInterval: null,
+
+                // Caixa Quick Actions
+                caixaStatus: { isOpen: false, notOpened: true, paymentMethodsConfig: {} },
+                quickAberturaModal: { isOpen: false, isLoading: false, valorInicial: '', responsavel: '' },
+                quickFechamentoModal: { isOpen: false, isLoading: false, valores: { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' } },
+                quickSangriaModal: { isOpen: false, isLoading: false, valor: '', observacao: '' },
+
                 // ==========================================
                 // LIFECYCLE
                 // ==========================================
@@ -2670,6 +3367,9 @@
 
                         // Load notifications
                         this.initNotifications();
+
+                        // Load caixa status for quick actions
+                        this.loadCaixaStatus().catch(e => console.warn('[Dashboard] Caixa status:', e.message));
 
                         // Load WhatsApp bot status
                         await this.loadWhatsappStatus();
@@ -3407,115 +4107,182 @@
                 },
 
                 // ==========================================
-                // NOTIFICATIONS
+                // NOTIFICATION PANEL SYSTEM
                 // ==========================================
                 initNotifications() {
-                    const bell = document.getElementById('notification-bell');
-                    const panel = document.getElementById('notification-panel');
-                    const dot = document.getElementById('notification-dot');
-                    const markAllBtn = document.getElementById('mark-all-read-btn');
-
-                    if (bell && panel) {
-                        bell.addEventListener('click', (e) => {
-                            e.stopPropagation();
-
-                            // Calcula a posição do botão do sino
-                            const bellRect = bell.getBoundingClientRect();
-
-                            // Posiciona o painel abaixo do sino, alinhado à direita
-                            panel.style.top = `${bellRect.bottom + 12}px`;
-                            panel.style.right = `${window.innerWidth - bellRect.right}px`;
-
-                            panel.classList.toggle('active');
-                            if (panel.classList.contains('active')) {
-                                dot.style.display = 'none';
-                            }
-                        });
-
-                        document.addEventListener('click', (e) => {
-                            if (!panel.contains(e.target) && !bell.contains(e.target)) {
-                                panel.classList.remove('active');
-                            }
-                        });
-
-                        // Reposiciona o painel ao redimensionar a janela
-                        window.addEventListener('resize', () => {
-                            if (panel.classList.contains('active')) {
-                                const bellRect = bell.getBoundingClientRect();
-                                panel.style.top = `${bellRect.bottom + 12}px`;
-                                panel.style.right = `${window.innerWidth - bellRect.right}px`;
-                            }
-                        });
-                    }
-
-                    if (markAllBtn) {
-                        markAllBtn.addEventListener('click', async () => {
-                            try {
-                                await window.api.marcarTodasComoLidas();
-                                if (typeof showToast === 'function') {
-                                    showToast('Todas as notificacoes foram marcadas como lidas.');
-                                }
-                                this.loadNotifications();
-                            } catch (error) {
-                                console.error('Error marking notifications:', error);
-                            }
-                        });
-                    }
-
-                    this.loadNotifications();
-                    setInterval(() => this.loadNotifications(), 30000);
+                    // Carrega inicial + auto-refresh a cada 30s
+                    this.refreshNotif();
+                    this.notifInterval = setInterval(() => this.refreshNotif(), 30000);
                 },
 
-                async loadNotifications() {
+                openNotifPanel() {
+                    this.notifOpen = true;
+                    if (this.patioOpen) this.closePatio();
+                    this.refreshNotif();
+                },
+
+                closeNotifPanel() {
+                    this.notifOpen = false;
+                },
+
+                // ==========================================
+                // QUICK ACTIONS — CAIXA
+                // ==========================================
+                async loadCaixaStatus() {
+                    try {
+                        const status = await window.api.getStatusCaixa();
+                        this.caixaStatus.isOpen = status.isOpen;
+                        this.caixaStatus.notOpened = status.notOpened;
+                        this.caixaStatus.paymentMethodsConfig = status.paymentMethodsConfig || {};
+                        this.quickAberturaModal.responsavel = status.currentUserNome || localStorage.getItem('usuarioNome') || '';
+                        updateCaixaBtn(status.isOpen, status.notOpened);
+                    } catch (e) {
+                        console.warn('[Dashboard] Erro ao carregar status do caixa:', e.message);
+                    }
+                },
+
+                openQuickCaixa() {
+                    if (this.caixaStatus.isOpen) {
+                        this.quickFechamentoModal.isOpen = true;
+                    } else {
+                        this.quickAberturaModal.isOpen = true;
+                    }
+                },
+
+                async confirmarAbertura() {
+                    this.quickAberturaModal.isLoading = true;
+                    try {
+                        await window.api.abrirCaixa({
+                            valorInicial: parseFloat(this.quickAberturaModal.valorInicial) || 0,
+                            abertoPor: this.quickAberturaModal.responsavel
+                        });
+                        this.caixaStatus.isOpen = true;
+                        this.caixaStatus.notOpened = false;
+                        this.quickAberturaModal.isOpen = false;
+                        this.quickAberturaModal.valorInicial = '';
+                        updateCaixaBtn(true, false);
+                        showToast('Caixa aberto com sucesso!', 'success');
+                    } catch (e) {
+                        showToast(e.message || 'Erro ao abrir caixa', 'error');
+                    } finally {
+                        this.quickAberturaModal.isLoading = false;
+                    }
+                },
+
+                async confirmarFechamento() {
+                    this.quickFechamentoModal.isLoading = true;
+                    try {
+                        const result = await window.api.createFechamento({ valoresDigitados: this.quickFechamentoModal.valores });
+                        this.caixaStatus.isOpen = false;
+                        this.quickFechamentoModal.isOpen = false;
+                        this.quickFechamentoModal.valores = { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' };
+                        updateCaixaBtn(false, false);
+                        const status = result.fechamento && result.fechamento.status === 'CONFERIDO' ? 'CONFERIDO ✓' : 'DIVERGENTE ⚠';
+                        const toastType = result.fechamento && result.fechamento.status === 'CONFERIDO' ? 'success' : 'warning';
+                        showToast('Caixa fechado — ' + status + '. Veja o relatório em Financeiro.', toastType);
+                    } catch (e) {
+                        showToast(e.message || 'Erro ao fechar caixa', 'error');
+                    } finally {
+                        this.quickFechamentoModal.isLoading = false;
+                    }
+                },
+
+                async confirmarSangria() {
+                    const valor = parseFloat(this.quickSangriaModal.valor);
+                    if (!valor || valor <= 0) { showToast('Informe um valor válido', 'error'); return; }
+                    this.quickSangriaModal.isLoading = true;
+                    try {
+                        await window.api.createSangria({ valor, observacao: this.quickSangriaModal.observacao || 'Sangria' });
+                        this.quickSangriaModal.isOpen = false;
+                        this.quickSangriaModal.valor = '';
+                        this.quickSangriaModal.observacao = '';
+                        showToast('Sangria registrada com sucesso!', 'success');
+                    } catch (e) {
+                        showToast(e.message || 'Erro ao registrar sangria', 'error');
+                    } finally {
+                        this.quickSangriaModal.isLoading = false;
+                    }
+                },
+
+                async refreshNotif() {
+                    this.notifRefreshing = true;
                     try {
                         const response = await window.api.getNotificacoes();
-                        const notifications = response.notificacoes || [];
-                        const list = document.getElementById('notification-list');
+                        const anterior = this.notifUnreadCount;
+                        this.notifItems = response.notificacoes || [];
+                        this.notifUnreadCount = this.notifItems.filter(n => !n.lida).length;
+                        this.notifLastUpdate = new Date();
+
+                        // Sincroniza sino antigo na nav (se existir)
                         const dot = document.getElementById('notification-dot');
-
-                        if (!list) return;
-
-                        list.innerHTML = '';
-
-                        if (notifications.length > 0) {
-                            const hasUnread = notifications.some(n => !n.lida);
-                            if (dot) dot.style.display = hasUnread ? 'block' : 'none';
-
-                            notifications.forEach(n => {
-                                const item = document.createElement('div');
-                                item.className = `notification-item ${n.lida ? '' : 'unread'}`;
-                                item.innerHTML = `
-                                    <div class="notification-icon ${n.type || 'info'}">
-                                        <i class="fas ${this.getNotificationIcon(n.type)}"></i>
-                                    </div>
-                                    <div class="notification-content">
-                                        <p>${n.mensagem}</p>
-                                        <small class="text-secondary">
-                                            ${new Date(n.createdAt).toLocaleDateString('pt-BR')} as
-                                            ${new Date(n.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                        </small>
-                                    </div>
-                                `;
-                                list.appendChild(item);
-                            });
-                        } else {
-                            if (dot) dot.style.display = 'none';
-                            list.innerHTML = '<div class="empty-state" style="padding: 20px;"><p>Nenhuma notificacao nova.</p></div>';
-                        }
-                    } catch (error) {
-                        console.error('Error loading notifications:', error);
+                        if (dot) dot.style.display = this.notifUnreadCount > 0 ? 'block' : 'none';
+                    } catch (e) {
+                        console.error('[Notif] Erro ao carregar:', e);
+                    } finally {
+                        this.notifRefreshing = false;
                     }
                 },
 
-                getNotificationIcon(type) {
+                getNotifFiltered() {
+                    if (this.notifFilter === 'nao_lidas') {
+                        return this.notifItems.filter(n => !n.lida);
+                    }
+                    return this.notifItems;
+                },
+
+                async onNotifClick(n) {
+                    // Marcar como lida
+                    if (!n.lida) {
+                        try {
+                            await window.api.marcarNotificacaoComoLida(n.id);
+                            n.lida = true;
+                            this.notifUnreadCount = Math.max(0, this.notifUnreadCount - 1);
+                        } catch (_) {}
+                    }
+                    // Navegar se tiver link
+                    if (n.link) {
+                        this.closeNotifPanel();
+                        window.location.href = n.link;
+                    }
+                },
+
+                async marcarTodasLidas() {
+                    try {
+                        await window.api.marcarTodasComoLidas();
+                        this.notifItems = this.notifItems.map(n => ({ ...n, lida: true }));
+                        this.notifUnreadCount = 0;
+                        showToast('Todas as notificações marcadas como lidas.');
+                    } catch (_) {
+                        showToast('Erro ao marcar notificações.', 'error');
+                    }
+                },
+
+                getNotifIcon(type) {
                     const icons = {
-                        ordemCriada: 'fa-plus-circle',
-                        ordemEditada: 'fa-pencil-alt',
-                        ordemDeletada: 'fa-trash-alt',
+                        ordemCriada:           'fa-plus-circle',
+                        ordemEditada:          'fa-pencil-alt',
+                        ordemDeletada:         'fa-trash-alt',
                         finalizacaoAutomatica: 'fa-magic',
-                        info: 'fa-info-circle'
+                        caixaAberto:           'fa-door-open',
+                        caixaFechado:          'fa-door-closed',
+                        info:                  'fa-info-circle',
                     };
                     return icons[type] || 'fa-info-circle';
+                },
+
+                formatNotifTime(dateStr) {
+                    const d = new Date(dateStr);
+                    const now = new Date();
+                    const diff = Math.floor((now - d) / 1000);
+                    if (diff < 60)   return 'Agora mesmo';
+                    if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+                    if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+                    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                },
+
+                // Manter compatibilidade com sino antigo na nav
+                getNotificationIcon(type) {
+                    return this.getNotifIcon(type);
                 },
 
                 // ==========================================
@@ -3532,6 +4299,7 @@
 
                 async openPatio() {
                     this.patioOpen = true;
+                    if (this.notifOpen) this.closeNotifPanel();
                     await this.refreshPatio();
                     this.patioInterval = setInterval(() => this.refreshPatio(), 30000);
                 },
@@ -3702,10 +4470,46 @@
             localStorage.setItem('floatingMenuCollapsed', isCollapsed);
         }
 
-        // Open Notifications (placeholder)
         function openNotifications() {
-            // TODO: Integrate with existing notification system
-            console.log('Notificações clicado');
+            const el = document.querySelector('[x-data]');
+            if (el && el._x_dataStack) {
+                const data = el._x_dataStack[0];
+                if (data && data.openNotifPanel) data.openNotifPanel();
+            }
+        }
+
+        function openCaixaAction() {
+            const el = document.querySelector('[x-data]');
+            if (el && el._x_dataStack) {
+                const data = el._x_dataStack[0];
+                if (data && data.openQuickCaixa) data.openQuickCaixa();
+            }
+        }
+
+        function openSangriaRapida() {
+            const el = document.querySelector('[x-data]');
+            if (el && el._x_dataStack) {
+                const data = el._x_dataStack[0];
+                if (data) data.quickSangriaModal.isOpen = true;
+            }
+        }
+
+        function updateCaixaBtn(isOpen, notOpened) {
+            const btn = document.getElementById('caixa-quick-btn');
+            if (!btn) return;
+            const icon = btn.querySelector('i');
+            const label = btn.querySelector('.floating-menu-label');
+            if (isOpen) {
+                btn.classList.add('caixa-open');
+                btn.title = 'Fechar Caixa';
+                if (icon) icon.className = 'fas fa-lock-open';
+                if (label) label.textContent = 'Fechar Caixa';
+            } else {
+                btn.classList.remove('caixa-open');
+                btn.title = 'Abrir Caixa';
+                if (icon) icon.className = 'fas fa-cash-register';
+                if (label) label.textContent = 'Abrir Caixa';
+            }
         }
 
         // Restore floating menu state on page load
