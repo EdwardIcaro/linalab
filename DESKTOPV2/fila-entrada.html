@@ -733,36 +733,26 @@
 
                             <!-- Cliente / Veículo -->
                             <td>
-                                <template x-if="row.state === 'found' || row.state === 'done'">
-                                    <div class="cell-info">
-                                        <div class="cell-info-name" x-text="row.clienteNome || '—'"></div>
-                                        <div class="cell-info-sub" x-text="row.veiculoDesc || '—'"></div>
-                                    </div>
-                                </template>
-                                <template x-if="row.state === 'searching'">
-                                    <div class="cell-info" style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)">
-                                        <span class="spinner"></span>
-                                        <span style="font-size:12px">Buscando...</span>
-                                    </div>
-                                </template>
-                                <template x-if="row.state === 'manual'">
-                                    <div class="cell-info">
-                                        <input
-                                            class="cell-input"
-                                            type="text"
-                                            placeholder="Nome do cliente (opcional)"
-                                            x-model="row.clienteNome"
-                                            style="font-size:12px"
-                                            :disabled="isCreating"
-                                        >
-                                    </div>
-                                </template>
-                                <template x-if="row.state === 'empty'">
-                                    <span class="cell-info-empty">—</span>
-                                </template>
-                                <template x-if="row.state === 'error'">
-                                    <span class="cell-info" style="color:#dc2626;font-size:12px" x-text="row.errorMsg || 'Erro'"></span>
-                                </template>
+                                <div class="cell-info" x-show="row.state === 'found' || row.state === 'done'">
+                                    <div class="cell-info-name" x-text="row.clienteNome || '—'"></div>
+                                    <div class="cell-info-sub" x-text="row.veiculoDesc || '—'"></div>
+                                </div>
+                                <div class="cell-info" x-show="row.state === 'searching'" style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)">
+                                    <span class="spinner"></span>
+                                    <span style="font-size:12px">Buscando...</span>
+                                </div>
+                                <div class="cell-info" x-show="row.state === 'manual'">
+                                    <input
+                                        class="cell-input"
+                                        type="text"
+                                        placeholder="Nome (opcional)"
+                                        x-model="row.clienteNome"
+                                        style="font-size:12px"
+                                        :disabled="isCreating"
+                                    >
+                                </div>
+                                <span class="cell-info-empty" x-show="row.state === 'empty'">—</span>
+                                <span class="cell-info" x-show="row.state === 'error'" style="color:#dc2626;font-size:12px" x-text="row.errorMsg || 'Erro'"></span>
                             </td>
 
                             <!-- Tipo de Veículo -->
@@ -781,26 +771,23 @@
 
                             <!-- Categoria (só para CARRO) -->
                             <td>
-                                <template x-if="row.tipoVeiculo === 'CARRO'">
-                                    <select
-                                        class="cell-input"
-                                        x-model="row.categoriaVeiculo"
-                                        :disabled="row.state === 'done' || isCreating"
-                                        @change="onCategoriaChange(row)"
-                                    >
-                                        <option value="HATCH">Hatch</option>
-                                        <option value="SEDAN">Sedan</option>
-                                        <option value="SUV">SUV</option>
-                                        <option value="PICKUP">Pickup</option>
-                                        <option value="CAMINHONETE">Caminhonete</option>
-                                        <option value="VAN">Van</option>
-                                        <option value="MICROONIBUS">Micro-ônibus</option>
-                                        <option value="CAMINHAO">Caminhão</option>
-                                    </select>
-                                </template>
-                                <template x-if="row.tipoVeiculo !== 'CARRO'">
-                                    <span class="cell-info-empty" style="font-size:12px">—</span>
-                                </template>
+                                <select
+                                    class="cell-input"
+                                    x-model="row.categoriaVeiculo"
+                                    x-show="row.tipoVeiculo === 'CARRO'"
+                                    :disabled="row.state === 'done' || isCreating"
+                                    @change="onCategoriaChange(row)"
+                                >
+                                    <option value="HATCH">Hatch</option>
+                                    <option value="SEDAN">Sedan</option>
+                                    <option value="SUV">SUV</option>
+                                    <option value="PICKUP">Pickup</option>
+                                    <option value="CAMINHONETE">Caminhonete</option>
+                                    <option value="VAN">Van</option>
+                                    <option value="MICROONIBUS">Micro-ônibus</option>
+                                    <option value="CAMINHAO">Caminhão</option>
+                                </select>
+                                <span class="cell-info-empty" x-show="row.tipoVeiculo !== 'CARRO'" style="font-size:12px">—</span>
                             </td>
 
                             <!-- Serviço -->
