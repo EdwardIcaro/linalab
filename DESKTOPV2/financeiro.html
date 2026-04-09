@@ -1714,17 +1714,24 @@
 
                         <!-- Register Actions -->
                         <div class="register-actions">
-                            <button id="btn-sangria" type="button" class="register-action-card sangria" @click="openTransactionModal('sangria')">
+                            <!-- Abrir Caixa: visível quando caixa está fechado/não aberto -->
+                            <button x-show="!isRegisterOpen" type="button" class="register-action-card abrir" @click="openAberturaModal()">
+                                <i class="fas fa-door-open"></i>
+                                <h4>Abrir Caixa</h4>
+                                <p x-text="caixaNotOpened ? 'Iniciar o dia de trabalho' : 'Reabrir o caixa'"></p>
+                            </button>
+                            <!-- Sangria/Suprimento/Fechar: visíveis somente com caixa aberto -->
+                            <button x-show="isRegisterOpen" id="btn-sangria" type="button" class="register-action-card sangria" @click="openTransactionModal('sangria')">
                                 <i class="fas fa-arrow-down"></i>
                                 <h4>Sangria</h4>
                                 <p>Retirar dinheiro do caixa</p>
                             </button>
-                            <button id="btn-suprimento" type="button" class="register-action-card suprimento" @click="openTransactionModal('suprimento')">
+                            <button x-show="isRegisterOpen" id="btn-suprimento" type="button" class="register-action-card suprimento" @click="openTransactionModal('suprimento')">
                                 <i class="fas fa-arrow-up"></i>
                                 <h4>Suprimento</h4>
                                 <p>Adicionar troco ao caixa</p>
                             </button>
-                            <button id="btn-fechar-caixa" type="button" class="register-action-card fechar" @click="openFechamentoModal()">
+                            <button x-show="isRegisterOpen" id="btn-fechar-caixa" type="button" class="register-action-card fechar" @click="openFechamentoModal()">
                                 <i class="fas fa-door-closed"></i>
                                 <h4>Fechar Caixa</h4>
                                 <p>Encerrar o dia de trabalho</p>
@@ -2323,83 +2330,151 @@
             </div>
         </div>
 
-        <!-- Fechamento Modal -->
-        <div
-            class="modal-overlay"
-            :class="{ active: fechamentoModal.isOpen }"
-            x-show="fechamentoModal.isOpen"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            @click.self="closeFechamentoModal()"
-        >
+        <!-- Modal: Abertura de Caixa -->
+        <div class="modal-overlay" :class="{ active: aberturaModal.isOpen }" x-show="aberturaModal.isOpen"
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             @click.self="aberturaModal.isOpen = false">
+            <div class="modal-content" @click.stop style="max-width: 420px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-door-open"></i> Abrir Caixa</h2>
+                    <button type="button" class="modal-close" @click="aberturaModal.isOpen = false"><i class="fas fa-times"></i></button>
+                </div>
+                <div style="padding: 0 0 8px;">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label class="form-label">Troco inicial em dinheiro (opcional)</label>
+                        <input type="number" step="0.01" min="0" placeholder="R$ 0,00"
+                               x-model="aberturaModal.valorInicial"
+                               class="form-input" style="font-size: 18px; font-weight: 600;">
+                        <small style="color: var(--finance-text-secondary);">Deixe em branco se não houver troco no caixa.</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Responsável pela abertura</label>
+                        <input type="text" x-model="aberturaModal.responsavel" class="form-input"
+                               placeholder="Nome do responsável">
+                        <small style="color: var(--finance-text-secondary);">Administradores podem abrir em nome de outro funcionário.</small>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @click="aberturaModal.isOpen = false">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @click="confirmarAbertura()" :disabled="aberturaModal.isLoading">
+                        <i class="fas fa-door-open" x-show="!aberturaModal.isLoading"></i>
+                        <i class="fas fa-spinner spinner" x-show="aberturaModal.isLoading"></i>
+                        <span x-text="aberturaModal.isLoading ? 'Abrindo...' : 'Abrir Caixa'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Fechamento de Caixa -->
+        <div class="modal-overlay" :class="{ active: fechamentoModal.isOpen }" x-show="fechamentoModal.isOpen"
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             @click.self="closeFechamentoModal()">
             <div class="modal-content wide" @click.stop>
                 <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-door-closed"></i>
-                        Fechar Caixa do Dia
-                    </h2>
-                    <button type="button" class="modal-close" @click="closeFechamentoModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <h2 class="modal-title"><i class="fas fa-door-closed"></i> Fechar Caixa do Dia</h2>
+                    <button type="button" class="modal-close" @click="closeFechamentoModal()"><i class="fas fa-times"></i></button>
                 </div>
 
-                <!-- Loading -->
-                <template x-if="fechamentoModal.isLoading">
-                    <div style="text-align: center; padding: 40px;">
-                        <i class="fas fa-spinner spinner" style="font-size: 32px; color: var(--finance-cyan);"></i>
-                        <p style="margin-top: 16px; color: var(--finance-text-secondary);">Carregando resumo...</p>
-                    </div>
-                </template>
+                <p style="color: var(--finance-text-secondary); margin-bottom: 20px; font-size: 14px;">
+                    Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
+                </p>
 
-                <!-- Summary -->
-                <div x-show="!fechamentoModal.isLoading">
-                    <div class="fechamento-grid">
-                        <div class="fechamento-item">
-                            <div class="label">Dinheiro</div>
-                            <div class="value positive" x-text="formatCurrency(fechamentoModal.resumo.totalDinheiro)"></div>
-                        </div>
-                        <div class="fechamento-item">
-                            <div class="label">Cartao</div>
-                            <div class="value positive" x-text="formatCurrency(fechamentoModal.resumo.totalCartao)"></div>
-                        </div>
-                        <div class="fechamento-item">
-                            <div class="label">PIX</div>
-                            <div class="value positive" x-text="formatCurrency(fechamentoModal.resumo.totalPix)"></div>
-                        </div>
-                        <div class="fechamento-item">
-                            <div class="label">Saidas / Sangrias</div>
-                            <div class="value negative" x-text="'- ' + formatCurrency(fechamentoModal.resumo.totalSaidas)"></div>
-                        </div>
+                <div class="fechamento-grid">
+                    <div class="fechamento-item" x-show="paymentMethodsConfig.DINHEIRO !== false">
+                        <div class="label">💵 Dinheiro</div>
+                        <input type="number" step="0.01" min="0" placeholder="0,00"
+                               x-model="fechamentoModal.valores.DINHEIRO" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
                     </div>
-
-                    <div class="fechamento-total">
-                        <div class="label">Saldo Final Esperado (Dinheiro)</div>
-                        <div class="value" x-text="formatCurrency(fechamentoModal.resumo.saldoDinheiro)"></div>
+                    <div class="fechamento-item" x-show="paymentMethodsConfig.PIX !== false">
+                        <div class="label">📱 PIX</div>
+                        <input type="number" step="0.01" min="0" placeholder="0,00"
+                               x-model="fechamentoModal.valores.PIX" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
                     </div>
-
-                    <div style="margin-top: 16px; padding: 16px; background: var(--finance-orange-light); border-radius: var(--radius-md); text-align: center;">
-                        <i class="fas fa-exclamation-triangle" style="color: var(--finance-orange);"></i>
-                        <span style="color: var(--finance-text); margin-left: 8px;">Esta acao nao pode ser desfeita.</span>
+                    <div class="fechamento-item" x-show="paymentMethodsConfig.CARTAO !== false">
+                        <div class="label">💳 Cartão</div>
+                        <input type="number" step="0.01" min="0" placeholder="0,00"
+                               x-model="fechamentoModal.valores.CARTAO" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+                    </div>
+                    <div class="fechamento-item" x-show="paymentMethodsConfig.NFE === true">
+                        <div class="label">🧾 NFe</div>
+                        <input type="number" step="0.01" min="0" placeholder="0,00"
+                               x-model="fechamentoModal.valores.NFE" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
                     </div>
                 </div>
 
-                <div class="modal-actions" x-show="!fechamentoModal.isLoading">
-                    <button type="button" class="btn btn-secondary" @click="closeFechamentoModal()">
-                        Cancelar
-                    </button>
+                <div style="margin-top: 16px; padding: 16px; background: var(--finance-orange-light); border-radius: var(--radius-md); text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--finance-orange);"></i>
+                    <span style="color: var(--finance-text); margin-left: 8px;">Esta ação não pode ser desfeita.</span>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @click="closeFechamentoModal()">Cancelar</button>
                     <button class="btn btn-danger" @click="confirmarFechamento()" :disabled="fechamentoModal.isClosing">
-                        <template x-if="fechamentoModal.isClosing">
-                            <i class="fas fa-spinner spinner"></i>
-                        </template>
-                        <template x-if="!fechamentoModal.isClosing">
-                            <i class="fas fa-lock"></i>
-                        </template>
+                        <i class="fas fa-spinner spinner" x-show="fechamentoModal.isClosing"></i>
+                        <i class="fas fa-lock" x-show="!fechamentoModal.isClosing"></i>
                         <span x-text="fechamentoModal.isClosing ? 'Fechando...' : 'Confirmar Fechamento'"></span>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Relatório de Fechamento -->
+        <div class="modal-overlay" :class="{ active: relatorioModal.isOpen }" x-show="relatorioModal.isOpen"
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             @click.self="relatorioModal.isOpen = false">
+            <div class="modal-content wide" @click.stop>
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
+                    <button type="button" class="modal-close" @click="relatorioModal.isOpen = false"><i class="fas fa-times"></i></button>
+                </div>
+
+                <!-- Badge status -->
+                <div style="text-align:center; margin-bottom: 20px;">
+                    <span x-show="relatorioModal.status === 'CONFERIDO'"
+                          style="display:inline-block; padding: 8px 24px; background: var(--finance-green-light); color: var(--finance-green); border-radius: 20px; font-weight: 700; font-size: 16px;">
+                        ✅ CONFERIDO — Tudo certo!
+                    </span>
+                    <span x-show="relatorioModal.status === 'DIVERGENTE'"
+                          style="display:inline-block; padding: 8px 24px; background: var(--finance-red-light); color: var(--finance-red); border-radius: 20px; font-weight: 700; font-size: 16px;">
+                        ⚠️ DIVERGENTE — Há diferenças!
+                    </span>
+                </div>
+
+                <!-- Tabela -->
+                <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--finance-border);">
+                            <th style="text-align:left; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Método</th>
+                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Digitado</th>
+                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Computado</th>
+                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Diferença</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="[metodo, dados] in Object.entries(relatorioModal.relatorio)" :key="metodo">
+                            <tr style="border-bottom: 1px solid var(--finance-border);"
+                                :style="dados.diferenca !== 0 ? 'background: var(--finance-red-light)' : ''">
+                                <td style="padding:10px 8px; font-weight:600;" x-text="{ DINHEIRO: '💵 Dinheiro', PIX: '📱 PIX', CARTAO: '💳 Cartão', NFE: '🧾 NFe' }[metodo] || metodo"></td>
+                                <td style="text-align:right; padding:10px 8px;" x-text="formatCurrency(dados.digitado)"></td>
+                                <td style="text-align:right; padding:10px 8px;" x-text="formatCurrency(dados.computado)"></td>
+                                <td style="text-align:right; padding:10px 8px; font-weight:700;"
+                                    :style="dados.diferenca === 0 ? 'color: var(--finance-green)' : 'color: var(--finance-red)'"
+                                    x-text="(dados.diferenca >= 0 ? '+' : '') + formatCurrency(dados.diferenca)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--finance-text-secondary); margin-top:8px;">
+                    <span x-text="'Fechado por: ' + (relatorioModal.fechadoPor || '—')"></span>
+                    <span x-show="relatorioModal.totalSaidas > 0" x-text="'Saídas do dia: ' + formatCurrency(relatorioModal.totalSaidas)"></span>
+                </div>
+
+                <div class="modal-actions" style="margin-top:16px;">
+                    <button type="button" class="btn btn-primary" @click="relatorioModal.isOpen = false">Fechar</button>
                 </div>
             </div>
         </div>
@@ -2609,7 +2684,9 @@
                 datePreset: 'today',
 
                 // Register Status
-                isRegisterOpen: true,
+                isRegisterOpen: false,
+                caixaNotOpened: true,
+                paymentMethodsConfig: { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false },
 
                 // Lookups
                 lavadores: [],
@@ -2619,18 +2696,29 @@
                 // Transaction Modal
                 transactionModal: createTransactionModalState(),
 
+                // Abertura Modal
+                aberturaModal: {
+                    isOpen: false,
+                    isLoading: false,
+                    valorInicial: '',
+                    responsavel: ''
+                },
+
                 // Fechamento Modal
                 fechamentoModal: {
                     isOpen: false,
                     isLoading: false,
                     isClosing: false,
-                    resumo: {
-                        totalDinheiro: 0,
-                        totalCartao: 0,
-                        totalPix: 0,
-                        totalSaidas: 0,
-                        saldoDinheiro: 0
-                    }
+                    valores: { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' }
+                },
+
+                // Relatorio Modal
+                relatorioModal: {
+                    isOpen: false,
+                    relatorio: {},
+                    status: '',
+                    fechadoPor: '',
+                    totalSaidas: 0
                 },
 
                 // Quitar Pendencia Modal
@@ -2671,6 +2759,17 @@
 
                     // Load lookup data
                     await this.loadLookups();
+
+                    // Carregar status do caixa do banco
+                    try {
+                        const status = await window.api.getStatusCaixa();
+                        this.isRegisterOpen = status.isOpen;
+                        this.caixaNotOpened = status.notOpened;
+                        this.paymentMethodsConfig = status.paymentMethodsConfig || this.paymentMethodsConfig;
+                        this.aberturaModal.responsavel = status.currentUserNome || '';
+                    } catch (e) {
+                        console.warn('[financeDashboard] Erro ao carregar status do caixa:', e);
+                    }
 
                     // Load pendencias count
                     this.loadPendenciasCount();
@@ -3245,33 +3344,38 @@
                 },
 
                 // ==========================================
+                // ABERTURA MODAL
+                // ==========================================
+                openAberturaModal() {
+                    this.aberturaModal.valorInicial = '';
+                    this.aberturaModal.isOpen = true;
+                },
+
+                async confirmarAbertura() {
+                    this.aberturaModal.isLoading = true;
+                    try {
+                        await window.api.abrirCaixa({
+                            valorInicial: parseFloat(this.aberturaModal.valorInicial) || 0,
+                            abertoPor: this.aberturaModal.responsavel || ''
+                        });
+                        this.isRegisterOpen = true;
+                        this.caixaNotOpened = false;
+                        this.aberturaModal.isOpen = false;
+                        showToast('Caixa aberto com sucesso!', 'success');
+                    } catch (error) {
+                        const msg = error?.message || 'Erro ao abrir o caixa.';
+                        showToast(msg, 'error');
+                    } finally {
+                        this.aberturaModal.isLoading = false;
+                    }
+                },
+
+                // ==========================================
                 // FECHAMENTO MODAL
                 // ==========================================
-                async openFechamentoModal() {
-                    console.log('[financeDashboard] openFechamentoModal');
+                openFechamentoModal() {
+                    this.fechamentoModal.valores = { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' };
                     this.fechamentoModal.isOpen = true;
-                    this.fechamentoModal.isLoading = true;
-
-                    try {
-                        console.log('[financeDashboard] Buscando resumo para fechamento...');
-                        const resumo = await window.api.getResumoDia();
-                        console.log('[financeDashboard] Resumo recebido do backend:', resumo);
-
-                        this.fechamentoModal.resumo = {
-                            totalDinheiro: resumo.totalDinheiro || 0,
-                            totalCartao: resumo.totalCartao || 0,
-                            totalPix: resumo.totalPix || 0,
-                            totalSaidas: resumo.totalSaidas || 0,
-                            saldoDinheiro: resumo.saldoDinheiro || 0
-                        };
-
-                        console.log('[financeDashboard] Modal de fechamento atualizado com:', this.fechamentoModal.resumo);
-                    } catch (error) {
-                        console.error('[financeDashboard] Erro ao carregar resumo para fechamento:', error);
-                        showToast('Erro ao carregar resumo.', 'error');
-                    } finally {
-                        this.fechamentoModal.isLoading = false;
-                    }
                 },
 
                 closeFechamentoModal() {
@@ -3280,12 +3384,23 @@
 
                 async confirmarFechamento() {
                     this.fechamentoModal.isClosing = true;
-
                     try {
-                        await window.api.createFechamento({});
-                        showToast('Caixa fechado com sucesso!', 'success');
+                        const result = await window.api.createFechamento({
+                            valoresDigitados: {
+                                DINHEIRO: parseFloat(this.fechamentoModal.valores.DINHEIRO) || 0,
+                                PIX:      parseFloat(this.fechamentoModal.valores.PIX)      || 0,
+                                CARTAO:   parseFloat(this.fechamentoModal.valores.CARTAO)   || 0,
+                                NFE:      parseFloat(this.fechamentoModal.valores.NFE)      || 0,
+                            }
+                        });
                         this.isRegisterOpen = false;
                         this.closeFechamentoModal();
+                        // Abrir relatório
+                        this.relatorioModal.relatorio = result.relatorio || {};
+                        this.relatorioModal.status = result.fechamento?.status || '';
+                        this.relatorioModal.fechadoPor = result.fechamento?.fechadoPor || '';
+                        this.relatorioModal.totalSaidas = result.totalSaidas || 0;
+                        this.relatorioModal.isOpen = true;
                         this.loadTransactions();
                     } catch (error) {
                         console.error('Error closing register:', error);

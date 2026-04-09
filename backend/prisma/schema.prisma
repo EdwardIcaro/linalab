@@ -45,6 +45,7 @@ model Empresa {
   clientes                   Cliente[]
   usuario                    Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   fechamentosCaixa           FechamentoCaixa[]
+  aberturasCaixa             AberturaCaixa[]
   fechamentosComissao        FechamentoComissao[]
   fornecedores               Fornecedor[]
   lavadores                  Lavador[]
@@ -162,14 +163,28 @@ model FechamentoCaixa {
   pix            Float
   dinheiro       Float
   cartao         Float
+  nfe            Float?           @default(0)
   diferenca      Float            @default(0)
   status         StatusFechamento @default(PENDENTE)
   observacao     String?
+  relatorio      String?
+  fechadoPor     String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   empresa        Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("fechamentos_caixa")
+}
+
+model AberturaCaixa {
+  id           String   @id @default(cuid())
+  empresaId    String
+  data         DateTime @default(now())
+  valorInicial Float    @default(0)
+  abertoPor    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("abertura_caixa")
 }
 
 model CaixaRegistro {

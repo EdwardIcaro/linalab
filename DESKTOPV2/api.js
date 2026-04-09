@@ -287,6 +287,8 @@ const api = {
   deletePagamento: (id) => fetchApi(`/pagamentos/${id}`, { method: 'DELETE' }),
 
   // ===== CAIXA E FORNECEDORES =====
+  getStatusCaixa: () => fetchApi('/caixa/status'),
+  abrirCaixa: (data) => fetchApi('/caixa/abertura', { method: 'POST', body: JSON.stringify(data) }),
   getResumoDia: () => fetchApi('/caixa/resumo-dia'),
   getHistoricoCaixa: (filters) => {
     const params = new URLSearchParams(filters);

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import {
+  getStatusCaixa,
+  abrirCaixa,
   createFechamento,
   createSaida,
   createSangria,
@@ -18,6 +20,8 @@ import {
 
 const router: Router = Router();
 
+router.get('/status', getStatusCaixa);
+router.post('/abertura', abrirCaixa);
 router.get('/resumo-dia', getResumoDia);
 router.get('/ganhos-mes', getGanhosDoMes);
 router.get('/historico', getHistorico);

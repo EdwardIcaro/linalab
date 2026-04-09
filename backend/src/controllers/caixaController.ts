@@ -4,6 +4,7 @@ import { Prisma, CaixaRegistro, FechamentoCaixa, Adiantamento, Fornecedor, Lavad
 
 interface EmpresaRequest extends Request {
     empresaId?: string;
+    usuarioNome?: string;
 }
 
 // Define types for objects with relations
@@ -56,6 +57,80 @@ const getWorkdayRange = (date: Date, horarioAbertura: string = '07:00') => {
     end.setDate(end.getDate() + 1);
     end.setMilliseconds(end.getMilliseconds() - 1);
     return { start, end };
+};
+
+export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
+    const empresaId = req.empresaId!;
+    try {
+        const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+        const horarioAbertura = empresa?.horarioAbertura || '07:00';
+        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+
+        const [abertura, fechamento] = await Promise.all([
+            prisma.aberturaCaixa.findFirst({
+                where: { empresaId, data: { gte: start, lte: end } },
+                orderBy: { data: 'desc' },
+            }),
+            prisma.fechamentoCaixa.findFirst({
+                where: { empresaId, data: { gte: start, lte: end } },
+                orderBy: { data: 'desc' },
+            }),
+        ]);
+
+        const isOpen = !!abertura && !fechamento;
+        const notOpened = !abertura;
+
+        // Parse paymentMethodsConfig
+        let paymentMethodsConfig: Record<string, boolean> = { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false };
+        if (empresa?.paymentMethodsConfig) {
+            try {
+                const raw = typeof empresa.paymentMethodsConfig === 'string'
+                    ? JSON.parse(empresa.paymentMethodsConfig)
+                    : empresa.paymentMethodsConfig;
+                paymentMethodsConfig = raw;
+            } catch (_) {}
+        }
+
+        return res.json({
+            isOpen,
+            notOpened,
+            abertura: abertura || null,
+            fechamento: fechamento || null,
+            paymentMethodsConfig,
+            currentUserNome: req.usuarioNome || '',
+        });
+    } catch (error) {
+        console.error('Erro ao buscar status do caixa:', error);
+        return res.status(500).json({ error: 'Erro ao buscar status do caixa.' });
+    }
+};
+
+export const abrirCaixa = async (req: EmpresaRequest, res: Response) => {
+    const empresaId = req.empresaId!;
+    const { valorInicial = 0, abertoPor } = req.body;
+    try {
+        const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+        const horarioAbertura = empresa?.horarioAbertura || '07:00';
+        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+
+        // Validar: caixa já aberto hoje?
+        const aberturaExistente = await prisma.aberturaCaixa.findFirst({
+            where: { empresaId, data: { gte: start, lte: end } },
+        });
+        if (aberturaExistente) {
+            return res.status(400).json({ error: 'O caixa já foi aberto hoje.' });
+        }
+
+        const responsavel = abertoPor || req.usuarioNome || 'Administrador';
+        const abertura = await prisma.aberturaCaixa.create({
+            data: { empresaId, valorInicial: Number(valorInicial) || 0, abertoPor: responsavel },
+        });
+
+        return res.status(201).json({ message: 'Caixa aberto com sucesso.', abertura });
+    } catch (error) {
+        console.error('Erro ao abrir caixa:', error);
+        return res.status(500).json({ error: 'Erro ao abrir caixa.' });
+    }
 };
 
 export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
@@ -130,23 +205,72 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
 
 export const createFechamento = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { faturamentoDia, pix, dinheiro, cartao, observacao } = req.body;
-
-    const totalInformado = pix + dinheiro + cartao;
-    const diferenca = totalInformado - faturamentoDia;
+    const { valoresDigitados, observacao } = req.body;
+    // valoresDigitados: { DINHEIRO?: number, PIX?: number, CARTAO?: number, NFE?: number }
 
     try {
-        const [fechamento, _] = await prisma.$transaction([
+        const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+        const horarioAbertura = empresa?.horarioAbertura || '07:00';
+        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+
+        // Buscar pagamentos e saídas do dia (mesma lógica do getResumoDia)
+        const [pagamentos, saidas] = await Promise.all([
+            prisma.pagamento.findMany({
+                where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
+                select: { valor: true, metodo: true },
+            }),
+            prisma.caixaRegistro.findMany({
+                where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, data: { gte: start, lte: end } },
+                select: { valor: true, formaPagamento: true },
+            }),
+        ]);
+
+        // Computado por método (valores reais do sistema)
+        const computado: Record<string, number> = {
+            DINHEIRO: pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0),
+            PIX:      pagamentos.filter(p => p.metodo === 'PIX').reduce((a, p) => a + p.valor, 0),
+            CARTAO:   pagamentos.filter(p => p.metodo === 'CARTAO').reduce((a, p) => a + p.valor, 0),
+            NFE:      pagamentos.filter(p => (p.metodo as string) === 'NFE').reduce((a, p) => a + p.valor, 0),
+        };
+
+        // Digitado (o que o operador informou; campo vazio = 0)
+        const digitado: Record<string, number> = {
+            DINHEIRO: Number(valoresDigitados?.DINHEIRO) || 0,
+            PIX:      Number(valoresDigitados?.PIX)      || 0,
+            CARTAO:   Number(valoresDigitados?.CARTAO)   || 0,
+            NFE:      Number(valoresDigitados?.NFE)      || 0,
+        };
+
+        // Relatório por método
+        const relatorio: Record<string, { digitado: number; computado: number; diferenca: number }> = {};
+        for (const metodo of ['DINHEIRO', 'PIX', 'CARTAO', 'NFE']) {
+            relatorio[metodo] = {
+                digitado:  digitado[metodo],
+                computado: computado[metodo],
+                diferenca: digitado[metodo] - computado[metodo],
+            };
+        }
+
+        const diferencaTotal = Object.values(relatorio).reduce((a, r) => a + Math.abs(r.diferenca), 0);
+        const faturamentoDia = Object.values(computado).reduce((a, v) => a + v, 0);
+        const totalSaidas = saidas.reduce((a, s) => a + s.valor, 0);
+        const status = diferencaTotal < 0.01 ? 'CONFERIDO' : 'DIVERGENTE';
+        const fechadoPor = req.usuarioNome || 'Administrador';
+
+        const [fechamento] = await prisma.$transaction([
             prisma.fechamentoCaixa.create({
                 data: {
                     empresaId,
-                    faturamentoDia: faturamentoDia,
-                    pix: pix,
-                    dinheiro: dinheiro,
-                    cartao: cartao,
-                    diferenca,
-                    status: Math.abs(diferenca) < 0.01 ? 'CONFERIDO' as any : 'DIVERGENTE' as any,
+                    faturamentoDia,
+                    dinheiro: digitado.DINHEIRO,
+                    pix:      digitado.PIX,
+                    cartao:   digitado.CARTAO,
+                    nfe:      digitado.NFE,
+                    diferenca: diferencaTotal,
+                    status: status as any,
                     observacao,
+                    relatorio: JSON.stringify(relatorio),
+                    fechadoPor,
                 },
             }),
             prisma.caixaRegistro.create({
@@ -155,18 +279,20 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
                     tipo: 'FECHAMENTO' as any,
                     valor: 0,
                     formaPagamento: 'NA' as any,
-                    descricao: `Fechamento do dia. Diferença: ${diferenca.toFixed(2)}`,
-                }
-            })
+                    descricao: `Fechamento do dia — ${status}. Diferença total: R$ ${diferencaTotal.toFixed(2)}`,
+                },
+            }),
         ]);
 
-        res.status(201).json({
-            message: "Fechamento de caixa registrado com sucesso.",
-            fechamento
+        return res.status(201).json({
+            message: 'Fechamento de caixa registrado com sucesso.',
+            fechamento,
+            relatorio,
+            totalSaidas,
         });
     } catch (error) {
         console.error('Erro ao criar fechamento de caixa:', error);
-        res.status(500).json({ error: 'Erro ao criar fechamento de caixa.' });
+        return res.status(500).json({ error: 'Erro ao criar fechamento de caixa.' });
     }
 };
 
