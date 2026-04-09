@@ -2350,9 +2350,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Responsável pela abertura</label>
-                        <input type="text" x-model="aberturaModal.responsavel" class="form-input"
-                               placeholder="Nome do responsável">
-                        <small style="color: var(--finance-text-secondary);">Administradores podem abrir em nome de outro funcionário.</small>
+                        <select x-model="aberturaModal.responsavel" class="form-input">
+                            <template x-for="pessoa in getResponsaveisAbertura()" :key="pessoa.nome">
+                                <option :value="pessoa.nome" x-text="pessoa.nome + ' (' + pessoa.cargo + ')'"></option>
+                            </template>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -2692,6 +2694,7 @@
                 lavadores: [],
                 fornecedores: [],
                 subaccounts: [],
+                roles: [],
 
                 // Transaction Modal
                 transactionModal: createTransactionModalState(),
@@ -2820,14 +2823,16 @@
                     const [lavadoresData, fornecedoresData, rolesData] = await Promise.all([
                         window.api.getLavadoresSimple(),
                         window.api.getFornecedores(),
-                        window.api.getRolesAndUsers().catch(() => ({ usuarios: [] }))
+                        window.api.getRolesAndUsers().catch(() => ({ usuarios: [], roles: [] }))
                     ]);
                     this.lavadores = lavadoresData.lavadores || [];
                     this.fornecedores = fornecedoresData || [];
+                    this.roles = rolesData.roles || [];
                     this.subaccounts = (rolesData.usuarios || []).map(u => ({
                         id: u.id,
                         nome: u.nome,
                         cargo: u.roleInt?.nome || 'Funcionário',
+                        roleId: u.roleInt?.id || null,
                         tipo: 'subaccount'
                     }));
                 } catch (error) {
@@ -2993,6 +2998,28 @@
                         }
                         return true;
                         });
+                },
+
+                getResponsaveisAbertura() {
+                    // Roles que têm permissão "ver_financeiro"
+                    const rolesFinanceiro = new Set(
+                        (this.roles || [])
+                            .filter(r => (r.permissoes || []).some(p => p.name === 'ver_financeiro' || p.nome === 'ver_financeiro'))
+                            .map(r => r.id)
+                    );
+
+                    // Subaccounts com acesso financeiro
+                    const comAcesso = (this.subaccounts || [])
+                        .filter(u => u.roleId && rolesFinanceiro.has(u.roleId))
+                        .map(u => ({ nome: u.nome, cargo: u.cargo }));
+
+                    // Admin sempre na primeira posição
+                    const adminNome = this.aberturaModal.responsavel || 'Administrador';
+                    const adminEntry = { nome: adminNome, cargo: 'Administrador' };
+
+                    // Evitar duplicar admin se já estiver na lista
+                    const semAdmin = comAcesso.filter(u => u.nome !== adminNome);
+                    return [adminEntry, ...semAdmin];
                 },
 
                 getResponsaveisList() {
