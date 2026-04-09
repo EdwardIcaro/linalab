@@ -12,48 +12,39 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
 
     <style>
-        :root {
-            --bg: #f3f3f3;
-            --card: #ffffff;
-            --border: rgba(0,0,0,0.08);
-            --shadow: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
-            --text: #1a1a1a;
-            --text-secondary: #5c5c5c;
-            --accent: #6c63ff;
-            --accent-hover: #5b52e8;
-            --radius: 12px;
-            --radius-sm: 8px;
-
-            /* Row state colors */
-            --state-empty: #e5e7eb;
-            --state-searching: #93c5fd;
-            --state-found: #86efac;
-            --state-manual: #fde68a;
-            --state-done: #4ade80;
-            --state-error: #fca5a5;
-
-            --state-empty-bg: #f9fafb;
-            --state-searching-bg: #eff6ff;
-            --state-found-bg: #f0fdf4;
-            --state-manual-bg: #fffbeb;
-            --state-done-bg: #dcfce7;
-            --state-error-bg: #fef2f2;
-        }
-
+        /* ===== RESET & BASE ===== */
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            background: #f3f3f3;
+            color: #1a1a1a;
             min-height: 100vh;
+        }
+
+        /* ===== GRID DE COLUNAS — a única fonte de verdade para alinhamento ===== */
+        /*
+          Col 1: #        40px
+          Col 2: Placa    130px
+          Col 3: Cliente  180px
+          Col 4: Tipo     100px
+          Col 5: Categoria 120px
+          Col 6: Serviço  1fr  (elástico)
+          Col 7: Lavador  160px
+          Col 8: Status   110px
+          Col 9: Ação     46px
+        */
+        .fila-grid-row {
+            display: grid;
+            grid-template-columns: 40px 130px 180px 100px 120px 1fr 160px 110px 46px;
+            align-items: center;
+            gap: 0;
         }
 
         /* ===== HEADER ===== */
         .page-header {
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
+            background: #fff;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
             padding: 16px 24px;
             display: flex;
             align-items: center;
@@ -61,7 +52,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: var(--shadow);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
         .back-btn {
@@ -69,66 +60,45 @@
             align-items: center;
             gap: 8px;
             padding: 8px 14px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.08);
             background: transparent;
-            color: var(--text-secondary);
+            color: #5c5c5c;
             font-size: 14px;
             font-family: inherit;
             cursor: pointer;
             text-decoration: none;
             transition: all 0.2s;
         }
+        .back-btn:hover { background: #f3f3f3; color: #1a1a1a; }
 
-        .back-btn:hover {
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        .page-header-title {
-            flex: 1;
-        }
-
+        .page-header-title { flex: 1; }
         .page-header-title h1 {
             font-size: 20px;
             font-weight: 600;
-            color: var(--text);
             display: flex;
             align-items: center;
             gap: 10px;
         }
-
-        .page-header-title h1 .bolt-icon {
+        .bolt-icon {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             color: white;
-            width: 32px;
-            height: 32px;
+            width: 32px; height: 32px;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             font-size: 15px;
         }
+        .page-header-title p { font-size: 13px; color: #5c5c5c; margin-top: 2px; }
 
-        .page-header-title p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
+        .header-actions { display: flex; align-items: center; gap: 10px; }
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* ===== BUTTONS ===== */
+        /* ===== BOTÕES ===== */
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 6px;
             padding: 9px 16px;
-            border-radius: var(--radius-sm);
+            border-radius: 8px;
             font-size: 13px;
             font-family: inherit;
             font-weight: 500;
@@ -137,257 +107,177 @@
             transition: all 0.2s;
             text-decoration: none;
         }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .btn-primary { background: #6c63ff; color: white; }
+        .btn-primary:hover { background: #5b52e8; transform: translateY(-1px); }
 
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
+        .btn-secondary { background: #fff; color: #1a1a1a; border: 1px solid rgba(0,0,0,0.08); }
+        .btn-secondary:hover { background: #f3f3f3; }
 
-        .btn-primary:hover:not(:disabled) {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-        }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; transform: translateY(-1px); }
 
-        .btn-secondary {
-            background: var(--card);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: var(--bg);
-        }
-
-        .btn-success {
-            background: #16a34a;
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background: #15803d;
-            transform: translateY(-1px);
-        }
-
-        .btn-danger {
+        .btn-remove {
+            width: 30px; height: 30px;
+            padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px;
             background: transparent;
             color: #dc2626;
             border: 1px solid #fecaca;
-            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s;
         }
+        .btn-remove:hover { background: #fef2f2; }
+        .btn-remove:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        .btn-danger:hover {
-            background: #fef2f2;
-        }
-
-        .btn-add-row {
+        .btn-amber {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             color: white;
-            border-radius: var(--radius-sm);
-            padding: 9px 18px;
         }
+        .btn-amber:hover { filter: brightness(1.05); transform: translateY(-1px); }
 
-        .btn-add-row:hover {
-            filter: brightness(1.05);
-            transform: translateY(-1px);
-        }
-
-        /* ===== MAIN LAYOUT ===== */
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 24px;
-        }
+        /* ===== MAIN ===== */
+        .main-container { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
         /* ===== TOOLBAR ===== */
         .toolbar {
-            background: var(--card);
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            padding: 14px 18px;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: 12px 18px;
             display: flex;
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
             margin-bottom: 16px;
-            box-shadow: var(--shadow);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
-
-        .toolbar-label {
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
+        .toolbar-label { font-size: 13px; color: #5c5c5c; font-weight: 500; white-space: nowrap; }
         .toolbar-select {
             padding: 7px 10px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 8px;
             font-family: inherit;
             font-size: 13px;
-            background: var(--bg);
-            color: var(--text);
+            background: #f3f3f3;
+            color: #1a1a1a;
             cursor: pointer;
             outline: none;
         }
-
-        .toolbar-select:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
-        }
-
-        .toolbar-divider {
-            width: 1px;
-            height: 28px;
-            background: var(--border);
-            margin: 0 4px;
-        }
-
+        .toolbar-select:focus { border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,0.1); }
+        .toolbar-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.08); }
         .toolbar-spacer { flex: 1; }
 
-        /* ===== TABLE WRAPPER ===== */
-        .table-wrapper {
-            background: var(--card);
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
+        /* ===== CARD DA TABELA ===== */
+        .grid-card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             overflow: hidden;
         }
 
-        .fila-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .fila-table thead th {
+        /* ===== CABEÇALHO DAS COLUNAS ===== */
+        .grid-header {
             background: #f8fafc;
-            padding: 12px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .grid-header .fila-grid-row { padding: 0; }
+        .grid-col-head {
+            padding: 11px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #5c5c5c;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
             white-space: nowrap;
         }
+        .grid-col-head.center { text-align: center; }
 
-        .fila-table thead th.col-num { width: 40px; text-align: center; }
-        .fila-table thead th.col-placa { width: 140px; }
-        .fila-table thead th.col-cliente { width: 180px; }
-        .fila-table thead th.col-tipo { width: 110px; }
-        .fila-table thead th.col-categoria { width: 130px; }
-        .fila-table thead th.col-servico { width: 200px; }
-        .fila-table thead th.col-lavador { width: 180px; }
-        .fila-table thead th.col-status { width: 120px; }
-        .fila-table thead th.col-acao { width: 50px; text-align: center; }
-
-        /* ===== TABLE ROWS ===== */
-        .fila-row {
-            transition: background 0.2s;
-            border-bottom: 1px solid var(--border);
+        /* ===== LINHA DE DADO ===== */
+        .fila-row-wrap {
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            transition: background 0.15s;
+            position: relative;
         }
+        .fila-row-wrap:last-child { border-bottom: none; }
+        .fila-row-wrap .fila-grid-row { padding: 8px 0; }
 
-        .fila-row:last-child { border-bottom: none; }
+        /* Estado — cor de fundo + borda esquerda */
+        .fila-row-wrap.state-empty    { background: #f9fafb; border-left: 3px solid #d1d5db; }
+        .fila-row-wrap.state-searching{ background: #eff6ff; border-left: 3px solid #93c5fd; }
+        .fila-row-wrap.state-found    { background: #f0fdf4; border-left: 3px solid #86efac; }
+        .fila-row-wrap.state-manual   { background: #fffbeb; border-left: 3px solid #fde68a; }
+        .fila-row-wrap.state-done     { background: #dcfce7; border-left: 3px solid #4ade80; }
+        .fila-row-wrap.state-error    { background: #fef2f2; border-left: 3px solid #fca5a5; }
 
-        .fila-row td {
-            padding: 10px 14px;
-            vertical-align: middle;
+        /* ===== CÉLULA GENÉRICA ===== */
+        .fila-cell {
+            padding: 2px 10px;
         }
+        .fila-cell.center { text-align: center; }
 
-        .fila-row .row-num {
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-
-        /* Row state backgrounds */
-        .fila-row.state-empty { background: var(--state-empty-bg); }
-        .fila-row.state-searching { background: var(--state-searching-bg); }
-        .fila-row.state-found { background: var(--state-found-bg); }
-        .fila-row.state-manual { background: var(--state-manual-bg); }
-        .fila-row.state-done { background: var(--state-done-bg); }
-        .fila-row.state-error { background: var(--state-error-bg); }
-
-        /* Left border accent */
-        .fila-row { position: relative; }
-        .fila-row::before {
-            content: '';
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 3px;
-            border-radius: 0 2px 2px 0;
-        }
-
-        .fila-row.state-empty::before { background: var(--state-empty); }
-        .fila-row.state-searching::before { background: var(--state-searching); }
-        .fila-row.state-found::before { background: var(--state-found); }
-        .fila-row.state-manual::before { background: var(--state-manual); }
-        .fila-row.state-done::before { background: var(--state-done); }
-        .fila-row.state-error::before { background: var(--state-error); }
-
-        /* ===== INPUTS INSIDE TABLE ===== */
+        /* ===== INPUTS / SELECTS ===== */
         .cell-input {
             width: 100%;
-            padding: 7px 10px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
+            padding: 6px 8px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 7px;
             font-family: inherit;
-            font-size: 13px;
-            background: rgba(255,255,255,0.8);
-            color: var(--text);
+            font-size: 12px;
+            background: rgba(255,255,255,0.85);
+            color: #1a1a1a;
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s;
         }
-
         .cell-input:focus {
-            border-color: var(--accent);
+            border-color: #6c63ff;
             box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
         }
-
         .cell-input:disabled {
             background: rgba(0,0,0,0.04);
-            color: var(--text-secondary);
+            color: #9ca3af;
             cursor: not-allowed;
         }
-
         .placa-input {
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            font-size: 14px;
+            font-size: 13px;
         }
 
-        /* ===== CELL INFORMAÇÕES ===== */
-        .cell-info {
+        /* ===== CÉLULA CLIENTE ===== */
+        .cell-client-found .client-name {
             font-size: 12px;
-        }
-
-        .cell-info-name {
             font-weight: 600;
-            color: var(--text);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 170px;
         }
-
-        .cell-info-sub {
-            color: var(--text-secondary);
+        .cell-client-found .client-sub {
             font-size: 11px;
+            color: #5c5c5c;
             margin-top: 1px;
         }
-
-        .cell-info-empty {
-            color: var(--text-secondary);
-            font-style: italic;
+        .cell-empty-dash { color: #9ca3af; font-size: 13px; }
+        .cell-searching {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #5c5c5c;
             font-size: 12px;
+        }
+        .cell-error { color: #dc2626; font-size: 12px; }
+
+        /* ===== ROW NUMBER ===== */
+        .row-num {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #9ca3af;
         }
 
         /* ===== STATUS BADGE ===== */
@@ -395,57 +285,34 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 4px 10px;
+            padding: 4px 9px;
             border-radius: 20px;
             font-size: 11px;
             font-weight: 600;
             white-space: nowrap;
         }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-        .status-badge .badge-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-        }
-
-        .badge-empty {
-            background: rgba(0,0,0,0.06);
-            color: #6b7280;
-        }
+        .badge-empty   { background: rgba(0,0,0,0.06); color: #6b7280; }
         .badge-empty .badge-dot { background: #9ca3af; }
 
-        .badge-searching {
-            background: rgba(59,130,246,0.1);
-            color: #1d4ed8;
-        }
-        .badge-searching .badge-dot { background: #3b82f6; animation: pulse 1s infinite; }
+        .badge-searching { background: rgba(59,130,246,0.1); color: #1d4ed8; }
+        .badge-searching .badge-dot { background: #3b82f6; animation: blink 1s infinite; }
 
-        .badge-found {
-            background: rgba(22,163,74,0.1);
-            color: #15803d;
-        }
+        .badge-found   { background: rgba(22,163,74,0.1); color: #15803d; }
         .badge-found .badge-dot { background: #22c55e; }
 
-        .badge-manual {
-            background: rgba(217,119,6,0.1);
-            color: #b45309;
-        }
+        .badge-manual  { background: rgba(217,119,6,0.1); color: #b45309; }
         .badge-manual .badge-dot { background: #f59e0b; }
 
-        .badge-done {
-            background: rgba(22,163,74,0.15);
-            color: #14532d;
-        }
+        .badge-done    { background: rgba(22,163,74,0.15); color: #14532d; }
         .badge-done .badge-dot { background: #16a34a; }
 
-        .badge-error {
-            background: rgba(220,38,38,0.1);
-            color: #b91c1c;
-        }
+        .badge-error   { background: rgba(220,38,38,0.1); color: #b91c1c; }
         .badge-error .badge-dot { background: #ef4444; }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+        @keyframes blink {
+            0%,100% { opacity:1; } 50% { opacity:0.2; }
         }
 
         /* ===== EMPTY STATE ===== */
@@ -453,31 +320,60 @@
             padding: 60px 24px;
             text-align: center;
         }
+        .empty-state-icon { font-size: 48px; opacity: 0.2; margin-bottom: 16px; }
+        .empty-state h3 { font-size: 18px; font-weight: 600; color: #5c5c5c; margin-bottom: 8px; }
+        .empty-state p  { font-size: 14px; color: #9ca3af; }
 
-        .empty-state-icon {
-            font-size: 48px;
+        /* ===== LEGENDA ===== */
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            font-size: 11px;
+            color: #5c5c5c;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* ===== BARRA DE PROGRESSO ===== */
+        .progress-bar-container {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: 14px 18px;
             margin-bottom: 16px;
-            opacity: 0.3;
+            display: none;
+        }
+        .progress-bar-container.visible { display: block; }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .progress-track {
+            height: 8px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6c63ff, #4ade80);
+            border-radius: 20px;
+            transition: width 0.3s ease;
         }
 
-        .empty-state h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-
-        .empty-state p {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        /* ===== FOOTER BAR ===== */
+        /* ===== FOOTER ===== */
         .footer-bar {
             position: sticky;
             bottom: 0;
-            background: var(--card);
-            border-top: 1px solid var(--border);
+            background: #fff;
+            border-top: 1px solid rgba(0,0,0,0.08);
             box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
             padding: 14px 24px;
             display: flex;
@@ -485,66 +381,21 @@
             gap: 14px;
             z-index: 50;
         }
-
-        .footer-counter {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .footer-counter strong {
-            color: var(--text);
-            font-weight: 700;
-        }
-
+        .footer-counter { font-size: 14px; color: #5c5c5c; }
+        .footer-counter strong { color: #1a1a1a; font-weight: 700; }
         .footer-spacer { flex: 1; }
-
-        /* ===== PROGRESS BAR ===== */
-        .progress-bar-container {
-            background: var(--bg);
-            border-radius: var(--radius);
-            padding: 16px 20px;
-            margin-bottom: 16px;
-            border: 1px solid var(--border);
-            display: none;
-        }
-
-        .progress-bar-container.visible { display: block; }
-
-        .progress-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 13px;
-        }
-
-        .progress-bar-track {
-            height: 8px;
-            background: var(--border);
-            border-radius: 20px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), #4ade80);
-            border-radius: 20px;
-            transition: width 0.3s ease;
-        }
 
         /* ===== SPINNER ===== */
         .spinner {
             width: 14px; height: 14px;
             border: 2px solid rgba(0,0,0,0.1);
-            border-top-color: var(--accent);
+            border-top-color: #6c63ff;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
             display: inline-block;
+            flex-shrink: 0;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ===== TOAST ===== */
         #toast-container {
@@ -556,60 +407,31 @@
             flex-direction: column;
             gap: 8px;
         }
-
         .toast {
             padding: 12px 18px;
-            border-radius: var(--radius-sm);
+            border-radius: 8px;
             font-size: 13px;
             font-weight: 500;
             color: white;
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
             animation: slideIn 0.3s ease;
             max-width: 320px;
         }
-
         .toast.success { background: #16a34a; }
-        .toast.error { background: #dc2626; }
-        .toast.info { background: var(--accent); }
-
+        .toast.error   { background: #dc2626; }
+        .toast.info    { background: #6c63ff; }
         @keyframes slideIn {
             from { transform: translateX(120%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* ===== LEGEND ===== */
-        .legend {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            padding: 10px 14px;
-            background: #f8fafc;
-            border-top: 1px solid var(--border);
-            font-size: 11px;
-            color: var(--text-secondary);
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .legend-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
+            to   { transform: translateX(0);    opacity: 1; }
         }
 
         /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            .main-container { padding: 12px; }
-            .page-header { padding: 12px 16px; }
-            .fila-table { font-size: 12px; }
-            .fila-table thead th.col-cliente,
-            .fila-table thead th.col-categoria { display: none; }
-            .fila-row td:nth-child(3),
-            .fila-row td:nth-child(5) { display: none; }
+        @media (max-width: 900px) {
+            /* esconder cliente e categoria em telas menores */
+            .col-cliente, .col-categoria { display: none !important; }
+            .fila-grid-row {
+                grid-template-columns: 36px 110px 90px 1fr 140px 100px 36px;
+            }
         }
     </style>
 </head>
@@ -621,7 +443,6 @@
             <i class="fas fa-arrow-left"></i>
             Voltar
         </a>
-
         <div class="page-header-title">
             <h1>
                 <span class="bolt-icon"><i class="fas fa-bolt"></i></span>
@@ -629,15 +450,12 @@
             </h1>
             <p>Criação em massa de ordens de serviço</p>
         </div>
-
         <div class="header-actions">
             <button class="btn btn-secondary" @click="addRow()" :disabled="isCreating">
-                <i class="fas fa-plus"></i>
-                Adicionar Linha
+                <i class="fas fa-plus"></i> Adicionar Linha
             </button>
-            <button class="btn btn-add-row" @click="addMultipleRows()" :disabled="isCreating">
-                <i class="fas fa-list-ul"></i>
-                +5 Linhas
+            <button class="btn btn-amber" @click="addMultipleRows()" :disabled="isCreating">
+                <i class="fas fa-list-ul"></i> +5 Linhas
             </button>
         </div>
     </header>
@@ -645,80 +463,72 @@
     <!-- MAIN -->
     <div class="main-container">
 
-        <!-- BARRA DE FERRAMENTAS -->
+        <!-- TOOLBAR -->
         <div class="toolbar">
             <span class="toolbar-label">Aplicar a todas:</span>
-
             <select class="toolbar-select" x-model="globalServico" @change="applyServiceToAll()">
                 <option value="">— Serviço global —</option>
                 <template x-for="s in servicosAll" :key="s.id">
                     <option :value="s.id" x-text="s.nome"></option>
                 </template>
             </select>
-
             <div class="toolbar-divider"></div>
-
             <button class="btn btn-secondary" @click="distribuirLavadores()" :disabled="lavadores.length === 0">
-                <i class="fas fa-random"></i>
-                Distribuir Lavadores
+                <i class="fas fa-random"></i> Distribuir Lavadores
             </button>
-
             <div class="toolbar-spacer"></div>
-
             <span class="toolbar-label" x-text="`${rowsReady} de ${rows.length} prontas`"></span>
         </div>
 
-        <!-- BARRA DE PROGRESSO (só durante criação) -->
+        <!-- BARRA DE PROGRESSO -->
         <div class="progress-bar-container" :class="{ visible: isCreating }">
             <div class="progress-header">
                 <span style="font-weight:600">Criando ordens...</span>
-                <span x-text="`${progressDone} / ${progressTotal}`" style="color:var(--text-secondary)"></span>
+                <span x-text="`${progressDone} / ${progressTotal}`" style="color:#5c5c5c"></span>
             </div>
-            <div class="progress-bar-track">
-                <div class="progress-bar-fill"
-                     :style="`width: ${progressTotal > 0 ? (progressDone/progressTotal*100) : 0}%`">
+            <div class="progress-track">
+                <div class="progress-fill"
+                     :style="`width:${progressTotal > 0 ? (progressDone/progressTotal*100) : 0}%`">
                 </div>
             </div>
         </div>
 
-        <!-- TABELA -->
-        <div class="table-wrapper">
-            <table class="fila-table">
-                <thead>
-                    <tr>
-                        <th class="col-num">#</th>
-                        <th class="col-placa">Placa</th>
-                        <th class="col-cliente">Cliente / Veículo</th>
-                        <th class="col-tipo">Tipo</th>
-                        <th class="col-categoria">Categoria</th>
-                        <th class="col-servico">Serviço</th>
-                        <th class="col-lavador">Lavador</th>
-                        <th class="col-status">Status</th>
-                        <th class="col-acao"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Empty State -->
-                    <template x-if="rows.length === 0">
-                        <tr>
-                            <td colspan="9">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon"><i class="fas fa-car"></i></div>
-                                    <h3>Nenhum veículo na fila</h3>
-                                    <p>Clique em "Adicionar Linha" para começar a registrar veículos</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </template>
+        <!-- GRADE (substituindo <table>) -->
+        <div class="grid-card">
 
-                    <!-- Linhas da fila -->
-                    <template x-for="(row, idx) in rows" :key="row.id">
-                        <tr class="fila-row" :class="`state-${row.state}`">
-                            <!-- Número -->
-                            <td class="row-num" x-text="idx + 1"></td>
+            <!-- CABEÇALHO -->
+            <div class="grid-header">
+                <div class="fila-grid-row">
+                    <div class="grid-col-head center">#</div>
+                    <div class="grid-col-head">Placa</div>
+                    <div class="grid-col-head col-cliente">Cliente / Veículo</div>
+                    <div class="grid-col-head">Tipo</div>
+                    <div class="grid-col-head col-categoria">Categoria</div>
+                    <div class="grid-col-head">Serviço</div>
+                    <div class="grid-col-head">Lavador</div>
+                    <div class="grid-col-head">Status</div>
+                    <div class="grid-col-head"></div>
+                </div>
+            </div>
 
-                            <!-- Placa -->
-                            <td>
+            <!-- EMPTY STATE -->
+            <div x-show="rows.length === 0" class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-car"></i></div>
+                <h3>Nenhum veículo na fila</h3>
+                <p>Clique em "Adicionar Linha" para começar</p>
+            </div>
+
+            <!-- LINHAS -->
+            <div x-show="rows.length > 0">
+                <template x-for="(row, idx) in rows" :key="row.id">
+                    <div class="fila-row-wrap" :class="`state-${row.state}`">
+                        <div class="fila-grid-row">
+
+                            <!-- # -->
+                            <div class="fila-cell center row-num" x-text="idx + 1"></div>
+
+                            <!-- PLACA -->
+                            <div class="fila-cell">
                                 <input
                                     class="cell-input placa-input"
                                     type="text"
@@ -727,21 +537,23 @@
                                     x-model="row.placa"
                                     :disabled="row.state === 'done' || row.state === 'searching' || isCreating"
                                     @input="onPlacaInput(row)"
-                                    @keydown.enter="$event.target.closest('tr').querySelector('select') && $event.target.closest('tr').querySelectorAll('select')[0].focus()"
                                 >
-                            </td>
+                            </div>
 
-                            <!-- Cliente / Veículo -->
-                            <td>
-                                <div class="cell-info" x-show="row.state === 'found' || row.state === 'done'">
-                                    <div class="cell-info-name" x-text="row.clienteNome || '—'"></div>
-                                    <div class="cell-info-sub" x-text="row.veiculoDesc || '—'"></div>
+                            <!-- CLIENTE / VEÍCULO -->
+                            <div class="fila-cell col-cliente">
+                                <!-- Encontrado ou feito -->
+                                <div class="cell-client-found" x-show="row.state === 'found' || row.state === 'done'">
+                                    <div class="client-name" x-text="row.clienteNome || '—'"></div>
+                                    <div class="client-sub"  x-text="row.veiculoDesc || ''"></div>
                                 </div>
-                                <div class="cell-info" x-show="row.state === 'searching'" style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)">
+                                <!-- Buscando -->
+                                <div class="cell-searching" x-show="row.state === 'searching'">
                                     <span class="spinner"></span>
-                                    <span style="font-size:12px">Buscando...</span>
+                                    <span>Buscando...</span>
                                 </div>
-                                <div class="cell-info" x-show="row.state === 'manual'">
+                                <!-- Manual -->
+                                <div x-show="row.state === 'manual'">
                                     <input
                                         class="cell-input"
                                         type="text"
@@ -751,12 +563,14 @@
                                         :disabled="isCreating"
                                     >
                                 </div>
-                                <span class="cell-info-empty" x-show="row.state === 'empty'">—</span>
-                                <span class="cell-info" x-show="row.state === 'error'" style="color:#dc2626;font-size:12px" x-text="row.errorMsg || 'Erro'"></span>
-                            </td>
+                                <!-- Vazia -->
+                                <span class="cell-empty-dash" x-show="row.state === 'empty'">—</span>
+                                <!-- Erro -->
+                                <span class="cell-error" x-show="row.state === 'error'" x-text="row.errorMsg || 'Erro'"></span>
+                            </div>
 
-                            <!-- Tipo de Veículo -->
-                            <td>
+                            <!-- TIPO -->
+                            <div class="fila-cell">
                                 <select
                                     class="cell-input"
                                     x-model="row.tipoVeiculo"
@@ -767,10 +581,10 @@
                                     <option value="MOTO">Moto</option>
                                     <option value="OUTROS">Outros</option>
                                 </select>
-                            </td>
+                            </div>
 
-                            <!-- Categoria (só para CARRO) -->
-                            <td>
+                            <!-- CATEGORIA -->
+                            <div class="fila-cell col-categoria">
                                 <select
                                     class="cell-input"
                                     x-model="row.categoriaVeiculo"
@@ -787,25 +601,26 @@
                                     <option value="MICROONIBUS">Micro-ônibus</option>
                                     <option value="CAMINHAO">Caminhão</option>
                                 </select>
-                                <span class="cell-info-empty" x-show="row.tipoVeiculo !== 'CARRO'" style="font-size:12px">—</span>
-                            </td>
+                                <span style="color:#9ca3af;font-size:13px" x-show="row.tipoVeiculo !== 'CARRO'">—</span>
+                            </div>
 
-                            <!-- Serviço -->
-                            <td>
+                            <!-- SERVIÇO -->
+                            <div class="fila-cell">
                                 <select
                                     class="cell-input"
                                     x-model="row.servicoId"
                                     :disabled="row.state === 'done' || isCreating"
+                                    @change="() => {}"
                                 >
                                     <option value="">— Selecione —</option>
                                     <template x-for="s in getServicosForRow(row)" :key="s.id">
                                         <option :value="s.id" x-text="s.nome + (s.preco ? ` — R$${Number(s.preco).toFixed(2)}` : '')"></option>
                                     </template>
                                 </select>
-                            </td>
+                            </div>
 
-                            <!-- Lavador -->
-                            <td>
+                            <!-- LAVADOR -->
+                            <div class="fila-cell">
                                 <select
                                     class="cell-input"
                                     x-model="row.lavadorId"
@@ -816,51 +631,43 @@
                                         <option :value="l.id" x-text="l.nome"></option>
                                     </template>
                                 </select>
-                            </td>
+                            </div>
 
-                            <!-- Status -->
-                            <td>
+                            <!-- STATUS -->
+                            <div class="fila-cell">
                                 <span class="status-badge" :class="`badge-${row.state}`">
                                     <span class="badge-dot"></span>
                                     <span x-text="stateLabel(row.state)"></span>
                                 </span>
-                            </td>
+                            </div>
 
-                            <!-- Ação -->
-                            <td>
+                            <!-- AÇÃO -->
+                            <div class="fila-cell center">
                                 <button
-                                    class="btn btn-danger"
+                                    class="btn-remove"
                                     @click="removeRow(idx)"
                                     :disabled="isCreating"
                                     title="Remover linha"
                                 >
                                     <i class="fas fa-times"></i>
                                 </button>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
+                            </div>
 
-            <!-- Legenda -->
-            <div class="legend" x-show="rows.length > 0">
-                <span class="legend-item">
-                    <span class="legend-dot" style="background:#9ca3af"></span> Vazia
-                </span>
-                <span class="legend-item">
-                    <span class="legend-dot" style="background:#22c55e"></span> Encontrado
-                </span>
-                <span class="legend-item">
-                    <span class="legend-dot" style="background:#f59e0b"></span> Manual
-                </span>
-                <span class="legend-item">
-                    <span class="legend-dot" style="background:#16a34a"></span> Criado
-                </span>
-                <span class="legend-item">
-                    <span class="legend-dot" style="background:#ef4444"></span> Erro
-                </span>
+                        </div>
+                    </div>
+                </template>
             </div>
-        </div>
+
+            <!-- LEGENDA -->
+            <div class="legend" x-show="rows.length > 0">
+                <span class="legend-item"><span class="legend-dot" style="background:#9ca3af"></span> Vazia</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Encontrado</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> Manual</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#16a34a"></span> Criado</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Erro</span>
+            </div>
+
+        </div><!-- /grid-card -->
 
     </div><!-- /main-container -->
 
@@ -868,43 +675,22 @@
     <div class="footer-bar" x-show="rows.length > 0">
         <div class="footer-counter">
             <strong x-text="rowsReady"></strong> prontas
-            <template x-if="rowsDone > 0">
-                <span> · <strong x-text="rowsDone"></strong> criadas</strong></span>
-            </template>
-            <template x-if="rowsError > 0">
-                <span style="color:#dc2626"> · <strong x-text="rowsError"></strong> com erro</span>
-            </template>
+            <span x-show="rowsDone > 0"> · <strong x-text="rowsDone"></strong> criadas</span>
+            <span x-show="rowsError > 0" style="color:#dc2626"> · <strong x-text="rowsError"></strong> com erro</span>
         </div>
-
         <div class="footer-spacer"></div>
-
-        <button
-            class="btn btn-secondary"
-            @click="clearCompleted()"
-            x-show="rowsDone > 0"
-            :disabled="isCreating"
-        >
-            <i class="fas fa-broom"></i>
-            Limpar Criadas
+        <button class="btn btn-secondary" @click="clearCompleted()" x-show="rowsDone > 0" :disabled="isCreating">
+            <i class="fas fa-broom"></i> Limpar Criadas
         </button>
-
-        <button
-            class="btn btn-success"
-            @click="criarOrdens()"
-            :disabled="rowsReady === 0 || isCreating"
-        >
-            <template x-if="!isCreating">
-                <span>
-                    <i class="fas fa-check-circle"></i>
-                    Criar <span x-text="rowsReady"></span> Ordens
-                </span>
-            </template>
-            <template x-if="isCreating">
-                <span style="display:flex;align-items:center;gap:8px">
-                    <span class="spinner" style="border-top-color:white;border-color:rgba(255,255,255,0.3)"></span>
-                    Criando...
-                </span>
-            </template>
+        <button class="btn btn-success" @click="criarOrdens()" :disabled="rowsReady === 0 || isCreating">
+            <span x-show="!isCreating">
+                <i class="fas fa-check-circle"></i>
+                Criar <span x-text="rowsReady"></span> Ordens
+            </span>
+            <span x-show="isCreating" style="display:flex;align-items:center;gap:8px">
+                <span class="spinner" style="border-top-color:white;border-color:rgba(255,255,255,0.3)"></span>
+                Criando...
+            </span>
         </button>
     </div>
 
@@ -916,7 +702,6 @@
         // ============================================================
         // UTILITÁRIOS
         // ============================================================
-        let _toastId = 0;
         function showToast(msg, type = 'info', duration = 3500) {
             const container = document.getElementById('toast-container');
             const el = document.createElement('div');
@@ -926,7 +711,6 @@
             setTimeout(() => el.remove(), duration);
         }
 
-        // debounce simples
         function debounce(fn, delay) {
             let timer;
             return (...args) => {
@@ -935,24 +719,20 @@
             };
         }
 
-        // id único para linhas
         let _rowId = 0;
         function makeRow() {
             return {
                 id: ++_rowId,
                 placa: '',
-                state: 'empty',      // empty | searching | found | manual | done | error
-                // dados do veículo encontrado
+                state: 'empty',
                 veiculoId: null,
                 clienteId: null,
                 clienteNome: '',
                 veiculoDesc: '',
-                // seleções do usuário
                 tipoVeiculo: 'CARRO',
                 categoriaVeiculo: 'HATCH',
                 servicoId: '',
                 lavadorId: '',
-                // resultado
                 ordemId: null,
                 errorMsg: '',
             };
@@ -965,261 +745,153 @@
             return {
                 rows: [],
                 lavadores: [],
-                servicos: [],        // todos os serviços carregados
-                servicosAll: [],     // flat list para "aplicar a todos"
-
+                servicos: [],
+                servicosAll: [],
                 globalServico: '',
-
                 isCreating: false,
                 progressDone: 0,
                 progressTotal: 0,
-
-                // debounced search
                 _placaSearch: null,
 
-                // ---- computed ----
                 get rowsReady() {
                     return this.rows.filter(r =>
                         (r.state === 'found' || r.state === 'manual') && r.servicoId
                     ).length;
                 },
-                get rowsDone() {
-                    return this.rows.filter(r => r.state === 'done').length;
-                },
-                get rowsError() {
-                    return this.rows.filter(r => r.state === 'error').length;
-                },
+                get rowsDone()  { return this.rows.filter(r => r.state === 'done').length; },
+                get rowsError() { return this.rows.filter(r => r.state === 'error').length; },
 
-                // ---- init ----
                 async init() {
-                    // Verificar auth
-                    const token = localStorage.getItem('token');
-                    if (!token) {
+                    if (!localStorage.getItem('token')) {
                         window.location.href = 'login.html';
                         return;
                     }
-
-                    // Carregar lavadores e serviços em paralelo
                     try {
                         const [lavs, servs] = await Promise.all([
                             window.api.getLavadoresSimple(),
                             window.api.getServicos({ limit: 500, ativo: 'true' })
                         ]);
-                        // getLavadoresSimple retorna { lavadores: [...] }
-                        this.lavadores = lavs?.lavadores || (Array.isArray(lavs) ? lavs : []);
-                        // getServicos retorna { servicos: [...], pagination: {...} }
-                        this.servicos = servs?.servicos || (Array.isArray(servs) ? servs : []);
+                        this.lavadores  = lavs?.lavadores  || (Array.isArray(lavs)  ? lavs  : []);
+                        this.servicos   = servs?.servicos  || (Array.isArray(servs) ? servs : []);
                         this.servicosAll = this.servicos;
                     } catch (e) {
-                        console.error('Erro ao carregar dados iniciais:', e);
+                        console.error('Erro ao carregar dados:', e);
                         showToast('Erro ao carregar lavadores/serviços', 'error');
                     }
-
-                    // Iniciar com 3 linhas prontas
                     this.addMultipleRows(3);
-
-                    // Setup do debounce de busca de placa
-                    this._placaSearch = debounce(async (row) => {
-                        await this._buscarPlaca(row);
-                    }, 600);
+                    this._placaSearch = debounce(row => this._buscarPlaca(row), 600);
                 },
 
-                // ---- gerenciar linhas ----
                 addRow() {
                     this.rows.push(makeRow());
                     this.$nextTick(() => {
                         const inputs = document.querySelectorAll('.placa-input');
-                        const last = inputs[inputs.length - 1];
-                        if (last) last.focus();
+                        inputs[inputs.length - 1]?.focus();
                     });
                 },
-
                 addMultipleRows(n = 5) {
                     for (let i = 0; i < n; i++) this.rows.push(makeRow());
                 },
+                removeRow(idx)    { this.rows.splice(idx, 1); },
+                clearCompleted()  { this.rows = this.rows.filter(r => r.state !== 'done'); },
 
-                removeRow(idx) {
-                    this.rows.splice(idx, 1);
-                },
-
-                clearCompleted() {
-                    this.rows = this.rows.filter(r => r.state !== 'done');
-                },
-
-                // ---- placa ----
                 onPlacaInput(row) {
                     const raw = row.placa.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                    // Formatar: ABC1234 → ABC-1234 ou ABC1D23 (Mercosul)
-                    let formatted = raw;
-                    if (raw.length > 3) {
-                        formatted = raw.slice(0, 3) + '-' + raw.slice(3, 7);
-                    }
-                    row.placa = formatted;
-
+                    row.placa = raw.length > 3 ? raw.slice(0,3) + '-' + raw.slice(3,7) : raw;
                     const placa = raw.replace(/-/g, '');
-
                     if (placa.length < 7) {
-                        // Limpar estado se placa ficou incompleta
                         if (row.state !== 'empty') {
-                            row.state = 'empty';
-                            row.veiculoId = null;
-                            row.clienteId = null;
-                            row.clienteNome = '';
-                            row.veiculoDesc = '';
+                            Object.assign(row, { state:'empty', veiculoId:null, clienteId:null, clienteNome:'', veiculoDesc:'' });
                         }
                         return;
                     }
-
-                    // Placa completa: buscar
                     row.state = 'searching';
                     this._placaSearch(row);
                 },
 
                 async _buscarPlaca(row) {
-                    const placa = row.placa.replace(/-/g, '').toUpperCase();
+                    const placa = row.placa.replace(/-/g,'').toUpperCase();
                     if (placa.length < 7) return;
-
                     try {
                         const data = await window.api.getVeiculoByPlaca(placa);
-                        if (data && data.id) {
-                            row.state = 'found';
-                            row.veiculoId = data.id;
-                            row.clienteId = data.clienteId || null;
-                            row.clienteNome = data.cliente?.nome || data.clienteNome || '—';
-                            row.veiculoDesc = `${data.modelo || ''} ${data.cor ? '· ' + data.cor : ''}`.trim() || data.placa;
-                            // Preencher tipo/categoria do veículo encontrado
-                            if (data.tipo) row.tipoVeiculo = data.tipo;
-                            if (data.categoria) row.categoriaVeiculo = data.categoria;
-                            // Se há um serviço global selecionado, aplicar
-                            if (this.globalServico && !row.servicoId) {
-                                row.servicoId = this.globalServico;
-                            }
+                        if (data?.id) {
+                            Object.assign(row, {
+                                state: 'found',
+                                veiculoId: data.id,
+                                clienteId: data.clienteId || null,
+                                clienteNome: data.cliente?.nome || '—',
+                                veiculoDesc: `${data.modelo || ''} ${data.cor ? '· '+data.cor : ''}`.trim() || placa,
+                                tipoVeiculo: data.tipo || row.tipoVeiculo,
+                                categoriaVeiculo: data.categoria || row.categoriaVeiculo,
+                            });
+                            if (this.globalServico && !row.servicoId) row.servicoId = this.globalServico;
                         } else {
-                            // Não encontrado — modo manual
-                            row.state = 'manual';
-                            row.veiculoId = null;
-                            row.clienteId = null;
-                            row.clienteNome = '';
-                            row.veiculoDesc = '';
+                            Object.assign(row, { state:'manual', veiculoId:null, clienteId:null, clienteNome:'', veiculoDesc:'' });
                         }
-                    } catch (e) {
-                        // Qualquer erro (inclusive 404 = não encontrado) → modo manual
-                        row.state = 'manual';
-                        row.veiculoId = null;
-                        row.clienteId = null;
-                        row.clienteNome = '';
-                        row.veiculoDesc = '';
+                    } catch {
+                        Object.assign(row, { state:'manual', veiculoId:null, clienteId:null, clienteNome:'', veiculoDesc:'' });
                     }
                 },
 
-                // ---- tipo / categoria ----
                 onTipoChange(row) {
-                    if (row.tipoVeiculo !== 'CARRO') {
-                        row.categoriaVeiculo = '';
-                    } else {
-                        row.categoriaVeiculo = 'HATCH';
-                    }
-                    // Limpar serviço pois filtro mudou
+                    row.categoriaVeiculo = row.tipoVeiculo === 'CARRO' ? 'HATCH' : '';
                     row.servicoId = '';
                 },
+                onCategoriaChange(row) { row.servicoId = ''; },
 
-                onCategoriaChange(row) {
-                    // Limpar serviço pois filtro mudou
-                    row.servicoId = '';
-                },
-
-                // ---- serviços filtrados por linha ----
-                // tiposVeiculo retornados pelo backend: [{ nome: 'CARRO', categoria: 'HATCH' | null }]
                 getServicosForRow(row) {
                     return this.servicos.filter(s => {
                         const tvs = s.tiposVeiculo;
-                        // Sem restrição de tipo → aceita tudo
                         if (!tvs || tvs.length === 0) return true;
-
                         const tipoMatch = tvs.filter(tv => tv.nome === row.tipoVeiculo);
                         if (tipoMatch.length === 0) return false;
-
-                        // Para CARRO, verificar se há restrição de categoria
                         if (row.tipoVeiculo === 'CARRO' && row.categoriaVeiculo) {
-                            const comCategoria = tipoMatch.filter(tv => tv.categoria);
-                            if (comCategoria.length > 0) {
-                                return comCategoria.some(tv => tv.categoria === row.categoriaVeiculo);
-                            }
+                            const comCat = tipoMatch.filter(tv => tv.categoria);
+                            if (comCat.length > 0) return comCat.some(tv => tv.categoria === row.categoriaVeiculo);
                         }
                         return true;
                     });
                 },
 
-                // ---- aplicar serviço a todas ----
                 applyServiceToAll() {
                     if (!this.globalServico) return;
-                    this.rows.forEach(row => {
-                        if (row.state !== 'done') {
-                            row.servicoId = this.globalServico;
-                        }
-                    });
+                    this.rows.forEach(r => { if (r.state !== 'done') r.servicoId = this.globalServico; });
                     showToast('Serviço aplicado a todas as linhas', 'info');
                 },
 
-                // ---- distribuir lavadores ----
                 distribuirLavadores() {
-                    if (this.lavadores.length === 0) {
-                        showToast('Nenhum lavador disponível', 'error');
-                        return;
-                    }
                     const lavs = Array.isArray(this.lavadores) ? this.lavadores : [];
-                    if (lavs.length === 0) {
-                        showToast('Nenhum lavador disponível', 'error');
-                        return;
-                    }
-                    let lavIdx = 0;
+                    if (lavs.length === 0) { showToast('Nenhum lavador disponível', 'error'); return; }
+                    let i = 0;
                     this.rows.forEach(row => {
                         if (row.state !== 'done') {
-                            const lav = lavs[lavIdx % lavs.length];
+                            const lav = lavs[i % lavs.length];
                             if (lav?.id) row.lavadorId = lav.id;
-                            lavIdx++;
+                            i++;
                         }
                     });
                     showToast('Lavadores distribuídos uniformemente', 'info');
                 },
 
-                // ---- label do estado ----
                 stateLabel(state) {
-                    const labels = {
-                        empty: 'Vazia',
-                        searching: 'Buscando',
-                        found: 'Encontrado',
-                        manual: 'Manual',
-                        done: 'Criado ✓',
-                        error: 'Erro ✗',
-                    };
-                    return labels[state] || state;
+                    return { empty:'Vazia', searching:'Buscando', found:'Encontrado',
+                             manual:'Manual', done:'Criado ✓', error:'Erro ✗' }[state] || state;
                 },
 
-                // ---- criar ordens ----
                 async criarOrdens() {
                     const prontas = this.rows.filter(r =>
                         (r.state === 'found' || r.state === 'manual') && r.servicoId
                     );
-
-                    if (prontas.length === 0) {
-                        showToast('Nenhuma linha pronta para criar', 'error');
-                        return;
-                    }
+                    if (prontas.length === 0) { showToast('Nenhuma linha pronta', 'error'); return; }
 
                     this.isCreating = true;
                     this.progressDone = 0;
                     this.progressTotal = prontas.length;
+                    let criadas = 0, erros = 0;
 
-                    let criadas = 0;
-                    let erros = 0;
-
-                    // Criar sequencialmente para evitar sobrecarga
                     for (const row of prontas) {
                         try {
-                            const payload = this._buildPayload(row);
-                            const result = await window.api.createOrdem(payload);
-
+                            const result = await window.api.createOrdem(this._buildPayload(row));
                             row.state = 'done';
                             row.ordemId = result?.id || null;
                             criadas++;
@@ -1230,50 +902,30 @@
                         }
                         this.progressDone++;
                     }
-
                     this.isCreating = false;
 
-                    if (criadas > 0 && erros === 0) {
-                        showToast(`${criadas} ordem(ns) criada(s) com sucesso!`, 'success');
-                    } else if (criadas > 0 && erros > 0) {
-                        showToast(`${criadas} criadas, ${erros} com erro`, 'info');
-                    } else {
-                        showToast(`Erro ao criar ordens (${erros} falhas)`, 'error');
-                    }
+                    if (criadas > 0 && erros === 0)      showToast(`${criadas} ordem(ns) criada(s)!`, 'success');
+                    else if (criadas > 0 && erros > 0)   showToast(`${criadas} criadas, ${erros} com erro`, 'info');
+                    else                                  showToast(`Erro ao criar ordens (${erros} falhas)`, 'error');
                 },
 
                 _buildPayload(row) {
-                    const placa = row.placa.replace(/-/g, '').toUpperCase();
-
+                    const placa = row.placa.replace(/-/g,'').toUpperCase();
                     const payload = {
-                        itens: [{
-                            tipo: 'SERVICO',
-                            itemId: row.servicoId,
-                            quantidade: 1
-                        }],
+                        itens: [{ tipo:'SERVICO', itemId: row.servicoId, quantidade: 1 }],
                         lavadorId: row.lavadorId || undefined,
-                        forcarCriacao: true,  // pular verificação de ordem ativa existente
+                        forcarCriacao: true,
                     };
-
                     if (row.veiculoId && row.clienteId) {
-                        // Veículo encontrado no sistema com cliente vinculado
-                        payload.veiculoId = row.veiculoId;
-                        payload.clienteId = row.clienteId;
+                        payload.veiculoId  = row.veiculoId;
+                        payload.clienteId  = row.clienteId;
                     } else if (row.veiculoId) {
-                        // Veículo no sistema mas sem cliente (incomum)
-                        payload.veiculoId = row.veiculoId;
+                        payload.veiculoId  = row.veiculoId;
                         payload.novoCliente = { nome: `Avulso ${placa}` };
                     } else {
-                        // Modo manual: criar cliente + veículo no backend
-                        payload.novoCliente = {
-                            nome: row.clienteNome?.trim() || `Avulso ${placa}`
-                        };
-                        payload.novoVeiculo = {
-                            placa,
-                            modelo: 'Veículo'  // modelo mínimo requerido
-                        };
+                        payload.novoCliente = { nome: row.clienteNome?.trim() || `Avulso ${placa}` };
+                        payload.novoVeiculo = { placa, modelo: 'Veículo' };
                     }
-
                     return payload;
                 },
             };
