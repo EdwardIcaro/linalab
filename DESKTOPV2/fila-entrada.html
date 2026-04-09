@@ -1018,7 +1018,9 @@
                             window.api.getLavadoresSimple(),
                             window.api.getServicos({ limit: 500, ativo: 'true' })
                         ]);
-                        this.lavadores = lavs || [];
+                        // getLavadoresSimple retorna { lavadores: [...] }
+                        this.lavadores = lavs?.lavadores || (Array.isArray(lavs) ? lavs : []);
+                        // getServicos retorna { servicos: [...], pagination: {...} }
                         this.servicos = servs?.servicos || (Array.isArray(servs) ? servs : []);
                         this.servicosAll = this.servicos;
                     } catch (e) {
@@ -1178,10 +1180,16 @@
                         showToast('Nenhum lavador disponível', 'error');
                         return;
                     }
+                    const lavs = Array.isArray(this.lavadores) ? this.lavadores : [];
+                    if (lavs.length === 0) {
+                        showToast('Nenhum lavador disponível', 'error');
+                        return;
+                    }
                     let lavIdx = 0;
                     this.rows.forEach(row => {
                         if (row.state !== 'done') {
-                            row.lavadorId = this.lavadores[lavIdx % this.lavadores.length].id;
+                            const lav = lavs[lavIdx % lavs.length];
+                            if (lav?.id) row.lavadorId = lav.id;
                             lavIdx++;
                         }
                     });
