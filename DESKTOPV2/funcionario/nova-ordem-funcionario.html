@@ -1660,7 +1660,7 @@
                 <h3><i class="fas fa-camera" style="color:#0066cc"></i> Ler Placa por Câmera</h3>
                 <button class="camera-modal-close" @click="closeCameraModal()"><i class="fas fa-times"></i></button>
             </div>
-            <div class="camera-viewport" x-show="!ocr.result">
+            <div class="camera-viewport">
                 <video id="ocrVideo" class="camera-video" autoplay playsinline muted></video>
                 <div class="camera-guide">
                     <div class="camera-guide-rect"></div>
@@ -1670,29 +1670,12 @@
             <canvas id="ocrCanvas" style="display:none"></canvas>
             <div class="camera-controls">
                 <div class="ocr-error-box" x-show="ocr.error" x-text="ocr.error"></div>
-                <div class="ocr-result-box" x-show="ocr.result">
-                    <div x-show="ocr.result?.confidence >= 80">
-                        <div class="ocr-result-placa" x-text="ocr.result?.placa || ''"></div>
-                        <div class="ocr-confidence high">✅ Confiança: <span x-text="ocr.result?.confidence + '%'"></span></div>
-                    </div>
-                    <div x-show="ocr.result && ocr.result.confidence < 80">
-                        <div class="ocr-confidence low" style="margin-bottom:8px;">
-                            ⚠️ Confiança baixa (<span x-text="ocr.result?.confidence + '%'"></span>) — confirme ou corrija:
-                        </div>
-                        <input class="ocr-edit-input" type="text" maxlength="8" x-model="ocr.editedPlate" placeholder="ABC1D23">
-                    </div>
-                </div>
-                <button class="camera-btn camera-btn-capture" x-show="!ocr.result && !ocr.isProcessing && !ocr.error" @click="captureAndProcess()">
-                    <i class="fas fa-camera"></i> Capturar e Ler Placa
+                <button class="camera-btn camera-btn-capture" x-show="!ocr.isProcessing" @click="captureAndProcess()">
+                    <i class="fas fa-camera"></i>
+                    <span x-text="ocr.error ? 'Tentar novamente' : 'Capturar e Ler Placa'"></span>
                 </button>
                 <button class="camera-btn camera-btn-capture" x-show="ocr.isProcessing" disabled>
                     <span class="camera-spinner"></span> Lendo placa...
-                </button>
-                <button class="camera-btn camera-btn-confirm" x-show="ocr.result" @click="useOcrPlate()">
-                    <i class="fas fa-check"></i> Usar esta placa
-                </button>
-                <button class="camera-btn camera-btn-retry" x-show="ocr.result || ocr.error" @click="resetOcrCapture()">
-                    <i class="fas fa-redo"></i> Tentar novamente
                 </button>
             </div>
         </div>
@@ -1906,7 +1889,7 @@
                     canvas.width  = video.videoWidth  || 640;
                     canvas.height = video.videoHeight || 480;
                     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+                    const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
                     this.ocr.isProcessing = true;
                     this.ocr.error = null;
                     try {
@@ -1915,24 +1898,16 @@
                             this.ocr.error = 'Nenhuma placa detectada. Tente ajustar o ângulo ou iluminação.';
                             return;
                         }
-                        this.ocr.result = data;
-                        this.ocr.editedPlate = data.placa;
+                        // Auto-usar sem confirmação
+                        this.closeCameraModal();
+                        this.searchQuery = data.placa;
+                        await this.$nextTick();
+                        await this.performSearch();
                     } catch (err) {
                         this.ocr.error = 'Erro ao processar imagem. Tente novamente.';
                     } finally {
                         this.ocr.isProcessing = false;
                     }
-                },
-
-                async useOcrPlate() {
-                    const placa = this.ocr.result?.confidence >= 80
-                        ? this.ocr.result.placa
-                        : this.ocr.editedPlate.toUpperCase().replace(/[-\s]/g, '');
-                    if (!placa) return;
-                    this.closeCameraModal();
-                    this.searchQuery = placa;
-                    await this.$nextTick();
-                    await this.performSearch();
                 },
 
                 async init() {

@@ -433,6 +433,101 @@
                 grid-template-columns: 36px 110px 90px 1fr 140px 100px 36px;
             }
         }
+
+        /* ===== OCR CÂMERA (fila) ===== */
+        .placa-cell-wrap {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .placa-cell-wrap .cell-input { flex: 1; min-width: 0; }
+
+        .row-cam-btn {
+            flex-shrink: 0;
+            width: 26px; height: 26px;
+            border-radius: 5px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex; align-items: center; justify-content: center;
+            transition: filter 0.15s;
+        }
+        .row-cam-btn:hover { filter: brightness(1.3); }
+        .row-cam-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .camera-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 9000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .camera-modal-overlay.active { display: flex; }
+        .camera-modal {
+            background: #1a1a2e;
+            border-radius: 16px;
+            overflow: hidden;
+            width: 100%; max-width: 460px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .camera-modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .camera-modal-header h3 {
+            color: white; font-size: 15px; font-weight: 600; margin: 0;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .camera-modal-close {
+            background: rgba(255,255,255,0.1); border: none; color: white;
+            width: 30px; height: 30px; border-radius: 7px; cursor: pointer;
+            font-size: 15px; display: flex; align-items: center; justify-content: center;
+        }
+        .camera-modal-close:hover { background: rgba(255,255,255,0.2); }
+        .camera-viewport { position: relative; background: black; aspect-ratio: 4/3; overflow: hidden; }
+        .camera-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .camera-guide {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none;
+        }
+        .camera-guide-rect {
+            width: 72%; height: 28%;
+            border: 2px solid rgba(255,220,0,0.85);
+            border-radius: 8px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
+        }
+        .camera-guide-label {
+            position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.7); font-size: 11px; white-space: nowrap;
+        }
+        .camera-controls { padding: 14px 18px; }
+        .ocr-error-box {
+            background: rgba(220,53,69,0.15); border: 1px solid rgba(220,53,69,0.3);
+            border-radius: 8px; padding: 10px 14px; color: #fca5a5;
+            font-size: 13px; text-align: center; margin-bottom: 12px;
+        }
+        .camera-btn {
+            width: 100%; padding: 11px; border-radius: 9px; border: none;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            font-family: inherit; transition: filter 0.2s;
+        }
+        .camera-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .camera-btn-capture { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+        .camera-btn-capture:hover:not(:disabled) { filter: brightness(1.1); }
+        .ocr-spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+            border-radius: 50%; animation: ocr-spin 0.7s linear infinite;
+        }
+        @keyframes ocr-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body x-data="filaEntrada()" x-init="init()">
@@ -529,15 +624,23 @@
 
                             <!-- PLACA -->
                             <div class="fila-cell">
-                                <input
-                                    class="cell-input placa-input"
-                                    type="text"
-                                    maxlength="8"
-                                    placeholder="ABC-1234"
-                                    x-model="row.placa"
-                                    :disabled="row.state === 'done' || row.state === 'searching' || isCreating"
-                                    @input="onPlacaInput(row)"
-                                >
+                                <div class="placa-cell-wrap">
+                                    <input
+                                        class="cell-input placa-input"
+                                        type="text"
+                                        maxlength="8"
+                                        placeholder="ABC-1234"
+                                        x-model="row.placa"
+                                        :disabled="row.state === 'done' || row.state === 'searching' || isCreating"
+                                        @input="onPlacaInput(row)"
+                                    >
+                                    <button
+                                        class="row-cam-btn"
+                                        @click="abrirOcrParaLinha(row)"
+                                        :disabled="row.state === 'done' || isCreating"
+                                        title="Ler placa por câmera"
+                                    ><i class="fas fa-camera"></i></button>
+                                </div>
                             </div>
 
                             <!-- CLIENTE / VEÍCULO -->
@@ -694,6 +797,34 @@
         </button>
     </div>
 
+    <!-- MODAL: CÂMERA OCR -->
+    <div class="camera-modal-overlay" :class="{ active: ocr.isOpen }" x-show="ocr.isOpen" @click.self="closeCameraModal()">
+        <div class="camera-modal" @click.stop>
+            <div class="camera-modal-header">
+                <h3><i class="fas fa-camera" style="color:#6366f1"></i> Ler Placa</h3>
+                <button class="camera-modal-close" @click="closeCameraModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="camera-viewport">
+                <video id="ocrVideo" class="camera-video" autoplay playsinline muted></video>
+                <div class="camera-guide">
+                    <div class="camera-guide-rect"></div>
+                    <span class="camera-guide-label">Enquadre a placa no retângulo</span>
+                </div>
+            </div>
+            <canvas id="ocrCanvas" style="display:none"></canvas>
+            <div class="camera-controls">
+                <div class="ocr-error-box" x-show="ocr.error" x-text="ocr.error"></div>
+                <button class="camera-btn camera-btn-capture" x-show="!ocr.isProcessing" @click="ocrCapturar()">
+                    <i class="fas fa-camera"></i>
+                    <span x-text="ocr.error ? 'Tentar novamente' : 'Capturar'"></span>
+                </button>
+                <button class="camera-btn camera-btn-capture" x-show="ocr.isProcessing" disabled>
+                    <span class="ocr-spinner"></span> Lendo placa...
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST -->
     <div id="toast-container"></div>
 
@@ -753,6 +884,9 @@
                 progressTotal: 0,
                 _placaSearch: null,
 
+                // OCR câmera
+                ocr: { isOpen: false, stream: null, isProcessing: false, error: null, targetRow: null },
+
                 get rowsReady() {
                     return this.rows.filter(r =>
                         (r.state === 'found' || r.state === 'manual') && r.servicoId
@@ -760,6 +894,64 @@
                 },
                 get rowsDone()  { return this.rows.filter(r => r.state === 'done').length; },
                 get rowsError() { return this.rows.filter(r => r.state === 'error').length; },
+
+                // ===== OCR CÂMERA POR LINHA =====
+                async abrirOcrParaLinha(row) {
+                    this.ocr.targetRow = row;
+                    this.ocr.isOpen = true;
+                    this.ocr.error = null;
+                    this.ocr.isProcessing = false;
+                    await this.$nextTick();
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                        });
+                        this.ocr.stream = stream;
+                        const video = document.getElementById('ocrVideo');
+                        if (video) { video.srcObject = stream; video.play(); }
+                    } catch {
+                        this.ocr.error = 'Câmera não acessível. Verifique permissões ou use HTTPS.';
+                    }
+                },
+
+                closeCameraModal() {
+                    if (this.ocr.stream) {
+                        this.ocr.stream.getTracks().forEach(t => t.stop());
+                        this.ocr.stream = null;
+                    }
+                    this.ocr.isOpen = false;
+                    this.ocr.targetRow = null;
+                },
+
+                async ocrCapturar() {
+                    const video = document.getElementById('ocrVideo');
+                    const canvas = document.getElementById('ocrCanvas');
+                    if (!video || !canvas) return;
+                    canvas.width  = video.videoWidth  || 640;
+                    canvas.height = video.videoHeight || 480;
+                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                    this.ocr.isProcessing = true;
+                    this.ocr.error = null;
+                    try {
+                        const data = await window.api.reconhecerPlaca(imageBase64);
+                        if (!data.placa) {
+                            this.ocr.error = 'Nenhuma placa detectada. Ajuste o ângulo e tente novamente.';
+                            return;
+                        }
+                        // Preencher a linha alvo e fechar
+                        const row = this.ocr.targetRow;
+                        this.closeCameraModal();
+                        if (row) {
+                            row.placa = data.placa;
+                            this.onPlacaInput(row);
+                        }
+                    } catch {
+                        this.ocr.error = 'Erro ao processar imagem. Tente novamente.';
+                    } finally {
+                        this.ocr.isProcessing = false;
+                    }
+                },
 
                 async init() {
                     if (!localStorage.getItem('token')) {
