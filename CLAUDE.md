@@ -125,7 +125,7 @@ Usuario → Empresa → Cliente → Veiculo
 /Features            → Specs de features futuras (leia antes de implementar!)
   fila-de-entrada.md             ✅ Implementado
   abertura-fechamento-caixa.md   ✅ Implementado
-  ocr-placa.md                   ⏳ Planejado
+  ocr-placa.md                   ✅ Implementado
   whatsapp-command-center.md     ⏳ Planejado
   whatsapp-vision.md             ⏳ Planejado
 ```
