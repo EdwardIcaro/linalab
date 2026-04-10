@@ -417,6 +417,12 @@ const api = {
     }),
   },
 
+  // ===== OCR DE PLACA =====
+  reconhecerPlaca: (imageBase64) => fetchApi('/ocr/placa', {
+    method: 'POST',
+    body: JSON.stringify({ image: imageBase64 }),
+  }),
+
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),
   logout: () => {

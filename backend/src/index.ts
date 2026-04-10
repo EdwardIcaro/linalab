@@ -30,6 +30,7 @@ import subscriptionAdminRoutes from './routes/subscriptionAdmin';
 import promotionRoutes from './routes/promotionRoutes';
 import paymentRoutes from './routes/payment';
 import whatsappRoutes from './routes/whatsapp';
+import ocrRoutes from './routes/ocr';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
@@ -163,6 +164,7 @@ app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
 
 // Rotas WhatsApp Bot
 app.use('/api/whatsapp', authMiddleware, whatsappRoutes); // Rotas protegidas (com auth)
+app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas autenticação de usuário)
 
 // Rota de saúde
 app.get('/health', (_req: express.Request, res: express.Response) => {
