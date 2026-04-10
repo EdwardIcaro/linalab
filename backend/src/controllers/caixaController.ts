@@ -394,20 +394,22 @@ export const createSangria = async (req: EmpresaRequest, res: Response) => {
     }
 };
 
-// ✅ OTIMIZAÇÃO: Função auxiliar otimizada - sem OR complexo
+// Função auxiliar: busca pagamentos do período, respeitando filtro de tipo
 async function getPagamentosDoPeriodoOptimizado(
     empresaId: string,
     dateFilter: Prisma.DateTimeFilter | undefined,
-    tipo?: string | string[]
+    tipo?: string
 ) {
-    if (!dateFilter) {
-        return [];
-    }
+    const fetchPagos    = !tipo || tipo === 'PAGAMENTO';
+    const fetchPendentes = !tipo || tipo === 'PENDENTE';
 
-    // ✅ Fazer duas queries em paralelo ao invés de usar OR
     const [pagos, pendentes] = await Promise.all([
-        prisma.pagamento.findMany({
-            where: { empresaId, status: 'PAGO', pagoEm: dateFilter },
+        fetchPagos ? prisma.pagamento.findMany({
+            where: {
+                empresaId,
+                status: 'PAGO',
+                ...(dateFilter ? { pagoEm: dateFilter } : {}),
+            },
             select: {
                 id: true,
                 valor: true,
@@ -415,9 +417,14 @@ async function getPagamentosDoPeriodoOptimizado(
                 pagoEm: true,
                 ordem: { select: { veiculo: { select: { placa: true, modelo: true } } } }
             },
-        }),
-        prisma.pagamento.findMany({
-            where: { empresaId, status: 'PENDENTE', createdAt: dateFilter },
+        }) : Promise.resolve([]),
+
+        fetchPendentes ? prisma.pagamento.findMany({
+            where: {
+                empresaId,
+                status: 'PENDENTE',
+                ...(dateFilter ? { createdAt: dateFilter } : {}),
+            },
             select: {
                 id: true,
                 valor: true,
@@ -425,7 +432,7 @@ async function getPagamentosDoPeriodoOptimizado(
                 createdAt: true,
                 ordem: { select: { veiculo: { select: { placa: true, modelo: true } } } }
             },
-        })
+        }) : Promise.resolve([]),
     ]);
 
     return [...pagos, ...pendentes].map((p: any) => ({
@@ -441,7 +448,8 @@ async function getPagamentosDoPeriodoOptimizado(
 export const getHistorico = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { dataInicio, dataFim } = req.query;
-    const tipo = req.query.tipo as string | string[] | undefined;
+    const tipoRaw = req.query.tipo as string | string[] | undefined;
+    const tipo = Array.isArray(tipoRaw) ? tipoRaw[0] : (tipoRaw || '');
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     const horarioAbertura = empresa?.horarioAbertura || '07:00';
@@ -463,39 +471,46 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
         dateRange = { gte: start, lte: end };
     }
 
+    // PAGAMENTO e PENDENTE vêm da tabela Pagamento; SAIDA/SANGRIA/FECHAMENTO vêm de CaixaRegistro
+    const fetchPayments     = !tipo || tipo === 'PAGAMENTO' || tipo === 'PENDENTE';
+    const fetchCaixaRegistros = !tipo || (tipo !== 'PAGAMENTO' && tipo !== 'PENDENTE');
+
     try {
-        // ✅ OTIMIZAÇÃO: Rodar ambas as queries em paralelo
         const [registrosPagamento, outrosRegistros] = await Promise.all([
-            getPagamentosDoPeriodoOptimizado(empresaId, dateRange, tipo),
-            prisma.caixaRegistro.findMany({
-                where: {
-                    empresaId,
-                    ...(tipo && tipo !== 'PAGAMENTO' ? { tipo: tipo as any } : {}),
-                    ...(dateRange ? { data: dateRange } : {}),
-                },
-                select: {
-                    id: true,
-                    tipo: true,
-                    data: true,
-                    valor: true,
-                    formaPagamento: true,
-                    descricao: true,
-                    origem: true,
-                    lancadoPor: true,
-                    fornecedor: { select: { nome: true } },
-                    lavador: { select: { nome: true } },
-                },
-                orderBy: { data: 'desc' }, // ✅ Ordenar no banco ao invés de JavaScript
-            })
+            fetchPayments
+                ? getPagamentosDoPeriodoOptimizado(empresaId, dateRange, tipo)
+                : Promise.resolve([]),
+            fetchCaixaRegistros
+                ? prisma.caixaRegistro.findMany({
+                    where: {
+                        empresaId,
+                        ...(tipo ? { tipo: tipo as any } : {}),
+                        ...(dateRange ? { data: dateRange } : {}),
+                    },
+                    select: {
+                        id: true,
+                        tipo: true,
+                        data: true,
+                        valor: true,
+                        formaPagamento: true,
+                        descricao: true,
+                        origem: true,
+                        lancadoPor: true,
+                        fornecedor: { select: { nome: true } },
+                        lavador: { select: { nome: true } },
+                    },
+                    orderBy: { data: 'desc' },
+                  })
+                : Promise.resolve([])
         ]);
 
-        // ✅ Combinar e ordenar uma vez no final
         const todosRegistros = [...registrosPagamento, ...outrosRegistros].sort((a: { data: Date | null }, b: { data: Date | null }) =>
             new Date(b.data!).getTime() - new Date(a.data!).getTime()
         );
 
-        // Calcular totais com base nos registros filtrados
-        const totalEntradas = registrosPagamento.reduce((acc, p) => acc + p.valor, 0);
+        const totalEntradas = registrosPagamento
+            .filter(p => p.tipo === 'PAGAMENTO')
+            .reduce((acc, p) => acc + p.valor, 0);
         const totalSaidas = outrosRegistros
             .filter(r => r.tipo === 'SAIDA' || r.tipo === 'SANGRIA')
             .reduce((acc, r) => acc + r.valor, 0);
@@ -509,10 +524,7 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
             }
         };
 
-        res.json({
-            registros: todosRegistros,
-            totais: totais
-        });
+        res.json({ registros: todosRegistros, totais });
     } catch (error) {
         console.error('Erro ao buscar histórico de caixa:', error);
         res.status(500).json({ error: 'Erro ao buscar histórico de caixa.' });
