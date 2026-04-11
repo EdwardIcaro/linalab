@@ -378,6 +378,35 @@
     .empty-box h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
     .empty-box p { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
+    /* ===== FAB — Nova Ordem ===== */
+    .fab-nova-ordem {
+      position: fixed;
+      bottom: 28px;
+      right: 22px;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0066cc, #004ea3);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 6px 20px rgba(0,102,204,0.45);
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      z-index: 500;
+    }
+    .fab-nova-ordem:active {
+      transform: scale(0.93);
+      box-shadow: 0 3px 10px rgba(0,102,204,0.3);
+    }
+    @media (min-width: 501px) {
+      .fab-nova-ordem { bottom: 32px; right: 28px; width: 66px; height: 66px; }
+    }
+
     /* ===== CONFIRM DIALOG ===== */
     .confirm-dialog {
       position: fixed; inset: 0; z-index: 2000;
@@ -488,6 +517,11 @@
 
   </main>
 
+  <!-- FAB: Nova Ordem (visível apenas se tem permissão gerenciar_ordens) -->
+  <a href="funcionario/nova-ordem-funcionario.html" class="fab-nova-ordem" id="fabNovaOrdem" style="display:none" title="Nova Ordem">
+    <i class="fas fa-tint"></i>
+  </a>
+
   <script src="api.js"></script>
   <script>
     // Definição dos botões por permissão
@@ -566,9 +600,10 @@
 
       const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
 
-      // Hero: Fila de Entrada
+      // Hero: Fila de Entrada + FAB Nova Ordem
       if (permissoes.includes('gerenciar_ordens')) {
         document.getElementById('heroFila').style.display = 'flex';
+        document.getElementById('fabNovaOrdem').style.display = 'flex';
       }
 
       // Grid de navegação
