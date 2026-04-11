@@ -38,12 +38,20 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     });
 
     if (existente && existente.status === 'connected') {
-      console.warn(
-        '[WhatsApp Setup] Instância já conectada para empresa:',
-        empresaId
-      );
-      return res.status(400).json({
-        error: 'Já existe uma instância conectada para esta empresa',
+      // Checar se a conexão Baileys em memória ainda está ativa.
+      // Após reinício do servidor, o banco pode ter 'connected' mas o socket foi perdido.
+      const statusAtual = getStatus(empresaId);
+      if (statusAtual === 'connected') {
+        console.warn('[WhatsApp Setup] Instância já conectada para empresa:', empresaId);
+        return res.status(400).json({
+          error: 'Já existe uma instância conectada para esta empresa',
+        });
+      }
+      // Banco desatualizado — socket perdido (reinício do servidor). Corrigir e reconectar.
+      console.log('[WhatsApp Setup] DB diz connected mas Baileys está desconectado. Atualizando estado...');
+      await prisma.whatsappInstance.update({
+        where: { empresaId },
+        data: { status: 'disconnected' },
       });
     }
 
@@ -209,12 +217,16 @@ export async function disconnectWhatsapp(
       return res.status(404).json({ error: 'Instância não encontrada' });
     }
 
-    // Desconectar Baileys
+    // Desconectar Baileys (sempre limpa o estado em memória)
     try {
       await disconnectBaileys(empresaId);
     } catch (error) {
       console.warn('[WhatsApp Disconnect] Erro ao desconectar Baileys:', error);
-      // Continuar mesmo se houver erro
+      // Garantir limpeza no banco mesmo se o service falhou
+      await prisma.whatsappInstance.update({
+        where: { empresaId },
+        data: { status: 'disconnected', authState: null, qrCode: null },
+      }).catch(() => {});
     }
 
     return res.json({ message: 'WhatsApp desconectado com sucesso' });
