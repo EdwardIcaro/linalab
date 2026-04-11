@@ -59,10 +59,10 @@ export async function gerarPixParaOrdem(
     };
   }
 
-  // Gerar txId único: empresa+ordem codificados em base64url
+  // txId interno apenas para rastreamento — NÃO vai no payload (evita "agendamento")
   const txId = `LINA${ordem.numeroOrdem}E${empresaId.substring(0, 6).toUpperCase()}`.replace(/[^A-Za-z0-9]/g, '');
 
-  // Calcular expiração
+  // Calcular expiração (referência interna)
   const expiracaoMin = bankIntegration.pixExpiracaoMin ?? 30;
   const expiraEm = new Date(Date.now() + expiracaoMin * 60 * 1000);
 
@@ -71,16 +71,15 @@ export async function gerarPixParaOrdem(
     bankIntegration.nomeRecebedor ?? 'Lava Jato'
   ).substring(0, 25);
 
-  // Montar descrição (txid): "Ordem 321"
-  const descricao = `Ordem ${ordem.numeroOrdem}`.substring(0, 35);
-
   // Gerar payload PIX estático
+  // IMPORTANTE: transactionId = "***" é o padrão BCB para QR estático reutilizável.
+  // Usar um txid real faz alguns bancos tratar como QR dinâmico → mostra "agendamento".
   const payload = gerarPayloadPix({
     key: bankIntegration.chavePix,
     name: nomeRecebedor,
     city: 'Brasil',
     amount: ordem.valorTotal,
-    transactionId: txId.substring(0, 25),
+    transactionId: '***',
   });
 
   // Gerar imagem PNG

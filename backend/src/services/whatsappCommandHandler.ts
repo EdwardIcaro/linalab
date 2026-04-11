@@ -131,15 +131,15 @@ export async function handleIncomingMessage(
       return await handleOrdensAtivas(empresaId, user);
     }
 
-    // pix ordem N / pagamento ordem N
-    const pixMatch = message.trim().match(/^(?:pix|pagamento)\s+ordem\s+(\d+)$/i);
+    // pix N / pix ordem N / pagamento N / pagamento ordem N
+    const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
     if (pixMatch) {
       const numOrdem = parseInt(pixMatch[1]);
       return await handlePixOrdem(numOrdem, empresaId, from, user, false);
     }
 
-    // reenviar pix N
-    const reenviarMatch = message.trim().match(/^reenviar\s+pix\s+(\d+)$/i);
+    // reenviar pix N / reenviar pix ordem N
+    const reenviarMatch = message.trim().match(/^reenviar\s+pix(?:\s+ordem)?\s+(\d+)$/i);
     if (reenviarMatch) {
       const numOrdem = parseInt(reenviarMatch[1]);
       return await handlePixOrdem(numOrdem, empresaId, from, user, true);
@@ -757,7 +757,7 @@ function handleAjudaLavador(): string {
     `/status - Seu faturamento e comissão do dia e mês\n` +
     `/comissoes - Comissões em aberto a receber\n` +
     `ordens - Ver suas ordens ativas\n` +
-    `pix ordem [nº] - Gerar QR Code PIX para o cliente\n` +
+    `pix [nº] - Gerar QR Code PIX (ex: _pix 321_)\n` +
     `reenviar pix [nº] - Reenviar QR já gerado\n` +
     `/ajuda - Este menu\n\n` +
     `Acesso limitado: você só pode ver seus dados.\n` +
@@ -1017,10 +1017,9 @@ function handleAjudaCommand(): string {
     `/pendentes - Ordens em andamento\n\n` +
     `*PIX pelo WhatsApp:*\n` +
     `ordens - Lista ordens ativas\n` +
-    `pix ordem [nº] - Gera QR Code PIX para a ordem\n` +
-    `pagamento ordem [nº] - Alias para pix ordem\n` +
-    `reenviar pix [nº] - Reenvia QR Code já gerado\n` +
-    `Ex: _pix ordem 321_\n\n` +
+    `pix [nº] - Gera QR Code PIX (ex: _pix 321_)\n` +
+    `pix ordem [nº] - Também funciona\n` +
+    `reenviar pix [nº] - Reenvia QR Code já gerado\n\n` +
     `*Relatórios por data:*\n` +
     `relatório de ontem\n` +
     `relatório dia 02/04\n` +
@@ -1245,7 +1244,7 @@ async function handleOrdensAtivas(empresaId: string, user: WhatsAppUser): Promis
   }
 
   r += `\n────────────────\n`;
-  r += `Para gerar PIX: *pix ordem [número]*\nEx: _pix ordem ${ordens[0]?.numeroOrdem ?? '1'}_`;
+  r += `Para gerar PIX: *pix [número]*\nEx: _pix ${ordens[0]?.numeroOrdem ?? '1'}_`;
 
   return r.trim();
 }
