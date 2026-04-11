@@ -136,8 +136,9 @@ export async function initBaileys(empresaId: string): Promise<void> {
     const baileysMod = await dynamicImport('@whiskeysockets/baileys') as any;
     const qrcodeMod = await dynamicImport('qrcode') as any;
 
-    const makeWASocket = baileysMod.default || baileysMod;
     const {
+      default: _baileysDefault,
+      makeWASocket,
       isJidBroadcast,
       useMultiFileAuthState,
       fetchLatestBaileysVersion,
@@ -145,6 +146,12 @@ export async function initBaileys(empresaId: string): Promise<void> {
       DisconnectReason: BaileysDisconnectReason,
       makeInMemoryStore,
     } = baileysMod;
+
+    // Baileys pode expor makeWASocket como named export ou via default
+    const _makeWASocket: typeof makeWASocket =
+      makeWASocket ??
+      _baileysDefault?.makeWASocket ??
+      _baileysDefault;
     const QRCode = qrcodeMod.default || qrcodeMod;
 
     // Criar/reusar store em memória (persiste entre reconexões para manter @lid mappings)
@@ -172,7 +179,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
     }
 
     // Criar socket com configuração oficial
-    const sock = makeWASocket({
+    const sock = _makeWASocket({
       version,
       auth: state,
       printQRInTerminal: false,
