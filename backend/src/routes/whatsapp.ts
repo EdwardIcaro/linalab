@@ -26,7 +26,7 @@ import {
   getPairingStatus,
 } from '../controllers/whatsappAdminPhoneController';
 
-const router = Router();
+const router: Router = Router();
 
 // Rotas do bot (setup, status, disconnect)
 router.post('/setup', setupWhatsapp);

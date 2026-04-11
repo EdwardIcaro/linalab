@@ -8,7 +8,7 @@ import {
 import userAuthMiddleware from '../middlewares/userAuthMiddleware';
 import express from 'express';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * POST /api/payments/create-preference

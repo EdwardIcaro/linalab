@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { reconhecerPlaca } from '../controllers/ocrController';
 
-const router = Router();
+const router: Router = Router();
 
 // POST /api/ocr/placa — proxy para Plate Recognizer (protegido por userAuthMiddleware)
 router.post('/placa', reconhecerPlaca);

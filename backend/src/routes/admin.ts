@@ -3,7 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import prisma from '../db';
 
-const router = Router();
+const router: Router = Router();
 const execAsync = promisify(exec);
 
 /**
