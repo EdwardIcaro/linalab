@@ -570,6 +570,35 @@ export async function sendMessage(
 }
 
 /**
+ * Envia uma imagem (Buffer PNG) com legenda opcional
+ */
+export async function sendImageBuffer(
+  empresaId: string,
+  to: string,
+  imageBuffer: Buffer,
+  caption?: string
+): Promise<void> {
+  try {
+    const sock = sockets.get(empresaId);
+    if (!sock) {
+      throw new Error(`Socket não encontrado para empresa: ${empresaId}. Conecte primeiro.`);
+    }
+
+    const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+    await sock.sendMessage(jid, {
+      image: imageBuffer,
+      caption: caption ?? '',
+      mimetype: 'image/png',
+    });
+
+    console.log(`[Baileys] Imagem enviada para ${jid}`);
+  } catch (error) {
+    console.error(`[Baileys] Erro ao enviar imagem:`, error);
+    throw error;
+  }
+}
+
+/**
  * Resolve número de telefone para JID do WhatsApp (@s.whatsapp.net ou @lid)
  * Necessário para identificar números no novo protocolo WhatsApp (@lid)
  */

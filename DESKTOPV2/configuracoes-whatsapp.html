@@ -559,6 +559,59 @@
 
             <div id="alert" class="alert" style="display: none;"></div>
 
+            <!-- ===== Integração PIX ===== -->
+            <div class="admin-section" style="margin-top:2rem;">
+                <div class="section-header">
+                    <h2>💳 Integração PIX</h2>
+                </div>
+                <p style="color:#666;margin-bottom:1.5rem;">
+                    Cadastre sua chave PIX para que os funcionários possam gerar QR Codes de pagamento diretamente pelo WhatsApp.<br>
+                    O cliente escaneia o QR Code e paga. Sem intermediários, sem taxas.
+                </p>
+
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="pixAtivoToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span style="font-weight:600;">Ativar PIX pelo WhatsApp</span>
+                </div>
+
+                <div id="pixConfigFields">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                        <div class="form-group-phone">
+                            <label for="pixChave">Chave PIX</label>
+                            <input type="text" id="pixChave" placeholder="Ex: 11999999999 ou seu@email.com">
+                        </div>
+                        <div class="form-group-phone">
+                            <label for="pixTipo">Tipo da Chave</label>
+                            <select id="pixTipo" style="width:100%;padding:0.6rem 0.8rem;border:1px solid #ddd;border-radius:6px;font-size:0.95rem;">
+                                <option value="ALEATORIA">Chave Aleatória (EVP)</option>
+                                <option value="CPF">CPF</option>
+                                <option value="CNPJ">CNPJ</option>
+                                <option value="EMAIL">E-mail</option>
+                                <option value="TELEFONE">Telefone</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+                        <div class="form-group-phone">
+                            <label for="pixNomeRecebedor">Nome do Recebedor (máx. 25 chars)</label>
+                            <input type="text" id="pixNomeRecebedor" placeholder="Ex: Lava Jato Silva" maxlength="25">
+                        </div>
+                        <div class="form-group-phone">
+                            <label for="pixExpiracao">Validade do QR Code (minutos)</label>
+                            <input type="number" id="pixExpiracao" min="1" max="1440" value="30" placeholder="30">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="salvarPixConfig()" id="btnSalvarPix">
+                        Salvar Configuração PIX
+                    </button>
+                </div>
+            </div>
+
             <!-- Seção de Admins -->
             <div class="admin-section">
                 <div class="section-header">
@@ -796,11 +849,51 @@
             }
         }
 
+        // ===== PIX =====
+        async function loadPixConfig() {
+            try {
+                const { integration } = await window.api.whatsappBankIntegration.get();
+                if (integration) {
+                    document.getElementById('pixAtivoToggle').checked = integration.ativo;
+                    document.getElementById('pixChave').value = integration.chavePix || '';
+                    document.getElementById('pixTipo').value = integration.tipoPix || 'ALEATORIA';
+                    document.getElementById('pixNomeRecebedor').value = integration.nomeRecebedor || '';
+                    document.getElementById('pixExpiracao').value = integration.pixExpiracaoMin || 30;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar config PIX:', error);
+            }
+        }
+
+        async function salvarPixConfig() {
+            const btn = document.getElementById('btnSalvarPix');
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+
+            try {
+                await window.api.whatsappBankIntegration.save({
+                    ativo: document.getElementById('pixAtivoToggle').checked,
+                    chavePix: document.getElementById('pixChave').value.trim(),
+                    tipoPix: document.getElementById('pixTipo').value,
+                    nomeRecebedor: document.getElementById('pixNomeRecebedor').value.trim(),
+                    pixExpiracaoMin: parseInt(document.getElementById('pixExpiracao').value) || 30,
+                });
+                showAlert('✅ Configuração PIX salva com sucesso!', 'success');
+            } catch (error) {
+                showAlert('Erro ao salvar configuração PIX', 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Salvar Configuração PIX';
+            }
+        }
+
         // Inicializar
         async function init() {
             await loadAdminPhones();
             await loadLavadores();
             await loadConfig();
+            await loadPixConfig();
         }
 
         // Carregar configuração

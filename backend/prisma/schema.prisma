@@ -58,6 +58,7 @@ model Empresa {
   theme                      Theme?
   tipoVeiculos               TipoVeiculo[]
   whatsappInstance           WhatsappInstance?
+  bankIntegration            BankIntegration?
 
   @@map("empresas")
 }
@@ -273,6 +274,13 @@ model OrdemServico {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   fechamentoComissaoId String?
+  // Campos PIX
+  pixTxId              String?
+  pixStatus            String?               // "PENDENTE" | "PAGO" | "EXPIRADO"
+  pixPagoEm            DateTime?
+  pixValor             Float?
+  pixQrCode            String?               // payload do QR Code (salvo para reenvio)
+  pixExpiraEm          DateTime?             // quando o QR expira
   cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
@@ -692,4 +700,34 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   CANCELED
+}
+
+model BankIntegration {
+  id              String    @id @default(cuid())
+  empresaId       String    @unique
+  ativo           Boolean   @default(true)
+
+  // Fase 1 — chave PIX estática
+  chavePix        String?
+  tipoPix         String?   // "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "ALEATORIA"
+
+  // Fase 2 — credenciais bancárias (Inter / Cora)
+  banco           String?   // "INTER" | "CORA"
+  clientId        String?
+  clientSecret    String?   // criptografado em produção
+  certCrt         String?   // certificado .crt (Inter MTLS)
+  certKey         String?   // chave .key (Inter MTLS)
+  accessToken     String?
+  tokenExpiresAt  DateTime?
+
+  // Configurações
+  pixExpiracaoMin Int       @default(30) // minutos para o QR expirar
+  nomeRecebedor   String?   // nome que aparece no QR Code
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  empresa         Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("bank_integrations")
 }

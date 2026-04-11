@@ -6,6 +6,8 @@
 import prisma from '../db';
 import { chatCompletion } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type WhatsAppUser } from './whatsappAuthService';
+import { gerarPixParaOrdem } from './pixService';
+import { sendImageBuffer } from './baileyService';
 
 // ==========================================
 // ESTADO DE CONFIRMAÇÃO DE SAÍDAS PENDENTES
@@ -121,6 +123,26 @@ export async function handleIncomingMessage(
       if (isSaida) {
         return await handleSaidaWhatsapp(message, from, senderName, empresaId);
       }
+    }
+
+    // ── Comandos PIX (admin e lavador) ──────────────────────────────────────
+    // ordens
+    if (command === 'ordens') {
+      return await handleOrdensAtivas(empresaId, user);
+    }
+
+    // pix ordem N / pagamento ordem N
+    const pixMatch = message.trim().match(/^(?:pix|pagamento)\s+ordem\s+(\d+)$/i);
+    if (pixMatch) {
+      const numOrdem = parseInt(pixMatch[1]);
+      return await handlePixOrdem(numOrdem, empresaId, from, user, false);
+    }
+
+    // reenviar pix N
+    const reenviarMatch = message.trim().match(/^reenviar\s+pix\s+(\d+)$/i);
+    if (reenviarMatch) {
+      const numOrdem = parseInt(reenviarMatch[1]);
+      return await handlePixOrdem(numOrdem, empresaId, from, user, true);
     }
 
     // Admin do bot: acesso completo (igual ao admin da empresa)
@@ -734,6 +756,9 @@ function handleAjudaLavador(): string {
   return `📚 SEUS COMANDOS\n\n` +
     `/status - Seu faturamento e comissão do dia e mês\n` +
     `/comissoes - Comissões em aberto a receber\n` +
+    `ordens - Ver suas ordens ativas\n` +
+    `pix ordem [nº] - Gerar QR Code PIX para o cliente\n` +
+    `reenviar pix [nº] - Reenviar QR já gerado\n` +
     `/ajuda - Este menu\n\n` +
     `Acesso limitado: você só pode ver seus dados.\n` +
     `Para outras informações, contate o gerente.`;
@@ -990,6 +1015,12 @@ function handleAjudaCommand(): string {
     `/lavadores - Lavadores e comissões de hoje\n` +
     `/caixa - Caixa do dia\n` +
     `/pendentes - Ordens em andamento\n\n` +
+    `*PIX pelo WhatsApp:*\n` +
+    `ordens - Lista ordens ativas\n` +
+    `pix ordem [nº] - Gera QR Code PIX para a ordem\n` +
+    `pagamento ordem [nº] - Alias para pix ordem\n` +
+    `reenviar pix [nº] - Reenvia QR Code já gerado\n` +
+    `Ex: _pix ordem 321_\n\n` +
     `*Relatórios por data:*\n` +
     `relatório de ontem\n` +
     `relatório dia 02/04\n` +
@@ -1164,5 +1195,133 @@ async function confirmarSaida(pendingKey: string, senderName: string): Promise<s
   } catch (error) {
     console.error('[WhatsApp] Erro ao criar saída:', error);
     return '❌ Erro ao registrar a saída. Tente novamente.';
+  }
+}
+
+// ==========================================
+// COMANDOS PIX
+// ==========================================
+
+/**
+ * Lista ordens ativas da empresa (admin: todas; lavador: só as suas)
+ */
+async function handleOrdensAtivas(empresaId: string, user: WhatsAppUser): Promise<string> {
+  const statusAtivos = ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'];
+
+  const where: Record<string, unknown> = { empresaId, status: { in: statusAtivos } };
+  if (user.type === 'lavador') {
+    where.OR = [
+      { lavadorId: user.lavadorId },
+      { ordemLavadores: { some: { lavadorId: user.lavadorId } } },
+    ];
+  }
+
+  const ordens = await prisma.ordemServico.findMany({
+    where: where as any,
+    include: {
+      veiculo: { select: { modelo: true, placa: true } },
+      cliente: { select: { nome: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+  });
+
+  if (ordens.length === 0) {
+    return `📋 Nenhuma ordem ativa no momento.`;
+  }
+
+  const statusLabel: Record<string, string> = {
+    PENDENTE: 'PENDENTE',
+    EM_ANDAMENTO: 'EM ANDAMENTO',
+    AGUARDANDO_PAGAMENTO: 'AGUARD. PAGAMENTO',
+  };
+
+  let r = `📋 *Ordens ativas agora (${ordens.length}):*\n\n`;
+  for (const o of ordens) {
+    const modelo = (o.veiculo.modelo ?? 'Veículo').toUpperCase();
+    const placa = o.veiculo.placa ?? '';
+    const status = statusLabel[o.status] ?? o.status;
+    r += `#${o.numeroOrdem} · ${modelo} ${placa} · *R$ ${o.valorTotal.toFixed(2)}* · ${status}\n`;
+  }
+
+  r += `\n────────────────\n`;
+  r += `Para gerar PIX: *pix ordem [número]*\nEx: _pix ordem ${ordens[0]?.numeroOrdem ?? '1'}_`;
+
+  return r.trim();
+}
+
+/**
+ * Gera ou reenvia QR Code PIX para uma ordem
+ */
+async function handlePixOrdem(
+  numOrdem: number,
+  empresaId: string,
+  from: string,
+  user: WhatsAppUser,
+  reusar: boolean
+): Promise<string> {
+  // Buscar a ordem
+  const ordem = await prisma.ordemServico.findFirst({
+    where: { empresaId, numeroOrdem: numOrdem },
+    include: {
+      cliente: { select: { nome: true } },
+      veiculo: { select: { modelo: true, placa: true } },
+    },
+  });
+
+  if (!ordem) {
+    return `❌ Ordem #${numOrdem} não encontrada.`;
+  }
+
+  // Lavador só pode gerar PIX das próprias ordens
+  if (user.type === 'lavador') {
+    const ehSua = ordem.lavadorId === user.lavadorId ||
+      (await prisma.ordemServicoLavador.findFirst({
+        where: { ordemId: ordem.id, lavadorId: user.lavadorId! },
+      })) !== null;
+
+    if (!ehSua) {
+      return `❌ Você só pode gerar PIX para as suas próprias ordens.`;
+    }
+  }
+
+  // Verificar status
+  const statusAtivo = ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'];
+  if (!statusAtivo.includes(ordem.status)) {
+    return `❌ Ordem #${numOrdem} não está ativa (status: ${ordem.status}).`;
+  }
+
+  // Verificar integração bancária
+  const bankIntegration = await prisma.bankIntegration.findUnique({
+    where: { empresaId },
+  });
+
+  if (!bankIntegration || !bankIntegration.chavePix || !bankIntegration.ativo) {
+    return `⚠️ Nenhuma integração bancária configurada.\n\nAcesse *Configurações → WhatsApp Bot → Integração PIX* para cadastrar sua chave PIX.`;
+  }
+
+  try {
+    const { qrCodeBuffer, expiraEm, txId } = await gerarPixParaOrdem(ordem.id, empresaId, reusar);
+
+    const cliente = ordem.cliente.nome;
+    const modelo = (ordem.veiculo.modelo ?? 'Veículo').toUpperCase();
+    const placa = ordem.veiculo.placa ?? '';
+    const expMin = Math.round((expiraEm.getTime() - Date.now()) / 60000);
+
+    const caption =
+      `💳 *PIX gerado para Ordem #${numOrdem}*\n\n` +
+      `👤 ${cliente} · ${modelo} ${placa}\n` +
+      `💰 *R$ ${ordem.valorTotal.toFixed(2)}*\n` +
+      `⏳ Válido por ${expMin} minuto(s)\n\n` +
+      `Mostre este QR Code para o cliente escanear e pagar.`;
+
+    // Enviar imagem diretamente (retornar string vazia para não duplicar msg)
+    await sendImageBuffer(empresaId, from, qrCodeBuffer, caption);
+    return ''; // Baileys ignora string vazia
+
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[PIX] Erro ao gerar QR Code:', error);
+    return `❌ Erro ao gerar PIX: ${msg}`;
   }
 }

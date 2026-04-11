@@ -25,6 +25,10 @@ import {
   cancelPairing,
   getPairingStatus,
 } from '../controllers/whatsappAdminPhoneController';
+import {
+  getBankIntegration,
+  saveBankIntegration,
+} from '../controllers/bankIntegrationController';
 
 const router: Router = Router();
 
@@ -41,6 +45,10 @@ router.delete('/phones/:lavadorId', deleteLavadorPhone);
 // Rotas de configuração
 router.get('/config', getWhatsappConfig);
 router.patch('/config', updateWhatsappConfig);
+
+// Integração bancária / PIX
+router.get('/bank-integration', getBankIntegration);
+router.patch('/bank-integration', saveBankIntegration);
 
 // Rotas de números de admin
 router.get('/admin-phones', listAdminPhones);

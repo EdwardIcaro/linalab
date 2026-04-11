@@ -416,6 +416,13 @@ const api = {
       body: JSON.stringify(data)
     }),
   },
+  whatsappBankIntegration: {
+    get: () => fetchApi('/whatsapp/bank-integration'),
+    save: (data) => fetchApi('/whatsapp/bank-integration', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  },
 
   // ===== OCR DE PLACA =====
   reconhecerPlaca: (imageBase64) => fetchApi('/ocr/placa', {
