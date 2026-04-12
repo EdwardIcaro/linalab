@@ -313,7 +313,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
   const fim    = new Date(date); fim.setHours(23,59,59,999);
 
   const ordens = await prisma.ordemServico.findMany({
-    where: { empresaId, createdAt: { gte: inicio, lte: fim } },
+    where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicio, lte: fim } },
     include: {
       veiculo:  { select: { modelo: true } },
       lavador:  { select: { nome: true, comissao: true } },
@@ -398,7 +398,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
 
 async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string): Promise<string> {
   const ordens = await prisma.ordemServico.findMany({
-    where: { empresaId, createdAt: { gte: inicio, lte: fim } },
+    where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicio, lte: fim } },
     include: {
       veiculo:  { select: { modelo: true } },
       lavador:  { select: { nome: true, comissao: true } },
@@ -672,10 +672,10 @@ async function handleStatusLavador(lavadorId: string, empresaId: string): Promis
 
   const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
     }),
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, createdAt: { gte: inicioMes, lte: fimMes } },
+      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } },
     }),
     prisma.adiantamento.findMany({
       where: { lavadorId, status: 'PENDENTE' },
@@ -797,7 +797,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
 
     // 3. Ordens do DIA
     const ordensDia = await prisma.ordemServico.findMany({
-      where: { empresaId, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
       include: {
         cliente: { select: { nome: true } },
         veiculo: { select: { placa: true, modelo: true } },
@@ -807,7 +807,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
 
     // 4. Ordens do MÊS
     const ordensMes = await prisma.ordemServico.findMany({
-      where: { empresaId, createdAt: { gte: inicioMes, lte: fimMes } },
+      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } },
       include: { lavador: { select: { nome: true } } }
     });
 
@@ -828,7 +828,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     // 6b. Ordens e caixa do mês anterior
     const [ordensMesAnterior, caixaMesAnterior] = await Promise.all([
       prisma.ordemServico.findMany({
-        where: { empresaId, createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
+        where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
         include: { lavador: { select: { nome: true } } }
       }),
       prisma.caixaRegistro.findMany({
@@ -1066,10 +1066,10 @@ async function handleLavadorEspecifico(
 
     const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
       prisma.ordemServico.findMany({
-        where: { empresaId, lavadorId: lavador.id, createdAt: { gte: hoje, lt: amanha } }
+        where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } }
       }),
       prisma.ordemServico.findMany({
-        where: { empresaId, lavadorId: lavador.id, createdAt: { gte: inicioMes, lte: fimMes } }
+        where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } }
       }),
       prisma.adiantamento.findMany({
         where: { lavadorId: lavador.id, status: 'PENDENTE' }
