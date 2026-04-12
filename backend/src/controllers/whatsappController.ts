@@ -47,7 +47,15 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
           error: 'Já existe uma instância conectada para esta empresa',
         });
       }
-      // Banco desatualizado — socket perdido (reinício do servidor). Corrigir e reconectar.
+      // Reconexão automática em andamento (startup) — não cancelar
+      if (statusAtual === 'reconnecting') {
+        console.log('[WhatsApp Setup] Reconexão automática em andamento, aguarde...');
+        return res.status(409).json({
+          status: 'reconnecting',
+          message: 'Reconexão automática em andamento. Aguarde alguns segundos e verifique o status novamente.',
+        });
+      }
+      // Banco desatualizado — socket perdido sem reconexão. Corrigir e reconectar.
       console.log('[WhatsApp Setup] DB diz connected mas Baileys está desconectado. Atualizando estado...');
       await prisma.whatsappInstance.update({
         where: { empresaId },
@@ -169,6 +177,14 @@ export async function getWhatsappStatus(
         status: 'connected',
         ownerPhone: instance.ownerPhone,
         message: 'WhatsApp conectado com sucesso',
+      });
+    }
+
+    // Se reconectando automaticamente (startup)
+    if (status === 'reconnecting') {
+      return res.json({
+        status: 'reconnecting',
+        message: 'Reconectando automaticamente ao WhatsApp...',
       });
     }
 

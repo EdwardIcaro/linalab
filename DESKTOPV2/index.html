@@ -3028,6 +3028,11 @@
 
                 <!-- Card Footer with Actions -->
                 <div class="whatsapp-card-footer">
+                    <template x-if="whatsappStatus === 'reconnecting'">
+                        <span class="btn btn-secondary btn-sm" style="cursor:default;opacity:0.7;">
+                            <i class="fas fa-circle-notch fa-spin"></i> Reconectando...
+                        </span>
+                    </template>
                     <template x-if="whatsappStatus === 'disconnected'">
                         <button @click="setupWhatsapp()" class="btn btn-primary btn-sm" :disabled="whatsappLoading">
                             <i class="fas fa-plus-circle"></i> Configurar Bot
@@ -3105,6 +3110,11 @@
 
                     <!-- Modal Footer with Actions -->
                     <div class="whatsapp-modal-footer">
+                        <template x-if="whatsappStatus === 'reconnecting'">
+                            <span class="btn btn-secondary btn-sm" style="flex:1;cursor:default;opacity:0.7;">
+                                <i class="fas fa-circle-notch fa-spin"></i> Reconectando automaticamente...
+                            </span>
+                        </template>
                         <template x-if="whatsappStatus === 'disconnected'">
                             <button @click="setupWhatsapp()" class="btn btn-primary btn-sm" :disabled="whatsappLoading" style="flex: 1;">
                                 <i class="fas fa-plus-circle"></i> Configurar
@@ -4035,7 +4045,8 @@
                             const statusMap = {
                                 'connected': '✅ Conectado',
                                 'qr_code': '📱 Aguardando escaneamento',
-                                'disconnected': '❌ Desconectado'
+                                'disconnected': '❌ Desconectado',
+                                'reconnecting': '🔄 Reconectando automaticamente...'
                             };
                             this.whatsappStatusText = statusMap[response.status] || 'Desconhecido';
 

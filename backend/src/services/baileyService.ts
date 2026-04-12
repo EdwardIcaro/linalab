@@ -165,6 +165,17 @@ export async function initBaileys(empresaId: string): Promise<void> {
     await restoreAuthDirFromDb(empresaId);
     const authDir = getAuthDir(empresaId);
 
+    // Se há credenciais salvas → marcar como 'reconnecting' para evitar que o
+    // setup manual cancele a reconexão automática antes dela completar
+    const instanceCheck = await prisma.whatsappInstance.findUnique({
+      where: { empresaId },
+      select: { authState: true },
+    });
+    if (instanceCheck?.authState && statuses.get(empresaId) !== 'connected') {
+      statuses.set(empresaId, 'reconnecting');
+      console.log(`[Baileys] Reconectando com credenciais salvas para ${empresaId}`);
+    }
+
     // useMultiFileAuthState — implementação oficial do Baileys (SignalKeyStore correto)
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
