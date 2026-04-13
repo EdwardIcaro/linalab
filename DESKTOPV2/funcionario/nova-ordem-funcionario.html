@@ -655,88 +655,99 @@
       margin: 0;
     }
 
-    /* ── CAMERA OCR MODAL ────────────────────── */
+    /* ── CAMERA OCR MODAL (fullscreen) ─────────── */
     .camera-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.92);
+      background: #000;
       z-index: 300;
-      display: flex; align-items: flex-end;
+      display: flex; flex-direction: column;
+      animation: fadeIn .22s ease;
     }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
     .camera-sheet {
-      background: #1e293b;
-      border-radius: 24px 24px 0 0;
-      width: 100%;
-      animation: slideUp .3s cubic-bezier(.34,1.4,.64,1);
+      display: flex; flex-direction: column;
+      height: 100%; width: 100%;
     }
     .camera-hd {
+      flex-shrink: 0;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      padding: 14px 18px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      background: rgba(0,0,0,.65);
+      position: absolute; top: 0; left: 0; right: 0;
+      z-index: 10;
     }
     .camera-hd-title {
       font-size: 16px; font-weight: 800; color: #fff;
-      display: flex; align-items: center; gap: 9px; margin: 0;
+      display: flex; align-items: center; gap: 8px;
     }
     .camera-hd-close {
-      width: 32px; height: 32px;
-      background: rgba(255,255,255,.1);
-      border: none; border-radius: 9px;
-      color: rgba(255,255,255,.7);
-      font-size: 14px; cursor: pointer;
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,.15);
+      border: 1.5px solid rgba(255,255,255,.2);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 15px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background .18s;
     }
-    .camera-hd-close:hover { background: rgba(255,255,255,.2); }
+    .camera-hd-close:hover { background: rgba(255,255,255,.28); }
     .camera-viewport {
-      position: relative;
-      background: #000;
-      aspect-ratio: 4/3;
-      overflow: hidden;
+      position: relative; flex: 1;
+      background: #000; overflow: hidden;
     }
-    .camera-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .camera-video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
     .camera-guide {
       position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
       pointer-events: none;
     }
     .camera-guide-rect {
-      width: 78%; height: 28%;
-      border: 2.5px solid rgba(255,220,0,.9);
-      border-radius: 8px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,.38);
+      width: 82%; max-width: 340px;
+      aspect-ratio: 3 / 1;
+      border: 3px solid rgba(255,220,0,.95);
+      border-radius: 10px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.45);
     }
     .camera-guide-label {
-      position: absolute; bottom: 14px;
-      left: 50%; transform: translateX(-50%);
-      color: rgba(255,255,255,.72);
-      font-size: 11px; white-space: nowrap;
-      background: rgba(0,0,0,.45);
-      padding: 4px 13px; border-radius: 20px;
+      margin-top: 18px;
+      color: rgba(255,255,255,.85);
+      font-size: 12px; font-weight: 500;
+      background: rgba(0,0,0,.5);
+      padding: 5px 16px; border-radius: 20px;
     }
     .camera-controls {
-      padding: 16px 20px;
-      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      flex-shrink: 0;
+      padding: 18px 24px;
+      padding-bottom: max(22px, env(safe-area-inset-bottom));
+      background: rgba(0,0,0,.75);
+      display: flex; flex-direction: column; gap: 10px;
     }
     .camera-error {
-      background: rgba(239,68,68,.15);
-      border: 1px solid rgba(239,68,68,.3);
-      border-radius: 9px; padding: 10px 14px;
+      background: rgba(239,68,68,.2);
+      border: 1px solid rgba(239,68,68,.4);
+      border-radius: 10px; padding: 10px 14px;
       color: #fca5a5;
       font-size: 13px; text-align: center;
-      margin-bottom: 12px;
     }
     .camera-btn-cap {
-      width: 100%; padding: 15px;
+      width: 100%; padding: 16px;
       background: linear-gradient(135deg, var(--blue-d), var(--blue));
       border: none; border-radius: var(--rpill);
-      font-size: 15px; font-weight: 700; color: #fff;
+      font-size: 16px; font-weight: 700; color: #fff;
       cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      box-shadow: 0 4px 14px rgba(37,99,235,.35);
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      box-shadow: 0 6px 20px rgba(37,99,235,.45);
       font-family: 'Inter', sans-serif;
-      transition: opacity .18s;
+      transition: opacity .18s, transform .1s;
     }
-    .camera-btn-cap:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+    .camera-btn-cap:active:not(:disabled) { transform: scale(.97); }
+    .camera-btn-cap:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
     .cam-spin {
       width: 18px; height: 18px;
       border: 2.5px solid rgba(255,255,255,.3);
