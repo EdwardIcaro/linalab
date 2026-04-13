@@ -1804,7 +1804,9 @@
                                         <td x-text="pend.cliente?.nome || 'N/A'"></td>
                                         <td x-text="pend.veiculo?.placa || 'N/A'"></td>
                                         <td x-text="formatDate(pend.dataFinalizado || pend.createdAt)"></td>
-                                        <td style="text-align: right;" class="value-pending" x-text="formatCurrency(pend.valorTotal)"></td>
+                                        <td style="text-align: right;" class="value-pending"
+                                            x-text="formatCurrency((pend.pagamentos || []).filter(p => p.metodo === 'PENDENTE').reduce((s,p) => s + p.valor, 0) || pend.valorTotal)">
+                                        </td>
                                         <td>
                                             <button @click="abrirModalQuitarPendencia(pend)" class="btn btn-primary" style="padding: 8px 16px;">
                                                 <i class="fas fa-money-bill-wave" style="margin-right: 6px;"></i> Quitar

@@ -405,6 +405,82 @@
     }
     .pay-summary-row span { font-weight: 700; color: var(--text); }
 
+    /* Discount section */
+    .discount-section {
+      background: rgba(245,158,11,.07);
+      border: 1.5px solid rgba(245,158,11,.25);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .discount-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .discount-label {
+      font-size: 12px; font-weight: 700; color: #92400e;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .discount-limit {
+      font-size: 11px; color: var(--mid); font-weight: 500;
+    }
+    .discount-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .discount-input-wrap {
+      flex: 1; position: relative;
+    }
+    .discount-prefix {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 13px; font-weight: 700; color: var(--amber);
+    }
+    .discount-input {
+      width: 100%; padding: 9px 9px 9px 26px;
+      border: 1.5px solid rgba(245,158,11,.35);
+      border-radius: 8px;
+      font-size: 15px; font-weight: 700; color: var(--text);
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      outline: none;
+    }
+    .discount-input:focus { border-color: var(--amber); }
+    .discount-pct-wrap {
+      flex: 1; position: relative;
+    }
+    .discount-pct-suffix {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 13px; font-weight: 700; color: var(--amber);
+    }
+    .discount-pct-input {
+      width: 100%; padding: 9px 24px 9px 10px;
+      border: 1.5px solid rgba(245,158,11,.35);
+      border-radius: 8px;
+      font-size: 15px; font-weight: 700; color: var(--text);
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      outline: none;
+    }
+    .discount-pct-input:focus { border-color: var(--amber); }
+    .btn-apply-discount {
+      padding: 9px 14px;
+      background: var(--amber); border: none; border-radius: 8px;
+      color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+    .btn-apply-discount:hover { opacity: .85; }
+    .discount-applied {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px; color: #065f46;
+      background: rgba(16,185,129,.1);
+      border-radius: 6px; padding: 6px 10px;
+    }
+    .btn-remove-discount {
+      background: none; border: none; color: var(--red);
+      cursor: pointer; font-size: 13px;
+    }
+
     .pay-input-wrap {
       position: relative; margin-bottom: 12px;
     }
@@ -656,6 +732,34 @@
         </div>
       </div>
 
+      <!-- Desconto (aparece apenas quando maxDesconto > 0) -->
+      <div class="discount-section" id="discountSection" style="display:none">
+        <div class="discount-label">
+          <i class="fas fa-tag"></i> Desconto
+          <span id="discountMaxLabel" style="margin-left:auto;font-size:11px;font-weight:500;color:#92400e;opacity:.8"></span>
+        </div>
+        <div id="discountAppliedRow" style="display:none" class="discount-applied">
+          <span id="discountAppliedText" style="font-size:13px;font-weight:700;color:#065f46"></span>
+          <button class="btn-remove-discount" onclick="removeDiscount()">
+            <i class="fas fa-times"></i> Remover
+          </button>
+        </div>
+        <div id="discountInputRow" style="display:flex;gap:8px;margin-top:8px">
+          <div class="pay-input-wrap" style="margin:0;flex:1">
+            <span class="pay-prefix">R$</span>
+            <input type="text" class="pay-input discount-input" id="discountValueInput"
+                   placeholder="0,00" oninput="syncDiscountFromValue(event)">
+          </div>
+          <div class="pay-input-wrap" style="margin:0;width:74px">
+            <input type="text" class="pay-input discount-pct-input" id="discountPctInput"
+                   placeholder="0" oninput="syncDiscountFromPct(event)"
+                   style="padding-right:24px;text-align:right">
+            <span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--mid);pointer-events:none">%</span>
+          </div>
+          <button class="btn-apply-discount" onclick="applyDiscount()">Aplicar</button>
+        </div>
+      </div>
+
       <div class="pay-input-wrap">
         <span class="pay-prefix">R$</span>
         <input type="text" class="pay-input" id="paymentValueInput" placeholder="0,00"
@@ -707,7 +811,8 @@
     let paymentModal = {
       isOpen: false, isProcessing: false,
       orderId: null, total: 0, paid: 0, remaining: 0,
-      inputValue: '', payments: []
+      inputValue: '', payments: [],
+      originalTotal: 0, desconto: 0, maxDesconto: 0
     };
     let paymentKeydownHandler = null;
 
@@ -1050,22 +1155,32 @@
     }
 
     // ── PAYMENT MODAL ─────────────────────────────
-    function openPaymentModal(order) {
+    async function openPaymentModal(order) {
       if (!order) return;
       if (order.status !== 'AGUARDANDO_PAGAMENTO') {
         showToast('Conclua a lavagem antes de registrar pagamento.', 'error');
         return;
       }
-      paymentModal.orderId   = order.id;
-      paymentModal.total     = order.valorTotal || order.valor || 0;
-      paymentModal.paid      = (order.pagamentos || [])
+      paymentModal.orderId      = order.id;
+      paymentModal.originalTotal= order.valorTotal || order.valor || 0;
+      paymentModal.total        = paymentModal.originalTotal;
+      paymentModal.paid         = (order.pagamentos || [])
         .filter(p => p.status === 'PAGO')
         .reduce((s, p) => s + p.valor, 0);
-      paymentModal.remaining = paymentModal.total - paymentModal.paid;
-      paymentModal.inputValue = '';
-      paymentModal.payments  = [];
-      paymentModal.isOpen    = true;
+      paymentModal.remaining    = paymentModal.total - paymentModal.paid;
+      paymentModal.inputValue   = '';
+      paymentModal.payments     = [];
+      paymentModal.desconto     = 0;
+      paymentModal.maxDesconto  = 0;
+      paymentModal.isOpen       = true;
 
+      // Carrega maxDesconto do usuário atual
+      try {
+        const perfil = await window.api.getMeuPerfil();
+        paymentModal.maxDesconto = perfil.maxDesconto ?? 0;
+      } catch { paymentModal.maxDesconto = 0; }
+
+      updateDiscountSection();
       updatePaymentModalUI();
       document.getElementById('paymentModal').classList.add('active');
       setTimeout(() => {
@@ -1079,14 +1194,26 @@
       paymentModal.isOpen = false;
       paymentModal.payments = [];
       paymentModal.inputValue = '';
+      paymentModal.desconto = 0;
       document.getElementById('paymentModal').classList.remove('active');
       ocultarPixQr();
       unbindPaymentHotkeys();
+      // Limpa campos de desconto
+      const dv = document.getElementById('discountValueInput');
+      const dp = document.getElementById('discountPctInput');
+      if (dv) dv.value = '';
+      if (dp) dp.value = '';
     }
 
     function updatePaymentModalUI() {
       document.getElementById('remainingAmount').textContent = formatCurrency(paymentModal.remaining);
-      document.getElementById('totalAmount').textContent     = formatCurrency(paymentModal.total);
+      // Mostra original + desconto ou apenas total
+      const totalEl = document.getElementById('totalAmount');
+      if (paymentModal.desconto > 0) {
+        totalEl.innerHTML = `<span style="text-decoration:line-through;color:var(--mid);font-size:11px;font-weight:500">${formatCurrency(paymentModal.originalTotal)}</span> ${formatCurrency(paymentModal.total)}`;
+      } else {
+        totalEl.textContent = formatCurrency(paymentModal.total);
+      }
       document.getElementById('paidAmount').textContent      = formatCurrency(paymentModal.paid);
       document.getElementById('paymentValueInput').value     = paymentModal.inputValue;
 
@@ -1212,6 +1339,107 @@
       if (panel) panel.style.display = 'none';
     }
 
+    // ── DESCONTO ──────────────────────────────────
+    function updateDiscountSection() {
+      const section = document.getElementById('discountSection');
+      const maxLabel = document.getElementById('discountMaxLabel');
+      if (!section) return;
+
+      if (paymentModal.maxDesconto <= 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+      if (maxLabel) maxLabel.textContent = `Máx. ${paymentModal.maxDesconto}%`;
+    }
+
+    function syncDiscountFromValue(event) {
+      let raw = event.target.value.replace(/\D/g, '');
+      raw = (parseInt(raw, 10) / 100).toFixed(2);
+      if (isNaN(parseFloat(raw))) raw = '0.00';
+      const val = parseFloat(raw);
+      event.target.value = raw.replace('.', ',');
+      // Atualiza campo %
+      const pctInput = document.getElementById('discountPctInput');
+      if (pctInput && paymentModal.originalTotal > 0) {
+        const pct = (val / paymentModal.originalTotal) * 100;
+        pctInput.value = pct > 0 ? pct.toFixed(1).replace(/\.0$/, '') : '';
+      }
+    }
+
+    function syncDiscountFromPct(event) {
+      let val = event.target.value.replace(/[^0-9.]/g, '');
+      const pct = parseFloat(val) || 0;
+      // Atualiza campo R$
+      const valInput = document.getElementById('discountValueInput');
+      if (valInput && paymentModal.originalTotal > 0) {
+        const descontoVal = (pct / 100) * paymentModal.originalTotal;
+        valInput.value = descontoVal > 0 ? descontoVal.toFixed(2).replace('.', ',') : '';
+      }
+    }
+
+    function applyDiscount() {
+      const dv = document.getElementById('discountValueInput');
+      if (!dv) return;
+      const raw = (dv.value || '').replace(',', '.');
+      const desconto = parseFloat(raw) || 0;
+
+      if (desconto <= 0) { showToast('Informe um valor de desconto.', 'error'); return; }
+
+      const maxPermitido = (paymentModal.maxDesconto / 100) * paymentModal.originalTotal;
+      if (desconto > maxPermitido + 0.01) {
+        showToast(`Desconto máximo: ${formatCurrency(maxPermitido)} (${paymentModal.maxDesconto}%)`, 'error');
+        return;
+      }
+      if (desconto >= paymentModal.originalTotal) {
+        showToast('Desconto não pode ser igual ou maior que o total.', 'error');
+        return;
+      }
+
+      // Limpa pagamentos já adicionados (evita inconsistência)
+      if (paymentModal.payments.length > 0) {
+        paymentModal.payments = [];
+        ocultarPixQr();
+      }
+
+      paymentModal.desconto = desconto;
+      paymentModal.total    = paymentModal.originalTotal - desconto;
+      paymentModal.remaining= paymentModal.total - paymentModal.paid;
+
+      // Mostra estado aplicado
+      const row = document.getElementById('discountInputRow');
+      const appliedRow = document.getElementById('discountAppliedRow');
+      const appliedText = document.getElementById('discountAppliedText');
+      if (row) row.style.display = 'none';
+      if (appliedRow) appliedRow.style.display = 'flex';
+      if (appliedText) appliedText.textContent =
+        `− ${formatCurrency(desconto)} aplicado → Total: ${formatCurrency(paymentModal.total)}`;
+
+      updatePaymentModalUI();
+      showToast('Desconto aplicado!', 'success');
+    }
+
+    function removeDiscount() {
+      paymentModal.desconto  = 0;
+      paymentModal.total     = paymentModal.originalTotal;
+      paymentModal.remaining = paymentModal.total - paymentModal.paid;
+      if (paymentModal.payments.length > 0) {
+        paymentModal.payments = [];
+        ocultarPixQr();
+      }
+
+      const row = document.getElementById('discountInputRow');
+      const appliedRow = document.getElementById('discountAppliedRow');
+      const dv = document.getElementById('discountValueInput');
+      const dp = document.getElementById('discountPctInput');
+      if (row) row.style.display = 'flex';
+      if (appliedRow) appliedRow.style.display = 'none';
+      if (dv) dv.value = '';
+      if (dp) dp.value = '';
+
+      updatePaymentModalUI();
+    }
+
     function removePayment(index) {
       const removed = paymentModal.payments.splice(index, 1);
       if (removed.length > 0) {
@@ -1287,7 +1515,8 @@
         pagamentos: paymentModal.payments.map(p => ({
           metodo: p.method.toUpperCase().trim(),
           valor: parseFloat(p.amount).toFixed(2)
-        }))
+        })),
+        desconto: paymentModal.desconto > 0 ? parseFloat(paymentModal.desconto.toFixed(2)) : 0
       };
 
       try {

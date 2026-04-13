@@ -1388,6 +1388,7 @@ export const deleteOrdem = async (req: EmpresaRequest, res: Response) => {
  */
 export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
   const empresaId = req.empresaId!;
+  const subaccountId = (req as any).subaccountId as string | undefined;
   const { id } = req.params as { id: string };
 
   // Validação de entrada
@@ -1407,6 +1408,7 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
 
   // Use sanitized data
   const { pagamentos, lavadorDebitoId } = validation.sanitizedData!;
+  const descontoRaw = Number(req.body.desconto) || 0;
 
   try {
     // Buscar a ordem e verificar se existe e pertence à empresa
@@ -1445,22 +1447,45 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       });
     }
 
+    // ── Validar e aplicar desconto ────────────────────────────────────────
+    let desconto = 0;
+    if (descontoRaw > 0) {
+      // Se for subaccount, busca o limite de desconto configurado
+      if (subaccountId) {
+        const sub = await prisma.subaccount.findUnique({
+          where: { id: subaccountId },
+          select: { maxDesconto: true }
+        });
+        const limitePerc = sub?.maxDesconto ?? 0;
+        const limiteValor = (ordem.valorTotal * limitePerc) / 100;
+        if (descontoRaw > limiteValor + 0.01) {
+          return res.status(403).json({
+            error: `Desconto excede o limite permitido de ${limitePerc}% (máx. R$ ${limiteValor.toFixed(2)}).`,
+            code: 'DISCOUNT_LIMIT_EXCEEDED'
+          });
+        }
+      }
+      // OWNER: sem restrição de desconto
+      desconto = Math.min(descontoRaw, ordem.valorTotal);
+    }
+
+    const valorFinal = Math.max(0, ordem.valorTotal - desconto);
+
     // Calcular valor total dos pagamentos
     const valorTotalPagamentos = pagamentos.reduce((sum: number, pag: any) => sum + pag.valor, 0);
 
-    // Verificar se o valor total dos pagamentos corresponde ao valor da ordem
-    if (Math.abs(valorTotalPagamentos - ordem.valorTotal) > 0.01) { // Tolerância de 1 centavo para erros de arredondamento
+    // Verificar se o valor total dos pagamentos corresponde ao valor final (com desconto)
+    if (Math.abs(valorTotalPagamentos - valorFinal) > 0.01) {
       return res.status(400).json({
-        error: `Valor total dos pagamentos (R$ ${valorTotalPagamentos.toFixed(2)}) não corresponde ao valor da ordem (R$ ${ordem.valorTotal.toFixed(2)})`,
+        error: `Valor total dos pagamentos (R$ ${valorTotalPagamentos.toFixed(2)}) não corresponde ao valor da ordem (R$ ${valorFinal.toFixed(2)})`,
         code: 'PAYMENT_VALUE_MISMATCH'
       });
     }
 
-    // Calcular comissão se houver lavador
+    // Calcular comissão se houver lavador (sobre valorFinal após desconto)
     let comissaoCalculada = 0;
     if (ordem.lavador) {
-      // Comissão é uma porcentagem do valor total (ex: 15.5% = 15.5)
-      comissaoCalculada = (ordem.valorTotal * ordem.lavador.comissao) / 100;
+      comissaoCalculada = (valorFinal * ordem.lavador.comissao) / 100;
     }
 
     // Executar tudo em uma transação atômica
@@ -1471,8 +1496,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
         data: {
           status: 'FINALIZADO',
           dataFim: new Date(),
+          valorTotal: valorFinal,
+          desconto,
           comissao: comissaoCalculada,
-          comissaoPaga: false, // Será paga no fechamento de comissão
+          comissaoPaga: false,
           pago: true
         },
         include: {
@@ -1539,7 +1566,7 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
     // 4. Enviar notificação após a transação
     await createNotification({
       empresaId,
-      mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${ordem.valorTotal.toFixed(2)}`,
+      mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${valorFinal.toFixed(2)}${desconto > 0 ? ` (desconto: R$ ${desconto.toFixed(2)})` : ''}`,
       link: `ordens.html?id=${ordem.id}`,
       type: 'ordemEditada'
     });

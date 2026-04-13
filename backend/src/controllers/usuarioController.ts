@@ -123,6 +123,7 @@ export const getMeuPerfil = async (req: Request, res: Response) => {
         id: true,
         nome: true,
         email: true,
+        maxDesconto: true,
         roleInt: { select: { nome: true } }
       }
     });
@@ -133,6 +134,7 @@ export const getMeuPerfil = async (req: Request, res: Response) => {
         nome: subaccount.nome,
         email: subaccount.email,
         cargo: subaccount.roleInt?.nome || null,
+        maxDesconto: subaccount.maxDesconto ?? 0,
         tipo: 'subaccount'
       });
     }
