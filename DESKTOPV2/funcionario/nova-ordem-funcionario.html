@@ -610,6 +610,93 @@
       box-shadow: 0 4px 16px rgba(37,99,235,.35);
     }
 
+    /* ── LOCK DAS SEÇÕES ─────────────────────── */
+    .sections-wrap {
+      position: relative;
+      min-height: 280px;
+    }
+    .sections-content {
+      transition: opacity 0.22s;
+    }
+    .sections-content.locked {
+      opacity: 0.25;
+      pointer-events: none;
+      user-select: none;
+    }
+    .lock-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .lock-hint-box {
+      background: var(--white);
+      border-radius: 18px;
+      padding: 20px 28px;
+      text-align: center;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.13);
+      border: 1.5px solid var(--border);
+      max-width: 220px;
+    }
+    .lock-hint-box i {
+      font-size: 30px;
+      color: var(--light);
+      margin-bottom: 10px;
+      display: block;
+    }
+    .lock-hint-box p {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mid);
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    /* ── OCR PROCESSING ───────────────────────── */
+    .ocr-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(15,23,42,.72);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ocr-card {
+      background: var(--white);
+      border-radius: 22px;
+      padding: 36px 44px;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,.25);
+    }
+    .ocr-spinner {
+      width: 52px; height: 52px;
+      border: 4px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+      margin: 0 auto 18px;
+    }
+    .ocr-icon {
+      font-size: 36px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .ocr-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .ocr-sub {
+      font-size: 13px;
+      color: var(--light);
+    }
+
     /* ── TOAST ────────────────────────────────── */
     .toast {
       position: fixed;
@@ -713,6 +800,17 @@
 
   <!-- ══ MAIN ══════════════════════════════════ -->
   <div class="main">
+  <div class="sections-wrap">
+
+    <!-- Hint de lock quando sem cliente -->
+    <div class="lock-hint" x-show="!cliente" x-cloak>
+      <div class="lock-hint-box">
+        <i class="fas fa-user-circle"></i>
+        <p>Busque ou cadastre<br>um cliente primeiro</p>
+      </div>
+    </div>
+
+    <div class="sections-content" :class="{locked: !cliente}">
 
     <!-- Tipo de veículo -->
     <div class="sec">
@@ -824,7 +922,9 @@
       </div>
     </div>
 
-  </div>
+    </div><!-- /sections-content -->
+  </div><!-- /sections-wrap -->
+  </div><!-- /main -->
 
   <!-- ══ FOOTER ════════════════════════════════ -->
   <div class="ft">
@@ -838,6 +938,15 @@
       @click="criar()"
       x-text="criando ? 'Criando...' : '✓  Criar Ordem'">
     </button>
+  </div>
+
+  <!-- ══ OCR PROCESSING ════════════════════════ -->
+  <div class="ocr-overlay" x-show="ocrProcessando" x-cloak>
+    <div class="ocr-card">
+      <div class="ocr-spinner"></div>
+      <div class="ocr-title">Analisando placa...</div>
+      <div class="ocr-sub">Aguarde um momento</div>
+    </div>
   </div>
 
   <!-- ══ BOTTOM SHEET: NOVO / EDITAR CLIENTE ═══ -->
@@ -970,6 +1079,9 @@
         // ── Busca ─────────────────────────────
         q: '', showDrop: false, results: [], buscando: false,
         _buscarTimer: null,
+
+        // ── OCR ────────────────────────────────
+        ocrProcessando: false,
 
         // ── Cliente selecionado ─────────────
         // { clienteId, veiculoId, nome, modelo, placa, telefone, cor?, isNew?, novoVeiculo? }
@@ -1396,6 +1508,7 @@
             tipo: null, cat: null,
             svc: null, adds: [], lavs: [],
             criando: false, sucesso: false, ordemNum: null,
+            ocrProcessando: false,
             servicos: [],
           });
         },
@@ -1410,20 +1523,24 @@
           if (!file) return;
           e.target.value = '';
 
+          // Mostra overlay de processamento imediatamente
+          this.ocrProcessando = true;
+
           const reader = new FileReader();
           reader.onload = async (ev) => {
             const base64 = ev.target.result.split(',')[1];
             try {
               const data = await window.api.reconhecerPlaca(base64);
               if (data?.placa) {
-                this.form.placa = data.placa;
                 this.abrirFormNovoCliente();
-                this.form.placa = data.placa; // re-set após reset do form
+                this.form.placa = data.placa;
               } else {
                 showToast('Nenhuma placa detectada. Tente outra foto.', 'error');
               }
             } catch {
               showToast('Erro ao reconhecer a placa.', 'error');
+            } finally {
+              this.ocrProcessando = false;
             }
           };
           reader.readAsDataURL(file);
