@@ -2,1565 +2,1022 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lina X - Ordens</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ordens — Lina X</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     :root {
-      --primary: #0066cc;
-      --success: #28a745;
-      --warning: #ffc107;
-      --danger: #dc3545;
-      --info: #17a2b8;
-      --light: #f8f9fa;
-      --dark: #333;
-      --border: #ddd;
-      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+      --navy:   #0f172a;
+      --navy-m: #1e293b;
+      --blue:   #3b82f6;
+      --blue-d: #2563eb;
+      --text:   #0f172a;
+      --mid:    #64748b;
+      --light:  #94a3b8;
+      --border: #e2e8f0;
+      --bg:     #f1f5f9;
+      --white:  #ffffff;
+      --green:  #10b981;
+      --green-d:#059669;
+      --amber:  #f59e0b;
+      --orange: #f97316;
+      --red:    #ef4444;
+      --r:      12px;
+      --rpill:  999px;
     }
-
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html,body { height: 100%; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--light);
-      color: var(--dark);
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column;
     }
 
-    /* HEADER */
-    .header-funcionario {
-      background: white;
-      padding: 16px 20px;
-      display: flex;
+    /* ── HEADER ─────────────────────────────── */
+    .hd {
+      background: var(--navy);
+      flex-shrink: 0;
+      position: sticky; top: 0; z-index: 40;
+    }
+    .hd-top {
+      display: flex; align-items: center;
       justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--shadow);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      border-bottom: 2px solid var(--primary);
+      padding: 14px 16px 10px;
     }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-    }
-
-    .logo-link {
+    .hd-left { display: flex; align-items: center; gap: 10px; }
+    .btn-icon-hd {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: rgba(255,255,255,.1);
+      border: 1.5px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; cursor: pointer;
       text-decoration: none;
+      transition: background .18s; flex-shrink: 0;
+    }
+    .btn-icon-hd:hover { background: rgba(255,255,255,.2); }
+    .btn-icon-hd:active { transform: scale(.93); }
+    .hd-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+    .hd-sub { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
+    .hd-right { display: flex; align-items: center; gap: 8px; }
+    .btn-new-hd {
+      height: 34px; padding: 0 14px;
+      background: var(--blue-d);
+      border: none; border-radius: var(--rpill);
+      color: #fff; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; gap: 6px;
+      cursor: pointer; text-decoration: none;
+      font-family: 'Inter', sans-serif;
+      transition: opacity .18s;
+    }
+    .btn-new-hd:hover { opacity: .85; }
+
+    /* Filter tabs */
+    .filter-tabs {
+      display: flex; gap: 6px;
+      overflow-x: auto; padding: 0 16px 12px;
+      scrollbar-width: none;
+    }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .filter-tabs.hidden { display: none; }
+    .ftab {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: var(--rpill);
+      border: 1.5px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.55);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all .18s;
+    }
+    .ftab.active {
+      background: var(--blue-d);
+      border-color: var(--blue-d);
+      color: #fff;
     }
 
-    .logo {
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
-      border-radius: 8px;
+    /* ── MAIN ────────────────────────────────── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px 100px;
+    }
+
+    /* Quick action links */
+    .quick-links {
+      display: flex; gap: 8px;
+      margin-bottom: 14px;
+    }
+    .qlink {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 10px 8px;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      font-size: 12px; font-weight: 600; color: var(--mid);
+      text-decoration: none;
+      transition: all .18s;
+    }
+    .qlink:hover { border-color: var(--blue); color: var(--blue-d); }
+    .qlink i { font-size: 14px; }
+    .qlink-amber { color: #92400e; border-color: rgba(245,158,11,.3); background: rgba(255,251,235,.8); }
+    .qlink-amber:hover { border-color: var(--amber); color: #78350f; }
+
+    /* ── ORDER CARDS ─────────────────────────── */
+    .orders-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .order-card {
+      background: var(--white);
+      border-radius: var(--r);
+      box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
       display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-    }
-
-    .page-info h1 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-    }
-
-    .page-info p {
-      font-size: 12px;
-      color: #666;
-      margin: 0;
-    }
-
-    .icon-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      color: var(--dark);
+      overflow: hidden;
       cursor: pointer;
-      padding: 8px 12px;
-      border-radius: 6px;
-      transition: all 0.3s;
+      transition: box-shadow .18s, transform .12s;
     }
-
-    .icon-btn:hover {
-      background: var(--light);
-      color: var(--primary);
+    .order-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+      transform: translateY(-1px);
     }
+    .order-card:active { transform: scale(.99); }
 
-    /* MAIN */
-    .main-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      padding-bottom: 100px;
+    .card-accent {
+      width: 4px; flex-shrink: 0;
     }
+    .acc-PENDENTE          { background: var(--amber); }
+    .acc-EM_ANDAMENTO      { background: var(--blue); }
+    .acc-AGUARDANDO_PAGAMENTO { background: var(--orange); }
+    .acc-COMPLETO          { background: var(--green); }
 
-    /* SECTION HEADER */
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      gap: 16px;
+    .card-body {
+      flex: 1; padding: 13px 14px;
+      min-width: 0;
     }
-
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
+    .card-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 8px;
+      margin-bottom: 6px;
     }
-
-    .btn-nova-ordem {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .card-num {
+      font-size: 12px; font-weight: 700; color: var(--mid);
+      letter-spacing: .3px;
     }
-
-    .btn-nova-ordem:hover {
-      background: #0052a3;
-      transform: translateY(-2px);
+    .card-date {
+      font-size: 11px; color: var(--light);
+      margin-top: 1px;
     }
+    .sbadge {
+      flex-shrink: 0;
+      padding: 3px 9px;
+      border-radius: var(--rpill);
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .2px; text-transform: uppercase;
+    }
+    .sbadge-PENDENTE { background: rgba(245,158,11,.12); color: #92400e; }
+    .sbadge-EM_ANDAMENTO { background: rgba(59,130,246,.12); color: #1d4ed8; }
+    .sbadge-AGUARDANDO_PAGAMENTO { background: rgba(249,115,22,.12); color: #c2410c; }
+    .sbadge-COMPLETO { background: rgba(16,185,129,.12); color: #065f46; }
 
-    /* FILTERS */
-    .filters {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
+    .card-client {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      margin-bottom: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-meta {
+      display: flex; align-items: center; gap: 6px;
       flex-wrap: wrap;
     }
-
-    .filter-select {
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .filter-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
-    }
-
-    /* ORDERS TABLE */
-    .orders-container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .table-responsive {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    thead {
-      background: var(--light);
-      border-bottom: 2px solid var(--border);
-    }
-
-    th {
-      padding: 12px 16px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--dark);
-    }
-
-    td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tbody tr:hover {
-      background: var(--light);
-    }
-
-    /* STATUS BADGE */
-    .status-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .status-pendente {
-      background: rgba(255, 193, 7, 0.2);
-      color: #ff9800;
-    }
-
-    .status-em-andamento {
-      background: rgba(33, 150, 243, 0.2);
-      color: var(--info);
-    }
-
-    .status-aguardando {
-      background: rgba(244, 67, 54, 0.2);
-      color: var(--danger);
-    }
-
-    .status-completo {
-      background: rgba(76, 175, 80, 0.2);
-      color: var(--success);
-    }
-
-    /* ACTION BUTTONS */
-    .action-btns {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-small {
-      background: none;
-      border: 1px solid var(--border);
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.3s;
-      color: var(--primary);
-    }
-
-    .btn-small:hover {
-      border-color: var(--primary);
-      background: var(--light);
-    }
-
-    .btn-small-danger {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .btn-small-danger:hover {
-      background: rgba(220, 53, 69, 0.1);
-    }
-
-    .btn-small-success {
-      color: var(--success);
-      border-color: var(--success);
-    }
-
-    .btn-small-success:hover {
-      background: rgba(40, 167, 69, 0.1);
-    }
-
-    /* DETAIL VIEW */
-    .detail-header {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-    }
-
-    .detail-info {
-      flex: 1;
-    }
-
-    .detail-title {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--dark);
-    }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    .detail-item {
-      background: var(--light);
-      padding: 12px;
-      border-radius: 6px;
-    }
-
-    .detail-item-label {
-      font-size: 12px;
-      color: #666;
-      font-weight: 500;
-      text-transform: uppercase;
-    }
-
-    .detail-item-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--dark);
-      margin-top: 4px;
-    }
-
-    .detail-actions {
-      display: flex;
-      gap: 12px;
-      flex-direction: column;
-    }
-
-    .btn-large {
-      padding: 12px 16px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .btn-large-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-large-primary:hover {
-      background: #0052a3;
-    }
-
-    .btn-large-success {
-      background: var(--success);
-      color: white;
-    }
-
-    .btn-large-success:hover {
-      background: #207142;
-    }
-
-    .order-items {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-    }
-
-    .order-items h3 {
-      margin-bottom: 16px;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .item-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .item-row:last-child {
-      border-bottom: none;
-    }
-
-    .item-name {
-      font-weight: 500;
-    }
-
-    .item-value {
-      font-weight: 600;
-      color: var(--primary);
-    }
-
-    /* MODAL STYLES */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--dark);
-      margin: 0;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--dark);
-      font-size: 24px;
-      cursor: pointer;
-      padding: 0;
-      transition: all 0.3s;
-    }
-
-    .modal-close:hover {
-      color: var(--primary);
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-label {
-      display: block;
-      color: var(--dark);
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-
-    .form-input,
-    .form-select {
-      width: 100%;
-      background-color: white;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      color: var(--dark);
-      font-size: 14px;
-    }
-
-    .form-input:focus,
-    .form-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-    }
-
-    .payment-list {
-      background: var(--light);
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 16px;
-    }
-
-    .payment-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .payment-item:last-child {
-      border-bottom: none;
-    }
-
-    .payment-method {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--primary);
-      color: white;
-    }
-
-    .payment-remove {
-      background: none;
-      border: none;
-      color: var(--danger);
-      cursor: pointer;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 24px;
-      padding: 16px;
-      border-top: 1px solid var(--border);
-      justify-content: flex-end;
-      background: var(--light);
-      position: sticky;
-      bottom: 0;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-      border-radius: 0 0 8px 8px;
-    }
-
-    /* PAYMENT MODAL STYLES */
-    .payment-header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .remaining-amount {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--primary);
-      margin: 8px 0;
-    }
-
-    .payment-header p {
-      margin: 8px 0;
-      font-size: 14px;
-      color: #666;
-    }
-
-    .payment-input-group {
-      position: relative;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-    }
-
-    .currency-symbol {
-      position: absolute;
-      left: 16px;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--primary);
-    }
-
-    #paymentValueInput {
-      font-size: 28px;
-      font-weight: 700;
-      text-align: right;
-      padding: 16px 20px 16px 50px;
-      width: 100%;
-      border: 2px solid var(--border);
-      border-radius: 6px;
-    }
-
-    #paymentValueInput:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-    }
-
-    .payment-methods {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .payment-method-btn {
-      padding: 12px;
-      border: 2px solid var(--border);
-      background: white;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.3s;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-    }
-
-    .payment-method-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: rgba(0, 102, 204, 0.05);
-    }
-
-    .payment-method-btn.pending {
-      background: #fef3c7;
-      color: #92400e;
-      border-color: #fbbf24;
-    }
-
-    .payment-method-btn.pending:hover {
-      background: #fce8b0;
-    }
-
-    .payment-list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      background: var(--light);
-      border-radius: 6px;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .payment-list-item button {
-      background: none;
-      border: none;
-      color: var(--dark);
-      cursor: pointer;
-      padding: 0;
-      font-size: 16px;
-      transition: all 0.3s;
-    }
-
-    .payment-list-item button:hover {
-      color: var(--danger);
-    }
-
-    @media (max-width: 600px) {
-      .payment-methods {
-        grid-template-columns: 1fr;
-      }
-
-      #paymentValueInput {
-        font-size: 20px;
-      }
-
-      .remaining-amount {
-        font-size: 20px;
-      }
-    }
-
-    /* EMPTY STATE */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #999;
-    }
-
-    .empty-state i {
-      font-size: 64px;
-      color: #ddd;
-      margin-bottom: 20px;
-      display: block;
-    }
-
-    .empty-state h2 {
-      font-size: 20px;
-      color: var(--dark);
-      margin-bottom: 8px;
-    }
-
-    .empty-state p {
-      margin-bottom: 20px;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-primary:hover {
-      background: #0052a3;
-    }
-
-    /* LOADING */
-    .loading-container {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .spinner {
-      border: 4px solid var(--light);
-      border-top: 4px solid var(--primary);
+    .card-plate {
+      display: inline-flex; align-items: center;
+      background: var(--navy);
+      color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 5px;
+      letter-spacing: .5px;
+    }
+    .card-svc {
+      font-size: 12px; color: var(--mid); font-weight: 500;
+    }
+    .card-divider {
+      height: 1px; background: var(--border); margin: 10px 0;
+    }
+    .card-bottom {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .card-value {
+      font-size: 16px; font-weight: 800; color: var(--text);
+    }
+    .card-actions { display: flex; gap: 7px; flex-shrink: 0; }
+    .btn-card {
+      height: 32px; padding: 0 12px;
+      border-radius: var(--rpill);
+      border: none; cursor: pointer;
+      font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+      font-family: 'Inter', sans-serif;
+      transition: opacity .18s;
+    }
+    .btn-card:hover { opacity: .85; }
+    .btn-card:active { transform: scale(.95); }
+    .btn-card-eye  { background: rgba(100,116,139,.1); color: var(--mid); }
+    .btn-card-done { background: rgba(16,185,129,.12); color: #065f46; }
+    .btn-card-pay  { background: linear-gradient(135deg, var(--orange), #ea580c); color: #fff; }
+
+    /* ── LOADING ─────────────────────────────── */
+    .loading-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 20px; gap: 14px;
+    }
+    .spin {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue-d);
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
+      animation: spin .8s linear infinite;
+    }
+    .loading-txt { font-size: 14px; color: var(--mid); font-weight: 500; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── EMPTY STATE ─────────────────────────── */
+    .empty-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 20px; text-align: center; gap: 10px;
+    }
+    .empty-icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: var(--light); margin-bottom: 6px;
+    }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .empty-sub { font-size: 14px; color: var(--mid); max-width: 240px; }
+    .btn-empty {
+      margin-top: 6px; padding: 11px 24px;
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      border: none; border-radius: var(--rpill);
+      color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* ── DETAIL VIEW ─────────────────────────── */
+    .detail-wrap { display: flex; flex-direction: column; gap: 12px; padding-bottom: 90px; }
+
+    .detail-hero {
+      background: var(--navy-m);
+      border-radius: var(--r);
+      padding: 18px;
     }
-
-    /* MENU */
-    .menu-dropdown {
-      display: none;
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      min-width: 200px;
-      z-index: 999;
-      animation: slideUp 0.3s ease;
+    .detail-hero-top {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+      margin-bottom: 14px;
     }
-
-    .menu-dropdown.active {
-      display: block;
+    .detail-num {
+      font-size: 22px; font-weight: 800; color: #fff;
+      letter-spacing: -.3px;
     }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .detail-hero-date { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 2px; }
+    .detail-value {
+      font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 2px;
     }
+    .detail-value-label { font-size: 12px; color: rgba(255,255,255,.45); }
 
-    .menu-dropdown a,
-    .menu-dropdown button {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      color: var(--dark);
-      text-decoration: none;
-      border: none;
-      background: none;
-      width: 100%;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.3s;
+    .detail-card {
+      background: var(--white);
+      border-radius: var(--r);
+      padding: 16px 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
     }
-
-    .menu-dropdown a:hover,
-    .menu-dropdown button:hover {
-      background: var(--light);
-      color: var(--primary);
-    }
-
-    .menu-dropdown button:last-child {
-      color: var(--danger);
-    }
-
-    .menu-dropdown button:last-child:hover {
-      background: rgba(220, 53, 69, 0.1);
-    }
-
-    /* OVERLAY */
-    .overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 998;
-    }
-
-    .overlay.active {
-      display: block;
-    }
-
-    /* MOBILE NAV */
-    .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-around;
-      height: 70px;
-      z-index: 999;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      color: #666;
-      font-size: 11px;
-      gap: 4px;
-      transition: all 0.3s;
-      border: none;
-      background: none;
-      cursor: pointer;
-      border-top: 3px solid transparent;
-    }
-
-    .nav-item:hover {
-      color: var(--primary);
-    }
-
-    .nav-item.active {
-      color: var(--primary);
-      border-top-color: var(--primary);
-    }
-
-    .nav-item i {
-      font-size: 24px;
-    }
-
-    /* TOAST */
-    .toast {
-      position: fixed;
-      bottom: 100px;
-      left: 20px;
-      right: 20px;
-      max-width: 400px;
-      background: white;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      z-index: 1001;
-      transform: translateY(120px);
-      transition: transform 0.3s ease;
-    }
-
-    .toast.show {
-      transform: translateY(0);
-    }
-
-    .toast-success {
-      border-left: 4px solid var(--success);
-    }
-
-    .toast-success i {
-      color: var(--success);
-    }
-
-    .toast-error {
-      border-left: 4px solid var(--danger);
-    }
-
-    .toast-error i {
-      color: var(--danger);
-    }
-
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      .main-container {
-        padding: 16px;
-        padding-bottom: 100px;
-      }
-
-      .section-header {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .btn-nova-ordem {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .filters {
-        flex-direction: column;
-      }
-
-      .filter-select {
-        width: 100%;
-      }
-
-      .page-info h1 {
-        font-size: 14px;
-      }
-
-      th, td {
-        padding: 8px 12px;
-        font-size: 12px;
-      }
-
-      .status-badge {
-        padding: 2px 8px;
-        font-size: 10px;
-      }
-
-      .detail-header {
-        flex-direction: column;
-      }
-
-      .detail-actions {
-        width: 100%;
-      }
-
-      .detail-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* CONFIRMATION DIALOG MODAL */
-    .confirm-dialog {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    }
-
-    .confirm-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      z-index: -1;
-    }
-
-    .confirm-box {
-      background: white;
-      border-radius: 12px;
-      padding: 30px;
-      max-width: 450px;
-      width: 90%;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      animation: slideUp 0.3s ease-out;
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .confirm-box h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #333;
+    .detail-card-title {
+      font-size: 11px; font-weight: 700; color: var(--light);
+      letter-spacing: .6px; text-transform: uppercase;
       margin-bottom: 12px;
     }
-
-    .confirm-box p {
-      font-size: 0.95rem;
-      color: #666;
-      line-height: 1.6;
-      margin-bottom: 30px;
-    }
-
-    .confirm-buttons {
-      display: flex;
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
-      justify-content: flex-end;
+    }
+    .info-item {}
+    .info-label { font-size: 11px; color: var(--light); font-weight: 600; margin-bottom: 2px; }
+    .info-value { font-size: 14px; font-weight: 700; color: var(--text); }
+    .info-value-plate {
+      display: inline-flex; align-items: center;
+      background: var(--navy); color: #fff;
+      font-size: 13px; font-weight: 800;
+      padding: 3px 10px; border-radius: 6px;
+      letter-spacing: .8px;
     }
 
+    .svc-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .svc-row:last-child { border-bottom: none; }
+    .svc-name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .svc-price { font-size: 14px; font-weight: 700; color: var(--blue-d); }
+
+    .obs-text { font-size: 14px; color: var(--mid); line-height: 1.6; }
+
+    /* ── STICKY DETAIL ACTIONS ───────────────── */
+    .sticky-actions {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 12px 14px;
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px; z-index: 30;
+    }
+    .btn-action {
+      flex: 1; padding: 14px;
+      border-radius: var(--rpill);
+      border: none; cursor: pointer;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: 'Inter', sans-serif;
+      transition: opacity .18s, transform .1s;
+    }
+    .btn-action:active { transform: scale(.97); }
+    .btn-action-back { background: var(--bg); color: var(--mid); border: 1.5px solid var(--border); }
+    .btn-action-done { background: linear-gradient(135deg, var(--green-d), var(--green)); color: #fff; box-shadow: 0 4px 12px rgba(5,150,105,.3); }
+    .btn-action-pay  { background: linear-gradient(135deg, var(--orange), #ea580c); color: #fff; box-shadow: 0 4px 12px rgba(234,88,12,.3); }
+    .btn-action-edit { background: rgba(59,130,246,.1); color: var(--blue-d); border: 1.5px solid rgba(59,130,246,.2); }
+
+    /* ── PAYMENT MODAL ───────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 2000;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content {
+      background: var(--white);
+      border-radius: 24px 24px 0 0;
+      padding: 8px 20px 0;
+      width: 100%; max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp .3s cubic-bezier(.34,1.4,.64,1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 8px auto 14px;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
+    .modal-close {
+      width: 32px; height: 32px;
+      background: var(--bg); border: none; border-radius: 50%;
+      color: var(--mid); font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .pay-summary {
+      background: var(--bg); border-radius: 12px;
+      padding: 14px; text-align: center; margin-bottom: 16px;
+    }
+    .pay-remaining { font-size: 32px; font-weight: 800; color: var(--text); }
+    .pay-summary-row {
+      display: flex; justify-content: center; gap: 16px;
+      margin-top: 6px; font-size: 12px; color: var(--mid);
+    }
+    .pay-summary-row span { font-weight: 700; color: var(--text); }
+
+    .pay-input-wrap {
+      position: relative; margin-bottom: 12px;
+    }
+    .pay-prefix {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      font-size: 16px; font-weight: 700; color: var(--mid);
+    }
+    .pay-input {
+      width: 100%; padding: 16px 16px 16px 42px;
+      border: 2px solid var(--border); border-radius: 12px;
+      font-size: 28px; font-weight: 800; text-align: right;
+      font-family: 'Inter', sans-serif; color: var(--text);
+      outline: none; transition: border-color .18s;
+    }
+    .pay-input:focus { border-color: var(--blue-d); }
+
+    .btn-fill-remaining {
+      width: 100%; padding: 11px;
+      background: rgba(37,99,235,.07);
+      border: 1.5px solid rgba(37,99,235,.2);
+      border-radius: var(--rpill);
+      color: var(--blue-d); font-size: 13px; font-weight: 700;
+      cursor: pointer; margin-bottom: 14px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .pay-methods {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 14px;
+    }
+    .pay-method-btn {
+      padding: 12px 8px;
+      border: 1.5px solid var(--border);
+      background: var(--white); border-radius: 10px;
+      cursor: pointer; font-weight: 600; font-size: 13px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 5px;
+      transition: all .18s; font-family: 'Inter', sans-serif;
+      color: var(--text);
+    }
+    .pay-method-btn:hover {
+      border-color: var(--blue-d);
+      color: var(--blue-d);
+      background: rgba(37,99,235,.04);
+    }
+    .pay-method-btn.pending {
+      background: #fef3c7; color: #92400e; border-color: #fbbf24;
+    }
+    .pay-method-btn i { font-size: 18px; }
+
+    .pay-list { margin-bottom: 4px; }
+    .pay-list-label {
+      font-size: 12px; font-weight: 700; color: var(--light);
+      letter-spacing: .4px; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .pay-list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px;
+      background: var(--bg); border-radius: 8px;
+      margin-bottom: 6px; font-size: 14px; font-weight: 600;
+    }
+    .pay-list-item button {
+      background: none; border: none;
+      color: var(--light); cursor: pointer; font-size: 15px;
+      transition: color .15s;
+    }
+    .pay-list-item button:hover { color: var(--red); }
+
+    .modal-actions {
+      position: sticky; bottom: 0;
+      padding: 12px 0;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      background: var(--white);
+      display: flex; gap: 8px;
+    }
+    .btn-modal-cancel {
+      padding: 14px 20px;
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: var(--rpill);
+      color: var(--mid); font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+    .btn-modal-submit {
+      flex: 1; padding: 14px;
+      background: linear-gradient(135deg, var(--green-d), var(--green));
+      border: none; border-radius: var(--rpill);
+      color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: opacity .18s;
+      box-shadow: 0 4px 12px rgba(5,150,105,.3);
+    }
+    .btn-modal-submit:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+
+    /* ── TOAST ───────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 90px;
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--navy); color: #fff;
+      padding: 12px 20px; border-radius: var(--rpill);
+      display: flex; align-items: center; gap: 9px;
+      font-size: 14px; font-weight: 600;
+      z-index: 9999; opacity: 0;
+      transition: opacity .25s, transform .25s;
+      white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast-success i { color: var(--green); }
+    .toast-error   i { color: #f87171; }
+    .toast-info    i { color: #60a5fa; }
+
+    /* ── CONFIRM DIALOG ──────────────────────── */
+    .confirm-dialog {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000;
+    }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); }
+    .confirm-box {
+      background: var(--white);
+      border-radius: 20px; padding: 28px 24px;
+      max-width: 360px; width: 90%;
+      position: relative; z-index: 1;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      animation: slideUp .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .confirm-box h2 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+    .confirm-box p { font-size: 14px; color: var(--mid); line-height: 1.5; margin-bottom: 24px; }
+    .confirm-buttons { display: flex; gap: 10px; }
     .btn-cancel {
-      padding: 10px 24px;
-      border: 2px solid #ddd;
-      background: white;
-      color: #333;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
+      flex: 1; padding: 12px;
+      border: 1.5px solid var(--border); background: var(--white);
+      border-radius: var(--rpill); font-weight: 700; font-size: 14px;
+      cursor: pointer; color: var(--mid); font-family: 'Inter', sans-serif;
     }
-
-    .btn-cancel:hover {
-      background: #f5f5f5;
-      border-color: #999;
-    }
-
     .btn-confirm {
-      padding: 10px 24px;
-      border: none;
-      background: #28a745;
-      color: white;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-
-    .btn-confirm:hover {
-      background: #218838;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-    }
-
-    .btn-confirm:active {
-      transform: translateY(0);
-    }
-
-    @media (max-width: 600px) {
-      .confirm-box {
-        padding: 24px;
-        max-width: 95%;
-      }
-
-      .confirm-box h2 {
-        font-size: 1.25rem;
-      }
-
-      .confirm-buttons {
-        gap: 10px;
-      }
-
-      .btn-cancel,
-      .btn-confirm {
-        padding: 10px 16px;
-        font-size: 0.9rem;
-      }
+      flex: 1; padding: 12px;
+      background: linear-gradient(135deg, var(--green-d), var(--green));
+      border: none; border-radius: var(--rpill);
+      color: #fff; font-weight: 700; font-size: 14px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
     }
   </style>
 </head>
 <body>
-  <!-- HEADER -->
-  <div id="header"></div>
 
-  <!-- MENU -->
-  <div id="menu"></div>
-  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+  <!-- ══ HEADER ════════════════════════════════════ -->
+  <header class="hd">
+    <div class="hd-top">
+      <div class="hd-left">
+        <a href="../index-funcionario.html" class="btn-icon-hd">
+          <i class="fas fa-home"></i>
+        </a>
+        <div>
+          <div class="hd-title">Ordens</div>
+          <div class="hd-sub" id="empresaNome">Carregando...</div>
+        </div>
+      </div>
+      <div class="hd-right">
+        <a href="nova-ordem-funcionario.html" class="btn-new-hd">
+          <i class="fas fa-plus"></i> Nova
+        </a>
+        <button class="btn-icon-hd" onclick="logout()" title="Sair">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
 
-  <!-- MAIN CONTENT -->
-  <main class="main-container" id="mainContent"></main>
+    <div class="filter-tabs" id="filterTabs">
+      <button class="ftab active" onclick="setFilter(this,'ACTIVE')">Ativas</button>
+      <button class="ftab" onclick="setFilter(this,'PENDENTE')">Pendente</button>
+      <button class="ftab" onclick="setFilter(this,'EM_ANDAMENTO')">Em Andamento</button>
+      <button class="ftab" onclick="setFilter(this,'AGUARDANDO_PAGAMENTO')">Aguardando</button>
+    </div>
+  </header>
 
-  <!-- MOBILE NAV -->
-  <nav id="mobileNav"></nav>
+  <!-- ══ CONTENT ═══════════════════════════════════ -->
+  <main class="main" id="mainContent"></main>
 
-  <!-- PAYMENT MODAL -->
-  <div class="modal-overlay" id="paymentModal" onclick="if(event.target === this) closePaymentModal()">
+  <!-- ══ PAYMENT MODAL ══════════════════════════════ -->
+  <div class="modal-overlay" id="paymentModal" onclick="if(event.target===this)closePaymentModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
       <div class="modal-header">
         <h2 class="modal-title">Registrar Pagamento</h2>
-        <button class="modal-close" onclick="closePaymentModal()" title="Fechar">
-          <i class="fas fa-times"></i>
-        </button>
+        <button class="modal-close" onclick="closePaymentModal()">✕</button>
       </div>
 
-      <div class="payment-header">
-        <p style="font-size: 14px; color: var(--text-secondary);">Valor Restante</p>
-        <p class="remaining-amount" id="remainingAmount">R$ 0,00</p>
-        <p style="font-size: 14px; color: var(--text-secondary);">
-          Total: <span id="totalAmount">R$ 0,00</span> |
-          Pago: <span id="paidAmount">R$ 0,00</span>
-        </p>
+      <div class="pay-summary">
+        <div class="pay-remaining" id="remainingAmount">R$ 0,00</div>
+        <div class="pay-summary-row">
+          <div>Total: <span id="totalAmount">R$ 0,00</span></div>
+          <div>·</div>
+          <div>Pago: <span id="paidAmount">R$ 0,00</span></div>
+        </div>
       </div>
 
-      <div class="payment-input-group">
-        <span class="currency-symbol">R$</span>
-        <input
-          type="text"
-          class="form-input"
-          placeholder="0,00"
-          id="paymentValueInput"
-          oninput="formatPaymentInput(event)"
-        >
+      <div class="pay-input-wrap">
+        <span class="pay-prefix">R$</span>
+        <input type="text" class="pay-input" id="paymentValueInput" placeholder="0,00"
+               oninput="formatPaymentInput(event)">
       </div>
 
-      <button type="button" class="btn-primary" style="width: 100%; margin-bottom: 16px;" onclick="fillRemainingAmount()">
-        Preencher Valor Restante
+      <button class="btn-fill-remaining" onclick="fillRemainingAmount()">
+        Preencher valor restante
       </button>
 
-      <p class="form-label">Adicionar pagamento como:</p>
-      <div class="payment-methods">
-        <button type="button" class="payment-method-btn" onclick="addPayment('DINHEIRO')" title="Dinheiro">
-          <i class="fas fa-money-bill-wave"></i>
-          <span>Dinheiro</span>
+      <div class="pay-methods">
+        <button class="pay-method-btn" onclick="addPayment('DINHEIRO')">
+          <i class="fas fa-money-bill-wave"></i> Dinheiro
         </button>
-        <button type="button" class="payment-method-btn" onclick="addPayment('PIX')" title="PIX">
-          <i class="fab fa-pix"></i>
-          <span>PIX</span>
+        <button class="pay-method-btn" onclick="addPayment('PIX')">
+          <i class="fab fa-pix"></i> PIX
         </button>
-        <button type="button" class="payment-method-btn" onclick="addPayment('CARTAO')" title="Cartão">
-          <i class="fas fa-credit-card"></i>
-          <span>Cartão</span>
+        <button class="pay-method-btn" onclick="addPayment('CARTAO')">
+          <i class="fas fa-credit-card"></i> Cartão
         </button>
-        <button type="button" class="payment-method-btn" onclick="addPayment('NFE')" title="Nota Fiscal Eletrônica">
-          <i class="fas fa-file-invoice"></i>
-          <span>NFe</span>
+        <button class="pay-method-btn" onclick="addPayment('NFE')">
+          <i class="fas fa-file-invoice"></i> NFe
         </button>
-        <button type="button" class="payment-method-btn pending" onclick="addPayment('PENDENTE')" title="Pendente">
-          <i class="fas fa-clock"></i>
-          <span>Pendente</span>
+        <button class="pay-method-btn pending" onclick="addPayment('PENDENTE')">
+          <i class="fas fa-clock"></i> Pendente
         </button>
       </div>
 
-      <div id="paymentsList" style="margin-top: 16;">
-        <!-- Payments added will be shown here -->
-      </div>
+      <div class="pay-list" id="paymentsList"></div>
 
       <div class="modal-actions">
-        <button type="button" class="btn-primary" style="background: var(--light); color: var(--dark); border: 1px solid var(--border);" onclick="closePaymentModal()">
-          Cancelar
-        </button>
-        <button type="button" class="btn-primary" id="submitPaymentBtn" onclick="submitPayments()" disabled>
+        <button class="btn-modal-cancel" onclick="closePaymentModal()">Cancelar</button>
+        <button class="btn-modal-submit" id="submitPaymentBtn" onclick="submitPayments()" disabled>
           Finalizar Ordem
         </button>
       </div>
     </div>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="../api.js"></script>
   <script src="utils-funcionario.js"></script>
-
   <script>
-    // PAGE CONFIGURATION
-    const PAGE_TITLE = 'Ordens';
-    const PAGE_ACTIVE = 'ordens';
-
     let currentOrdem = null;
+    let currentFilter = 'ACTIVE';
+    let currentView = 'list'; // 'list' | 'detail'
     let paymentModal = {
-      isOpen: false,
-      isProcessing: false,
-      orderId: null,
-      total: 0,
-      paid: 0,
-      remaining: 0,
-      inputValue: '',
-      payments: []
+      isOpen: false, isProcessing: false,
+      orderId: null, total: 0, paid: 0, remaining: 0,
+      inputValue: '', payments: []
     };
     let paymentKeydownHandler = null;
 
-    // INITIALIZE
+    // ── INIT ─────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
-
-      // Set header in correct location (outside mainContent)
-      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
-      document.getElementById('menu').innerHTML = createFuncionarioMenu();
-      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
-
       await loadUserInfo();
 
       const urlParams = new URLSearchParams(window.location.search);
       const ordemId = urlParams.get('id');
 
       if (ordemId) {
+        showDetailMode();
         await loadOrdemDetail(ordemId);
       } else {
-        await loadOrdensList();
+        showListMode();
+        await loadOrdens();
       }
     });
 
-    // LOAD ORDENS LIST
-    async function loadOrdensList() {
-      const mainContent = document.getElementById('mainContent');
-
-      const html = `
-        <div class="section-header">
-          <h1 class="section-title">Ordens de Serviço</h1>
-          <div style="display: flex; gap: 12px;">
-            <button class="btn-nova-ordem" onclick="window.location.href='nova-ordem-funcionario.html'">
-              <i class="fas fa-plus"></i>
-              Nova Ordem
-            </button>
-            <button class="btn-nova-ordem" onclick="window.location.href='fila-entrada-funcionario.html'" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-              <i class="fas fa-bolt"></i>
-              Fila de Entrada
-            </button>
-            <button class="btn-nova-ordem" onclick="window.location.href='servicos-funcionario.html'" style="background: #6c757d;">
-              <i class="fas fa-wrench"></i>
-              Serviços
-            </button>
-          </div>
-        </div>
-
-        <div class="filters">
-          <select class="filter-select" id="statusFilter" onchange="applyFilters()">
-            <option value="ACTIVE" selected>Ordens Ativas</option>
-            <option value="PENDENTE">Pendente</option>
-            <option value="EM_ANDAMENTO">Em Andamento</option>
-            <option value="AGUARDANDO_PAGAMENTO">Aguardando Pagamento</option>
-          </select>
-        </div>
-
-        <div id="content"></div>
-      `;
-
-      mainContent.innerHTML = html;
-      await loadOrdens();
+    // ── VIEW MODE ─────────────────────────────────
+    function showListMode() {
+      currentView = 'list';
+      document.getElementById('filterTabs').classList.remove('hidden');
+    }
+    function showDetailMode() {
+      currentView = 'detail';
+      document.getElementById('filterTabs').classList.add('hidden');
     }
 
-    // LOAD ORDENS
+    // ── FILTER ───────────────────────────────────
+    function setFilter(btn, status) {
+      document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = status;
+      loadOrdens();
+    }
+
+    // ── LOAD ORDENS ───────────────────────────────
     async function loadOrdens() {
-      const content = document.getElementById('content');
-      const statusFilter = document.getElementById('statusFilter')?.value || 'ACTIVE';
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `
+        <div class="quick-links">
+          <a href="fila-entrada-funcionario.html" class="qlink qlink-amber">
+            <i class="fas fa-bolt"></i> Fila de Entrada
+          </a>
+          <a href="servicos-funcionario.html" class="qlink">
+            <i class="fas fa-wrench"></i> Serviços
+          </a>
+        </div>
+        <div class="loading-wrap">
+          <div class="spin"></div>
+          <div class="loading-txt">Carregando ordens...</div>
+        </div>
+      `;
 
       try {
-        content.innerHTML = createLoading();
-
-        const response = await window.api.getOrdens(1, 50, '', statusFilter);
+        const response = await window.api.getOrdens(1, 50, '', currentFilter);
         const ordens = response.data || response.ordens || [];
 
-        if (ordens.length === 0) {
-          content.innerHTML = createEmptyState(
-            'fa-inbox',
-            'Nenhuma ordem encontrada',
-            'Você ainda não tem ordens neste status. Crie uma nova ordem para começar!',
-            'Nova Ordem',
-            "window.location.href='nova-ordem-funcionario.html'"
-          );
-          return;
-        }
-
-        let html = `
-          <div class="orders-container">
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Veículo</th>
-                    <th>Status</th>
-                    <th>Valor</th>
-                    <th>Data</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-        `;
-
-        ordens.forEach(ordem => {
-          const statusClass = `status-${ordem.status.toLowerCase().replace(/_/g, '-')}`;
-          html += `
-            <tr>
-              <td>#${ordem.numeroOrdem || ordem.id.substring(0, 8)}</td>
-              <td>${ordem.cliente?.nome || '-'}</td>
-              <td>${ordem.veiculo?.placa || '-'}</td>
-              <td><span class="status-badge ${statusClass}">${ordem.status}</span></td>
-              <td>${formatCurrency(ordem.valorTotal || ordem.valor)}</td>
-              <td>${formatDate(ordem.createdAt)}</td>
-              <td>
-                <div class="action-btns">
-                  ${ordem.status === 'PENDENTE' || ordem.status === 'EM_ANDAMENTO' ? `
-                    <button class="btn-small" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir Lavagem">
-                      <i class="fas fa-flag-checkered"></i>
-                    </button>
-                  ` : ''}
-                  ${ordem.status === 'AGUARDANDO_PAGAMENTO' ? `
-                    <button class="btn-small" onclick="openPaymentModalFromTable('${ordem.id}')" title="Registrar Pagamento">
-                      <i class="fas fa-check"></i>
-                    </button>
-                  ` : ''}
-                  <button class="btn-small" onclick="viewOrdem('${ordem.id}')" title="Visualizar">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  ${ordem.status !== 'COMPLETO' ? `
-                    <button class="btn-small" onclick="editOrdem('${ordem.id}')" title="Editar">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                  ` : ''}
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-
-        html += `
-                </tbody>
-              </table>
-            </div>
+        let listHTML = `
+          <div class="quick-links">
+            <a href="fila-entrada-funcionario.html" class="qlink qlink-amber">
+              <i class="fas fa-bolt"></i> Fila de Entrada
+            </a>
+            <a href="servicos-funcionario.html" class="qlink">
+              <i class="fas fa-wrench"></i> Serviços
+            </a>
           </div>
         `;
 
-        content.innerHTML = html;
+        if (ordens.length === 0) {
+          listHTML += `
+            <div class="empty-wrap">
+              <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+              <div class="empty-title">Nenhuma ordem</div>
+              <div class="empty-sub">Não há ordens neste status no momento.</div>
+              <button class="btn-empty" onclick="window.location.href='nova-ordem-funcionario.html'">
+                + Nova Ordem
+              </button>
+            </div>
+          `;
+        } else {
+          listHTML += `<div class="orders-list">`;
+          ordens.forEach(ordem => {
+            const svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ') || '—';
+            const status = ordem.status || 'PENDENTE';
+            const accClass = `acc-${status}`;
+            const badgeClass = `sbadge-${status}`;
+            const statusLabel = {
+              PENDENTE: 'Pendente',
+              EM_ANDAMENTO: 'Em Andamento',
+              AGUARDANDO_PAGAMENTO: 'Aguardando',
+              COMPLETO: 'Concluído'
+            }[status] || status;
+
+            const canDone = status === 'PENDENTE' || status === 'EM_ANDAMENTO';
+            const canPay  = status === 'AGUARDANDO_PAGAMENTO';
+
+            listHTML += `
+              <div class="order-card" onclick="viewOrdem('${ordem.id}')">
+                <div class="card-accent ${accClass}"></div>
+                <div class="card-body">
+                  <div class="card-top">
+                    <div>
+                      <div class="card-num"># ${ordem.numeroOrdem || ordem.id.substring(0,8).toUpperCase()}</div>
+                      <div class="card-date">${formatDate(ordem.createdAt)}</div>
+                    </div>
+                    <span class="sbadge ${badgeClass}">${statusLabel}</span>
+                  </div>
+                  <div class="card-client">${ordem.cliente?.nome || '—'}</div>
+                  <div class="card-meta">
+                    ${ordem.veiculo?.placa ? `<span class="card-plate">${ordem.veiculo.placa}</span>` : ''}
+                    <span class="card-svc">${svcNomes}</span>
+                  </div>
+                  <div class="card-divider"></div>
+                  <div class="card-bottom">
+                    <div class="card-value">${formatCurrency(ordem.valorTotal || ordem.valor)}</div>
+                    <div class="card-actions" onclick="event.stopPropagation()">
+                      ${canDone ? `
+                        <button class="btn-card btn-card-done" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir">
+                          <i class="fas fa-flag-checkered"></i>
+                        </button>` : ''}
+                      ${canPay ? `
+                        <button class="btn-card btn-card-pay" onclick="openPaymentModalFromTable('${ordem.id}')" title="Pagar">
+                          <i class="fas fa-credit-card"></i> Pagar
+                        </button>` : ''}
+                      <button class="btn-card btn-card-eye" onclick="viewOrdem('${ordem.id}')" title="Ver">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          listHTML += `</div>`;
+        }
+
+        main.innerHTML = listHTML;
 
       } catch (error) {
         console.error('Erro ao carregar ordens:', error);
-        content.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar as ordens. Tente novamente em alguns segundos.',
-          'Tentar novamente',
-          'loadOrdens()'
-        );
+        main.innerHTML = `
+          <div class="empty-wrap">
+            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-title">Erro ao carregar</div>
+            <div class="empty-sub">Tente novamente em instantes.</div>
+            <button class="btn-empty" onclick="loadOrdens()">Tentar novamente</button>
+          </div>
+        `;
       }
     }
 
-    // LOAD ORDEM DETAIL
+    // ── LOAD ORDEM DETAIL ─────────────────────────
     async function loadOrdemDetail(ordemId) {
-      const mainContent = document.getElementById('mainContent');
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `<div class="loading-wrap"><div class="spin"></div><div class="loading-txt">Carregando...</div></div>`;
 
       try {
-        mainContent.innerHTML = createLoading();
-
         const response = await window.api.getOrdemById(ordemId);
         currentOrdem = response.data || response;
 
-        let actionButtons = `
-          <button class="btn-large btn-large-primary" onclick="goBack()">
-            <i class="fas fa-arrow-left"></i> Voltar
-          </button>
-        `;
+        const status = currentOrdem.status || 'PENDENTE';
+        const badgeClass = `sbadge-${status}`;
+        const statusLabel = {
+          PENDENTE: 'Pendente',
+          EM_ANDAMENTO: 'Em Andamento',
+          AGUARDANDO_PAGAMENTO: 'Aguardando Pgto',
+          COMPLETO: 'Concluído'
+        }[status] || status;
 
-        if (currentOrdem.status === 'EM_ANDAMENTO') {
-          actionButtons += `
-            <button class="btn-large btn-large-success" onclick="markAsComplete()">
-              <i class="fas fa-check"></i> Marcar como Concluído
-            </button>
-          `;
-        }
+        const lavNomes = (currentOrdem.lavadores || [])
+          .map(l => l.nome || l).join(', ') || '—';
 
-        if (currentOrdem.status === 'AGUARDANDO_PAGAMENTO') {
-          actionButtons += `
-            <button class="btn-large btn-large-success" onclick="openPaymentModal(currentOrdem)">
-              <i class="fas fa-credit-card"></i> Finalizar Pagamento
-            </button>
-          `;
-        }
-
-        if (currentOrdem.status !== 'COMPLETO') {
-          actionButtons += `
-            <button class="btn-large btn-large-primary" onclick="editOrdem('${currentOrdem.id}')">
-              <i class="fas fa-edit"></i> Editar Ordem
-            </button>
-          `;
-        }
-
-        let servicesHtml = '';
-        if (currentOrdem.servicos && currentOrdem.servicos.length > 0) {
-          servicesHtml = `
-            <div class="order-items" style="margin-top: 20px;">
-              <h3><i class="fas fa-broom"></i> Serviços</h3>
+        let svcHtml = '';
+        if ((currentOrdem.servicos || []).length > 0) {
+          svcHtml = `
+            <div class="detail-card">
+              <div class="detail-card-title"><i class="fas fa-broom" style="margin-right:6px"></i>Serviços</div>
               ${currentOrdem.servicos.map(s => `
-                <div class="item-row">
-                  <span class="item-name">${s.nome}</span>
-                  <span class="item-value">${formatCurrency(s.preco)}</span>
+                <div class="svc-row">
+                  <span class="svc-name">${s.nome}</span>
+                  <span class="svc-price">${formatCurrency(s.preco)}</span>
                 </div>
               `).join('')}
             </div>
           `;
         }
 
-        let adicionaisHtml = '';
-        if (currentOrdem.adicionais && currentOrdem.adicionais.length > 0) {
-          adicionaisHtml = `
-            <div class="order-items" style="margin-top: 20px;">
-              <h3><i class="fas fa-plus-circle"></i> Adicionais</h3>
+        let addHtml = '';
+        if ((currentOrdem.adicionais || []).length > 0) {
+          addHtml = `
+            <div class="detail-card">
+              <div class="detail-card-title"><i class="fas fa-plus-circle" style="margin-right:6px"></i>Adicionais</div>
               ${currentOrdem.adicionais.map(a => `
-                <div class="item-row">
-                  <span class="item-name">${a.nome}</span>
-                  <span class="item-value">${formatCurrency(a.preco)}</span>
+                <div class="svc-row">
+                  <span class="svc-name">${a.nome}</span>
+                  <span class="svc-price">${formatCurrency(a.preco)}</span>
                 </div>
               `).join('')}
             </div>
           `;
         }
 
-        const statusClass = `status-${currentOrdem.status.toLowerCase().replace(/_/g, '-')}`;
+        let obsHtml = '';
+        if (currentOrdem.observacoes) {
+          obsHtml = `
+            <div class="detail-card">
+              <div class="detail-card-title"><i class="fas fa-note-sticky" style="margin-right:6px"></i>Observações</div>
+              <p class="obs-text">${currentOrdem.observacoes}</p>
+            </div>
+          `;
+        }
 
-        const html = `
-          <div class="section-header" style="margin-bottom: 20px;">
-            <h1 class="section-title">Detalhes da Ordem</h1>
-          </div>
+        // Sticky action buttons
+        let actionsHtml = `<button class="btn-action btn-action-back" onclick="goBack()">
+          <i class="fas fa-arrow-left"></i> Voltar
+        </button>`;
 
-          <div class="detail-header">
-            <div class="detail-info">
-              <div class="detail-title">Ordem #${currentOrdem.numeroOrdem || currentOrdem.id.substring(0, 8)}</div>
-              <div class="detail-grid">
-                <div class="detail-item">
-                  <div class="detail-item-label">Cliente</div>
-                  <div class="detail-item-value">${currentOrdem.cliente?.nome || '-'}</div>
+        if (status === 'EM_ANDAMENTO' || status === 'PENDENTE') {
+          actionsHtml += `<button class="btn-action btn-action-done" onclick="markAsComplete()">
+            <i class="fas fa-flag-checkered"></i> Concluir
+          </button>`;
+        }
+        if (status === 'AGUARDANDO_PAGAMENTO') {
+          actionsHtml += `<button class="btn-action btn-action-pay" onclick="openPaymentModal(currentOrdem)">
+            <i class="fas fa-credit-card"></i> Pagar
+          </button>`;
+        }
+        if (status !== 'COMPLETO') {
+          actionsHtml += `<button class="btn-action btn-action-edit" onclick="editOrdem('${currentOrdem.id}')">
+            <i class="fas fa-edit"></i>
+          </button>`;
+        }
+
+        main.innerHTML = `
+          <div class="detail-wrap">
+            <div class="detail-hero">
+              <div class="detail-hero-top">
+                <div>
+                  <div class="detail-num"># ${currentOrdem.numeroOrdem || currentOrdem.id.substring(0,8).toUpperCase()}</div>
+                  <div class="detail-hero-date">${formatDate(currentOrdem.createdAt)}</div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-item-label">Veículo</div>
-                  <div class="detail-item-value">${currentOrdem.veiculo?.placa || '-'}</div>
+                <span class="sbadge ${badgeClass}">${statusLabel}</span>
+              </div>
+              <div class="detail-value">${formatCurrency(currentOrdem.valorTotal || currentOrdem.valor)}</div>
+              <div class="detail-value-label">Valor total</div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-card-title">Informações</div>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Cliente</div>
+                  <div class="info-value">${currentOrdem.cliente?.nome || '—'}</div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-item-label">Status</div>
-                  <div class="detail-item-value"><span class="status-badge ${statusClass}">${currentOrdem.status}</span></div>
+                <div class="info-item">
+                  <div class="info-label">Placa</div>
+                  <div class="info-value">
+                    ${currentOrdem.veiculo?.placa
+                      ? `<span class="info-value-plate">${currentOrdem.veiculo.placa}</span>`
+                      : '—'}
+                  </div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-item-label">Valor Total</div>
-                  <div class="detail-item-value" style="color: var(--primary); font-size: 16px;">${formatCurrency(currentOrdem.valorTotal || currentOrdem.valor)}</div>
+                <div class="info-item">
+                  <div class="info-label">Pagamento</div>
+                  <div class="info-value">${currentOrdem.metodoPagamento || '—'}</div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-item-label">Data</div>
-                  <div class="detail-item-value">${formatDate(currentOrdem.createdAt)}</div>
+                <div class="info-item">
+                  <div class="info-label">Lavadores</div>
+                  <div class="info-value">${lavNomes}</div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-item-label">Método Pagamento</div>
-                  <div class="detail-item-value">${currentOrdem.metodoPagamento || '-'}</div>
-                </div>
-                ${currentOrdem.lavadores && currentOrdem.lavadores.length > 0 ? `
-                <div class="detail-item">
-                  <div class="detail-item-label">Lavadores</div>
-                  <div class="detail-item-value">${currentOrdem.lavadores.map(l => l.nome || l).join(', ')}</div>
-                </div>
-                ` : ''}
               </div>
             </div>
-            <div class="detail-actions">
-              ${actionButtons}
-            </div>
+
+            ${svcHtml}
+            ${addHtml}
+            ${obsHtml}
           </div>
 
-          ${servicesHtml}
-          ${adicionaisHtml}
-
-          ${currentOrdem.observacoes ? `
-            <div class="order-items" style="margin-top: 20px;">
-              <h3><i class="fas fa-note-sticky"></i> Observações</h3>
-              <p>${currentOrdem.observacoes}</p>
-            </div>
-          ` : ''}
+          <div class="sticky-actions">${actionsHtml}</div>
         `;
 
-        mainContent.innerHTML = html;
-
       } catch (error) {
-        console.error('Erro ao carregar ordem:', error);
-        mainContent.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar os detalhes da ordem.',
-          'Voltar',
-          'goBack()'
-        );
+        console.error('Erro:', error);
+        main.innerHTML = `
+          <div class="empty-wrap">
+            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-title">Erro ao carregar</div>
+            <button class="btn-empty" onclick="goBack()">Voltar</button>
+          </div>
+        `;
       }
     }
 
-    // MARK AS COMPLETE (from detail view)
+    // ── MARK AS COMPLETE ──────────────────────────
     async function markAsComplete() {
       if (!currentOrdem) return;
-
       showConfirm(
-        'Marcar como Concluído',
-        'Tem certeza que deseja marcar esta ordem como concluída?',
-        () => {
-          updateOrdemStatus('AGUARDANDO_PAGAMENTO');
-        }
+        'Concluir Lavagem',
+        'Confirma que a lavagem foi concluída?',
+        () => updateOrdemStatus('AGUARDANDO_PAGAMENTO')
       );
     }
 
-    // MARK ORDER COMPLETED (from table view)
     async function markOrderCompletedFromTable(ordemId) {
       try {
         const response = await window.api.getOrdemById(ordemId);
         currentOrdem = response.data || response;
         markAsComplete();
-      } catch (error) {
-        console.error('Erro ao carregar ordem:', error);
-        showToast('Erro ao carregar ordem. Tente novamente.', 'error');
+      } catch {
+        showToast('Erro ao carregar ordem.', 'error');
       }
     }
 
-    // OPEN PAYMENT MODAL (from table view)
-    // OPEN PAYMENT MODAL FROM TABLE
     async function openPaymentModalFromTable(ordemId) {
       try {
         const response = await window.api.getOrdemById(ordemId);
         currentOrdem = response.data || response;
         openPaymentModal(currentOrdem);
-      } catch (error) {
-        console.error('Erro ao carregar ordem:', error);
-        showToast('Erro ao carregar ordem. Tente novamente.', 'error');
+      } catch {
+        showToast('Erro ao carregar ordem.', 'error');
       }
     }
 
-    // UPDATE ORDEM STATUS
+    // ── UPDATE STATUS ─────────────────────────────
     async function updateOrdemStatus(newStatus) {
       try {
         await window.api.updateOrdem(currentOrdem.id, { status: newStatus });
-
-        showToast('Ordem atualizada com sucesso!', 'success');
-
-        // ✅ OTIMIZAÇÃO: Re-renderizar detalhe com novo status (sem page reload)
-        await loadOrdemDetail(currentOrdem.id);
-
-        // Recarregar lista em background (sem bloquear UI)
-        setTimeout(() => {
-          loadOrdensList();
-        }, 500);
-      } catch (error) {
-        console.error('Erro ao atualizar ordem:', error);
-        showToast('Erro ao atualizar ordem. Tente novamente.', 'error');
+        showToast('Ordem atualizada!', 'success');
+        if (currentView === 'detail') {
+          await loadOrdemDetail(currentOrdem.id);
+        } else {
+          await loadOrdens();
+        }
+      } catch {
+        showToast('Erro ao atualizar ordem.', 'error');
       }
     }
 
-    // OPEN PAYMENT MODAL
+    // ── PAYMENT MODAL ─────────────────────────────
     function openPaymentModal(order) {
       if (!order) return;
-
-      // Validação: Status deve ser AGUARDANDO_PAGAMENTO
       if (order.status !== 'AGUARDANDO_PAGAMENTO') {
-        showToast('Marque a lavagem como concluida antes de receber o pagamento', 'error');
+        showToast('Conclua a lavagem antes de registrar pagamento.', 'error');
         return;
       }
-
-      // Inicializa estado do modal
-      paymentModal.orderId = order.id;
-      paymentModal.total = order.valorTotal || order.valor || 0;
-      paymentModal.paid = (order.pagamentos || [])
+      paymentModal.orderId   = order.id;
+      paymentModal.total     = order.valorTotal || order.valor || 0;
+      paymentModal.paid      = (order.pagamentos || [])
         .filter(p => p.status === 'PAGO')
-        .reduce((sum, p) => sum + p.valor, 0);
+        .reduce((s, p) => s + p.valor, 0);
       paymentModal.remaining = paymentModal.total - paymentModal.paid;
       paymentModal.inputValue = '';
-      paymentModal.payments = [];
-      paymentModal.isOpen = true;
+      paymentModal.payments  = [];
+      paymentModal.isOpen    = true;
 
-      // Atualiza UI
       updatePaymentModalUI();
       document.getElementById('paymentModal').classList.add('active');
-
-      // Foca no input
       setTimeout(() => {
-        const input = document.getElementById('paymentValueInput');
-        if (input) {
-          input.focus();
-          input.select();
-        }
-      }, 50);
-
-      // Bind hotkeys
+        const inp = document.getElementById('paymentValueInput');
+        if (inp) { inp.focus(); inp.select(); }
+      }, 80);
       bindPaymentHotkeys();
     }
 
-    // CLOSE PAYMENT MODAL
     function closePaymentModal() {
       paymentModal.isOpen = false;
       paymentModal.payments = [];
@@ -1569,27 +1026,23 @@
       unbindPaymentHotkeys();
     }
 
-    // UPDATE PAYMENT MODAL UI
     function updatePaymentModalUI() {
       document.getElementById('remainingAmount').textContent = formatCurrency(paymentModal.remaining);
-      document.getElementById('totalAmount').textContent = formatCurrency(paymentModal.total);
-      document.getElementById('paidAmount').textContent = formatCurrency(paymentModal.paid);
-      document.getElementById('paymentValueInput').value = paymentModal.inputValue;
+      document.getElementById('totalAmount').textContent     = formatCurrency(paymentModal.total);
+      document.getElementById('paidAmount').textContent      = formatCurrency(paymentModal.paid);
+      document.getElementById('paymentValueInput').value     = paymentModal.inputValue;
 
-      // Renderizar lista de pagamentos
       const listDiv = document.getElementById('paymentsList');
       if (paymentModal.payments.length === 0) {
         listDiv.innerHTML = '';
         document.getElementById('submitPaymentBtn').disabled = true;
       } else {
-        let html = '<p class="form-label" style="margin-bottom: 12px;">Pagamentos adicionados:</p>';
-        paymentModal.payments.forEach((payment, index) => {
+        let html = `<div class="pay-list-label">Pagamentos adicionados</div>`;
+        paymentModal.payments.forEach((p, i) => {
           html += `
-            <div class="payment-list-item">
-              <span>${payment.method} - ${formatCurrency(payment.amount)}</span>
-              <button type="button" onclick="removePayment(${index})" title="Remover">
-                <i class="fas fa-times"></i>
-              </button>
+            <div class="pay-list-item">
+              <span>${p.method} — ${formatCurrency(p.amount)}</span>
+              <button onclick="removePayment(${i})"><i class="fas fa-times"></i></button>
             </div>
           `;
         });
@@ -1598,184 +1051,101 @@
       }
     }
 
-    // FORMAT PAYMENT INPUT
     function formatPaymentInput(event) {
       let value = event.target.value.replace(/\D/g, '');
       value = (parseInt(value, 10) / 100).toFixed(2);
-      if (isNaN(value)) value = "0.00";
+      if (isNaN(value)) value = '0.00';
       paymentModal.inputValue = value.replace('.', ',');
       event.target.value = paymentModal.inputValue;
     }
 
-    // FILL REMAINING AMOUNT
     function fillRemainingAmount() {
       paymentModal.inputValue = paymentModal.remaining.toFixed(2).replace('.', ',');
       document.getElementById('paymentValueInput').value = paymentModal.inputValue;
     }
 
-    // ADD PAYMENT
     function addPayment(method) {
       let amount = parseFloat(paymentModal.inputValue.replace(',', '.')) || 0;
-
-      // Para PENDENTE, preenche com valor restante se input vazio
-      if (method === 'PENDENTE' && amount === 0) {
-        amount = paymentModal.remaining > 0 ? paymentModal.remaining : 0;
-      }
-
-      // Validações
-      if (amount <= 0) {
-        showToast('Valor deve ser maior que zero', 'error');
-        return;
-      }
-
-      if (amount > paymentModal.remaining + 0.01) {
-        showToast('Valor maior que o restante', 'error');
-        return;
-      }
-
-      // Adiciona pagamento
+      if (method === 'PENDENTE' && amount === 0) amount = paymentModal.remaining > 0 ? paymentModal.remaining : 0;
+      if (amount <= 0) { showToast('Valor deve ser maior que zero.', 'error'); return; }
+      if (amount > paymentModal.remaining + 0.01) { showToast('Valor maior que o restante.', 'error'); return; }
       paymentModal.payments.push({ method, amount });
       paymentModal.remaining -= amount;
       paymentModal.inputValue = '';
-
-      // Atualiza UI
       updatePaymentModalUI();
     }
 
-    // REMOVE PAYMENT
     function removePayment(index) {
       const removed = paymentModal.payments.splice(index, 1);
-      if (removed.length > 0) {
-        paymentModal.remaining += removed[0].amount;
-      }
+      if (removed.length > 0) paymentModal.remaining += removed[0].amount;
       updatePaymentModalUI();
     }
 
-    // BIND PAYMENT HOTKEYS
     function bindPaymentHotkeys() {
       unbindPaymentHotkeys();
-      paymentKeydownHandler = (event) => {
+      paymentKeydownHandler = (e) => {
         if (!paymentModal.isOpen) return;
-        const target = event.target;
-        const isEditable = target && (
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable
-        );
-        if (isEditable && target.id !== 'paymentValueInput') {
-          return;
-        }
-
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          closePaymentModal();
-          return;
-        }
-
-        if (event.key === 'Backspace') {
-          event.preventDefault();
-          updatePaymentInputByKey('BACKSPACE');
-          return;
-        }
-
-        if (/^[0-9]$/.test(event.key)) {
-          event.preventDefault();
-          updatePaymentInputByKey(event.key);
-        }
+        const isEditable = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+        if (isEditable && e.target.id !== 'paymentValueInput') return;
+        if (e.key === 'Escape') { e.preventDefault(); closePaymentModal(); return; }
+        if (e.key === 'Backspace') { e.preventDefault(); updatePaymentInputByKey('BACKSPACE'); return; }
+        if (/^[0-9]$/.test(e.key)) { e.preventDefault(); updatePaymentInputByKey(e.key); }
       };
       document.addEventListener('keydown', paymentKeydownHandler);
     }
-
-    // UNBIND PAYMENT HOTKEYS
     function unbindPaymentHotkeys() {
       if (paymentKeydownHandler) {
         document.removeEventListener('keydown', paymentKeydownHandler);
         paymentKeydownHandler = null;
       }
     }
-
-    // UPDATE PAYMENT INPUT BY KEY
     function updatePaymentInputByKey(key) {
       const input = document.getElementById('paymentValueInput');
       if (!input) return;
       let digits = (input.value || '').replace(/\D/g, '');
-      if (key === 'BACKSPACE') {
-        digits = digits.slice(0, -1);
-      } else {
-        digits += key;
-      }
+      if (key === 'BACKSPACE') digits = digits.slice(0, -1);
+      else digits += key;
       input.value = digits;
       formatPaymentInput({ target: input });
       input.value = paymentModal.inputValue;
     }
 
-    // SUBMIT PAYMENTS
     async function submitPayments() {
-      if (paymentModal.payments.length === 0) {
-        showToast('Adicione pelo menos um pagamento', 'error');
-        return;
-      }
-
-      // Se sobrou valor, oferece registrar como PENDENTE
+      if (paymentModal.payments.length === 0) { showToast('Adicione pelo menos um pagamento.', 'error'); return; }
       if (paymentModal.remaining > 0.01) {
         showConfirm(
           'Saldo Pendente',
           `Resta ${formatCurrency(paymentModal.remaining)}. Registrar como PENDENTE?`,
           () => {
-            paymentModal.payments.push({
-              method: 'PENDENTE',
-              amount: parseFloat(paymentModal.remaining.toFixed(2))
-            });
+            paymentModal.payments.push({ method: 'PENDENTE', amount: parseFloat(paymentModal.remaining.toFixed(2)) });
             confirmAndProcess();
           }
         );
         return;
       }
-
       confirmAndProcess();
     }
 
-    // CONFIRM AND PROCESS
     function confirmAndProcess() {
-      const totalValue = paymentModal.payments.reduce((sum, p) => sum + p.amount, 0);
+      const total = paymentModal.payments.reduce((s, p) => s + p.amount, 0);
       showConfirm(
         'Confirmar Finalização',
-        `Tem certeza que deseja finalizar esta ordem? Total: ${formatCurrency(totalValue)}`,
-        () => {
-          processPayments();
-        }
+        `Finalizar esta ordem? Total: ${formatCurrency(total)}`,
+        () => processPayments()
       );
     }
 
-    // PROCESS PAYMENTS
     async function processPayments() {
-      // ✅ Validação do frontend: Verificar se há pagamentos adicionados
-      if (!paymentModal.payments || paymentModal.payments.length === 0) {
-        showToast('Adicione pelo menos um método de pagamento', 'error');
-        return;
-      }
-
-      // ✅ Validação: Verificar se todos os pagamentos têm método e valor válidos
-      for (const payment of paymentModal.payments) {
-        if (!payment.method || typeof payment.method !== 'string' || payment.method.trim() === '') {
-          showToast(`Método de pagamento inválido: ${payment.method}`, 'error');
-          return;
-        }
-        if (!payment.amount || payment.amount <= 0) {
-          showToast(`Valor de pagamento inválido: ${payment.amount}`, 'error');
-          return;
-        }
-      }
-
-      paymentModal.isProcessing = true;
+      if (!paymentModal.payments?.length) { showToast('Adicione pelo menos um pagamento.', 'error'); return; }
       const submitBtn = document.getElementById('submitPaymentBtn');
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+      paymentModal.isProcessing = true;
 
       const payload = {
         pagamentos: paymentModal.payments.map(p => ({
-          metodo: p.method.toUpperCase().trim(), // ✅ Normalizar método (maiúsculas, sem espaços)
-          valor: parseFloat(p.amount).toFixed(2) // ✅ Garantir que valor é numérico válido
+          metodo: p.method.toUpperCase().trim(),
+          valor: parseFloat(p.amount).toFixed(2)
         }))
       };
 
@@ -1783,45 +1153,99 @@
         await window.api.finalizarOrdem(paymentModal.orderId, payload);
         showToast('Ordem finalizada com sucesso!', 'success');
         closePaymentModal();
-
-        // ✅ OTIMIZAÇÃO: Atualizar estado local em vez de fazer redirect
-        // Se estamos vendo o detalhe, voltar para a lista
-        if (currentOrdem?.id === paymentModal.orderId) {
-          goBack();
-        }
-
-        // Recarregar lista em background para garantir sincronização
-        // (sem bloquear UI - usuário vê feedback imediato)
-        setTimeout(() => {
-          loadOrdensList();
-        }, 300);
+        if (currentOrdem?.id === paymentModal.orderId) goBack();
+        setTimeout(() => loadOrdens(), 300);
       } catch (error) {
-        console.error('Erro ao finalizar ordem:', error);
-        showToast(`Erro ao finalizar ordem: ${error.error || 'Tente novamente.'}`, 'error');
+        showToast(`Erro: ${error.error || 'Tente novamente.'}`, 'error');
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Finalizar Ordem';
         paymentModal.isProcessing = false;
       }
     }
 
-    // VIEW ORDEM
+    // ── NAV ───────────────────────────────────────
     function viewOrdem(id) {
-      window.location.href = `ordens-funcionario.html?id=${id}`;
+      showDetailMode();
+      window.history.pushState({}, '', `?id=${id}`);
+      loadOrdemDetail(id);
     }
 
-    // EDIT ORDEM
     function editOrdem(id) {
       window.location.href = `nova-ordem-funcionario.html?edit=${id}`;
     }
 
-    // GO BACK
     function goBack() {
-      window.history.back();
+      showListMode();
+      window.history.pushState({}, '', 'ordens-funcionario.html');
+      currentOrdem = null;
+      loadOrdens();
     }
 
-    // APPLY FILTERS
-    function applyFilters() {
-      loadOrdens();
+    // ── UTILS ─────────────────────────────────────
+    function formatCurrency(value) {
+      if (!value) return 'R$ 0,00';
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    }
+    function formatDate(date) {
+      if (!date) return '—';
+      return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(date));
+    }
+    async function loadUserInfo() {
+      const empresaNomeEl = document.getElementById('empresaNome');
+      let nome = localStorage.getItem('empresaNome');
+      if (!nome) {
+        const empresaId = localStorage.getItem('empresaId');
+        if (empresaId) {
+          try {
+            const data = await window.api.getEmpresaById(empresaId);
+            nome = data.nome || data.name || 'Minha Empresa';
+            localStorage.setItem('empresaNome', nome);
+          } catch { nome = 'Minha Empresa'; }
+        } else { nome = 'Minha Empresa'; }
+      }
+      if (empresaNomeEl) empresaNomeEl.textContent = nome;
+    }
+
+    // ── TOAST ─────────────────────────────────────
+    function showToast(message, type = 'success') {
+      const old = document.getElementById('_toast');
+      if (old) old.remove();
+      const t = document.createElement('div');
+      t.id = '_toast';
+      t.className = `toast toast-${type}`;
+      const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+      t.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+      document.body.appendChild(t);
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+    }
+
+    // ── CONFIRM ───────────────────────────────────
+    function showConfirm(title, message, onConfirm, onCancel = null) {
+      const d = document.createElement('div');
+      d.className = 'confirm-dialog';
+      d.innerHTML = `
+        <div class="confirm-overlay"></div>
+        <div class="confirm-box">
+          <h2>${title}</h2>
+          <p>${message}</p>
+          <div class="confirm-buttons">
+            <button class="btn-cancel" id="cfnCancel">Cancelar</button>
+            <button class="btn-confirm" id="cfnOk">Confirmar</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(d);
+      d.querySelector('#cfnCancel').addEventListener('click', () => { d.remove(); onCancel?.(); });
+      d.querySelector('#cfnOk').addEventListener('click', () => { d.remove(); onConfirm?.(); });
+    }
+
+    // ── LOGOUT ────────────────────────────────────
+    function logout() {
+      showConfirm('Sair', 'Tem certeza que deseja sair?', () => {
+        showToast('Até logo!', 'success');
+        setTimeout(() => { localStorage.clear(); window.location.href = '../login.html'; }, 500);
+      });
     }
   </script>
 </body>
