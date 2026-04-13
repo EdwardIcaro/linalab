@@ -10,20 +10,24 @@ import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
 
 // ==========================================
-// ESTADO DE CONFIRMAÇÃO DE SAÍDAS PENDENTES
+// ESTADO DE COLETA CONVERSACIONAL DE SAÍDAS
 // ==========================================
+type SaidaStep = 'descricao' | 'formaPagamento' | 'fornecedor' | 'confirming';
+
 interface PendingSaida {
   valor: number;
-  descricao: string;
-  formaPagamento: string;
+  descricao: string | null;       // null = ainda não coletado
+  formaPagamento: string | null;  // null = ainda não coletado
   categoria: string;
+  fornecedorNome: string | null | undefined; // undefined = ainda não perguntado; null = usuário pulou; string = fornecido
+  step: SaidaStep;
   empresaId: string;
   userName: string;
   expiresAt: number;
 }
 const pendingSaidas = new Map<string, PendingSaida>();
 
-// Limpa confirmações expiradas a cada 5 minutos
+// Limpa sessões expiradas a cada 5 minutos
 setInterval(() => {
   const now = Date.now();
   for (const [key, val] of pendingSaidas.entries()) {
@@ -105,16 +109,10 @@ export async function handleIncomingMessage(
     // ── Comandos fixos ───────────────────────────────────────────────────────
     const dailyContext = await buildDailyContext(empresaId);
 
-    // ── Confirmação de saída pendente ────────────────────────────────────────
+    // ── Saída em andamento — coleta por etapas ───────────────────────────────
     const pendingKey = `${empresaId}:${from}`;
     if (pendingSaidas.has(pendingKey)) {
-      const resp = command.trim();
-      if (/^sim$|^s$|^yes$|^confirmar$|^confirma$/.test(resp)) {
-        return await confirmarSaida(pendingKey, senderName);
-      } else {
-        pendingSaidas.delete(pendingKey);
-        return '❌ Lançamento cancelado.';
-      }
+      return await handlePendingSaidaStep(message, pendingKey, senderName);
     }
 
     // ── Detecção de intenção de saída (não-lavador) ───────────────────────
@@ -1102,32 +1100,119 @@ async function handleLavadorEspecifico(
 // LANÇAMENTO DE SAÍDA VIA WHATSAPP
 // ==========================================
 
+// ==========================================
+// SAÍDAS — FLUXO CONVERSACIONAL POR ETAPAS
+// ==========================================
+
+const FORMA_LABELS: Record<string, string> = {
+  PIX: 'PIX', DINHEIRO: 'Dinheiro', CARTAO: 'Cartão', NFE: 'NFe',
+};
+
 /**
- * Extrai dados de saída da mensagem usando Groq
+ * Determina a próxima etapa com base no que falta coletar
  */
-async function extrairDadosSaida(message: string): Promise<{ valor: number; descricao: string; formaPagamento: string; categoria: string } | null> {
-  const prompt = `Extraia os dados de uma saída financeira desta mensagem. Retorne APENAS um JSON válido sem markdown, com os campos:
-- valor: número (obrigatório)
-- descricao: string descrevendo o que foi pago (obrigatório)
-- formaPagamento: "PIX" | "DINHEIRO" | "CARTAO" | "NFE" (padrão: "DINHEIRO")
-- categoria: "Despesa" | "Adiantamento" (padrão: "Despesa")
+function getNextSaidaStep(p: Partial<PendingSaida> & { valor: number }): SaidaStep {
+  if (!p.descricao) return 'descricao';
+  if (!p.formaPagamento) return 'formaPagamento';
+  if (p.fornecedorNome === undefined) return 'fornecedor';
+  return 'confirming';
+}
+
+/**
+ * Retorna a pergunta/mensagem para a etapa atual
+ */
+function promptForSaidaStep(p: PendingSaida): string {
+  switch (p.step) {
+    case 'descricao':
+      return (
+        `💸 Saída de *R$ ${p.valor.toFixed(2)}* recebida!\n\n` +
+        `📝 *Qual a descrição do gasto?*\n` +
+        `_Ex: Produto químico, Conta de luz, Material de limpeza_`
+      );
+
+    case 'formaPagamento':
+      return (
+        `📝 _${p.descricao}_\n\n` +
+        `💳 *Qual a forma de pagamento?*\n` +
+        `1️⃣ Dinheiro\n2️⃣ PIX\n3️⃣ Cartão\n4️⃣ NFe`
+      );
+
+    case 'fornecedor':
+      return (
+        `🏪 *Nome do fornecedor ou responsável?*\n` +
+        `_(ou envie *pular* para deixar em branco)_`
+      );
+
+    case 'confirming': {
+      const formaLabel = FORMA_LABELS[p.formaPagamento || 'DINHEIRO'] || p.formaPagamento;
+      const fornLine = p.fornecedorNome ? `\n  🏪 Fornecedor: ${p.fornecedorNome}` : '';
+      return (
+        `💸 *Confirmar lançamento?*\n\n` +
+        `  💰 Valor: *R$ ${p.valor.toFixed(2)}*\n` +
+        `  📝 Descrição: ${p.descricao}\n` +
+        `  💳 Pagamento: ${formaLabel}\n` +
+        `  🏷️ Categoria: ${p.categoria}` +
+        fornLine +
+        `\n\nResponda *sim* para confirmar ou *não* para cancelar.`
+      );
+    }
+  }
+}
+
+/**
+ * Tenta parsear forma de pagamento de um texto livre
+ */
+function parseFormaPagamento(text: string): string | null {
+  const t = text.trim().toLowerCase();
+  if (/^1$|dinheiro|esp[eé]cie/.test(t)) return 'DINHEIRO';
+  if (/^2$|^pix$/.test(t)) return 'PIX';
+  if (/^3$|cart[aã]o|cr[eé]dito|d[eé]bito/.test(t)) return 'CARTAO';
+  if (/^4$|nf[e\-]?|nota\s*fiscal/.test(t)) return 'NFE';
+  return null;
+}
+
+/**
+ * Extrai o que for possível da mensagem inicial usando Groq.
+ * Retorna null apenas se não conseguir extrair o valor.
+ * descricao e formaPagamento podem ser null (serão coletados depois).
+ */
+async function extrairDadosSaida(message: string): Promise<{
+  valor: number;
+  descricao: string | null;
+  formaPagamento: string | null;
+  categoria: string;
+} | null> {
+  const prompt = `Extraia dados de uma saída financeira. Retorne APENAS JSON sem markdown.
+Campos:
+- valor: número (obrigatório; null se ausente)
+- descricao: texto do que foi pago (null se não mencionado explicitamente)
+- formaPagamento: "PIX" | "DINHEIRO" | "CARTAO" | "NFE" (null se não mencionado)
+- categoria: "Despesa" | "Adiantamento" | "Outro" (padrão "Despesa")
+
+Regras:
+- formaPagamento: só preencha se o usuário mencionar explicitamente
+- descricao: só preencha se descreve claramente o gasto; capitalize
+- Se a mensagem tiver "adiantamento" → categoria = "Adiantamento"
 
 Exemplos:
 "saida 50 material de limpeza pix" → {"valor":50,"descricao":"Material de limpeza","formaPagamento":"PIX","categoria":"Despesa"}
-"gastei 120 conta de luz" → {"valor":120,"descricao":"Conta de luz","formaPagamento":"DINHEIRO","categoria":"Despesa"}
-"despesa 80 produto químico cartão" → {"valor":80,"descricao":"Produto químico","formaPagamento":"CARTAO","categoria":"Despesa"}
+"gastei 120 conta de luz" → {"valor":120,"descricao":"Conta de luz","formaPagamento":null,"categoria":"Despesa"}
+"saida 120 dinheiro" → {"valor":120,"descricao":null,"formaPagamento":"DINHEIRO","categoria":"Despesa"}
+"despesa 80" → {"valor":80,"descricao":null,"formaPagamento":null,"categoria":"Despesa"}
+"adiantamento 200" → {"valor":200,"descricao":null,"formaPagamento":null,"categoria":"Adiantamento"}
 
 Mensagem: "${message}"`;
 
   try {
-    const resposta = await chatCompletion(prompt, '', 'Você é um extrator de dados JSON. Retorne APENAS o JSON, sem texto adicional, sem markdown.');
+    const resposta = await chatCompletion(prompt, '', 'Retorne APENAS o JSON, sem texto adicional, sem markdown.');
     const json = resposta.replace(/```json?|```/g, '').trim();
     const dados = JSON.parse(json);
-    if (!dados.valor || isNaN(Number(dados.valor))) return null;
+    const valor = Number(dados.valor);
+    if (!dados.valor || isNaN(valor) || valor <= 0) return null;
     return {
-      valor: Number(dados.valor),
-      descricao: dados.descricao || 'Despesa',
-      formaPagamento: dados.formaPagamento || 'DINHEIRO',
+      valor,
+      descricao: dados.descricao || null,
+      formaPagamento: dados.formaPagamento || null,
       categoria: dados.categoria || 'Despesa',
     };
   } catch {
@@ -1136,64 +1221,154 @@ Mensagem: "${message}"`;
 }
 
 /**
- * Processa intenção de lançar saída e pede confirmação
+ * Ponto de entrada: detectou intenção de saída na mensagem inicial
  */
 async function handleSaidaWhatsapp(message: string, from: string, senderName: string, empresaId: string): Promise<string> {
   const dados = await extrairDadosSaida(message);
 
   if (!dados) {
-    return '❓ Não consegui identificar os dados da saída. Tente: *saída [valor] [descrição] [pix/dinheiro/cartão]*\nEx: _saída 50 material de limpeza pix_';
+    return (
+      `❓ Não consegui identificar o valor da saída.\n\n` +
+      `Tente:\n` +
+      `  *saída 50 material de limpeza pix*\n` +
+      `  *despesa 120 conta de luz dinheiro*\n` +
+      `  *saída 80 cartão*`
+    );
   }
 
-  const formaLabel: Record<string, string> = { PIX: 'PIX', DINHEIRO: 'Dinheiro', CARTAO: 'Cartão', NFE: 'NFe' };
   const pendingKey = `${empresaId}:${from}`;
-
-  pendingSaidas.set(pendingKey, {
-    ...dados,
+  const pending: PendingSaida = {
+    valor: dados.valor,
+    descricao: dados.descricao,
+    formaPagamento: dados.formaPagamento,
+    categoria: dados.categoria,
+    fornecedorNome: undefined, // ainda não perguntado
+    step: getNextSaidaStep(dados as PendingSaida & { valor: number }),
     empresaId,
     userName: senderName,
-    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutos
-  });
+    expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutos
+  };
 
-  return `💸 *Confirmar lançamento?*\n\n` +
-    `  Valor: *R$ ${dados.valor.toFixed(2)}*\n` +
-    `  Descrição: ${dados.descricao}\n` +
-    `  Pagamento: ${formaLabel[dados.formaPagamento] || dados.formaPagamento}\n` +
-    `  Categoria: ${dados.categoria}\n\n` +
-    `Responda *sim* para confirmar ou *não* para cancelar.`;
+  pendingSaidas.set(pendingKey, pending);
+  return promptForSaidaStep(pending);
 }
 
 /**
- * Confirma e cria a saída no banco
+ * Processa resposta do usuário em uma etapa de coleta ativa
+ */
+async function handlePendingSaidaStep(message: string, pendingKey: string, senderName: string): Promise<string> {
+  const pending = pendingSaidas.get(pendingKey)!;
+  const resp = message.trim();
+  const lower = resp.toLowerCase();
+
+  // Cancelamento a qualquer momento
+  if (/^(n[aã]o|nao|cancelar|cancel|sair|abortar|parar)$/.test(lower)) {
+    pendingSaidas.delete(pendingKey);
+    return '❌ Lançamento cancelado.';
+  }
+
+  // Renova sessão (usuário está ativo)
+  pending.expiresAt = Date.now() + 10 * 60 * 1000;
+
+  switch (pending.step) {
+    case 'descricao': {
+      if (resp.length < 2) {
+        return '⚠️ Descrição muito curta. Descreva melhor o gasto.\nEx: _Produto químico_, _Conta de luz_';
+      }
+      pending.descricao = resp.charAt(0).toUpperCase() + resp.slice(1);
+      break;
+    }
+
+    case 'formaPagamento': {
+      const forma = parseFormaPagamento(resp);
+      if (!forma) {
+        return (
+          `❓ Não reconheci a forma de pagamento. Escolha:\n` +
+          `1️⃣ Dinheiro\n2️⃣ PIX\n3️⃣ Cartão\n4️⃣ NFe`
+        );
+      }
+      pending.formaPagamento = forma;
+      break;
+    }
+
+    case 'fornecedor': {
+      if (/^(pular|skip|n[aã]o|nao|nenhum|-)$/.test(lower)) {
+        pending.fornecedorNome = null; // pulou explicitamente
+      } else {
+        pending.fornecedorNome = resp;
+      }
+      break;
+    }
+
+    case 'confirming': {
+      if (/^(sim|s|yes|confirmar|confirma|ok)$/.test(lower)) {
+        return await confirmarSaida(pendingKey, senderName);
+      }
+      pendingSaidas.delete(pendingKey);
+      return '❌ Lançamento cancelado.';
+    }
+  }
+
+  // Avança para próxima etapa
+  pending.step = getNextSaidaStep(pending);
+  pendingSaidas.set(pendingKey, pending);
+  return promptForSaidaStep(pending);
+}
+
+/**
+ * Cria o CaixaRegistro após confirmação final
  */
 async function confirmarSaida(pendingKey: string, senderName: string): Promise<string> {
   const pending = pendingSaidas.get(pendingKey);
-  if (!pending) return '❌ Confirmação expirada. Tente novamente.';
+  if (!pending) return '❌ Sessão expirada. Tente novamente.';
   pendingSaidas.delete(pendingKey);
 
   try {
-    const finalDescricao = `[${pending.categoria}] ${pending.descricao}`;
+    const finalDescricao = `[${pending.categoria}] ${pending.descricao || 'Saída'}`;
+    const formaFinal = (pending.formaPagamento || 'DINHEIRO') as any;
+
+    // Lookup ou cria fornecedor se informado
+    let fornecedorId: string | undefined;
+    if (pending.fornecedorNome) {
+      let fornecedor = await prisma.fornecedor.findFirst({
+        where: { nome: pending.fornecedorNome, empresaId: pending.empresaId },
+      });
+      if (!fornecedor) {
+        fornecedor = await prisma.fornecedor.create({
+          data: { nome: pending.fornecedorNome, empresaId: pending.empresaId },
+        });
+      }
+      fornecedorId = fornecedor.id;
+    }
 
     await prisma.caixaRegistro.create({
       data: {
         empresaId: pending.empresaId,
         tipo: 'SAIDA',
         valor: pending.valor,
-        formaPagamento: pending.formaPagamento as any,
+        formaPagamento: formaFinal,
         descricao: finalDescricao,
+        ...(fornecedorId ? { fornecedorId } : {}),
         origem: 'WHATSAPP',
         lancadoPor: senderName,
       },
     });
 
-    return `✅ *Saída registrada com sucesso!*\n\n` +
-      `  💸 R$ ${pending.valor.toFixed(2)}\n` +
-      `  📝 ${pending.descricao}\n` +
-      `  💳 ${pending.formaPagamento}\n` +
-      `  👤 Lançado por: ${senderName}`;
+    const formaLabel = FORMA_LABELS[pending.formaPagamento || 'DINHEIRO'] || pending.formaPagamento;
+    const fornLine = pending.fornecedorNome ? `\n  🏪 ${pending.fornecedorNome}` : '';
+
+    return (
+      `✅ *Saída registrada!*\n\n` +
+      `  💰 R$ ${pending.valor.toFixed(2)}\n` +
+      `  📝 ${pending.descricao || 'Saída'}\n` +
+      `  💳 ${formaLabel}\n` +
+      `  🏷️ ${pending.categoria}` +
+      fornLine +
+      `\n  👤 ${senderName}`
+    );
   } catch (error) {
     console.error('[WhatsApp] Erro ao criar saída:', error);
-    return '❌ Erro ao registrar a saída. Tente novamente.';
+    return '❌ Erro ao registrar. Tente novamente.';
   }
 }
 
