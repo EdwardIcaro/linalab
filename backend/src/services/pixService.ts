@@ -102,6 +102,45 @@ export async function gerarPixParaOrdem(
 }
 
 /**
+ * Gera QR Code PIX para um valor arbitrário (sem salvar na ordem).
+ * Usado no modal de pagamento do frontend.
+ */
+export async function gerarQrPixAvulso(
+  empresaId: string,
+  valor: number
+): Promise<{ payload: string; qrDataUrl: string; chavePix: string; nomeRecebedor: string }> {
+  const bankIntegration = await prisma.bankIntegration.findUnique({
+    where: { empresaId },
+    select: { chavePix: true, ativo: true, nomeRecebedor: true },
+  });
+
+  if (!bankIntegration?.chavePix || !bankIntegration.ativo) {
+    throw new Error('PIX não configurado para esta empresa.');
+  }
+
+  const nomeRecebedor = normalizar(
+    bankIntegration.nomeRecebedor ?? 'Lava Jato'
+  ).substring(0, 25);
+
+  const pixPayload = gerarPayloadPix({
+    key: bankIntegration.chavePix,
+    name: nomeRecebedor,
+    city: 'Brasil',
+    amount: valor,
+    transactionId: '***',
+  });
+
+  const qrDataUrl = await QRCode.toDataURL(pixPayload, { width: 400, margin: 2 });
+
+  return {
+    payload: pixPayload,
+    qrDataUrl,
+    chavePix: bankIntegration.chavePix,
+    nomeRecebedor,
+  };
+}
+
+/**
  * Remove acentos e caracteres especiais
  */
 function normalizar(str: string): string {

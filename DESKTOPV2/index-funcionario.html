@@ -710,13 +710,17 @@
       const strip = document.getElementById('statsStrip');
       strip.style.display = 'grid';
       try {
-        const [stats, clientes] = await Promise.all([
-          window.api.getOrdensStats ? window.api.getOrdensStats() : Promise.resolve({}),
-          window.api.getClientes ? window.api.getClientes(1, 1) : Promise.resolve({ total: 0 })
+        const today = new Date().toISOString().split('T')[0];
+        const [ordens, clientes, stats] = await Promise.all([
+          window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'ACTIVE') : Promise.resolve({}),
+          window.api.getClientes ? window.api.getClientes(1, 1) : Promise.resolve({}),
+          window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today }) : Promise.resolve({})
         ]);
-        document.getElementById('statOrdens').textContent = stats.total ?? '-';
-        document.getElementById('statClientes').textContent = clientes.total ?? '-';
-        const fat = stats.faturamentoDia || stats.faturamento || 0;
+        document.getElementById('statOrdens').textContent =
+          ordens.pagination?.total ?? ordens.total ?? '-';
+        document.getElementById('statClientes').textContent =
+          clientes.pagination?.total ?? clientes.total ?? '-';
+        const fat = stats.valorTotal || 0;
         document.getElementById('statFat').textContent = fat > 0
           ? 'R$\u00a0' + fat.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
           : 'R$\u00a00';

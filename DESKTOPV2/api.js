@@ -246,6 +246,10 @@ const api = {
 
   deleteOrdem: (id) => fetchApi(`/ordens/${id}`, { method: 'DELETE' }),
   getOrdemById: (id) => fetchApi(`/ordens/${id}`),
+  gerarPixQr: (ordemId, valor) => fetchApi(`/ordens/${ordemId}/pix`, {
+    method: 'POST',
+    body: JSON.stringify({ valor }),
+  }),
   finalizarOrdensPendentes: () => fetchApi('/ordens/finalizar-pendentes', { method: 'POST' }),
 
   // ===== PAGAMENTOS - REFATORADO =====

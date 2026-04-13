@@ -3,6 +3,7 @@ import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
+import { gerarQrPixAvulso } from '../services/pixService';
 
 // ✅ CACHE SIMPLES EM MEMÓRIA
 interface CacheEntry {
@@ -1652,5 +1653,36 @@ export const processarFinalizacoesAutomaticas = async () => {
     }
   } catch (error) {
     console.error(`[${agora.toISOString()}] Erro geral no processo de finalização automática:`, error);
+  }
+};
+
+/**
+ * POST /ordens/:id/pix
+ * Gera QR Code PIX para o valor informado no body (não o valorTotal do DB).
+ * Usado no modal de pagamento para refletir valor com descontos/ajustes.
+ */
+export const gerarPixQr = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const { id: ordemId } = req.params;
+    const { valor } = req.body;
+
+    if (!valor || isNaN(Number(valor)) || Number(valor) <= 0) {
+      return res.status(400).json({ error: 'Valor inválido para gerar PIX.' });
+    }
+
+    // Verifica que a ordem pertence à empresa
+    const ordem = await prisma.ordemServico.findFirst({
+      where: { id: ordemId, empresaId: req.empresaId },
+      select: { id: true, numeroOrdem: true },
+    });
+    if (!ordem) return res.status(404).json({ error: 'Ordem não encontrada.' });
+
+    const result = await gerarQrPixAvulso(req.empresaId!, Number(valor));
+
+    return res.json(result);
+  } catch (error: any) {
+    const msg = error?.message || 'Erro ao gerar QR PIX';
+    const status = msg.includes('não configurado') ? 422 : 500;
+    return res.status(status).json({ error: msg });
   }
 };

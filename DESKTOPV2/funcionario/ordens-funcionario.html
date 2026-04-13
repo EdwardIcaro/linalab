@@ -455,6 +455,60 @@
     }
     .pay-method-btn i { font-size: 18px; }
 
+    /* PIX QR Panel */
+    .pix-qr-panel {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border: 1.5px solid rgba(16,185,129,.25);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      text-align: center;
+      animation: fadeIn .25s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .pix-qr-title {
+      font-size: 13px; font-weight: 700; color: var(--green-d);
+      margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .pix-qr-img {
+      width: 180px; height: 180px;
+      border-radius: 10px;
+      margin: 0 auto 12px;
+      display: block;
+      border: 3px solid rgba(16,185,129,.2);
+    }
+    .pix-qr-valor {
+      font-size: 22px; font-weight: 800; color: var(--green-d);
+      margin-bottom: 4px;
+    }
+    .pix-qr-chave {
+      font-size: 12px; color: var(--mid);
+      margin-bottom: 12px;
+      word-break: break-all;
+    }
+    .pix-qr-copy {
+      width: 100%;
+      padding: 10px;
+      background: rgba(16,185,129,.12);
+      border: 1.5px solid rgba(16,185,129,.25);
+      border-radius: var(--rpill);
+      color: var(--green-d); font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: background .18s;
+    }
+    .pix-qr-copy:hover { background: rgba(16,185,129,.2); }
+    .pix-qr-loading {
+      padding: 24px 0;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px;
+      color: var(--green-d); font-size: 13px; font-weight: 600;
+    }
+    .pix-qr-error {
+      font-size: 13px; color: var(--mid); padding: 8px 0;
+    }
+
     .pay-list { margin-bottom: 4px; }
     .pay-list-label {
       font-size: 12px; font-weight: 700; color: var(--light);
@@ -616,7 +670,7 @@
         <button class="pay-method-btn" onclick="addPayment('DINHEIRO')">
           <i class="fas fa-money-bill-wave"></i> Dinheiro
         </button>
-        <button class="pay-method-btn" onclick="addPayment('PIX')">
+        <button class="pay-method-btn" onclick="addPaymentPix()">
           <i class="fab fa-pix"></i> PIX
         </button>
         <button class="pay-method-btn" onclick="addPayment('CARTAO')">
@@ -629,6 +683,9 @@
           <i class="fas fa-clock"></i> Pendente
         </button>
       </div>
+
+      <!-- PIX QR Code (aparece ao clicar PIX) -->
+      <div id="pixQrPanel" style="display:none"></div>
 
       <div class="pay-list" id="paymentsList"></div>
 
@@ -1023,6 +1080,7 @@
       paymentModal.payments = [];
       paymentModal.inputValue = '';
       document.getElementById('paymentModal').classList.remove('active');
+      ocultarPixQr();
       unbindPaymentHotkeys();
     }
 
@@ -1075,9 +1133,92 @@
       updatePaymentModalUI();
     }
 
+    // ── PIX COM QR CODE ───────────────────────────
+    async function addPaymentPix() {
+      // 1. Determina o valor: usa o digitado ou o restante
+      let amount = parseFloat((paymentModal.inputValue || '').replace(',', '.')) || 0;
+      if (amount === 0) amount = paymentModal.remaining > 0 ? paymentModal.remaining : 0;
+
+      if (amount <= 0) { showToast('Valor deve ser maior que zero.', 'error'); return; }
+      if (amount > paymentModal.remaining + 0.01) { showToast('Valor maior que o restante.', 'error'); return; }
+
+      // 2. Adiciona ao pagamento normalmente
+      paymentModal.payments.push({ method: 'PIX', amount });
+      paymentModal.remaining -= amount;
+      paymentModal.inputValue = '';
+      updatePaymentModalUI();
+
+      // 3. Gera QR PIX se tiver ordemId
+      if (!paymentModal.orderId) return;
+      await mostrarPixQr(amount);
+    }
+
+    async function mostrarPixQr(valor) {
+      const panel = document.getElementById('pixQrPanel');
+      if (!panel) return;
+
+      // Loading state
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <div class="pix-qr-panel">
+          <div class="pix-qr-loading">
+            <div class="spin" style="width:28px;height:28px;border-top-color:var(--green-d)"></div>
+            Gerando QR Code PIX...
+          </div>
+        </div>
+      `;
+
+      try {
+        const result = await window.api.gerarPixQr(paymentModal.orderId, valor);
+        const valorFmt = formatCurrency(valor);
+        panel.innerHTML = `
+          <div class="pix-qr-panel">
+            <div class="pix-qr-title">
+              <i class="fab fa-pix"></i> QR Code PIX — ${valorFmt}
+            </div>
+            <img class="pix-qr-img" src="${result.qrDataUrl}" alt="QR Code PIX">
+            <div class="pix-qr-valor">${valorFmt}</div>
+            <div class="pix-qr-chave">Chave: ${result.chavePix}</div>
+            <button class="pix-qr-copy" onclick="copiarPixPayload('${result.payload.replace(/'/g, "\\'")}', this)">
+              <i class="fas fa-copy"></i> Copiar código PIX
+            </button>
+          </div>
+        `;
+      } catch (err) {
+        const msg = err?.error || err?.message || '';
+        if (msg.includes('não configurado')) {
+          // PIX não configurado — apenas oculta o painel silenciosamente
+          panel.style.display = 'none';
+        } else {
+          panel.innerHTML = `
+            <div class="pix-qr-panel">
+              <div class="pix-qr-error"><i class="fas fa-exclamation-circle"></i> Não foi possível gerar o QR Code.</div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function copiarPixPayload(payload, btn) {
+      navigator.clipboard.writeText(payload).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+      }).catch(() => showToast('Erro ao copiar.', 'error'));
+    }
+
+    function ocultarPixQr() {
+      const panel = document.getElementById('pixQrPanel');
+      if (panel) panel.style.display = 'none';
+    }
+
     function removePayment(index) {
       const removed = paymentModal.payments.splice(index, 1);
-      if (removed.length > 0) paymentModal.remaining += removed[0].amount;
+      if (removed.length > 0) {
+        paymentModal.remaining += removed[0].amount;
+        // Se removeu um PIX, esconde o QR
+        if (removed[0].method === 'PIX') ocultarPixQr();
+      }
       updatePaymentModalUI();
     }
 

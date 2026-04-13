@@ -8,7 +8,8 @@ import {
   cancelOrdem,
   getOrdensStats,
   deleteOrdem,
-  finalizarOrdem
+  finalizarOrdem,
+  gerarPixQr
 } from '../controllers/ordemController';
 
 const router: Router = Router();
@@ -20,6 +21,7 @@ router.get('/stats', authMiddleware, getOrdensStats);
 router.get('/:id', authMiddleware, getOrdemById);
 router.put('/:id', authMiddleware, updateOrdem);
 router.post('/:id/finalizar', authMiddleware, finalizarOrdem);
+router.post('/:id/pix', authMiddleware, gerarPixQr);
 router.patch('/:id/cancel', authMiddleware, cancelOrdem);
 router.delete('/:id', authMiddleware, deleteOrdem);
 
