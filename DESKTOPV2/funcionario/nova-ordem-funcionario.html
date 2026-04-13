@@ -655,46 +655,94 @@
       margin: 0;
     }
 
-    /* ── OCR PROCESSING ───────────────────────── */
-    .ocr-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 200;
-      background: rgba(15,23,42,.72);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* ── CAMERA OCR MODAL ────────────────────── */
+    .camera-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.92);
+      z-index: 300;
+      display: flex; align-items: flex-end;
     }
-    .ocr-card {
-      background: var(--white);
-      border-radius: 22px;
-      padding: 36px 44px;
-      text-align: center;
-      box-shadow: 0 24px 60px rgba(0,0,0,.25);
+    .camera-sheet {
+      background: #1e293b;
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      animation: slideUp .3s cubic-bezier(.34,1.4,.64,1);
     }
-    .ocr-spinner {
-      width: 52px; height: 52px;
-      border: 4px solid var(--border);
-      border-top-color: var(--blue);
+    .camera-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .camera-hd-title {
+      font-size: 16px; font-weight: 800; color: #fff;
+      display: flex; align-items: center; gap: 9px; margin: 0;
+    }
+    .camera-hd-close {
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,.1);
+      border: none; border-radius: 9px;
+      color: rgba(255,255,255,.7);
+      font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .18s;
+    }
+    .camera-hd-close:hover { background: rgba(255,255,255,.2); }
+    .camera-viewport {
+      position: relative;
+      background: #000;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+    }
+    .camera-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .camera-guide {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .camera-guide-rect {
+      width: 78%; height: 28%;
+      border: 2.5px solid rgba(255,220,0,.9);
+      border-radius: 8px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.38);
+    }
+    .camera-guide-label {
+      position: absolute; bottom: 14px;
+      left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.72);
+      font-size: 11px; white-space: nowrap;
+      background: rgba(0,0,0,.45);
+      padding: 4px 13px; border-radius: 20px;
+    }
+    .camera-controls {
+      padding: 16px 20px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    .camera-error {
+      background: rgba(239,68,68,.15);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 9px; padding: 10px 14px;
+      color: #fca5a5;
+      font-size: 13px; text-align: center;
+      margin-bottom: 12px;
+    }
+    .camera-btn-cap {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      border: none; border-radius: var(--rpill);
+      font-size: 15px; font-weight: 700; color: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 14px rgba(37,99,235,.35);
+      font-family: 'Inter', sans-serif;
+      transition: opacity .18s;
+    }
+    .camera-btn-cap:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+    .cam-spin {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
       border-radius: 50%;
-      animation: spin .75s linear infinite;
-      margin: 0 auto 18px;
-    }
-    .ocr-icon {
-      font-size: 36px;
-      margin-bottom: 14px;
-      display: block;
-    }
-    .ocr-title {
-      font-size: 17px;
-      font-weight: 800;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-    .ocr-sub {
-      font-size: 13px;
-      color: var(--light);
+      animation: spin .7s linear infinite;
     }
 
     /* ── TOAST ────────────────────────────────── */
@@ -779,8 +827,7 @@
           </div>
         </div>
         <!-- Câmera OCR -->
-        <button class="btn-cam" title="Escanear placa" @click="onCamera()">📷</button>
-        <input type="file" id="ocrInput" accept="image/*" capture="environment" style="display:none" @change="handleOCR($event)">
+        <button class="btn-cam" title="Escanear placa" @click="abrirCamera()">📷</button>
       </div>
     </div>
 
@@ -940,13 +987,35 @@
     </button>
   </div>
 
-  <!-- ══ OCR PROCESSING ════════════════════════ -->
-  <div class="ocr-overlay" x-show="ocrProcessando" x-cloak>
-    <div class="ocr-card">
-      <div class="ocr-spinner"></div>
-      <div class="ocr-title">Analisando placa...</div>
-      <div class="ocr-sub">Aguarde um momento</div>
+  <!-- ══ CAMERA OCR MODAL ═══════════════════════ -->
+  <div class="camera-overlay" x-show="ocr.isOpen" x-cloak @click.self="closeCameraModal()">
+    <div class="camera-sheet" @click.stop>
+      <div class="camera-hd">
+        <span class="camera-hd-title">📷 Ler Placa</span>
+        <button class="camera-hd-close" @click="closeCameraModal()">✕</button>
+      </div>
+      <div class="camera-viewport">
+        <video id="ocrVideoNO" class="camera-video" autoplay playsinline muted></video>
+        <div class="camera-guide">
+          <div class="camera-guide-rect"></div>
+          <div class="camera-guide-label">Posicione a placa dentro do retângulo</div>
+        </div>
+      </div>
+      <div class="camera-controls">
+        <div class="camera-error" x-show="ocr.error" x-text="ocr.error" x-cloak></div>
+        <button class="camera-btn-cap" @click="ocrCapturar()" :disabled="ocr.isProcessing">
+          <template x-if="!ocr.isProcessing">
+            <span>Capturar</span>
+          </template>
+          <template x-if="ocr.isProcessing">
+            <span style="display:flex;align-items:center;gap:8px">
+              <span class="cam-spin"></span> Analisando...
+            </span>
+          </template>
+        </button>
+      </div>
     </div>
+    <canvas id="ocrCanvasNO" style="display:none"></canvas>
   </div>
 
   <!-- ══ BOTTOM SHEET: NOVO / EDITAR CLIENTE ═══ -->
@@ -1080,8 +1149,8 @@
         q: '', showDrop: false, results: [], buscando: false,
         _buscarTimer: null,
 
-        // ── OCR ────────────────────────────────
-        ocrProcessando: false,
+        // ── OCR câmera ─────────────────────────
+        ocr: { isOpen: false, stream: null, isProcessing: false, error: null },
 
         // ── Cliente selecionado ─────────────
         // { clienteId, veiculoId, nome, modelo, placa, telefone, cor?, isNew?, novoVeiculo? }
@@ -1501,6 +1570,7 @@
         },
 
         reset() {
+          this.closeCameraModal();
           Object.assign(this, {
             q: '', showDrop: false, results: [], buscando: false,
             cliente: null, _linkClienteId: null,
@@ -1508,42 +1578,59 @@
             tipo: null, cat: null,
             svc: null, adds: [], lavs: [],
             criando: false, sucesso: false, ordemNum: null,
-            ocrProcessando: false,
+            ocr: { isOpen: false, stream: null, isProcessing: false, error: null },
             servicos: [],
           });
         },
 
         // ── OCR câmera ────────────────────
-        onCamera() {
-          document.getElementById('ocrInput').click();
+        async abrirCamera() {
+          this.ocr.error = null;
+          this.ocr.isOpen = true;
+          await this.$nextTick();
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'environment' }
+            });
+            this.ocr.stream = stream;
+            const video = document.getElementById('ocrVideoNO');
+            if (video) { video.srcObject = stream; video.play(); }
+          } catch {
+            this.ocr.error = 'Câmera não disponível. Verifique as permissões.';
+          }
         },
 
-        async handleOCR(e) {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          e.target.value = '';
+        closeCameraModal() {
+          if (this.ocr.stream) {
+            this.ocr.stream.getTracks().forEach(t => t.stop());
+          }
+          this.ocr = { isOpen: false, stream: null, isProcessing: false, error: null };
+        },
 
-          // Mostra overlay de processamento imediatamente
-          this.ocrProcessando = true;
-
-          const reader = new FileReader();
-          reader.onload = async (ev) => {
-            const base64 = ev.target.result.split(',')[1];
-            try {
-              const data = await window.api.reconhecerPlaca(base64);
-              if (data?.placa) {
-                this.abrirFormNovoCliente();
-                this.form.placa = data.placa;
-              } else {
-                showToast('Nenhuma placa detectada. Tente outra foto.', 'error');
-              }
-            } catch {
-              showToast('Erro ao reconhecer a placa.', 'error');
-            } finally {
-              this.ocrProcessando = false;
+        async ocrCapturar() {
+          if (this.ocr.isProcessing) return;
+          this.ocr.isProcessing = true;
+          this.ocr.error = null;
+          try {
+            const video = document.getElementById('ocrVideoNO');
+            const canvas = document.getElementById('ocrCanvasNO');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+            const data = await window.api.reconhecerPlaca(base64);
+            if (data?.placa) {
+              this.closeCameraModal();
+              this.abrirFormNovoCliente();
+              this.form.placa = data.placa;
+            } else {
+              this.ocr.error = 'Nenhuma placa detectada. Tente novamente.';
+              this.ocr.isProcessing = false;
             }
-          };
-          reader.readAsDataURL(file);
+          } catch {
+            this.ocr.error = 'Erro ao analisar a imagem. Tente novamente.';
+            this.ocr.isProcessing = false;
+          }
         },
       };
     }
