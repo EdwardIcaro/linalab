@@ -445,6 +445,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
       dataInicio,
       dataFim,
       metodoPagamento,
+      tipo,
     } = req.query;
 
     const page = Number(pageQuery) || 1;
@@ -559,7 +560,6 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     }
 
     if (dataInicio && dataFim && dataInicio !== 'null' && dataFim !== 'null') {
-      // As datas já chegam no formato YYYY-MM-DD
       const start = new Date(dataInicio as string);
       start.setUTCHours(0, 0, 0, 0);
 
@@ -567,10 +567,15 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
       end.setUTCHours(23, 59, 59, 999);
       end.setDate(end.getDate() + 1);
 
-      where.createdAt = {
-        gte: start,
-        lte: end,
-      };
+      const range = { gte: start, lte: end };
+
+      // historico filtra por dataFim (quando o serviço foi concluído)
+      // demais contextos filtram por createdAt (quando a ordem foi criada)
+      if (tipo === 'historico') {
+        where.dataFim = range;
+      } else {
+        where.createdAt = range;
+      }
     }
 
     // ✅ OTIMIZAÇÃO: Filtro de metodoPagamento também busca as IDs primeiro

@@ -21,7 +21,7 @@ Guia para o Claude Code ao trabalhar neste repositório.
 | Banco (prod) | PostgreSQL via Neon |
 | Frontend | HTML5 + CSS3 + JavaScript vanilla (sem framework) |
 | Package Manager | pnpm |
-| Alpine.js | v3 (usado em páginas complexas: `financeiro.html`, `fila-entrada.html`) |
+| Alpine.js | v3 (usado em páginas complexas) |
 
 ---
 
@@ -74,7 +74,9 @@ Usuario → Empresa → Cliente → Veiculo
                   → Lavador
                   → Servico + Adicional
                   → OrdemServico → Pagamento
+                                 → pixTxId, pixStatus, pixQrCode, pixValor, pixExpiraEm
                   → CaixaRegistro + FechamentoCaixa + AberturaCaixa
+                  → BankIntegration   (config PIX por empresa)
                   → Subscription
 ```
 
@@ -96,9 +98,10 @@ Usuario → Empresa → Cliente → Veiculo
 /backend
   /src
     /controllers     → lógica de requisição (caixaController, ordemController…)
-    /services        → lógica de negócio (emailService, whatsappService…)
+    /services        → lógica de negócio (emailService, baileyService, pixService…)
     /routes          → mapeamento HTTP
     /middlewares     → authMiddleware, permissionMiddleware
+    /@types          → declarações de tipos para pacotes sem @types (ex: pix-payload.d.ts)
   /prisma
     schema.prisma
     /migrations
@@ -108,10 +111,12 @@ Usuario → Empresa → Cliente → Veiculo
   utils.js           → Utilitários compartilhados (admin)
   index.html         → Dashboard
   ordens.html        → Ordens de serviço
+  historico.html     → Histórico de ordens finalizadas
   financeiro.html    → Financeiro (Alpine.js)
   clientes.html      → CRM
   comissoes.html     → Comissões
   configuracoes.html → Configurações da empresa
+  configuracoes-whatsapp.html → Config WhatsApp + PIX (Alpine.js)
   fila-entrada.html  → Criação em massa de ordens (Alpine.js)
   /funcionario       → Portal do funcionário (mobile-first)
     utils-funcionario.js
@@ -126,8 +131,15 @@ Usuario → Empresa → Cliente → Veiculo
   fila-de-entrada.md             ✅ Implementado
   abertura-fechamento-caixa.md   ✅ Implementado
   ocr-placa.md                   ✅ Implementado
+  whatsapp-pix.md                ✅ Fase 1 implementada (PIX estático)
   whatsapp-command-center.md     ⏳ Planejado
   whatsapp-vision.md             ⏳ Planejado
+
+  /front             → Protótipos HTML estáticos (sem backend)
+    nova-ordem.html  → Redesign da tela de nova ordem (Alpine.js + mock data)
+    ⚠️  Estes arquivos são apenas para validação visual.
+        Não modificar backend para servi-los.
+        Dados são mock/hardcoded.
 ```
 
 ---
@@ -136,6 +148,12 @@ Usuario → Empresa → Cliente → Veiculo
 
 Antes de implementar qualquer feature nova, **leia o arquivo correspondente em `/Features`**.
 Os arquivos contêm: fluxo completo, arquivos afetados, SQL necessário, UX esperada e observações.
+
+### `/Features/front` — Protótipos Visuais
+Antes de alterar qualquer página de produção em `/DESKTOPV2`, criar primeiro um protótipo em `/Features/front/`.
+- Dados hardcoded (mock), sem chamadas de API
+- Alpine.js via CDN para interatividade
+- Usado para validar design antes de ir para produção
 
 ---
 
@@ -158,6 +176,7 @@ Acesso separado para usuários com role `USER`. Regras:
 
 ### Alpine.js
 - `financeiro.html`: componente `financeDashboard`
+- `configuracoes-whatsapp.html`: componente inline com `x-data`
 - `fila-entrada.html` / `fila-entrada-funcionario.html`: componente `filaEntrada`
 - ⚠️ `<template x-for>` dentro de `<td>/<tr>` é relocado pelo parser HTML antes do Alpine processar → **sempre usar CSS Grid com `<div>` em vez de `<table>` para layouts tabulares Alpine**
 
@@ -168,7 +187,6 @@ Acesso separado para usuários com role `USER`. Regras:
     grid-template-columns: 36px 120px 170px 95px 115px 1fr 150px 105px 40px;
 }
 ```
-Garante alinhamento imune a interferência do parser. Headers e data rows usam o mesmo template.
 
 ### Respostas de API — extrair corretamente
 - `getLavadoresSimple()` → retorna `{ lavadores: [...] }` — extrair com `res.lavadores`
@@ -195,6 +213,23 @@ Hoje tem AberturaCaixa?
 
 ---
 
+## Financeiro vs Histórico — Divergência de Design (Intencional)
+
+As duas telas usam âncoras de data diferentes — isso é correto por design:
+
+| Tela | Tabela | Campo de data | Pergunta respondida |
+|---|---|---|---|
+| `financeiro.html` | `Pagamento` | `pagoEm` | Quanto entrou no caixa neste período? |
+| `historico.html` | `OrdemServico` | `dataFim` | Quais serviços foram concluídos neste período? |
+
+**Regras aplicadas:**
+- `historico.html` — exclui ordens com `pagamento.status === 'PENDENTE'` do total de receita
+- `historico.html` — filtra por `dataFim` (não `createdAt`) quando `tipo=historico` no backend
+- `financeiro.html` — conta apenas `Pagamento.status = 'PAGO'` no `totalEntradas`
+- Ordens canceladas **não entram** em nenhum total: historico filtra por `FINALIZADO`; financeiro usa pagamentos `PAGO` que nunca existem em ordens canceladas (não é possível cancelar ordem já finalizada)
+
+---
+
 ## ⚠️ Prisma Migrations — SQL Manual para Neon
 
 **TODA** alteração em `schema.prisma` deve gerar SQL puro para execução manual no Neon.
@@ -209,11 +244,28 @@ Hoje tem AberturaCaixa?
 3. Apresentar o SQL no chat para o usuário executar no **Neon Dashboard → SQL Editor**
 4. Confirmar execução, então fazer `git push`
 
-### Exemplo:
+### SQL pendente para produção (PIX):
 ```sql
-ALTER TABLE "FechamentoCaixa" ADD COLUMN IF NOT EXISTS "nfe" DOUBLE PRECISION DEFAULT 0;
-ALTER TABLE "FechamentoCaixa" ADD COLUMN IF NOT EXISTS "relatorio" TEXT;
-ALTER TABLE "FechamentoCaixa" ADD COLUMN IF NOT EXISTS "fechadoPor" TEXT;
+CREATE TABLE IF NOT EXISTS "bank_integrations" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "empresaId" TEXT NOT NULL UNIQUE,
+  "ativo" BOOLEAN NOT NULL DEFAULT true,
+  "chavePix" TEXT, "tipoPix" TEXT, "banco" TEXT,
+  "clientId" TEXT, "clientSecret" TEXT, "certCrt" TEXT, "certKey" TEXT,
+  "accessToken" TEXT, "tokenExpiresAt" TIMESTAMP(3),
+  "pixExpiracaoMin" INTEGER NOT NULL DEFAULT 30,
+  "nomeRecebedor" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "bank_integrations_empresaId_fkey"
+    FOREIGN KEY ("empresaId") REFERENCES "empresas"("id") ON DELETE CASCADE
+);
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixTxId" TEXT;
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixStatus" TEXT;
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixPagoEm" TIMESTAMP(3);
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixValor" DOUBLE PRECISION;
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixQrCode" TEXT;
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixExpiraEm" TIMESTAMP(3);
 ```
 
 ⚠️ Não confiar em `npx prisma db push` ou migrations automáticas no Railway/Neon.
@@ -231,13 +283,39 @@ ALTER TABLE "FechamentoCaixa" ADD COLUMN IF NOT EXISTS "fechadoPor" TEXT;
 
 ---
 
-## WhatsApp
+## WhatsApp (Baileys)
 
-- Bot implementado via **Baileys** (Evolution API)
-- Instâncias por empresa em `WhatsappInstance`
-- Auth state persistido no banco
-- Comandos de texto processados por IA (Groq + LLaMA)
-- Features futuras planejadas em `/Features/whatsapp-command-center.md` e `/Features/whatsapp-vision.md`
+- Bot via **Baileys** — instâncias por empresa em `WhatsappInstance`
+- Auth state persistido no banco (`authState` em `WhatsappInstance`)
+- Comandos de texto processados via IA (Groq + LLaMA) em `whatsappCommandHandler.ts`
+
+### Estado de conexão (`baileyService.ts`)
+```
+disconnected → reconnecting → connected
+                           → qr_code → connected
+```
+- `reconnecting`: estado intermediário ao iniciar com `authState` existente no banco
+- Bloqueia novo setup (retorna 409) enquanto reconexão automática está em andamento
+- Evita que o frontend cancele a reconexão ao reiniciar o servidor
+
+### Comandos PIX (Fase 1 — PIX estático)
+- `pix 432` ou `pix ordem 432` → gera QR Code PIX e envia como imagem
+- `reenviar pix 432` → reenvia QR existente sem criar novo
+- `ordens` → lista ordens ativas da empresa
+- PIX usa `transactionId: '***'` (BCB spec para QR estático reutilizável)
+- ⚠️ Usar `transactionId` real causa bancos mostrarem como "PIX Agendado" — nunca fazer isso
+
+### Config PIX por empresa
+- Tabela `BankIntegration` com `chavePix`, `tipoPix`, `nomeRecebedor`, `pixExpiracaoMin`
+- Configurado em `configuracoes-whatsapp.html`
+- Fase 2 (PIX dinâmico via Cora/Inter) — aguardando aprovação de parceria
+
+### Relatórios — filtro de canceladas
+Todas as queries de relatório em `whatsappCommandHandler.ts` usam:
+```typescript
+status: { not: 'CANCELADO' }
+```
+Garante que ordens canceladas não aparecem em contagens e totais.
 
 ---
 

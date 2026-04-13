@@ -1152,7 +1152,9 @@ function createTimelineCard(order) {
 function updateStats(orders) {
     document.getElementById('totalOrders').textContent = orders.length;
     
-    const revenue = orders.reduce((sum, order) => sum + order.valorTotal, 0);
+    const revenue = orders
+        .filter(order => !order.pagamentos.some(p => p.status === 'PENDENTE'))
+        .reduce((sum, order) => sum + order.valorTotal, 0);
     document.getElementById('totalRevenue').textContent = formatCurrency(revenue);
     
     const avgTicket = orders.length > 0 ? revenue / orders.length : 0;
