@@ -372,6 +372,7 @@ const api = {
   getAdminEmpresaById: (id) => api.call('GET', `admin/empresas/${id}/details`),
 
   // ===== USER PROFILE =====
+  getMeuPerfil: () => fetchApi('/usuarios/me'),
   updateUserProfile: (data) => fetchApi('/usuarios/profile', {
     method: 'PATCH',
     body: JSON.stringify(data)

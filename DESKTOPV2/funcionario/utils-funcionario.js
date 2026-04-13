@@ -35,7 +35,7 @@ function createFuncionarioHeader(pageTitle) {
       </div>
 
       <div class="header-right">
-        <a href="../perfil.html" class="icon-btn" title="Meu Perfil">
+        <a href="../perfil-funcionario.html" class="icon-btn" title="Meu Perfil">
           <i class="fas fa-user-circle"></i>
         </a>
         <button class="icon-btn" onclick="logout()" title="Sair">
@@ -53,7 +53,7 @@ function createFuncionarioHeader(pageTitle) {
 function createFuncionarioMenu() {
   return `
     <div class="menu-dropdown" id="menuDropdown">
-      <a href="../perfil.html">
+      <a href="../perfil-funcionario.html">
         <i class="fas fa-id-card"></i>
         <span>Meu Perfil</span>
       </a>

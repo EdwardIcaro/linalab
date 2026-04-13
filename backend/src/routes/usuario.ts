@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUsuario, authenticateUsuario, generateScopedToken } from '../controllers/usuarioController';
+import { createUsuario, authenticateUsuario, generateScopedToken, getMeuPerfil, changePassword } from '../controllers/usuarioController';
 import userAuthMiddleware from '../middlewares/userAuthMiddleware';
 
 const router: Router = Router();
@@ -12,5 +12,11 @@ router.post('/auth', authenticateUsuario);
 
 // Rota para gerar um novo token com o escopo de uma empresa
 router.post('/scope-token', userAuthMiddleware, generateScopedToken);
+
+// Perfil do usuário logado
+router.get('/me', userAuthMiddleware, getMeuPerfil);
+
+// Alterar senha
+router.post('/change-password', userAuthMiddleware, changePassword);
 
 export default router;

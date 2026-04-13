@@ -110,6 +110,113 @@ export const generateScopedToken = async (req: Request, res: Response) => {
 };
 
 /**
+ * Retorna perfil do usuário logado (suporta Usuario e Subaccount)
+ */
+export const getMeuPerfil = async (req: Request, res: Response) => {
+  const usuarioId = (req as any).usuarioId;
+
+  try {
+    // Tenta subaccount primeiro (funcionários)
+    const subaccount = await prisma.subaccount.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        roleInt: { select: { nome: true } }
+      }
+    });
+
+    if (subaccount) {
+      return res.json({
+        id: subaccount.id,
+        nome: subaccount.nome,
+        email: subaccount.email,
+        cargo: subaccount.roleInt?.nome || null,
+        tipo: 'subaccount'
+      });
+    }
+
+    // Fallback: usuario admin
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { id: true, nome: true, email: true, role: true }
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.json({
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      cargo: usuario.role,
+      tipo: 'usuario'
+    });
+  } catch (error) {
+    console.error('Erro ao buscar perfil:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * Alterar senha do usuário logado (suporta Usuario e Subaccount)
+ */
+export const changePassword = async (req: Request, res: Response) => {
+  const usuarioId = (req as any).usuarioId;
+  const { senhaAtual, novaSenha } = req.body;
+
+  if (!senhaAtual || !novaSenha) {
+    return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+  }
+
+  if (novaSenha.length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres' });
+  }
+
+  try {
+    // Tenta subaccount primeiro
+    const subaccount = await prisma.subaccount.findUnique({ where: { id: usuarioId } });
+
+    if (subaccount) {
+      const senhaValida = await bcrypt.compare(senhaAtual, subaccount.senha);
+      if (!senhaValida) {
+        return res.status(400).json({ error: 'Senha atual incorreta' });
+      }
+      const novaSenhaHash = await bcrypt.hash(novaSenha, 12);
+      await prisma.subaccount.update({
+        where: { id: usuarioId },
+        data: { senha: novaSenhaHash }
+      });
+      return res.json({ message: 'Senha alterada com sucesso' });
+    }
+
+    // Fallback: usuario admin
+    const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    const senhaValida = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaValida) {
+      return res.status(400).json({ error: 'Senha atual incorreta' });
+    }
+
+    const novaSenhaHash = await bcrypt.hash(novaSenha, 12);
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { senha: novaSenhaHash }
+    });
+
+    return res.json({ message: 'Senha alterada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * Autenticar usuário (login)
  * Returns a base token (no empresa scope) + list of user's empresas
  */

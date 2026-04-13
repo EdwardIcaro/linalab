@@ -1,2469 +1,1449 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinaX - Nova Ordem (Funcionário)</title>
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Alpine.js via CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
-    <style>
-        /* ==========================================
-           CSS VARIABLES & RESET
-           ========================================== */
-        :root {
-            --wizard-primary: #00bcd4;
-            --wizard-primary-dark: #0097a7;
-            --wizard-primary-light: rgba(0, 188, 212, 0.1);
-            --wizard-success: #10b981;
-            --wizard-warning: #f59e0b;
-            --wizard-danger: #ef4444;
-            --wizard-bg: #f8fafc;
-            --wizard-card: #ffffff;
-            --wizard-text: #1e293b;
-            --wizard-text-light: #64748b;
-            --wizard-border: #e2e8f0;
-            --wizard-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            --wizard-shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
-            --wizard-radius: 16px;
-            --wizard-radius-sm: 12px;
-        }
-
-        /* Alpine.js cloak */
-        [x-cloak] { display: none !important; }
-
-        /* ==========================================
-           PROGRESS BAR
-           ========================================== */
-        .wizard-progress {
-            background: var(--wizard-card);
-            border-bottom: 1px solid var(--wizard-border);
-            padding: 16px 24px;
-            position: sticky;
-            top: 60px;
-            z-index: 50;
-        }
-
-        .progress-steps {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        .progress-step {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 24px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--wizard-text-light);
-            background: var(--wizard-bg);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-
-        .progress-step.active {
-            background: var(--wizard-primary-light);
-            color: var(--wizard-primary-dark);
-            border-color: var(--wizard-primary);
-        }
-
-        .progress-step.completed {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--wizard-success);
-        }
-
-        .progress-step-number {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            background: var(--wizard-border);
-            color: var(--wizard-text-light);
-        }
-
-        .progress-step.active .progress-step-number {
-            background: var(--wizard-primary);
-            color: white;
-        }
-
-        .progress-step.completed .progress-step-number {
-            background: var(--wizard-success);
-            color: white;
-        }
-
-        .progress-connector {
-            width: 40px;
-            height: 3px;
-            background: var(--wizard-border);
-            border-radius: 2px;
-            transition: background 0.3s;
-        }
-
-        .progress-connector.active {
-            background: var(--wizard-primary);
-        }
-
-        /* ==========================================
-           WIZARD CONTAINER
-           ========================================== */
-        .wizard-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 24px 16px 120px;
-        }
-
-        .wizard-step {
-            animation: fadeSlideIn 0.3s ease;
-        }
-
-        @keyframes fadeSlideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ==========================================
-           STEP 1: IDENTIFICATION
-           ========================================== */
-        .search-hero {
-            background: linear-gradient(135deg, var(--wizard-primary) 0%, var(--wizard-primary-dark) 100%);
-            border-radius: var(--wizard-radius);
-            padding: 40px 24px;
-            text-align: center;
-            color: white;
-            margin-bottom: 24px;
-            box-shadow: var(--wizard-shadow-lg);
-        }
-
-        .search-hero h2 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .search-hero p {
-            opacity: 0.9;
-            margin-bottom: 24px;
-            font-size: 15px;
-        }
-
-        .smart-search-box {
-            position: relative;
-            max-width: 400px;
-            margin: 0 auto 16px;
-        }
-
-        .smart-search-input {
-            width: 100%;
-            padding: 18px 56px 18px 20px;
-            border: none;
-            border-radius: var(--wizard-radius);
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            background: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: all 0.2s;
-        }
-
-        .smart-search-input:focus {
-            outline: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-
-        .smart-search-input::placeholder {
-            text-transform: none;
-            letter-spacing: normal;
-            color: var(--wizard-text-light);
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--wizard-primary);
-            font-size: 20px;
-        }
-
-        .search-loading {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: translateY(-50%) rotate(0deg); }
-            to { transform: translateY(-50%) rotate(360deg); }
-        }
-
-        /* Search Results Dropdown */
-        .search-results {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border-radius: 0 0 var(--wizard-radius) var(--wizard-radius);
-            box-shadow: var(--wizard-shadow-lg);
-            max-height: 300px;
-            overflow-y: auto;
-            z-index: 100;
-            margin-top: -8px;
-        }
-
-        .search-result-item {
-            padding: 14px 20px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--wizard-border);
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--wizard-text);
-        }
-
-        .search-result-item:last-child {
-            border-bottom: none;
-            border-radius: 0 0 var(--wizard-radius) var(--wizard-radius);
-        }
-
-        .search-result-item:hover {
-            background: var(--wizard-bg);
-        }
-
-        .search-result-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--wizard-primary-light);
-            color: var(--wizard-primary);
-        }
-
-        .search-result-info {
-            flex: 1;
-        }
-
-        .search-result-title {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .search-result-subtitle {
-            font-size: 12px;
-            color: var(--wizard-text-light);
-        }
-
-        .search-result-new {
-            background: var(--wizard-primary-light);
-            border: 2px dashed var(--wizard-primary);
-        }
-
-        /* Vehicle Type Selection */
-        .vehicle-type-section {
-            background: var(--wizard-card);
-            border-radius: var(--wizard-radius);
-            padding: 24px;
-            box-shadow: var(--wizard-shadow);
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: var(--wizard-text);
-        }
-
-        .section-title i {
-            color: var(--wizard-primary);
-        }
-
-        .vehicle-types-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .vehicle-type-card {
-            padding: 16px;
-            border: 2px solid var(--wizard-border);
-            border-radius: var(--wizard-radius-sm);
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-            background: var(--wizard-card);
-        }
-
-        .vehicle-type-card:hover {
-            border-color: var(--wizard-primary);
-            transform: translateY(-2px);
-        }
-
-        .vehicle-type-card.selected {
-            border-color: var(--wizard-primary);
-            background: var(--wizard-primary-light);
-        }
-
-        .vehicle-type-card i {
-            font-size: 32px;
-            margin-bottom: 8px;
-            color: var(--wizard-primary);
-        }
-
-        .vehicle-type-card span {
-            font-weight: 600;
-            font-size: 14px;
-            display: block;
-        }
-
-        /* Category Grid */
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-        }
-
-        @media (max-width: 600px) {
-            .category-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .category-card {
-            padding: 16px 12px;
-            border: 2px solid var(--wizard-border);
-            border-radius: var(--wizard-radius-sm);
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-            background: var(--wizard-card);
-        }
-
-        .category-card:hover {
-            border-color: var(--wizard-primary);
-        }
-
-        .category-card.selected {
-            border-color: var(--wizard-primary);
-            background: var(--wizard-primary-light);
-        }
-
-        .category-card img {
-            height: 40px;
-            object-fit: contain;
-            margin-bottom: 8px;
-        }
-
-        .category-card span {
-            font-weight: 600;
-            font-size: 13px;
-            display: block;
-        }
-
-        /* ==========================================
-           QUICK REGISTER MODAL
-           ========================================== */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-
-        .modal-content {
-            background: var(--wizard-card);
-            border-radius: var(--wizard-radius);
-            padding: 24px;
-            max-width: 450px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: var(--wizard-shadow-lg);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from { opacity: 0; transform: scale(0.9) translateY(20px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--wizard-border);
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .modal-title i {
-            color: var(--wizard-primary);
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: var(--wizard-text-light);
-            padding: 8px;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .modal-close:hover {
-            background: var(--wizard-bg);
-            color: var(--wizard-text);
-        }
-
-        /* Form Styles */
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--wizard-text);
-            margin-bottom: 8px;
-        }
-
-        .form-input, .form-select {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid var(--wizard-border);
-            border-radius: var(--wizard-radius-sm);
-            font-size: 15px;
-            background: var(--wizard-card);
-            transition: all 0.2s;
-            color: var(--wizard-text);
-        }
-
-        .form-input:focus, .form-select:focus {
-            outline: none;
-            border-color: var(--wizard-primary);
-            background: white;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        @media (max-width: 480px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ==========================================
-           STEP 2: SERVICE SELECTION
-           ========================================== */
-        .selected-info-bar {
-            background: var(--wizard-card);
-            border-radius: var(--wizard-radius);
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            box-shadow: var(--wizard-shadow);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .selected-info-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .selected-info-item i {
-            color: var(--wizard-primary);
-        }
-
-        .selected-info-item strong {
-            font-weight: 600;
-        }
-
-        .selected-info-divider {
-            width: 1px;
-            height: 24px;
-            background: var(--wizard-border);
-        }
-
-        @media (max-width: 600px) {
-            .selected-info-divider {
-                display: none;
-            }
-            .selected-info-bar {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-        }
-
-        /* Services Section */
-        .services-section {
-            background: var(--wizard-card);
-            border-radius: var(--wizard-radius);
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: var(--wizard-shadow);
-        }
-
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .service-card {
-            position: relative;
-            border: 2px solid var(--wizard-border);
-            border-radius: var(--wizard-radius-sm);
-            padding: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: var(--wizard-card);
-        }
-
-        .service-card:hover {
-            border-color: var(--wizard-primary);
-            transform: translateY(-2px);
-        }
-
-        .service-card.selected {
-            border-color: var(--wizard-primary);
-            background: var(--wizard-primary-light);
-        }
-
-        .service-check {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 2px solid var(--wizard-border);
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .service-card.selected .service-check {
-            background: var(--wizard-primary);
-            border-color: var(--wizard-primary);
-        }
-
-        .service-check i {
-            font-size: 12px;
-            color: white;
-            opacity: 0;
-        }
-
-        .service-card.selected .service-check i {
-            opacity: 1;
-        }
-
-        .service-name {
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 8px;
-            padding-right: 32px;
-            color: var(--wizard-text);
-        }
-
-        .service-price {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--wizard-primary);
-        }
-
-        .service-duration {
-            font-size: 12px;
-            color: var(--wizard-text-light);
-            margin-top: 4px;
-        }
-
-        /* Washer & Notes */
-        .details-section {
-            background: var(--wizard-card);
-            border-radius: var(--wizard-radius);
-            padding: 24px;
-            box-shadow: var(--wizard-shadow);
-        }
-
-        .form-textarea {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid var(--wizard-border);
-            border-radius: var(--wizard-radius-sm);
-            font-size: 15px;
-            background: var(--wizard-card);
-            transition: all 0.2s;
-            resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-        }
-
-        .form-textarea:focus {
-            outline: none;
-            border-color: var(--wizard-primary);
-            background: white;
-        }
-
-        /* ==========================================
-           TYPE / CATEGORY CHIPS
-           ========================================== */
-        .chips-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .type-chip {
-            padding: 8px 18px;
-            border: 2px solid var(--wizard-border);
-            border-radius: 24px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            background: var(--wizard-card);
-            color: var(--wizard-text-light);
-            transition: all 0.18s;
-            white-space: nowrap;
-        }
-
-        .type-chip:hover {
-            border-color: var(--wizard-primary);
-            color: var(--wizard-primary-dark);
-        }
-
-        .type-chip.active {
-            border-color: var(--wizard-primary);
-            background: var(--wizard-primary-light);
-            color: var(--wizard-primary-dark);
-        }
-
-        /* ==========================================
-           WASHER AVATARS
-           ========================================== */
-        .washer-avatars-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 4px;
-        }
-
-        .washer-avatar-card {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 12px 16px;
-            border: 2px solid var(--wizard-border);
-            border-radius: var(--wizard-radius-sm);
-            cursor: pointer;
-            transition: all 0.18s;
-            background: var(--wizard-card);
-            min-width: 72px;
-        }
-
-        .washer-avatar-card:hover {
-            border-color: var(--wizard-primary);
-            transform: translateY(-2px);
-        }
-
-        .washer-avatar-card.selected {
-            border-color: var(--wizard-primary);
-            background: var(--wizard-primary-light);
-        }
-
-        .washer-avatar-initial {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--wizard-primary) 0%, var(--wizard-primary-dark) 100%);
-            color: white;
-            font-size: 20px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .washer-avatar-card.selected .washer-avatar-initial {
-            box-shadow: 0 0 0 3px var(--wizard-primary);
-        }
-
-        .washer-avatar-name {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--wizard-text);
-            text-align: center;
-            max-width: 72px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .washer-avatar-check {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--wizard-success);
-            color: white;
-            font-size: 11px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* ==========================================
-           MINI RESUMO (substituiu Step 3)
-           ========================================== */
-        .mini-summary {
-            background: var(--wizard-card);
-            border-radius: var(--wizard-radius);
-            padding: 20px 24px;
-            box-shadow: var(--wizard-shadow);
-            border-top: 3px solid var(--wizard-primary);
-        }
-
-        .mini-summary-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--wizard-text-light);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
-
-        .mini-summary-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--wizard-border);
-            font-weight: 500;
-        }
-
-        .mini-summary-item.secondary {
-            font-size: 13px;
-            color: var(--wizard-text-light);
-        }
-
-        .mini-summary-item .price {
-            font-weight: 600;
-            color: var(--wizard-primary);
-        }
-
-        .mini-summary-total {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 12px;
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--wizard-text);
-        }
-
-        .mini-summary-total .total-val {
-            color: var(--wizard-primary);
-            font-size: 22px;
-        }
-
-        /* ==========================================
-           FLOATING FOOTER
-           ========================================== */
-        .wizard-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--wizard-card);
-            border-top: 1px solid var(--wizard-border);
-            padding: 16px 24px;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-            z-index: 99;
-        }
-
-        .footer-content {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-        }
-
-        .footer-total {
-            text-align: left;
-        }
-
-        .footer-total-label {
-            font-size: 12px;
-            color: var(--wizard-text-light);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .footer-total-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--wizard-primary);
-        }
-
-        .footer-buttons {
-            display: flex;
-            gap: 12px;
-        }
-
-        .btn {
-            padding: 14px 24px;
-            border-radius: var(--wizard-radius-sm);
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            border: none;
-            min-height: 50px;
-        }
-
-        .btn-secondary {
-            background: var(--wizard-bg);
-            color: var(--wizard-text);
-            border: 2px solid var(--wizard-border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--wizard-border);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--wizard-primary) 0%, var(--wizard-primary-dark) 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 188, 212, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, var(--wizard-success) 0%, #059669 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        /* Spinner */
-        .spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--wizard-text-light);
-        }
-
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 12px;
-            opacity: 0.3;
-        }
-
-        /* Toast override for this page */
-        .toast-success {
-            background: var(--wizard-success) !important;
-        }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-            .progress-step span {
-                display: none;
-            }
-            .footer-content {
-                flex-direction: column;
-            }
-            .footer-buttons {
-                width: 100%;
-            }
-            .btn {
-                flex: 1;
-                justify-content: center;
-            }
-        }
-
-        /* Skeleton Loaders */
-        .skeleton {
-            animation: skeleton-pulse 1.5s ease-in-out infinite;
-            background: linear-gradient(90deg, var(--wizard-border) 25%, var(--wizard-bg) 50%, var(--wizard-border) 75%);
-            background-size: 200% 100%;
-            border-radius: 8px;
-        }
-
-        @keyframes skeleton-pulse {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        /* ===== OCR CÂMERA ===== */
-        .btn-camera-ocr {
-            flex-shrink: 0;
-            width: 52px;
-            height: 52px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        .btn-camera-ocr:hover { transform: translateY(-1px); filter: brightness(1.15); }
-
-        .search-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-        .search-row .smart-search-box { flex: 1; }
-
-        .camera-modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            z-index: 9000;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-        .camera-modal-overlay.active { display: flex; }
-
-        .camera-modal {
-            background: #1a1a2e;
-            border-radius: 16px;
-            overflow: hidden;
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-
-        .camera-modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .camera-modal-header h3 {
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .camera-modal-close {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: white;
-            width: 32px; height: 32px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .camera-modal-close:hover { background: rgba(255,255,255,0.2); }
-
-        .camera-viewport {
-            position: relative;
-            background: black;
-            aspect-ratio: 4/3;
-            overflow: hidden;
-        }
-        .camera-video {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .camera-guide {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-        .camera-guide-rect {
-            width: 72%;
-            height: 28%;
-            border: 2px solid rgba(255, 220, 0, 0.8);
-            border-radius: 8px;
-            box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
-        }
-        .camera-guide-label {
-            position: absolute;
-            bottom: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255,255,255,0.7);
-            font-size: 12px;
-            white-space: nowrap;
-        }
-
-        .camera-controls { padding: 16px 20px; }
-
-        .ocr-result-box {
-            background: rgba(255,255,255,0.06);
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 14px;
-        }
-        .ocr-result-placa {
-            font-size: 28px;
-            font-weight: 800;
-            color: white;
-            letter-spacing: 4px;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            margin-bottom: 6px;
-        }
-        .ocr-confidence { text-align: center; font-size: 12px; margin-bottom: 12px; }
-        .ocr-confidence.high { color: #4ade80; }
-        .ocr-confidence.low  { color: #fbbf24; }
-
-        .ocr-edit-input {
-            width: 100%;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
-            color: white;
-            font-size: 20px;
-            font-weight: 700;
-            text-align: center;
-            letter-spacing: 3px;
-            padding: 8px;
-            text-transform: uppercase;
-            font-family: 'Courier New', monospace;
-        }
-        .ocr-edit-input:focus { outline: none; border-color: rgba(0,102,204,0.6); }
-
-        .ocr-error-box {
-            background: rgba(220,53,69,0.15);
-            border: 1px solid rgba(220,53,69,0.3);
-            border-radius: 10px;
-            padding: 12px 16px;
-            color: #fca5a5;
-            font-size: 13px;
-            text-align: center;
-            margin-bottom: 14px;
-        }
-
-        .camera-btn {
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            border: none;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s;
-            margin-bottom: 8px;
-            font-family: inherit;
-        }
-        .camera-btn:last-child { margin-bottom: 0; }
-        .camera-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .camera-btn-capture { background: linear-gradient(135deg, #0066cc, #0052a3); color: white; }
-        .camera-btn-capture:hover:not(:disabled) { filter: brightness(1.1); }
-        .camera-btn-confirm { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-        .camera-btn-confirm:hover:not(:disabled) { filter: brightness(1.1); }
-        .camera-btn-retry { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.15); }
-        .camera-btn-retry:hover { background: rgba(255,255,255,0.14); }
-        .camera-spinner {
-            width: 18px; height: 18px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: ocr-spin 0.7s linear infinite;
-        }
-        @keyframes ocr-spin { to { transform: rotate(360deg); } }
-    </style>
-<link rel="stylesheet" href="../webapp-mobile.css">
-<link rel="stylesheet" href="../fix-responsive.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nova Ordem — Lina X</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --navy:   #0f172a;
+      --navy-m: #1e293b;
+      --blue:   #3b82f6;
+      --blue-d: #2563eb;
+      --blue-l: #eff6ff;
+      --blue-m: #bfdbfe;
+      --text:   #0f172a;
+      --mid:    #64748b;
+      --light:  #94a3b8;
+      --border: #e2e8f0;
+      --bg:     #f8fafc;
+      --white:  #ffffff;
+      --green:  #10b981;
+      --green-d:#059669;
+      --red:    #ef4444;
+      --amber:  #f59e0b;
+      --r:      10px;
+      --rpill:  999px;
+    }
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+    [x-cloak] { display: none !important; }
+    button { font-family: 'Inter', -apple-system, sans-serif; }
+
+    /* ── HEADER ───────────────────────────────── */
+    .hd {
+      flex-shrink: 0;
+      background: var(--navy);
+      padding: 14px 16px;
+      position: relative;
+      z-index: 40;
+    }
+    .hd-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .hd-left { display: flex; align-items: center; gap: 10px; }
+    .btn-back-hd {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: rgba(255,255,255,.1);
+      border: 1.5px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; cursor: pointer; text-decoration: none;
+      transition: background .18s;
+      flex-shrink: 0;
+    }
+    .btn-back-hd:hover { background: rgba(255,255,255,.18); }
+    .btn-back-hd:active { transform: scale(.93); }
+    .hd-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+    .hd-sub { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
+    .hd-badge {
+      background: rgba(59,130,246,.18);
+      border: 1px solid rgba(59,130,246,.3);
+      border-radius: var(--rpill);
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #93c5fd;
+      letter-spacing: .3px;
+    }
+
+    /* Search */
+    .search-row { display: flex; gap: 8px; }
+    .sw { flex: 1; position: relative; }
+    .search-input {
+      width: 100%;
+      padding: 11px 14px 11px 40px;
+      background: rgba(255,255,255,.1);
+      border: 1.5px solid rgba(255,255,255,.12);
+      border-radius: var(--r);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: #fff;
+      outline: none;
+      transition: all .2s;
+    }
+    .search-input::placeholder { color: rgba(255,255,255,.35); }
+    .search-input:focus { background: rgba(255,255,255,.16); border-color: rgba(59,130,246,.6); }
+    .si {
+      position: absolute;
+      left: 13px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      pointer-events: none;
+      color: rgba(255,255,255,.4);
+    }
+    .btn-cam {
+      flex-shrink: 0;
+      width: 44px; height: 44px;
+      background: rgba(59,130,246,.18);
+      border: 1.5px solid rgba(59,130,246,.3);
+      border-radius: var(--r);
+      font-size: 19px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-cam:hover { background: rgba(59,130,246,.32); }
+    .btn-cam:active { transform: scale(.92); }
+
+    /* Dropdown */
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0; right: 0;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.22);
+      z-index: 50;
+      overflow: hidden;
+    }
+    .dr {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    .dr:last-child { border-bottom: none; }
+    .dr:hover { background: var(--bg); }
+    .dr-av {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      color: #fff;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .dr-av.new { background: none; border: 2px dashed var(--blue); color: var(--blue); font-size: 17px; }
+    .dr-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .dr-sub { font-size: 11px; color: var(--light); margin-top: 1px; }
+    .dr-loading { padding: 14px; text-align: center; font-size: 13px; color: var(--light); }
+
+    /* Client tag */
+    .client-tag {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,.08);
+      border: 1.5px solid rgba(255,255,255,.14);
+      border-radius: var(--r);
+      padding: 9px 13px;
+    }
+    .ct-av {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      color: #fff;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .ct-name { font-size: 14px; font-weight: 700; color: #fff; flex: 1; }
+    .ct-info { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 1px; }
+    .ct-edit {
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.7);
+      border: 1.5px solid rgba(255,255,255,.18);
+      border-radius: 8px;
+      width: 32px; height: 32px;
+      font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all .18s;
+      flex-shrink: 0;
+    }
+    .ct-edit:hover { background: rgba(255,255,255,.22); color: #fff; }
+    .ct-x {
+      background: rgba(255,255,255,.1);
+      border: none;
+      border-radius: 50%;
+      width: 24px; height: 24px;
+      color: rgba(255,255,255,.5);
+      font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+
+    /* ── MAIN (scrollável) ────────────────────── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sec {
+      flex-shrink: 0;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+    }
+    .sec-lbl {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--light);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 8px;
+    }
+    .sec-lbl b { color: var(--blue); font-weight: 700; }
+
+    /* Tipo */
+    .tipo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tipo-btn {
+      position: relative; overflow: hidden;
+      display: flex; align-items: flex-start; flex-direction: column;
+      gap: 2px;
+      padding: 14px 14px 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      background: var(--bg);
+      cursor: pointer;
+      transition: all .15s;
+      min-height: 72px;
+    }
+    .tipo-btn:hover { border-color: var(--blue-m); }
+    .tipo-btn.on { border-color: var(--blue); background: var(--blue-l); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+
+    .tipo-btn::after {
+      content: '';
+      position: absolute;
+      right: -8px; bottom: -6px;
+      width: 110px; height: 58px;
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: right bottom;
+      opacity: .08;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+    .tipo-btn.on::after { opacity: .14; }
+    .tipo-btn:hover::after { opacity: .12; }
+
+    .tipo-car::after {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 210 82'%3E%3Cpath fill-rule='evenodd' fill='%23000' d='M6,76 L6,52 L28,52 L52,16 L88,6 L148,6 L176,20 L204,52 L204,76 Z M46,50 A20,20 0 1,0 46,90 A20,20 0 1,0 46,50 Z M158,50 A20,20 0 1,0 158,90 A20,20 0 1,0 158,50 Z'/%3E%3C/svg%3E");
+    }
+    .tipo-moto::after {
+      width: 100px; height: 62px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 96'%3E%3Ccircle cx='36' cy='70' r='23' fill='%23000'/%3E%3Ccircle cx='154' cy='70' r='23' fill='%23000'/%3E%3Cpath fill='%23000' d='M36,70 L58,36 L88,26 L114,34 L142,58 L154,70 L134,70 L116,52 L94,54 L74,70 Z M88,26 L95,12 L112,14 L106,32 Z M58,36 L44,46 L36,42 L50,28 Z M36,70 A5,5 0 1,0 46,70 A5,5 0 1,0 36,70 Z M149,70 A5,5 0 1,0 159,70 A5,5 0 1,0 149,70 Z'/%3E%3C/svg%3E");
+    }
+
+    .tipo-name { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .tipo-btn.on .tipo-name { color: var(--blue-d); }
+    .tipo-sub { font-size: 10px; color: var(--light); margin-top: 1px; }
+
+    /* Chips */
+    .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0;
+      padding: 6px 13px;
+      border: 2px solid var(--border);
+      border-radius: var(--rpill);
+      background: var(--bg);
+      cursor: pointer;
+      font-size: 12px; font-weight: 600; color: var(--mid);
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .chip:hover { border-color: var(--blue-m); }
+    .chip.on { border-color: var(--blue); background: var(--blue-l); color: var(--blue-d); }
+
+    /* Serviços */
+    .svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .svc-card {
+      position: relative; overflow: hidden;
+      padding: 11px 12px 11px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      background: var(--bg);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .svc-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: var(--border);
+      transition: background .15s;
+    }
+    .svc-card:hover { border-color: var(--blue-m); }
+    .svc-card.on { border-color: var(--blue); background: var(--blue-l); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+    .svc-card.on::before { background: var(--blue); }
+    .svc-check {
+      position: absolute; top: 8px; right: 8px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: 9px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transform: scale(0);
+      transition: all .2s;
+    }
+    .svc-card.on .svc-check { opacity: 1; transform: scale(1); }
+    .svc-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
+    .svc-card.on .svc-name { color: var(--blue-d); }
+    .svc-desc { font-size: 10px; color: var(--light); margin-bottom: 5px; line-height: 1.3; }
+    .svc-price { font-size: 18px; font-weight: 800; color: var(--text); }
+    .svc-card.on .svc-price { color: var(--blue-d); }
+
+    /* Adicionais */
+    .add-chip {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px;
+      border: 2px solid var(--border);
+      border-radius: var(--rpill);
+      background: var(--bg);
+      cursor: pointer;
+      font-size: 12px; font-weight: 600; color: var(--mid);
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .add-chip:hover { border-color: var(--blue-m); }
+    .add-chip.on { border-color: var(--blue); background: var(--blue-l); color: var(--blue-d); }
+    .add-tick {
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .add-price { font-size: 10px; opacity: .6; font-weight: 500; }
+
+    /* Lavadores */
+    .lav-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; }
+    .lav-row::-webkit-scrollbar { display: none; }
+    .lav { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0; }
+    .lav-av {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 2.5px solid var(--border);
+      background: var(--bg); color: var(--mid);
+      font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+      position: relative;
+    }
+    .lav.on .lav-av {
+      border-color: transparent; color: #fff;
+      box-shadow: 0 4px 14px rgba(0,0,0,.22);
+    }
+    .lav-tick {
+      position: absolute;
+      bottom: -2px; right: -2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid #fff;
+      color: #fff; font-size: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lav-name { font-size: 10px; font-weight: 600; color: var(--mid); white-space: nowrap; }
+    .lav.on .lav-name { font-weight: 700; }
+
+    /* Seletor de cores */
+    .color-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; }
+    .color-sw { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+    .color-circle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      transition: all .15s;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    }
+    .color-sw.on .color-circle { border-color: var(--blue); }
+    .color-sw.on .color-circle::after {
+      content: '✓';
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 900; color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+    .color-lbl { font-size: 9px; font-weight: 600; color: var(--mid); text-align: center; line-height: 1.1; }
+
+    /* Estado vazio / loading */
+    .sec-empty {
+      padding: 16px 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--light);
+    }
+    .sec-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 0;
+      font-size: 12px;
+      color: var(--light);
+    }
+    .spin-ico {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FOOTER ───────────────────────────────── */
+    .ft {
+      flex-shrink: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ft-total { flex: 1; }
+    .ft-lbl { font-size: 10px; font-weight: 700; color: var(--light); text-transform: uppercase; letter-spacing: .6px; }
+    .ft-val { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1.1; }
+    .ft-val em { font-size: 13px; font-weight: 600; color: var(--mid); font-style: normal; }
+    .ft-desc { font-size: 11px; color: var(--light); margin-top: 1px; }
+    .btn-criar {
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      color: #fff;
+      border: none;
+      border-radius: var(--rpill);
+      padding: 14px 24px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: -.2px;
+      box-shadow: 0 4px 16px rgba(37,99,235,.35);
+      transition: all .2s;
+    }
+    .btn-criar:not(:disabled):hover { box-shadow: 0 6px 22px rgba(37,99,235,.45); transform: translateY(-1px); }
+    .btn-criar:not(:disabled):active { transform: scale(.96); box-shadow: none; }
+    .btn-criar:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+
+    /* ── BOTTOM SHEET BASE ────────────────────── */
+    .backdrop {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(15,23,42,.55);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+    }
+    .sheet {
+      background: var(--white);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-height: 90dvh;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp .32s cubic-bezier(.34,1.4,.64,1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 14px auto 0;
+      flex-shrink: 0;
+    }
+    .sheet-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sheet-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .sheet-sub { font-size: 12px; color: var(--light); margin-top: 2px; }
+    .sheet-close {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: none; color: var(--mid);
+      font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sheet-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+    }
+    .sheet-footer {
+      display: flex; gap: 8px;
+      padding: 12px 20px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Form no sheet */
+    .form-required-hint { font-size: 11px; color: var(--light); margin-bottom: 14px; }
+    .form-required-hint span { color: var(--red); }
+    .form-row { display: grid; gap: 10px; margin-bottom: 10px; }
+    .form-row.cols2 { grid-template-columns: 1fr 1fr; }
+    .form-row.cols1 { grid-template-columns: 1fr; }
+    .fld label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      color: var(--mid);
+      text-transform: uppercase; letter-spacing: .6px;
+      margin-bottom: 5px;
+    }
+    .fld label span { color: var(--red); }
+    .fld input, .fld select {
+      width: 100%;
+      padding: 11px 13px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      outline: none;
+      transition: all .18s;
+    }
+    .fld input:focus, .fld select:focus { border-color: var(--blue); background: var(--white); }
+    .fld input::placeholder { color: var(--light); }
+    .fld input.error { border-color: var(--red); }
+    .fld-err { font-size: 10px; color: var(--red); margin-top: 3px; font-weight: 500; }
+
+    /* Botões sheet */
+    .btn-cancel {
+      flex: 0 0 auto;
+      padding: 13px 18px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--rpill);
+      font-size: 14px; font-weight: 600;
+      color: var(--mid);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-cancel:hover { background: var(--border); }
+    .btn-confirm {
+      flex: 1;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      border: none;
+      border-radius: var(--rpill);
+      font-size: 14px; font-weight: 700; color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,.3);
+      transition: all .2s;
+    }
+    .btn-confirm:hover { box-shadow: 0 6px 20px rgba(37,99,235,.4); transform: translateY(-1px); }
+    .btn-confirm:active { transform: scale(.96); }
+    .btn-confirm:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; transform: none; }
+
+    /* ── SHEET SUCESSO ────────────────────────── */
+    .sheet-success {
+      background: var(--white);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      padding: 8px 28px 44px;
+      text-align: center;
+      animation: slideUp .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    .s-ring {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-d), var(--green));
+      color: #fff; font-size: 32px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+      box-shadow: 0 8px 24px rgba(16,185,129,.35);
+    }
+    .s-title { font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+    .s-sub { font-size: 14px; color: var(--mid); margin-bottom: 8px; }
+    .s-num {
+      display: inline-block;
+      background: var(--blue-l); color: var(--blue-d);
+      border-radius: var(--rpill);
+      padding: 6px 22px;
+      font-size: 15px; font-weight: 800;
+      margin-bottom: 28px;
+    }
+    .btn-nova {
+      width: 100%; max-width: 280px;
+      background: linear-gradient(135deg, var(--blue-d), var(--blue));
+      color: #fff; border: none;
+      border-radius: var(--rpill);
+      padding: 15px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(37,99,235,.35);
+    }
+
+    /* ── TOAST ────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: #1f2937;
+      color: #fff;
+      padding: 11px 18px;
+      border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+      opacity: 0;
+      transition: opacity .25s, transform .25s;
+      z-index: 999;
+      pointer-events: none;
+      max-width: calc(100vw - 32px);
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success i { color: #34d399; }
+    .toast.error   i { color: #f87171; }
+  </style>
 </head>
-<body>
-    <!-- Header Funcionário -->
-    <header class="navbar" style="position: sticky; top: 0; z-index: 100; background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 20px; display: flex; align-items: center; gap: 12px; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="ordens-funcionario.html" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #f1f5f9; border-radius: 8px; color: #0066cc; font-size: 18px; text-decoration: none;">
-                <i class="fas fa-arrow-left"></i>
-            </a>
-            <div>
-                <h1 style="font-size: 18px; font-weight: 700; color: #1e293b;">Nova Ordem</h1>
-            </div>
+<body x-data="app()" x-init="init()">
+
+  <!-- ══ HEADER ════════════════════════════════ -->
+  <div class="hd">
+    <div class="hd-row">
+      <div class="hd-left">
+        <a href="../index-funcionario.html" class="btn-back-hd">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+          <div class="hd-title">Nova Ordem</div>
+          <div class="hd-sub">Preencha os dados abaixo</div>
         </div>
-    </header>
-
-    <!-- Main Wizard Content -->
-    <main x-data="orderWizard()" x-init="init()" x-cloak>
-        <!-- Progress Bar -->
-        <div class="wizard-progress">
-            <div class="progress-steps">
-                <div
-                    class="progress-step"
-                    :class="{ 'active': step === 1, 'completed': step > 1 }"
-                    @click="step > 1 && goToStep(1)"
-                >
-                    <span class="progress-step-number">
-                        <i class="fas fa-check" x-show="step > 1"></i>
-                        <span x-show="step <= 1">1</span>
-                    </span>
-                    <span>Identificação</span>
-                </div>
-
-                <div class="progress-connector" :class="{ 'active': step > 1 }"></div>
-
-                <div
-                    class="progress-step"
-                    :class="{ 'active': step === 2 }"
-                >
-                    <span class="progress-step-number">2</span>
-                    <span>Serviços</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="wizard-container">
-            <!-- ==========================================
-                 STEP 1: IDENTIFICATION
-                 ========================================== -->
-            <div class="wizard-step" x-show="step === 1" x-transition>
-                <!-- Smart Search Hero -->
-                <div class="search-hero">
-                    <h2><i class="fas fa-search"></i> Busca Inteligente</h2>
-                    <p>Digite a placa do veiculo ou nome do cliente para comecar</p>
-
-                    <div class="search-row">
-                    <div class="smart-search-box">
-                        <input
-                            type="text"
-                            class="smart-search-input"
-                            placeholder="ABC-1234 ou Nome do cliente"
-                            x-model="searchQuery"
-                            @input.debounce.300ms="performSearch()"
-                            @keydown.enter="handleSearchEnter()"
-                            @keydown.escape="closeSearchResults()"
-                            x-ref="searchInput"
-                        >
-                        <i
-                            class="search-icon fas"
-                            :class="isSearching ? 'fa-spinner search-loading' : 'fa-search'"
-                        ></i>
-
-                        <!-- Search Results Dropdown -->
-                        <div class="search-results" x-show="showSearchResults && searchResults.length > 0">
-                            <template x-for="result in searchResults" :key="result.id">
-                                <div
-                                    class="search-result-item"
-                                    :class="{ 'search-result-new': result.isNew }"
-                                    @click="selectSearchResult(result)"
-                                >
-                                    <div class="search-result-icon">
-                                        <i :class="result.icon"></i>
-                                    </div>
-                                    <div class="search-result-info">
-                                        <div class="search-result-title" x-text="result.title"></div>
-                                        <div class="search-result-subtitle" x-text="result.subtitle"></div>
-                                    </div>
-                                    <i class="fas fa-chevron-right" style="color: var(--wizard-text-light);"></i>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                    <!-- Botão câmera OCR -->
-                    <button class="btn-camera-ocr" @click="openCameraModal()" title="Ler placa por câmera">
-                        <i class="fas fa-camera"></i>
-                    </button>
-                    </div><!-- /search-row -->
-
-                </div>
-
-                <!-- Quick Register (Inline) -->
-                <div class="card" style="margin-top: 20px; padding: 20px;">
-                    <div class="section-title" style="margin-bottom: 12px;">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Cadastro Rápido</span>
-                    </div>
-                    <p class="text-sm text-secondary" style="margin-bottom: 16px;">
-                        Use esta opção quando o cliente/veículo ainda não existem.
-                    </p>
-
-                    <div class="form-group">
-                        <label class="form-label">Nome do Cliente *</label>
-                            <input
-                                type="text"
-                                class="form-input"
-                                placeholder="Nome completo"
-                                x-model.trim="quickRegister.clientName"
-                                x-ref="quickRegisterName"
-                                @input="syncQuickRegister()"
-                            >
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Telefone</label>
-                        <input
-                            type="tel"
-                            class="form-input"
-                            placeholder="(00) 00000-0000"
-                            x-model="quickRegister.clientPhone"
-                        >
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">
-                                Placa <span x-show="!semPlaca">*</span>
-                                <span x-show="semPlaca" style="color: var(--wizard-text-light); font-weight: 400;">(Opcional)</span>
-                            </label>
-                            <input
-                                type="text"
-                                class="form-input"
-                                placeholder="ABC-1234"
-                                x-model.trim="quickRegister.vehiclePlate"
-                                @input="quickRegister.vehiclePlate = $event.target.value.toUpperCase(); syncQuickRegister()"
-                                maxlength="8"
-                                :disabled="semPlaca"
-                                :style="semPlaca ? 'opacity: 0.5; cursor: not-allowed;' : ''"
-                            >
-                            <div style="margin-top: 8px;">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--wizard-text-light);">
-                                    <input
-                                        type="checkbox"
-                                        x-model="semPlaca"
-                                        @change="if (semPlaca) quickRegister.vehiclePlate = ''"
-                                        style="width: 16px; height: 16px; cursor: pointer;"
-                                    >
-                                    <span>🚗 Veículo sem placa (carro novo, etc)</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Modelo</label>
-                            <input
-                                type="text"
-                                class="form-input"
-                                placeholder="Ex: Honda Civic"
-                                x-model="quickRegister.vehicleModel"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Cor</label>
-                        <input
-                            type="text"
-                            class="form-input"
-                            placeholder="Ex: Prata"
-                            x-model="quickRegister.vehicleColor"
-                        >
-                    </div>
-                </div>
-
-                <!-- Tipo e Categoria: chips compactos -->
-                <div class="vehicle-type-section" style="margin-top: 16px;">
-                    <div class="section-title" style="margin-bottom: 10px;">
-                        <i class="fas fa-car"></i>
-                        <span>Tipo de Veículo</span>
-                    </div>
-                    <div class="chips-row">
-                        <button class="type-chip" :class="{ active: vehicleType === 'CARRO' }" @click="selectVehicleType('CARRO')">🚗 Carro</button>
-                        <button class="type-chip" :class="{ active: vehicleType === 'MOTO' }" @click="selectVehicleType('MOTO')">🏍️ Moto</button>
-                    </div>
-
-                    <div x-show="vehicleType === 'CARRO'" x-transition style="margin-top: 12px;">
-                        <div class="section-title" style="margin-bottom: 10px; font-size: 14px;">
-                            <i class="fas fa-layer-group"></i>
-                            <span>Categoria</span>
-                        </div>
-                        <div class="chips-row">
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'HATCH' }" @click="selectVehicleCategory('HATCH')">Hatch</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'SEDAN' }" @click="selectVehicleCategory('SEDAN')">Sedan</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'SUV' }" @click="selectVehicleCategory('SUV')">SUV</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'PICKUP' }" @click="selectVehicleCategory('PICKUP')">Pick-up</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'CAMINHONETE' }" @click="selectVehicleCategory('CAMINHONETE')">🛻 Caminhonete</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'VAN' }" @click="selectVehicleCategory('VAN')">🚐 Van</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'MICROONIBUS' }" @click="selectVehicleCategory('MICROONIBUS')">🚌 Micro-ônibus</button>
-                            <button class="type-chip" :class="{ active: vehicleCategory === 'CAMINHAO' }" @click="selectVehicleCategory('CAMINHAO')">🚚 Caminhão</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ==========================================
-                 STEP 2: SERVICE SELECTION
-                 ========================================== -->
-            <div class="wizard-step" x-show="step === 2" x-transition>
-                <!-- Selected Client/Vehicle Info Bar -->
-                <div class="selected-info-bar">
-                    <div class="selected-info-item">
-                        <i class="fas fa-user"></i>
-                        <strong x-text="client?.nome || 'Novo Cliente'"></strong>
-                    </div>
-                    <div class="selected-info-divider"></div>
-                    <div class="selected-info-item">
-                        <i class="fas fa-car"></i>
-                        <strong x-text="vehicle?.placa || 'Nova Placa'"></strong>
-                        <span x-text="vehicle?.modelo ? ' - ' + vehicle.modelo : ''"></span>
-                    </div>
-                    <div class="selected-info-divider"></div>
-                    <div class="selected-info-item">
-                        <i class="fas fa-tag"></i>
-                        <span x-text="getCategoryLabel()"></span>
-                    </div>
-                    <button
-                        class="btn btn-secondary"
-                        style="margin-left: auto; padding: 8px 12px;"
-                        @click="goToStep(1)"
-                    >
-                        <i class="fas fa-edit"></i> Alterar
-                    </button>
-                </div>
-
-                <!-- Main Services -->
-                <div class="services-section">
-                    <div class="section-title">
-                        <i class="fas fa-soap"></i>
-                        <span>Servico Principal</span>
-                        <span style="font-weight: 400; color: var(--wizard-text-light); font-size: 13px; margin-left: auto;">
-                            Selecione um servico
-                        </span>
-                    </div>
-
-                    <!-- Loading Skeleton -->
-                    <div class="services-grid" x-show="isLoadingServices">
-                        <template x-for="i in 4" :key="'skel-' + i">
-                            <div class="service-card" style="pointer-events: none;">
-                                <div class="skeleton" style="height: 18px; width: 70%; margin-bottom: 12px;"></div>
-                                <div class="skeleton" style="height: 28px; width: 50%;"></div>
-                            </div>
-                        </template>
-                    </div>
-
-                    <!-- Services Grid -->
-                    <div class="services-grid" x-show="!isLoadingServices">
-                        <template x-if="filteredServices.length === 0">
-                            <div class="empty-state" style="grid-column: 1 / -1;">
-                                <i class="fas fa-inbox"></i>
-                                <p>Nenhum servico disponivel para esta categoria</p>
-                            </div>
-                        </template>
-
-                        <template x-for="service in filteredServices" :key="service.id">
-                            <div
-                                class="service-card"
-                                :class="{ 'selected': selectedService?.id === service.id }"
-                                @click="selectService(service)"
-                            >
-                                <div class="service-check">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="service-name" x-text="service.nome"></div>
-                                <div class="service-price" x-text="formatCurrency(getServicePrice(service))"></div>
-                                <div class="service-duration" x-show="service.duracao">
-                                    <i class="fas fa-clock"></i>
-                                    <span x-text="service.duracao + ' min'"></span>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Additionals -->
-                <div class="services-section">
-                    <div class="section-title">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Adicionais</span>
-                        <span style="font-weight: 400; color: var(--wizard-text-light); font-size: 13px; margin-left: auto;">
-                            Opcional
-                        </span>
-                    </div>
-
-                    <div class="services-grid" x-show="!isLoadingServices">
-                        <template x-if="adicionais.length === 0">
-                            <div class="empty-state" style="grid-column: 1 / -1; padding: 20px;">
-                                <p style="margin: 0;">Nenhum adicional disponivel</p>
-                            </div>
-                        </template>
-
-                        <template x-for="adicional in adicionais" :key="adicional.id">
-                            <div
-                                class="service-card"
-                                :class="{ 'selected': selectedAdicionais.some(a => a.id === adicional.id) }"
-                                @click="toggleAdicional(adicional)"
-                            >
-                                <div class="service-check">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="service-name" x-text="adicional.nome"></div>
-                                <div class="service-price" x-text="formatCurrency(adicional.preco)"></div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Details Section -->
-                <div class="details-section">
-                    <div class="section-title" style="margin-bottom: 12px;">
-                        <i class="fas fa-user-tie"></i>
-                        <span>Lavadores <span style="font-weight:400;color:var(--wizard-text-light);font-size:13px;">(Opcional)</span></span>
-                    </div>
-
-                    <div class="washer-avatars-grid">
-                        <template x-for="washer in washers" :key="washer.id">
-                            <div
-                                class="washer-avatar-card"
-                                :class="{ selected: selectedWasherIds.includes(washer.id) }"
-                                @click="toggleWasher(washer.id)"
-                            >
-                                <div class="washer-avatar-initial" x-text="washer.nome.charAt(0).toUpperCase()"></div>
-                                <div class="washer-avatar-name" x-text="washer.nome.split(' ')[0]"></div>
-                                <div class="washer-avatar-check" x-show="selectedWasherIds.includes(washer.id)">✓</div>
-                            </div>
-                        </template>
-                        <div x-show="washers.length === 0" style="color: var(--wizard-text-light); font-size: 13px; padding: 8px 0;">
-                            Nenhum lavador cadastrado
-                        </div>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label class="form-label">Observações <span style="font-weight:400;color:var(--wizard-text-light);">(Opcional)</span></label>
-                        <textarea
-                            class="form-textarea"
-                            placeholder="Ex: Cliente pediu atenção especial nas rodas..."
-                            x-model="observacoes"
-                        ></textarea>
-                    </div>
-                </div>
-
-                <!-- Mini Resumo — aparece quando há serviço selecionado -->
-                <div class="mini-summary" x-show="selectedService" x-transition>
-                    <div class="mini-summary-title">📋 Resumo do Pedido</div>
-
-                    <div class="mini-summary-item">
-                        <span x-text="selectedService?.nome"></span>
-                        <span class="price" x-text="formatCurrency(getServicePrice(selectedService))"></span>
-                    </div>
-
-                    <template x-for="ad in selectedAdicionais" :key="ad.id">
-                        <div class="mini-summary-item secondary">
-                            <span x-text="'+ ' + ad.nome"></span>
-                            <span class="price" x-text="formatCurrency(ad.preco)"></span>
-                        </div>
-                    </template>
-
-                    <div x-show="selectedWasherIds.length > 0" class="mini-summary-item secondary">
-                        <span>👷 <span x-text="getSelectedWasherNames()"></span></span>
-                    </div>
-
-                    <div class="mini-summary-total">
-                        <span>Total</span>
-                        <span class="total-val" x-text="formatCurrency(total)"></span>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Floating Footer -->
-        <div class="wizard-footer">
-            <div class="footer-content">
-                <div class="footer-total" x-show="step > 1">
-                    <div class="footer-total-label">Total</div>
-                    <div class="footer-total-value" x-text="formatCurrency(total)"></div>
-                </div>
-
-                <div class="footer-buttons" :style="step === 1 ? 'margin-left: auto;' : ''">
-                    <button
-                        class="btn btn-secondary"
-                        x-show="step > 1"
-                        @click="prevStep()"
-                    >
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Voltar</span>
-                    </button>
-
-                    <!-- Step 1: Next -->
-                    <button
-                        class="btn btn-primary"
-                        x-show="step === 1"
-                        :disabled="!canProceedStep1"
-                        @click="nextStep()"
-                    >
-                        <span>Continuar</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-
-                    <!-- Step 2: Criar Ordem diretamente -->
-                    <button
-                        class="btn btn-success"
-                        x-show="step === 2"
-                        :disabled="!selectedService || isCreatingOrder"
-                        @click="createOrder()"
-                    >
-                        <template x-if="isCreatingOrder">
-                            <i class="fas fa-spinner spinner"></i>
-                        </template>
-                        <template x-if="!isCreatingOrder">
-                            <i class="fas fa-check-circle"></i>
-                        </template>
-                        <span x-text="isCreatingOrder ? 'Criando...' : 'Criar Ordem — ' + formatCurrency(total)"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Confirmação: Criar sem lavador -->
-        <div
-            class="modal-overlay"
-            x-show="showNoLavadorModal"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-        >
-            <div class="modal-content" style="text-align: center; max-width: 380px;">
-                <div style="font-size: 48px; color: var(--wizard-warning); margin-bottom: 12px;">
-                    <i class="fas fa-user-slash"></i>
-                </div>
-                <h2 style="font-size: 20px; margin-bottom: 8px;">Nenhum lavador selecionado</h2>
-                <p style="color: var(--wizard-text-light); margin-bottom: 24px; font-size: 14px;">
-                    Deseja criar a ordem sem atribuir um lavador? A ordem ficará como <strong>Pendente</strong> até ser atribuída.
-                </p>
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn btn-secondary" style="flex: 1;" @click="_noLavadorResolve && _noLavadorResolve(false); showNoLavadorModal = false;">
-                        <i class="fas fa-arrow-left"></i>
-                        Voltar
-                    </button>
-                    <button class="btn btn-success" style="flex: 1;" @click="_noLavadorResolve && _noLavadorResolve(true); showNoLavadorModal = false;">
-                        <i class="fas fa-check"></i>
-                        Criar mesmo assim
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Success Modal -->
-        <div
-            class="modal-overlay"
-            x-show="showSuccessModal"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-        >
-            <div class="modal-content" style="text-align: center;">
-                <div style="font-size: 64px; color: var(--wizard-success); margin-bottom: 16px;">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <h2 style="font-size: 24px; margin-bottom: 8px;">Ordem Criada!</h2>
-                <p style="color: var(--wizard-text-light); margin-bottom: 24px;">
-                    Ordem #<span x-text="createdOrderNumber"></span> criada com sucesso.
-                </p>
-
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn btn-secondary" style="flex: 1;" @click="createAnother()">
-                        <i class="fas fa-plus"></i>
-                        Nova Ordem
-                    </button>
-                    <button class="btn btn-primary" style="flex: 1;" @click="goToOrders()">
-                        <i class="fas fa-list"></i>
-                        Ver Ordens
-                    </button>
-                </div>
-            </div>
-        </div>
-
-    <!-- ===== MODAL: CÂMERA OCR DE PLACA ===== -->
-    <div class="camera-modal-overlay" :class="{ active: ocr.isOpen }" x-show="ocr.isOpen" @click.self="closeCameraModal()">
-        <div class="camera-modal" @click.stop>
-            <div class="camera-modal-header">
-                <h3><i class="fas fa-camera" style="color:#0066cc"></i> Ler Placa por Câmera</h3>
-                <button class="camera-modal-close" @click="closeCameraModal()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="camera-viewport">
-                <video id="ocrVideo" class="camera-video" autoplay playsinline muted></video>
-                <div class="camera-guide">
-                    <div class="camera-guide-rect"></div>
-                    <span class="camera-guide-label">Enquadre a placa dentro do retângulo</span>
-                </div>
-            </div>
-            <canvas id="ocrCanvas" style="display:none"></canvas>
-            <div class="camera-controls">
-                <div class="ocr-error-box" x-show="ocr.error" x-text="ocr.error"></div>
-                <button class="camera-btn camera-btn-capture" x-show="!ocr.isProcessing" @click="captureAndProcess()">
-                    <i class="fas fa-camera"></i>
-                    <span x-text="ocr.error ? 'Tentar novamente' : 'Capturar e Ler Placa'"></span>
-                </button>
-                <button class="camera-btn camera-btn-capture" x-show="ocr.isProcessing" disabled>
-                    <span class="camera-spinner"></span> Lendo placa...
-                </button>
-            </div>
-        </div>
+      </div>
+      <div class="hd-badge">Lina X</div>
     </div>
 
-    </main>
-
-    <div id="toast-container" class="toast-container"></div>
-
-    <script src="../utils.js"></script>
-    <script src="../api.js"></script>
-    <script src="utils-funcionario.js"></script>
-    <script>
-        /**
-         * ============================================================
-         * Alpine.js Component: Order Wizard
-         * ============================================================
-         *
-         * A unified, single-page wizard for creating orders optimized
-         * for high-speed data entry by car wash attendants.
-         *
-         * ARCHITECTURE:
-         * - Step 1: Identification (Client + Vehicle + Category)
-         * - Step 2: Service Selection (with category-based pricing)
-         * - Step 3: Review & Confirm
-         *
-         * CAR CATEGORY PRICING LOGIC:
-         * ----------------------------
-         * Services in LinaX are linked to TipoVeiculo entities which have
-         * both a 'nome' (CARRO, MOTO) and 'categoria' (HATCH, SEDAN, SUV, PICKUP).
-         *
-         * When loading services, we filter by:
-         * 1. vehicleType (CARRO or MOTO)
-         * 2. vehicleCategory (HATCH, SEDAN, SUV, PICKUP for cars)
-         *
-         * The API returns services with their prices already filtered
-         * for the selected vehicle type/category combination.
-         *
-         * If a service has multiple prices for different categories,
-         * the backend handles this via the many-to-many relationship
-         * between Servico and TipoVeiculo.
-         *
-         * For future enhancement: If you need different prices for the
-         * SAME service across categories, you would either:
-         * a) Create separate service entries (e.g., "Lavagem Completa - SUV")
-         * b) Add a 'precos' JSON field to Servico with category-based pricing
-         *
-         * ============================================================
-         */
-        function orderWizard() {
-            return {
-                // ==========================================
-                // WIZARD STATE
-                // ==========================================
-                step: 1,
-
-                // ==========================================
-                // SEARCH STATE
-                // ==========================================
-                searchQuery: '',
-                isSearching: false,
-                showSearchResults: false,
-                searchResults: [],
-                searchDebounceTimer: null,
-
-                // ==========================================
-                // CLIENT & VEHICLE STATE
-                // ==========================================
-                client: null,           // Selected client object
-                vehicle: null,          // Selected vehicle object
-                vehicleType: 'CARRO',   // CARRO or MOTO
-                vehicleCategory: null,  // HATCH, SEDAN, SUV, PICKUP (for cars)
-                semPlaca: false,        // Ordem sem placa (carros novos, etc)
-
-                quickRegister: {
-                    clientName: '',
-                    clientPhone: '',
-                    vehiclePlate: '',
-                    vehicleModel: '',
-                    vehicleColor: ''
-                },
-
-                // ==========================================
-                // SERVICES STATE
-                // ==========================================
-                services: [],           // All services from API
-                adicionais: [],         // All adicionais from API
-                washers: [],            // All washers from API
-                isLoadingServices: true,
-
-                selectedService: null,        // Single main service
-                selectedAdicionais: [],       // Multiple adicionais
-                selectedWasherIds: [],
-                observacoes: '',
-
-                // ==========================================
-                // ORDER STATE
-                // ==========================================
-                isCreatingOrder: false,
-                showSuccessModal: false,
-                createdOrderNumber: null,
-                showNoLavadorModal: false,
-                _noLavadorResolve: null,
-
-                // ==========================================
-                // OCR CÂMERA
-                // ==========================================
-                ocr: {
-                    isOpen: false,
-                    stream: null,
-                    isProcessing: false,
-                    result: null,
-                    editedPlate: '',
-                    error: null,
-                },
-
-                // ==========================================
-                // COMPUTED: Total Price
-                // ==========================================
-                get total() {
-                    let sum = 0;
-
-                    if (this.selectedService) {
-                        sum += this.getServicePrice(this.selectedService);
-                    }
-
-                    for (const adicional of this.selectedAdicionais) {
-                        sum += adicional.preco;
-                    }
-
-                    return sum;
-                },
-
-                // ==========================================
-                // COMPUTED: Filtered Services by Category
-                // ==========================================
-                get filteredServices() {
-                    // Services are already filtered by the API based on
-                    // vehicleType and vehicleCategory, but we keep this
-                    // getter for potential client-side filtering needs
-                    return this.services;
-                },
-
-                // ==========================================
-                // COMPUTED: Can Proceed from Step 1
-                // ==========================================
-                get canProceedStep1() {
-                    // Need either:
-                    // 1. An existing client+vehicle selected, OR
-                    // 2. Quick register data filled (com ou sem placa)
-                    const hasExisting = this.client && this.vehicle;
-                    const quickName = (this.quickRegister.clientName || '').trim();
-                    const quickPlate = (this.quickRegister.vehiclePlate || '').trim();
-
-                    // Se marcou "sem placa", só precisa do nome do cliente
-                    const hasQuickRegister = this.semPlaca ? quickName : (quickName && quickPlate);
-                    const hasCategory = this.vehicleType === 'MOTO' || this.vehicleCategory;
-
-                    return (hasExisting || hasQuickRegister) && hasCategory;
-                },
-
-                // ==========================================
-                // LIFECYCLE
-                // ==========================================
-                // Chave da última carga de serviços (evita double-load)
-                _lastServicesKey: '',
-
-                // ==========================================
-                // OCR CÂMERA — MÉTODOS
-                // ==========================================
-                async openCameraModal() {
-                    this.ocr.isOpen = true;
-                    this.ocr.result = null;
-                    this.ocr.editedPlate = '';
-                    this.ocr.error = null;
-                    this.ocr.isProcessing = false;
-                    await this.$nextTick();
-                    try {
-                        const stream = await navigator.mediaDevices.getUserMedia({
-                            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                        });
-                        this.ocr.stream = stream;
-                        const video = document.getElementById('ocrVideo');
-                        if (video) { video.srcObject = stream; video.play(); }
-                    } catch (err) {
-                        this.ocr.error = 'Câmera não acessível. Verifique as permissões do navegador ou use HTTPS.';
-                    }
-                },
-
-                closeCameraModal() {
-                    if (this.ocr.stream) {
-                        this.ocr.stream.getTracks().forEach(t => t.stop());
-                        this.ocr.stream = null;
-                    }
-                    this.ocr.isOpen = false;
-                },
-
-                resetOcrCapture() {
-                    this.ocr.result = null;
-                    this.ocr.editedPlate = '';
-                    this.ocr.error = null;
-                    this.ocr.isProcessing = false;
-                    const video = document.getElementById('ocrVideo');
-                    if (video && this.ocr.stream) { video.srcObject = this.ocr.stream; video.play(); }
-                },
-
-                async captureAndProcess() {
-                    const video = document.getElementById('ocrVideo');
-                    const canvas = document.getElementById('ocrCanvas');
-                    if (!video || !canvas) return;
-                    canvas.width  = video.videoWidth  || 640;
-                    canvas.height = video.videoHeight || 480;
-                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
-                    this.ocr.isProcessing = true;
-                    this.ocr.error = null;
-                    try {
-                        const data = await window.api.reconhecerPlaca(imageBase64);
-                        if (!data.placa) {
-                            this.ocr.error = 'Nenhuma placa detectada. Tente ajustar o ângulo ou iluminação.';
-                            return;
-                        }
-                        // Auto-usar sem confirmação
-                        this.closeCameraModal();
-                        this.searchQuery = data.placa;
-                        await this.$nextTick();
-                        await this.performSearch();
-                    } catch (err) {
-                        this.ocr.error = 'Erro ao processar imagem. Tente novamente.';
-                    } finally {
-                        this.ocr.isProcessing = false;
-                    }
-                },
-
-                async init() {
-                    if (!window.api.isAuthenticated()) {
-                        window.location.href = '../login.html';
-                        return;
-                    }
-
-                    const params = new URLSearchParams(window.location.search);
-                    if (params.get('tipo')) this.vehicleType = params.get('tipo');
-                    if (params.get('subtipo')) this.vehicleCategory = params.get('subtipo');
-                    if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
-                        this.vehicleCategory = 'HATCH';
-                    }
-
-                    // Preload em background: lavadores + serviços (já com os defaults)
-                    this.loadWashers();
-                    this.loadServices(); // sem await — roda em background enquanto usuário digita
-
-                    this.$nextTick(() => { this.$refs.searchInput?.focus(); });
-                    this.syncQuickRegister();
-                },
-
-                // ==========================================
-                // NAVIGATION
-                // ==========================================
-                goToStep(targetStep) {
-                    if (targetStep < this.step) {
-                        this.step = targetStep;
-                    }
-                },
-
-                async nextStep() {
-                    if (this.step === 1) {
-                        const key = `${this.vehicleType}-${this.vehicleCategory}`;
-                        // Se o preload ainda não carregou para essa combinação, aguardar
-                        if (this._lastServicesKey !== key) {
-                            await this.loadServices();
-                        }
-                        // Se o preload já está rodando (isLoadingServices), aguardar conclusão
-                        if (this.isLoadingServices) {
-                            await this.loadServices();
-                        }
-                        this.step = 2;
-                    }
-                },
-
-                prevStep() {
-                    if (this.step > 1) {
-                        this.step--;
-                    }
-                },
-
-                // ==========================================
-                // SMART SEARCH
-                // ==========================================
-                async performSearch() {
-                    const query = this.searchQuery.trim();
-
-                    if (query.length < 2) {
-                        this.searchResults = [];
-                        this.showSearchResults = false;
-                        return;
-                    }
-
-                    this.isSearching = true;
-
-                    try {
-                        // Determine if query looks like a plate (has numbers)
-                        const isPlateSearch = /\d/.test(query);
-
-                        if (isPlateSearch) {
-                            // Search by plate
-                            const cleanPlate = query.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                            try {
-                                const response = await window.api.getVeiculoByPlaca(cleanPlate);
-                                if (response && response.veiculo && response.cliente) {
-                                    this.searchResults = [{
-                                        id: response.veiculo.id,
-                                        type: 'vehicle',
-                                        icon: 'fas fa-car',
-                                        title: response.veiculo.placa,
-                                        subtitle: `${response.cliente.nome} - ${response.veiculo.modelo || 'Modelo N/A'}`,
-                                        client: response.cliente,
-                                        vehicle: response.veiculo
-                                    }];
-                                } else {
-                                    // Plate not found - offer to create
-                                    this.searchResults = [{
-                                        id: 'new-' + cleanPlate,
-                                        type: 'new',
-                                        isNew: true,
-                                        icon: 'fas fa-plus',
-                                        title: `Cadastrar placa ${cleanPlate}`,
-                                        subtitle: 'Clique para cadastrar novo cliente e veiculo',
-                                        plate: cleanPlate
-                                    }];
-                                }
-                            } catch (e) {
-                                // API error - offer to create
-                                this.searchResults = [{
-                                    id: 'new-' + cleanPlate,
-                                    type: 'new',
-                                    isNew: true,
-                                    icon: 'fas fa-plus',
-                                    title: `Cadastrar placa ${cleanPlate}`,
-                                    subtitle: 'Clique para cadastrar novo cliente e veiculo',
-                                    plate: cleanPlate
-                                }];
-                            }
-                        } else {
-                            // Search by client name
-                            const data = await window.api.getClientes(1, 5, query);
-                            this.searchResults = [];
-
-                            if (data.clientes && data.clientes.length > 0) {
-                                // For each client, show their vehicles
-                                for (const cliente of data.clientes) {
-                                    if (cliente.veiculos && cliente.veiculos.length > 0) {
-                                        for (const veiculo of cliente.veiculos) {
-                                            this.searchResults.push({
-                                                id: veiculo.id,
-                                                type: 'vehicle',
-                                                icon: 'fas fa-car',
-                                                title: cliente.nome,
-                                                subtitle: `${veiculo.placa} - ${veiculo.modelo || 'Modelo N/A'}`,
-                                                client: cliente,
-                                                vehicle: veiculo
-                                            });
-                                        }
-                                    } else {
-                                        // Client without vehicles
-                                        this.searchResults.push({
-                                            id: cliente.id,
-                                            type: 'client',
-                                            icon: 'fas fa-user',
-                                            title: cliente.nome,
-                                            subtitle: cliente.telefone || 'Sem telefone',
-                                            client: cliente
-                                        });
-                                    }
-                                }
-                            }
-
-                            // Always add option to create new
-                            this.searchResults.push({
-                                id: 'new-client',
-                                type: 'new',
-                                isNew: true,
-                                icon: 'fas fa-plus',
-                                title: `Cadastrar "${query}"`,
-                                subtitle: 'Clique para cadastrar novo cliente',
-                                name: query
-                            });
-                        }
-
-                        this.showSearchResults = true;
-                    } catch (error) {
-                        console.error('Search error:', error);
-                    } finally {
-                        this.isSearching = false;
-                    }
-                },
-
-                async selectSearchResult(result) {
-                    if (result.type === 'vehicle') {
-                        this.client = result.client;
-                        this.vehicle = result.vehicle;
-                        this.searchQuery = result.vehicle.placa;
-                        this.closeSearchResults();
-
-                        // Usar serviços do preload se já carregados para a combinação atual
-                        const key = `${this.vehicleType}-${this.vehicleCategory}`;
-                        if (this._lastServicesKey !== key || this.services.length === 0) {
-                            await this.loadServices();
-                        }
-                        this.step = 2;
-                        return;
-                    } else if (result.type === 'client') {
-                        this.client = result.client;
-                        this.vehicle = null;
-                        // Open quick register to add vehicle
-                        this.quickRegister.clientName = result.client.nome;
-                        this.quickRegister.clientPhone = result.client.telefone || '';
-                        this.$nextTick(() => {
-                            this.$refs.quickRegisterName?.focus();
-                        });
-                    } else if (result.type === 'new') {
-                        // New registration
-                        this.quickRegister.vehiclePlate = result.plate || '';
-                        this.quickRegister.clientName = result.name || '';
-                        this.$nextTick(() => {
-                            this.$refs.quickRegisterName?.focus();
-                        });
-                    }
-
-                    this.closeSearchResults();
-                },
-
-                handleSearchEnter() {
-                    if (this.searchResults.length === 1) {
-                        this.selectSearchResult(this.searchResults[0]);
-                    } else if (this.searchResults.length > 1) {
-                        // Select first non-new result, or first result if all are new
-                        const existing = this.searchResults.find(r => r.type !== 'new');
-                        this.selectSearchResult(existing || this.searchResults[0]);
-                    }
-                },
-
-                closeSearchResults() {
-                    this.showSearchResults = false;
-                },
-
-                // ==========================================
-                // VEHICLE TYPE/CATEGORY SELECTION
-                // ==========================================
-                selectVehicleType(type) {
-                    this.vehicleType = type;
-                    if (type === 'CARRO') {
-                        if (!this.vehicleCategory) this.vehicleCategory = 'HATCH';
-                    } else {
-                        // Moto, Caminhonete, Van, Micro-ônibus, Caminhão — sem subcategoria
-                        this.vehicleCategory = null;
-                    }
-                    this.syncQuickRegister();
-                    // Recarregar serviços em background para nova combinação
-                    this.loadServices();
-                },
-
-                selectVehicleCategory(category) {
-                    this.vehicleCategory = category;
-                    this.syncQuickRegister();
-                    // Recarregar serviços em background para nova categoria
-                    this.loadServices();
-                },
-
-                getCategoryLabel() {
-                    if (this.vehicleType === 'MOTO') {
-                        return 'Moto';
-                    }
-                    const labels = {
-                        'HATCH': 'Carro Hatch',
-                        'SEDAN': 'Carro Sedan',
-                        'SUV': 'SUV',
-                        'PICKUP': 'Pick-up'
-                    };
-                    return labels[this.vehicleCategory] || 'Carro';
-                },
-
-                // ==========================================
-                // QUICK REGISTER (INLINE)
-                // ==========================================
-                syncQuickRegister() {
-                    this.quickRegister.clientName = (this.quickRegister.clientName || '').trim();
-                    this.quickRegister.vehiclePlate = (this.quickRegister.vehiclePlate || '').trim().toUpperCase();
-                    if (this.vehicleType === 'CARRO' && !this.vehicleCategory) {
-                        this.vehicleCategory = 'HATCH';
-                    }
-                },
-
-                // ==========================================
-                // DATA LOADING
-                // ==========================================
-                async loadServices() {
-                    const key = `${this.vehicleType}-${this.vehicleCategory}`;
-                    if (this._lastServicesKey === key && !this.isLoadingServices && this.services.length > 0) {
-                        return; // já carregado para esta combinação
-                    }
-                    this._lastServicesKey = key;
-                    this.isLoadingServices = true;
-
-                    try {
-                        const [servicosData, adicionaisData] = await Promise.all([
-                            window.api.getServicos({
-                                tipoVeiculo: this.vehicleType,
-                                subtipoVeiculo: this.vehicleCategory
-                            }),
-                            window.api.getAdicionaisSimple()
-                        ]);
-
-                        this.services = servicosData.servicos || [];
-                        this.adicionais = adicionaisData.adicionais || [];
-                        this.selectedService = null;
-                        this.selectedAdicionais = [];
-                    } catch (error) {
-                        console.error('Error loading services:', error);
-                        showToast('Erro ao carregar serviços', 'error');
-                    } finally {
-                        this.isLoadingServices = false;
-                    }
-                },
-
-                async loadWashers() {
-                    try {
-                        const data = await window.api.getLavadoresSimple();
-                        this.washers = data.lavadores || [];
-                    } catch (error) {
-                        console.error('Error loading washers:', error);
-                    }
-                },
-
-                // ==========================================
-                // SERVICE SELECTION
-                // ==========================================
-                /**
-                 * Get the price for a service based on vehicle category.
-                 *
-                 * CATEGORY PRICING LOGIC:
-                 * ------------------------
-                 * Currently, services have a single 'preco' field and are
-                 * filtered by the backend based on tipoVeiculo/subtipoVeiculo.
-                 *
-                 * If you need different prices for the same service name
-                 * across categories (e.g., "Lavagem Completa" costs more for SUVs),
-                 * you have two options:
-                 *
-                 * OPTION A (Current): Create separate service entries
-                 * - "Lavagem Completa - Hatch" (R$ 50)
-                 * - "Lavagem Completa - SUV" (R$ 80)
-                 *
-                 * OPTION B (Future Enhancement): Add category-based pricing
-                 * - Add a 'precosPorCategoria' JSON field to Servico model:
-                 *   { "HATCH": 50, "SEDAN": 60, "SUV": 80, "PICKUP": 90 }
-                 * - This method would then return:
-                 *   service.precosPorCategoria?.[this.vehicleCategory] || service.preco
-                 *
-                 * For now, we simply return service.preco since the backend
-                 * already filters services by category.
-                 */
-                getServicePrice(service) {
-                    if (!service) return 0;
-
-                    // Future enhancement: Check for category-based pricing
-                    // if (service.precosPorCategoria && this.vehicleCategory) {
-                    //     return service.precosPorCategoria[this.vehicleCategory] || service.preco;
-                    // }
-
-                    return service.preco;
-                },
-
-                selectService(service) {
-                    this.selectedService = service;
-                },
-
-                toggleAdicional(adicional) {
-                    const index = this.selectedAdicionais.findIndex(a => a.id === adicional.id);
-                    if (index > -1) {
-                        this.selectedAdicionais.splice(index, 1);
-                    } else {
-                        this.selectedAdicionais.push(adicional);
-                    }
-                },
-
-                toggleWasher(id) {
-                    const idx = this.selectedWasherIds.indexOf(id);
-                    if (idx > -1) this.selectedWasherIds.splice(idx, 1);
-                    else this.selectedWasherIds.push(id);
-                },
-
-                // ==========================================
-                // HELPERS
-                // ==========================================
-                getItemsCount() {
-                    let count = 0;
-                    if (this.selectedService) count++;
-                    count += this.selectedAdicionais.length;
-                    return count;
-                },
-
-                getSelectedWasherName() {
-                    const washer = this.washers.find(w => w.id === this.selectedWasherIds[0]);
-                    return washer?.nome || '';
-                },
-
-                getSelectedWasherNames() {
-                    return this.washers
-                        .filter(w => this.selectedWasherIds.includes(w.id))
-                        .map(w => w.nome)
-                        .join(', ');
-                },
-
-                getServiceCommissionSplits() {
-                    if (!this.selectedService || this.selectedWasherIds.length === 0) return [];
-                    const serviceValue = this.getServicePrice(this.selectedService);
-                    const washers = this.washers.filter(w => this.selectedWasherIds.includes(w.id));
-                    if (washers.length === 0) return [];
-                    // Cada lavador recebe sua própria % — não divide igualmente
-                    // Ex: lavador A 35% + lavador B 40% sobre R$130 = R$45,50 + R$52,00
-                    return washers.map(w => {
-                        const ganho = serviceValue * ((w.comissao || 0) / 100);
-                        const cents = Math.round(ganho * 100);
-                        return {
-                            id: w.id,
-                            nome: w.nome,
-                            valorCentavos: cents,
-                            valor: cents / 100
-                        };
-                    });
-                },
-
-                formatCurrency(value) {
-                    return new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                    }).format(value || 0);
-                },
-
-                // ==========================================
-                // ORDER CREATION
-                // ==========================================
-                confirmSemLavador() {
-                    return new Promise(resolve => {
-                        this._noLavadorResolve = resolve;
-                        this.showNoLavadorModal = true;
-                    });
-                },
-
-                async createOrder() {
-                    if (!this.selectedService) {
-                        showToast('Selecione um servico', 'error');
-                        return;
-                    }
-
-                    // Se nenhum lavador selecionado, pedir confirmação
-                    if (this.selectedWasherIds.length === 0) {
-                        const confirmed = await this.confirmSemLavador();
-                        if (!confirmed) return;
-                    }
-
-                    this.isCreatingOrder = true;
-
-                    // Build items array
-                    const items = [];
-
-                    // Add main service
-                    items.push({
-                        tipo: 'SERVICO',
-                        itemId: this.selectedService.id,
-                        nome: this.selectedService.nome,
-                        preco: this.getServicePrice(this.selectedService),
-                        quantidade: 1,
-                        lavadores: this.getServiceCommissionSplits().map(entry => ({
-                            id: entry.id,
-                            ganhoCentavos: entry.valorCentavos,
-                            ganho: entry.valor
-                        }))
-                    });
-
-                    // Add adicionais
-                    for (const adicional of this.selectedAdicionais) {
-                        items.push({
-                            tipo: 'ADICIONAL',
-                            itemId: adicional.id,
-                            nome: adicional.nome,
-                            preco: adicional.preco,
-                            quantidade: 1
-                        });
-                    }
-
-                    // Build order data
-                    const primaryWasherId = this.selectedWasherIds[0] || null;
-                    const orderData = {
-                        clienteId: this.client?.id || null,
-                        veiculoId: this.vehicle?.id || null,
-                        lavadorId: primaryWasherId,
-                        lavadorIds: [...this.selectedWasherIds],
-                        itens: items,
-                        observacoes: this.observacoes.trim(),
-                        forcarCriacao: false
-                    };
-
-                    // Add new client/vehicle data if quick register was used
-                    if (!this.vehicle) {
-                        orderData.novoCliente = {
-                            nome: this.quickRegister.clientName,
-                            telefone: this.quickRegister.clientPhone || null
-                        };
-                        orderData.novoVeiculo = {
-                            placa: this.semPlaca ? `SEM-PLACA-${Date.now()}` : this.quickRegister.vehiclePlate.toUpperCase(),
-                            modelo: this.quickRegister.vehicleModel || null,
-                            cor: this.quickRegister.vehicleColor || null
-                        };
-                    }
-
-                    try {
-                        const response = await window.api.createOrdem(orderData);
-                        this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
-                        this.showSuccessModal = true;
-                        showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
-                        setTimeout(() => {
-                            if (this.showSuccessModal) {
-                                window.location.href = 'ordens-funcionario.html';
-                            }
-                        }, 2000);
-                    } catch (error) {
-                        console.error('Error creating order:', error);
-
-                        if (error.code === 'ACTIVE_ORDER_EXISTS') {
-                            // Show confirmation dialog
-                            if (confirm('Ja existe uma ordem ativa para este veiculo. Deseja criar mesmo assim?')) {
-                                orderData.forcarCriacao = true;
-                                try {
-                                    const response = await window.api.createOrdem(orderData);
-                                    this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
-                                    this.showSuccessModal = true;
-                                    showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
-                                    setTimeout(() => {
-                                        if (this.showSuccessModal) {
-                                            window.location.href = 'ordens-funcionario.html';
-                                        }
-                                    }, 2000);
-                                } catch (retryError) {
-                                    showToast('Erro ao criar ordem: ' + (retryError.details || retryError.error || 'Erro desconhecido'), 'error');
-                                }
-                            }
-                        } else {
-                            showToast('Erro ao criar ordem: ' + (error.details || error.error || 'Erro desconhecido'), 'error');
-                        }
-                    } finally {
-                        this.isCreatingOrder = false;
-                    }
-                },
-
-                // ==========================================
-                // POST-CREATION ACTIONS
-                // ==========================================
-                createAnother() {
-                    this.step = 1;
-                    this.client = null;
-                    this.vehicle = null;
-                    this.vehicleType = 'CARRO';
-                    this.vehicleCategory = 'HATCH';
-                    this.searchQuery = '';
-                    this.selectedService = null;
-                    this.selectedAdicionais = [];
-                    this.selectedWasherIds = [];
-                    this.observacoes = '';
-                    this.quickRegister = { clientName: '', clientPhone: '', vehiclePlate: '', vehicleModel: '', vehicleColor: '' };
-                    this.showSuccessModal = false;
-                    this._lastServicesKey = ''; // forçar reload para próxima ordem
-                    this.$nextTick(() => { this.$refs.searchInput?.focus(); });
-                },
-
-                goToOrders() {
-                    window.location.href = 'ordens-funcionario.html';
+    <!-- Busca (sem cliente selecionado) -->
+    <div x-show="!cliente">
+      <div class="search-row">
+        <div class="sw">
+          <i class="fas fa-search si"></i>
+          <input
+            class="search-input"
+            type="search"
+            placeholder="Buscar cliente, placa ou veículo..."
+            x-model="q"
+            @input="buscar()"
+            @blur="setTimeout(()=> showDrop=false, 180)"
+            @focus="if(results.length > 0 || q.length >= 2) showDrop=true"
+            autocomplete="off"
+          >
+          <!-- Dropdown resultados -->
+          <div class="dropdown" x-show="showDrop" x-cloak>
+            <div class="dr-loading" x-show="buscando">
+              <i class="fas fa-spinner fa-spin"></i> Buscando...
+            </div>
+            <template x-for="r in results" :key="r.clienteId + '-' + (r.veiculoId || 'novo')">
+              <div class="dr" @mousedown.prevent="pick(r)">
+                <div class="dr-av" x-text="r.nome[0]?.toUpperCase()"></div>
+                <div>
+                  <div class="dr-name" x-text="r.nome"></div>
+                  <div class="dr-sub" x-text="(r.modelo && r.modelo !== '—' ? r.modelo + ' · ' : '') + (r.placa && r.placa !== '—' ? r.placa : '')"></div>
+                </div>
+              </div>
+            </template>
+            <!-- Novo cliente -->
+            <div class="dr" @mousedown.prevent="abrirFormNovoCliente()">
+              <div class="dr-av new">+</div>
+              <div>
+                <div class="dr-name" style="color:var(--blue)">Cadastrar novo cliente</div>
+                <div class="dr-sub" x-text="q.length > 0 ? 'Nome: &quot;' + q + '&quot;' : 'Preencher dados do cliente'"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Câmera OCR -->
+        <button class="btn-cam" title="Escanear placa" @click="onCamera()">📷</button>
+        <input type="file" id="ocrInput" accept="image/*" capture="environment" style="display:none" @change="handleOCR($event)">
+      </div>
+    </div>
+
+    <!-- Tag cliente selecionado -->
+    <div class="client-tag" x-show="cliente" x-cloak>
+      <div class="ct-av" x-text="cliente?.nome?.[0]?.toUpperCase() || '?'"></div>
+      <div style="flex:1;min-width:0">
+        <div class="ct-name" x-text="cliente?.nome"></div>
+        <div class="ct-info" x-text="[cliente?.modelo, cliente?.placa, cliente?.telefone].filter(Boolean).join(' · ')"></div>
+      </div>
+      <button class="ct-edit" @click="abrirFormEdicao()" title="Editar">
+        <i class="fas fa-pencil-alt"></i>
+      </button>
+      <button class="ct-x" @click="cliente=null; q=''">✕</button>
+    </div>
+  </div>
+
+  <!-- ══ MAIN ══════════════════════════════════ -->
+  <div class="main">
+
+    <!-- Tipo de veículo -->
+    <div class="sec">
+      <div class="sec-lbl">Tipo de Veículo</div>
+      <div class="tipo-row">
+        <button class="tipo-btn tipo-car" :class="{on: tipo==='CARRO'}" @click="tipo='CARRO'">
+          <div class="tipo-name">Carro</div>
+          <div class="tipo-sub">Hatch · Sedan · SUV</div>
+        </button>
+        <button class="tipo-btn tipo-moto" :class="{on: tipo==='MOTO'}" @click="tipo='MOTO'; cat=null">
+          <div class="tipo-name">Moto</div>
+          <div class="tipo-sub">Qualquer porte</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Categoria (só CARRO) -->
+    <div class="sec" x-show="tipo==='CARRO'" x-cloak>
+      <div class="sec-lbl">Categoria</div>
+      <div class="chips">
+        <template x-for="c in cats" :key="c.k">
+          <button class="chip" :class="{on: cat===c.k}" @click="cat=c.k" x-text="c.l"></button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Serviços -->
+    <div class="sec">
+      <div class="sec-lbl">Serviço</div>
+
+      <!-- Aguardando seleção de tipo -->
+      <div class="sec-empty" x-show="!tipo">
+        Selecione o tipo de veículo primeiro
+      </div>
+
+      <!-- Carregando -->
+      <div class="sec-spinner" x-show="tipo && loadingServicos" x-cloak>
+        <div class="spin-ico"></div> Carregando serviços...
+      </div>
+
+      <!-- Nenhum serviço -->
+      <div class="sec-empty" x-show="tipo && !loadingServicos && servicos.length === 0" x-cloak>
+        Nenhum serviço cadastrado para este tipo
+      </div>
+
+      <!-- Grid de serviços -->
+      <div class="svc-grid" x-show="tipo && !loadingServicos && servicos.length > 0" x-cloak>
+        <template x-for="s in servicos" :key="s.id">
+          <div class="svc-card" :class="{on: svc?.id===s.id}" @click="svc = svc?.id===s.id ? null : s">
+            <div class="svc-check">✓</div>
+            <div class="svc-name" x-text="s.nome"></div>
+            <div class="svc-desc" x-text="s.descricao || ''"></div>
+            <div class="svc-price" x-text="'R$ ' + Number(s.preco || 0).toFixed(2).replace('.',',')"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Adicionais -->
+    <div class="sec" x-show="adicionais.length > 0" x-cloak>
+      <div class="sec-lbl">
+        Adicionais
+        <b x-show="adds.length > 0" x-text="'· ' + adds.length" x-cloak></b>
+      </div>
+      <div class="chips">
+        <template x-for="a in adicionais" :key="a.id">
+          <button class="add-chip" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)">
+            <div class="add-tick" x-show="adds.includes(a.id)" x-cloak>✓</div>
+            <span x-text="a.nome"></span>
+            <span class="add-price" x-text="'+ R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Lavadores -->
+    <div class="sec">
+      <div class="sec-lbl">
+        Responsável
+        <b x-show="lavs.length > 0" x-text="'· ' + lavs.length" x-cloak></b>
+      </div>
+
+      <!-- Carregando -->
+      <div class="sec-spinner" x-show="loadingLavadores" x-cloak>
+        <div class="spin-ico"></div> Carregando...
+      </div>
+
+      <!-- Nenhum -->
+      <div class="sec-empty" x-show="!loadingLavadores && lavadores.length === 0" x-cloak>
+        Nenhum lavador cadastrado
+      </div>
+
+      <div class="lav-row" x-show="!loadingLavadores && lavadores.length > 0" x-cloak>
+        <template x-for="(l, i) in lavadores" :key="l.id">
+          <div class="lav" :class="{on: lavs.includes(l.id)}" @click="toggleLav(l)">
+            <div class="lav-av"
+              :style="lavs.includes(l.id)
+                ? 'background:' + lavGrad(i) + ';box-shadow:0 4px 14px ' + lavShadow(i)
+                : ''">
+              <span x-text="l.nome?.[0]?.toUpperCase()"></span>
+              <div class="lav-tick" x-show="lavs.includes(l.id)" x-cloak>✓</div>
+            </div>
+            <span class="lav-name"
+              :style="lavs.includes(l.id) ? 'color:' + lavColor(i) : ''"
+              x-text="l.nome?.split(' ')[0]">
+            </span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ FOOTER ════════════════════════════════ -->
+  <div class="ft">
+    <div class="ft-total">
+      <div class="ft-lbl">Total</div>
+      <div class="ft-val"><em>R$&nbsp;</em><span x-text="total().toFixed(2).replace('.',',')"></span></div>
+      <div class="ft-desc" x-show="descItens()" x-text="descItens()" x-cloak></div>
+    </div>
+    <button class="btn-criar"
+      :disabled="!podecriar()"
+      @click="criar()"
+      x-text="criando ? 'Criando...' : '✓  Criar Ordem'">
+    </button>
+  </div>
+
+  <!-- ══ BOTTOM SHEET: NOVO / EDITAR CLIENTE ═══ -->
+  <div class="backdrop" x-show="showForm" x-cloak @click.self="showForm=false">
+    <div class="sheet" @click.stop>
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title" x-text="formEdicao ? 'Editar Cliente' : 'Novo Cliente'"></div>
+          <div class="sheet-sub">Dados do cliente e veículo</div>
+        </div>
+        <button class="sheet-close" @click="showForm=false">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <div class="form-required-hint"><span>*</span> campos obrigatórios</div>
+
+        <!-- Nome -->
+        <div class="form-row cols1">
+          <div class="fld">
+            <label>Nome completo <span>*</span></label>
+            <input type="text" placeholder="Ex: João da Silva"
+              x-model="form.nome"
+              :class="{error: formErros.nome}"
+              @input="formErros.nome=false">
+            <div class="fld-err" x-show="formErros.nome" x-cloak>Nome é obrigatório</div>
+          </div>
+        </div>
+
+        <!-- Telefone + CPF -->
+        <div class="form-row cols2">
+          <div class="fld">
+            <label>Telefone / WhatsApp</label>
+            <input type="tel" placeholder="(11) 9 0000-0000"
+              x-model="form.telefone"
+              @input="maskPhone($event)">
+          </div>
+          <div class="fld">
+            <label>CPF / CNPJ</label>
+            <input type="text" placeholder="000.000.000-00"
+              x-model="form.cpf">
+          </div>
+        </div>
+
+        <!-- Modelo + Placa -->
+        <div class="form-row cols2">
+          <div class="fld">
+            <label>Modelo do veículo <span>*</span></label>
+            <input type="text" placeholder="Ex: HB20, Civic"
+              x-model="form.modelo"
+              :class="{error: formErros.modelo}"
+              @input="formErros.modelo=false">
+            <div class="fld-err" x-show="formErros.modelo" x-cloak>Modelo é obrigatório</div>
+          </div>
+          <div class="fld">
+            <label>Placa <span>*</span></label>
+            <input type="text" placeholder="ABC-1234"
+              x-model="form.placa"
+              :class="{error: formErros.placa}"
+              @input="form.placa=$event.target.value.toUpperCase(); formErros.placa=false"
+              maxlength="8">
+            <div class="fld-err" x-show="formErros.placa" x-cloak>Placa é obrigatória</div>
+          </div>
+        </div>
+
+        <!-- Cor do veículo -->
+        <div class="fld" style="margin-bottom:10px">
+          <label>
+            Cor do veículo
+            <span x-show="form.cor" x-text="'— ' + form.cor" style="color:var(--blue);text-transform:none;letter-spacing:0;font-weight:600" x-cloak></span>
+          </label>
+          <div class="color-grid">
+            <template x-for="c in coresCarro" :key="c.nome">
+              <div class="color-sw" :class="{on: form.cor===c.nome}" @click="form.cor=c.nome">
+                <div class="color-circle" :style="'background:' + c.hex"></div>
+                <span class="color-lbl" x-text="c.nome"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Ano -->
+        <div class="form-row cols1">
+          <div class="fld">
+            <label>Ano</label>
+            <input type="number" placeholder="2020"
+              x-model="form.ano" min="1990" max="2030">
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showForm=false">Cancelar</button>
+        <button class="btn-confirm" @click="confirmarCliente()"
+          x-text="formEdicao ? 'Salvar Alterações' : 'Confirmar Cliente'">
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BOTTOM SHEET: SUCESSO ═════════════════ -->
+  <div class="backdrop" x-show="sucesso" x-cloak>
+    <div class="sheet-success" @click.stop>
+      <div class="sheet-handle"></div>
+      <div style="height:20px"></div>
+      <div class="s-ring">✓</div>
+      <div class="s-title">Ordem Criada!</div>
+      <div class="s-sub">Adicionada à fila com sucesso</div>
+      <div class="s-num" x-text="'Ordem # ' + ordemNum"></div>
+      <button class="btn-nova" @click="reset()">+ Nova Ordem</button>
+    </div>
+  </div>
+
+  <script src="../api.js"></script>
+  <script>
+    // Paleta de gradientes para lavadores (atribuída por índice)
+    const GRADS = [
+      { grad: 'linear-gradient(135deg,#2563eb,#60a5fa)', shadow: 'rgba(37,99,235,.35)',  color: '#60a5fa' },
+      { grad: 'linear-gradient(135deg,#059669,#34d399)', shadow: 'rgba(5,150,105,.35)',   color: '#34d399' },
+      { grad: 'linear-gradient(135deg,#7c3aed,#a78bfa)', shadow: 'rgba(124,58,237,.35)', color: '#a78bfa' },
+      { grad: 'linear-gradient(135deg,#ea580c,#fb923c)', shadow: 'rgba(234,88,12,.35)',   color: '#fb923c' },
+      { grad: 'linear-gradient(135deg,#db2777,#f472b6)', shadow: 'rgba(219,39,119,.35)',  color: '#f472b6' },
+      { grad: 'linear-gradient(135deg,#0d9488,#2dd4bf)', shadow: 'rgba(13,148,136,.35)',  color: '#2dd4bf' },
+      { grad: 'linear-gradient(135deg,#d97706,#fcd34d)', shadow: 'rgba(217,119,6,.35)',   color: '#fcd34d' },
+      { grad: 'linear-gradient(135deg,#dc2626,#f87171)', shadow: 'rgba(220,38,38,.35)',   color: '#f87171' },
+    ];
+
+    function app() {
+      return {
+        // ── Busca ─────────────────────────────
+        q: '', showDrop: false, results: [], buscando: false,
+        _buscarTimer: null,
+
+        // ── Cliente selecionado ─────────────
+        // { clienteId, veiculoId, nome, modelo, placa, telefone, cor?, isNew?, novoVeiculo? }
+        cliente: null,
+        _linkClienteId: null, // quando cliente existe mas veículo não
+
+        // ── Form novo/editar ────────────────
+        showForm: false,
+        formEdicao: false,
+        form: { nome:'', telefone:'', cpf:'', modelo:'', placa:'', cor:'', ano:'' },
+        formErros: { nome:false, modelo:false, placa:false },
+
+        // ── Ordem ──────────────────────────
+        tipo: null, cat: null,
+        svc: null,
+        adds: [],       // IDs de adicionais selecionados
+        lavs: [],       // IDs de lavadores selecionados
+        criando: false, sucesso: false, ordemNum: null,
+
+        // ── Dados da API ───────────────────
+        servicos:   [],
+        adicionais: [],
+        lavadores:  [],
+        loadingServicos:  false,
+        loadingLavadores: false,
+
+        // ── Estáticos ──────────────────────
+        cats: [
+          {k:'HATCH',  l:'Hatch'},
+          {k:'SEDAN',  l:'Sedan'},
+          {k:'SUV',    l:'SUV'},
+          {k:'PICKUP', l:'Pickup'},
+          {k:'VAN',    l:'Van'},
+          {k:'UTILI',  l:'Utilitário'},
+        ],
+        coresCarro: [
+          {nome:'Branco',   hex:'#f1f5f9'},
+          {nome:'Preto',    hex:'#1e293b'},
+          {nome:'Prata',    hex:'#94a3b8'},
+          {nome:'Cinza',    hex:'#64748b'},
+          {nome:'Vermelho', hex:'#ef4444'},
+          {nome:'Azul',     hex:'#3b82f6'},
+          {nome:'Verde',    hex:'#10b981'},
+          {nome:'Amarelo',  hex:'#fbbf24'},
+          {nome:'Laranja',  hex:'#f97316'},
+          {nome:'Marrom',   hex:'#78350f'},
+          {nome:'Bege',     hex:'#d4b896'},
+          {nome:'Vinho',    hex:'#9f1239'},
+        ],
+
+        // ── Init ───────────────────────────
+        async init() {
+          if (!window.api.isAuthenticated()) {
+            window.location.href = '../login.html';
+            return;
+          }
+
+          // Carrega lavadores e adicionais em paralelo
+          await Promise.all([
+            this.loadLavadores(),
+            this.loadAdicionais(),
+          ]);
+
+          // Recarrega serviços ao mudar tipo ou categoria
+          this.$watch('tipo', () => {
+            if (this.tipo === 'MOTO') this.cat = null;
+            this.svc = null;
+            this.loadServicos();
+          });
+          this.$watch('cat', () => {
+            if (!this.tipo) return;
+            this.svc = null;
+            this.loadServicos();
+          });
+        },
+
+        // ── Busca de clientes ──────────────
+        buscar() {
+          clearTimeout(this._buscarTimer);
+          this._buscarTimer = setTimeout(() => this._buscarNow(), 320);
+        },
+
+        async _buscarNow() {
+          const q = this.q.trim();
+          if (q.length < 2) {
+            this.results = [];
+            this.showDrop = q.length > 0; // mantém dropdown aberto para mostrar "Novo cliente"
+            return;
+          }
+
+          this.buscando = true;
+          this.showDrop = true;
+
+          try {
+            const cleanPlate = q.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const isPlateSearch = cleanPlate.length >= 5;
+
+            if (isPlateSearch) {
+              try {
+                const r = await window.api.getVeiculoByPlaca(cleanPlate);
+                if (r?.veiculo && r?.cliente) {
+                  this.results = [{
+                    clienteId: r.cliente.id,
+                    veiculoId: r.veiculo.id,
+                    nome:      r.cliente.nome,
+                    modelo:    r.veiculo.modelo || '',
+                    placa:     r.veiculo.placa,
+                    telefone:  r.cliente.telefone || '',
+                    cor:       r.veiculo.cor || '',
+                  }];
+                } else {
+                  this.results = [];
                 }
+              } catch { this.results = []; }
+            } else {
+              const data = await window.api.getClientes(1, 5, q);
+              this.results = [];
+              for (const c of (data.clientes || [])) {
+                if (c.veiculos?.length > 0) {
+                  for (const v of c.veiculos) {
+                    this.results.push({
+                      clienteId: c.id,
+                      veiculoId: v.id,
+                      nome:      c.nome,
+                      modelo:    v.modelo || '',
+                      placa:     v.placa  || '',
+                      telefone:  c.telefone || '',
+                      cor:       v.cor || '',
+                    });
+                  }
+                } else {
+                  this.results.push({
+                    clienteId: c.id,
+                    veiculoId: null,
+                    nome:      c.nome,
+                    modelo:    '',
+                    placa:     '',
+                    telefone:  c.telefone || '',
+                    cor:       '',
+                  });
+                }
+              }
+            }
+          } catch { this.results = []; }
+          finally { this.buscando = false; }
+        },
+
+        pick(r) {
+          if (!r.veiculoId) {
+            // Cliente existe mas sem veículo → abrir form pré-preenchido
+            this._linkClienteId = r.clienteId;
+            this.formEdicao = false;
+            this.form = {
+              nome:     r.nome,
+              telefone: r.telefone,
+              cpf: '', modelo: '', placa: '', cor: '', ano: ''
             };
-        }
-    </script>
-    
+            this.formErros = { nome:false, modelo:false, placa:false };
+            this.showDrop = false;
+            this.q = '';
+            this.showForm = true;
+            return;
+          }
+          this.cliente = { ...r };
+          this.q = '';
+          this.showDrop = false;
+        },
 
+        abrirFormNovoCliente() {
+          this._linkClienteId = null;
+          this.formEdicao = false;
+          this.form = {
+            nome: this.q || '',
+            telefone: '', cpf: '', modelo: '', placa: '', cor: '', ano: ''
+          };
+          this.formErros = { nome:false, modelo:false, placa:false };
+          this.showDrop = false;
+          this.showForm = true;
+        },
 
+        abrirFormEdicao() {
+          this.formEdicao = true;
+          this.form = {
+            nome:     this.cliente?.nome     || '',
+            telefone: this.cliente?.telefone || '',
+            cpf:      this.cliente?.cpf      || '',
+            modelo:   this.cliente?.modelo   || '',
+            placa:    this.cliente?.placa    || '',
+            cor:      this.cliente?.cor      || '',
+            ano:      this.cliente?.ano      || '',
+          };
+          this.formErros = { nome:false, modelo:false, placa:false };
+          this.showForm = true;
+        },
 
+        confirmarCliente() {
+          this.formErros.nome   = !this.form.nome.trim();
+          this.formErros.modelo = !this.form.modelo.trim();
+          this.formErros.placa  = !this.form.placa.trim();
+          if (this.formErros.nome || this.formErros.modelo || this.formErros.placa) return;
+
+          const placaFmt = this.form.placa.toUpperCase();
+
+          if (this.formEdicao) {
+            // Editando cliente já selecionado
+            this.cliente = {
+              ...this.cliente,
+              nome:     this.form.nome.trim(),
+              modelo:   this.form.modelo.trim(),
+              placa:    placaFmt,
+              telefone: this.form.telefone,
+              cor:      this.form.cor,
+            };
+          } else if (this._linkClienteId) {
+            // Cliente existente + novo veículo
+            this.cliente = {
+              clienteId: this._linkClienteId,
+              veiculoId: null,
+              nome:      this.form.nome.trim(),
+              modelo:    this.form.modelo.trim(),
+              placa:     placaFmt,
+              telefone:  this.form.telefone,
+              cor:       this.form.cor,
+              isNew:     false,
+              novoVeiculo: {
+                placa:  placaFmt,
+                modelo: this.form.modelo.trim() || null,
+                cor:    this.form.cor || null,
+              }
+            };
+            this._linkClienteId = null;
+          } else {
+            // Completamente novo
+            this.cliente = {
+              clienteId: null,
+              veiculoId: null,
+              nome:      this.form.nome.trim(),
+              modelo:    this.form.modelo.trim(),
+              placa:     placaFmt,
+              telefone:  this.form.telefone,
+              cor:       this.form.cor,
+              cpf:       this.form.cpf,
+              isNew:     true,
+            };
+          }
+
+          this.q = '';
+          this.showForm = false;
+        },
+
+        maskPhone(e) {
+          let v = e.target.value.replace(/\D/g, '');
+          if (v.length > 11) v = v.slice(0, 11);
+          if (v.length >= 11) v = v.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
+          else if (v.length >= 7) v = v.replace(/^(\d{2})(\d{4})(\d+)$/, '($1) $2-$3');
+          else if (v.length >= 3) v = v.replace(/^(\d{2})(\d+)$/, '($1) $2');
+          this.form.telefone = v;
+        },
+
+        // ── Carregar dados da API ──────────
+        async loadServicos() {
+          if (!this.tipo) { this.servicos = []; return; }
+          this.loadingServicos = true;
+          try {
+            const data = await window.api.getServicos({
+              tipoVeiculo: this.tipo,
+              subtipoVeiculo: this.cat || undefined,
+            });
+            this.servicos = data.servicos || [];
+          } catch { this.servicos = []; }
+          finally { this.loadingServicos = false; }
+        },
+
+        async loadAdicionais() {
+          try {
+            const data = await window.api.getAdicionaisSimple();
+            this.adicionais = data.adicionais || [];
+          } catch { this.adicionais = []; }
+        },
+
+        async loadLavadores() {
+          this.loadingLavadores = true;
+          try {
+            const data = await window.api.getLavadoresSimple();
+            this.lavadores = data.lavadores || [];
+          } catch { this.lavadores = []; }
+          finally { this.loadingLavadores = false; }
+        },
+
+        // ── Seleção ────────────────────────
+        toggleAdd(a) {
+          const i = this.adds.indexOf(a.id);
+          if (i >= 0) this.adds.splice(i, 1);
+          else this.adds.push(a.id);
+        },
+
+        toggleLav(l) {
+          const i = this.lavs.indexOf(l.id);
+          if (i >= 0) this.lavs.splice(i, 1);
+          else this.lavs.push(l.id);
+        },
+
+        // ── Gradientes lavadores ───────────
+        lavGrad(i)   { return GRADS[i % GRADS.length].grad; },
+        lavShadow(i) { return GRADS[i % GRADS.length].shadow; },
+        lavColor(i)  { return GRADS[i % GRADS.length].color; },
+
+        // ── Totais ─────────────────────────
+        total() {
+          let t = this.svc?.preco || 0;
+          for (const id of this.adds) {
+            const a = this.adicionais.find(a => a.id === id);
+            if (a) t += Number(a.preco) || 0;
+          }
+          return t;
+        },
+
+        descItens() {
+          const p = [];
+          if (this.svc) p.push(this.svc.nome);
+          if (this.adds.length) p.push(this.adds.length + ' adicional(is)');
+          return p.join(' + ');
+        },
+
+        podecriar() {
+          return this.tipo && this.svc && this.lavs.length > 0 &&
+            (this.tipo !== 'CARRO' || this.cat);
+        },
+
+        // ── Criar ordem ───────────────────
+        async criar() {
+          if (!this.podecriar() || this.criando) return;
+          this.criando = true;
+
+          // Monta payload antes do try para poder reusar no catch (forçar criação)
+          const precoPorLav = Math.round((this.svc.preco / this.lavs.length) * 100) / 100;
+          const lavadoresComissao = this.lavs.map(id => ({
+            id,
+            ganho: precoPorLav,
+            ganhoCentavos: Math.round(precoPorLav * 100),
+          }));
+
+          const itens = [
+            {
+              tipo: 'SERVICO',
+              itemId:    this.svc.id,
+              nome:      this.svc.nome,
+              preco:     Number(this.svc.preco),
+              quantidade: 1,
+              lavadores: lavadoresComissao,
+            },
+            ...this.adds.map(id => {
+              const a = this.adicionais.find(x => x.id === id);
+              return {
+                tipo: 'ADICIONAL',
+                itemId:    a.id,
+                nome:      a.nome,
+                preco:     Number(a.preco),
+                quantidade: 1,
+              };
+            }),
+          ];
+
+          const payload = {
+            clienteId:    this.cliente?.clienteId || null,
+            veiculoId:    this.cliente?.veiculoId || null,
+            lavadorId:    this.lavs[0] || null,
+            lavadorIds:   [...this.lavs],
+            itens,
+            observacoes:  '',
+            forcarCriacao: false,
+          };
+
+          // Novo cliente completo
+          if (this.cliente?.isNew) {
+            payload.clienteId = null;
+            payload.veiculoId = null;
+            payload.novoCliente = {
+              nome:     this.cliente.nome,
+              telefone: this.cliente.telefone || null,
+            };
+            payload.novoVeiculo = {
+              placa:  this.cliente.placa,
+              modelo: this.cliente.modelo || null,
+              cor:    this.cliente.cor    || null,
+            };
+          }
+
+          // Cliente existente, novo veículo
+          if (this.cliente?.novoVeiculo) {
+            payload.veiculoId = null;
+            payload.novoVeiculo = this.cliente.novoVeiculo;
+          }
+
+          try {
+            const response = await window.api.createOrdem(payload);
+            this.ordemNum = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+            this.sucesso = true;
+
+          } catch (error) {
+            if (error.code === 'ACTIVE_ORDER_EXISTS') {
+              if (confirm('Já existe uma ordem ativa para este veículo. Deseja criar mesmo assim?')) {
+                try {
+                  const response = await window.api.createOrdem({ ...payload, forcarCriacao: true });
+                  this.ordemNum = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                  this.sucesso = true;
+                } catch (e2) {
+                  showToast(e2?.details || e2?.error || 'Erro ao criar ordem', 'error');
+                }
+              }
+            } else {
+              showToast(error?.details || error?.error || 'Erro ao criar ordem', 'error');
+            }
+          } finally {
+            this.criando = false;
+          }
+        },
+
+        reset() {
+          Object.assign(this, {
+            q: '', showDrop: false, results: [], buscando: false,
+            cliente: null, _linkClienteId: null,
+            showForm: false, formEdicao: false,
+            tipo: null, cat: null,
+            svc: null, adds: [], lavs: [],
+            criando: false, sucesso: false, ordemNum: null,
+            servicos: [],
+          });
+        },
+
+        // ── OCR câmera ────────────────────
+        onCamera() {
+          document.getElementById('ocrInput').click();
+        },
+
+        async handleOCR(e) {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          e.target.value = '';
+
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const base64 = ev.target.result.split(',')[1];
+            try {
+              const data = await window.api.reconhecerPlaca(base64);
+              if (data?.placa) {
+                this.form.placa = data.placa;
+                this.abrirFormNovoCliente();
+                this.form.placa = data.placa; // re-set após reset do form
+              } else {
+                showToast('Nenhuma placa detectada. Tente outra foto.', 'error');
+              }
+            } catch {
+              showToast('Erro ao reconhecer a placa.', 'error');
+            }
+          };
+          reader.readAsDataURL(file);
+        },
+      };
+    }
+
+    // ── Toast global ─────────────────────────
+    function showToast(message, type = 'success') {
+      const old = document.getElementById('_toast');
+      if (old) old.remove();
+      const t = document.createElement('div');
+      t.id = '_toast';
+      t.className = `toast ${type}`;
+      const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+      t.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+      document.body.appendChild(t);
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+    }
+  </script>
 </body>
 </html>
-
-
-
-
