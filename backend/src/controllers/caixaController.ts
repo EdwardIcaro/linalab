@@ -312,7 +312,12 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
         return res.status(400).json({ error: 'A descrição é obrigatória para este tipo de saída.' });
     }
 
-    const dataRegistro = dataRetroativo ? new Date(dataRetroativo) : new Date();
+    // Interpreta data-only como meio-dia UTC para evitar cair no turno do dia anterior
+    // Ex: "2026-04-13" → new Date("2026-04-13") = T00:00:00Z (antes das 07:00 do turno) ← bug
+    //                   → new Date("2026-04-13T12:00:00") = T12:00:00Z ← dentro do turno
+    const dataRegistro = dataRetroativo
+        ? new Date(`${String(dataRetroativo).slice(0, 10)}T12:00:00`)
+        : new Date();
 
     try {
         const registro = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -889,7 +894,7 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
             lavadorId: tipo === 'Adiantamento' ? (lavadorId || null) : null,
         };
 
-        if (dataRetroativo) updateData.data = new Date(dataRetroativo);
+        if (dataRetroativo) updateData.data = new Date(`${String(dataRetroativo).slice(0, 10)}T12:00:00`);
         if (comprovante !== undefined) updateData.comprovante = comprovante || null;
 
         const registroAtualizado = await prisma.caixaRegistro.update({

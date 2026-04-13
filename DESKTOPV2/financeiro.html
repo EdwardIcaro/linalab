@@ -2636,7 +2636,7 @@
                 descricao: '',
                 lavadorId: '',
                 fornecedorNome: '',
-                dataRetroativo: new Date().toISOString().slice(0, 10),
+                dataRetroativo: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
                 comprovante: null,
                 comprovanteNome: '',
                 comprovantePreview: null,
@@ -3189,7 +3189,9 @@
                     modalState.descricao = tx.descricao.replace(/\[(Despesa|Adiantamento|Outro)\]\s*/, '').replace(/^Adiantamento para .+$/, '');
                     modalState.lavadorId = tx.lavadorId || '';
                     modalState.fornecedorNome = tx.fornecedor?.nome || tx.lavador?.nome || '';
-                    modalState.dataRetroativo = tx.data ? tx.data.slice(0, 10) : new Date().toISOString().slice(0, 10);
+                    modalState.dataRetroativo = tx.data
+                        ? (() => { const d = new Date(tx.data); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })()
+                        : (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
                     if (tx.comprovante) {
                         modalState.comprovante = tx.comprovante;
                         modalState.comprovantePreview = tx.comprovante;
