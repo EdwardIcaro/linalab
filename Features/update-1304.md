@@ -1,35 +1,63 @@
-# Update 13/04/2026
+# Update 13–14/04/2026
 
-## Resumo do dia
-Sessão de correções de bugs, melhorias de UX e novos recursos no sistema Lina X.
+## Resumo
+Sessão intensa de correções de bugs, melhorias de UX e novos recursos no sistema Lina X. Abrangeu backend (TypeScript/Prisma), frontend do funcionário (HTML/JS vanilla) e WhatsApp bot.
 
 ---
 
 ## 1. Sistema de Desconto no Pagamento (funcionário)
 
-**Arquivo:** `DESKTOPV2/funcionario/ordens-funcionario.html`
+**Arquivos:** `ordens-funcionario.html`, `schema.prisma`, `ordemController.ts`, `usuarioController.ts`
 
-- Modal de pagamento exibe seção de desconto somente para usuários com `maxDesconto > 0`
-- `maxDesconto` é carregado via `getMeuPerfil` ao abrir o modal
+- Modal de pagamento exibe desconto **somente** para usuários com `maxDesconto > 0` (carregado via `getMeuPerfil`)
 - Dois inputs sincronizados: R$ e % (alterar um atualiza o outro em tempo real)
 - Backend valida o limite: subaccount não pode ultrapassar sua porcentagem configurada
-- OWNER (sem `subaccountId` no JWT) não tem restrição de desconto
-- Pay-summary exibe o total original tachado quando desconto está aplicado
-- `desconto` é enviado no payload para `finalizarOrdem`
+- OWNER sem `subaccountId` no JWT não tem restrição de desconto
+- Pay-summary exibe o total original tachado quando desconto está ativo
+- Campo `desconto Float @default(0)` adicionado ao model `OrdemServico` no schema
+- `finalizarOrdem` valida, calcula `valorFinal` e salva no banco; comissão calculada sobre `valorFinal`
 
-**Arquivo:** `backend/prisma/schema.prisma`
-- Campo `desconto Float @default(0)` adicionado ao model `OrdemServico`
-
-**Arquivo:** `backend/src/controllers/ordemController.ts`
-- `finalizarOrdem` extrai e valida `desconto`, calcula `valorFinal`, salva no banco
-- Comissão é calculada sobre `valorFinal` (não sobre valorTotal original)
-
-**Arquivo:** `backend/src/controllers/usuarioController.ts`
-- `getMeuPerfil` agora inclui `maxDesconto` na resposta
+**SQL executado no Neon:**
+```sql
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "desconto" DOUBLE PRECISION DEFAULT 0;
+```
 
 ---
 
-## 2. Correção de Pendências no Financeiro
+## 2. Três Ajustes de UX no Modal de Pagamento (funcionário)
+
+**Arquivo:** `DESKTOPV2/funcionario/ordens-funcionario.html`
+
+### 2a. Desconto Colapsível
+- Desconto removido do topo (onde ficava proeminente) e movido para botão colapsível no rodapé do modal
+- Botão fica **verde** com valor aplicado quando desconto está ativo; fecha o painel automaticamente após aplicar
+- Fechar o modal reseta o painel e os inputs
+
+### 2b. PIX QR sob Demanda
+- PIX era gerado automaticamente ao ser adicionado — agora não gera mais
+- Ao adicionar PIX na lista de pagamentos, aparece botão **"QR"** verde no item
+- Clicar abre bottom-sheet modal com loading → QR Code + botão "Copiar código PIX"
+
+### 2c. Editar Ordem Inline
+- Botão "Editar" não redireciona mais para `nova-ordem-funcionario.html`
+- Abre bottom-sheet modal com:
+  - Textarea de observações (pré-preenchida)
+  - Chips clicáveis de todos os lavadores da empresa (selecionados = vinculados à ordem)
+- Salvar chama `updateOrdem` com `{ observacoes, lavadorIds }` e recarrega o detalhe
+
+---
+
+## 3. Modelo do Veículo nos Cards de Ordem
+
+**Arquivo:** `DESKTOPV2/funcionario/ordens-funcionario.html`
+
+- Cards de ordem agora exibem badge cinza com o modelo do veículo (ex: "Gol") antes da placa
+- Campo `modelo` já era retornado pela API — só não estava sendo renderizado
+- CSS: classe `.card-model` com `background: var(--bg2)` e `border: 1px solid var(--border)`
+
+---
+
+## 4. Correção de Pendências no Financeiro
 
 **Arquivo:** `DESKTOPV2/financeiro.html`
 
@@ -38,54 +66,117 @@ Sessão de correções de bugs, melhorias de UX e novos recursos no sistema Lina
 
 ---
 
-## 3. Fluxo Conversacional de Saídas no WhatsApp
+## 5. Fluxo Conversacional de Saídas no WhatsApp
 
 **Arquivo:** `backend/src/services/whatsappCommandHandler.ts`
 
-- Substituiu o modelo "tudo em uma mensagem + confirmar" por formulário conversacional por etapas
+- Substituiu "tudo em uma mensagem + confirmar" por formulário conversacional por etapas
 - Etapas coletadas: `descrição → forma de pagamento → fornecedor → confirmação`
-- Groq extrai o que for possível da mensagem inicial (valor obrigatório; demais campos, opcionais)
-- Forma de pagamento aceita número (1/2/3/4) ou texto livre ("dinheiro", "pix", "cartão", "nfe")
-- Fornecedor: cria ou reutiliza registro existente no banco (mesma lógica do financeiro)
+- Groq extrai o que for possível da mensagem inicial; campos faltantes são pedidos um a um
+- Forma de pagamento aceita número (1/2/3/4) ou texto livre ("pix", "dinheiro", etc.)
+- Fornecedor: cria ou reutiliza registro existente no banco
 - Cancelamento com "não"/"cancelar" funciona em qualquer etapa
-- Sessão estendida para 10 minutos de inatividade (era 5 min)
-- Categoria suporta: `Despesa | Adiantamento | Outro` (detectado via Groq)
+- Sessão estendida para 10 minutos de inatividade
 
 ---
 
-## 4. Correção de Timezone em Lançamentos de Despesa
+## 6. Correção de Timezone em Lançamentos de Despesa
 
 **Arquivo:** `backend/src/controllers/caixaController.ts`
 
-- Bug: `new Date("2026-04-13")` criava `T00:00:00Z` (meia-noite UTC), antes do turno das 07:00
+- Bug: `new Date("2026-04-13")` gerava `T00:00:00Z` (meia-noite UTC), antes do turno das 07:00, causando despesas aparecerem no dia anterior
 - Fix: data-only agora interpretada como `T12:00:00` (meio-dia UTC), dentro do turno correto
 - Corrigido em `createSaida` e `editSaida`
 
 **Arquivo:** `DESKTOPV2/financeiro.html`
-
-- Valor inicial do campo de data usava `toISOString().slice(0,10)` (UTC), trocado por data local do browser
-- Edit modal: data do registro exibida em horário local (não UTC slice)
+- Campo de data inicializava com `toISOString().slice(0,10)` (UTC) → trocado por data local do browser
+- Modal de edição: data exibida em horário local
 
 ---
 
-## 5. Modal "Trocar de Empresa / Sair" no Botão Sair
+## 7. Modal "Trocar de Empresa / Sair"
 
 **Arquivo:** `DESKTOPV2/nav-menu-helper.js`
 
-- Botão "Sair" agora abre um mini-modal com duas opções:
-  - **Trocar de Empresa** → limpa `empresaId`/`empresaNome` do localStorage e vai para `selecionar-empresa.html`
+- Botão "Sair" abre mini-modal com duas opções:
+  - **Trocar de Empresa** → limpa `empresaId`/`empresaNome` do localStorage → redireciona para `selecionar-empresa.html`
   - **Sair do Sistema** → `localStorage.clear()` + redirect para `login.html`
 - Modal injetado dinamicamente no DOM (sem HTML extra em cada página)
-- Token scoped é mantido na troca de empresa (userAuthMiddleware aceita `decoded.id` do token scoped)
 
 **Arquivo:** `DESKTOPV2/index.html`
-- `logout()` global atualizado para usar `window.showSairModal()` quando disponível
+- Função `logout()` atualizada para chamar `window.showSairModal()` quando disponível
 
 ---
 
-## SQL para Executar no Neon (produção)
+## 8. Correção de Build no Railway (TypeScript)
 
-```sql
--- Desconto em OrdemServico
-ALTER TABLE "OrdemServico" ADD COLUMN IF NOT EXISTS "desconto" DOUBLE PRECISION DEFAULT 0;
-```
+**Arquivo:** `backend/package.json`
+
+- Build falhava com `TS2322: Type 'string | string[]' not assignable to 'string'` em `ordemController.ts`
+- Fix: adicionado cast `as string` no endpoint `gerarPixQr` (linha 1702)
+- `prisma generate` adicionado ao script de build (`"build": "rm -rf dist && prisma generate && tsc"`)
+  - Sem isso, o Prisma Client em cache no Railway não refletia mudanças de schema (campo `desconto` faltando)
+
+---
+
+## 9. Correção de Desconexão do WhatsApp após Deploy
+
+**Arquivo:** `backend/src/services/baileyService.ts`
+
+- Bug: `authState` era limpo no banco sempre que a conexão caia (inclusive por reinício do servidor)
+- Fix: `authState: null` agora só é salvo em caso de **logout real** (erro 401 após estar conectado)
+- Em falhas de rede ou reinício, `authState` é preservado — reconecta automaticamente
+- `restoreActiveSessions` busca instâncias com `authState IS NOT NULL` (não apenas `status: 'connected'`)
+
+**Arquivo:** `backend/src/index.ts`
+- Adicionado delay de 5 segundos antes de `restoreActiveSessions()` para rede estabilizar após cold start
+
+---
+
+## 10. Campo Modelo na Fila de Entrada
+
+**Arquivo:** `DESKTOPV2/funcionario/fila-entrada-funcionario.html`
+
+- Quando placa não encontrada no banco (estado `manual`), exibe input de modelo com borda laranja
+- Criação bloqueada enquanto modelo estiver vazio (linha manual)
+- `_buildPayload` usa `row.modelo` no `novoVeiculo` em vez do texto genérico `'Veículo'` hardcoded
+- Veículo encontrado pela placa: `row.modelo` preenchido automaticamente da API
+
+---
+
+## 11. Nome do Cliente Opcional em Todo o Sistema
+
+**Arquivo:** `backend/src/utils/validate.ts`
+- Removida validação obrigatória de `novoCliente.nome`
+- Quando vazio, `sanitizedData` define `nome: 'N/A'`
+
+**Arquivo:** `backend/src/controllers/ordemController.ts`
+- `nomeCliente = novoCliente.nome?.trim() || 'N/A'` antes de criar/buscar o cliente
+- Condição `if (!finalClienteId && novoCliente && novoCliente.nome)` → `if (!finalClienteId && novoCliente)`
+
+**Arquivo:** `DESKTOPV2/funcionario/fila-entrada-funcionario.html`
+- Campo nome com placeholder `"Nome (opcional — N/A se vazio)"`; payload envia string vazia
+
+---
+
+## 12. Redesign do CRM de Clientes (funcionário)
+
+**Arquivo:** `DESKTOPV2/funcionario/clientes-funcionario.html`
+
+Reescrito do zero. Principais mudanças:
+
+| Antes | Depois |
+|---|---|
+| Tabela HTML (ilegível no mobile) | Grid de cards responsivo |
+| CSS hardcoded `#0066cc` | Mesmo tema do sistema (`--navy`, `--blue-d`, etc.) |
+| 2 modais centralizados separados | Drawer bottom-sheet unificado (detalhe + edição) |
+| Código de renderização duplicado na busca | Uma função `clienteCard()` compartilhada |
+| Sem stats no card | Visitas / Veículos / Total gasto por card |
+| Avatar genérico | Inicial do nome como avatar colorido |
+| Nome obrigatório no formulário | Opcional com hint explicativo |
+| Botão WhatsApp perdido na tabela | Botão contextual no card e no detalhe |
+
+- Cards exibem: avatar com inicial, nome, telefone, tags de placa/modelo, estatísticas, ações rápidas
+- Busca unificada por nome, telefone, placa ou modelo
+- Formulário com seções "Dados pessoais" e "Veículos" (adicionar/remover dinamicamente)
+- Confirmação de exclusão via `confirm()` antes de deletar
