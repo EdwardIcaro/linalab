@@ -500,6 +500,68 @@
       filter: brightness(0.95);
     }
 
+    /* ===== CAIXA MODAL ===== */
+    .caixa-modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .22s;
+    }
+    .caixa-modal-overlay.open {
+      opacity: 1; pointer-events: all;
+    }
+    .caixa-modal {
+      background: #fff;
+      border-radius: 22px 22px 0 0;
+      padding: 20px 20px 28px;
+      width: 100%; max-width: 480px;
+      transform: translateY(100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .caixa-modal-overlay.open .caixa-modal {
+      transform: translateY(0);
+    }
+    .caixa-modal-handle {
+      width: 36px; height: 4px;
+      background: #e5e7eb; border-radius: 99px;
+      margin: 0 auto 16px;
+    }
+    .caixa-modal-title {
+      font-size: 17px; font-weight: 800; color: var(--text);
+      margin-bottom: 4px; display: flex; align-items: center; gap: 9px;
+    }
+    .caixa-modal-sub {
+      font-size: 12px; color: var(--muted); margin-bottom: 20px;
+    }
+    .caixa-field { margin-bottom: 14px; }
+    .caixa-field label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .4px; margin-bottom: 5px;
+    }
+    .caixa-field input {
+      width: 100%; padding: 11px 13px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 15px; font-family: inherit; color: var(--text);
+      transition: border-color .15s;
+    }
+    .caixa-field input:focus { outline: none; border-color: #0066cc; }
+    .caixa-btns {
+      display: flex; gap: 10px; margin-top: 20px;
+    }
+    .caixa-btn {
+      flex: 1; padding: 13px;
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .caixa-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .caixa-btn-cancel { background: #f3f4f6; color: #374151; }
+    .caixa-btn-confirm { color: #fff; }
+    .caixa-btn-confirm.open-btn { background: linear-gradient(135deg,#059669,#047857); }
+    .caixa-btn-confirm.close-btn { background: linear-gradient(135deg,#f59e0b,#d97706); }
+
     /* ===== CONFIRM DIALOG ===== */
     .confirm-dialog {
       position: fixed; inset: 0; z-index: 2000;
@@ -620,6 +682,51 @@
     <i class="fas fa-bolt"></i>
   </a>
   <div class="fab-fila-label" id="fabFilaLabel">Fila</div>
+
+  <!-- MODAL: Abrir Caixa -->
+  <div class="caixa-modal-overlay" id="modalAbrirCaixa" onclick="if(event.target===this)closeCaixaModal('modalAbrirCaixa')">
+    <div class="caixa-modal">
+      <div class="caixa-modal-handle"></div>
+      <div class="caixa-modal-title">
+        <i class="fas fa-lock-open" style="color:#059669"></i>
+        Abrir Caixa
+      </div>
+      <div class="caixa-modal-sub">Registre o troco inicial e confirme o responsável.</div>
+      <div class="caixa-field">
+        <label>Troco inicial (R$)</label>
+        <input type="number" id="abrirValorInicial" placeholder="0,00" min="0" step="0.01">
+      </div>
+      <div class="caixa-field">
+        <label>Responsável</label>
+        <input type="text" id="abrirResponsavel" placeholder="Nome do funcionário">
+      </div>
+      <div class="caixa-btns">
+        <button class="caixa-btn caixa-btn-cancel" onclick="closeCaixaModal('modalAbrirCaixa')">Cancelar</button>
+        <button class="caixa-btn caixa-btn-confirm open-btn" id="btnConfirmarAbertura" onclick="confirmarAbrirCaixa()">
+          <i class="fas fa-door-open"></i> Abrir Caixa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Fechar Caixa -->
+  <div class="caixa-modal-overlay" id="modalFecharCaixa" onclick="if(event.target===this)closeCaixaModal('modalFecharCaixa')">
+    <div class="caixa-modal">
+      <div class="caixa-modal-handle"></div>
+      <div class="caixa-modal-title">
+        <i class="fas fa-lock" style="color:#d97706"></i>
+        Fechar Caixa
+      </div>
+      <div class="caixa-modal-sub">Informe o valor físico contado em cada método.</div>
+      <div id="fecharCampos"></div>
+      <div class="caixa-btns">
+        <button class="caixa-btn caixa-btn-cancel" onclick="closeCaixaModal('modalFecharCaixa')">Cancelar</button>
+        <button class="caixa-btn caixa-btn-confirm close-btn" id="btnConfirmarFechamento" onclick="confirmarFecharCaixa()">
+          <i class="fas fa-lock"></i> Fechar Caixa
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="api.js"></script>
   <script>
@@ -842,8 +949,109 @@
     }
 
     function handleCaixaClick() {
-      // Se tiver financeiro disponível, vai para lá para abrir/fechar formalmente
-      window.location.href = 'funcionario/financeiro-funcionario.html';
+      if (!caixaStatus) return;
+
+      if (caixaStatus.isOpen) {
+        // Caixa aberto → abre modal de fechamento
+        openFecharCaixaModal();
+      } else {
+        // Não aberto ou fechado → abre modal de abertura
+        openAbrirCaixaModal();
+      }
+    }
+
+    function openAbrirCaixaModal() {
+      // Pré-preenche nome do responsável com o usuário logado
+      const nome = localStorage.getItem('usuarioNome') || '';
+      document.getElementById('abrirResponsavel').value = caixaStatus?.currentUserNome || nome;
+      document.getElementById('abrirValorInicial').value = '';
+      document.getElementById('modalAbrirCaixa').classList.add('open');
+    }
+
+    function openFecharCaixaModal() {
+      const config = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true };
+      const labels = { DINHEIRO: 'Dinheiro', PIX: 'PIX', CARTAO: 'Cartão', NFE: 'NFe' };
+
+      const campos = Object.entries(labels)
+        .filter(([k]) => config[k] !== false)
+        .map(([k, label]) => `
+          <div class="caixa-field">
+            <label>${label}</label>
+            <input type="number" id="fechar_${k}" placeholder="0,00" min="0" step="0.01">
+          </div>
+        `).join('');
+
+      document.getElementById('fecharCampos').innerHTML = campos;
+      document.getElementById('modalFecharCaixa').classList.add('open');
+    }
+
+    function closeCaixaModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    async function confirmarAbrirCaixa() {
+      const btn = document.getElementById('btnConfirmarAbertura');
+      const valorInicial = parseFloat(document.getElementById('abrirValorInicial').value) || 0;
+      const abertoPor   = document.getElementById('abrirResponsavel').value.trim() ||
+                          localStorage.getItem('usuarioNome') || 'Funcionário';
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
+
+      try {
+        await window.api.abrirCaixa({ valorInicial, abertoPor });
+        closeCaixaModal('modalAbrirCaixa');
+        // Atualiza o botão hero
+        caixaStatus = { ...caixaStatus, isOpen: true, notOpened: false };
+        const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+        loadCaixaStatus(permissoes);
+        showToastIndex('Caixa aberto com sucesso!', 'green');
+      } catch (err) {
+        showToastIndex(err?.error || 'Erro ao abrir o caixa.', 'red');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-door-open"></i> Abrir Caixa';
+      }
+    }
+
+    async function confirmarFecharCaixa() {
+      const btn = document.getElementById('btnConfirmarFechamento');
+      const config = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true };
+      const labels = { DINHEIRO: true, PIX: true, CARTAO: true, NFE: true };
+
+      const valoresDigitados = {};
+      Object.keys(labels).forEach(k => {
+        if (config[k] !== false) {
+          const el = document.getElementById(`fechar_${k}`);
+          valoresDigitados[k] = parseFloat(el?.value) || 0;
+        }
+      });
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fechando...';
+
+      try {
+        await window.api.createFechamento({ valoresDigitados });
+        closeCaixaModal('modalFecharCaixa');
+        caixaStatus = { ...caixaStatus, isOpen: false, notOpened: false };
+        const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+        loadCaixaStatus(permissoes);
+        showToastIndex('Caixa fechado com sucesso!', 'green');
+      } catch (err) {
+        showToastIndex(err?.error || 'Erro ao fechar o caixa.', 'red');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Fechar Caixa';
+      }
+    }
+
+    function showToastIndex(msg, color) {
+      const t = document.createElement('div');
+      t.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+        background:${color === 'green' ? '#059669' : '#ef4444'};color:#fff;
+        padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;
+        z-index:2000;white-space:nowrap;animation:fadeIn .2s ease`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
     }
 
     function showConfirm(title, message, onConfirm) {
