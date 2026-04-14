@@ -681,13 +681,22 @@
                                     <span class="spinner"></span>
                                     <span>Buscando...</span>
                                 </div>
-                                <div x-show="row.state === 'manual'">
+                                <div x-show="row.state === 'manual'" style="display:flex;flex-direction:column;gap:4px">
                                     <input
                                         class="cell-input"
                                         type="text"
-                                        placeholder="Nome (opcional)"
+                                        placeholder="Nome cliente (opcional)"
                                         x-model="row.clienteNome"
                                         style="font-size:12px"
+                                        :disabled="isCreating"
+                                    >
+                                    <input
+                                        class="cell-input"
+                                        type="text"
+                                        placeholder="Modelo do veículo *"
+                                        x-model="row.modelo"
+                                        style="font-size:12px;border-color: row.modelo ? '' : 'var(--warning, #f59e0b)'"
+                                        :style="!row.modelo ? 'border-color:#f59e0b' : ''"
                                         :disabled="isCreating"
                                     >
                                 </div>
@@ -882,6 +891,7 @@
                 veiculoDesc: '',
                 tipoVeiculo: 'CARRO',
                 categoriaVeiculo: 'HATCH',
+                modelo: '',
                 servicoId: '',
                 lavadorId: '',
                 ordemId: null,
@@ -907,7 +917,8 @@
 
                 get rowsReady() {
                     return this.rows.filter(r =>
-                        (r.state === 'found' || r.state === 'manual') && r.servicoId
+                        (r.state === 'found' || r.state === 'manual') && r.servicoId &&
+                        (r.state === 'found' || r.modelo?.trim())
                     ).length;
                 },
                 get rowsDone()  { return this.rows.filter(r => r.state === 'done').length; },
@@ -976,6 +987,7 @@
                                 clienteId: data.clienteId || null,
                                 clienteNome: data.cliente?.nome || '—',
                                 veiculoDesc: `${data.modelo || ''} ${data.cor ? '· '+data.cor : ''}`.trim() || placa,
+                                modelo: data.modelo || '',
                                 tipoVeiculo: data.tipo || row.tipoVeiculo,
                                 categoriaVeiculo: data.categoria || row.categoriaVeiculo,
                             });
@@ -1035,9 +1047,10 @@
 
                 async criarOrdens() {
                     const prontas = this.rows.filter(r =>
-                        (r.state === 'found' || r.state === 'manual') && r.servicoId
+                        (r.state === 'found' || r.state === 'manual') && r.servicoId &&
+                        (r.state === 'found' || r.modelo?.trim())
                     );
-                    if (prontas.length === 0) { showToast('Nenhuma linha pronta', 'error'); return; }
+                    if (prontas.length === 0) { showToast('Nenhuma linha pronta. Preencha o serviço e o modelo do veículo.', 'error'); return; }
 
                     this.isCreating = true;
                     this.progressDone = 0;
@@ -1136,7 +1149,7 @@
                         payload.novoCliente = { nome: `Avulso ${placa}` };
                     } else {
                         payload.novoCliente = { nome: row.clienteNome?.trim() || `Avulso ${placa}` };
-                        payload.novoVeiculo = { placa, modelo: 'Veículo' };
+                        payload.novoVeiculo = { placa, modelo: row.modelo?.trim() || placa };
                     }
                     return payload;
                 },
