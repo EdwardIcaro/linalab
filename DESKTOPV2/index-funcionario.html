@@ -500,67 +500,131 @@
       filter: brightness(0.95);
     }
 
-    /* ===== CAIXA MODAL ===== */
+    /* ===== CAIXA MODALS ===== */
     .caixa-modal-overlay {
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,.5);
-      display: flex; align-items: flex-end; justify-content: center;
-      opacity: 0; pointer-events: none;
-      transition: opacity .22s;
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
-    .caixa-modal-overlay.open {
-      opacity: 1; pointer-events: all;
+    .caixa-modal-overlay.active { display: flex; }
+
+    .caixa-modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     }
-    .caixa-modal {
-      background: #fff;
-      border-radius: 22px 22px 0 0;
-      padding: 20px 20px 28px;
-      width: 100%; max-width: 480px;
-      transform: translateY(100%);
-      transition: transform .28s cubic-bezier(.4,0,.2,1);
+
+    .caixa-modal-content.wide { max-width: 560px; }
+
+    .caixa-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
     }
-    .caixa-modal-overlay.open .caixa-modal {
-      transform: translateY(0);
+    .caixa-modal-header h2 { margin: 0; font-size: 18px; }
+    .caixa-modal-close {
+      background: none; border: none;
+      font-size: 24px; cursor: pointer; color: #666;
     }
-    .caixa-modal-handle {
-      width: 36px; height: 4px;
-      background: #e5e7eb; border-radius: 99px;
-      margin: 0 auto 16px;
+
+    .caixa-form-group { margin-bottom: 16px; }
+    .caixa-form-group label {
+      display: block; font-weight: 600;
+      margin-bottom: 6px; font-size: 14px;
     }
-    .caixa-modal-title {
-      font-size: 17px; font-weight: 800; color: var(--text);
-      margin-bottom: 4px; display: flex; align-items: center; gap: 9px;
+    .caixa-form-group input {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px; font-size: 14px;
+      font-family: inherit; box-sizing: border-box;
     }
-    .caixa-modal-sub {
-      font-size: 12px; color: var(--muted); margin-bottom: 20px;
+    .caixa-form-group input:focus {
+      outline: none; border-color: #0066cc;
     }
-    .caixa-field { margin-bottom: 14px; }
-    .caixa-field label {
-      display: block; font-size: 11px; font-weight: 700;
-      color: var(--muted); text-transform: uppercase;
-      letter-spacing: .4px; margin-bottom: 5px;
+
+    .caixa-modal-btns {
+      display: flex; gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
     }
-    .caixa-field input {
-      width: 100%; padding: 11px 13px;
-      border: 1.5px solid var(--border); border-radius: 10px;
-      font-size: 15px; font-family: inherit; color: var(--text);
-      transition: border-color .15s;
+    .caixa-btn-cancel, .caixa-btn-submit, .caixa-btn-danger {
+      padding: 10px 20px; border-radius: 6px;
+      border: none; cursor: pointer;
+      font-weight: 600; transition: all 0.2s;
     }
-    .caixa-field input:focus { outline: none; border-color: #0066cc; }
-    .caixa-btns {
-      display: flex; gap: 10px; margin-top: 20px;
-    }
-    .caixa-btn {
-      flex: 1; padding: 13px;
-      border: none; border-radius: 12px;
-      font-size: 14px; font-weight: 700;
-      cursor: pointer; transition: opacity .15s;
-    }
-    .caixa-btn:disabled { opacity: .5; cursor: not-allowed; }
     .caixa-btn-cancel { background: #f3f4f6; color: #374151; }
-    .caixa-btn-confirm { color: #fff; }
-    .caixa-btn-confirm.open-btn { background: linear-gradient(135deg,#059669,#047857); }
-    .caixa-btn-confirm.close-btn { background: linear-gradient(135deg,#f59e0b,#d97706); }
+    .caixa-btn-cancel:hover { background: #e0e0e0; }
+    .caixa-btn-submit { background: #0066cc; color: white; }
+    .caixa-btn-submit:hover { background: #0052a3; }
+    .caixa-btn-danger { background: #dc2626; color: white; }
+    .caixa-btn-danger:hover { background: #b91c1c; }
+    .caixa-btn-cancel:disabled,
+    .caixa-btn-submit:disabled,
+    .caixa-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Grid de métodos no fechamento */
+    .caixa-fech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .caixa-fech-item {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .caixa-fech-item .label {
+      font-size: 13px; font-weight: 600;
+      color: #555; margin-bottom: 8px;
+    }
+    .caixa-fech-item input {
+      width: 100%; padding: 9px;
+      border: 1px solid var(--border);
+      border-radius: 6px; font-size: 16px;
+      font-weight: 700; text-align: center;
+      color: #111; box-sizing: border-box;
+    }
+
+    /* Tabela de relatório */
+    .caixa-rel-table {
+      width: 100%; border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .caixa-rel-table th {
+      text-align: left; padding: 8px;
+      color: #666; font-size: 13px;
+      border-bottom: 2px solid var(--border);
+    }
+    .caixa-rel-table th:not(:first-child) { text-align: right; }
+    .caixa-rel-table td {
+      padding: 10px 8px; border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .caixa-rel-table td:not(:first-child) { text-align: right; }
+    .caixa-rel-table tr.divergente { background: #fee2e2; }
+    .caixa-rel-diff-ok { color: #059669; font-weight: 700; }
+    .caixa-rel-diff-err { color: #dc2626; font-weight: 700; }
+    .caixa-status-badge {
+      display: inline-block; padding: 8px 24px;
+      border-radius: 20px; font-weight: 700; font-size: 16px;
+    }
+    .caixa-status-badge.conferido { background: #d1fae5; color: #065f46; }
+    .caixa-status-badge.divergente { background: #fee2e2; color: #991b1b; }
+
+    @keyframes caixa-spin { to { transform: rotate(360deg); } }
+    .caixa-spin { animation: caixa-spin 1s linear infinite; }
 
     /* ===== CONFIRM DIALOG ===== */
     .confirm-dialog {
@@ -685,24 +749,23 @@
 
   <!-- MODAL: Abrir Caixa -->
   <div class="caixa-modal-overlay" id="modalAbrirCaixa" onclick="if(event.target===this)closeCaixaModal('modalAbrirCaixa')">
-    <div class="caixa-modal">
-      <div class="caixa-modal-handle"></div>
-      <div class="caixa-modal-title">
-        <i class="fas fa-lock-open" style="color:#059669"></i>
-        Abrir Caixa
+    <div class="caixa-modal-content">
+      <div class="caixa-modal-header">
+        <h2><i class="fas fa-door-open"></i> Abrir Caixa</h2>
+        <button class="caixa-modal-close" onclick="closeCaixaModal('modalAbrirCaixa')">&times;</button>
       </div>
-      <div class="caixa-modal-sub">Registre o troco inicial e confirme o responsável.</div>
-      <div class="caixa-field">
-        <label>Troco inicial (R$)</label>
-        <input type="number" id="abrirValorInicial" placeholder="0,00" min="0" step="0.01">
+      <div class="caixa-form-group">
+        <label>Troco inicial em dinheiro (opcional)</label>
+        <input type="number" id="abrirValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="font-size:18px; font-weight:600;">
+        <small style="color:#666; display:block; margin-top:4px;">Deixe em branco se não houver troco no caixa.</small>
       </div>
-      <div class="caixa-field">
-        <label>Responsável</label>
-        <input type="text" id="abrirResponsavel" placeholder="Nome do funcionário">
+      <div class="caixa-form-group">
+        <label>Responsável pela abertura</label>
+        <input type="text" id="abrirResponsavel" placeholder="Nome do responsável">
       </div>
-      <div class="caixa-btns">
-        <button class="caixa-btn caixa-btn-cancel" onclick="closeCaixaModal('modalAbrirCaixa')">Cancelar</button>
-        <button class="caixa-btn caixa-btn-confirm open-btn" id="btnConfirmarAbertura" onclick="confirmarAbrirCaixa()">
+      <div class="caixa-modal-btns">
+        <button class="caixa-btn-cancel" onclick="closeCaixaModal('modalAbrirCaixa')">Cancelar</button>
+        <button class="caixa-btn-submit" id="btnConfirmarAbertura" onclick="confirmarAbrirCaixa()">
           <i class="fas fa-door-open"></i> Abrir Caixa
         </button>
       </div>
@@ -711,19 +774,49 @@
 
   <!-- MODAL: Fechar Caixa -->
   <div class="caixa-modal-overlay" id="modalFecharCaixa" onclick="if(event.target===this)closeCaixaModal('modalFecharCaixa')">
-    <div class="caixa-modal">
-      <div class="caixa-modal-handle"></div>
-      <div class="caixa-modal-title">
-        <i class="fas fa-lock" style="color:#d97706"></i>
-        Fechar Caixa
+    <div class="caixa-modal-content wide">
+      <div class="caixa-modal-header">
+        <h2><i class="fas fa-door-closed"></i> Fechar Caixa do Dia</h2>
+        <button class="caixa-modal-close" onclick="closeCaixaModal('modalFecharCaixa')">&times;</button>
       </div>
-      <div class="caixa-modal-sub">Informe o valor físico contado em cada método.</div>
-      <div id="fecharCampos"></div>
-      <div class="caixa-btns">
-        <button class="caixa-btn caixa-btn-cancel" onclick="closeCaixaModal('modalFecharCaixa')">Cancelar</button>
-        <button class="caixa-btn caixa-btn-confirm close-btn" id="btnConfirmarFechamento" onclick="confirmarFecharCaixa()">
-          <i class="fas fa-lock"></i> Fechar Caixa
+      <p style="color:#666; font-size:14px; margin-bottom:20px;">
+        Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
+      </p>
+      <div class="caixa-fech-grid" id="fecharCampos"></div>
+      <div style="margin:16px 0; padding:12px 16px; background:#fff3cd; border-radius:8px; text-align:center; color:#856404;">
+        <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
+      </div>
+      <div class="caixa-modal-btns">
+        <button class="caixa-btn-cancel" onclick="closeCaixaModal('modalFecharCaixa')">Cancelar</button>
+        <button class="caixa-btn-danger" id="btnConfirmarFechamento" onclick="confirmarFecharCaixa()">
+          <i class="fas fa-lock"></i> Confirmar Fechamento
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Relatório de Fechamento -->
+  <div class="caixa-modal-overlay" id="modalRelatorio" onclick="if(event.target===this)closeCaixaModal('modalRelatorio')">
+    <div class="caixa-modal-content wide">
+      <div class="caixa-modal-header">
+        <h2><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
+        <button class="caixa-modal-close" onclick="closeCaixaModal('modalRelatorio')">&times;</button>
+      </div>
+      <div style="text-align:center; margin-bottom:20px;" id="relatorioStatusIndex"></div>
+      <table class="caixa-rel-table">
+        <thead>
+          <tr>
+            <th>Método</th>
+            <th>Digitado</th>
+            <th>Computado</th>
+            <th>Diferença</th>
+          </tr>
+        </thead>
+        <tbody id="relatorioTbodyIndex"></tbody>
+      </table>
+      <div id="relatorioRodapeIndex" style="font-size:13px; color:#666; margin-top:8px;"></div>
+      <div class="caixa-modal-btns" style="margin-top:16px;">
+        <button class="caixa-btn-submit" onclick="closeCaixaModal('modalRelatorio')">Fechar</button>
       </div>
     </div>
   </div>
@@ -961,32 +1054,36 @@
     }
 
     function openAbrirCaixaModal() {
-      // Pré-preenche nome do responsável com o usuário logado
       const nome = localStorage.getItem('usuarioNome') || '';
       document.getElementById('abrirResponsavel').value = caixaStatus?.currentUserNome || nome;
       document.getElementById('abrirValorInicial').value = '';
-      document.getElementById('modalAbrirCaixa').classList.add('open');
+      document.getElementById('modalAbrirCaixa').classList.add('active');
     }
 
     function openFecharCaixaModal() {
-      const config = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true };
-      const labels = { DINHEIRO: 'Dinheiro', PIX: 'PIX', CARTAO: 'Cartão', NFE: 'NFe' };
+      const cfg = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true };
+      const metodos = [
+        { key: 'DINHEIRO', label: '💵 Dinheiro', show: cfg.DINHEIRO !== false },
+        { key: 'PIX',      label: '📱 PIX',      show: cfg.PIX !== false },
+        { key: 'CARTAO',   label: '💳 Cartão',   show: cfg.CARTAO !== false },
+        { key: 'NFE',      label: '🧾 NFe',      show: true },
+      ];
 
-      const campos = Object.entries(labels)
-        .filter(([k]) => config[k] !== false)
-        .map(([k, label]) => `
-          <div class="caixa-field">
-            <label>${label}</label>
-            <input type="number" id="fechar_${k}" placeholder="0,00" min="0" step="0.01">
+      const gridHtml = metodos
+        .filter(m => m.show)
+        .map(m => `
+          <div class="caixa-fech-item">
+            <div class="label">${m.label}</div>
+            <input type="number" id="fechar_${m.key}" step="0.01" min="0" placeholder="0,00">
           </div>
         `).join('');
 
-      document.getElementById('fecharCampos').innerHTML = campos;
-      document.getElementById('modalFecharCaixa').classList.add('open');
+      document.getElementById('fecharCampos').innerHTML = gridHtml;
+      document.getElementById('modalFecharCaixa').classList.add('active');
     }
 
     function closeCaixaModal(id) {
-      document.getElementById(id).classList.remove('open');
+      document.getElementById(id).classList.remove('active');
     }
 
     async function confirmarAbrirCaixa() {
@@ -996,18 +1093,18 @@
                           localStorage.getItem('usuarioNome') || 'Funcionário';
 
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
+      btn.innerHTML = '<i class="fas fa-spinner caixa-spin"></i> Abrindo...';
 
       try {
         await window.api.abrirCaixa({ valorInicial, abertoPor });
         closeCaixaModal('modalAbrirCaixa');
-        // Atualiza o botão hero
         caixaStatus = { ...caixaStatus, isOpen: true, notOpened: false };
         const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
         loadCaixaStatus(permissoes);
-        showToastIndex('Caixa aberto com sucesso!', 'green');
+        showToastIndex('Caixa aberto com sucesso!', 'success');
       } catch (err) {
-        showToastIndex(err?.error || 'Erro ao abrir o caixa.', 'red');
+        showToastIndex(err?.error || err?.message || 'Erro ao abrir o caixa.', 'error');
+      } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-door-open"></i> Abrir Caixa';
       }
@@ -1015,40 +1112,72 @@
 
     async function confirmarFecharCaixa() {
       const btn = document.getElementById('btnConfirmarFechamento');
-      const config = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true };
-      const labels = { DINHEIRO: true, PIX: true, CARTAO: true, NFE: true };
+      const cfg = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true };
 
-      const valoresDigitados = {};
-      Object.keys(labels).forEach(k => {
-        if (config[k] !== false) {
-          const el = document.getElementById(`fechar_${k}`);
-          valoresDigitados[k] = parseFloat(el?.value) || 0;
-        }
-      });
+      const valoresDigitados = {
+        DINHEIRO: cfg.DINHEIRO !== false ? (parseFloat(document.getElementById('fechar_DINHEIRO')?.value) || 0) : 0,
+        PIX:      cfg.PIX !== false      ? (parseFloat(document.getElementById('fechar_PIX')?.value)      || 0) : 0,
+        CARTAO:   cfg.CARTAO !== false   ? (parseFloat(document.getElementById('fechar_CARTAO')?.value)   || 0) : 0,
+        NFE:      parseFloat(document.getElementById('fechar_NFE')?.value) || 0,
+      };
 
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fechando...';
+      btn.innerHTML = '<i class="fas fa-spinner caixa-spin"></i> Fechando...';
 
       try {
-        await window.api.createFechamento({ valoresDigitados });
+        const result = await window.api.createFechamento({ valoresDigitados });
         closeCaixaModal('modalFecharCaixa');
         caixaStatus = { ...caixaStatus, isOpen: false, notOpened: false };
         const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
         loadCaixaStatus(permissoes);
-        showToastIndex('Caixa fechado com sucesso!', 'green');
+        showToastIndex('Caixa fechado com sucesso!', 'success');
+        exibirRelatorioIndex(result);
       } catch (err) {
-        showToastIndex(err?.error || 'Erro ao fechar o caixa.', 'red');
+        showToastIndex(err?.error || err?.message || 'Erro ao fechar o caixa.', 'error');
+      } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-lock"></i> Fechar Caixa';
+        btn.innerHTML = '<i class="fas fa-lock"></i> Confirmar Fechamento';
       }
     }
 
-    function showToastIndex(msg, color) {
+    function exibirRelatorioIndex(result) {
+      const relatorio  = result.relatorio || {};
+      const status     = result.fechamento?.status || '';
+      const fechadoPor = result.fechamento?.fechadoPor || '';
+      const LABELS = { DINHEIRO: '💵 Dinheiro', PIX: '📱 PIX', CARTAO: '💳 Cartão', NFE: '🧾 NFe' };
+
+      const badgeClass = status === 'CONFERIDO' ? 'conferido' : 'divergente';
+      const badgeText  = status === 'CONFERIDO' ? '✅ CONFERIDO — Tudo certo!' : '⚠️ DIVERGENTE — Há diferenças!';
+      document.getElementById('relatorioStatusIndex').innerHTML =
+        `<span class="caixa-status-badge ${badgeClass}">${badgeText}</span>`;
+
+      const fmt = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+      document.getElementById('relatorioTbodyIndex').innerHTML =
+        Object.entries(relatorio).map(([metodo, dados]) => {
+          const diff = dados.diferenca ?? 0;
+          const rowClass = diff !== 0 ? 'divergente' : '';
+          const diffClass = diff === 0 ? 'caixa-rel-diff-ok' : 'caixa-rel-diff-err';
+          const diffText = (diff >= 0 ? '+' : '') + fmt(diff);
+          return `<tr class="${rowClass}">
+            <td style="font-weight:600;">${LABELS[metodo] || metodo}</td>
+            <td>${fmt(dados.digitado)}</td>
+            <td>${fmt(dados.computado)}</td>
+            <td class="${diffClass}">${diffText}</td>
+          </tr>`;
+        }).join('');
+
+      document.getElementById('relatorioRodapeIndex').innerHTML =
+        fechadoPor ? `Fechado por: <strong>${fechadoPor}</strong>` : '';
+
+      document.getElementById('modalRelatorio').classList.add('active');
+    }
+
+    function showToastIndex(msg, type) {
+      const bg = type === 'success' ? '#059669' : '#ef4444';
       const t = document.createElement('div');
       t.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
-        background:${color === 'green' ? '#059669' : '#ef4444'};color:#fff;
-        padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;
-        z-index:2000;white-space:nowrap;animation:fadeIn .2s ease`;
+        background:${bg};color:#fff;padding:10px 20px;border-radius:10px;
+        font-size:13px;font-weight:700;z-index:9999;white-space:nowrap;`;
       t.textContent = msg;
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
