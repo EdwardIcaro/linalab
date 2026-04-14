@@ -855,24 +855,56 @@
 
   <!-- ══ EDIT ORDEM MODAL ══════════════════════ -->
   <div class="edit-modal-overlay" id="editOrdemModal" style="display:none" onclick="if(event.target===this)closeEditModal()">
-    <div class="edit-modal-content" onclick="event.stopPropagation()">
+    <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:92vh">
       <div class="modal-handle"></div>
       <div class="edit-modal-title">
         <i class="fas fa-edit" style="color:var(--blue-d)"></i>
         Editar Ordem
       </div>
 
-      <div class="edit-form-group">
-        <div class="edit-form-label">Observações</div>
-        <textarea class="edit-textarea" id="editObservacoes" rows="3"
-                  placeholder="Anotações sobre a ordem..."></textarea>
+      <!-- INFO READ-ONLY: cliente + veículo -->
+      <div id="editInfoSection" style="margin-bottom:16px;padding:12px;background:var(--bg);border-radius:10px;font-size:13px">
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Cliente</div>
+            <div id="editClienteNome" style="font-weight:600;color:var(--text)">—</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Veículo</div>
+            <div id="editVeiculoInfo" style="font-weight:600;color:var(--text)">—</div>
+          </div>
+        </div>
       </div>
 
+      <!-- SERVIÇOS -->
+      <div class="edit-form-group">
+        <div class="edit-form-label">Serviços <span style="color:var(--light);font-weight:400;font-size:11px">(selecione ao menos um)</span></div>
+        <div class="lavador-chip-wrap" id="editServicosWrap">
+          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ADICIONAIS -->
+      <div class="edit-form-group" id="editAdicionaisGroup">
+        <div class="edit-form-label">Adicionais <span style="color:var(--light);font-weight:400;font-size:11px">(opcional)</span></div>
+        <div class="lavador-chip-wrap" id="editAdicionaisWrap">
+          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- LAVADORES -->
       <div class="edit-form-group">
         <div class="edit-form-label">Lavadores</div>
         <div class="lavador-chip-wrap" id="editLavadoresWrap">
           <div style="font-size:13px;color:var(--mid)">Carregando...</div>
         </div>
+      </div>
+
+      <!-- OBSERVAÇÕES -->
+      <div class="edit-form-group">
+        <div class="edit-form-label">Observações</div>
+        <textarea class="edit-textarea" id="editObservacoes" rows="2"
+                  placeholder="Anotações sobre a ordem..."></textarea>
       </div>
 
       <div class="modal-actions">
@@ -885,7 +917,7 @@
   </div>
 
   <!-- ══ PIX QR MODAL ═══════════════════════════ -->
-  <div class="edit-modal-overlay" id="pixQrModal" style="display:none" onclick="if(event.target===this)closePixQrModal()">
+  <div class="edit-modal-overlay" id="pixQrModal" style="display:none;z-index:3000" onclick="if(event.target===this)closePixQrModal()">
     <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:70vh">
       <div class="modal-handle"></div>
       <div class="edit-modal-title">
@@ -1719,46 +1751,108 @@
       openEditModal(id);
     }
 
-    let editModalState = { ordemId: null, lavadoresSelecionados: [], todosLavadores: [] };
+    let editModalState = {
+      ordemId: null,
+      lavadoresSelecionados: [],
+      todosLavadores: [],
+      servicosSelecionados: [],   // [{ tipo:'SERVICO', itemId, quantidade:1 }]
+      adicionaisSelecionados: [], // [{ tipo:'ADICIONAL', itemId, quantidade:1 }]
+      todosServicos: [],
+      todosAdicionais: []
+    };
 
     async function openEditModal(id) {
-      editModalState.ordemId = id;
-      editModalState.lavadoresSelecionados = [];
-      editModalState.todosLavadores = [];
-
       const modal = document.getElementById('editOrdemModal');
-      const wrap  = document.getElementById('editLavadoresWrap');
-      const obs   = document.getElementById('editObservacoes');
       if (!modal) return;
 
-      // Preenche com dados atuais da ordem
-      const ordem = currentOrdem?.id === id ? currentOrdem : null;
-      if (obs) obs.value = ordem?.observacoes || '';
+      // Reset state
+      editModalState.ordemId           = id;
+      editModalState.lavadoresSelecionados  = [];
+      editModalState.servicosSelecionados   = [];
+      editModalState.adicionaisSelecionados = [];
 
-      // IDs dos lavadores já vinculados
-      const lavadoresAtuais = (ordem?.lavadores || []).map(l => l.id || l);
-      editModalState.lavadoresSelecionados = [...lavadoresAtuais];
-
-      // Mostra modal antes de carregar
+      // Mostra modal com loading
       modal.style.display = 'flex';
-      if (wrap) wrap.innerHTML = `<div style="font-size:13px;color:var(--mid)">Carregando lavadores...</div>`;
+      document.getElementById('editLavadoresWrap').innerHTML  = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
+      document.getElementById('editServicosWrap').innerHTML   = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
+      document.getElementById('editAdicionaisWrap').innerHTML = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
 
       try {
-        // Carrega dados da ordem se necessário
-        if (!ordem) {
-          const resp = await window.api.getOrdemById(id);
-          const o = resp.data || resp;
-          if (obs) obs.value = o.observacoes || '';
-          const ids = (o.lavadores || []).map(l => l.id || l);
-          editModalState.lavadoresSelecionados = [...ids];
-        }
-        // Carrega lista de lavadores da empresa
-        const resp = await window.api.getLavadores();
-        editModalState.todosLavadores = resp.data || resp || [];
+        // Carrega ordem e listas em paralelo
+        const ordem = currentOrdem?.id === id ? currentOrdem : null;
+        const [ordemData, lavsResp, svcsResp, adicsResp] = await Promise.all([
+          ordem ? Promise.resolve(ordem) : window.api.getOrdemById(id).then(r => r.data || r),
+          window.api.getLavadores(),
+          window.api.getServicos({ limit: 500, ativo: 'true' }),
+          window.api.getAdicionais()
+        ]);
+
+        // Preenche info read-only
+        document.getElementById('editClienteNome').textContent  = ordemData.cliente?.nome || '—';
+        const veiculo = ordemData.veiculo;
+        document.getElementById('editVeiculoInfo').textContent  =
+          veiculo ? `${veiculo.placa}${veiculo.modelo ? ' · ' + veiculo.modelo : ''}` : '—';
+
+        document.getElementById('editObservacoes').value = ordemData.observacoes || '';
+
+        // Lavadores
+        editModalState.todosLavadores         = lavsResp.data || lavsResp.lavadores || lavsResp || [];
+        editModalState.lavadoresSelecionados  = (ordemData.lavadores || []).map(l => l.id || l).filter(Boolean);
+
+        // Serviços e adicionais disponíveis
+        editModalState.todosServicos   = svcsResp.servicos || svcsResp.data || (Array.isArray(svcsResp) ? svcsResp : []);
+        editModalState.todosAdicionais = adicsResp.adicionais || adicsResp.data || (Array.isArray(adicsResp) ? adicsResp : []);
+
+        // IDs atualmente na ordem (vem de items)
+        const items = ordemData.items || [];
+        editModalState.servicosSelecionados   = items
+          .filter(i => i.servico)
+          .map(i => ({ tipo: 'SERVICO',   itemId: i.servico.id,   quantidade: i.quantidade || 1 }));
+        editModalState.adicionaisSelecionados = items
+          .filter(i => i.adicional)
+          .map(i => ({ tipo: 'ADICIONAL', itemId: i.adicional.id, quantidade: i.quantidade || 1 }));
+
+        renderEditServicos();
+        renderEditAdicionais();
         renderEditLavadores();
+
       } catch (err) {
-        if (wrap) wrap.innerHTML = `<div style="font-size:13px;color:var(--red)">Erro ao carregar lavadores.</div>`;
+        console.error('Erro ao carregar dados para edição:', err);
+        showToast('Erro ao carregar dados da ordem.', 'error');
+        closeEditModal();
       }
+    }
+
+    function renderEditServicos() {
+      const wrap = document.getElementById('editServicosWrap');
+      if (!wrap) return;
+      if (editModalState.todosServicos.length === 0) {
+        wrap.innerHTML = `<div style="font-size:13px;color:var(--mid)">Nenhum serviço cadastrado.</div>`;
+        return;
+      }
+      const selecionadosIds = editModalState.servicosSelecionados.map(s => s.itemId);
+      wrap.innerHTML = editModalState.todosServicos.map(svc => {
+        const sel = selecionadosIds.includes(svc.id);
+        return `<div class="lavador-chip ${sel ? 'selected' : ''}" onclick="toggleEditServico('${svc.id}', this)">
+          ${svc.nome}${svc.preco ? ` <span style="opacity:.7;font-size:10px">R$${Number(svc.preco).toFixed(2)}</span>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function renderEditAdicionais() {
+      const wrap = document.getElementById('editAdicionaisWrap');
+      if (!wrap) return;
+      if (editModalState.todosAdicionais.length === 0) {
+        wrap.innerHTML = `<div style="font-size:13px;color:var(--mid)">Nenhum adicional cadastrado.</div>`;
+        return;
+      }
+      const selecionadosIds = editModalState.adicionaisSelecionados.map(a => a.itemId);
+      wrap.innerHTML = editModalState.todosAdicionais.map(adic => {
+        const sel = selecionadosIds.includes(adic.id);
+        return `<div class="lavador-chip ${sel ? 'selected' : ''}" onclick="toggleEditAdicional('${adic.id}', this)">
+          ${adic.nome}${adic.preco ? ` <span style="opacity:.7;font-size:10px">R$${Number(adic.preco).toFixed(2)}</span>` : ''}
+        </div>`;
+      }).join('');
     }
 
     function renderEditLavadores() {
@@ -1770,11 +1864,32 @@
       }
       wrap.innerHTML = editModalState.todosLavadores.map(lav => {
         const sel = editModalState.lavadoresSelecionados.includes(lav.id);
-        return `
-          <div class="lavador-chip ${sel ? 'selected' : ''}" onclick="toggleEditLavador('${lav.id}', this)">
-            ${lav.nome}
-          </div>`;
+        return `<div class="lavador-chip ${sel ? 'selected' : ''}" onclick="toggleEditLavador('${lav.id}', this)">
+          ${lav.nome}
+        </div>`;
       }).join('');
+    }
+
+    function toggleEditServico(id, el) {
+      const idx = editModalState.servicosSelecionados.findIndex(s => s.itemId === id);
+      if (idx === -1) {
+        editModalState.servicosSelecionados.push({ tipo: 'SERVICO', itemId: id, quantidade: 1 });
+        el.classList.add('selected');
+      } else {
+        editModalState.servicosSelecionados.splice(idx, 1);
+        el.classList.remove('selected');
+      }
+    }
+
+    function toggleEditAdicional(id, el) {
+      const idx = editModalState.adicionaisSelecionados.findIndex(a => a.itemId === id);
+      if (idx === -1) {
+        editModalState.adicionaisSelecionados.push({ tipo: 'ADICIONAL', itemId: id, quantidade: 1 });
+        el.classList.add('selected');
+      } else {
+        editModalState.adicionaisSelecionados.splice(idx, 1);
+        el.classList.remove('selected');
+      }
     }
 
     function toggleEditLavador(id, el) {
@@ -1791,7 +1906,12 @@
     function closeEditModal() {
       const modal = document.getElementById('editOrdemModal');
       if (modal) modal.style.display = 'none';
-      editModalState = { ordemId: null, lavadoresSelecionados: [], todosLavadores: [] };
+      editModalState = {
+        ordemId: null,
+        lavadoresSelecionados: [], todosLavadores: [],
+        servicosSelecionados: [], adicionaisSelecionados: [],
+        todosServicos: [], todosAdicionais: []
+      };
     }
 
     async function saveEditOrdem() {
@@ -1800,17 +1920,27 @@
       const btn = document.getElementById('saveEditBtn');
       if (!id) return;
 
+      const todosItens = [
+        ...editModalState.servicosSelecionados,
+        ...editModalState.adicionaisSelecionados
+      ];
+
+      if (todosItens.length === 0) {
+        showToast('Selecione ao menos um serviço.', 'error');
+        return;
+      }
+
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
       try {
         await window.api.updateOrdem(id, {
           observacoes: obs,
-          lavadorIds: editModalState.lavadoresSelecionados
+          lavadorIds: editModalState.lavadoresSelecionados,
+          itens: todosItens
         });
         showToast('Ordem atualizada com sucesso!', 'success');
         closeEditModal();
-        // Recarrega detail se estiver visualizando esta ordem
         if (currentOrdem?.id === id) loadOrdemDetail(id);
       } catch (err) {
         showToast(`Erro: ${err.error || 'Não foi possível salvar.'}`, 'error');
