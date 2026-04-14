@@ -132,7 +132,7 @@
 
     /* ===== MAIN ===== */
     .main {
-      padding: 16px 16px 24px;
+      padding: 16px 16px 120px;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -171,16 +171,14 @@
       font-weight: 600;
     }
 
-    /* ===== HERO BUTTON (Fila de Entrada) ===== */
+    /* ===== HERO BUTTON (Caixa) ===== */
     .hero-btn {
       display: flex;
       align-items: center;
       gap: 14px;
-      background: linear-gradient(135deg, #f59e0b 0%, #e08b00 100%);
       border-radius: 18px;
       padding: 18px 20px;
       text-decoration: none;
-      box-shadow: 0 6px 20px rgba(245,158,11,0.35);
       transition: transform 0.14s, box-shadow 0.14s;
       cursor: pointer;
       border: none;
@@ -189,7 +187,27 @@
     }
     .hero-btn:active {
       transform: scale(0.97);
-      box-shadow: 0 2px 10px rgba(245,158,11,0.2);
+    }
+
+    /* Estado: carregando / não configurado */
+    .hero-btn.caixa-loading {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      box-shadow: 0 6px 20px rgba(107,114,128,0.25);
+    }
+    /* Estado: aberto */
+    .hero-btn.caixa-open {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow: 0 6px 20px rgba(5,150,105,0.35);
+    }
+    /* Estado: fechado */
+    .hero-btn.caixa-closed {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 6px 20px rgba(245,158,11,0.35);
+    }
+    /* Estado: não aberto hoje */
+    .hero-btn.caixa-not-opened {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 6px 20px rgba(239,68,68,0.35);
     }
 
     .hero-icon {
@@ -219,6 +237,51 @@
       color: rgba(255,255,255,0.65);
       font-size: 15px;
       flex-shrink: 0;
+    }
+
+    /* ===== FAB FILA DE ENTRADA ===== */
+    .fab-fila {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(calc(-50% + 52px));
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      text-decoration: none;
+      z-index: 499;
+      box-shadow: 0 4px 14px rgba(245,158,11,0.5);
+      outline: 2.5px solid rgba(255,255,255,0.22);
+      outline-offset: 2px;
+      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.18s;
+    }
+    .fab-fila:hover {
+      filter: brightness(1.12);
+      transform: translateX(calc(-50% + 52px)) scale(1.1);
+    }
+    .fab-fila:active {
+      transform: translateX(calc(-50% + 52px)) scale(0.92);
+    }
+    .fab-fila-label {
+      position: fixed;
+      bottom: 78px;
+      left: 50%;
+      transform: translateX(calc(-50% + 52px));
+      font-size: 9px;
+      font-weight: 700;
+      color: #d97706;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      display: none;
+      white-space: nowrap;
     }
 
     /* ===== SECTION LABEL ===== */
@@ -462,7 +525,7 @@
     /* ===== DESKTOP CENTERING ===== */
     @media (min-width: 501px) {
       .header { padding: 18px 20px 22px; }
-      .main { padding: 20px 20px 32px; gap: 14px; }
+      .main { padding: 20px 20px 120px; gap: 14px; }
       .nav-btn { padding: 18px 16px; }
       .nav-label { font-size: 15px; }
     }
@@ -498,11 +561,11 @@
     <div class="stats-strip" id="statsStrip" style="display:none">
       <div class="stat-card">
         <div class="stat-value" id="statOrdens">-</div>
-        <div class="stat-label">Ordens</div>
+        <div class="stat-label">Em Aberto</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value" id="statClientes">-</div>
-        <div class="stat-label">Clientes</div>
+        <div class="stat-value" id="statAguardando">-</div>
+        <div class="stat-label">Aguardando</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statFat">-</div>
@@ -510,17 +573,17 @@
       </div>
     </div>
 
-    <!-- HERO: Fila de Entrada (visível se gerenciar_ordens) -->
-    <a href="funcionario/fila-entrada-funcionario.html" class="hero-btn" id="heroFila" style="display:none">
-      <div class="hero-icon">
-        <i class="fas fa-bolt"></i>
+    <!-- HERO: Caixa (visível se ver_financeiro) -->
+    <button class="hero-btn caixa-loading" id="heroCaixa" style="display:none" onclick="handleCaixaClick()">
+      <div class="hero-icon" id="heroCaixaIcon">
+        <i class="fas fa-cash-register"></i>
       </div>
       <div class="hero-body">
-        <div class="hero-label">Fila de Entrada</div>
-        <div class="hero-sub">Lançamento rápido de veículos</div>
+        <div class="hero-label" id="heroCaixaLabel">Verificando caixa...</div>
+        <div class="hero-sub" id="heroCaixaSub">Aguarde um momento</div>
       </div>
       <i class="fas fa-chevron-right hero-arrow"></i>
-    </a>
+    </button>
 
     <!-- SEÇÃO NAVEGAÇÃO -->
     <div class="section-label" id="sectionLabel" style="display:none">Navegação</div>
@@ -547,10 +610,16 @@
 
   </main>
 
-  <!-- FAB: Nova Ordem (visível apenas se tem permissão gerenciar_ordens) -->
+  <!-- FAB: Nova Ordem (gota) -->
   <a href="funcionario/nova-ordem-funcionario.html" class="fab-nova-ordem" id="fabNovaOrdem" style="display:none" title="Nova Ordem">
     <i class="fas fa-tint"></i>
   </a>
+
+  <!-- FAB: Fila de Entrada (raio) — ao lado do gota -->
+  <a href="funcionario/fila-entrada-funcionario.html" class="fab-fila" id="fabFila" title="Fila de Entrada">
+    <i class="fas fa-bolt"></i>
+  </a>
+  <div class="fab-fila-label" id="fabFilaLabel">Fila</div>
 
   <script src="api.js"></script>
   <script>
@@ -614,6 +683,8 @@
       },
     ];
 
+    let caixaStatus = null; // guarda o status para usar no click
+
     document.addEventListener('DOMContentLoaded', async () => {
       const token = localStorage.getItem('token');
       if (!token) { window.location.href = 'login.html'; return; }
@@ -630,16 +701,23 @@
 
       const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
 
-      // Hero: Fila de Entrada + FAB Nova Ordem
+      // FABs de ordem
       if (permissoes.includes('gerenciar_ordens')) {
-        document.getElementById('heroFila').style.display = 'flex';
         document.getElementById('fabNovaOrdem').style.display = 'flex';
+        document.getElementById('fabFila').style.display = 'flex';
+        document.getElementById('fabFilaLabel').style.display = 'block';
+      }
+
+      // Hero caixa (quem tem ver_financeiro ou gerenciar_ordens pode ver o status)
+      if (permissoes.includes('ver_financeiro') || permissoes.includes('gerenciar_ordens')) {
+        document.getElementById('heroCaixa').style.display = 'flex';
+        loadCaixaStatus(permissoes);
       }
 
       // Grid de navegação
       renderNavGrid(permissoes);
 
-      // Stats (só se tiver permissão)
+      // Stats
       if (permissoes.includes('ver_dashboard')) {
         loadStats();
       }
@@ -711,20 +789,61 @@
       strip.style.display = 'grid';
       try {
         const today = new Date().toISOString().split('T')[0];
-        const [ordens, clientes, stats] = await Promise.all([
+        const [ordens, aguardando, stats] = await Promise.all([
           window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'ACTIVE') : Promise.resolve({}),
-          window.api.getClientes ? window.api.getClientes(1, 1) : Promise.resolve({}),
+          window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'AGUARDANDO_PAGAMENTO') : Promise.resolve({}),
           window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today }) : Promise.resolve({})
         ]);
         document.getElementById('statOrdens').textContent =
           ordens.pagination?.total ?? ordens.total ?? '-';
-        document.getElementById('statClientes').textContent =
-          clientes.pagination?.total ?? clientes.total ?? '-';
+        document.getElementById('statAguardando').textContent =
+          aguardando.pagination?.total ?? aguardando.total ?? '-';
         const fat = stats.valorTotal || 0;
         document.getElementById('statFat').textContent = fat > 0
           ? 'R$\u00a0' + fat.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
           : 'R$\u00a00';
       } catch { /* silencioso */ }
+    }
+
+    async function loadCaixaStatus(permissoes) {
+      const btn   = document.getElementById('heroCaixa');
+      const label = document.getElementById('heroCaixaLabel');
+      const sub   = document.getElementById('heroCaixaSub');
+      const icon  = document.getElementById('heroCaixaIcon');
+
+      try {
+        const status = await window.api.getStatusCaixa();
+        caixaStatus = status;
+
+        btn.className = 'hero-btn ';
+        if (status.isOpen) {
+          btn.classList.add('caixa-open');
+          icon.innerHTML = '<i class="fas fa-lock-open"></i>';
+          label.textContent = 'Caixa Aberto';
+          sub.textContent = 'Clique para fechar o caixa';
+        } else if (status.notOpened) {
+          btn.classList.add('caixa-not-opened');
+          icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+          label.textContent = 'Caixa não aberto hoje!';
+          sub.textContent = 'Clique para abrir o caixa';
+        } else {
+          btn.classList.add('caixa-closed');
+          icon.innerHTML = '<i class="fas fa-lock"></i>';
+          label.textContent = 'Caixa Fechado';
+          sub.textContent = 'Clique para abrir o caixa';
+        }
+      } catch {
+        btn.classList.add('caixa-loading');
+        label.textContent = 'Status do Caixa';
+        sub.textContent = 'Toque para ver o financeiro';
+        // Em caso de erro, redireciona para financeiro
+        btn.onclick = () => { window.location.href = 'funcionario/financeiro-funcionario.html'; };
+      }
+    }
+
+    function handleCaixaClick() {
+      // Se tiver financeiro disponível, vai para lá para abrir/fechar formalmente
+      window.location.href = 'funcionario/financeiro-funcionario.html';
     }
 
     function showConfirm(title, message, onConfirm) {
