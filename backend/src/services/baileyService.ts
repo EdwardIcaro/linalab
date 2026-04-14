@@ -289,7 +289,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
           // Erro durante fase QR sem scan → delay maior para QR não mudar (15s)
           const reconnectDelay = credsJustUpdated ? 1000 : (wasAuthenticated ? 3000 : 15000);
           credsJustUpdated = false;
-          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s... (creds=${credsJustUpdated}, auth=${wasAuthenticated})`);
+          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s... (auth=${wasAuthenticated})`);
           setTimeout(() => {
             initBaileys(empresaId).catch(console.error);
           }, reconnectDelay);
@@ -300,10 +300,23 @@ export async function initBaileys(empresaId: string): Promise<void> {
           reconnectAttempts.delete(empresaId); // Reset para permitir nova tentativa manual
           freshCredsSet.delete(empresaId);
 
-          await prisma.whatsappInstance.update({
-            where: { empresaId },
-            data: { status: 'disconnected', authState: null, qrCode: null },
-          });
+          if (isRealLogout) {
+            // WhatsApp explicitamente invalidou a sessão (logout real pelo celular ou expiração)
+            // Limpa authState pois as credenciais não são mais válidas → necessário novo QR
+            console.log(`[Baileys] ⚠️ Logout real para ${empresaId} — credenciais invalidadas, limpando authState`);
+            await prisma.whatsappInstance.update({
+              where: { empresaId },
+              data: { status: 'disconnected', authState: null, qrCode: null },
+            });
+          } else {
+            // Máximo de tentativas atingido por problema de rede/servidor — NÃO limpar authState
+            // Na próxima startup, as credenciais ainda são válidas e a reconexão será tentada
+            console.log(`[Baileys] ⚠️ Max tentativas para ${empresaId} — preservando authState para próximo startup`);
+            await prisma.whatsappInstance.update({
+              where: { empresaId },
+              data: { status: 'disconnected', qrCode: null },
+            });
+          }
         }
       }
     });
@@ -674,18 +687,27 @@ export async function restoreActiveSessions(): Promise<void> {
   try {
     console.log('[Baileys] Restaurando sessões ativas...');
 
+    // Reconecta qualquer instância que tenha authState salvo — independente do status.
+    // Isso cobre casos onde o status ficou 'disconnected' por falha de rede mas as
+    // credenciais ainda são válidas (ex: deploy/restart do servidor).
     const instances = await prisma.whatsappInstance.findMany({
-      where: { status: 'connected' },
+      where: { authState: { not: null } },
+      select: { empresaId: true, status: true },
     });
 
+    if (instances.length === 0) {
+      console.log('[Baileys] Nenhuma sessão com credenciais salvas para restaurar');
+      return;
+    }
+
+    console.log(`[Baileys] ${instances.length} instância(s) com credenciais — iniciando reconexão...`);
+
     for (const instance of instances) {
-      console.log(`[Baileys] Restaurando sessão para ${instance.empresaId}...`);
+      console.log(`[Baileys] Restaurando ${instance.empresaId} (status anterior: ${instance.status})...`);
       await initBaileys(instance.empresaId).catch((err) => {
         console.error(`[Baileys] Erro ao restaurar ${instance.empresaId}:`, err);
       });
     }
-
-    console.log(`[Baileys] ${instances.length} sessão(ões) restaurada(s)`);
   } catch (error) {
     console.error('[Baileys] Erro ao restaurar sessões:', error);
   }

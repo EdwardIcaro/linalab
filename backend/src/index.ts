@@ -212,7 +212,10 @@ async function startServer() {
     await waitForDatabase();
 
     // Restaurar sessões ativas do WhatsApp (Baileys)
-    console.log('🔄 Restaurando sessões ativas do WhatsApp...');
+    // Delay de 5s para o servidor e rede estabilizarem antes de conectar ao WA
+    console.log('🔄 Aguardando estabilização antes de restaurar sessões WhatsApp...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('🔄 Restaurando sessões do WhatsApp...');
     await restoreActiveSessions();
 
     // Iniciar servidor
