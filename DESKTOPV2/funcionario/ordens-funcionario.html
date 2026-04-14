@@ -1355,11 +1355,30 @@
       document.getElementById('paymentValueInput').value     = paymentModal.inputValue;
 
       const listDiv = document.getElementById('paymentsList');
-      if (paymentModal.payments.length === 0) {
+      const hasPayments = paymentModal.payments.length > 0;
+      const hasDiscount = paymentModal.desconto > 0;
+
+      if (!hasPayments && !hasDiscount) {
         listDiv.innerHTML = '';
         document.getElementById('submitPaymentBtn').disabled = true;
       } else {
         let html = `<div class="pay-list-label">Pagamentos adicionados</div>`;
+
+        // Desconto como item removível no topo da lista
+        if (hasDiscount) {
+          html += `
+            <div class="pay-list-item" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);">
+              <span style="color:#92400e;font-weight:700;">
+                <i class="fas fa-tag" style="margin-right:5px;font-size:11px;opacity:.7"></i>
+                Desconto — <span style="color:var(--red)">− ${formatCurrency(paymentModal.desconto)}</span>
+              </span>
+              <button onclick="removeDiscount()" title="Remover desconto" style="color:#92400e;">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          `;
+        }
+
         paymentModal.payments.forEach((p, i) => {
           const pixBtn = p.method === 'PIX' && paymentModal.orderId
             ? `<button class="btn-pix-qr" onclick="showPixQrForPayment(${p.amount})" title="Ver QR PIX"><i class="fab fa-pix"></i> QR</button>`
@@ -1374,8 +1393,9 @@
             </div>
           `;
         });
+
         listDiv.innerHTML = html;
-        document.getElementById('submitPaymentBtn').disabled = false;
+        document.getElementById('submitPaymentBtn').disabled = !hasPayments;
       }
     }
 
