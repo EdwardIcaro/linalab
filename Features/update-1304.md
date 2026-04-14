@@ -1,4 +1,4 @@
-# Update 13–14/04/2026
+# Update 13–15/04/2026
 
 ## Resumo
 Sessão intensa de correções de bugs, melhorias de UX e novos recursos no sistema Lina X. Abrangeu backend (TypeScript/Prisma), frontend do funcionário (HTML/JS vanilla) e WhatsApp bot.
@@ -180,3 +180,48 @@ Reescrito do zero. Principais mudanças:
 - Busca unificada por nome, telefone, placa ou modelo
 - Formulário com seções "Dados pessoais" e "Veículos" (adicionar/remover dinamicamente)
 - Confirmação de exclusão via `confirm()` antes de deletar
+
+---
+
+## 13. Modais de Caixa Inline no Index do Funcionário
+
+**Arquivo:** `DESKTOPV2/index-funcionario.html`
+
+- Botão hero de caixa não redireciona mais para `financeiro-funcionario.html`
+- Abre modal diretamente no index:
+  - **Abrir Caixa**: inputs de troco inicial e responsável
+  - **Fechar Caixa**: grid de inputs por método de pagamento ativo
+  - **Relatório de Fechamento**: tabela Digitado × Computado × Diferença com badge CONFERIDO/DIVERGENTE
+- Estilo idêntico ao modal de caixa do financeiro (modal centralizado com sombra, sem bottom-sheet)
+- NFe sempre exibido no grid de fechamento (não condicional)
+
+---
+
+## 14. NFe no Modal de Fechamento do Financeiro
+
+**Arquivo:** `DESKTOPV2/funcionario/financeiro-funcionario.html`
+
+- Campo NFe agora aparece **sempre** no grid de fechamento de caixa
+- Antes: `show: cfg.NFE === true` (ficava oculto pois o padrão é `false`)
+- Depois: `show: true` (sempre visível)
+- Coleta e envia o valor no `confirmarFechamento()` independentemente da config
+
+---
+
+## 15. Redesign Visual do Financeiro (funcionário)
+
+**Arquivo:** `DESKTOPV2/funcionario/financeiro-funcionario.html`
+
+- Atualizado para o padrão visual moderno do sistema:
+  - Fonte **Inter** (via Google Fonts)
+  - **Header navy** (`#0f172a`) com ícones semi-transparentes (igual às outras páginas)
+  - CSS variables atualizadas para `--navy`, `--primary` (`#2563eb`), `--mid`, `--border` (`#e2e8f0`), `--light` (`#f1f5f9`)
+  - Balance cards com tipografia Inter e tamanho reduzido para mobile
+  - Tabs com `white-space: nowrap` + scroll horizontal no mobile
+  - Botões de ação com `border-radius: 10px` e hover mais suave
+  - Tabelas com cabeçalhos em uppercase/600 e hover `#f8fafc`
+  - Status badges pill com cores semânticas (`#d1fae5`/`#fef3c7`)
+  - Mobile nav com `height: 66px`, fonte Inter
+  - Toast com `border-radius: 10px` e sombra md
+  - Comissões com grid responsivo que colapsa em coluna única abaixo de 900px
+  - Resumo de comissões com gradiente navy (dark) em vez de azul primário
