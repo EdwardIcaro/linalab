@@ -164,8 +164,7 @@ export function validateCreateOrder(data: any): ValidationResult {
   if (!data.clienteId && !data.novoCliente) {
     errors.push('clienteId ou novoCliente é obrigatório');
   } else if (data.novoCliente) {
-    const nameError = validators.isNonEmptyString(data.novoCliente.nome, 'novoCliente.nome');
-    if (nameError) errors.push(nameError);
+    // nome é opcional — quando ausente/vazio, será tratado como 'N/A' no controller
   }
 
   // Validate veiculo/novoVeiculo
@@ -209,7 +208,7 @@ export function validateCreateOrder(data: any): ValidationResult {
     observacoes: data.observacoes ? validators.sanitizeString(data.observacoes) : null,
     novoCliente: data.novoCliente ? {
       ...data.novoCliente,
-      nome: validators.sanitizeString(data.novoCliente.nome),
+      nome: data.novoCliente.nome?.trim() ? validators.sanitizeString(data.novoCliente.nome) : 'N/A',
     } : undefined,
     lavadorId: data.lavadorId ? data.lavadorId : undefined,
     lavadorIds: Array.isArray(data.lavadorIds) ? data.lavadorIds.filter(Boolean) : undefined,

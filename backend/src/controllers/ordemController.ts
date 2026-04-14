@@ -126,11 +126,12 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       let finalVeiculoId: string | undefined = veiculoId;
 
       // 1. Determina o ID do cliente: usa o existente ou cria um novo.
-      if (!finalClienteId && novoCliente && novoCliente.nome) {
+      if (!finalClienteId && novoCliente) {
+        const nomeCliente = novoCliente.nome?.trim() || 'N/A';
         // Primeiro, tenta encontrar um cliente existente com o mesmo nome e telefone
         let clienteExistente = await tx.cliente.findFirst({
           where: {
-            nome: novoCliente.nome,
+            nome: nomeCliente,
             telefone: novoCliente.telefone || null,
             empresaId: empresaId,
           },
@@ -142,7 +143,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           // Se não encontrar, cria um novo cliente
           const clienteCriado = await tx.cliente.create({
             data: {
-              nome: novoCliente.nome,
+              nome: nomeCliente,
               telefone: novoCliente.telefone,
               empresaId,
             },
