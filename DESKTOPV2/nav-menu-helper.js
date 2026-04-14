@@ -24,20 +24,115 @@
         return roleNames[role] || 'Usuário';
     }
 
+    function showSairModal() {
+        // Remove qualquer modal anterior
+        const existing = document.getElementById('__sairModal');
+        if (existing) existing.remove();
+
+        const empresaNome = localStorage.getItem('empresaNome') || '';
+
+        const overlay = document.createElement('div');
+        overlay.id = '__sairModal';
+        overlay.style.cssText = `
+            position:fixed;inset:0;z-index:99999;
+            display:flex;align-items:center;justify-content:center;
+            background:rgba(15,23,42,.55);backdrop-filter:blur(4px);
+            animation:__fadeIn .15s ease;
+        `;
+
+        overlay.innerHTML = `
+            <style>
+                @keyframes __fadeIn{from{opacity:0}to{opacity:1}}
+                @keyframes __slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+                #__sairCard{
+                    background:#fff;border-radius:20px;padding:28px 24px 20px;
+                    width:min(340px,90vw);box-shadow:0 24px 64px rgba(15,23,42,.22);
+                    animation:__slideUp .18s ease;font-family:'Inter',sans-serif;
+                }
+                #__sairCard h3{
+                    font-size:17px;font-weight:800;color:#0f172a;
+                    margin:0 0 4px;letter-spacing:-.3px;
+                }
+                #__sairCard p{
+                    font-size:13px;color:#64748b;margin:0 0 20px;
+                }
+                .__sair-options{display:flex;flex-direction:column;gap:10px;}
+                .__sair-btn{
+                    display:flex;align-items:center;gap:12px;
+                    padding:14px 16px;border-radius:12px;border:none;
+                    cursor:pointer;font-family:'Inter',sans-serif;
+                    font-size:14px;font-weight:600;text-align:left;
+                    transition:opacity .15s,transform .12s;
+                }
+                .__sair-btn:active{transform:scale(.97);}
+                .__sair-btn:hover{opacity:.88;}
+                .__sair-btn-icon{
+                    width:36px;height:36px;border-radius:10px;flex-shrink:0;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:16px;
+                }
+                .__btn-empresa{background:#f0f9ff;color:#0369a1;}
+                .__btn-empresa .__sair-btn-icon{background:#bfdbfe;color:#1d4ed8;}
+                .__btn-sair{background:#fff1f2;color:#be123c;}
+                .__btn-sair .__sair-btn-icon{background:#fecdd3;color:#e11d48;}
+                .__sair-cancel{
+                    margin-top:8px;width:100%;padding:10px;border:none;
+                    background:none;color:#94a3b8;font-size:13px;
+                    font-family:'Inter',sans-serif;cursor:pointer;font-weight:500;
+                }
+                .__sair-cancel:hover{color:#64748b;}
+                .__sair-sub{font-size:12px;font-weight:400;color:inherit;opacity:.75;margin-top:1px;}
+            </style>
+            <div id="__sairCard">
+                <h3>Até logo! 👋</h3>
+                <p>${empresaNome ? `Empresa: <strong>${empresaNome}</strong>` : 'O que deseja fazer?'}</p>
+                <div class="__sair-options">
+                    <button class="__sair-btn __btn-empresa" id="__btnTrocar">
+                        <div class="__sair-btn-icon"><i class="fas fa-building"></i></div>
+                        <div>
+                            Trocar de Empresa
+                            <div class="__sair-sub">Selecionar outra empresa</div>
+                        </div>
+                    </button>
+                    <button class="__sair-btn __btn-sair" id="__btnSair">
+                        <div class="__sair-btn-icon"><i class="fas fa-sign-out-alt"></i></div>
+                        <div>
+                            Sair do Sistema
+                            <div class="__sair-sub">Encerrar sessão completamente</div>
+                        </div>
+                    </button>
+                </div>
+                <button class="__sair-cancel" id="__btnCancelar">Cancelar</button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Fechar ao clicar fora do card
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        document.getElementById('__btnCancelar').addEventListener('click', () => overlay.remove());
+
+        document.getElementById('__btnTrocar').addEventListener('click', () => {
+            overlay.remove();
+            // Mantém o token (userAuthMiddleware aceita o token scoped para listar empresas)
+            // Apenas limpa o escopo atual para forçar re-seleção
+            localStorage.removeItem('empresaId');
+            localStorage.removeItem('empresaNome');
+            window.location.href = 'selecionar-empresa.html';
+        });
+
+        document.getElementById('__btnSair').addEventListener('click', () => {
+            overlay.remove();
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
+    }
+
     function handleLogout() {
-        if (typeof showCustomConfirm === 'function') {
-            showCustomConfirm({
-                title: 'Confirmar Saída',
-                message: 'Tem certeza que deseja sair do sistema?',
-                onConfirm: () => window.api.logout()
-            });
-        } else if (typeof logout === 'function') {
-            logout();
-        } else {
-            if (confirm('Tem certeza que deseja sair do sistema?')) {
-                window.api.logout();
-            }
-        }
+        showSairModal();
     }
 
     // Adiciona os botões de perfil, notificação e logout ao nav-menu quando o DOM carregar
@@ -215,8 +310,9 @@
         return icons[type] || 'fa-info-circle';
     }
 
-    // Expõe a função de logout globalmente
+    // Expõe funções globalmente
     window.handleNavMenuLogout = handleLogout;
+    window.showSairModal = showSairModal;
 
     // Inicializa quando o DOM carregar
     if (document.readyState === 'loading') {

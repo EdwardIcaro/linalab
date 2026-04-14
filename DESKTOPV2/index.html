@@ -5063,11 +5063,15 @@
         // GLOBAL FUNCTIONS (needed for onclick handlers)
         // ==========================================
         function logout() {
-            showCustomConfirm({
-                title: 'Confirmar Saida',
-                message: 'Tem certeza que deseja sair do sistema?',
-                onConfirm: () => window.api.logout()
-            });
+            if (typeof window.showSairModal === 'function') {
+                window.showSairModal();
+            } else {
+                showCustomConfirm({
+                    title: 'Confirmar Saída',
+                    message: 'Tem certeza que deseja sair do sistema?',
+                    onConfirm: () => window.api.logout()
+                });
+            }
         }
 
         // ==========================================
