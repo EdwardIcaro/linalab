@@ -1699,7 +1699,7 @@ export const gerarPixQr = async (req: EmpresaRequest, res: Response) => {
 
     // Verifica que a ordem pertence à empresa
     const ordem = await prisma.ordemServico.findFirst({
-      where: { id: ordemId, empresaId: req.empresaId },
+      where: { id: ordemId as string, empresaId: req.empresaId as string },
       select: { id: true, numeroOrdem: true },
     });
     if (!ordem) return res.status(404).json({ error: 'Ordem não encontrada.' });
