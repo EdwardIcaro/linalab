@@ -12,14 +12,17 @@ import { sendImageBuffer } from './baileyService';
 // ==========================================
 // ESTADO DE COLETA CONVERSACIONAL DE SAÍDAS
 // ==========================================
-type SaidaStep = 'descricao' | 'formaPagamento' | 'fornecedor' | 'confirming';
+type SaidaStep = 'valor' | 'descricao' | 'formaPagamento' | 'lavador' | 'fornecedor' | 'confirming';
 
 interface PendingSaida {
-  valor: number;
-  descricao: string | null;       // null = ainda não coletado
-  formaPagamento: string | null;  // null = ainda não coletado
+  valor: number;                   // 0 = ainda não informado
+  descricao: string | null;
+  formaPagamento: string | null;
   categoria: string;
-  fornecedorNome: string | null | undefined; // undefined = ainda não perguntado; null = usuário pulou; string = fornecido
+  fornecedorNome: string | null | undefined; // undefined = não perguntado; null = pulou; string = fornecido
+  lavadorId: string | null | undefined;      // undefined = não perguntado; null = pulou
+  lavadorNome: string | null | undefined;
+  lavadoresList: Array<{ id: string; nome: string }>;
   step: SaidaStep;
   empresaId: string;
   userName: string;
@@ -1111,10 +1114,12 @@ const FORMA_LABELS: Record<string, string> = {
 /**
  * Determina a próxima etapa com base no que falta coletar
  */
-function getNextSaidaStep(p: Partial<PendingSaida> & { valor: number }): SaidaStep {
+function getNextSaidaStep(p: Partial<PendingSaida>): SaidaStep {
+  if (!p.valor || p.valor <= 0) return 'valor';
   if (!p.descricao) return 'descricao';
   if (!p.formaPagamento) return 'formaPagamento';
-  if (p.fornecedorNome === undefined) return 'fornecedor';
+  if (p.categoria === 'Adiantamento' && p.lavadorId === undefined) return 'lavador';
+  if (p.categoria !== 'Adiantamento' && p.fornecedorNome === undefined) return 'fornecedor';
   return 'confirming';
 }
 
@@ -1123,9 +1128,16 @@ function getNextSaidaStep(p: Partial<PendingSaida> & { valor: number }): SaidaSt
  */
 function promptForSaidaStep(p: PendingSaida): string {
   switch (p.step) {
+    case 'valor':
+      return (
+        `💸 *Nova saída de caixa*\n\n` +
+        `💰 *Qual o valor da saída?*\n` +
+        `_Ex: 50, 120,50, 200_`
+      );
+
     case 'descricao':
       return (
-        `💸 Saída de *R$ ${p.valor.toFixed(2)}* recebida!\n\n` +
+        `💸 Saída de *R$ ${p.valor.toFixed(2)}*\n\n` +
         `📝 *Qual a descrição do gasto?*\n` +
         `_Ex: Produto químico, Conta de luz, Material de limpeza_`
       );
@@ -1137,6 +1149,17 @@ function promptForSaidaStep(p: PendingSaida): string {
         `1️⃣ Dinheiro\n2️⃣ PIX\n3️⃣ Cartão\n4️⃣ NFe`
       );
 
+    case 'lavador': {
+      const lista = p.lavadoresList.length > 0
+        ? p.lavadoresList.map((l, i) => `${i + 1}️⃣ ${l.nome}`).join('\n')
+        : '_(nenhum funcionário cadastrado)_';
+      return (
+        `👤 *Para qual funcionário é o adiantamento?*\n\n` +
+        lista +
+        `\n\n_Digite o número correspondente_`
+      );
+    }
+
     case 'fornecedor':
       return (
         `🏪 *Nome do fornecedor ou responsável?*\n` +
@@ -1145,13 +1168,15 @@ function promptForSaidaStep(p: PendingSaida): string {
 
     case 'confirming': {
       const formaLabel = FORMA_LABELS[p.formaPagamento || 'DINHEIRO'] || p.formaPagamento;
-      const fornLine = p.fornecedorNome ? `\n  🏪 Fornecedor: ${p.fornecedorNome}` : '';
+      const fornLine    = p.fornecedorNome ? `\n  🏪 Fornecedor: ${p.fornecedorNome}` : '';
+      const lavLine     = p.lavadorNome    ? `\n  👤 Funcionário: ${p.lavadorNome}` : '';
       return (
         `💸 *Confirmar lançamento?*\n\n` +
         `  💰 Valor: *R$ ${p.valor.toFixed(2)}*\n` +
         `  📝 Descrição: ${p.descricao}\n` +
         `  💳 Pagamento: ${formaLabel}\n` +
         `  🏷️ Categoria: ${p.categoria}` +
+        lavLine +
         fornLine +
         `\n\nResponda *sim* para confirmar ou *não* para cancelar.`
       );
@@ -1225,29 +1250,33 @@ Mensagem: "${message}"`;
  */
 async function handleSaidaWhatsapp(message: string, from: string, senderName: string, empresaId: string): Promise<string> {
   const dados = await extrairDadosSaida(message);
-
-  if (!dados) {
-    return (
-      `❓ Não consegui identificar o valor da saída.\n\n` +
-      `Tente:\n` +
-      `  *saída 50 material de limpeza pix*\n` +
-      `  *despesa 120 conta de luz dinheiro*\n` +
-      `  *saída 80 cartão*`
-    );
-  }
-
   const pendingKey = `${empresaId}:${from}`;
+
   const pending: PendingSaida = {
-    valor: dados.valor,
-    descricao: dados.descricao,
-    formaPagamento: dados.formaPagamento,
-    categoria: dados.categoria,
-    fornecedorNome: undefined, // ainda não perguntado
-    step: getNextSaidaStep(dados as PendingSaida & { valor: number }),
+    valor:          dados?.valor ?? 0,
+    descricao:      dados?.descricao ?? null,
+    formaPagamento: dados?.formaPagamento ?? null,
+    categoria:      dados?.categoria ?? 'Despesa',
+    fornecedorNome: undefined,
+    lavadorId:      undefined,
+    lavadorNome:    undefined,
+    lavadoresList:  [],
+    step:           'valor', // será recalculado abaixo
     empresaId,
-    userName: senderName,
-    expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutos
+    userName:       senderName,
+    expiresAt:      Date.now() + 10 * 60 * 1000,
   };
+
+  pending.step = getNextSaidaStep(pending);
+
+  // Se o próximo step é lavador, pré-carrega a lista
+  if (pending.step === 'lavador') {
+    pending.lavadoresList = await prisma.lavador.findMany({
+      where: { empresaId, ativo: true },
+      select: { id: true, nome: true },
+      orderBy: { nome: 'asc' },
+    });
+  }
 
   pendingSaidas.set(pendingKey, pending);
   return promptForSaidaStep(pending);
@@ -1271,6 +1300,15 @@ async function handlePendingSaidaStep(message: string, pendingKey: string, sende
   pending.expiresAt = Date.now() + 10 * 60 * 1000;
 
   switch (pending.step) {
+    case 'valor': {
+      const val = parseFloat(resp.replace(',', '.').replace(/[^\d.]/g, ''));
+      if (!val || val <= 0) {
+        return '⚠️ Informe um valor válido.\n_Ex: 50, 120,50, 200_';
+      }
+      pending.valor = val;
+      break;
+    }
+
     case 'descricao': {
       if (resp.length < 2) {
         return '⚠️ Descrição muito curta. Descreva melhor o gasto.\nEx: _Produto químico_, _Conta de luz_';
@@ -1291,9 +1329,25 @@ async function handlePendingSaidaStep(message: string, pendingKey: string, sende
       break;
     }
 
+    case 'lavador': {
+      const num = parseInt(resp, 10);
+      if (!isNaN(num) && num >= 1 && num <= pending.lavadoresList.length) {
+        const lav = pending.lavadoresList[num - 1];
+        pending.lavadorId   = lav.id;
+        pending.lavadorNome = lav.nome;
+      } else {
+        const lista = pending.lavadoresList.map((l, i) => `${i + 1}️⃣ ${l.nome}`).join('\n');
+        return (
+          `❓ Opção inválida. Escolha digitando o número:\n\n` +
+          lista
+        );
+      }
+      break;
+    }
+
     case 'fornecedor': {
       if (/^(pular|skip|n[aã]o|nao|nenhum|-)$/.test(lower)) {
-        pending.fornecedorNome = null; // pulou explicitamente
+        pending.fornecedorNome = null;
       } else {
         pending.fornecedorNome = resp;
       }
@@ -1311,6 +1365,16 @@ async function handlePendingSaidaStep(message: string, pendingKey: string, sende
 
   // Avança para próxima etapa
   pending.step = getNextSaidaStep(pending);
+
+  // Se o próximo step é lavador, carrega a lista de funcionários
+  if (pending.step === 'lavador' && pending.lavadoresList.length === 0) {
+    pending.lavadoresList = await prisma.lavador.findMany({
+      where: { empresaId: pending.empresaId, ativo: true },
+      select: { id: true, nome: true },
+      orderBy: { nome: 'asc' },
+    });
+  }
+
   pendingSaidas.set(pendingKey, pending);
   return promptForSaidaStep(pending);
 }
@@ -1341,7 +1405,7 @@ async function confirmarSaida(pendingKey: string, senderName: string): Promise<s
       fornecedorId = fornecedor.id;
     }
 
-    await prisma.caixaRegistro.create({
+    const registro = await prisma.caixaRegistro.create({
       data: {
         empresaId: pending.empresaId,
         tipo: 'SAIDA',
@@ -1354,8 +1418,22 @@ async function confirmarSaida(pendingKey: string, senderName: string): Promise<s
       },
     });
 
+    // Se for adiantamento com lavador vinculado, cria o registro de adiantamento
+    if (pending.categoria === 'Adiantamento' && pending.lavadorId) {
+      await prisma.adiantamento.create({
+        data: {
+          valor:          pending.valor,
+          lavadorId:      pending.lavadorId,
+          empresaId:      pending.empresaId,
+          caixaRegistroId: registro.id,
+          status:         'PENDENTE',
+        },
+      });
+    }
+
     const formaLabel = FORMA_LABELS[pending.formaPagamento || 'DINHEIRO'] || pending.formaPagamento;
-    const fornLine = pending.fornecedorNome ? `\n  🏪 ${pending.fornecedorNome}` : '';
+    const fornLine  = pending.fornecedorNome ? `\n  🏪 ${pending.fornecedorNome}` : '';
+    const lavLine   = pending.lavadorNome    ? `\n  👤 Funcionário: ${pending.lavadorNome}` : '';
 
     return (
       `✅ *Saída registrada!*\n\n` +
@@ -1363,6 +1441,7 @@ async function confirmarSaida(pendingKey: string, senderName: string): Promise<s
       `  📝 ${pending.descricao || 'Saída'}\n` +
       `  💳 ${formaLabel}\n` +
       `  🏷️ ${pending.categoria}` +
+      lavLine +
       fornLine +
       `\n  👤 ${senderName}`
     );
