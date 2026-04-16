@@ -1,7 +1,7 @@
 # Update 16/04/2026
 
 ## Resumo
-Melhorias críticas de UI/UX no portal do funcionário e implementação robusta de reconexão automática do bot WhatsApp para produção. Totalizando 3 commits com 112 linhas adicionadas.
+Melhorias críticas de UI/UX no portal do funcionário, lógica inteligente de caixa, categorias dinâmicas de veículos e implementação robusta de reconexão automática do bot WhatsApp para produção. Totalizando 4 commits com 184+ linhas adicionadas.
 
 ---
 
@@ -184,18 +184,85 @@ import { restoreActiveSessions, initBaileys, getStatus } from './services/bailey
 
 ---
 
+## 5. Carregar Categorias de Veículos Dinamicamente (ETAPA 5)
+
+**Arquivos:** `DESKTOPV2/funcionario/nova-ordem-funcionario.html`
+
+### 5a. Problema
+- Categorias estavam **hardcoded**: HATCH, SEDAN, SUV, PICKUP, VAN, UTILI
+- Não mostrava categorias customizadas criadas pela empresa
+- Sistema não era escalável para diferentes tipos de veículos
+
+### 5b. Solução Implementada
+
+**Novo State:**
+- `tiposVeiculo[]` — todos os tipos de veículos do banco
+- `loadingTiposVeiculo` — flag de loading
+- `cats: []` — agora preenchido dinamicamente (antes hardcoded)
+
+**Novas Funções:**
+- `loadTiposVeiculo()` — chama `window.api.getTiposVeiculo()` na inicialização
+- `atualizarCategorias()` — filtra categorias baseado no tipo selecionado
+
+### 5c. Fluxo Dinâmico
+```
+1. Página carrega
+   ↓
+2. loadTiposVeiculo() busca todos os tipos do banco
+   ↓
+3. Usuário seleciona tipo (ex: CARRO)
+   ↓
+4. atualizarCategorias() filtra tipos com nome='CARRO'
+   ↓
+5. Extrai campo `categoria` de cada tipo
+   ↓
+6. Cria array cats[] com labels amigáveis
+   ↓
+7. HTML atualiza com <template x-for="c in cats">
+```
+
+### 5d. Labels Amigáveis
+Mapeamento automático:
+```
+HATCH → Hatch
+SEDAN → Sedan
+SUV → SUV
+PICKUP → Pickup
+VAN → Van
+UTILI → Utilitário
+MONOVOLUME → Monovolume
+COUPE → Cupê
+CONVERSIVEL → Conversível
+[customizada] → [customizada] (fallback)
+```
+
+### 5e. Comportamento Por Tipo
+- **CARRO**: mostra apenas categorias CARRO (Hatch, Sedan, SUV, etc)
+- **MOTO**: sem seleção de categoria (cats = [])
+- **OUTROS**: categorias específicas se existirem no banco
+
+### 5f. Benefícios
+✅ **Escalável**: Novas categorias aparecem automaticamente
+✅ **Customizável**: Cada empresa pode ter categorias próprias
+✅ **Sem hardcoding**: Dados vêm 100% do banco
+✅ **Ordenação**: Categorias ordenadas alfabeticamente
+✅ **Fallback**: Labels customizados com fallback para categoria bruta
+
+---
+
 ## 📊 Estatísticas do Commit
 
 ```
-Arquivos modificados: 5
-Linhas adicionadas: 112
-Linhas removidas: 17
-Commits: 3 principais
+Arquivos modificados: 6
+Linhas adicionadas: 184+
+Linhas removidas: 27
+Commits: 4 principais
 ```
 
-**Commit 1**: `62b4751` — Nova ordem: nome opcional + busca inteligente de clientes
-**Commit 2**: `d3e9431` — Lógica inteligente de caixa com troco inicial
-**Commit 3** (próximo): Reconexão robusta do WhatsApp
+**Commit 1**: `62b4751` — ETAPA 1+2: Nova ordem - nome opcional + busca inteligente de clientes
+**Commit 2**: `d3e9431` — ETAPA 3: Lógica inteligente de caixa com troco inicial
+**Commit 3**: `de4e371` — ETAPA 4: Reconexão robusta do WhatsApp com backoff exponencial
+**Commit 4**: `f095647` — ETAPA 5: Carregar categorias de veículos dinamicamente
 
 ---
 
