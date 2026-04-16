@@ -1061,13 +1061,42 @@
 
         <!-- Nome -->
         <div class="form-row cols1">
-          <div class="fld">
-            <label>Nome completo <span>*</span></label>
-            <input type="text" placeholder="Ex: João da Silva"
+          <div class="fld" style="position:relative">
+            <label>Nome completo</label>
+            <input type="text" placeholder="Ex: João da Silva (opcional — N/A se vazio)"
               x-model="form.nome"
-              :class="{error: formErros.nome}"
-              @input="formErros.nome=false">
-            <div class="fld-err" x-show="formErros.nome" x-cloak>Nome é obrigatório</div>
+              @input="buscarClientesNoForm()"
+              autocomplete="off">
+
+            <!-- Dropdown de sugestões de clientes -->
+            <div x-show="formClienteSuggestions.length > 0" x-cloak
+              style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; margin-top:4px; z-index:100; max-height:200px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+              <template x-for="c in formClienteSuggestions" :key="c.id">
+                <div @click="selecionarClienteDoForm(c)"
+                  style="padding:10px 12px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center"
+                  @mouseenter="$el.style.background='var(--light)'"
+                  @mouseleave="$el.style.background='white'">
+                  <div style="flex:1">
+                    <div style="font-weight:500" x-text="c.nome"></div>
+                    <div style="font-size:12px; color:var(--mid)" x-text="c.telefone || 'Sem telefone'"></div>
+                  </div>
+                  <div style="margin-left:8px; color:var(--mid); font-size:12px">
+                    <span x-text="(c.veiculos?.length || 0) + ' veículo(s)'"></span>
+                  </div>
+                </div>
+              </template>
+              <div x-show="formBuscandoClientes" x-cloak
+                style="padding:10px; text-align:center; color:var(--mid); font-size:12px">
+                Buscando...
+              </div>
+            </div>
+
+            <!-- Badge quando cliente está selecionado -->
+            <div x-show="formClienteSelecionado && !formClienteSuggestions.length" x-cloak
+              style="margin-top:6px; padding:6px 10px; background:var(--light); border-radius:4px; font-size:12px; color:var(--mid)">
+              <span>✓ Cliente selecionado: </span>
+              <strong x-text="formClienteSelecionado.nome"></strong>
+            </div>
           </div>
         </div>
 
@@ -1188,7 +1217,11 @@
         showForm: false,
         formEdicao: false,
         form: { nome:'', telefone:'', cpf:'', modelo:'', placa:'', cor:'', ano:'' },
-        formErros: { nome:false, modelo:false, placa:false },
+        formErros: { modelo:false, placa:false },
+        formClienteSuggestions: [],
+        formClienteSelecionado: null,
+        formBuscandoClientes: false,
+        _formBuscaTimer: null,
 
         // ── Ordem ──────────────────────────
         tipo: null, cat: null,
@@ -1373,11 +1406,50 @@
           this.showForm = true;
         },
 
+        // ── Busca de clientes no formulário ────
+        buscarClientesNoForm() {
+          clearTimeout(this._formBuscaTimer);
+          const q = this.form.nome.trim();
+          if (q.length < 2) {
+            this.formClienteSuggestions = [];
+            return;
+          }
+          this._formBuscaTimer = setTimeout(() => this._buscarClientesNoFormNow(), 300);
+        },
+
+        async _buscarClientesNoFormNow() {
+          const q = this.form.nome.trim();
+          if (q.length < 2) return;
+
+          this.formBuscandoClientes = true;
+          try {
+            const data = await window.api.getClientes(1, 5, q);
+            this.formClienteSuggestions = data.clientes || [];
+          } catch {
+            this.formClienteSuggestions = [];
+          } finally {
+            this.formBuscandoClientes = false;
+          }
+        },
+
+        selecionarClienteDoForm(cliente) {
+          this.formClienteSelecionado = cliente;
+          this.form.nome = cliente.nome;
+          this.form.telefone = cliente.telefone || '';
+          this.formClienteSuggestions = [];
+        },
+
+        limparSugestoes() {
+          if (!this.form.nome.trim()) {
+            this.formClienteSuggestions = [];
+            this.formClienteSelecionado = null;
+          }
+        },
+
         confirmarCliente() {
-          this.formErros.nome   = !this.form.nome.trim();
           this.formErros.modelo = !this.form.modelo.trim();
           this.formErros.placa  = !this.form.placa.trim();
-          if (this.formErros.nome || this.formErros.modelo || this.formErros.placa) return;
+          if (this.formErros.modelo || this.formErros.placa) return;
 
           const placaFmt = this.form.placa.toUpperCase();
 
@@ -1391,8 +1463,26 @@
               telefone: this.form.telefone,
               cor:      this.form.cor,
             };
+          } else if (this.formClienteSelecionado) {
+            // Cliente selecionado da busca + novo veículo
+            this.cliente = {
+              clienteId: this.formClienteSelecionado.id,
+              veiculoId: null,
+              nome:      this.formClienteSelecionado.nome,
+              modelo:    this.form.modelo.trim(),
+              placa:     placaFmt,
+              telefone:  this.formClienteSelecionado.telefone || '',
+              cor:       this.form.cor,
+              isNew:     false,
+              novoVeiculo: {
+                placa:  placaFmt,
+                modelo: this.form.modelo.trim() || null,
+                cor:    this.form.cor || null,
+              }
+            };
+            this.formClienteSelecionado = null;
           } else if (this._linkClienteId) {
-            // Cliente existente + novo veículo
+            // Cliente existente + novo veículo (via busca inicial)
             this.cliente = {
               clienteId: this._linkClienteId,
               veiculoId: null,
@@ -1602,6 +1692,7 @@
             q: '', showDrop: false, results: [], buscando: false,
             cliente: null, _linkClienteId: null,
             showForm: false, formEdicao: false,
+            formClienteSuggestions: [], formClienteSelecionado: null,
             tipo: null, cat: null,
             svc: null, adds: [], lavs: [],
             criando: false, sucesso: false, ordemNum: null,
