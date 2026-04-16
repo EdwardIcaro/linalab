@@ -203,6 +203,44 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
     }
 };
 
+export const getValoresEsperados = async (req: EmpresaRequest, res: Response) => {
+    const empresaId = req.empresaId!;
+    try {
+        const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+        const horarioAbertura = empresa?.horarioAbertura || '07:00';
+        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+
+        // Buscar pagamentos e abertura do dia
+        const [pagamentos, abertura] = await Promise.all([
+            prisma.pagamento.findMany({
+                where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
+                select: { valor: true, metodo: true },
+            }),
+            prisma.aberturaCaixa.findFirst({
+                where: { empresaId, data: { gte: start, lte: end } },
+                select: { valorInicial: true },
+            }),
+        ]);
+
+        // Valores esperados por método
+        const esperado: Record<string, number> = {
+            DINHEIRO: (abertura?.valorInicial || 0) + pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0),
+            PIX:      pagamentos.filter(p => p.metodo === 'PIX').reduce((a, p) => a + p.valor, 0),
+            CARTAO:   pagamentos.filter(p => p.metodo === 'CARTAO').reduce((a, p) => a + p.valor, 0),
+            NFE:      pagamentos.filter(p => (p.metodo as string) === 'NFE').reduce((a, p) => a + p.valor, 0),
+        };
+
+        return res.json({
+            esperado,
+            valorInicial: abertura?.valorInicial || 0,
+            pagamentosDinheiro: pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0),
+        });
+    } catch (error) {
+        console.error('Erro ao buscar valores esperados:', error);
+        res.status(500).json({ error: 'Erro ao buscar valores esperados.' });
+    }
+};
+
 export const createFechamento = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { valoresDigitados, observacao } = req.body;
@@ -213,8 +251,8 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
         const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
 
-        // Buscar pagamentos e saídas do dia (mesma lógica do getResumoDia)
-        const [pagamentos, saidas] = await Promise.all([
+        // Buscar pagamentos, saídas e abertura do dia
+        const [pagamentos, saidas, abertura] = await Promise.all([
             prisma.pagamento.findMany({
                 where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
                 select: { valor: true, metodo: true },
@@ -223,11 +261,16 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
                 where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, data: { gte: start, lte: end } },
                 select: { valor: true, formaPagamento: true },
             }),
+            prisma.aberturaCaixa.findFirst({
+                where: { empresaId, data: { gte: start, lte: end } },
+                select: { valorInicial: true },
+            }),
         ]);
 
         // Computado por método (valores reais do sistema)
+        // Para DINHEIRO: inclui troco inicial da abertura + pagamentos do dia
         const computado: Record<string, number> = {
-            DINHEIRO: pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0),
+            DINHEIRO: (abertura?.valorInicial || 0) + pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0),
             PIX:      pagamentos.filter(p => p.metodo === 'PIX').reduce((a, p) => a + p.valor, 0),
             CARTAO:   pagamentos.filter(p => p.metodo === 'CARTAO').reduce((a, p) => a + p.valor, 0),
             NFE:      pagamentos.filter(p => (p.metodo as string) === 'NFE').reduce((a, p) => a + p.valor, 0),
@@ -289,6 +332,7 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
             fechamento,
             relatorio,
             totalSaidas,
+            valorInicial: abertura?.valorInicial || 0,
         });
     } catch (error) {
         console.error('Erro ao criar fechamento de caixa:', error);

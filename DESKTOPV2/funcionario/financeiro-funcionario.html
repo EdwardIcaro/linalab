@@ -1795,7 +1795,7 @@
     }
 
     // FECHAMENTO DE CAIXA
-    function openFechamentoModal() {
+    async function openFechamentoModal() {
       const cfg = caixaStatus.paymentMethodsConfig || {};
       const metodos = [
         { key: 'DINHEIRO', label: '💵 Dinheiro', show: cfg.DINHEIRO !== false },
@@ -1804,14 +1804,38 @@
         { key: 'NFE',      label: '🧾 NFe',      show: true },
       ];
 
+      // Carregar valores esperados
+      let valoresEsperados = {};
+      let valorInicial = 0;
+      let pagamentosDinheiro = 0;
+      try {
+        const response = await window.api.getValoresEsperados();
+        valoresEsperados = response.esperado || {};
+        valorInicial = response.valorInicial || 0;
+        pagamentosDinheiro = response.pagamentosDinheiro || 0;
+      } catch (err) {
+        console.error('Erro ao buscar valores esperados:', err);
+      }
+
+      const fmt = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+
       const gridHtml = metodos
         .filter(m => m.show)
-        .map(m => `
-          <div class="fechamento-item">
-            <div class="label">${m.label}</div>
-            <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00">
-          </div>
-        `).join('');
+        .map(m => {
+          const valorEsperado = valoresEsperados[m.key] || 0;
+          const dinheiro = m.key === 'DINHEIRO';
+          const detalhes = dinheiro && valorInicial > 0
+            ? `<div style="font-size:11px;color:#666;margin-top:4px">Troco: ${fmt(valorInicial)} + Entradas: ${fmt(pagamentosDinheiro)} = ${fmt(valorEsperado)}</div>`
+            : '';
+          return `
+            <div class="fechamento-item">
+              <div class="label">${m.label}</div>
+              <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00" data-esperado="${valorEsperado}">
+              <div style="font-size:12px;color:#0066cc;font-weight:600;margin-top:6px">Esperado: ${fmt(valorEsperado)}</div>
+              ${detalhes}
+            </div>
+          `;
+        }).join('');
 
       document.getElementById('fechamentoGrid').innerHTML = gridHtml;
       document.getElementById('fechamentoModal').classList.add('active');

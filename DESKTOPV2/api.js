@@ -294,6 +294,7 @@ const api = {
   getStatusCaixa: () => fetchApi('/caixa/status'),
   abrirCaixa: (data) => fetchApi('/caixa/abertura', { method: 'POST', body: JSON.stringify(data) }),
   getResumoDia: () => fetchApi('/caixa/resumo-dia'),
+  getValoresEsperados: () => fetchApi('/caixa/valores-esperados'),
   getHistoricoCaixa: (filters) => {
     const params = new URLSearchParams(filters);
     return fetchApi(`/caixa/historico?${params.toString()}`);

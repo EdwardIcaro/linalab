@@ -7,6 +7,7 @@ import {
   createSangria,
   getHistorico,
   getResumoDia,
+  getValoresEsperados,
   getFechamentoById,
   getGanhosDoMes,
   getDadosComissao,
@@ -23,6 +24,7 @@ const router: Router = Router();
 router.get('/status', getStatusCaixa);
 router.post('/abertura', abrirCaixa);
 router.get('/resumo-dia', getResumoDia);
+router.get('/valores-esperados', getValoresEsperados);
 router.get('/ganhos-mes', getGanhosDoMes);
 router.get('/historico', getHistorico);
 router.get('/comissoes', getDadosComissao);
