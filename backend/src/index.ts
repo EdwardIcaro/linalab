@@ -34,7 +34,7 @@ import ocrRoutes from './routes/ocr';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
-import { restoreActiveSessions } from './services/baileyService';
+import { restoreActiveSessions, initBaileys, getStatus } from './services/baileyService';
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
@@ -201,6 +201,40 @@ cron.schedule('0 */6 * * *', () => {
 cron.schedule('0 9 * * *', () => {
   console.log(`[${new Date().toISOString()}] Verificando trials próximos de expirar...`);
   subscriptionService.checkTrialExpirationWarnings();
+}, {
+  timezone: "America/Sao_Paulo"
+});
+
+// Cron job para verificar e reconectar bots desconectados (a cada 10 minutos)
+// Reforça reconexões que atingiram MAX_RECONNECT, garantindo sessão mantida em produção
+cron.schedule('*/10 * * * *', async () => {
+  try {
+    const desconectadas = await prisma.whatsappInstance.findMany({
+      where: {
+        authState: { not: null },
+        status: { in: ['disconnected', 'qr_code'] } // excluir 'connected' e 'reconnecting'
+      }
+    });
+
+    if (desconectadas.length > 0) {
+      console.log(`[${new Date().toISOString()}] [WhatsApp Cron] ${desconectadas.length} instância(s) desconectada(s) com credenciais — tentando reconectar...`);
+
+      for (const instance of desconectadas) {
+        const statusMemoria = getStatus(instance.empresaId);
+        // Se em memória também está desconectado → tentar reconectar
+        if (statusMemoria === 'disconnected' && instance.authState) {
+          console.log(`[WhatsApp Cron] Reconectando ${instance.empresaId}...`);
+          try {
+            await initBaileys(instance.empresaId);
+          } catch (err) {
+            console.error(`[WhatsApp Cron] Erro ao reconectar ${instance.empresaId}:`, err);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[WhatsApp Cron] Erro ao verificar status:', err);
+  }
 }, {
   timezone: "America/Sao_Paulo"
 });

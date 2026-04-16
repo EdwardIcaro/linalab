@@ -89,6 +89,7 @@ Usuario → Empresa → Cliente → Veiculo
 - Cron a cada 15 min: auto-finalização de ordens (`processarFinalizacoesAutomaticas`)
 - Cron a cada 6h: expiração de assinaturas
 - Cron 09h diário: avisos de trial expirando
+- Cron a cada 10 min: reconexão de bots WhatsApp desconectados (`restoreActiveSessions`)
 
 ---
 

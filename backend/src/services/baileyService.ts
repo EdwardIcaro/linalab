@@ -19,7 +19,24 @@ const sockets = new Map<string, WASocket>();
 const qrCodes = new Map<string, string>();
 const statuses = new Map<string, string>();
 const reconnectAttempts = new Map<string, number>();
-const MAX_RECONNECT = 10;
+const reconnectDelays = new Map<string, number>();
+
+// Backoff exponencial para reconexão
+const BASE_DELAY = 3000; // 3 segundos
+const MAX_DELAY = 60000; // 60 segundos
+const MAX_RECONNECT = 100; // Aumentado de 10 para 100 (com backoff exponencial)
+
+function getNextReconnectDelay(empresaId: string): number {
+  let delay = reconnectDelays.get(empresaId) || BASE_DELAY;
+  // Próximo delay = delay * 1.5, com cap em MAX_DELAY
+  const nextDelay = Math.min(delay * 1.5, MAX_DELAY);
+  reconnectDelays.set(empresaId, nextDelay);
+  return delay;
+}
+
+function resetReconnectDelay(empresaId: string): void {
+  reconnectDelays.delete(empresaId);
+}
 
 // Mapeamento de @lid → número de telefone (novo protocolo WhatsApp)
 const lidToPhone = new Map<string, string>();
@@ -253,6 +270,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
         statuses.set(empresaId, 'connected');
         sockets.set(empresaId, sock);
         reconnectAttempts.set(empresaId, 0);
+        resetReconnectDelay(empresaId); // Reset delay ao conectar com sucesso
         freshCredsSet.delete(empresaId); // Conexão estabelecida, creds já persistidos no DB
 
         const jid = sock.user?.id;
@@ -269,6 +287,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
       // Desconectado
       if (connection === 'close') {
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const errorMsg = (lastDisconnect?.error as any)?.message || 'Sem mensagem';
         const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
         const isLoggedOut = statusCode === loggedOutCode;
         const attempts = reconnectAttempts.get(empresaId) || 0;
@@ -277,19 +296,29 @@ export async function initBaileys(empresaId: string): Promise<void> {
         const isRealLogout = isLoggedOut && wasAuthenticated;
         const shouldReconnect = !isRealLogout && attempts < MAX_RECONNECT;
 
-        console.log(
-          `[Baileys] Desconectado para ${empresaId}. Código: ${statusCode} | Autenticado: ${wasAuthenticated} | Reconectar: ${shouldReconnect} (tentativa ${attempts}/${MAX_RECONNECT})`
-        );
+        console.log(`[Baileys] Desconexão para ${empresaId}:`, {
+          statusCode,
+          errorMsg,
+          wasAuthenticated,
+          isRealLogout,
+          tentativaAtual: attempts + 1,
+          maxTentativas: MAX_RECONNECT,
+          shouldReconnect,
+        });
 
         if (shouldReconnect) {
           reconnectAttempts.set(empresaId, attempts + 1);
           sockets.delete(empresaId);
+
           // QR escaneado → creds atualizadas → reconectar imediatamente (1s)
-          // Sessão ativa caiu → reconectar rápido (3s)
+          // Sessão ativa caiu → usar backoff exponencial (3s, 4.5s, 6.7s, ..., 60s)
           // Erro durante fase QR sem scan → delay maior para QR não mudar (15s)
-          const reconnectDelay = credsJustUpdated ? 1000 : (wasAuthenticated ? 3000 : 15000);
+          const reconnectDelay = credsJustUpdated
+            ? 1000
+            : (wasAuthenticated ? getNextReconnectDelay(empresaId) : 15000);
+
           credsJustUpdated = false;
-          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s... (auth=${wasAuthenticated})`);
+          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s (tentativa ${attempts + 1}/${MAX_RECONNECT})...`);
           setTimeout(() => {
             initBaileys(empresaId).catch(console.error);
           }, reconnectDelay);
@@ -297,7 +326,7 @@ export async function initBaileys(empresaId: string): Promise<void> {
           qrCodes.delete(empresaId);
           sockets.delete(empresaId);
           statuses.set(empresaId, 'disconnected');
-          reconnectAttempts.delete(empresaId); // Reset para permitir nova tentativa manual
+          // NÃO deletar attempts — mantém histórico para logging
           freshCredsSet.delete(empresaId);
 
           if (isRealLogout) {
@@ -310,8 +339,8 @@ export async function initBaileys(empresaId: string): Promise<void> {
             });
           } else {
             // Máximo de tentativas atingido por problema de rede/servidor — NÃO limpar authState
-            // Na próxima startup, as credenciais ainda são válidas e a reconexão será tentada
-            console.log(`[Baileys] ⚠️ Max tentativas para ${empresaId} — preservando authState para próximo startup`);
+            // Cron job a cada 10 min tentará reconectar novamente
+            console.log(`[Baileys] ⚠️ Max tentativas (${MAX_RECONNECT}) para ${empresaId} — preservando authState. Cron tentará novamente em 10 min`);
             await prisma.whatsappInstance.update({
               where: { empresaId },
               data: { status: 'disconnected', qrCode: null },

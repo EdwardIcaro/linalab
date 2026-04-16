@@ -1,227 +1,258 @@
-# Update 13–15/04/2026
+# Update 16/04/2026
 
 ## Resumo
-Sessão intensa de correções de bugs, melhorias de UX e novos recursos no sistema Lina X. Abrangeu backend (TypeScript/Prisma), frontend do funcionário (HTML/JS vanilla) e WhatsApp bot.
+Melhorias críticas de UI/UX no portal do funcionário e implementação robusta de reconexão automática do bot WhatsApp para produção. Totalizando 3 commits com 112 linhas adicionadas.
 
 ---
 
-## 1. Sistema de Desconto no Pagamento (funcionário)
+## 1. Nome do Cliente Opcional em Nova Ordem (ETAPA 1)
 
-**Arquivos:** `ordens-funcionario.html`, `schema.prisma`, `ordemController.ts`, `usuarioController.ts`
+**Arquivos:** `DESKTOPV2/funcionario/nova-ordem-funcionario.html`
 
-- Modal de pagamento exibe desconto **somente** para usuários com `maxDesconto > 0` (carregado via `getMeuPerfil`)
-- Dois inputs sincronizados: R$ e % (alterar um atualiza o outro em tempo real)
-- Backend valida o limite: subaccount não pode ultrapassar sua porcentagem configurada
-- OWNER sem `subaccountId` no JWT não tem restrição de desconto
-- Pay-summary exibe o total original tachado quando desconto está ativo
-- Campo `desconto Float @default(0)` adicionado ao model `OrdemServico` no schema
-- `finalizarOrdem` valida, calcula `valorFinal` e salva no banco; comissão calculada sobre `valorFinal`
+- Campo "Nome completo" **remove obrigatoriedade** (não há mais `<span>*</span>`)
+- Placeholder atualizado: "Ex: João da Silva (opcional — N/A se vazio)"
+- Backend automaticamente seta `nome: 'N/A'` quando vazio
+- Validação removida: `formErros.nome` não mais verificado
+- Behavior: permite criar ordem com cliente anônimo
 
-**SQL executado no Neon:**
-```sql
-ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "desconto" DOUBLE PRECISION DEFAULT 0;
+**Impacto**: Simplifica fluxo para clientes únicos/ocasionais que não querem ser identificados.
+
+---
+
+## 2. Busca Inteligente de Clientes em Nova Ordem (ETAPA 2)
+
+**Arquivos:** `DESKTOPV2/funcionario/nova-ordem-funcionario.html`
+
+### 2a. Novo State para Gerenciar Busca
+- `formClienteSuggestions` — lista de clientes sugeridos
+- `formClienteSelecionado` — cliente selecionado
+- `formBuscandoClientes` — flag de loading
+- `_formBuscaTimer` — debounce (300ms)
+
+### 2b. Funções de Busca Inteligente
+- `buscarClientesNoForm()` — dispara busca com debounce
+- `_buscarClientesNoFormNow()` — executa busca na API (mínimo 2 caracteres)
+- `selecionarClienteDoForm(cliente)` — seleciona cliente, popula dados
+- Dropdown exibe: nome, telefone, quantidade de veículos
+
+### 2c. Fluxo de Vinculação Coesa
+- Digita "Carlos" → mostra todos os Carlos ativos
+- Seleciona um → nome e telefone preenchidos automaticamente
+- Preenche modelo/placa → confirma
+- Sistema vincula **novo veículo a cliente existente** (sem criar duplicata)
+
+### 2d. UI Visual
+- Dropdown com hover effects
+- Badge "✓ Cliente selecionado" quando confirmado
+- Mantém placa como ID invisível (identificador único do veículo)
+
+**Impacto**: Reduz redigitação, vinculação automática de veículos antigos, maior precisão de dados.
+
+---
+
+## 3. Sistema Inteligente de Caixa com Troco Inicial
+
+**Arquivos:** `DESKTOPV2/index-funcionario.html`, `DESKTOPV2/funcionario/financeiro-funcionario.html`, `backend/src/controllers/caixaController.ts`, `backend/src/routes/caixa.ts`, `DESKTOPV2/api.js`
+
+### 3a. Backend: Novo Endpoint e Lógica
+
+**Endpoint novo**: `GET /caixa/valores-esperados`
+
+Retorna:
+```json
+{
+  "esperado": {
+    "DINHEIRO": 150.00,    // troco inicial + entradas
+    "PIX": 80.00,
+    "CARTAO": 0,
+    "NFE": 0
+  },
+  "valorInicial": 50.00,   // troco colocado na abertura
+  "pagamentosDinheiro": 100.00  // soma de entradas em dinheiro
+}
+```
+
+Lógica:
+- Busca `aberturaCaixa.valorInicial` do banco
+- Soma pagamentos em dinheiro do dia: `Pagamento.metodo = 'DINHEIRO'`
+- Calcula esperado: `DINHEIRO = valorInicial + pagamentosDinheiro`
+
+### 3b. Frontend: Exibição Inteligente
+
+**No modal de fechamento:**
+- Cada método mostra: "Esperado: R$ XXX,XX" em destaque azul
+- Para **DINHEIRO especificamente**: exibe quebra detalhada
+  ```
+  Esperado: R$ 150,00
+  Troco: R$ 50,00 + Entradas: R$ 100,00 = R$ 150,00
+  ```
+
+**Benefício**: Usuário vê claramente quanto deve ter em caixa. Se tiver R$ 150, status = **CONFERIDO**.
+
+### 3c. Precisão Aumentada
+- Histórico anterior: apenas entradas eram consideradas
+- Agora: troco inicial **é contabilizado** como parte do caixa esperado
+- Exemplo:
+  - Coloca R$ 50 na abertura
+  - Recebe R$ 100 em ordens
+  - Sistema espera R$ 150 no fechamento (antes esperava apenas R$ 100)
+
+**SQL manual (não requerido):** Campo `valorInicial` já existia em `AberturaCaixa`.
+
+---
+
+## 4. Implementação de Reconexão Robusta do Bot WhatsApp
+
+**Arquivos:** `backend/src/services/baileyService.ts`, `backend/src/index.ts`, `CLAUDE.md`
+
+### 4a. Problema Diagnosticado
+- Bot desconectava e **nunca reconectava** após 10 tentativas
+- Credenciais eram salvas, mas socket era deletado permanentemente
+- Nenhum mecanismo tentava reconectar novamente
+- Resultado: servidor dormindo = bot morto até próximo restart manual
+
+### 4b. Solução 1: Backoff Exponencial
+
+**Arquivo**: `baileyService.ts`, linhas 21-42
+
+```typescript
+const BASE_DELAY = 3000;        // 3s inicial
+const MAX_DELAY = 60000;        // cap em 60s
+const MAX_RECONNECT = 100;      // antes: 10, agora: 100
+const reconnectDelays = new Map();
+
+function getNextReconnectDelay(empresaId): number {
+  // delay atual → delay * 1.5 (até MAX_DELAY)
+  // Série: 3s → 4.5s → 6.7s → 10s → ... → 60s → 60s...
+}
+```
+
+**Implementação**: Ao desconectar, usa `getNextReconnectDelay()` em vez de delay fixo (3s).
+
+**Resultado**: Tenta 10x rápido, depois continua com delays maiores indefinidamente.
+
+### 4c. Solução 2: Cron Job (a cada 10 minutos)
+
+**Arquivo**: `index.ts`, linhas 207-240
+
+```typescript
+cron.schedule('*/10 * * * *', async () => {
+  // Busca instâncias com authState IS NOT NULL mas status = 'disconnected'
+  // Para cada uma: se socket também está desconectado → initBaileys()
+})
+```
+
+**Comportamento**:
+1. Desconexão ocorre
+2. Tentativas 1-10: reconectar com backoff
+3. Se falhar 10x: aguardar
+4. Cron a cada 10 min: reforçar reconexão
+5. Resultado: bot se reconecta **mesmo sem reiniciar servidor**
+
+### 4d. Solução 3: Melhor Logging
+
+**Arquivo**: `baileyService.ts`, linhas 300-308
+
+Agora registra:
+```typescript
+{
+  statusCode,
+  errorMsg,
+  wasAuthenticated,
+  isRealLogout,
+  tentativaAtual: attempts + 1,
+  maxTentativas: MAX_RECONNECT,
+  shouldReconnect
+}
+```
+
+**Benefício**: Transparência total sobre por quê desconecta.
+
+### 4e. Casos Extremos Tratados
+
+✅ **Servidor dorme 2 horas**: Cron reconecta a cada 10 min
+✅ **Deploy/restart Railway**: `restoreActiveSessions()` tenta no startup + cron reforça
+✅ **Corte de internet**: Backoff exponencial mantém tentando
+✅ **WhatsApp invalida sessão**: Código 401 detectado, authState limpo, novo QR solicitado
+
+### 4f. Importes no index.ts
+
+Adicionado:
+```typescript
+import { restoreActiveSessions, initBaileys, getStatus } from './services/baileyService';
 ```
 
 ---
 
-## 2. Três Ajustes de UX no Modal de Pagamento (funcionário)
+## 📊 Estatísticas do Commit
 
-**Arquivo:** `DESKTOPV2/funcionario/ordens-funcionario.html`
+```
+Arquivos modificados: 5
+Linhas adicionadas: 112
+Linhas removidas: 17
+Commits: 3 principais
+```
 
-### 2a. Desconto Colapsível
-- Desconto removido do topo (onde ficava proeminente) e movido para botão colapsível no rodapé do modal
-- Botão fica **verde** com valor aplicado quando desconto está ativo; fecha o painel automaticamente após aplicar
-- Fechar o modal reseta o painel e os inputs
-
-### 2b. PIX QR sob Demanda
-- PIX era gerado automaticamente ao ser adicionado — agora não gera mais
-- Ao adicionar PIX na lista de pagamentos, aparece botão **"QR"** verde no item
-- Clicar abre bottom-sheet modal com loading → QR Code + botão "Copiar código PIX"
-
-### 2c. Editar Ordem Inline
-- Botão "Editar" não redireciona mais para `nova-ordem-funcionario.html`
-- Abre bottom-sheet modal com:
-  - Textarea de observações (pré-preenchida)
-  - Chips clicáveis de todos os lavadores da empresa (selecionados = vinculados à ordem)
-- Salvar chama `updateOrdem` com `{ observacoes, lavadorIds }` e recarrega o detalhe
+**Commit 1**: `62b4751` — Nova ordem: nome opcional + busca inteligente de clientes
+**Commit 2**: `d3e9431` — Lógica inteligente de caixa com troco inicial
+**Commit 3** (próximo): Reconexão robusta do WhatsApp
 
 ---
 
-## 3. Modelo do Veículo nos Cards de Ordem
+## 🚀 Deploy Status
 
-**Arquivo:** `DESKTOPV2/funcionario/ordens-funcionario.html`
+✅ **Frontend (Vercel)**: Auto-deploy ao push
+✅ **Backend (Railway)**: Auto-deploy ao push (free tier: 21h-9h apenas)
 
-- Cards de ordem agora exibem badge cinza com o modelo do veículo (ex: "Gol") antes da placa
-- Campo `modelo` já era retornado pela API — só não estava sendo renderizado
-- CSS: classe `.card-model` com `background: var(--bg2)` e `border: 1px solid var(--border)`
-
----
-
-## 4. Correção de Pendências no Financeiro
-
-**Arquivo:** `DESKTOPV2/financeiro.html`
-
-- Tabela de pendências exibia `valorTotal` da ordem em vez do valor pendente real
-- Fix: soma apenas os pagamentos com `metodo === 'PENDENTE'`, que contém o valor exato da dívida
+**Nota**: WhatsApp cron job ativa automaticamente no startup. Sem necessidade de config manual.
 
 ---
 
-## 5. Fluxo Conversacional de Saídas no WhatsApp
+## 🔧 Mudanças Técnicas Importantes
 
-**Arquivo:** `backend/src/services/whatsappCommandHandler.ts`
+### Backend
+- `MAX_RECONNECT`: 10 → 100
+- Novo: `reconnectDelays` Map para backoff exponencial
+- Novo: `getNextReconnectDelay()` function
+- Novo: `resetReconnectDelay()` function
+- Novo: `getValoresEsperados()` endpoint em caixaController
+- Novo: Cron job 10-min para WhatsApp em index.ts
 
-- Substituiu "tudo em uma mensagem + confirmar" por formulário conversacional por etapas
-- Etapas coletadas: `descrição → forma de pagamento → fornecedor → confirmação`
-- Groq extrai o que for possível da mensagem inicial; campos faltantes são pedidos um a um
-- Forma de pagamento aceita número (1/2/3/4) ou texto livre ("pix", "dinheiro", etc.)
-- Fornecedor: cria ou reutiliza registro existente no banco
-- Cancelamento com "não"/"cancelar" funciona em qualquer etapa
-- Sessão estendida para 10 minutos de inatividade
+### Frontend
+- Novo state em nova-ordem-funcionario: `formClienteSuggestions`, `formClienteSelecionado`, `formBuscandoClientes`
+- Novo functions: `buscarClientesNoForm()`, `_buscarClientesNoFormNow()`, `selecionarClienteDoForm()`
+- UI update: dropdown com sugestões, badge de cliente selecionado
+- Caixa: exibição de valores esperados com quebra detalhada para dinheiro
 
----
-
-## 6. Correção de Timezone em Lançamentos de Despesa
-
-**Arquivo:** `backend/src/controllers/caixaController.ts`
-
-- Bug: `new Date("2026-04-13")` gerava `T00:00:00Z` (meia-noite UTC), antes do turno das 07:00, causando despesas aparecerem no dia anterior
-- Fix: data-only agora interpretada como `T12:00:00` (meio-dia UTC), dentro do turno correto
-- Corrigido em `createSaida` e `editSaida`
-
-**Arquivo:** `DESKTOPV2/financeiro.html`
-- Campo de data inicializava com `toISOString().slice(0,10)` (UTC) → trocado por data local do browser
-- Modal de edição: data exibida em horário local
+### Database
+- Nenhuma migração necessária (campos já existiam)
 
 ---
 
-## 7. Modal "Trocar de Empresa / Sair"
+## ⚠️ Pontos de Atenção
 
-**Arquivo:** `DESKTOPV2/nav-menu-helper.js`
-
-- Botão "Sair" abre mini-modal com duas opções:
-  - **Trocar de Empresa** → limpa `empresaId`/`empresaNome` do localStorage → redireciona para `selecionar-empresa.html`
-  - **Sair do Sistema** → `localStorage.clear()` + redirect para `login.html`
-- Modal injetado dinamicamente no DOM (sem HTML extra em cada página)
-
-**Arquivo:** `DESKTOPV2/index.html`
-- Função `logout()` atualizada para chamar `window.showSairModal()` quando disponível
+1. **Cron WhatsApp**: Executará a cada 10 minutos em produção. Monitorar logs para reconexões desnecessárias.
+2. **Backoff delay**: Pode atingir 60s entre tentativas. Normal e esperado — evita spam.
+3. **authState preservation**: Não é limpo em erro de rede. Apenas em logout real (código 401).
+4. **Busca de clientes**: Requer API endpoint `getClientes()` funcionando (já existe).
 
 ---
 
-## 8. Correção de Build no Railway (TypeScript)
+## ✅ Testes Recomendados
 
-**Arquivo:** `backend/package.json`
-
-- Build falhava com `TS2322: Type 'string | string[]' not assignable to 'string'` em `ordemController.ts`
-- Fix: adicionado cast `as string` no endpoint `gerarPixQr` (linha 1702)
-- `prisma generate` adicionado ao script de build (`"build": "rm -rf dist && prisma generate && tsc"`)
-  - Sem isso, o Prisma Client em cache no Railway não refletia mudanças de schema (campo `desconto` faltando)
-
----
-
-## 9. Correção de Desconexão do WhatsApp após Deploy
-
-**Arquivo:** `backend/src/services/baileyService.ts`
-
-- Bug: `authState` era limpo no banco sempre que a conexão caia (inclusive por reinício do servidor)
-- Fix: `authState: null` agora só é salvo em caso de **logout real** (erro 401 após estar conectado)
-- Em falhas de rede ou reinício, `authState` é preservado — reconecta automaticamente
-- `restoreActiveSessions` busca instâncias com `authState IS NOT NULL` (não apenas `status: 'connected'`)
-
-**Arquivo:** `backend/src/index.ts`
-- Adicionado delay de 5 segundos antes de `restoreActiveSessions()` para rede estabilizar após cold start
+- [ ] Fechar internet → bot reconecta sozinho em 10-20 min
+- [ ] Restart servidor enquanto desconectado → bot revive
+- [ ] Logout real do WhatsApp (celular) → authState limpo, novo QR solicitado
+- [ ] Múltiplas desconexões → backoff aumenta corretamente
+- [ ] Buscar cliente por nome → dropdown aparece e funciona
+- [ ] Fechar caixa → valores esperados aparecem corretos
 
 ---
 
-## 10. Campo Modelo na Fila de Entrada
+## 📝 Próximos Passos
 
-**Arquivo:** `DESKTOPV2/funcionario/fila-entrada-funcionario.html`
+1. **Deploy em staging**: Testar cron WhatsApp por 1 semana
+2. **Monitorar logs**: Verificar padrão de reconexões
+3. **Deploy em produção**: Após validação
+4. **Feedback de usuários**: Caixa mais preciso? Busca funciona bem?
 
-- Quando placa não encontrada no banco (estado `manual`), exibe input de modelo com borda laranja
-- Criação bloqueada enquanto modelo estiver vazio (linha manual)
-- `_buildPayload` usa `row.modelo` no `novoVeiculo` em vez do texto genérico `'Veículo'` hardcoded
-- Veículo encontrado pela placa: `row.modelo` preenchido automaticamente da API
-
----
-
-## 11. Nome do Cliente Opcional em Todo o Sistema
-
-**Arquivo:** `backend/src/utils/validate.ts`
-- Removida validação obrigatória de `novoCliente.nome`
-- Quando vazio, `sanitizedData` define `nome: 'N/A'`
-
-**Arquivo:** `backend/src/controllers/ordemController.ts`
-- `nomeCliente = novoCliente.nome?.trim() || 'N/A'` antes de criar/buscar o cliente
-- Condição `if (!finalClienteId && novoCliente && novoCliente.nome)` → `if (!finalClienteId && novoCliente)`
-
-**Arquivo:** `DESKTOPV2/funcionario/fila-entrada-funcionario.html`
-- Campo nome com placeholder `"Nome (opcional — N/A se vazio)"`; payload envia string vazia
-
----
-
-## 12. Redesign do CRM de Clientes (funcionário)
-
-**Arquivo:** `DESKTOPV2/funcionario/clientes-funcionario.html`
-
-Reescrito do zero. Principais mudanças:
-
-| Antes | Depois |
-|---|---|
-| Tabela HTML (ilegível no mobile) | Grid de cards responsivo |
-| CSS hardcoded `#0066cc` | Mesmo tema do sistema (`--navy`, `--blue-d`, etc.) |
-| 2 modais centralizados separados | Drawer bottom-sheet unificado (detalhe + edição) |
-| Código de renderização duplicado na busca | Uma função `clienteCard()` compartilhada |
-| Sem stats no card | Visitas / Veículos / Total gasto por card |
-| Avatar genérico | Inicial do nome como avatar colorido |
-| Nome obrigatório no formulário | Opcional com hint explicativo |
-| Botão WhatsApp perdido na tabela | Botão contextual no card e no detalhe |
-
-- Cards exibem: avatar com inicial, nome, telefone, tags de placa/modelo, estatísticas, ações rápidas
-- Busca unificada por nome, telefone, placa ou modelo
-- Formulário com seções "Dados pessoais" e "Veículos" (adicionar/remover dinamicamente)
-- Confirmação de exclusão via `confirm()` antes de deletar
-
----
-
-## 13. Modais de Caixa Inline no Index do Funcionário
-
-**Arquivo:** `DESKTOPV2/index-funcionario.html`
-
-- Botão hero de caixa não redireciona mais para `financeiro-funcionario.html`
-- Abre modal diretamente no index:
-  - **Abrir Caixa**: inputs de troco inicial e responsável
-  - **Fechar Caixa**: grid de inputs por método de pagamento ativo
-  - **Relatório de Fechamento**: tabela Digitado × Computado × Diferença com badge CONFERIDO/DIVERGENTE
-- Estilo idêntico ao modal de caixa do financeiro (modal centralizado com sombra, sem bottom-sheet)
-- NFe sempre exibido no grid de fechamento (não condicional)
-
----
-
-## 14. NFe no Modal de Fechamento do Financeiro
-
-**Arquivo:** `DESKTOPV2/funcionario/financeiro-funcionario.html`
-
-- Campo NFe agora aparece **sempre** no grid de fechamento de caixa
-- Antes: `show: cfg.NFE === true` (ficava oculto pois o padrão é `false`)
-- Depois: `show: true` (sempre visível)
-- Coleta e envia o valor no `confirmarFechamento()` independentemente da config
-
----
-
-## 15. Redesign Visual do Financeiro (funcionário)
-
-**Arquivo:** `DESKTOPV2/funcionario/financeiro-funcionario.html`
-
-- Atualizado para o padrão visual moderno do sistema:
-  - Fonte **Inter** (via Google Fonts)
-  - **Header navy** (`#0f172a`) com ícones semi-transparentes (igual às outras páginas)
-  - CSS variables atualizadas para `--navy`, `--primary` (`#2563eb`), `--mid`, `--border` (`#e2e8f0`), `--light` (`#f1f5f9`)
-  - Balance cards com tipografia Inter e tamanho reduzido para mobile
-  - Tabs com `white-space: nowrap` + scroll horizontal no mobile
-  - Botões de ação com `border-radius: 10px` e hover mais suave
-  - Tabelas com cabeçalhos em uppercase/600 e hover `#f8fafc`
-  - Status badges pill com cores semânticas (`#d1fae5`/`#fef3c7`)
-  - Mobile nav com `height: 66px`, fonte Inter
-  - Toast com `border-radius: 10px` e sombra md
-  - Comissões com grid responsivo que colapsa em coluna única abaixo de 900px
-  - Resumo de comissões com gradiente navy (dark) em vez de azul primário
