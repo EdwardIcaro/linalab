@@ -1234,18 +1234,13 @@
         servicos:   [],
         adicionais: [],
         lavadores:  [],
+        tiposVeiculo: [], // Carregado dinamicamente do banco
         loadingServicos:  false,
         loadingLavadores: false,
+        loadingTiposVeiculo: false,
 
         // ── Estáticos ──────────────────────
-        cats: [
-          {k:'HATCH',  l:'Hatch'},
-          {k:'SEDAN',  l:'Sedan'},
-          {k:'SUV',    l:'SUV'},
-          {k:'PICKUP', l:'Pickup'},
-          {k:'VAN',    l:'Van'},
-          {k:'UTILI',  l:'Utilitário'},
-        ],
+        cats: [], // Preenchido dinamicamente baseado no tipo selecionado
         coresCarro: [
           {nome:'Branco',   hex:'#f1f5f9'},
           {nome:'Preto',    hex:'#1e293b'},
@@ -1268,16 +1263,18 @@
             return;
           }
 
-          // Carrega lavadores e adicionais em paralelo
+          // Carrega lavadores, adicionais e tipos de veículos em paralelo
           await Promise.all([
             this.loadLavadores(),
             this.loadAdicionais(),
+            this.loadTiposVeiculo(),
           ]);
 
-          // Recarrega serviços ao mudar tipo ou categoria
+          // Recarrega serviços e categorias ao mudar tipo
           this.$watch('tipo', () => {
             if (this.tipo === 'MOTO') this.cat = null;
             this.svc = null;
+            this.atualizarCategorias();
             this.loadServicos();
           });
           this.$watch('cat', () => {
@@ -1555,6 +1552,71 @@
             this.lavadores = data.lavadores || [];
           } catch { this.lavadores = []; }
           finally { this.loadingLavadores = false; }
+        },
+
+        async loadTiposVeiculo() {
+          this.loadingTiposVeiculo = true;
+          try {
+            const tipos = await window.api.getTiposVeiculo();
+            this.tiposVeiculo = tipos || [];
+            console.log('[Nova Ordem] Tipos de veículos carregados:', this.tiposVeiculo);
+          } catch {
+            this.tiposVeiculo = [];
+            console.warn('[Nova Ordem] Erro ao carregar tipos de veículo');
+          } finally {
+            this.loadingTiposVeiculo = false;
+          }
+        },
+
+        atualizarCategorias() {
+          if (!this.tipo) {
+            this.cats = [];
+            return;
+          }
+
+          // Filtrar tipos de veículo pelo tipo selecionado e extrair categorias
+          const tiposFiltrados = this.tiposVeiculo.filter(tv => tv.nome === this.tipo);
+
+          // Extrair categorias únicas (campo 'categoria')
+          const categoriasSet = new Set();
+          for (const tipo of tiposFiltrados) {
+            if (tipo.categoria) {
+              categoriasSet.add(tipo.categoria);
+            }
+          }
+
+          // Se não há categorias, mostra todas do tipo (sem filtro de categoria)
+          if (categoriasSet.size === 0) {
+            console.log(`[Nova Ordem] Tipo "${this.tipo}" tem ${tiposFiltrados.length} tipo(s) sem categoria específica`);
+            this.cats = [];
+            return;
+          }
+
+          // Converter Set para array de objetos { k, l }
+          // Tenta usar labels mais amigáveis
+          const labelMap: Record<string, string> = {
+            'HATCH': 'Hatch',
+            'SEDAN': 'Sedan',
+            'SUV': 'SUV',
+            'PICKUP': 'Pickup',
+            'VAN': 'Van',
+            'UTILI': 'Utilitário',
+            'MONOVOLUME': 'Monovolume',
+            'COUPE': 'Cupê',
+            'CONVERSIVEL': 'Conversível',
+            'MINIVAN': 'Minivan',
+            'IMPORTADO': 'Importado',
+            'ESPECIAL': 'Especial',
+          };
+
+          this.cats = Array.from(categoriasSet)
+            .map(cat => ({
+              k: cat as string,
+              l: labelMap[cat as string] || (cat as string)
+            }))
+            .sort((a, b) => a.l.localeCompare(b.l, 'pt-BR'));
+
+          console.log(`[Nova Ordem] Categorias para "${this.tipo}":`, this.cats);
         },
 
         // ── Seleção ────────────────────────
