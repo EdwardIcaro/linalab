@@ -2,1277 +2,706 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lina X - Serviços</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Serviços — Lina X</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     :root {
-      --primary: #0066cc;
-      --success: #28a745;
-      --warning: #ffc107;
-      --danger: #dc3545;
-      --info: #17a2b8;
-      --light: #f8f9fa;
-      --dark: #333;
-      --border: #ddd;
-      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+      --navy:   #0f172a;
+      --navy-m: #1e293b;
+      --blue:   #3b82f6;
+      --blue-d: #2563eb;
+      --text:   #0f172a;
+      --mid:    #64748b;
+      --light:  #94a3b8;
+      --border: #e2e8f0;
+      --bg:     #f1f5f9;
+      --white:  #ffffff;
+      --green:  #10b981;
+      --green-d:#059669;
+      --amber:  #f59e0b;
+      --red:    #ef4444;
+      --r:      12px;
     }
-
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--light);
-      color: var(--dark);
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
 
-    /* HEADER */
-    .header-funcionario {
-      background: white;
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--shadow);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      border-bottom: 2px solid var(--primary);
+    /* ── HEADER ── */
+    .hd {
+      background: var(--navy);
+      padding: 0 16px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
     }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
+    .hd-left { display: flex; align-items: center; gap: 12px; }
+    .hd-back {
+      background: none; border: none; color: #fff;
+      font-size: 18px; cursor: pointer; padding: 6px;
+      border-radius: 8px; transition: background .15s;
     }
-
-    .logo-link {
-      text-decoration: none;
+    .hd-back:hover { background: rgba(255,255,255,.1); }
+    .hd-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .hd-count { font-size: 11px; color: rgba(255,255,255,.5); }
+    .hd-btn {
+      background: var(--blue-d); border: none; color: #fff;
+      padding: 8px 14px; border-radius: 8px; font-size: 13px;
+      font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: background .15s;
     }
+    .hd-btn:hover { background: var(--blue); }
 
-    .logo {
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-    }
-
-    .page-info h1 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-    }
-
-    .page-info p {
-      font-size: 12px;
-      color: #666;
-      margin: 0;
-    }
-
-    .icon-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      color: var(--dark);
-      cursor: pointer;
-      padding: 8px 12px;
-      border-radius: 6px;
-      transition: all 0.3s;
-    }
-
-    .icon-btn:hover {
-      background: var(--light);
-      color: var(--primary);
-    }
-
-    /* MAIN */
-    .main-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      padding-bottom: 100px;
-    }
-
-    /* SECTION HEADER */
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      gap: 16px;
-    }
-
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .section-subtitle {
-      font-size: 14px;
-      color: #666;
-      margin: 0;
-    }
-
-    .btn-novo {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-
-    .btn-novo:hover {
-      background: #0052a3;
-      transform: translateY(-2px);
-    }
-
-    /* CARDS GRID */
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .service-card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      transition: all 0.3s;
-      position: relative;
-    }
-
-    .service-card:hover {
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-      transform: translateY(-2px);
-    }
-
-    .service-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 16px;
-    }
-
-    .service-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--dark);
-      flex: 1;
-    }
-
-    .service-info {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .service-info-item {
-      font-size: 13px;
-      color: #666;
-    }
-
-    .service-info-label {
-      font-weight: 500;
-      color: var(--dark);
-    }
-
-    .service-price {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--success);
-      margin: 12px 0;
-    }
-
-    .service-veiculo {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(0, 102, 204, 0.1);
-      color: var(--primary);
-      margin-bottom: 12px;
-    }
-
-    .service-actions {
-      display: flex;
-      gap: 8px;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-      margin-top: 12px;
-    }
-
-    .btn-action {
-      flex: 1;
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--primary);
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-action:hover {
-      background: var(--light);
-      border-color: var(--primary);
-    }
-
-    .btn-action-danger {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .btn-action-danger:hover {
-      background: rgba(220, 53, 69, 0.1);
-      border-color: var(--danger);
-    }
-
-    /* EMPTY STATE */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #999;
-    }
-
-    .empty-state i {
-      font-size: 64px;
-      color: #ddd;
-      margin-bottom: 20px;
-      display: block;
-    }
-
-    .empty-state h2 {
-      font-size: 20px;
-      color: var(--dark);
-      margin-bottom: 8px;
-    }
-
-    .empty-state p {
-      margin-bottom: 20px;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-primary:hover {
-      background: #0052a3;
-    }
-
-    /* LOADING */
-    .loading-container {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .spinner {
-      border: 4px solid var(--light);
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* MODAL */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
+    /* ── TABS ── */
+    .tabs-bar {
+      background: var(--white);
       border-bottom: 1px solid var(--border);
+      display: flex;
+      position: sticky; top: 56px; z-index: 90;
+    }
+    .tab-btn {
+      flex: 1; padding: 13px 0;
+      border: none; background: none;
+      font-size: 13px; font-weight: 600; color: var(--mid);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all .15s; display: flex; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .tab-btn.active { color: var(--blue-d); border-bottom-color: var(--blue-d); }
+    .tab-count {
+      background: var(--bg); border-radius: 99px;
+      padding: 1px 7px; font-size: 11px; font-weight: 700; color: var(--mid);
+    }
+    .tab-btn.active .tab-count { background: #dbeafe; color: var(--blue-d); }
+
+    /* ── LISTA ── */
+    .list-body { padding: 12px 16px 100px; }
+
+    .list-section-title {
+      font-size: 10px; font-weight: 700; color: var(--light);
+      text-transform: uppercase; letter-spacing: .6px;
+      padding: 0 4px; margin-bottom: 8px;
     }
 
-    .modal-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--dark);
-      margin: 0;
+    .item-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .item-row {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    }
+    .item-row:hover { border-color: var(--blue); box-shadow: 0 2px 12px rgba(37,99,235,.07); }
+    .item-row:active { transform: scale(.99); }
+
+    .item-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .item-icon.servico { background: #dbeafe; color: var(--blue-d); }
+    .item-icon.adicional { background: #fef3c7; color: #92400e; }
+
+    .item-info { flex: 1; min-width: 0; }
+    .item-name {
+      font-size: 14px; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .item-meta { font-size: 11px; color: var(--mid); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .item-price { font-size: 15px; font-weight: 800; color: var(--green-d); }
+    .item-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+    }
+    .badge-carro { background: #dbeafe; color: var(--blue-d); }
+    .badge-moto  { background: #fce7f3; color: #9d174d; }
+    .badge-outros{ background: #f0fdf4; color: #065f46; }
+    .badge-comissao { background: #f0fdf4; color: #065f46; }
+
+    /* ── ESTADOS ── */
+    .state-box {
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+      padding: 60px 20px; gap: 12px;
+    }
+    .state-icon { font-size: 48px; color: var(--border); }
+    .state-title { font-size: 16px; font-weight: 700; }
+    .state-sub { font-size: 13px; color: var(--mid); }
+    .btn-state {
+      padding: 10px 20px; background: var(--blue-d); color: #fff;
+      border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+      cursor: pointer; margin-top: 4px;
     }
 
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--dark);
-      font-size: 24px;
-      cursor: pointer;
-      padding: 0;
-      transition: all 0.3s;
+    .spin {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border); border-top-color: var(--blue-d);
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DRAWER ── */
+    .drawer-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 200;
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white); border-radius: 20px 20px 0 0;
+      z-index: 201; max-height: 92vh; overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+    }
+    .drawer.open { transform: translateY(0); }
+    .drawer-handle {
+      width: 36px; height: 4px; background: var(--border);
+      border-radius: 99px; margin: 12px auto 0; flex-shrink: 0;
+    }
+    .drawer-header {
+      padding: 16px 20px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .drawer-title { font-size: 16px; font-weight: 700; }
+    .drawer-close {
+      background: none; border: none;
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: var(--mid); cursor: pointer; transition: background .15s;
+    }
+    .drawer-close:hover { background: var(--bg); }
+    .drawer-body { padding: 20px; flex: 1; overflow-y: auto; }
+    .drawer-footer {
+      padding: 12px 20px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; flex-shrink: 0;
     }
 
-    .modal-close:hover {
-      color: var(--primary);
-    }
-
-    /* FORM */
-    .form-group {
-      margin-bottom: 20px;
-    }
-
+    /* ── FORM ── */
+    .form-group { margin-bottom: 16px; }
     .form-label {
-      display: block;
-      color: var(--dark);
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 8px;
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--mid); margin-bottom: 5px;
     }
-
-    .form-input,
-    .form-select {
-      width: 100%;
-      background-color: white;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      color: var(--dark);
-      font-size: 14px;
+    .form-input, .form-select {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 14px; font-family: inherit; color: var(--text);
+      background: var(--white); transition: border-color .15s;
     }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--blue-d); }
+    .form-hint { font-size: 11px; color: var(--light); margin-top: 4px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-    .form-input:focus,
-    .form-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    /* Checkboxes de categoria */
+    .cat-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 8px; margin-top: 4px;
     }
-
-    .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    .cat-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 10px; border-radius: 8px;
+      border: 1.5px solid var(--border); cursor: pointer;
+      font-size: 12px; font-weight: 600; color: var(--mid);
+      transition: all .15s; user-select: none;
     }
+    .cat-chip input[type="checkbox"] { display: none; }
+    .cat-chip.checked { background: #dbeafe; border-color: var(--blue-d); color: var(--blue-d); }
+    .cat-chip i { font-size: 11px; }
 
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    /* Botões footer */
+    .btn-f {
+      flex: 1; padding: 12px; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+      font-family: inherit;
     }
+    .btn-f-cancel { background: var(--bg); color: var(--mid); }
+    .btn-f-cancel:hover { background: var(--border); }
+    .btn-f-save { background: var(--blue-d); color: #fff; }
+    .btn-f-save:hover { background: var(--blue); }
+    .btn-f-save:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-f-danger { background: #fef2f2; color: var(--red); border: 1.5px solid #fecaca; flex: none; padding: 12px 16px; }
+    .btn-f-danger:hover { background: #fee2e2; }
 
-    .checkbox-item input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-      accent-color: var(--primary);
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white); border-top: 1px solid var(--border);
+      display: flex; z-index: 100; height: 64px;
     }
-
-    .checkbox-item label {
-      cursor: pointer;
-      font-size: 14px;
-      color: var(--dark);
-      margin: 0;
-    }
-
-    .form-info {
-      font-size: 12px;
-      color: #666;
-      margin-top: 8px;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-      justify-content: flex-end;
-    }
-
-    .btn-cancel {
-      background: var(--light);
-      color: var(--dark);
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-cancel:hover {
-      background: #e0e0e0;
-    }
-
-    .btn-confirm {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-confirm:hover {
-      background: #0052a3;
-    }
-
-    /* MENU */
-    .menu-dropdown {
-      display: none;
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      min-width: 200px;
-      z-index: 999;
-      animation: slideUp 0.3s ease;
-    }
-
-    .menu-dropdown.active {
-      display: block;
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .menu-dropdown a,
-    .menu-dropdown button {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      color: var(--dark);
-      text-decoration: none;
-      border: none;
-      background: none;
-      width: 100%;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.3s;
-    }
-
-    .menu-dropdown a:hover,
-    .menu-dropdown button:hover {
-      background: var(--light);
-      color: var(--primary);
-    }
-
-    .menu-dropdown button:last-child {
-      color: var(--danger);
-    }
-
-    .menu-dropdown button:last-child:hover {
-      background: rgba(220, 53, 69, 0.1);
-    }
-
-    /* OVERLAY */
-    .overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 998;
-    }
-
-    .overlay.active {
-      display: block;
-    }
-
-    /* MOBILE NAV */
-    .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-around;
-      height: 70px;
-      z-index: 999;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-    }
-
     .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      color: #666;
-      font-size: 11px;
-      gap: 4px;
-      transition: all 0.3s;
-      border: none;
-      background: none;
-      cursor: pointer;
-      border-top: 3px solid transparent;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-decoration: none; color: var(--light);
+      font-size: 10px; font-weight: 600; gap: 3px;
+      border: none; background: none; cursor: pointer;
+      border-top: 2px solid transparent; transition: all .15s;
     }
+    .nav-item i { font-size: 20px; }
+    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
 
-    .nav-item:hover {
-      color: var(--primary);
+    /* ── TOAST ── */
+    .toast-container {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%); z-index: 500;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
     }
-
-    .nav-item.active {
-      color: var(--primary);
-      border-top-color: var(--primary);
-    }
-
-    .nav-item i {
-      font-size: 24px;
-    }
-
-    /* TOAST */
     .toast {
-      position: fixed;
-      bottom: 100px;
-      left: 20px;
-      right: 20px;
-      max-width: 400px;
-      background: white;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      z-index: 1001;
-      transform: translateY(120px);
-      transition: transform 0.3s ease;
+      padding: 10px 18px; border-radius: 10px;
+      font-size: 13px; font-weight: 600; color: #fff;
+      animation: toast-in .2s ease; white-space: nowrap;
     }
+    .toast.success { background: var(--green-d); }
+    .toast.error   { background: var(--red); }
+    .toast.info    { background: var(--blue-d); }
+    @keyframes toast-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-    .toast.show {
-      transform: translateY(0);
-    }
-
-    .toast-success {
-      border-left: 4px solid var(--success);
-    }
-
-    .toast-success i {
-      color: var(--success);
-    }
-
-    .toast-error {
-      border-left: 4px solid var(--danger);
-    }
-
-    .toast-error i {
-      color: var(--danger);
-    }
-
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      .main-container {
-        padding: 16px;
-        padding-bottom: 100px;
-      }
-
-      .section-header {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .btn-novo {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .services-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .page-info h1 {
-        font-size: 14px;
-      }
-
-      .modal-content {
-        width: 95%;
-      }
+    @media (min-width: 640px) {
+      .drawer { left: auto; right: 0; width: 440px; border-radius: 20px 0 0 20px; max-height: 100vh; }
     }
   </style>
 </head>
 <body>
+
   <!-- HEADER -->
-  <div id="header"></div>
-
-  <!-- MENU -->
-  <div id="menu"></div>
-  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
-
-  <!-- MAIN CONTENT -->
-  <main class="main-container">
-    <div class="section-header">
+  <header class="hd">
+    <div class="hd-left">
+      <button class="hd-back" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
       <div>
-        <h1 class="section-title">Serviços e Adicionais</h1>
-        <p class="section-subtitle">Crie e gerencie os serviços e adicionais disponíveis</p>
-      </div>
-      <div style="display: flex; gap: 12px;">
-        <button class="btn-novo" onclick="openServiceModal()">
-          <i class="fas fa-plus"></i>
-          Novo Serviço
-        </button>
-        <button class="btn-novo" onclick="openAdicionalModal()" style="background: #6c757d;">
-          <i class="fas fa-plus"></i>
-          Novo Adicional
-        </button>
+        <div class="hd-title">Serviços e Adicionais</div>
+        <div class="hd-count" id="hd-count">Carregando...</div>
       </div>
     </div>
+    <button class="hd-btn" id="btnNovo" onclick="abrirNovo()">
+      <i class="fas fa-plus"></i> Novo
+    </button>
+  </header>
 
-    <!-- CONTENT -->
-    <div id="content"></div>
-  </main>
-
-  <!-- MOBILE NAV -->
-  <nav id="mobileNav"></nav>
-
-  <!-- SERVICE MODAL -->
-  <div class="modal-overlay" id="serviceModal">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title" id="serviceModalTitle">Novo Serviço</h2>
-        <button class="modal-close" onclick="closeServiceModal()">&times;</button>
-      </div>
-      <form id="serviceForm" onsubmit="saveService(event)">
-        <div class="form-group">
-          <label for="serviceName" class="form-label">Nome do Serviço</label>
-          <input
-            type="text"
-            id="serviceName"
-            class="form-input"
-            required
-          >
-        </div>
-        <div class="form-group">
-          <label for="servicePrice" class="form-label">Preço (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            id="servicePrice"
-            class="form-input"
-            required
-          >
-          <p class="form-info">
-            <i class="fas fa-info-circle"></i>
-            O preço deve ser maior que zero
-          </p>
-        </div>
-        <div class="form-group">
-          <label for="serviceTipoPrincipal" class="form-label">Tipo de Veículo</label>
-          <select
-            id="serviceTipoPrincipal"
-            class="form-select"
-            onchange="updateSubtipoOptions()"
-            required
-          >
-            <option value="">Selecione...</option>
-            <option value="CARRO">Carro</option>
-            <option value="MOTO">Moto</option>
-          </select>
-        </div>
-        <div class="form-group" id="subtipoGroup" style="display: none;">
-          <label class="form-label">Categorias (Subtipos)</label>
-          <p class="form-info">Selecione as categorias de carro para este serviço</p>
-          <div class="checkbox-group" id="subtipoCheckboxes"></div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="closeServiceModal()">Cancelar</button>
-          <button type="submit" class="btn-confirm">
-            <i class="fas fa-save"></i>
-            Salvar
-          </button>
-        </div>
-      </form>
-    </div>
+  <!-- TABS -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" id="tabServicos" onclick="setTab('servicos')">
+      <i class="fas fa-wrench"></i> Serviços
+      <span class="tab-count" id="countServicos">—</span>
+    </button>
+    <button class="tab-btn" id="tabAdicionais" onclick="setTab('adicionais')">
+      <i class="fas fa-star"></i> Adicionais
+      <span class="tab-count" id="countAdicionais">—</span>
+    </button>
   </div>
 
-  <!-- ADICIONAL MODAL -->
-  <div class="modal-overlay" id="adicionalModal">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title" id="adicionalModalTitle">Novo Adicional</h2>
-        <button class="modal-close" onclick="closeAdicionalModal()">&times;</button>
-      </div>
-      <form id="adicionalForm" onsubmit="saveAdicional(event)">
-        <div class="form-group">
-          <label for="adicionalName" class="form-label">Nome do Adicional</label>
-          <input
-            type="text"
-            id="adicionalName"
-            class="form-input"
-            placeholder="Ex: Polimento Especial"
-            required
-          >
-        </div>
-        <div class="form-group">
-          <label for="adicionalPrice" class="form-label">Preço (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            id="adicionalPrice"
-            class="form-input"
-            required
-          >
-          <p class="form-info">
-            <i class="fas fa-info-circle"></i>
-            O preço deve ser maior que zero
-          </p>
-        </div>
-        <div class="form-group">
-          <label for="adicionalDescricao" class="form-label">Descrição (Opcional)</label>
-          <textarea
-            id="adicionalDescricao"
-            class="form-input"
-            placeholder="Ex: Detalhes do que inclui este adicional..."
-            style="resize: vertical; min-height: 80px;"
-          ></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" onclick="closeAdicionalModal()">Cancelar</button>
-          <button type="submit" class="btn-confirm">
-            <i class="fas fa-save"></i>
-            Salvar
-          </button>
-        </div>
-      </form>
-    </div>
+  <!-- CONTEÚDO -->
+  <div class="list-body" id="listBody">
+    <div class="state-box"><div class="spin"></div></div>
   </div>
 
-  <!-- SCRIPTS -->
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottomNav"></nav>
+
+  <!-- TOASTS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- DRAWER OVERLAY -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="fecharDrawer()"></div>
+
+  <!-- DRAWER -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <span class="drawer-title" id="drawerTitle">—</span>
+      <button class="drawer-close" onclick="fecharDrawer()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+    <div class="drawer-footer" id="drawerFooter"></div>
+  </div>
+
   <script src="../api.js"></script>
   <script src="utils-funcionario.js"></script>
-
   <script>
-    // PAGE CONFIGURATION
-    const PAGE_TITLE = 'Serviços';
+    const PAGE_TITLE  = 'Serviços';
     const PAGE_ACTIVE = 'servicos';
 
-    let serviceForm = {
-      id: null,
-      nome: '',
-      preco: '',
-      tipoVeiculo: '',
-      subtiposVeiculo: []
+    let tabAtiva   = 'servicos';
+    let servicos   = [];
+    let adicionais = [];
+    let editandoId = null;
+
+    const CATS_CARRO = ['HATCH','SEDAN','SUV','PICKUP','CAMINHONETE','VAN','MICROONIBUS','CAMINHAO'];
+    const LABELS_CAT = {
+      HATCH:'Hatch', SEDAN:'Sedan', SUV:'SUV', PICKUP:'Pickup',
+      CAMINHONETE:'Caminhonete', VAN:'Van', MICROONIBUS:'Micro-ônibus', CAMINHAO:'Caminhão'
     };
 
-    // Vehicle types - will be populated from API
-    let tiposVeiculo = [];
-    const subtipoOptions = {};
-
-    // INITIALIZE
+    // ── INIT ─────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
-
-      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
-      if (!permissoes.includes('config_ver_servicos')) {
-        showToast('Você não tem permissão para gerenciar serviços', 'error');
-        setTimeout(() => {
-          window.location.href = '../index-funcionario.html';
-        }, 1500);
+      const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
+      if (!perms.includes('config_ver_servicos')) {
+        showToast('Sem permissão para gerenciar serviços', 'error');
+        setTimeout(() => { window.location.href = '../index-funcionario.html'; }, 1500);
         return;
       }
-
-      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
-      document.getElementById('menu').innerHTML = createFuncionarioMenu();
-      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
-
-      await loadUserInfo();
-      await loadTiposVeiculo();
-      await loadServicosAndAdicionais();
+      document.getElementById('bottomNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+      await carregar();
     });
 
-    // LOAD VEHICLE TYPES
-    async function loadTiposVeiculo() {
+    // ── CARREGAR ──────────────────────────────────
+    async function carregar() {
+      setLoading();
       try {
-        const response = await window.api.getTiposVeiculo();
-        tiposVeiculo = response.tiposVeiculo || response || [];
-
-        // Lista completa de categorias de carro (igual à configuracoes.html)
-        const ALL_CARRO_CATS = ['HATCH', 'SEDAN', 'SUV', 'PICKUP', 'CAMINHONETE', 'VAN', 'MICROONIBUS', 'CAMINHAO'];
-
-        // Garantir que todos os tipos existam
-        ALL_CARRO_CATS.forEach(cat => {
-          if (!tiposVeiculo.some(t => t.categoria === cat)) {
-            tiposVeiculo.push({ categoria: cat });
-          }
-        });
-
-        // Build subtipoOptions — mesma ordem da configuracoes.html
-        subtipoOptions.CARRO = ALL_CARRO_CATS.map(cat => ({ categoria: cat }));
-        subtipoOptions.MOTO = [];
-
-        // Populate select options
-        const select = document.getElementById('serviceTipoPrincipal');
-        if (select) {
-          select.innerHTML = '<option value="">Selecione...</option>';
-          select.innerHTML += '<option value="CARRO">Carro</option>';
-          select.innerHTML += '<option value="MOTO">Moto</option>';
-          select.innerHTML += '<option value="OUTROS">Outros</option>';
-        }
-      } catch (error) {
-        console.error('Erro ao carregar tipos de veículo:', error);
-        // Fallback — lista completa igual à configuracoes.html
-        subtipoOptions.CARRO = [
-          { categoria: 'HATCH' },
-          { categoria: 'SEDAN' },
-          { categoria: 'SUV' },
-          { categoria: 'PICKUP' },
-          { categoria: 'CAMINHONETE' },
-          { categoria: 'VAN' },
-          { categoria: 'MICROONIBUS' },
-          { categoria: 'CAMINHAO' }
-        ];
-        subtipoOptions.MOTO = [];
-      }
-    }
-
-    // LOAD SERVICOS AND ADICIONAIS
-    async function loadServicosAndAdicionais() {
-      const content = document.getElementById('content');
-
-      try {
-        content.innerHTML = createLoading();
-
-        const [servicosResponse, adicionaisResponse] = await Promise.all([
+        const [rs, ra] = await Promise.all([
           window.api.getServicos(),
           window.api.getAdicionais()
         ]);
-
-        const servicos = servicosResponse.servicos || [];
-        const adicionais = adicionaisResponse.adicionais || [];
-
-        if (servicos.length === 0 && adicionais.length === 0) {
-          content.innerHTML = createEmptyState(
-            'fa-wrench',
-            'Nenhum serviço ou adicional cadastrado',
-            'Crie seu primeiro serviço ou adicional para começar.',
-            'Novo Serviço',
-            "openServiceModal()"
-          );
-          return;
-        }
-
-        let html = '';
-
-        // SERVIÇOS
-        if (servicos.length > 0) {
-          html += '<div style="margin-bottom: 32px;">';
-          html += '<h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--dark);"><i class="fas fa-wrench" style="color: var(--primary); margin-right: 8px;"></i>Serviços</h2>';
-          html += '<div class="services-grid">';
-
-          servicos.forEach(servico => {
-            const subtipos = (servico.subtiposVeiculo && servico.subtiposVeiculo.length > 0)
-              ? servico.subtiposVeiculo.map(s => s.categoria || s).join(', ')
-              : 'Todos';
-            const tipoVeiculo = servico.tipoVeiculo || 'Não especificado';
-            html += `
-              <div class="service-card">
-                <div class="service-header">
-                  <div class="service-title">${servico.nome}</div>
-                </div>
-                <div class="service-veiculo">${tipoVeiculo}</div>
-                <div class="service-info">
-                  <div class="service-info-item">
-                    <span class="service-info-label">Categorias:</span> ${subtipos}
-                  </div>
-                </div>
-                <div class="service-price">${formatCurrency(servico.preco)}</div>
-                <div class="service-actions">
-                  <button class="btn-action" onclick="editService('${servico.id}', '${servico.nome}', ${servico.preco}, '${servico.tipoVeiculo}', '${JSON.stringify(servico.subtiposVeiculo || [])}')">
-                    <i class="fas fa-edit"></i> Editar
-                  </button>
-                  <button class="btn-action btn-action-danger" onclick="deleteService('${servico.id}', '${servico.nome}')">
-                    <i class="fas fa-trash"></i> Deletar
-                  </button>
-                </div>
-              </div>
-            `;
-          });
-
-          html += '</div>';
-          html += '</div>';
-        }
-
-        // ADICIONAIS
-        if (adicionais.length > 0) {
-          html += '<div>';
-          html += '<h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--dark);"><i class="fas fa-star" style="color: #ffc107; margin-right: 8px;"></i>Adicionais</h2>';
-          html += '<div class="services-grid">';
-
-          adicionais.forEach(adicional => {
-            html += `
-              <div class="service-card">
-                <div class="service-header">
-                  <div class="service-title">${adicional.nome}</div>
-                </div>
-                ${adicional.descricao ? `<div class="service-info"><div class="service-info-item">${adicional.descricao}</div></div>` : ''}
-                <div class="service-price">${formatCurrency(adicional.preco)}</div>
-                <div class="service-actions">
-                  <button class="btn-action" onclick="editAdicional('${adicional.id}', '${adicional.nome}', ${adicional.preco}, '${adicional.descricao || ''}')">
-                    <i class="fas fa-edit"></i> Editar
-                  </button>
-                  <button class="btn-action btn-action-danger" onclick="deleteAdicional('${adicional.id}', '${adicional.nome}')">
-                    <i class="fas fa-trash"></i> Deletar
-                  </button>
-                </div>
-              </div>
-            `;
-          });
-
-          html += '</div>';
-          html += '</div>';
-        }
-
-        content.innerHTML = html;
-
-      } catch (error) {
-        console.error('Erro ao carregar serviços e adicionais:', error);
-        content.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar os dados. Tente novamente.',
-          'Tentar novamente',
-          'loadServicosAndAdicionais()'
-        );
+        servicos   = rs.servicos   || [];
+        adicionais = ra.adicionais || [];
+        document.getElementById('countServicos').textContent   = servicos.length;
+        document.getElementById('countAdicionais').textContent = adicionais.length;
+        atualizarCount();
+        renderTab();
+      } catch {
+        document.getElementById('listBody').innerHTML = `
+          <div class="state-box">
+            <i class="fas fa-exclamation-triangle state-icon"></i>
+            <div class="state-title">Erro ao carregar</div>
+            <div class="state-sub">Verifique a conexão e tente novamente.</div>
+            <button class="btn-state" onclick="carregar()">Tentar novamente</button>
+          </div>`;
       }
     }
 
-    // OPEN SERVICE MODAL
-    function openServiceModal() {
-      serviceForm = {
-        id: null,
-        nome: '',
-        preco: '',
-        tipoVeiculo: '',
-        subtiposVeiculo: []
-      };
-      document.getElementById('serviceForm').reset();
-      document.getElementById('serviceModalTitle').textContent = 'Novo Serviço';
-      document.getElementById('subtipoGroup').style.display = 'none';
-      document.getElementById('serviceModal').classList.add('active');
+    function setLoading() {
+      document.getElementById('listBody').innerHTML = '<div class="state-box"><div class="spin"></div></div>';
     }
 
-    // CLOSE SERVICE MODAL
-    function closeServiceModal() {
-      document.getElementById('serviceModal').classList.remove('active');
-      document.getElementById('serviceForm').reset();
+    function atualizarCount() {
+      const total = tabAtiva === 'servicos' ? servicos.length : adicionais.length;
+      const nome  = tabAtiva === 'servicos' ? 'serviço' : 'adicional';
+      document.getElementById('hd-count').textContent = `${total} ${nome}${total !== 1 ? 's' : ''}`;
     }
 
-    // EDIT SERVICE
-    function editService(id, nome, preco, tipoVeiculo, subtiposStr) {
-      serviceForm = {
-        id: id,
-        nome: nome,
-        preco: preco,
-        tipoVeiculo: tipoVeiculo,
-        subtiposVeiculo: JSON.parse(subtiposStr)
-      };
-
-      document.getElementById('serviceModalTitle').textContent = 'Editar Serviço';
-      document.getElementById('serviceName').value = nome;
-      document.getElementById('servicePrice').value = preco;
-      document.getElementById('serviceTipoPrincipal').value = tipoVeiculo;
-
-      updateSubtipoOptions();
-
-      // Check the subtipo checkboxes
-      setTimeout(() => {
-        const checkboxes = document.querySelectorAll('#subtipoCheckboxes input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = serviceForm.subtiposVeiculo.includes(checkbox.value);
-        });
-      }, 100);
-
-      document.getElementById('serviceModal').classList.add('active');
+    // ── TAB ───────────────────────────────────────
+    function setTab(tab) {
+      tabAtiva = tab;
+      document.getElementById('tabServicos').classList.toggle('active', tab === 'servicos');
+      document.getElementById('tabAdicionais').classList.toggle('active', tab === 'adicionais');
+      atualizarCount();
+      renderTab();
     }
 
-    // DELETE SERVICE
-    function deleteService(id, nome) {
-      showConfirm(
-        'Excluir Serviço',
-        `Tem certeza que deseja excluir o serviço "${nome}"?`,
-        async () => {
-          try {
-            await window.api.deleteServico(id);
-            showToast('Serviço excluído com sucesso!', 'success');
-            await loadServicosAndAdicionais();
-          } catch (error) {
-            console.error('Erro ao excluir serviço:', error);
-            showToast('Erro ao excluir serviço. Tente novamente.', 'error');
-          }
-        }
-      );
+    function renderTab() {
+      if (tabAtiva === 'servicos') renderServicos();
+      else renderAdicionais();
     }
 
-    // UPDATE SUBTIPO OPTIONS
-    function updateSubtipoOptions() {
-      const tipoVeiculo = document.getElementById('serviceTipoPrincipal').value;
-      const subtipoGroup = document.getElementById('subtipoGroup');
-      const checkboxesContainer = document.getElementById('subtipoCheckboxes');
-
-      if (tipoVeiculo === 'CARRO') {
-        subtipoGroup.style.display = 'block';
-        checkboxesContainer.innerHTML = '';
-
-        const LABELS_CATEGORIA = {
-          HATCH: 'Hatch', SEDAN: 'Sedan', SUV: 'SUV', PICKUP: 'Pickup',
-          CAMINHONETE: 'Caminhonete', VAN: 'Van', MICROONIBUS: 'Micro-ônibus', CAMINHAO: 'Caminhão'
-        };
-        subtipoOptions.CARRO.forEach(subtipo => {
-          const categoria = subtipo.categoria;
-          const label = LABELS_CATEGORIA[categoria] || categoria;
-          const checkbox = document.createElement('div');
-          checkbox.className = 'checkbox-item';
-          checkbox.innerHTML = `
-            <input
-              type="checkbox"
-              id="subtipo-${categoria}"
-              value="${categoria}"
-              onchange="updateSubtiposSelection()"
-            >
-            <label for="subtipo-${categoria}">${label}</label>
-          `;
-          checkboxesContainer.appendChild(checkbox);
-        });
-      } else {
-        subtipoGroup.style.display = 'none';
-        serviceForm.subtiposVeiculo = [];
-      }
-    }
-
-    function updateSubtiposSelection() {
-      const checkboxes = document.querySelectorAll('#subtipoCheckboxes input[type="checkbox"]');
-      serviceForm.subtiposVeiculo = Array.from(checkboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-    }
-
-    // SAVE SERVICE
-    async function saveService(event) {
-      event.preventDefault();
-
-      const nome = document.getElementById('serviceName').value;
-      const preco = parseFloat(document.getElementById('servicePrice').value);
-      const tipoVeiculo = document.getElementById('serviceTipoPrincipal').value;
-
-      updateSubtiposSelection();
-
-      if (!nome || !preco || !tipoVeiculo) {
-        showToast('Preencha todos os campos obrigatórios', 'error');
+    // ── RENDER SERVIÇOS ───────────────────────────
+    function renderServicos() {
+      const body = document.getElementById('listBody');
+      if (!servicos.length) {
+        body.innerHTML = `
+          <div class="state-box">
+            <i class="fas fa-wrench state-icon"></i>
+            <div class="state-title">Nenhum serviço</div>
+            <div class="state-sub">Crie o primeiro serviço para começar.</div>
+            <button class="btn-state" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo Serviço</button>
+          </div>`;
         return;
       }
+      body.innerHTML = `<div class="item-list">${servicos.map(s => cardServico(s)).join('')}</div>`;
+    }
 
-      if (preco <= 0) {
-        showToast('O preço deve ser maior que zero', 'error');
+    function cardServico(s) {
+      const tipo  = s.tipoVeiculo || '';
+      const cats  = (s.subtiposVeiculo || []).map(x => LABELS_CAT[x.categoria || x] || x.categoria || x).join(', ');
+      const tipoCls = tipo === 'CARRO' ? 'badge-carro' : tipo === 'MOTO' ? 'badge-moto' : 'badge-outros';
+      const tipoLabel = tipo === 'CARRO' ? 'Carro' : tipo === 'MOTO' ? 'Moto' : tipo || '—';
+      const comissao = s.comissaoPercentual != null
+        ? `<span class="item-badge badge-comissao">${s.comissaoPercentual}% comissão</span>` : '';
+      return `
+        <div class="item-row" onclick="abrirEditarServico('${s.id}')">
+          <div class="item-icon servico"><i class="fas fa-wrench"></i></div>
+          <div class="item-info">
+            <div class="item-name">${escHtml(s.nome)}</div>
+            <div class="item-meta">
+              <span>${cats || 'Todos'}</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">${fmtR(s.preco)}</div>
+            <span class="item-badge ${tipoCls}">${tipoLabel}</span>
+            ${comissao}
+          </div>
+        </div>`;
+    }
+
+    // ── RENDER ADICIONAIS ─────────────────────────
+    function renderAdicionais() {
+      const body = document.getElementById('listBody');
+      if (!adicionais.length) {
+        body.innerHTML = `
+          <div class="state-box">
+            <i class="fas fa-star state-icon"></i>
+            <div class="state-title">Nenhum adicional</div>
+            <div class="state-sub">Crie o primeiro adicional para começar.</div>
+            <button class="btn-state" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo Adicional</button>
+          </div>`;
         return;
       }
+      body.innerHTML = `<div class="item-list">${adicionais.map(a => cardAdicional(a)).join('')}</div>`;
+    }
+
+    function cardAdicional(a) {
+      return `
+        <div class="item-row" onclick="abrirEditarAdicional('${a.id}')">
+          <div class="item-icon adicional"><i class="fas fa-star"></i></div>
+          <div class="item-info">
+            <div class="item-name">${escHtml(a.nome)}</div>
+            ${a.descricao ? `<div class="item-meta">${escHtml(a.descricao)}</div>` : ''}
+          </div>
+          <div class="item-right">
+            <div class="item-price">${fmtR(a.preco)}</div>
+          </div>
+        </div>`;
+    }
+
+    // ── BOTÃO "NOVO" (contexto-aware) ─────────────
+    function abrirNovo() {
+      if (tabAtiva === 'servicos') abrirFormServico(null);
+      else abrirFormAdicional(null);
+    }
+
+    // ── DRAWER HELPERS ────────────────────────────
+    function abrirDrawer() {
+      document.getElementById('drawerOverlay').classList.add('open');
+      document.getElementById('drawer').classList.add('open');
+    }
+    function fecharDrawer() {
+      document.getElementById('drawerOverlay').classList.remove('open');
+      document.getElementById('drawer').classList.remove('open');
+      editandoId = null;
+    }
+
+    // ── FORM SERVIÇO ──────────────────────────────
+    function abrirEditarServico(id) {
+      const s = servicos.find(x => x.id === id);
+      if (!s) return;
+      abrirFormServico(s);
+    }
+
+    function abrirFormServico(s) {
+      editandoId = s?.id || null;
+      document.getElementById('drawerTitle').textContent = s ? 'Editar Serviço' : 'Novo Serviço';
+
+      const tipo     = s?.tipoVeiculo || '';
+      const catsSel  = (s?.subtiposVeiculo || []).map(x => x.categoria || x);
+      const comissao = s?.comissaoPercentual != null ? s.comissaoPercentual : '';
+
+      document.getElementById('drawerBody').innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Nome do serviço *</label>
+          <input type="text" class="form-input" id="fNome" placeholder="Ex: Lavagem Simples" value="${escHtml(s?.nome || '')}">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Preço (R$) *</label>
+            <input type="number" step="0.01" min="0.01" class="form-input" id="fPreco" placeholder="0,00" value="${s?.preco || ''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Comissão (%)</label>
+            <input type="number" step="1" min="0" max="100" class="form-input" id="fComissao"
+                   placeholder="Padrão lavador" value="${comissao}">
+            <div class="form-hint">Deixe vazio para usar o % padrão</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de veículo *</label>
+          <select class="form-select" id="fTipo" onchange="onTipoChange()">
+            <option value="">Selecione...</option>
+            <option value="CARRO" ${tipo==='CARRO'?'selected':''}>Carro</option>
+            <option value="MOTO"  ${tipo==='MOTO' ?'selected':''}>Moto</option>
+            <option value="OUTROS"${tipo==='OUTROS'?'selected':''}>Outros</option>
+          </select>
+        </div>
+        <div class="form-group" id="fCatGroup" style="display:${tipo==='CARRO'?'block':'none'}">
+          <label class="form-label">Categorias (Carro)</label>
+          <div class="cat-grid" id="fCatGrid">
+            ${CATS_CARRO.map(cat => {
+              const sel = catsSel.includes(cat);
+              return `<label class="cat-chip ${sel?'checked':''}" onclick="toggleCat(this)">
+                <input type="checkbox" value="${cat}" ${sel?'checked':''}/>
+                ${LABELS_CAT[cat]}
+              </label>`;
+            }).join('')}
+          </div>
+          <div class="form-hint" style="margin-top:8px">Nenhuma selecionada = todos os tipos de carro</div>
+        </div>
+      `;
+
+      const isEdit = !!editandoId;
+      document.getElementById('drawerFooter').innerHTML = `
+        ${isEdit ? `<button class="btn-f btn-f-danger" onclick="excluirServico()"><i class="fas fa-trash"></i></button>` : ''}
+        <button class="btn-f btn-f-cancel" onclick="fecharDrawer()">Cancelar</button>
+        <button class="btn-f btn-f-save" id="btnSalvar" onclick="salvarServico()">
+          <i class="fas fa-save"></i> ${isEdit ? 'Salvar' : 'Criar'}
+        </button>
+      `;
+      abrirDrawer();
+    }
+
+    function onTipoChange() {
+      const tipo = document.getElementById('fTipo').value;
+      document.getElementById('fCatGroup').style.display = tipo === 'CARRO' ? 'block' : 'none';
+    }
+
+    function toggleCat(chip) {
+      const cb = chip.querySelector('input[type="checkbox"]');
+      cb.checked = !cb.checked;
+      chip.classList.toggle('checked', cb.checked);
+    }
+
+    async function salvarServico() {
+      const nome    = document.getElementById('fNome').value.trim();
+      const preco   = parseFloat(document.getElementById('fPreco').value);
+      const tipo    = document.getElementById('fTipo').value;
+      const comissaoVal = document.getElementById('fComissao').value;
+      const comissao = comissaoVal !== '' ? parseFloat(comissaoVal) : null;
+
+      if (!nome || !preco || preco <= 0 || !tipo) {
+        showToast('Preencha nome, preço e tipo de veículo', 'error'); return;
+      }
+
+      const cats = Array.from(document.querySelectorAll('#fCatGrid input:checked')).map(c => c.value);
 
       const payload = {
-        nome: nome,
-        preco: preco,
-        tipoVeiculo: tipoVeiculo,
-        subtiposVeiculo: serviceForm.subtiposVeiculo
+        nome, preco, tipoVeiculo: tipo,
+        subtiposVeiculo: cats,
+        ...(comissao !== null ? { comissaoPercentual: comissao } : { comissaoPercentual: null })
       };
 
+      const btn = document.getElementById('btnSalvar');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
       try {
-        if (serviceForm.id) {
-          await window.api.updateServico(serviceForm.id, payload);
-          showToast('Serviço atualizado com sucesso!', 'success');
+        if (editandoId) {
+          await window.api.updateServico(editandoId, payload);
+          showToast('Serviço atualizado!', 'success');
         } else {
           await window.api.createServico(payload);
-          showToast('Serviço criado com sucesso!', 'success');
+          showToast('Serviço criado!', 'success');
         }
-
-        closeServiceModal();
-        await loadServicosAndAdicionais();
-      } catch (error) {
-        console.error('Erro ao salvar serviço:', error);
-        showToast('Erro ao salvar serviço. Tente novamente.', 'error');
+        fecharDrawer();
+        await carregar();
+      } catch (err) {
+        showToast(err?.error || 'Erro ao salvar serviço', 'error');
+        btn.disabled = false; btn.innerHTML = `<i class="fas fa-save"></i> ${editandoId ? 'Salvar' : 'Criar'}`;
       }
     }
 
-    // ===== ADICIONAIS FUNCTIONS =====
-    let adicionalForm = {
-      id: null,
-      nome: '',
-      preco: '',
-      descricao: ''
-    };
-
-    // OPEN ADICIONAL MODAL
-    function openAdicionalModal() {
-      adicionalForm = {
-        id: null,
-        nome: '',
-        preco: '',
-        descricao: ''
-      };
-      document.getElementById('adicionalForm').reset();
-      document.getElementById('adicionalModalTitle').textContent = 'Novo Adicional';
-      document.getElementById('adicionalModal').classList.add('active');
+    function excluirServico() {
+      if (!confirm('Excluir este serviço? Esta ação não pode ser desfeita.')) return;
+      window.api.deleteServico(editandoId)
+        .then(() => { showToast('Serviço excluído.', 'success'); fecharDrawer(); carregar(); })
+        .catch(() => showToast('Erro ao excluir serviço.', 'error'));
     }
 
-    // CLOSE ADICIONAL MODAL
-    function closeAdicionalModal() {
-      document.getElementById('adicionalModal').classList.remove('active');
-      document.getElementById('adicionalForm').reset();
+    // ── FORM ADICIONAL ────────────────────────────
+    function abrirEditarAdicional(id) {
+      const a = adicionais.find(x => x.id === id);
+      if (!a) return;
+      abrirFormAdicional(a);
     }
 
-    // SAVE ADICIONAL
-    function saveAdicional(event) {
-      event.preventDefault();
+    function abrirFormAdicional(a) {
+      editandoId = a?.id || null;
+      document.getElementById('drawerTitle').textContent = a ? 'Editar Adicional' : 'Novo Adicional';
 
-      const nome = document.getElementById('adicionalName').value.trim();
-      const preco = parseFloat(document.getElementById('adicionalPrice').value);
-      const descricao = document.getElementById('adicionalDescricao').value.trim();
+      document.getElementById('drawerBody').innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Nome do adicional *</label>
+          <input type="text" class="form-input" id="fNomeA" placeholder="Ex: Polimento Especial" value="${escHtml(a?.nome || '')}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preço (R$) *</label>
+          <input type="number" step="0.01" min="0.01" class="form-input" id="fPrecoA" placeholder="0,00" value="${a?.preco || ''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição <span style="font-weight:400;color:var(--light)">(opcional)</span></label>
+          <textarea class="form-input" id="fDescA" placeholder="Detalhes do adicional..."
+                    style="resize:vertical;min-height:70px">${escHtml(a?.descricao || '')}</textarea>
+        </div>
+      `;
 
-      if (!nome || preco <= 0) {
-        showToast('Preencha todos os campos obrigatórios corretamente.', 'error');
-        return;
+      const isEdit = !!editandoId;
+      document.getElementById('drawerFooter').innerHTML = `
+        ${isEdit ? `<button class="btn-f btn-f-danger" onclick="excluirAdicional()"><i class="fas fa-trash"></i></button>` : ''}
+        <button class="btn-f btn-f-cancel" onclick="fecharDrawer()">Cancelar</button>
+        <button class="btn-f btn-f-save" id="btnSalvarA" onclick="salvarAdicional()">
+          <i class="fas fa-save"></i> ${isEdit ? 'Salvar' : 'Criar'}
+        </button>
+      `;
+      abrirDrawer();
+    }
+
+    async function salvarAdicional() {
+      const nome   = document.getElementById('fNomeA').value.trim();
+      const preco  = parseFloat(document.getElementById('fPrecoA').value);
+      const desc   = document.getElementById('fDescA').value.trim();
+
+      if (!nome || !preco || preco <= 0) {
+        showToast('Preencha nome e preço', 'error'); return;
       }
 
-      const payload = {
-        nome: nome,
-        preco: preco,
-        descricao: descricao || null
-      };
+      const btn = document.getElementById('btnSalvarA');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
       try {
-        if (adicionalForm.id) {
-          window.api.updateAdicional(adicionalForm.id, payload)
-            .then(() => {
-              showToast('Adicional atualizado com sucesso!', 'success');
-              closeAdicionalModal();
-              loadServicosAndAdicionais();
-            })
-            .catch(error => {
-              console.error('Erro ao atualizar adicional:', error);
-              showToast('Erro ao atualizar adicional. Tente novamente.', 'error');
-            });
+        const payload = { nome, preco, descricao: desc || null };
+        if (editandoId) {
+          await window.api.updateAdicional(editandoId, payload);
+          showToast('Adicional atualizado!', 'success');
         } else {
-          window.api.createAdicional(payload)
-            .then(() => {
-              showToast('Adicional criado com sucesso!', 'success');
-              closeAdicionalModal();
-              loadServicosAndAdicionais();
-            })
-            .catch(error => {
-              console.error('Erro ao criar adicional:', error);
-              showToast('Erro ao criar adicional. Tente novamente.', 'error');
-            });
+          await window.api.createAdicional(payload);
+          showToast('Adicional criado!', 'success');
         }
-      } catch (error) {
-        console.error('Erro ao salvar adicional:', error);
-        showToast('Erro ao salvar adicional. Tente novamente.', 'error');
+        fecharDrawer();
+        await carregar();
+      } catch (err) {
+        showToast(err?.error || 'Erro ao salvar adicional', 'error');
+        btn.disabled = false; btn.innerHTML = `<i class="fas fa-save"></i> ${editandoId ? 'Salvar' : 'Criar'}`;
       }
     }
 
-    // EDIT ADICIONAL
-    function editAdicional(id, nome, preco, descricao) {
-      adicionalForm = {
-        id: id,
-        nome: nome,
-        preco: preco,
-        descricao: descricao
-      };
-
-      document.getElementById('adicionalModalTitle').textContent = 'Editar Adicional';
-      document.getElementById('adicionalName').value = nome;
-      document.getElementById('adicionalPrice').value = preco;
-      document.getElementById('adicionalDescricao').value = descricao;
-      document.getElementById('adicionalModal').classList.add('active');
+    function excluirAdicional() {
+      if (!confirm('Excluir este adicional? Esta ação não pode ser desfeita.')) return;
+      window.api.deleteAdicional(editandoId)
+        .then(() => { showToast('Adicional excluído.', 'success'); fecharDrawer(); carregar(); })
+        .catch(() => showToast('Erro ao excluir adicional.', 'error'));
     }
 
-    // DELETE ADICIONAL
-    function deleteAdicional(id, nome) {
-      showConfirm(
-        'Deletar Adicional',
-        `Tem certeza que deseja deletar o adicional "${nome}"?`,
-        async () => {
-          try {
-            await window.api.deleteAdicional(id);
-            showToast('Adicional deletado com sucesso!', 'success');
-            await loadServicosAndAdicionais();
-          } catch (error) {
-            console.error('Erro ao deletar adicional:', error);
-            showToast('Erro ao deletar adicional. Tente novamente.', 'error');
-          }
-        }
-      );
+    // ── UTILS ─────────────────────────────────────
+    function fmtR(v) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+    }
+    function escHtml(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function showToast(msg, type = 'info') {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => el.remove(), 3000);
     }
   </script>
 </body>
