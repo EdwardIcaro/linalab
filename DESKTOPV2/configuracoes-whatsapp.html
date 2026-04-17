@@ -516,6 +516,64 @@
             line-height: 1.5;
         }
 
+        /* Tabs do modal de admin */
+        .admin-tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+            margin: 0 -1.5rem;
+            padding: 0 1.5rem;
+            gap: 4px;
+        }
+        .admin-tab {
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #888;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: all .15s;
+        }
+        .admin-tab.active {
+            color: #7f56d9;
+            border-bottom-color: #7f56d9;
+        }
+        .admin-tab:hover:not(.active) { color: #444; }
+
+        /* Display do código de 4 dígitos */
+        .code-display-box {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin: 12px 0;
+        }
+        .code-label {
+            font-size: 0.8rem;
+            color: #065f46;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 10px;
+        }
+        .code-digits {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 12px;
+            color: #047857;
+            font-family: 'Courier New', monospace;
+            line-height: 1;
+        }
+        .code-expires {
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 10px;
+        }
+        .code-expires.expiring { color: #ef4444; font-weight: 700; }
+
         .pairing-form-hint {
             font-size: 0.85rem;
             color: #888;
@@ -632,7 +690,7 @@
         </div>
     </div>
 
-    <!-- Modal para adicionar admin via pareamento -->
+    <!-- Modal para adicionar admin -->
     <div id="adminModal" class="modal-phone">
         <div class="modal-content-phone">
             <div class="modal-header-phone">
@@ -640,43 +698,86 @@
                 <button class="close-modal" onclick="closeAdminModal()">&times;</button>
             </div>
 
-            <!-- Estado 1: Formulário inicial -->
-            <div id="pairingFormState">
-                <div class="form-group-phone">
-                    <label for="adminNameInput">Nome/Descrição (opcional)</label>
-                    <input
-                        type="text"
-                        id="adminNameInput"
-                        placeholder="Ex: Gerente João"
-                    >
+            <!-- Tabs de método -->
+            <div id="adminModalTabs" class="admin-tabs">
+                <button class="admin-tab active" id="tabPairing" onclick="setAdminTab('pairing')">
+                    📲 Pareamento
+                </button>
+                <button class="admin-tab" id="tabCode" onclick="setAdminTab('code')">
+                    🔢 Código
+                </button>
+            </div>
+
+            <!-- ═══ ABA: PAREAMENTO ═══ -->
+            <div id="tabPairingContent">
+                <!-- Estado 1: Formulário -->
+                <div id="pairingFormState">
+                    <div class="form-group-phone">
+                        <label for="adminNameInput">Nome/Descrição (opcional)</label>
+                        <input type="text" id="adminNameInput" placeholder="Ex: Gerente João">
+                    </div>
+                    <p class="pairing-form-hint">
+                        📲 Ao clicar em "Iniciar Pareamento", a próxima pessoa que enviar qualquer mensagem para o WhatsApp do bot será adicionada automaticamente como administrador.
+                    </p>
+                    <div class="modal-footer-phone">
+                        <button type="button" class="btn-modal btn-cancel" onclick="closeAdminModal()">Cancelar</button>
+                        <button type="button" class="btn-modal btn-save-phone" id="startPairingBtn" onclick="startPairingMode()">
+                            Iniciar Pareamento
+                        </button>
+                    </div>
                 </div>
-                <p class="pairing-form-hint">
-                    📲 Ao clicar em "Iniciar Pareamento", a próxima pessoa que enviar qualquer mensagem para o WhatsApp do bot será adicionada automaticamente como administrador.
-                </p>
-                <div class="modal-footer-phone">
-                    <button type="button" class="btn-modal btn-cancel" onclick="closeAdminModal()">
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn-modal btn-save-phone" id="startPairingBtn" onclick="startPairingMode()">
-                        Iniciar Pareamento
-                    </button>
+                <!-- Estado 2: Aguardando mensagem -->
+                <div id="pairingWaitingState" style="display: none;">
+                    <div class="pairing-waiting">
+                        <div class="pairing-pulse-ring">
+                            <span class="pairing-pulse-icon">📱</span>
+                        </div>
+                        <h3>Aguardando mensagem...</h3>
+                        <p>Peça ao admin para enviar <strong>qualquer mensagem</strong> para o número do WhatsApp do bot.</p>
+                        <p style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">A página será atualizada automaticamente.</p>
+                    </div>
+                    <div class="modal-footer-phone">
+                        <button type="button" class="btn-modal btn-cancel" onclick="cancelPairingMode()">Cancelar Pareamento</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Estado 2: Aguardando mensagem -->
-            <div id="pairingWaitingState" style="display: none;">
-                <div class="pairing-waiting">
-                    <div class="pairing-pulse-ring">
-                        <span class="pairing-pulse-icon">📱</span>
+            <!-- ═══ ABA: CÓDIGO ═══ -->
+            <div id="tabCodeContent" style="display:none;">
+                <!-- Estado 1: Formulário para gerar código -->
+                <div id="codeFormState">
+                    <div class="form-group-phone">
+                        <label for="codeNameInput">Nome/Descrição (opcional)</label>
+                        <input type="text" id="codeNameInput" placeholder="Ex: Gerente João">
                     </div>
-                    <h3>Aguardando mensagem...</h3>
-                    <p>Peça ao admin para enviar <strong>qualquer mensagem</strong> para o número do WhatsApp do bot.</p>
-                    <p style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">A página será atualizada automaticamente.</p>
+                    <p class="pairing-form-hint">
+                        🔢 Será gerado um código de 4 dígitos. Peça ao admin para digitar exatamente esse código no WhatsApp do bot para se registrar.
+                    </p>
+                    <div class="modal-footer-phone">
+                        <button type="button" class="btn-modal btn-cancel" onclick="closeAdminModal()">Cancelar</button>
+                        <button type="button" class="btn-modal btn-save-phone" id="generateCodeBtn" onclick="startCodeMode()">
+                            🔢 Gerar Código
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-footer-phone">
-                    <button type="button" class="btn-modal btn-cancel" onclick="cancelPairingMode()">
-                        Cancelar Pareamento
-                    </button>
+                <!-- Estado 2: Mostrando código + aguardando -->
+                <div id="codeWaitingState" style="display: none;">
+                    <div class="code-display-box">
+                        <p class="code-label">Código para digitar no WhatsApp:</p>
+                        <div class="code-digits" id="codeDisplay">——</div>
+                        <p class="code-expires" id="codeExpires">Expira em 5:00</p>
+                    </div>
+                    <div class="pairing-waiting" style="margin-top: 12px;">
+                        <div class="pairing-pulse-ring">
+                            <span class="pairing-pulse-icon">⌨️</span>
+                        </div>
+                        <h3>Aguardando código...</h3>
+                        <p>Peça ao admin para enviar exatamente <strong id="codeDisplayInline">——</strong> no WhatsApp do bot.</p>
+                        <p style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">A página será atualizada automaticamente.</p>
+                    </div>
+                    <div class="modal-footer-phone">
+                        <button type="button" class="btn-modal btn-cancel" onclick="cancelCodeMode()">Cancelar</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -729,6 +830,9 @@
         // ========== ADMINS ==========
         let adminPhones = [];
         let pairingPollInterval = null;
+        let codePollInterval = null;
+        let codeCountdownInterval = null;
+        let codeExpiresAt = null;
 
         async function loadAdminPhones() {
             try {
@@ -767,16 +871,114 @@
             }).join('');
         }
 
+        // ── Tab control ──
+        function setAdminTab(tab) {
+            document.getElementById('tabPairing').classList.toggle('active', tab === 'pairing');
+            document.getElementById('tabCode').classList.toggle('active', tab === 'code');
+            document.getElementById('tabPairingContent').style.display = tab === 'pairing' ? '' : 'none';
+            document.getElementById('tabCodeContent').style.display = tab === 'code' ? '' : 'none';
+        }
+
         function openAddAdminModal() {
             document.getElementById('adminNameInput').value = '';
+            document.getElementById('codeNameInput').value = '';
             document.getElementById('pairingFormState').style.display = '';
             document.getElementById('pairingWaitingState').style.display = 'none';
+            document.getElementById('codeFormState').style.display = '';
+            document.getElementById('codeWaitingState').style.display = 'none';
+            setAdminTab('pairing');
             document.getElementById('adminModal').classList.add('active');
         }
 
         function closeAdminModal() {
             document.getElementById('adminModal').classList.remove('active');
             stopPairingPoll();
+            stopCodeMode();
+        }
+
+        // ── Aba CÓDIGO ──
+        async function startCodeMode() {
+            const nome = document.getElementById('codeNameInput').value.trim();
+            const btn = document.getElementById('generateCodeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+
+            try {
+                const res = await window.api.call('POST', '/whatsapp/admin-phones/pair-code', { nome: nome || null });
+                const code = res.data.code;
+                codeExpiresAt = Date.now() + (res.data.expiresIn || 300) * 1000;
+
+                document.getElementById('codeDisplay').textContent = code;
+                document.getElementById('codeDisplayInline').textContent = code;
+                document.getElementById('codeFormState').style.display = 'none';
+                document.getElementById('codeWaitingState').style.display = '';
+
+                startCodeCountdown();
+                startCodePoll();
+            } catch (error) {
+                const msg = error?.message || 'Erro ao gerar código';
+                showAlert(msg.includes('conectado') ? '⚠️ Conecte o WhatsApp antes de usar o código.' : msg, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔢 Gerar Código';
+            }
+        }
+
+        function startCodeCountdown() {
+            stopCodeCountdown();
+            codeCountdownInterval = setInterval(() => {
+                const remaining = Math.max(0, Math.ceil((codeExpiresAt - Date.now()) / 1000));
+                const min = Math.floor(remaining / 60);
+                const sec = String(remaining % 60).padStart(2, '0');
+                const el = document.getElementById('codeExpires');
+                if (el) {
+                    el.textContent = `Expira em ${min}:${sec}`;
+                    el.className = `code-expires${remaining <= 60 ? ' expiring' : ''}`;
+                }
+                if (remaining === 0) {
+                    stopCodeMode();
+                    closeAdminModal();
+                    showAlert('⏰ O código expirou. Gere um novo.', 'error');
+                }
+            }, 1000);
+        }
+
+        function stopCodeCountdown() {
+            if (codeCountdownInterval) { clearInterval(codeCountdownInterval); codeCountdownInterval = null; }
+        }
+
+        function startCodePoll() {
+            stopCodePoll();
+            const prevCount = adminPhones.length;
+            codePollInterval = setInterval(async () => {
+                try {
+                    const status = await window.api.call('GET', '/whatsapp/admin-phones/pair-code');
+                    if (!status.data.active || status.data.claimed) {
+                        stopCodeMode();
+                        closeAdminModal();
+                        await loadAdminPhones();
+                        if (adminPhones.length > prevCount || status.data.claimed) {
+                            showAlert('✅ Admin adicionado com sucesso via código!', 'success');
+                        }
+                    }
+                } catch (e) { /* silenciar */ }
+            }, 2000);
+        }
+
+        function stopCodePoll() {
+            if (codePollInterval) { clearInterval(codePollInterval); codePollInterval = null; }
+        }
+
+        function stopCodeMode() {
+            stopCodePoll();
+            stopCodeCountdown();
+            codeExpiresAt = null;
+            window.api.call('DELETE', '/whatsapp/admin-phones/pair-code').catch(() => {});
+        }
+
+        async function cancelCodeMode() {
+            stopCodeMode();
+            closeAdminModal();
         }
 
         async function startPairingMode() {

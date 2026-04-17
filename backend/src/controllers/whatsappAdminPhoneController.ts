@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import { resolvePhoneToJid, sendMessageAndCaptureJid } from '../services/baileyService';
+import { generateCode, getCodeEntry, cancelCode } from '../services/pairingCodeStore';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -302,6 +303,79 @@ export async function cancelPairing(req: AuthenticatedRequest, res: Response) {
     console.error('[WhatsApp Admin Phones] Erro ao cancelar pareamento:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     return res.status(500).json({ error: 'Erro ao cancelar pareamento', details: errorMsg });
+  }
+}
+
+/**
+ * POST /api/whatsapp/admin-phones/pair-code
+ * Gera um código de 4 dígitos para o admin digitar no WhatsApp
+ */
+export async function gerarCodigoPareamento(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    const { nome } = req.body;
+
+    if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
+
+    const instance = await prisma.whatsappInstance.findUnique({ where: { empresaId } });
+    if (!instance) {
+      return res.status(404).json({ error: 'Instância WhatsApp não encontrada. Conecte o WhatsApp primeiro.' });
+    }
+    if (instance.status !== 'connected') {
+      return res.status(400).json({ error: 'WhatsApp não está conectado. Conecte primeiro para usar o código.' });
+    }
+
+    const code = generateCode(empresaId, nome?.trim() || undefined);
+    console.log(`[WhatsApp Admin] Código de pareamento gerado para ${empresaId}: ${code}`);
+
+    return res.json({ data: { code, expiresIn: 300 } });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao gerar código', details: errorMsg });
+  }
+}
+
+/**
+ * GET /api/whatsapp/admin-phones/pair-code
+ * Retorna status do código gerado (ativo, expirado, usado)
+ */
+export async function statusCodigoPareamento(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
+
+    const entry = getCodeEntry(empresaId);
+    if (!entry) {
+      return res.json({ data: { active: false, claimed: false } });
+    }
+
+    return res.json({
+      data: {
+        active: true,
+        claimed: entry.claimed,
+        code: entry.code,
+        expiresAt: new Date(entry.expiresAt),
+      },
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao obter status do código', details: errorMsg });
+  }
+}
+
+/**
+ * DELETE /api/whatsapp/admin-phones/pair-code
+ * Cancela o código ativo
+ */
+export async function cancelarCodigoPareamento(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
+    cancelCode(empresaId);
+    return res.json({ message: 'Código cancelado' });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: 'Erro ao cancelar código', details: errorMsg });
   }
 }
 

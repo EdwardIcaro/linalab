@@ -11,6 +11,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
 import { handleIncomingMessage } from './whatsappCommandHandler';
+import { validateAndClaim } from './pairingCodeStore';
 
 // ==========================================
 // STATE INTERNO
@@ -458,6 +459,53 @@ export async function initBaileys(empresaId: string): Promise<void> {
         console.log(`[Baileys] Mensagem recebida de ${from}: ${text}`);
 
         const senderName = message.pushName || 'Usuário';
+
+        // Verificar código de pareamento de 4 dígitos
+        const trimmedText = text.trim();
+        if (/^\d{4}$/.test(trimmedText)) {
+          const claimed = validateAndClaim(empresaId, trimmedText);
+          if (claimed) {
+            const instanceForCode = await prisma.whatsappInstance.findUnique({
+              where: { empresaId },
+              select: { id: true },
+            });
+            if (instanceForCode) {
+              const lidOrPhone = rawFrom.split('@')[0];
+              const phoneToStore = (rawFrom.endsWith('@lid') && from !== rawFrom)
+                ? from.split('@')[0]
+                : rawFrom.endsWith('@lid')
+                  ? `lid_${lidOrPhone}`
+                  : lidOrPhone;
+
+              const nomeAdmin = claimed.nome || senderName;
+              try {
+                await prisma.whatsappAdminPhone.create({
+                  data: {
+                    instanceId: instanceForCode.id,
+                    telefone: phoneToStore,
+                    jid: rawFrom,
+                    nome: nomeAdmin,
+                    ativo: true,
+                  },
+                });
+                console.log(`[Baileys] ✅ Admin cadastrado via código: ${rawFrom} como "${nomeAdmin}"`);
+                await sock.sendMessage(rawFrom, {
+                  text: `✅ Olá ${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+                });
+              } catch (codeError: any) {
+                if (codeError?.message?.includes('unique') || codeError?.message?.includes('Unique')) {
+                  await sock.sendMessage(rawFrom, {
+                    text: `✅ Seu número já está cadastrado como administrador, ${nomeAdmin}!`,
+                  });
+                } else {
+                  console.error('[Baileys] Erro ao cadastrar admin via código:', codeError);
+                  await sock.sendMessage(rawFrom, { text: '❌ Erro ao registrar. Tente gerar um novo código.' });
+                }
+              }
+            }
+            return; // Não processar como mensagem normal
+          }
+        }
 
         // Verificar modo de pareamento: próxima msg de qualquer pessoa = novo admin
         const instanceForPairing = await prisma.whatsappInstance.findUnique({

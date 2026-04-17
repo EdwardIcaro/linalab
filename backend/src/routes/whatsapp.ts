@@ -24,6 +24,9 @@ import {
   startPairing,
   cancelPairing,
   getPairingStatus,
+  gerarCodigoPareamento,
+  statusCodigoPareamento,
+  cancelarCodigoPareamento,
 } from '../controllers/whatsappAdminPhoneController';
 import {
   getBankIntegration,
@@ -58,6 +61,11 @@ router.post('/admin-phones', createAdminPhone);
 router.get('/admin-phones/pair', getPairingStatus);
 router.post('/admin-phones/pair', startPairing);
 router.delete('/admin-phones/pair', cancelPairing);
+
+// Pareamento por código de 4 dígitos
+router.post('/admin-phones/pair-code', gerarCodigoPareamento);
+router.get('/admin-phones/pair-code', statusCodigoPareamento);
+router.delete('/admin-phones/pair-code', cancelarCodigoPareamento);
 
 // Rotas com parâmetro (devem vir depois das rotas específicas)
 router.delete('/admin-phones/:adminPhoneId', deleteAdminPhone);
