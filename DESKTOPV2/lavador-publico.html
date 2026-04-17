@@ -182,27 +182,22 @@
       background: var(--blue-l);
     }
     .nav-btn .nav-ico {
-      width: 40px; height: 40px; border-radius: 50%;
+      width: 46px; height: 46px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px; transition: background .2s;
+      font-size: 18px; transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 3px 10px rgba(0,0,0,.12);
     }
+    .nav-btn:hover .nav-ico { transform: scale(1.07); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
     .nav-btn .nav-label { font-size: 11px; font-weight: 600; color: var(--muted); }
     .nav-btn.active .nav-label { color: var(--blue-d); }
 
-    /* nav icon colors */
-    .ico-hoje    { background: #dbeafe; color: #2563eb; }
-    .ico-hist    { background: #f3e8ff; color: #7c3aed; }
-    .ico-stats   { background: #d1fae5; color: #059669; }
-    .ico-pagto   { background: #fce7f3; color: #db2777; }
-    .ico-adiant  { background: #fee2e2; color: #dc2626; }
-    .ico-periodo { background: #fef3c7; color: #d97706; }
-
-    .nav-btn.active .ico-hoje    { background: #bfdbfe; }
-    .nav-btn.active .ico-hist    { background: #ede9fe; }
-    .nav-btn.active .ico-stats   { background: #a7f3d0; }
-    .nav-btn.active .ico-pagto   { background: #fbcfe8; }
-    .nav-btn.active .ico-adiant  { background: #fecaca; }
-    .nav-btn.active .ico-periodo { background: #fde68a; }
+    /* nav icon colors — gradientes vibrantes */
+    .ico-hoje    { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: #fff; }
+    .ico-hist    { background: linear-gradient(135deg, #8b5cf6, #a855f7); color: #fff; }
+    .ico-stats   { background: linear-gradient(135deg, #10b981, #34d399); color: #fff; }
+    .ico-pagto   { background: linear-gradient(135deg, #ec4899, #f43f5e); color: #fff; }
+    .ico-adiant  { background: linear-gradient(135deg, #ef4444, #f97316); color: #fff; }
+    .ico-periodo { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #fff; }
 
     /* ===== SECTIONS ===== */
     .section { display: none; padding: 16px 16px 0; }
@@ -578,7 +573,6 @@
       <div id="heroAvatar" class="avatar">?</div>
       <div>
         <div id="heroNome" class="hero-name">—</div>
-        <div id="heroSub" class="hero-sub">— % comissão</div>
       </div>
     </div>
 
@@ -625,7 +619,7 @@
     </button>
     <button class="nav-btn" id="navAdiantBtn" onclick="setSecao('adiantamentos')">
       <div class="nav-ico ico-adiant"><i class="fas fa-hand-holding-usd"></i></div>
-      <span class="nav-label">Adianto</span>
+      <span class="nav-label">Vale</span>
     </button>
     <button class="nav-btn" onclick="setSecao('periodo')">
       <div class="nav-ico ico-periodo"><i class="fas fa-filter"></i></div>
@@ -886,8 +880,6 @@ function renderUI() {
   const nome = lavadorData.nome || '?';
   document.getElementById('heroNome').textContent = nome;
   document.getElementById('heroAvatar').textContent = nome.charAt(0).toUpperCase();
-  const comissao = lavadorData.comissao || 0;
-  document.getElementById('heroSub').textContent = `${comissao}% comissão`;
 
   // Saldo e pills
   renderHeroStats();
