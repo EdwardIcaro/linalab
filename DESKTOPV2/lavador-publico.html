@@ -3,1581 +3,1468 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinaX - Extrato</title>
-  <script src="api.js"></script>
+  <title>LinaX - Meu Painel</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="api.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --primary: #8B5CF6;
-      --primary-dark: #7C3AED;
-      --primary-light: #A78BFA;
-      --success: #10B981;
-      --success-light: #D1FAE5;
-      --danger: #EF4444;
-      --danger-light: #FEE2E2;
-      --warning: #F59E0B;
-      --warning-light: #FEF3C7;
-      --info: #3B82F6;
-      --info-light: #DBEAFE;
-
-      --bg-main: #F5F5F7;
-      --bg-card: #FFFFFF;
-      --text-primary: #1F2937;
-      --text-secondary: #6B7280;
-      --text-muted: #9CA3AF;
-      --border: #E5E7EB;
-
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 16px;
-      --radius-xl: 24px;
+      --navy:   #0f172a;
+      --navy2:  #1e293b;
+      --blue-d: #2563eb;
+      --blue-l: #eff6ff;
+      --green-d:#059669;
+      --green-l:#d1fae5;
+      --amber:  #f59e0b;
+      --amber-l:#fef3c7;
+      --red:    #ef4444;
+      --red-l:  #fee2e2;
+      --purple: #8b5cf6;
+      --purple-l:#ede9fe;
+      --bg:     #f1f5f9;
+      --white:  #ffffff;
+      --border: #e2e8f0;
+      --text:   #1e293b;
+      --muted:  #64748b;
+      --faint:  #94a3b8;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.10);
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg-main);
-      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
     }
 
-    .container {
+    .page {
       max-width: 600px;
       margin: 0 auto;
-      padding: 0;
       min-height: 100vh;
+      padding-bottom: 80px;
     }
 
-    /* =================== LOADER =================== */
+    /* ===== LOADER ===== */
     .loader-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      background: var(--bg-main);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; background: var(--bg);
     }
-
-    .loader-icon {
-      width: 48px;
-      height: 48px;
-      border: 3px solid var(--primary-light);
-      border-top-color: var(--primary);
+    .loader-spin {
+      width: 44px; height: 44px;
+      border: 3px solid #c7d2fe;
+      border-top-color: var(--blue-d);
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: spin 0.9s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { margin-top: 16px; font-size: 14px; color: var(--muted); font-weight: 500; }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .loader-text {
-      margin-top: 20px;
-      font-size: 14px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    /* =================== ERROR =================== */
+    /* ===== ERROR ===== */
     .error-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 20px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; padding: 32px; text-align: center;
+    }
+    .error-ico { font-size: 52px; color: var(--red); margin-bottom: 20px; }
+    .error-title { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+    .error-msg { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 320px; }
+
+    /* ===== HERO HEADER ===== */
+    .hero {
+      background: linear-gradient(150deg, var(--navy) 0%, #1e3a5f 100%);
+      color: #fff;
+      padding: 20px 20px 24px;
+      border-radius: 0 0 28px 28px;
+      box-shadow: 0 8px 24px rgba(15,23,42,.25);
+    }
+    .hero-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .timer-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.12);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 12px; font-weight: 500;
+    }
+    .timer-pill.permanent { background: rgba(5,150,105,.25); }
+    .timer-pill.expiring  { background: rgba(239,68,68,.25); }
+    .blur-btn {
+      background: rgba(255,255,255,.15);
+      border: none; color: #fff;
+      width: 32px; height: 32px;
+      border-radius: 50%; cursor: pointer;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .blur-btn:hover { background: rgba(255,255,255,.25); }
+
+    .hero-profile {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 20px;
+    }
+    .avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--blue-d);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,.3);
+    }
+    .hero-name { font-size: 20px; font-weight: 800; line-height: 1.2; }
+    .hero-sub  { font-size: 13px; opacity: .75; margin-top: 2px; }
+
+    .hero-balance-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .8px; text-transform: uppercase;
+      opacity: .7; margin-bottom: 4px;
+    }
+    .hero-balance {
+      font-size: 34px; font-weight: 800; letter-spacing: -1px;
+      transition: filter .25s;
+    }
+    .hero-balance.blurred { filter: blur(10px); user-select: none; }
+    .hero-debt-row {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 6px; font-size: 13px; opacity: .85;
+    }
+    .hero-debt-row .badge-red {
+      background: rgba(239,68,68,.25);
+      color: #fca5a5;
+      padding: 2px 8px; border-radius: 10px;
+      font-size: 12px; font-weight: 600;
+    }
+
+    /* Stat pills row */
+    .stat-pills {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; margin-top: 18px;
+    }
+    .stat-pill {
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px; padding: 10px 8px;
       text-align: center;
     }
+    .stat-pill-label { font-size: 10px; opacity: .65; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+    .stat-pill-value { font-size: 14px; font-weight: 700; }
 
-    .error-icon {
-      font-size: 48px;
-      color: var(--danger);
-      margin-bottom: 20px;
-    }
-
-    .error-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: var(--text-primary);
-    }
-
-    .error-message {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      max-width: 320px;
-    }
-
-    /* =================== HEADER =================== */
-    .header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      padding: 24px 20px;
-      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .header-greeting {
-      font-size: 13px;
-      font-weight: 500;
-      opacity: 0.9;
-      margin-bottom: 2px;
-    }
-
-    .header-name {
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 20px;
-    }
-
-    .balance-card {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .balance-label {
-      font-size: 12px;
-      font-weight: 500;
-      opacity: 0.9;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .balance-value {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .balance-toggle {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-      opacity: 0.8;
-      padding: 4px;
-      transition: opacity 0.2s;
-    }
-
-    .balance-toggle:hover {
-      opacity: 1;
-    }
-
-    .balance-value.hidden-value {
-      filter: blur(8px);
-      user-select: none;
-    }
-
-    .token-timer {
-      margin-top: 12px;
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      opacity: 0.9;
-    }
-
-    .token-timer i {
-      font-size: 14px;
-    }
-
-    .token-timer.expiring-soon {
-      background: rgba(245, 158, 11, 0.2);
-      color: #FFF;
-    }
-
-    .token-timer.permanent {
-      background: rgba(16, 185, 129, 0.2);
-    }
-
-    /* Indicador de dívida no card de saldo */
-    .debt-indicator {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-    }
-
-    .debt-indicator.hidden {
-      display: none;
-    }
-
-    .debt-label {
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .debt-value {
-      color: #ef4444;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    /* =================== PERIOD SUMMARY =================== */
-    .period-summary {
-      padding: 16px 20px;
+    /* ===== NAV GRID ===== */
+    .nav-grid {
+      padding: 20px 16px 8px;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 10px;
     }
-
-    .period-card {
-      background: var(--bg-card);
-      border-radius: var(--radius-sm);
-      padding: 12px 10px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border);
-      transition: transform 0.2s, box-shadow 0.2s;
-      text-align: center;
+    .nav-btn {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 8px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 6px;
+      cursor: pointer; font-family: inherit;
+      transition: all .2s; user-select: none;
     }
-
-    .period-card:active {
-      transform: scale(0.98);
+    .nav-btn:active { transform: scale(.96); }
+    .nav-btn.active {
+      border-color: var(--blue-d);
+      background: var(--blue-l);
     }
-
-    .period-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      margin: 0 auto 8px;
+    .nav-btn .nav-ico {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; transition: background .2s;
     }
+    .nav-btn .nav-label { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .nav-btn.active .nav-label { color: var(--blue-d); }
 
-    .period-icon.week {
-      background: #EEF2FF;
-      color: #6366F1;
+    /* nav icon colors */
+    .ico-hoje    { background: #dbeafe; color: #2563eb; }
+    .ico-hist    { background: #f3e8ff; color: #7c3aed; }
+    .ico-stats   { background: #d1fae5; color: #059669; }
+    .ico-pagto   { background: #fce7f3; color: #db2777; }
+    .ico-adiant  { background: #fee2e2; color: #dc2626; }
+    .ico-periodo { background: #fef3c7; color: #d97706; }
+
+    .nav-btn.active .ico-hoje    { background: #bfdbfe; }
+    .nav-btn.active .ico-hist    { background: #ede9fe; }
+    .nav-btn.active .ico-stats   { background: #a7f3d0; }
+    .nav-btn.active .ico-pagto   { background: #fbcfe8; }
+    .nav-btn.active .ico-adiant  { background: #fecaca; }
+    .nav-btn.active .ico-periodo { background: #fde68a; }
+
+    /* ===== SECTIONS ===== */
+    .section { display: none; padding: 16px 16px 0; }
+    .section.active { display: block; }
+
+    .sec-title {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
     }
+    .sec-title i { color: var(--blue-d); font-size: 14px; }
 
-    .period-icon.month {
-      background: #D1FAE5;
-      color: #059669;
+    /* ===== CALENDAR STRIP ===== */
+    .cal-nav {
+      display: flex; align-items: center;
+      gap: 8px; margin-bottom: 14px;
     }
-
-    .period-icon.debt {
-      background: var(--danger-light);
-      color: var(--danger);
+    .cal-arrow {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--white); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; color: var(--muted);
+      flex-shrink: 0; transition: all .15s;
     }
-
-    .period-label {
-      font-size: 10px;
-      color: var(--text-secondary);
-      font-weight: 600;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .period-value {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    /* =================== SECTION HEADER =================== */
-    .section-header {
-      padding: 20px 20px 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .section-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-subtitle {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    /* =================== TRANSACTIONS =================== */
-    .transactions {
-      padding: 0 20px 20px 20px;
-    }
-
-    .transaction-day {
-      margin-bottom: 20px;
-    }
-
-    .day-header {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
-      padding-left: 4px;
-    }
-
-    .transaction-item {
-      background: var(--bg-card);
-      border-radius: var(--radius-md);
-      padding: 14px;
-      margin-bottom: 8px;
-      box-shadow: var(--shadow-sm);
-      border-left: 3px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition: transform 0.2s, box-shadow 0.2s;
-      cursor: default;
-    }
-
-    .transaction-item.clickable {
-      cursor: pointer;
-    }
-
-    .transaction-item.clickable:active {
-      transform: scale(0.98);
-    }
-
-    .transaction-item.credit {
-      border-left-color: var(--success);
-    }
-
-    .transaction-item.payment {
-      border-left-color: var(--info);
-    }
-
-    .transaction-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .transaction-icon.credit {
-      background: var(--success-light);
-      color: var(--success);
-    }
-
-    .transaction-icon.payment {
-      background: var(--info-light);
-      color: var(--info);
-    }
-
-    .transaction-details {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .transaction-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .transaction-subtitle {
-      font-size: 12px;
-      color: var(--text-secondary);
-      white-space: nowrap;
+    .cal-arrow:hover { border-color: var(--blue-d); color: var(--blue-d); }
+    .cal-strip {
+      flex: 1; display: flex; gap: 6px;
       overflow: hidden;
-      text-overflow: ellipsis;
+    }
+    .cal-day {
+      flex: 1; min-width: 0;
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 8px 4px;
+      text-align: center; cursor: pointer;
+      transition: all .15s; user-select: none;
+    }
+    .cal-day:active { transform: scale(.95); }
+    .cal-day.has-orders { border-color: #93c5fd; }
+    .cal-day.active {
+      background: var(--blue-d);
+      border-color: var(--blue-d);
+      color: #fff;
+    }
+    .cal-day-name { font-size: 10px; font-weight: 600; text-transform: uppercase; opacity: .65; }
+    .cal-day.active .cal-day-name { opacity: .85; }
+    .cal-day-num  { font-size: 16px; font-weight: 700; margin: 2px 0; }
+    .cal-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--blue-d); margin: 0 auto;
+    }
+    .cal-day.active .cal-dot { background: rgba(255,255,255,.7); }
+    .cal-dot.hidden { opacity: 0; }
+    .cal-month-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-align: center; margin-bottom: 10px;
     }
 
-    .transaction-value {
-      font-size: 16px;
-      font-weight: 700;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .transaction-value.credit {
-      color: var(--success);
-    }
-
-    .transaction-value.payment {
-      color: var(--info);
-    }
-
-    /* Badges */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      padding: 3px 7px;
-      border-radius: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .multi-wash-badge {
-      background: var(--warning-light);
-      color: var(--warning);
-    }
-
-    .multi-wash-badge i {
-      font-size: 9px;
-    }
-
-    .status-badge.FINALIZADO {
-      background: var(--success-light);
-      color: #065F46;
-    }
-
-    .status-badge.EM_ANDAMENTO {
-      background: #FEF3C7;
-      color: #92400E;
-    }
-
-    .status-badge.AGUARDANDO_PAGAMENTO {
-      background: #DBEAFE;
-      color: #1E40AF;
-    }
-
-    .status-badge.PENDENTE {
-      background: #F3F4F6;
-      color: #4B5563;
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 50px 20px;
-    }
-
-    .empty-icon {
-      font-size: 48px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      opacity: 0.5;
-    }
-
-    .empty-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 6px;
-    }
-
-    .empty-text {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    /* =================== MODAL =================== */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
-    }
-
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .modal-content {
-      background: var(--bg-card);
-      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-      width: 100%;
-      max-width: 600px;
-      max-height: 80vh;
-      overflow-y: auto;
-      transform: translateY(100%);
-      transition: transform 0.3s;
-    }
-
-    .modal-overlay.active .modal-content {
-      transform: translateY(0);
-    }
-
-    .modal-header {
-      padding: 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      background: var(--bg-card);
-      z-index: 10;
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 24px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 4px;
-      line-height: 1;
-    }
-
-    .modal-body {
-      padding: 20px;
-    }
-
-    .modal-summary {
-      background: var(--bg-main);
-      border-radius: var(--radius-md);
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    .modal-summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    /* ===== ORDER CARDS ===== */
+    .order-card {
+      background: var(--white);
+      border-radius: 14px;
+      border: 1px solid var(--border);
       margin-bottom: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
     }
+    .order-card-main {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px;
+      cursor: pointer;
+    }
+    .order-card-main:active { background: #f8fafc; }
+    .order-ico {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .order-ico.finalizado    { background: var(--green-l); color: var(--green-d); }
+    .order-ico.em_andamento  { background: var(--amber-l); color: var(--amber); }
+    .order-ico.ag_pagamento  { background: var(--blue-l);  color: var(--blue-d); }
+    .order-ico.pendente      { background: #f1f5f9; color: var(--muted); }
 
-    .modal-summary-row:last-child {
-      margin-bottom: 0;
-      padding-top: 10px;
+    .order-info { flex: 1; min-width: 0; }
+    .order-veiculo {
+      font-size: 14px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .order-servico {
+      font-size: 12px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .order-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+    .order-value {
+      font-size: 16px; font-weight: 800;
+      color: var(--green-d); white-space: nowrap;
+      text-align: right;
+    }
+    .order-value.pending { color: var(--amber); }
+
+    .order-detail {
+      display: none;
+      padding: 0 14px 14px;
       border-top: 1px solid var(--border);
     }
-
-    .modal-summary-label {
+    .order-detail.open { display: block; }
+    .detail-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0;
       font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 500;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: var(--muted); }
+    .detail-value { font-weight: 600; color: var(--text); }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 600;
+      padding: 2px 7px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: .3px;
+    }
+    .badge-finalizado    { background: var(--green-l); color: #065f46; }
+    .badge-andamento     { background: var(--amber-l); color: #92400e; }
+    .badge-ag-pagamento  { background: var(--blue-l);  color: #1e40af; }
+    .badge-pendente      { background: #f1f5f9; color: #475569; }
+    .badge-multi         { background: #ede9fe; color: #5b21b6; }
+    .badge-pago          { background: var(--green-l); color: #065f46; }
+
+    /* ===== DAY GROUPS (histórico) ===== */
+    .day-group { margin-bottom: 16px; }
+    .day-group-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: var(--white);
+      border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 8px; cursor: pointer;
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .day-group-header:active { background: #f8fafc; }
+    .day-group-total { font-size: 13px; font-weight: 700; color: var(--green-d); }
+    .day-group-body  { display: block; }
+    .day-group-body.collapsed { display: none; }
+
+    /* ===== STATS ===== */
+    .stats-period {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .stats-period-btn {
+      flex: 1; padding: 8px; border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--white); font-family: inherit;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .stats-period-btn.active {
+      background: var(--blue-d); border-color: var(--blue-d);
+      color: #fff;
     }
 
-    .modal-summary-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
+    .bar-chart {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px;
+      margin-bottom: 14px; box-shadow: var(--shadow-sm);
     }
-
-    .modal-summary-value.total {
-      font-size: 18px;
-      color: var(--info);
+    .bar-chart-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 14px; }
+    .bars-row {
+      display: flex; align-items: flex-end; gap: 8px;
+      height: 100px;
     }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar-fill {
+      width: 100%; border-radius: 6px 6px 0 0;
+      background: var(--blue-d); min-height: 4px;
+      transition: height .4s ease;
+    }
+    .bar-fill.zero { background: #e2e8f0; }
+    .bar-day-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+    .bar-val-label { font-size: 9px; color: var(--muted); margin-top: 2px; }
+    .bar-fill.today-bar { background: var(--green-d); }
 
-    .modal-section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-primary);
+    .stats-cards {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 10px; margin-bottom: 14px;
+    }
+    .stats-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .stats-card-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+    .stats-card-value { font-size: 20px; font-weight: 800; color: var(--text); }
+    .stats-card-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ===== PAYMENTS ===== */
+    .payment-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; margin-bottom: 10px;
+      box-shadow: var(--shadow-sm); transition: all .15s;
+    }
+    .payment-card:active { transform: scale(.98); }
+    .payment-ico {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: #dbeafe; color: var(--blue-d);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .payment-info { flex: 1; min-width: 0; }
+    .payment-date { font-size: 13px; font-weight: 600; color: var(--text); }
+    .payment-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .payment-value { font-size: 16px; font-weight: 800; color: var(--blue-d); white-space: nowrap; }
+
+    /* ===== ADIANTAMENTOS ===== */
+    .debt-banner {
+      background: linear-gradient(135deg, #fee2e2, #fecaca);
+      border: 1px solid #fca5a5;
+      border-radius: 16px; padding: 16px;
+      margin-bottom: 14px;
+    }
+    .debt-banner-title { font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 4px; }
+    .debt-banner-value { font-size: 26px; font-weight: 800; color: var(--red); }
+    .adiant-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 10px; box-shadow: var(--shadow-sm);
+    }
+    .adiant-ico {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: var(--red-l); color: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .adiant-info  { flex: 1; }
+    .adiant-data  { font-size: 13px; font-weight: 600; }
+    .adiant-obs   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .adiant-value { font-size: 15px; font-weight: 800; color: var(--red); }
+
+    /* ===== PERÍODO FILTER ===== */
+    .periodo-form {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px;
+      margin-bottom: 16px; box-shadow: var(--shadow-sm);
+    }
+    .periodo-form label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; }
+    .periodo-form input {
+      width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; font-size: 14px; font-family: inherit;
+      color: var(--text); background: var(--bg);
+      margin-bottom: 12px; outline: none; transition: border-color .2s;
+    }
+    .periodo-form input:focus { border-color: var(--blue-d); }
+    .periodo-form .btn-filtrar {
+      width: 100%; background: var(--blue-d); color: #fff;
+      border: none; border-radius: 10px; padding: 12px;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .periodo-form .btn-filtrar:hover { opacity: .9; }
+    .periodo-result-title {
+      font-size: 13px; font-weight: 600; color: var(--muted);
       margin-bottom: 12px;
     }
 
-    .modal-order-item {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 14px;
+    /* ===== EMPTY STATES ===== */
+    .empty {
+      text-align: center; padding: 40px 20px;
+    }
+    .empty i    { font-size: 40px; color: var(--faint); margin-bottom: 12px; }
+    .empty h3   { font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+    .empty p    { font-size: 13px; color: var(--faint); }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 1000; opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: var(--white);
+      border-radius: 24px 24px 0 0;
+      width: 100%; max-width: 600px;
+      max-height: 82vh; overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform .3s;
+    }
+    .modal-overlay.active .modal-box { transform: translateY(0); }
+    .modal-header {
+      padding: 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; background: var(--white); z-index: 10;
+    }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none; font-size: 20px;
+      color: var(--muted); cursor: pointer; padding: 4px; line-height: 1;
+    }
+    .modal-body { padding: 20px; }
+    .modal-summary-box {
+      background: var(--bg); border-radius: 14px; padding: 16px;
+      margin-bottom: 20px;
+    }
+    .modal-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px; margin-bottom: 10px;
+    }
+    .modal-row:last-child {
+      margin-bottom: 0; padding-top: 10px;
+      border-top: 1px solid var(--border); margin-top: 4px;
+    }
+    .modal-row-label { color: var(--muted); font-weight: 500; }
+    .modal-row-val { font-weight: 600; }
+    .modal-row-val.total { font-size: 18px; color: var(--blue-d); }
+    .modal-sec-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+    .modal-order {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 8px;
+    }
+    .modal-order-hdr {
+      display: flex; justify-content: space-between; align-items: flex-start;
       margin-bottom: 8px;
     }
+    .modal-order-title { font-size: 14px; font-weight: 600; }
+    .modal-order-val   { font-size: 14px; font-weight: 700; color: var(--green-d); }
+    .modal-order-svc   { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .modal-order-meta  { display: flex; gap: 6px; flex-wrap: wrap; }
 
-    .modal-order-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-    }
+    .hidden { display: none !important; }
 
-    .modal-order-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .modal-order-value {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--success);
-    }
-
-    .modal-order-services {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 6px;
-    }
-
-    .modal-order-meta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    /* Utility */
-    .hidden {
-      display: none !important;
-    }
-
-    /* Desktop */
-    @media (min-width: 641px) {
-      .header {
-        padding: 32px 24px;
-      }
-
-      .header-name {
-        font-size: 28px;
-      }
-
-      .balance-value {
-        font-size: 36px;
-      }
-
-      .period-summary {
-        padding: 20px 24px;
-        gap: 12px;
-      }
-
-      .period-card {
-        padding: 16px 14px;
-      }
-
-      .period-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 15px;
-        margin-bottom: 10px;
-      }
-
-      .period-label {
-        font-size: 11px;
-      }
-
-      .period-value {
-        font-size: 18px;
-      }
-
-      .section-header {
-        padding: 24px 24px 16px 24px;
-      }
-
-      .section-title {
-        font-size: 18px;
-      }
-
-      .section-subtitle {
-        font-size: 13px;
-      }
-
-      .transactions {
-        padding: 0 24px 24px 24px;
-      }
-
-      .day-header {
-        font-size: 13px;
-      }
-
-      .transaction-item {
-        padding: 16px;
-        gap: 16px;
-      }
-
-      .transaction-icon {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
-      }
-
-      .transaction-title {
-        font-size: 15px;
-        gap: 8px;
-      }
-
-      .transaction-subtitle {
-        font-size: 13px;
-      }
-
-      .transaction-value {
-        font-size: 18px;
-      }
-
-      .badge {
-        font-size: 11px;
-      }
-
-      .modal-content {
-        border-radius: var(--radius-xl);
-        max-height: 85vh;
-      }
-
-      .modal-overlay {
-        align-items: center;
-      }
+    @media (min-width: 600px) {
+      .modal-overlay { align-items: center; }
+      .modal-box { border-radius: 24px; max-height: 88vh; }
     }
   </style>
-<link rel="stylesheet" href="webapp-mobile.css">
-<link rel="stylesheet" href="fix-responsive.css">
 </head>
 <body>
 
-  <!-- LOADER -->
-  <div id="loader" class="loader-screen">
-    <div class="loader-icon"></div>
-    <div class="loader-text">Carregando seu extrato...</div>
-  </div>
+<!-- LOADER -->
+<div id="loader" class="loader-screen">
+  <div class="loader-spin"></div>
+  <div class="loader-text">Carregando painel...</div>
+</div>
 
-  <!-- ERROR -->
-  <div id="error" class="error-screen hidden">
-    <div class="error-icon">
-      <i id="error-icon" class="fas fa-user-lock"></i>
+<!-- ERROR -->
+<div id="error" class="error-screen hidden">
+  <div class="error-ico"><i id="err-ico" class="fas fa-user-lock"></i></div>
+  <h1 id="err-title" class="error-title">Acesso Desativado</h1>
+  <p id="err-msg" class="error-msg">Seu link foi desativado. Entre em contato com o administrador.</p>
+</div>
+
+<!-- CONTENT -->
+<div id="content" class="page hidden">
+
+  <!-- HERO HEADER -->
+  <div class="hero">
+    <div class="hero-top">
+      <div id="timerPill" class="timer-pill hidden">
+        <i class="fas fa-clock"></i>
+        <span id="timerText">—</span>
+      </div>
+      <div style="flex:1"></div>
+      <button class="blur-btn" onclick="toggleBalance()" title="Ocultar saldo">
+        <i id="blurIco" class="fas fa-eye"></i>
+      </button>
     </div>
-    <h1 id="error-title" class="error-title">Acesso Desativado</h1>
-    <p id="error-message" class="error-message">
-      Seu link de acesso foi desativado. Por favor, entre em contato com o administrador.
-    </p>
-  </div>
 
-  <!-- CONTENT -->
-  <div id="content" class="container hidden">
-    <!-- Header com saldo -->
-    <div class="header">
-      <div class="header-greeting">Olá,</div>
-      <div id="lavadorNome" class="header-name">Carregando...</div>
-
-      <div class="balance-card">
-        <div class="balance-label">
-          <span>Saldo Disponível</span>
-          <button onclick="toggleBalance()" class="balance-toggle">
-            <i id="balance-eye" class="fas fa-eye"></i>
-          </button>
-        </div>
-        <div id="saldoTotal" class="balance-value">R$ 0,00</div>
-
-        <!-- Desconto por Dívida (adiantamentos) -->
-        <div id="debtIndicator" class="debt-indicator hidden">
-          <div class="debt-label">Desconto (adiantamentos):</div>
-          <div id="debtValue" class="debt-value">-R$ 0,00</div>
-        </div>
-
-        <!-- Token Timer -->
-        <div id="tokenTimer" class="token-timer hidden">
-          <i class="fas fa-clock"></i>
-          <span id="tokenTimerText">Carregando...</span>
-        </div>
+    <div class="hero-profile">
+      <div id="heroAvatar" class="avatar">?</div>
+      <div>
+        <div id="heroNome" class="hero-name">—</div>
+        <div id="heroSub" class="hero-sub">— % comissão</div>
       </div>
     </div>
 
-    <!-- Resumo por período -->
-    <div class="period-summary">
-      <div class="period-card">
-        <div class="period-icon week">
-          <i class="fas fa-calendar-week"></i>
-        </div>
-        <div class="period-label">Esta Semana</div>
-        <div id="ganhoSemana" class="period-value">R$ 0,00</div>
-      </div>
-
-      <div class="period-card">
-        <div class="period-icon month">
-          <i class="fas fa-calendar-alt"></i>
-        </div>
-        <div class="period-label">Este Mês</div>
-        <div id="ganhoMes" class="period-value">R$ 0,00</div>
-      </div>
-
-      <div class="period-card">
-        <div class="period-icon debt">
-          <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <div class="period-label">Dívida Atual</div>
-        <div id="dividaTotal" class="period-value">R$ 0,00</div>
-      </div>
+    <div class="hero-balance-label">A RECEBER</div>
+    <div id="heroSaldo" class="hero-balance">R$ 0,00</div>
+    <div id="heroDividaRow" class="hero-debt-row hidden">
+      <span>Adiantamentos:</span>
+      <span id="heroDividaVal" class="badge-red">–R$ 0,00</span>
     </div>
 
-    <!-- Seção de transações -->
-    <div class="section-header">
-      <div class="section-title">
-        <i class="fas fa-receipt"></i>
-        Extrato
+    <div class="stat-pills">
+      <div class="stat-pill">
+        <div class="stat-pill-label">Semana</div>
+        <div id="pillSemana" class="stat-pill-value">R$ 0</div>
       </div>
-      <div id="transactionsCount" class="section-subtitle">0 transações</div>
-    </div>
-
-    <div id="transactions" class="transactions">
-      <!-- Transactions will be rendered here -->
-    </div>
-
-    <!-- Empty state -->
-    <div id="emptyState" class="empty-state hidden">
-      <div class="empty-icon">
-        <i class="fas fa-inbox"></i>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Mês</div>
+        <div id="pillMes" class="stat-pill-value">R$ 0</div>
       </div>
-      <div class="empty-title">Nenhuma transação encontrada</div>
-      <div class="empty-text">Suas comissões aparecerão aqui</div>
-    </div>
-  </div>
-
-  <!-- MODAL -->
-  <div id="paymentModal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title">Detalhes do Pagamento</h2>
-        <button class="modal-close" onclick="closePaymentModal()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-summary">
-          <div class="modal-summary-row">
-            <span class="modal-summary-label">Total de Lavagens</span>
-            <span id="modalTotalOrdens" class="modal-summary-value">0</span>
-          </div>
-          <div class="modal-summary-row">
-            <span class="modal-summary-label">Dívidas Descontadas</span>
-            <span id="modalTotalAdiantamentos" class="modal-summary-value">R$ 0,00</span>
-          </div>
-          <div class="modal-summary-row">
-            <span class="modal-summary-label">Valor Pago</span>
-            <span id="modalValorPago" class="modal-summary-value total">R$ 0,00</span>
-          </div>
-        </div>
-
-        <div class="modal-section-title">Lavagens Incluídas</div>
-        <div id="modalOrdersList">
-          <!-- Orders will be rendered here -->
-        </div>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Dívida</div>
+        <div id="pillDivida" class="stat-pill-value">R$ 0</div>
       </div>
     </div>
   </div>
 
-  <script>
-    // ==================== UTILS ====================
-    // Tradução amigável de status
-    const STATUS_LABELS = {
-      'EM_ANDAMENTO': 'Em Andamento',
-      'FINALIZADO': 'Finalizado',
-      'AGUARDANDO_PAGAMENTO': 'Ag. Pagamento',
-      'PENDENTE': 'Pendente'
-    };
+  <!-- NAV GRID -->
+  <div class="nav-grid">
+    <button class="nav-btn active" onclick="setSecao('hoje')">
+      <div class="nav-ico ico-hoje"><i class="fas fa-calendar-day"></i></div>
+      <span class="nav-label">Hoje</span>
+    </button>
+    <button class="nav-btn" onclick="setSecao('historico')">
+      <div class="nav-ico ico-hist"><i class="fas fa-receipt"></i></div>
+      <span class="nav-label">Histórico</span>
+    </button>
+    <button class="nav-btn" onclick="setSecao('stats')">
+      <div class="nav-ico ico-stats"><i class="fas fa-chart-bar"></i></div>
+      <span class="nav-label">Estatísticas</span>
+    </button>
+    <button class="nav-btn" onclick="setSecao('pagamentos')">
+      <div class="nav-ico ico-pagto"><i class="fas fa-dollar-sign"></i></div>
+      <span class="nav-label">Pagamentos</span>
+    </button>
+    <button class="nav-btn" id="navAdiantBtn" onclick="setSecao('adiantamentos')">
+      <div class="nav-ico ico-adiant"><i class="fas fa-hand-holding-usd"></i></div>
+      <span class="nav-label">Adianto</span>
+    </button>
+    <button class="nav-btn" onclick="setSecao('periodo')">
+      <div class="nav-ico ico-periodo"><i class="fas fa-filter"></i></div>
+      <span class="nav-label">Período</span>
+    </button>
+  </div>
 
-    function formatCurrency(value) {
-      return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-      }).format(value || 0);
+  <!-- SEÇÃO HOJE -->
+  <div id="sec-hoje" class="section active">
+    <div class="sec-title"><i class="fas fa-calendar-day"></i> Hoje</div>
+
+    <div class="cal-nav">
+      <div class="cal-arrow" onclick="navegarSemana(-1)"><i class="fas fa-chevron-left"></i></div>
+      <div class="cal-strip" id="calStrip"><!-- dias --></div>
+      <div class="cal-arrow" onclick="navegarSemana(1)"><i class="fas fa-chevron-right"></i></div>
+    </div>
+    <div id="calMonthLabel" class="cal-month-label">—</div>
+
+    <div id="hojeOrdens"><!-- cards do dia --></div>
+  </div>
+
+  <!-- SEÇÃO HISTÓRICO -->
+  <div id="sec-historico" class="section">
+    <div class="sec-title"><i class="fas fa-receipt"></i> Histórico</div>
+    <div id="histContainer"><!-- dias --></div>
+  </div>
+
+  <!-- SEÇÃO ESTATÍSTICAS -->
+  <div id="sec-stats" class="section">
+    <div class="sec-title"><i class="fas fa-chart-bar"></i> Estatísticas</div>
+
+    <div class="stats-period">
+      <button class="stats-period-btn active" onclick="setStatPeriod(7, this)">7 dias</button>
+      <button class="stats-period-btn" onclick="setStatPeriod(14, this)">14 dias</button>
+      <button class="stats-period-btn" onclick="setStatPeriod(30, this)">30 dias</button>
+    </div>
+
+    <div class="bar-chart">
+      <div class="bar-chart-title" id="chartTitle">Ganhos por dia</div>
+      <div class="bars-row" id="barsRow"><!-- bars --></div>
+    </div>
+
+    <div class="stats-cards" id="statsCards"><!-- cards --></div>
+  </div>
+
+  <!-- SEÇÃO PAGAMENTOS -->
+  <div id="sec-pagamentos" class="section">
+    <div class="sec-title"><i class="fas fa-dollar-sign"></i> Pagamentos</div>
+    <div id="pagContainer"><!-- fechamentos --></div>
+  </div>
+
+  <!-- SEÇÃO ADIANTAMENTOS -->
+  <div id="sec-adiantamentos" class="section">
+    <div class="sec-title"><i class="fas fa-hand-holding-usd"></i> Adiantamentos</div>
+    <div id="adiantContainer"><!-- adiantamentos --></div>
+  </div>
+
+  <!-- SEÇÃO PERÍODO -->
+  <div id="sec-periodo" class="section">
+    <div class="sec-title"><i class="fas fa-filter"></i> Filtrar por Período</div>
+
+    <div class="periodo-form">
+      <label>Data inicial</label>
+      <input type="date" id="periodoInicio">
+      <label>Data final</label>
+      <input type="date" id="periodoFim">
+      <button class="btn-filtrar" onclick="filtrarPeriodo()">
+        <i class="fas fa-search"></i> Filtrar
+      </button>
+    </div>
+
+    <div id="periodoResult"></div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- MODAL PAGAMENTO -->
+<div id="paymentModal" class="modal-overlay" onclick="if(event.target===this)closePaymentModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">Detalhes do Pagamento</h2>
+      <button class="modal-close" onclick="closePaymentModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-summary-box">
+        <div class="modal-row">
+          <span class="modal-row-label">Total de Lavagens</span>
+          <span id="modalTotalOrdens" class="modal-row-val">0</span>
+        </div>
+        <div class="modal-row">
+          <span class="modal-row-label">Dívidas Descontadas</span>
+          <span id="modalTotalAdiantamentos" class="modal-row-val">R$ 0,00</span>
+        </div>
+        <div class="modal-row">
+          <span class="modal-row-label">Valor Pago</span>
+          <span id="modalValorPago" class="modal-row-val total">R$ 0,00</span>
+        </div>
+      </div>
+      <div class="modal-sec-title">Lavagens Incluídas</div>
+      <div id="modalOrdersList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== UTILS =====================
+const STATUS_LABELS = {
+  'EM_ANDAMENTO': 'Em Andamento',
+  'FINALIZADO': 'Finalizado',
+  'AGUARDANDO_PAGAMENTO': 'Ag. Pagamento',
+  'PENDENTE': 'Pendente'
+};
+const STATUS_ICO_CLASS = {
+  'FINALIZADO': 'finalizado',
+  'EM_ANDAMENTO': 'em_andamento',
+  'AGUARDANDO_PAGAMENTO': 'ag_pagamento',
+  'PENDENTE': 'pendente'
+};
+const STATUS_BADGE_CLASS = {
+  'FINALIZADO': 'badge-finalizado',
+  'EM_ANDAMENTO': 'badge-andamento',
+  'AGUARDANDO_PAGAMENTO': 'badge-ag-pagamento',
+  'PENDENTE': 'badge-pendente'
+};
+const STATUS_ICO = {
+  'FINALIZADO': 'fa-check',
+  'EM_ANDAMENTO': 'fa-spinner fa-spin',
+  'AGUARDANDO_PAGAMENTO': 'fa-clock',
+  'PENDENTE': 'fa-hourglass'
+};
+
+function formatCurrency(v) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+}
+function formatCurrencyShort(v) {
+  if (!v) return 'R$0';
+  if (Math.abs(v) >= 1000) return 'R$' + (v / 1000).toFixed(1).replace('.', ',') + 'k';
+  return 'R$' + Math.round(v);
+}
+
+function toLocaleDateISOString(dateInput) {
+  const d = new Date(dateInput || new Date());
+  const s = d.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+  const b = new Date(s);
+  return `${b.getFullYear()}-${String(b.getMonth()+1).padStart(2,'0')}-${String(b.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(iso) {
+  const today = toLocaleDateISOString();
+  const d = new Date(today + 'T12:00:00');
+  const yesterday = new Date(d); yesterday.setDate(d.getDate()-1);
+  const yesterdayIso = toLocaleDateISOString(yesterday);
+  if (iso === today) return 'Hoje';
+  if (iso === yesterdayIso) return 'Ontem';
+  const [y,m,day] = iso.split('-');
+  return new Date(`${y}-${m}-${day}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+}
+
+function toggleBalance() {
+  const el = document.getElementById('heroSaldo');
+  const ico = document.getElementById('blurIco');
+  el.classList.toggle('blurred');
+  ico.className = el.classList.contains('blurred') ? 'fas fa-eye-slash' : 'fas fa-eye';
+}
+
+// ===================== MULTI-WASH =====================
+function normalizeOrderWashers(order) {
+  if (!order) return [];
+  if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
+    const norm = order.ordemLavadores.filter(ol => ol?.lavador).map(ol => ({
+      id: ol.lavador?.id || ol.lavadorId,
+      nome: ol.lavador?.nome || 'N/A',
+      comissao: parseFloat(ol.lavador?.comissao) || 0
+    }));
+    if (norm.length > 0) return norm;
+  }
+  if (order.lavadorId) {
+    const lav = order.lavador || {};
+    return [{ id: lav?.id || order.lavadorId, nome: lav?.nome || 'N/A', comissao: parseFloat(lav?.comissao || 0) || 0 }];
+  }
+  return [];
+}
+
+function getCommissionPercent(order) {
+  if (order?.lavador?.comissao) {
+    const c = parseFloat(order.lavador.comissao);
+    return isFinite(c) ? c : 0;
+  }
+  if (order?.comissao && order?.valorTotal) {
+    const c = parseFloat(order.comissao), vt = parseFloat(order.valorTotal);
+    if (!isFinite(c) || !isFinite(vt) || vt === 0) return 0;
+    return (c / vt) * 100;
+  }
+  return 0;
+}
+
+function getWasherShare(order, washerId, lavadorComissao) {
+  const washers = normalizeOrderWashers(order);
+  if (!washers.length || !washerId) return 0;
+  const valorTotal = parseFloat(order?.valorTotal || 0);
+  if (!isFinite(valorTotal) || valorTotal <= 0) return 0;
+  if (washers.length === 1) {
+    const pct = (lavadorComissao !== undefined && lavadorComissao !== null) ? parseFloat(lavadorComissao) : getCommissionPercent(order);
+    return isFinite(pct) ? valorTotal * (pct / 100) : 0;
+  }
+  const pct = (lavadorComissao !== undefined && lavadorComissao !== null) ? parseFloat(lavadorComissao) : getCommissionPercent(order);
+  if (!isFinite(pct)) return 0;
+  const totalCents = Math.round(valorTotal * (pct / 100) * 100);
+  if (totalCents <= 0) return 0;
+  const base = Math.floor(totalCents / washers.length);
+  let rem = totalCents % washers.length;
+  const map = {};
+  washers.forEach(w => { let c = base; if (rem > 0) { c++; rem--; } map[w.id] = c / 100; });
+  return map[washerId] || 0;
+}
+
+function isMultiWash(order) {
+  return Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 1;
+}
+
+// ===================== STATE =====================
+let lavadorData = null;
+let currentLavadorId = null;
+let tokenTimerInterval = null;
+let calWeekOffset = 0;   // 0 = semana atual
+let diaAtivo = null;     // ISO string do dia ativo
+let statPeriodDays = 7;
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { showError('Link Inválido', 'Use o link fornecido pelo administrador.', 'fa-link'); return; }
+  try {
+    const data = await window.api.getLavadorPublico(token);
+    if (data) { lavadorData = data; currentLavadorId = data.lavadorId; renderUI(); }
+    else showError();
+  } catch(e) {
+    if (e.error?.includes('inativo')) showError('Acesso Desativado', 'Seu link foi desativado. Entre em contato com o administrador.', 'fa-user-lock');
+    else if (e.error?.includes('expirado')) showError('Link Expirado', 'Seu link expirou. Solicite um novo link ao administrador.', 'fa-clock');
+    else showError('Acesso Inválido', 'O link é inválido. Solicite um novo link ao administrador.', 'fa-ban');
+  }
+});
+
+// ===================== UI =====================
+function showError(title='Acesso Inválido', msg='O link é inválido ou expirou.', ico='fa-ban') {
+  document.getElementById('err-title').textContent = title;
+  document.getElementById('err-msg').textContent = msg;
+  document.getElementById('err-ico').className = `fas ${ico}`;
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('error').classList.remove('hidden');
+}
+
+function renderUI() {
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('content').classList.remove('hidden');
+
+  // Avatar
+  const nome = lavadorData.nome || '?';
+  document.getElementById('heroNome').textContent = nome;
+  document.getElementById('heroAvatar').textContent = nome.charAt(0).toUpperCase();
+  const comissao = lavadorData.comissao || 0;
+  document.getElementById('heroSub').textContent = `${comissao}% comissão`;
+
+  // Saldo e pills
+  renderHeroStats();
+
+  // Token timer
+  startTokenTimer();
+
+  // Seção hoje (default)
+  diaAtivo = toLocaleDateISOString();
+  renderCalendario();
+  renderHoje();
+
+  // Esconder botão adiantamentos se não houver dívida
+  const temDivida = (lavadorData.adiantamentosNaoQuitados || []).length > 0;
+  if (!temDivida) document.getElementById('navAdiantBtn').style.opacity = '0.5';
+
+  // Preencher datas padrão do filtro período
+  const hoje = toLocaleDateISOString();
+  const trintaDias = toLocaleDateISOString(new Date(Date.now() - 29*24*3600*1000));
+  document.getElementById('periodoFim').value = hoje;
+  document.getElementById('periodoInicio').value = trintaDias;
+}
+
+function renderHeroStats() {
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  let semana = 0, mes = 0, creditosNaoPagos = 0;
+  (lavadorData.ordens || []).forEach(o => {
+    if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
+    const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+    if (!isFinite(g) || g < 0) return;
+    if (!o.comissaoPaga) creditosNaoPagos += g;
+    const d = new Date(o.createdAt);
+    if (d >= weekStart) semana += g;
+    if (d >= monthStart) mes += g;
+  });
+
+  let divida = 0;
+  (lavadorData.adiantamentosNaoQuitados || []).forEach(a => divida += parseFloat(a.valor) || 0);
+  const saldo = creditosNaoPagos - divida;
+
+  document.getElementById('heroSaldo').textContent = formatCurrency(saldo);
+  if (saldo < 0) document.getElementById('heroSaldo').style.color = '#ef4444';
+  else document.getElementById('heroSaldo').style.color = '';
+
+  if (divida > 0) {
+    document.getElementById('heroDividaRow').classList.remove('hidden');
+    document.getElementById('heroDividaVal').textContent = '-' + formatCurrency(divida);
+  }
+
+  document.getElementById('pillSemana').textContent = formatCurrencyShort(semana);
+  document.getElementById('pillMes').textContent = formatCurrencyShort(mes);
+  document.getElementById('pillDivida').textContent = formatCurrencyShort(divida);
+
+  // Para uso em outras seções
+  window._stats = { semana, mes, divida, saldo };
+}
+
+// ===================== TOKEN TIMER =====================
+function startTokenTimer() {
+  const pill = document.getElementById('timerPill');
+  const text = document.getElementById('timerText');
+  if (!lavadorData.tokenExpiresAt) {
+    pill.classList.remove('hidden');
+    pill.classList.add('permanent');
+    text.innerHTML = '<i class="fas fa-infinity"></i> Permanente';
+    return;
+  }
+  pill.classList.remove('hidden');
+  function tick() {
+    const diff = new Date(lavadorData.tokenExpiresAt) - new Date();
+    if (diff <= 0) {
+      text.textContent = 'Expirado';
+      pill.classList.add('expiring');
+      clearInterval(tokenTimerInterval);
+      setTimeout(() => showError('Link Expirado','Este link expirou. Solicite um novo link ao administrador.','fa-clock'), 1000);
+      return;
     }
+    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+    text.textContent = h > 0 ? `Expira ${h}h${m}m` : m > 0 ? `Expira ${m}m${s}s` : `Expira ${s}s`;
+    if (diff < 3600000) pill.classList.add('expiring');
+  }
+  tick(); tokenTimerInterval = setInterval(tick, 1000);
+}
 
-    function getStatusLabel(status) {
-      return STATUS_LABELS[status] || status.replace(/_/g, ' ');
+// ===================== SECOES =====================
+function setSecao(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`sec-${id}`).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  // Renderizar seção quando aberta pela 1ª vez
+  if (id === 'historico') renderHistorico();
+  if (id === 'stats') renderEstatisticas(statPeriodDays);
+  if (id === 'pagamentos') renderPagamentos();
+  if (id === 'adiantamentos') renderAdiantamentos();
+}
+
+// ===================== CALENDÁRIO =====================
+function navegarSemana(delta) {
+  calWeekOffset += delta;
+  renderCalendario();
+}
+
+function renderCalendario() {
+  const strip = document.getElementById('calStrip');
+  const monthLabel = document.getElementById('calMonthLabel');
+  strip.innerHTML = '';
+
+  const now = new Date();
+  // Início da semana atual (domingo)
+  const weekAnchor = new Date(now);
+  weekAnchor.setDate(now.getDate() - now.getDay() + calWeekOffset * 7);
+  weekAnchor.setHours(0,0,0,0);
+
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  const daysInWeek = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekAnchor); d.setDate(weekAnchor.getDate() + i);
+    daysInWeek.push(d);
+  }
+
+  // Label do mês
+  const mesesPresentes = [...new Set(daysInWeek.map(d => d.getMonth()))];
+  monthLabel.textContent = mesesPresentes.map(m => meses[m]).join('/') + ' ' + daysInWeek[0].getFullYear();
+
+  // Dias com ordens
+  const diasComOrdens = new Set();
+  (lavadorData.ordens || []).forEach(o => {
+    if (['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) {
+      const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+      if (g > 0) diasComOrdens.add(toLocaleDateISOString(o.createdAt));
     }
+  });
 
-    function formatDate(dateStr) {
-      // Parse da data vinda do backend (já está em UTC)
-      const date = new Date(dateStr);
+  daysInWeek.forEach(d => {
+    const iso = toLocaleDateISOString(d);
+    const isActive = iso === diaAtivo;
+    const hasOrdens = diasComOrdens.has(iso);
 
-      // Formatter para São Paulo timezone
-      const formatter = new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
+    const div = document.createElement('div');
+    div.className = `cal-day${isActive ? ' active' : ''}${hasOrdens ? ' has-orders' : ''}`;
+    div.innerHTML = `
+      <div class="cal-day-name">${dias[d.getDay()]}</div>
+      <div class="cal-day-num">${d.getDate()}</div>
+      <div class="cal-dot${hasOrdens ? '' : ' hidden'}"></div>
+    `;
+    div.onclick = () => setDiaAtivo(iso);
+    strip.appendChild(div);
+  });
+}
 
-      // Obter hoje em São Paulo
-      const todayParts = formatter.formatToParts(new Date());
-      const todayYear = parseInt(todayParts.find(p => p.type === 'year').value);
-      const todayMonth = parseInt(todayParts.find(p => p.type === 'month').value);
-      const todayDay = parseInt(todayParts.find(p => p.type === 'day').value);
-      const todayStr_formatted = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
+function setDiaAtivo(iso) {
+  diaAtivo = iso;
+  renderCalendario();
+  renderHoje();
+}
 
-      // Converter data recebida para São Paulo
-      const dateParts = formatter.formatToParts(date);
-      const dateYear = parseInt(dateParts.find(p => p.type === 'year').value);
-      const dateMonth = parseInt(dateParts.find(p => p.type === 'month').value);
-      const dateDay = parseInt(dateParts.find(p => p.type === 'day').value);
-      const dateStr_formatted = `${dateYear}-${String(dateMonth).padStart(2, '0')}-${String(dateDay).padStart(2, '0')}`;
+// ===================== SEÇÃO HOJE =====================
+function renderHoje() {
+  const container = document.getElementById('hojeOrdens');
+  const ordens = ordemsPorDia(diaAtivo);
 
-      // Calcular ontem de forma segura: subtrair 1 dia da data atual em SP
-      const yesterdayDate = new Date();
-      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterdayParts = formatter.formatToParts(yesterdayDate);
-      const yesterdayYear = parseInt(yesterdayParts.find(p => p.type === 'year').value);
-      const yesterdayMonth = parseInt(yesterdayParts.find(p => p.type === 'month').value);
-      const yesterdayDay = parseInt(yesterdayParts.find(p => p.type === 'day').value);
-      const yesterdayStr_formatted = `${yesterdayYear}-${String(yesterdayMonth).padStart(2, '0')}-${String(yesterdayDay).padStart(2, '0')}`;
+  if (ordens.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <i class="fas fa-car-side"></i>
+        <h3>Nenhuma lavagem</h3>
+        <p>${formatDate(diaAtivo) === 'Hoje' ? 'Você não tem lavagens hoje' : 'Sem lavagens neste dia'}</p>
+      </div>`;
+    return;
+  }
 
-      // Comparação
-      if (dateStr_formatted === todayStr_formatted) {
-        return 'Hoje';
-      } else if (dateStr_formatted === yesterdayStr_formatted) {
-        return 'Ontem';
-      } else {
-        return date.toLocaleDateString('pt-BR', {
-          day: '2-digit',
-          month: 'long',
-          timeZone: 'America/Sao_Paulo'
-        });
-      }
-    }
+  container.innerHTML = '';
+  ordens.forEach((o, idx) => {
+    container.appendChild(buildOrderCard(o, `hoje-${idx}`));
+  });
+}
 
-    function toLocaleDateISOString(dateInput = new Date()) {
-      // Converter para timezone de São Paulo
-      const date = new Date(dateInput);
-      const dateStr = date.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
-      const dateBrasilia = new Date(dateStr);
+function ordemsPorDia(iso) {
+  return (lavadorData.ordens || []).filter(o => {
+    if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return false;
+    const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+    if (g <= 0) return false;
+    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    return toLocaleDateISOString(ref) === iso;
+  });
+}
 
-      const year = dateBrasilia.getFullYear();
-      const month = String(dateBrasilia.getMonth() + 1).padStart(2, '0');
-      const day = String(dateBrasilia.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
+function buildOrderCard(ordem, uid) {
+  const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+  const items = Array.isArray(ordem.items) ? ordem.items : [];
+  const servicos = items.map(i => i?.servico?.nome || i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem itens';
+  const statusKey = ordem.status;
+  const icoClass = STATUS_ICO_CLASS[statusKey] || 'pendente';
+  const badgeClass = STATUS_BADGE_CLASS[statusKey] || 'badge-pendente';
+  const icoFa = STATUS_ICO[statusKey] || 'fa-circle';
+  const isPending = statusKey !== 'FINALIZADO';
+  const multi = isMultiWash(ordem);
+  const washersCount = normalizeOrderWashers(ordem).length;
 
-    function toggleBalance() {
-      const balanceEl = document.getElementById('saldoTotal');
-      const eyeIcon = document.getElementById('balance-eye');
+  const horario = (() => {
+    try {
+      const ref = ordem.status === 'FINALIZADO' && ordem.updatedAt ? ordem.updatedAt : ordem.createdAt;
+      return new Date(ref).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    } catch { return '—'; }
+  })();
 
-      balanceEl.classList.toggle('hidden-value');
+  const placa = ordem.veiculo?.placa ? ` • ${ordem.veiculo.placa}` : '';
+  const totalItems = items.length;
 
-      if (balanceEl.classList.contains('hidden-value')) {
-        eyeIcon.className = 'fas fa-eye-slash';
-      } else {
-        eyeIcon.className = 'fas fa-eye';
-      }
-    }
+  const card = document.createElement('div');
+  card.className = 'order-card';
+  card.innerHTML = `
+    <div class="order-card-main" onclick="toggleOrderDetail('${uid}')">
+      <div class="order-ico ${icoClass}"><i class="fas ${icoFa}"></i></div>
+      <div class="order-info">
+        <div class="order-veiculo">${ordem.veiculo?.modelo || 'Veículo'}${placa}</div>
+        <div class="order-servico">${servicos}</div>
+        <div class="order-badges">
+          <span class="badge ${badgeClass}">${STATUS_LABELS[statusKey] || statusKey}</span>
+          ${multi ? `<span class="badge badge-multi"><i class="fas fa-users"></i> ${washersCount}x</span>` : ''}
+        </div>
+      </div>
+      <div class="order-value ${isPending ? 'pending' : ''}">+${formatCurrency(ganho)}</div>
+    </div>
+    <div id="detail-${uid}" class="order-detail">
+      <div class="detail-row"><span class="detail-label">Horário</span><span class="detail-value">${horario}</span></div>
+      <div class="detail-row"><span class="detail-label">Valor da ordem</span><span class="detail-value">${formatCurrency(parseFloat(ordem.valorTotal||0))}</span></div>
+      <div class="detail-row"><span class="detail-label">Sua comissão</span><span class="detail-value" style="color:var(--green-d)">+${formatCurrency(ganho)}</span></div>
+      ${totalItems > 0 ? `<div class="detail-row"><span class="detail-label">Itens</span><span class="detail-value">${totalItems} item${totalItems!==1?'s':''}</span></div>` : ''}
+      ${multi ? `<div class="detail-row"><span class="detail-label">Multi-wash</span><span class="detail-value">${washersCount} lavadores</span></div>` : ''}
+      ${ordem.comissaoPaga ? `<div class="detail-row"><span class="detail-label">Status pagamento</span><span class="badge badge-pago">Pago</span></div>` : ''}
+    </div>
+  `;
+  return card;
+}
 
-    // ==================== MULTI-WASH LOGIC ====================
-    function normalizeOrderWashers(order) {
-      if (!order) return [];
+function toggleOrderDetail(uid) {
+  const detail = document.getElementById(`detail-${uid}`);
+  if (detail) detail.classList.toggle('open');
+}
 
-      // ✅ Tentar multi-wash (ordemLavadores)
-      if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
-        const normalizados = order.ordemLavadores
-          .filter(ol => ol?.lavador)
-          .map(ol => {
-            const id = ol.lavador?.id || ol.lavador?.lavadorId || ol.lavadorId;
-            return {
-              id: id,
-              nome: ol.lavador?.nome || 'N/A',
-              comissao: parseFloat(ol.lavador?.comissao) || 0
-            };
-          });
-        if (normalizados.length > 0) return normalizados;
-      }
+// ===================== SEÇÃO HISTÓRICO =====================
+function renderHistorico() {
+  const container = document.getElementById('histContainer');
+  container.innerHTML = '';
 
-      // ✅ Fallback: usar lavador principal (ordem.lavadorId + ordem.lavador)
-      // Ser muito tolerante com a estrutura dos dados
-      if (order.lavadorId) {
-        // Tenta encontrar dados do lavador em múltiplos locais
-        let lavadorData = order.lavador || {};
+  const grouped = {};
+  (lavadorData.ordens || []).forEach(o => {
+    if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
+    const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+    if (!isFinite(g) || g <= 0) return;
+    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const key = toLocaleDateISOString(ref);
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(o);
+  });
 
-        // Se lavadorData não tem ID, tenta encontrar em outros campos
-        const id = lavadorData?.id || lavadorData?.lavadorId || order.lavadorId;
-        const nome = lavadorData?.nome || order.lavador?.nome || 'N/A';
-        const comissao = parseFloat(lavadorData?.comissao || order.lavador?.comissao || 0) || 0;
+  const keys = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
 
-        return [{
-          id: id,
-          nome: nome,
-          comissao: comissao
-        }];
-      }
+  if (keys.length === 0) {
+    container.innerHTML = `<div class="empty"><i class="fas fa-inbox"></i><h3>Sem histórico</h3><p>Suas lavagens aparecerão aqui</p></div>`;
+    return;
+  }
 
-      return [];
-    }
+  keys.forEach((key, ki) => {
+    const ordens = grouped[key];
+    const totalDia = ordens.reduce((s, o) => s + getWasherShare(o, currentLavadorId, lavadorData.comissao), 0);
 
-    function getCommissionPercent(order) {
-      // ✅ Validar tipo de comissao
-      if (order?.lavador?.comissao) {
-        const comissao = parseFloat(order.lavador.comissao);
-        return isFinite(comissao) ? comissao : 0;
-      }
-      if (order?.comissao && order?.valorTotal) {
-        const comissao = parseFloat(order.comissao);
-        const valorTotal = parseFloat(order.valorTotal);
-        // ✅ Validar tipos e evitar divisão por zero
-        if (!isFinite(comissao) || !isFinite(valorTotal) || valorTotal === 0) {
-          return 0;
-        }
-        return (comissao / valorTotal) * 100;
-      }
-      return 0;
-    }
+    const group = document.createElement('div');
+    group.className = 'day-group';
 
-    function getWasherShare(order, washerId, lavadorComissao) {
-      const washers = normalizeOrderWashers(order);
-      if (!washers.length || !washerId) {
-        // Debug: log mais detalhado quando retorna 0
-        if (order && !washers.length) {
-          console.warn('[getWasherShare] Nenhum lavador normalizado:', {
-            numeroOrdem: order.numeroOrdem,
-            ordemLavadores: order.ordemLavadores,
-            lavadorId: order.lavadorId,
-            lavadorIdExists: !!order.lavadorId,
-            lavadorExists: !!order.lavador,
-            lavadorKeys: order.lavador ? Object.keys(order.lavador) : [],
-          });
-        }
-        if (!washerId) {
-          console.warn('[getWasherShare] washerId não fornecido');
-        }
-        return 0;
-      }
+    const hdr = document.createElement('div');
+    hdr.className = 'day-group-header';
+    hdr.innerHTML = `<span>${formatDate(key)}</span><span class="day-group-total">+${formatCurrency(totalDia)}</span>`;
+    const body = document.createElement('div');
+    body.className = 'day-group-body';
+    hdr.onclick = () => body.classList.toggle('collapsed');
+    group.appendChild(hdr);
+    group.appendChild(body);
 
-      // ✅ Garantir que valorTotal é number
-      const valorTotal = parseFloat(order?.valorTotal || 0);
-      if (!isFinite(valorTotal) || valorTotal <= 0) {
-        console.warn('[getWasherShare] ValorTotal inválido:', valorTotal);
-        return 0;
-      }
-
-      if (washers.length === 1) {
-        // ✅ Corrigir lógica: se lavadorComissao existir, usar; senão, calcular
-        const percent = (lavadorComissao !== undefined && lavadorComissao !== null)
-          ? parseFloat(lavadorComissao)
-          : getCommissionPercent(order);
-        if (!isFinite(percent)) return 0;
-        return valorTotal * (percent / 100);
-      }
-
-      // ✅ Corrigir lógica: se lavadorComissao existir, usar; senão, calcular
-      const percent = (lavadorComissao !== undefined && lavadorComissao !== null)
-        ? parseFloat(lavadorComissao)
-        : getCommissionPercent(order);
-      if (!isFinite(percent)) return 0;
-      const totalCents = Math.round(valorTotal * (percent / 100) * 100);
-      if (totalCents <= 0) return 0;
-
-      const base = Math.floor(totalCents / washers.length);
-      let remainder = totalCents % washers.length;
-
-      const shareMap = {};
-      washers.forEach(washer => {
-        let cents = base;
-        if (remainder > 0) {
-          cents += 1;
-          remainder -= 1;
-        }
-        shareMap[washer.id] = cents / 100;
-      });
-
-      return shareMap[washerId] || 0;
-    }
-
-    function isMultiWash(order) {
-      return Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 1;
-    }
-
-    // ==================== STATE ====================
-    let lavadorData = null;
-    let currentLavadorId = null;
-    let tokenTimerInterval = null;
-
-    // ==================== INIT ====================
-    document.addEventListener('DOMContentLoaded', async () => {
-      const token = new URLSearchParams(window.location.search).get('token');
-      if (!token) {
-        showError('Link Inválido', 'Por favor, use o link fornecido pelo administrador.', 'fa-link');
-        return;
-      }
-
-      try {
-        const data = await window.api.getLavadorPublico(token);
-        if (data) {
-          lavadorData = data;
-          // Usar o lavadorId retornado pelo backend
-          currentLavadorId = data.lavadorId;
-          renderUI();
-        } else {
-          showError();
-        }
-      } catch (e) {
-        console.error('Erro na API:', e);
-        if (e.error?.includes('inativo')) {
-          showError('Acesso Desativado', 'Seu link foi desativado. Entre em contato com o administrador.', 'fa-user-lock');
-        } else if (e.error?.includes('expirado')) {
-          showError('Link Expirado', 'Seu link expirou. Solicite um novo link ao administrador.', 'fa-clock');
-        } else {
-          showError('Acesso Inválido', 'O link é inválido. Solicite um novo link ao administrador.', 'fa-ban');
-        }
-      }
+    ordens.forEach((o, oi) => {
+      body.appendChild(buildOrderCard(o, `hist-${ki}-${oi}`));
     });
 
-    // ==================== UI ====================
-    function showError(title = 'Acesso Inválido', message = 'O link é inválido ou expirou.', icon = 'fa-ban') {
-      document.getElementById('error-title').textContent = title;
-      document.getElementById('error-message').textContent = message;
-      document.getElementById('error-icon').className = `fas ${icon}`;
-      document.getElementById('loader').classList.add('hidden');
-      document.getElementById('error').classList.remove('hidden');
-    }
-
-    function renderUI() {
-      document.getElementById('loader').classList.add('hidden');
-      document.getElementById('content').classList.remove('hidden');
-
-      document.getElementById('lavadorNome').textContent = lavadorData.nome;
-
-      calculatePeriodSummary();
-      renderTransactions();
-      startTokenTimer();
-    }
-
-    // ==================== TOKEN TIMER ====================
-    function startTokenTimer() {
-      const timerEl = document.getElementById('tokenTimer');
-      const timerTextEl = document.getElementById('tokenTimerText');
-
-      if (!lavadorData.tokenExpiresAt) {
-        // Token permanente
-        timerEl.classList.remove('hidden');
-        timerEl.classList.add('permanent');
-        timerTextEl.innerHTML = '<i class="fas fa-infinity"></i> Link Permanente';
-        return;
-      }
-
-      timerEl.classList.remove('hidden');
-
-      function updateTimer() {
-        const now = new Date();
-        const expiresAt = new Date(lavadorData.tokenExpiresAt);
-        const diff = expiresAt.getTime() - now.getTime();
-
-        if (diff <= 0) {
-          timerTextEl.textContent = 'Link expirado';
-          timerEl.classList.add('expiring-soon');
-          clearInterval(tokenTimerInterval);
-          // Mostrar mensagem de expiração
-          setTimeout(() => {
-            showError('Link Expirado', 'Este link expirou. Solicite um novo link ao administrador.', 'fa-clock');
-          }, 1000);
-          return;
-        }
-
-        // Calcular tempo restante
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        let text = '';
-        if (hours > 0) {
-          text = `Expira em ${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-          text = `Expira em ${minutes}m ${seconds}s`;
-        } else {
-          text = `Expira em ${seconds}s`;
-        }
-
-        timerTextEl.textContent = text;
-
-        // Adicionar classe de alerta se falta menos de 1 hora
-        if (diff < 60 * 60 * 1000) {
-          timerEl.classList.add('expiring-soon');
-        }
-      }
-
-      updateTimer();
-      tokenTimerInterval = setInterval(updateTimer, 1000);
-    }
-
-    function calculatePeriodSummary() {
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      let ganhoSemana = 0;
-      let ganhoMes = 0;
-      let totalCreditos = 0;
-      let totalCreditosNaoPagos = 0;
-
-      // Calcular ganhos das ordens
-      lavadorData.ordens.forEach(ordem => {
-        if (['FINALIZADO', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(ordem.status)) {
-          const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
-          const ordemDate = new Date(ordem.createdAt);
-
-          // ✅ Validar que ganho é um número válido (não NaN ou Infinity)
-          if (!isFinite(ganho) || ganho < 0) {
-            console.warn('[calculatePeriodSummary] Ganho inválido:', { ordemId: ordem.id, ganho });
-            return;  // continue em forEach pulando para próxima ordem
-          }
-
-          totalCreditos += ganho;
-
-          // Apenas contar comissões NÃO PAGAS para o saldo disponível
-          if (!ordem.comissaoPaga) {
-            totalCreditosNaoPagos += ganho;
-          }
-
-          if (ordemDate >= weekStart) {
-            ganhoSemana += ganho;
-          }
-          if (ordemDate >= monthStart) {
-            ganhoMes += ganho;
-          }
-        }
-      });
-
-      // Calcular dívida total (adiantamentos não quitados)
-      let dividaTotal = 0;
-      if (lavadorData.adiantamentosNaoQuitados) {
-        dividaTotal = lavadorData.adiantamentosNaoQuitados.reduce((sum, a) => sum + (parseFloat(a.valor) || 0), 0);
-      }
-
-      // Saldo Disponível = Comissões não pagas - Dívidas (adiantamentos)
-      const saldoTotal = totalCreditosNaoPagos - dividaTotal;
-
-      document.getElementById('ganhoSemana').textContent = formatCurrency(ganhoSemana);
-      document.getElementById('ganhoMes').textContent = formatCurrency(ganhoMes);
-      document.getElementById('dividaTotal').textContent = formatCurrency(dividaTotal);
-
-      const saldoElement = document.getElementById('saldoTotal');
-      saldoElement.textContent = formatCurrency(saldoTotal);
-
-      // MELHORIA 3: Indicador visual de dívida e saldo negativo
-      const debtIndicator = document.getElementById('debtIndicator');
-      if (dividaTotal > 0) {
-        debtIndicator.classList.remove('hidden');
-        document.getElementById('debtValue').textContent = formatCurrency(-dividaTotal);
-      } else {
-        debtIndicator.classList.add('hidden');
-      }
-
-      // Indicador de saldo negativo em vermelho
-      if (saldoTotal < 0) {
-        saldoElement.style.color = '#ef4444';
-      } else {
-        saldoElement.style.color = '';
-      }
-
-    }
-
-    function renderTransactions() {
-      const container = document.getElementById('transactions');
-      const emptyState = document.getElementById('emptyState');
-
-      const transactions = [];
-
-      // Adicionar ordens como créditos
-      lavadorData.ordens.forEach(ordem => {
-        if (['FINALIZADO', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(ordem.status)) {
-          const ganho = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
-
-          if (ganho > 0) {
-            // ✅ Validar que items é array antes de usar .map()
-            const items = Array.isArray(ordem.items) ? ordem.items : [];
-            const subtitle = items
-              .map(i => i?.servico?.nome || i?.adicional?.nome)
-              .filter(Boolean)
-              .join(', ') || 'Sem itens';
-
-            transactions.push({
-              type: 'credit',
-              date: ordem.status === 'FINALIZADO' && ordem.updatedAt ? ordem.updatedAt : ordem.createdAt,
-              title: ordem.veiculo?.modelo || 'Veículo',
-              subtitle: subtitle,
-              value: ganho,
-              status: ordem.status,
-              isMultiWash: isMultiWash(ordem),
-              washersCount: normalizeOrderWashers(ordem).length
-            });
-          }
-        }
-      });
-
-      // Adicionar fechamentos de comissão como "Pagamento Realizado"
-      if (lavadorData.fechamentos && lavadorData.fechamentos.length > 0) {
-        lavadorData.fechamentos.forEach(fechamento => {
-          const totalOrdens = (fechamento.ordensPagas?.length || 0) + (fechamento.ordemLavadoresPagos?.length || 0);
-
-          transactions.push({
-            type: 'payment',
-            date: fechamento.data,
-            title: 'Pagamento Realizado',
-            subtitle: `${totalOrdens} lavagen${totalOrdens === 1 ? '' : 's'}`,
-            value: fechamento.valorPago,
-            clickable: true,
-            fechamentoData: fechamento
-          });
-        });
-      }
-
-      transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      document.getElementById('transactionsCount').textContent =
-        `${transactions.length} transaç${transactions.length === 1 ? 'ão' : 'ões'}`;
-
-      if (transactions.length === 0) {
-        container.classList.add('hidden');
-        emptyState.classList.remove('hidden');
-        return;
-      }
-
-      container.classList.remove('hidden');
-      emptyState.classList.add('hidden');
-
-      const groupedByDay = {};
-      transactions.forEach(t => {
-        const dayKey = toLocaleDateISOString(t.date);
-        if (!groupedByDay[dayKey]) {
-          groupedByDay[dayKey] = [];
-        }
-        groupedByDay[dayKey].push(t);
-      });
-
-      container.innerHTML = '';
-      Object.keys(groupedByDay).sort((a, b) => b.localeCompare(a)).forEach(dayKey => {
-        const dayTransactions = groupedByDay[dayKey];
-
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'transaction-day';
-
-        const dayHeader = document.createElement('div');
-        dayHeader.className = 'day-header';
-        dayHeader.textContent = formatDate(dayKey);
-        dayDiv.appendChild(dayHeader);
-
-        dayTransactions.forEach(t => {
-          const item = document.createElement('div');
-          item.className = `transaction-item ${t.type}`;
-
-          if (t.clickable) {
-            item.classList.add('clickable');
-            item.onclick = () => openPaymentModal(t.fechamentoData);
-          }
-
-          let icon = '';
-          if (t.type === 'credit') {
-            icon = '<i class="fas fa-arrow-down"></i>';
-          } else if (t.type === 'payment') {
-            icon = '<i class="fas fa-dollar-sign"></i>';
-          }
-
-          const badges = [];
-          if (t.isMultiWash) {
-            badges.push(`<span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${t.washersCount}x</span>`);
-          }
-          if (t.status) {
-            const statusText = getStatusLabel(t.status);
-            badges.push(`<span class="badge status-badge ${t.status}">${statusText}</span>`);
-          }
-
-          const valuePrefix = t.type === 'credit' ? '+' : '';
-          const valueClass = t.type === 'payment' ? 'payment' : t.type;
-
-          item.innerHTML = `
-            <div class="transaction-icon ${t.type}">
-              ${icon}
-            </div>
-            <div class="transaction-details">
-              <div class="transaction-title">
-                ${t.title}
-                ${badges.join(' ')}
-              </div>
-              <div class="transaction-subtitle">${t.subtitle}</div>
-            </div>
-            <div class="transaction-value ${valueClass}">
-              ${valuePrefix} ${formatCurrency(t.value)}
-            </div>
-          `;
-
-          dayDiv.appendChild(item);
-        });
-
-        container.appendChild(dayDiv);
-      });
-    }
-
-    // ==================== MODAL ====================
-    function openPaymentModal(fechamento) {
-      const modal = document.getElementById('paymentModal');
-
-      // Calcular totais
-      const totalOrdens = (fechamento.ordensPagas?.length || 0) + (fechamento.ordemLavadoresPagos?.length || 0);
-
-      // Calcular total de adiantamentos quitados
-      let totalAdiantamentos = 0;
-      if (fechamento.adiantamentosQuitados && Array.isArray(fechamento.adiantamentosQuitados)) {
-        totalAdiantamentos = fechamento.adiantamentosQuitados.reduce((sum, a) => {
-          // ✅ Validar tipo de valor
-          const valor = parseFloat(a.valor || 0);
-          return isFinite(valor) ? sum + valor : sum;
-        }, 0);
-      }
-
-      document.getElementById('modalTotalOrdens').textContent = totalOrdens;
-      document.getElementById('modalTotalAdiantamentos').textContent = formatCurrency(totalAdiantamentos);
-      document.getElementById('modalValorPago').textContent = formatCurrency(fechamento.valorPago);
-
-      // Renderizar ordens
-      const ordersList = document.getElementById('modalOrdersList');
-      ordersList.innerHTML = '';
-
-      let totalComissaoCalculada = 0;
-
-      // Ordens principais (onde o lavador é o principal)
-      if (fechamento.ordensPagas && Array.isArray(fechamento.ordensPagas)) {
-        fechamento.ordensPagas.forEach(ordem => {
-          // Para ordens principais, o lavador é o principal da ordem
-          // Calcular a comissão usando o valorTotal e a comissão do lavador
-          let comissao = 0;
-
-          // Se a ordem tem ordemLavadores (multi-wash), calcular divisão
-          if (Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length > 0) {
-            comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
-          } else {
-            // Ordem solo - lavador principal ganha comissão total
-            const valorTotal = parseFloat(ordem.valorTotal || 0);
-            const comissaoPercent = parseFloat(lavadorData.comissao || 0);
-            comissao = valorTotal * (comissaoPercent / 100);
-          }
-
-          // ✅ Validar que comissão é número válido
-          if (!isFinite(comissao) || comissao < 0) {
-            console.warn('[modal] Comissão inválida:', comissao);
-            comissao = 0;
-          }
-          totalComissaoCalculada += comissao;
-
-          const isMulti = Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length > 1;
-
-          // ✅ Validar que items é array
-          const itemsServicos = Array.isArray(ordem.items) ? ordem.items : [];
-          const servicos = itemsServicos.map(i => i?.servico?.nome || i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
-
-          ordersList.innerHTML += `
-            <div class="modal-order-item">
-              <div class="modal-order-header">
-                <div class="modal-order-title">${ordem.veiculo?.modelo || 'Veículo'}</div>
-                <div class="modal-order-value">${formatCurrency(comissao)}</div>
-              </div>
-              <div class="modal-order-services">${servicos}</div>
-              <div class="modal-order-meta">
-                ${isMulti ? `<span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${ordem.ordemLavadores.length}x</span>` : ''}
-                <span class="badge status-badge FINALIZADO">FINALIZADO</span>
-              </div>
-            </div>
-          `;
-        });
-      }
-
-      // Ordens multi-wash (onde o lavador é secundário)
-      if (fechamento.ordemLavadoresPagos && Array.isArray(fechamento.ordemLavadoresPagos)) {
-        fechamento.ordemLavadoresPagos.forEach(ol => {
-          const ordem = ol.ordem;
-
-          // Calcular comissão dividida
-          let comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
-
-          // ✅ Validar que comissão é número válido
-          if (!isFinite(comissao) || comissao < 0) {
-            console.warn('[modal] Comissão multi-wash inválida:', comissao);
-            comissao = 0;
-          }
-          totalComissaoCalculada += comissao;
-
-          // ✅ Validar que items é array antes de usar .map()
-          const items = Array.isArray(ordem.items) ? ordem.items : [];
-          const services = items.map(i => i?.servico?.nome || i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem serviços';
-          const washersCount = normalizeOrderWashers(ordem).length;
-
-          ordersList.innerHTML += `
-            <div class="modal-order-item">
-              <div class="modal-order-header">
-                <div class="modal-order-title">${ordem.veiculo?.modelo || 'Veículo'}</div>
-                <div class="modal-order-value">${formatCurrency(comissao)}</div>
-              </div>
-              <div class="modal-order-services">${services}</div>
-              <div class="modal-order-meta">
-                <span class="badge multi-wash-badge"><i class="fas fa-users"></i> ${washersCount}x</span>
-                <span class="badge status-badge FINALIZADO">FINALIZADO</span>
-              </div>
-            </div>
-          `;
-        });
-      }
-
-      modal.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closePaymentModal() {
-      const modal = document.getElementById('paymentModal');
-      modal.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-
-    // Fechar modal ao clicar fora
-    document.getElementById('paymentModal').addEventListener('click', (e) => {
-      if (e.target.id === 'paymentModal') {
-        closePaymentModal();
-      }
+    container.appendChild(group);
+  });
+}
+
+// ===================== SEÇÃO ESTATÍSTICAS =====================
+function setStatPeriod(days, btn) {
+  statPeriodDays = days;
+  document.querySelectorAll('.stats-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderEstatisticas(days);
+}
+
+function renderEstatisticas(days) {
+  const hoje = toLocaleDateISOString();
+  const diasArr = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(hoje + 'T12:00:00');
+    d.setDate(d.getDate() - i);
+    diasArr.push(toLocaleDateISOString(d));
+  }
+
+  const ganhosPorDia = {};
+  diasArr.forEach(d => ganhosPorDia[d] = 0);
+
+  (lavadorData.ordens || []).forEach(o => {
+    if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
+    const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+    if (!isFinite(g) || g <= 0) return;
+    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const key = toLocaleDateISOString(ref);
+    if (key in ganhosPorDia) ganhosPorDia[key] += g;
+  });
+
+  const valores = diasArr.map(d => ganhosPorDia[d]);
+  const maxVal = Math.max(...valores, 1);
+
+  // Barras
+  const barsRow = document.getElementById('barsRow');
+  barsRow.innerHTML = '';
+  const diaNomes = ['D','S','T','Q','Q','S','S'];
+
+  diasArr.forEach((iso, i) => {
+    const val = valores[i];
+    const pct = Math.max((val / maxVal) * 100, val > 0 ? 4 : 2);
+    const isToday = iso === hoje;
+    const dayOfWeek = new Date(iso + 'T12:00:00').getDay();
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    col.innerHTML = `
+      <div class="bar-fill${val === 0 ? ' zero' : ''}${isToday ? ' today-bar' : ''}" style="height:${pct}%"></div>
+      <div class="bar-day-label">${days <= 7 ? diaNomes[dayOfWeek] : iso.slice(8)}</div>
+    `;
+    barsRow.appendChild(col);
+  });
+  document.getElementById('chartTitle').textContent = `Ganhos — últimos ${days} dias`;
+
+  // Cards de métricas
+  const total = valores.reduce((s,v) => s+v, 0);
+  const diasComGanho = valores.filter(v => v > 0);
+  const media = diasComGanho.length > 0 ? total / diasComGanho.length : 0;
+  const melhor = Math.max(...valores, 0);
+  const qtdOrdens = (lavadorData.ordens || []).filter(o => {
+    if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return false;
+    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    return diasArr.includes(toLocaleDateISOString(ref));
+  }).length;
+
+  document.getElementById('statsCards').innerHTML = `
+    <div class="stats-card">
+      <div class="stats-card-label">Total</div>
+      <div class="stats-card-value">${formatCurrency(total)}</div>
+      <div class="stats-card-sub">${days} dias</div>
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-label">Média/dia ativo</div>
+      <div class="stats-card-value">${formatCurrency(media)}</div>
+      <div class="stats-card-sub">${diasComGanho.length} dias trabalhados</div>
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-label">Melhor dia</div>
+      <div class="stats-card-value">${formatCurrency(melhor)}</div>
+      <div class="stats-card-sub">${melhor > 0 ? formatDate(diasArr[valores.indexOf(melhor)]) : '—'}</div>
+    </div>
+    <div class="stats-card">
+      <div class="stats-card-label">Lavagens</div>
+      <div class="stats-card-value">${qtdOrdens}</div>
+      <div class="stats-card-sub">no período</div>
+    </div>
+  `;
+}
+
+// ===================== SEÇÃO PAGAMENTOS =====================
+function renderPagamentos() {
+  const container = document.getElementById('pagContainer');
+  const fechamentos = lavadorData.fechamentos || [];
+  if (fechamentos.length === 0) {
+    container.innerHTML = `<div class="empty"><i class="fas fa-dollar-sign"></i><h3>Sem pagamentos</h3><p>Seus fechamentos de comissão aparecerão aqui</p></div>`;
+    return;
+  }
+  container.innerHTML = '';
+  const sorted = [...fechamentos].sort((a,b) => new Date(b.data)-new Date(a.data));
+  sorted.forEach(f => {
+    const totalOrdens = (f.ordensPagas?.length||0) + (f.ordemLavadoresPagos?.length||0);
+    const card = document.createElement('div');
+    card.className = 'payment-card';
+    card.innerHTML = `
+      <div class="payment-ico"><i class="fas fa-dollar-sign"></i></div>
+      <div class="payment-info">
+        <div class="payment-date">${formatDate(toLocaleDateISOString(f.data))}</div>
+        <div class="payment-sub">${totalOrdens} lavagem${totalOrdens!==1?'s':''}</div>
+      </div>
+      <div class="payment-value">${formatCurrency(f.valorPago)}</div>
+    `;
+    card.onclick = () => openPaymentModal(f);
+    container.appendChild(card);
+  });
+}
+
+// ===================== SEÇÃO ADIANTAMENTOS =====================
+function renderAdiantamentos() {
+  const container = document.getElementById('adiantContainer');
+  const lista = lavadorData.adiantamentosNaoQuitados || [];
+
+  let divida = 0;
+  lista.forEach(a => divida += parseFloat(a.valor) || 0);
+
+  if (lista.length === 0) {
+    container.innerHTML = `<div class="empty"><i class="fas fa-check-circle" style="color:var(--green-d)"></i><h3>Sem dívidas</h3><p>Você não possui adiantamentos pendentes</p></div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="debt-banner">
+      <div class="debt-banner-title"><i class="fas fa-exclamation-triangle"></i> Total em aberto</div>
+      <div class="debt-banner-value">${formatCurrency(divida)}</div>
+    </div>
+  `;
+
+  lista.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'adiant-card';
+    card.innerHTML = `
+      <div class="adiant-ico"><i class="fas fa-hand-holding-usd"></i></div>
+      <div class="adiant-info">
+        <div class="adiant-data">${formatDate(toLocaleDateISOString(a.createdAt || a.data || new Date()))}</div>
+        ${a.observacao ? `<div class="adiant-obs">${a.observacao}</div>` : ''}
+      </div>
+      <div class="adiant-value">-${formatCurrency(parseFloat(a.valor)||0)}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ===================== SEÇÃO PERÍODO =====================
+function filtrarPeriodo() {
+  const inicio = document.getElementById('periodoInicio').value;
+  const fim = document.getElementById('periodoFim').value;
+  const result = document.getElementById('periodoResult');
+
+  if (!inicio || !fim) {
+    result.innerHTML = `<div class="empty"><i class="fas fa-calendar"></i><h3>Selecione o período</h3><p>Escolha as datas inicial e final</p></div>`;
+    return;
+  }
+  if (inicio > fim) {
+    result.innerHTML = `<div class="empty"><i class="fas fa-exclamation-circle"></i><h3>Período inválido</h3><p>A data inicial deve ser anterior à final</p></div>`;
+    return;
+  }
+
+  const grouped = {};
+  (lavadorData.ordens || []).forEach(o => {
+    if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
+    const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+    if (!isFinite(g) || g <= 0) return;
+    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const key = toLocaleDateISOString(ref);
+    if (key < inicio || key > fim) return;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(o);
+  });
+
+  const keys = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+  const totalGeral = keys.reduce((s,k) => s + grouped[k].reduce((ss,o) => ss + getWasherShare(o,currentLavadorId,lavadorData.comissao), 0), 0);
+  const totalOrdens = keys.reduce((s,k) => s + grouped[k].length, 0);
+
+  if (keys.length === 0) {
+    result.innerHTML = `<div class="empty"><i class="fas fa-search"></i><h3>Sem resultados</h3><p>Nenhuma lavagem no período selecionado</p></div>`;
+    return;
+  }
+
+  result.innerHTML = `
+    <div class="periodo-result-title">
+      ${totalOrdens} lavagem${totalOrdens!==1?'s':''} • Total: <strong style="color:var(--green-d)">${formatCurrency(totalGeral)}</strong>
+    </div>
+  `;
+
+  keys.forEach((key, ki) => {
+    const ordens = grouped[key];
+    const totalDia = ordens.reduce((s,o) => s + getWasherShare(o,currentLavadorId,lavadorData.comissao),0);
+
+    const group = document.createElement('div');
+    group.className = 'day-group';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'day-group-header';
+    hdr.innerHTML = `<span>${formatDate(key)}</span><span class="day-group-total">+${formatCurrency(totalDia)}</span>`;
+    const body = document.createElement('div');
+    body.className = 'day-group-body';
+    hdr.onclick = () => body.classList.toggle('collapsed');
+    group.appendChild(hdr);
+    group.appendChild(body);
+
+    ordens.forEach((o, oi) => {
+      body.appendChild(buildOrderCard(o, `per-${ki}-${oi}`));
     });
-  </script>
-<script src="mobile-nav.js"></script>
-<script src="webapp-bottom-nav.js"></script>
-<nav class="bottom-navigation">
-    <a href="index.html" class="bottom-nav-item" data-page="home" title="Dashboard">
-        <i class="fas fa-home"></i>
-        <span>Início</span>
-    </a>
-    <a href="ordens.html" class="bottom-nav-item" data-page="ordens" title="Minhas Ordens">
-        <i class="fas fa-list-check"></i>
-        <span>Ordens</span>
-    </a>
-    <a href="novaordem.html" class="bottom-nav-item" data-page="novaordem" title="Nova Ordem">
-        <i class="fas fa-plus-circle"></i>
-        <span>Nova</span>
-    </a>
-    <a href="clientes.html" class="bottom-nav-item" data-page="clientes" title="Clientes">
-        <i class="fas fa-users"></i>
-        <span>Clientes</span>
-    </a>
-    <a href="#" class="bottom-nav-item" data-page="menu" onclick="toggleMobileMenu(event)" title="Menu">
-        <i class="fas fa-bars"></i>
-        <span>Menu</span>
-    </a>
-</nav>
+
+    result.appendChild(group);
+  });
+}
+
+// ===================== MODAL =====================
+function openPaymentModal(fechamento) {
+  const totalOrdens = (fechamento.ordensPagas?.length||0) + (fechamento.ordemLavadoresPagos?.length||0);
+  let totalAdiantamentos = 0;
+  (fechamento.adiantamentosQuitados || []).forEach(a => {
+    const v = parseFloat(a.valor || 0);
+    if (isFinite(v)) totalAdiantamentos += v;
+  });
+
+  document.getElementById('modalTotalOrdens').textContent = totalOrdens;
+  document.getElementById('modalTotalAdiantamentos').textContent = formatCurrency(totalAdiantamentos);
+  document.getElementById('modalValorPago').textContent = formatCurrency(fechamento.valorPago);
+
+  const list = document.getElementById('modalOrdersList');
+  list.innerHTML = '';
+
+  (fechamento.ordensPagas || []).forEach(ordem => {
+    let comissao = Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length > 0
+      ? getWasherShare(ordem, currentLavadorId, lavadorData.comissao)
+      : parseFloat(ordem.valorTotal||0) * (parseFloat(lavadorData.comissao||0)/100);
+    if (!isFinite(comissao)||comissao<0) comissao=0;
+    const isMulti = Array.isArray(ordem.ordemLavadores) && ordem.ordemLavadores.length>1;
+    const items = Array.isArray(ordem.items)?ordem.items:[];
+    const svcs = items.map(i=>i?.servico?.nome||i?.adicional?.nome).filter(Boolean).join(', ')||'Sem serviços';
+    list.innerHTML += `
+      <div class="modal-order">
+        <div class="modal-order-hdr">
+          <div class="modal-order-title">${ordem.veiculo?.modelo||'Veículo'}</div>
+          <div class="modal-order-val">${formatCurrency(comissao)}</div>
+        </div>
+        <div class="modal-order-svc">${svcs}</div>
+        <div class="modal-order-meta">
+          ${isMulti?`<span class="badge badge-multi"><i class="fas fa-users"></i> ${ordem.ordemLavadores.length}x</span>`:''}
+          <span class="badge badge-finalizado">Finalizado</span>
+        </div>
+      </div>`;
+  });
+
+  (fechamento.ordemLavadoresPagos || []).forEach(ol => {
+    const ordem = ol.ordem;
+    let comissao = getWasherShare(ordem, currentLavadorId, lavadorData.comissao);
+    if (!isFinite(comissao)||comissao<0) comissao=0;
+    const items = Array.isArray(ordem.items)?ordem.items:[];
+    const svcs = items.map(i=>i?.servico?.nome||i?.adicional?.nome).filter(Boolean).join(', ')||'Sem serviços';
+    const wc = normalizeOrderWashers(ordem).length;
+    list.innerHTML += `
+      <div class="modal-order">
+        <div class="modal-order-hdr">
+          <div class="modal-order-title">${ordem.veiculo?.modelo||'Veículo'}</div>
+          <div class="modal-order-val">${formatCurrency(comissao)}</div>
+        </div>
+        <div class="modal-order-svc">${svcs}</div>
+        <div class="modal-order-meta">
+          <span class="badge badge-multi"><i class="fas fa-users"></i> ${wc}x</span>
+          <span class="badge badge-finalizado">Finalizado</span>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('paymentModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+</script>
 </body>
 </html>
