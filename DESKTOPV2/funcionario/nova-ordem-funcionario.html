@@ -964,6 +964,7 @@
       <div class="sec-lbl">
         Responsável
         <b x-show="lavs.length > 0" x-text="'· ' + lavs.length" x-cloak></b>
+        <span x-show="lavs.length === 0" x-cloak style="font-size:11px;font-weight:400;color:var(--light);margin-left:4px">(opcional)</span>
       </div>
 
       <!-- Carregando -->
@@ -1655,7 +1656,7 @@
         },
 
         podecriar() {
-          return this.tipo && this.svc && this.lavs.length > 0 &&
+          return this.tipo && this.svc &&
             (this.tipo !== 'CARRO' || this.cat);
         },
 
@@ -1665,12 +1666,12 @@
           this.criando = true;
 
           // Monta payload antes do try para poder reusar no catch (forçar criação)
-          const precoPorLav = Math.round((this.svc.preco / this.lavs.length) * 100) / 100;
-          const lavadoresComissao = this.lavs.map(id => ({
-            id,
-            ganho: precoPorLav,
-            ganhoCentavos: Math.round(precoPorLav * 100),
-          }));
+          const lavadoresComissao = this.lavs.length > 0
+            ? this.lavs.map(id => {
+                const ganho = Math.round((this.svc.preco / this.lavs.length) * 100) / 100;
+                return { id, ganho, ganhoCentavos: Math.round(ganho * 100) };
+              })
+            : [];
 
           const itens = [
             {
@@ -1679,7 +1680,7 @@
               nome:      this.svc.nome,
               preco:     Number(this.svc.preco),
               quantidade: 1,
-              lavadores: lavadoresComissao,
+              ...(lavadoresComissao.length > 0 ? { lavadores: lavadoresComissao } : {}),
             },
             ...this.adds.map(id => {
               const a = this.adicionais.find(x => x.id === id);
