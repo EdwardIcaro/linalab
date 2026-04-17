@@ -337,9 +337,18 @@
 
         .type-badge.entrada { background: var(--finance-green-light); color: var(--finance-green); }
         .type-badge.saida { background: var(--finance-red-light); color: var(--finance-red); }
-        .type-badge.sangria { background: var(--finance-orange-light); color: var(--finance-orange); }
+        .type-badge.adiantamento { background: var(--finance-orange-light); color: var(--finance-orange); }
+        .type-badge.sangria { background: rgba(100,116,139,0.1); color: #64748b; }
         .type-badge.fechamento { background: var(--finance-blue-light); color: var(--finance-blue); }
         .type-badge.pendente { background: var(--finance-purple-light); color: var(--finance-purple); }
+        .tx-adiantamento-hint {
+            font-size: 11px;
+            color: var(--finance-orange);
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
         /* Value Colors */
         .value-positive { color: var(--finance-green); font-weight: 600; }
@@ -1454,12 +1463,12 @@
                             <i class="fas fa-arrow-up"></i>
                         </div>
                     </div>
-                    <div class="balance-label">Total de Saidas</div>
+                    <div class="balance-label">Saidas Operacionais</div>
                     <template x-if="isLoading">
                         <div class="skeleton" style="height: 32px; width: 100px;"></div>
                     </template>
                     <template x-if="!isLoading">
-                        <div class="balance-value" x-text="formatCurrency(balance.totalExpenses)"></div>
+                        <div class="balance-value" x-text="formatCurrency(balance.saidasOperacionais)"></div>
                     </template>
                     <div class="balance-breakdown" x-show="!isLoading">
                         <div class="breakdown-item">
@@ -1469,6 +1478,11 @@
                         <div class="breakdown-item">
                             <span>Sangrias: </span>
                             <span x-text="formatCurrency(balance.sangrias)"></span>
+                        </div>
+                        <div class="breakdown-item" x-show="balance.adiantamentos > 0" style="color: var(--finance-orange); border-top: 1px solid var(--finance-border); padding-top: 4px; margin-top: 2px;">
+                            <i class="fas fa-rotate-left" style="font-size:10px;"></i>
+                            <span>Adiantamentos: </span>
+                            <span x-text="formatCurrency(balance.adiantamentos)"></span>
                         </div>
                     </div>
                 </div>
@@ -1653,8 +1667,8 @@
                                             <td>
                                                 <span
                                                     class="type-badge"
-                                                    :class="getTypeBadgeClass(tx.tipo)"
-                                                    x-text="getTypeLabel(tx.tipo, tx.formaPagamento)"
+                                                    :class="getTypeBadgeClass(tx.tipo, tx)"
+                                                    x-text="getTypeLabel(tx.tipo, tx.formaPagamento, tx)"
                                                 ></span>
                                             </td>
                                             <td>
@@ -1666,6 +1680,12 @@
                                                     >
                                                         <i class="fab fa-whatsapp"></i>
                                                     </span>
+                                                </template>
+                                                <template x-if="isAdiantamentoTx(tx)">
+                                                    <div class="tx-adiantamento-hint">
+                                                        <i class="fas fa-rotate-left" style="font-size:10px;"></i>
+                                                        Será descontado da comissão
+                                                    </div>
                                                 </template>
                                             </td>
                                             <td x-text="tx.formaPagamento || 'N/A'"></td>
@@ -1978,8 +1998,13 @@
                                     <div class="card-value" x-text="formatCurrency(calcLiquidoSaidas())"></div>
                                 </div>
                                 <div class="report-summary-card red">
-                                    <div class="card-label">📤 Saídas</div>
-                                    <div class="card-value" x-text="formatCurrency(reportData?.historico?.totais?.totalSaidas || 0)"></div>
+                                    <div class="card-label">📤 Saídas Operacionais</div>
+                                    <div class="card-value" x-text="formatCurrency(reportData?.historico?.totais?.totalSaidasOperacionais ?? reportData?.historico?.totais?.totalSaidas ?? 0)"></div>
+                                    <template x-if="(reportData?.historico?.totais?.totalAdiantamentos || 0) > 0">
+                                        <div style="font-size:11px;color:var(--finance-orange);margin-top:4px;">
+                                            + <span x-text="formatCurrency(reportData?.historico?.totais?.totalAdiantamentos || 0)"></span> em adiantamentos
+                                        </div>
+                                    </template>
                                 </div>
                                 <div class="report-summary-card orange">
                                     <div class="card-label">⏳ Pendente</div>
@@ -2067,10 +2092,22 @@
                                 </h4>
                                 <div class="report-saidas-categories">
                                     <template x-for="(categoria, cat) in groupSaidasByCategory()" :key="'cat-' + cat">
-                                        <div class="saida-category-item" @click="openSaidasModal(cat)" title="Clique para ver detalhes">
-                                            <div class="category-name" x-text="cat"></div>
-                                            <div class="category-amount" x-text="formatCurrency(categoria.total || 0)"></div>
+                                        <div class="saida-category-item"
+                                            :style="categoria.provisorio ? 'border-color: var(--finance-orange); background: rgba(245,158,11,0.04);' : ''"
+                                            @click="openSaidasModal(cat)" title="Clique para ver detalhes">
+                                            <div class="category-name" style="display:flex;align-items:center;gap:6px;">
+                                                <span x-text="cat"></span>
+                                                <template x-if="categoria.provisorio">
+                                                    <span style="font-size:10px;font-weight:600;color:var(--finance-orange);background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:99px;">provisório</span>
+                                                </template>
+                                            </div>
+                                            <div class="category-amount" :style="categoria.provisorio ? 'color: var(--finance-orange);' : ''" x-text="formatCurrency(categoria.total || 0)"></div>
                                             <div class="category-count" x-text="'(' + (categoria.count || 0) + ' movimentações)'"></div>
+                                            <template x-if="categoria.provisorio">
+                                                <div style="font-size:10px;color:var(--finance-orange);margin-top:3px;">
+                                                    <i class="fas fa-rotate-left" style="font-size:9px;"></i> Será descontado da comissão
+                                                </div>
+                                            </template>
                                         </div>
                                     </template>
                                 </div>
@@ -2658,6 +2695,8 @@
                 balance: {
                     totalReceived: 0,
                     totalExpenses: 0,
+                    adiantamentos: 0,
+                    saidasOperacionais: 0,
                     netBalance: 0,
                     pending: 0,
                     cash: 0,
@@ -2895,11 +2934,13 @@
                         this.transactions = response.registros || [];
                         const totais = response.totais || {};
 
-                        // Update balance
+                        // Update balance — adiantamentos são provisórios, não impactam o saldo real
                         this.balance.totalReceived = totais.totalEntradas || 0;
                         this.balance.totalExpenses = totais.totalSaidas || 0;
-                        this.balance.netBalance = this.balance.totalReceived - this.balance.totalExpenses;
-                        this.balance.expenses = totais.detalheSaidas?.saidas || 0;
+                        this.balance.adiantamentos = totais.totalAdiantamentos || 0;
+                        this.balance.saidasOperacionais = totais.totalSaidasOperacionais || 0;
+                        this.balance.netBalance = this.balance.totalReceived - this.balance.saidasOperacionais;
+                        this.balance.expenses = totais.detalheSaidas?.saidasOperacionais || 0;
                         this.balance.sangrias = totais.detalheSaidas?.sangrias || 0;
 
                         // Calculate by payment method from transactions
@@ -3277,7 +3318,8 @@
                             // Update balance immediately
                             this.balance.sangrias += valor;
                             this.balance.totalExpenses += valor;
-                            this.balance.netBalance = this.balance.totalReceived - this.balance.totalExpenses;
+                            this.balance.saidasOperacionais += valor;
+                            this.balance.netBalance = this.balance.totalReceived - this.balance.saidasOperacionais;
 
                             // Add temporary transaction to list
                             const tempTx = {
@@ -3516,7 +3558,12 @@
                     return new Date(dateString).toLocaleDateString('pt-BR');
                 },
 
-                getTypeBadgeClass(tipo) {
+                isAdiantamentoTx(tx) {
+                    return tx.tipo === 'SAIDA' && tx.descricao?.includes('[Adiantamento]');
+                },
+
+                getTypeBadgeClass(tipo, tx) {
+                    if (tx && tipo === 'SAIDA' && tx.descricao?.includes('[Adiantamento]')) return 'adiantamento';
                     const classes = {
                         'PAGAMENTO': 'entrada',
                         'SAIDA': 'saida',
@@ -3527,8 +3574,9 @@
                     return classes[tipo] || '';
                 },
 
-                getTypeLabel(tipo, formaPagamento) {
+                getTypeLabel(tipo, formaPagamento, tx) {
                     if (formaPagamento === 'DEBITO_FUNCIONARIO') return 'DEBITO OS';
+                    if (tx && tipo === 'SAIDA' && tx.descricao?.includes('[Adiantamento]')) return 'ADIANTAMENTO';
                     return tipo;
                 },
 
@@ -3633,7 +3681,10 @@
 
                 calcLiquidoSaidas() {
                     const bruto = this.reportData?.stats?.valorTotal || 0;
-                    const saidas = this.reportData?.historico?.totais?.totalSaidas || 0;
+                    // Líquido usa apenas saídas operacionais (adiantamentos são provisórios)
+                    const saidas = this.reportData?.historico?.totais?.totalSaidasOperacionais
+                        ?? this.reportData?.historico?.totais?.totalSaidas
+                        ?? 0;
                     return bruto - saidas;
                 },
 
@@ -3647,8 +3698,11 @@
                         const match = r.descricao?.match(/^\[([^\]]+)\]/);
                         if (match) categoria = match[1];
 
+                        // Adiantamentos marcados como provisórios
+                        const isAdiantamento = categoria === 'Adiantamento';
+
                         if (!saidasMap[categoria]) {
-                            saidasMap[categoria] = { total: 0, count: 0 };
+                            saidasMap[categoria] = { total: 0, count: 0, provisorio: isAdiantamento };
                         }
                         saidasMap[categoria].total += r.valor || 0;
                         saidasMap[categoria].count += 1;

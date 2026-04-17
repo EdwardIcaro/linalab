@@ -158,7 +158,7 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
                     tipo: { in: ['SAIDA', 'SANGRIA'] },
                     data: { gte: start, lte: end },
                 },
-                select: { valor: true, formaPagamento: true } // ✅ Select otimizado
+                select: { valor: true, formaPagamento: true, descricao: true }
             })
         ]);
 
@@ -182,6 +182,10 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalSaidas = saidas.reduce((acc: number, s) => acc + s.valor, 0);
+        const totalAdiantamentos = saidas
+            .filter(s => s.descricao?.includes('[Adiantamento]'))
+            .reduce((acc: number, s) => acc + s.valor, 0);
+        const totalSaidasOperacionais = totalSaidas - totalAdiantamentos;
 
         // Calcular saldo de dinheiro (entradas - saídas)
         const saldoDinheiro = totalDinheiro - saidas
@@ -195,6 +199,8 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             totalPix,
             totalNfe,
             totalSaidas,
+            totalAdiantamentos,
+            totalSaidasOperacionais,
             saldoDinheiro
         });
     } catch (error) {
@@ -563,12 +569,21 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
         const totalSaidas = outrosRegistros
             .filter(r => r.tipo === 'SAIDA' || r.tipo === 'SANGRIA')
             .reduce((acc, r) => acc + r.valor, 0);
+        const totalAdiantamentos = outrosRegistros
+            .filter(r => r.tipo === 'SAIDA' && r.descricao?.includes('[Adiantamento]'))
+            .reduce((acc, r) => acc + r.valor, 0);
 
         const totais = {
             totalEntradas,
             totalSaidas,
+            totalAdiantamentos,
+            totalSaidasOperacionais: totalSaidas - totalAdiantamentos,
             detalheSaidas: {
                 saidas: outrosRegistros.filter(r => r.tipo === 'SAIDA').reduce((acc, r) => acc + r.valor, 0),
+                adiantamentos: totalAdiantamentos,
+                saidasOperacionais: outrosRegistros
+                    .filter(r => r.tipo === 'SAIDA' && !r.descricao?.includes('[Adiantamento]'))
+                    .reduce((acc, r) => acc + r.valor, 0),
                 sangrias: outrosRegistros.filter(r => r.tipo === 'SANGRIA').reduce((acc, r) => acc + r.valor, 0),
             }
         };
