@@ -385,7 +385,7 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
             }
 
             const finalDescricao = tipo === 'Adiantamento'
-                ? `Adiantamento para ${fornecedorNome || 'funcionário'}`
+                ? `[Adiantamento] ${fornecedorNome || 'funcionário'}`
                 : `[${tipo}] ${descricao}`;
 
             return await tx.caixaRegistro.create({
@@ -942,7 +942,7 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
         }
 
         const finalDescricao = tipo === 'Adiantamento'
-            ? `Adiantamento para ${fornecedorNome || 'funcionário'}`
+            ? `[Adiantamento] ${fornecedorNome || 'funcionário'}`
             : `[${tipo}] ${descricao}`;
 
         const updateData: any = {
