@@ -140,6 +140,7 @@ const api = {
   createVeiculo: (data) => fetchApi('/veiculos', { method: 'POST', body: JSON.stringify(data) }),
   updateVeiculo: (id, data) => fetchApi(`/veiculos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteVeiculo: (id) => fetchApi(`/veiculos/${id}`, { method: 'DELETE' }),
+  transferirVeiculo: (id, novoClienteId) => fetchApi(`/veiculos/${id}/transferir`, { method: 'PATCH', body: JSON.stringify({ novoClienteId }) }),
 
   // ===== SERVIÇOS =====
   getServicos: (filters = {}) => {

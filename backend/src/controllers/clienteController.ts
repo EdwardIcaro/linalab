@@ -100,29 +100,15 @@ export const getClientes = async (req: EmpresaRequest, res: Response) => {
             }
           },
           ordens: {
-            include: {
-              lavador: {
-                select: {
-                  id: true,
-                  nome: true
-                }
-              },
-              items: {
-                include: {
-                  servico: {
-                    select: {
-                      id: true,
-                      nome: true,
-                    }
-                  },
-                  adicional: {
-                    select: {
-                      id: true,
-                      nome: true,
-                    }
-                  }
-                }
-              }
+            where: {
+              status: { not: 'CANCELADO' }
+            },
+            select: {
+              id: true,
+              valorTotal: true,
+              status: true,
+              dataFim: true,
+              createdAt: true
             },
             orderBy: {
               createdAt: 'desc'

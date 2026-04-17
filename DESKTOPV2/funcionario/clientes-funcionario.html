@@ -67,7 +67,7 @@
     .search-bar {
       background: var(--white);
       border-bottom: 1px solid var(--border);
-      padding: 12px 16px;
+      padding: 12px 16px 0;
       position: sticky;
       top: 56px;
       z-index: 90;
@@ -95,12 +95,47 @@
     }
     .search-clear.visible { display: block; }
 
+    /* ── FILTROS ── */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      font-size: 12px; font-weight: 600; color: var(--mid);
+      cursor: pointer; white-space: nowrap;
+      transition: all .15s;
+    }
+    .filter-btn.active {
+      background: var(--navy); color: #fff; border-color: var(--navy);
+    }
+    .filter-badge {
+      background: rgba(255,255,255,.25);
+      border-radius: 99px;
+      padding: 0 5px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .filter-btn:not(.active) .filter-badge {
+      background: var(--bg);
+      color: var(--mid);
+    }
+
     /* ── GRID DE CARDS ── */
     .crm-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 12px;
-      padding: 16px;
+      padding: 12px 16px;
       padding-bottom: 100px;
     }
 
@@ -138,6 +173,7 @@
       background: linear-gradient(135deg, var(--light), var(--mid));
     }
     .cc-info { flex: 1; min-width: 0; }
+    .cc-name-row { display: flex; align-items: center; gap: 6px; }
     .cc-name {
       font-size: 15px; font-weight: 700; color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -148,6 +184,24 @@
       display: flex; align-items: center; gap: 5px;
     }
     .cc-phone .no-phone { font-style: italic; }
+
+    /* Badges */
+    .badge-semnom {
+      display: inline-block; padding: 1px 6px;
+      background: #fef3c7; color: #92400e;
+      border: 1px solid #fde68a;
+      border-radius: 4px; font-size: 9px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px;
+      white-space: nowrap;
+    }
+    .badge-visita {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 7px; border-radius: 20px;
+      font-size: 10px; font-weight: 600; white-space: nowrap;
+    }
+    .badge-visita.recente { background: #d1fae5; color: #065f46; }
+    .badge-visita.media   { background: #fef3c7; color: #92400e; }
+    .badge-visita.antiga  { background: #fee2e2; color: #991b1b; }
 
     .cc-tags {
       display: flex; gap: 6px; flex-wrap: wrap;
@@ -334,7 +388,7 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .detail-stat {
       background: var(--bg);
@@ -362,9 +416,10 @@
     .detail-row-label { color: var(--mid); font-weight: 500; }
     .detail-row-val { color: var(--text); font-weight: 600; }
 
+    /* Veículos no detalhe */
     .veh-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
       gap: 8px;
       margin-bottom: 20px;
     }
@@ -377,9 +432,20 @@
     }
     .veh-card-plate { font-size: 13px; font-weight: 700; }
     .veh-card-model { font-size: 11px; color: var(--mid); margin-top: 2px; }
+    .btn-transfer-veh {
+      margin-top: 6px; width: 100%;
+      padding: 4px 0;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 10px; font-weight: 600; color: var(--mid);
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .btn-transfer-veh:hover { border-color: var(--blue); color: var(--blue-d); background: #eff6ff; }
 
     .detail-action-row {
-      display: flex; gap: 8px; margin-top: 4px; margin-bottom: 20px;
+      display: flex; gap: 8px; margin-top: 4px; margin-bottom: 16px;
     }
     .btn-detail-action {
       flex: 1; padding: 10px;
@@ -394,6 +460,110 @@
     .btn-detail-action.wa:hover { background: #f0fdf4; border-color: #25D366; }
     .btn-detail-action.danger { color: var(--red); border-color: #fecaca; }
     .btn-detail-action.danger:hover { background: #fef2f2; border-color: var(--red); }
+
+    /* Box de reengajamento WhatsApp */
+    .wa-reengage-box {
+      background: #f0fdf4;
+      border: 1.5px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .wa-reengage-title {
+      font-size: 12px; font-weight: 700; color: #065f46;
+      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .wa-reengage-msg {
+      font-size: 12px; color: #047857;
+      margin-bottom: 10px; line-height: 1.5;
+    }
+    .btn-wa-reengage {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: #25D366; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      transition: background .15s;
+    }
+    .btn-wa-reengage:hover { background: #1da851; }
+
+    /* ── MODAL TRANSFERÊNCIA ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 300;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--white);
+      border-radius: 16px;
+      width: 90%; max-width: 420px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .modal-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h3 { font-size: 15px; font-weight: 700; }
+    .modal-close-btn {
+      background: none; border: none; font-size: 18px; color: var(--mid);
+      cursor: pointer; padding: 4px;
+    }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px;
+    }
+
+    .transfer-info {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px; margin-bottom: 14px;
+    }
+    .transfer-info strong { color: var(--text); }
+    .transfer-info span { color: var(--mid); }
+
+    .transfer-search-results {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .transfer-result-item {
+      padding: 10px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; font-size: 13px;
+      transition: background .1s;
+    }
+    .transfer-result-item:last-child { border-bottom: none; }
+    .transfer-result-item:hover { background: #eff6ff; }
+    .transfer-result-item.selected { background: #dbeafe; }
+    .transfer-result-name { font-weight: 600; color: var(--text); }
+    .transfer-result-phone { font-size: 11px; color: var(--mid); }
+
+    .selected-client-box {
+      background: #dbeafe;
+      border: 1.5px solid #93c5fd;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .selected-client-name { font-size: 13px; font-weight: 700; color: var(--blue-d); }
+    .btn-deselect {
+      background: none; border: none; color: var(--light);
+      cursor: pointer; font-size: 16px; padding: 2px;
+    }
 
     /* ── NAV ── */
     .bottom-nav {
@@ -452,17 +622,18 @@
       </div>
     </div>
     <button class="hd-btn" onclick="openFormNew()">
-      <i class="fas fa-plus"></i> Novo Cliente
+      <i class="fas fa-plus"></i> Novo
     </button>
   </header>
 
-  <!-- BUSCA -->
+  <!-- BUSCA + FILTROS -->
   <div class="search-bar">
     <div class="search-wrap">
       <i class="fas fa-search"></i>
       <input type="text" id="searchInput" placeholder="Nome, telefone ou placa..." oninput="onSearch(this)">
       <button class="search-clear" id="searchClear" onclick="clearSearch()"><i class="fas fa-times"></i></button>
     </div>
+    <div class="filter-bar" id="filterBar"></div>
   </div>
 
   <!-- CARDS -->
@@ -488,6 +659,33 @@
     <div class="drawer-footer" id="drawerFooter" style="display:none"></div>
   </div>
 
+  <!-- MODAL TRANSFERÊNCIA -->
+  <div class="modal-overlay" id="transferModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fas fa-exchange-alt" style="color:var(--blue-d);margin-right:6px"></i> Transferir Veículo</h3>
+        <button class="modal-close-btn" onclick="closeTransferModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="transfer-info" id="transferInfo"></div>
+        <div class="form-group">
+          <label class="form-label">Buscar cliente destino</label>
+          <input type="text" class="form-input" id="transferSearch"
+                 placeholder="Nome ou telefone..."
+                 oninput="onTransferSearch(this)">
+        </div>
+        <div id="transferResults"></div>
+        <div id="selectedClientBox" style="display:none"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-f btn-f-cancel" onclick="closeTransferModal()">Cancelar</button>
+        <button class="btn-f btn-f-save" id="btnConfirmTransfer" onclick="confirmarTransferencia()" disabled>
+          <i class="fas fa-check"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="../api.js"></script>
   <script src="utils-funcionario.js"></script>
   <script>
@@ -498,6 +696,12 @@
     let filtered      = [];
     let editingId     = null;
     let vehCount      = 0;
+    let filtroAtivo   = 'todos';
+
+    // Estado da transferência
+    let transferVeiculoData   = null;
+    let transferClienteSel    = null;
+    let transferTimer         = null;
 
     // ── INIT ──────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
@@ -518,9 +722,10 @@
     async function loadClientes() {
       setGrid(`<div class="state-container"><div class="spin"></div></div>`);
       try {
-        const r = await window.api.getClientes(1, 200, '');
+        const r = await window.api.getClientes(1, 500, '');
         allClientes = r.clientes || r.data || [];
         filtered    = [...allClientes];
+        renderFilterBar();
         renderGrid();
       } catch {
         setGrid(`<div class="state-container">
@@ -531,18 +736,98 @@
       }
     }
 
-    // ── RENDER ────────────────────────────────────
+    // ── FILTRO BAR ────────────────────────────────
+    function renderFilterBar() {
+      const filtros = [
+        { id: 'todos',    label: 'Todos' },
+        { id: 'recentes', label: 'Recentes 7d' },
+        { id: 'inativos', label: 'Inativos 30d+' },
+        { id: 'semNome',  label: 'Sem Nome' }
+      ];
+      document.getElementById('filterBar').innerHTML = filtros.map(f => {
+        const count = f.id === 'todos' ? allClientes.length : contarFiltro(f.id);
+        return `<button class="filter-btn ${filtroAtivo === f.id ? 'active' : ''}"
+                        onclick="setFiltro('${f.id}')">
+          ${f.label}
+          <span class="filter-badge">${count}</span>
+        </button>`;
+      }).join('');
+    }
+
+    function setFiltro(id) {
+      filtroAtivo = id;
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      applyFilters(q);
+      renderFilterBar();
+    }
+
+    function contarFiltro(tipo) {
+      return allClientes.filter(c => matchFiltro(c, tipo)).length;
+    }
+
+    function matchFiltro(c, tipo) {
+      const dias = diasDesdeUltimaVisita(c);
+      if (tipo === 'recentes') return dias !== null && dias <= 7;
+      if (tipo === 'inativos') return dias === null || dias > 30;
+      if (tipo === 'semNome')  return !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
+      return true;
+    }
+
+    // ── HELPERS DE DATA / VISITA ──────────────────
+    function ultimaVisitaDate(c) {
+      const ordens = (c.ordens || []).filter(o => o.status !== 'CANCELADO');
+      if (!ordens.length) return null;
+      const datas = ordens
+        .map(o => o.dataFim || o.createdAt)
+        .filter(Boolean)
+        .map(d => new Date(d));
+      if (!datas.length) return null;
+      return new Date(Math.max(...datas));
+    }
+
+    function diasDesdeUltimaVisita(c) {
+      const data = ultimaVisitaDate(c);
+      if (!data) return null;
+      return Math.floor((Date.now() - data.getTime()) / 86400000);
+    }
+
+    function badgeVisitaHtml(c) {
+      const dias = diasDesdeUltimaVisita(c);
+      if (dias === null) return '';
+      let cls, txt;
+      if (dias <= 7)  { cls = 'recente'; txt = `${dias}d`; }
+      else if (dias <= 30) { cls = 'media'; txt = `${dias}d`; }
+      else            { cls = 'antiga';  txt = `${dias}d`; }
+      return `<span class="badge-visita ${cls}"><i class="fas fa-clock"></i>${txt}</span>`;
+    }
+
+    function calcTotalGasto(c) {
+      return (c.ordens || [])
+        .filter(o => o.status !== 'CANCELADO')
+        .reduce((acc, o) => acc + (o.valorTotal || 0), 0);
+    }
+
+    function gerarLinkWhatsApp(c, dias) {
+      const nome = (c.nome && c.nome !== 'N/A' ? c.nome : 'cliente').split(' ')[0];
+      const diasTxt = dias !== null ? `${dias} dias` : 'um tempo';
+      const msg = `Olá ${nome}! 😊 Já faz ${diasTxt} desde a sua última visita. Seu veículo já pode estar precisando de uma lavagem! Que tal agendar hoje? Temos horários disponíveis para você. 🚗✨`;
+      return `https://wa.me/55${cleanPhone(c.telefone)}?text=${encodeURIComponent(msg)}`;
+    }
+
+    // ── RENDER GRID ───────────────────────────────
     function renderGrid() {
-      const total = filtered.length;
+      const total    = filtered.length;
       const allTotal = allClientes.length;
       document.getElementById('countLabel').textContent =
-        total === allTotal ? `${total} cliente${total !== 1 ? 's' : ''}` : `${total} de ${allTotal} cliente${allTotal !== 1 ? 's' : ''}`;
+        total === allTotal
+          ? `${total} cliente${total !== 1 ? 's' : ''}`
+          : `${total} de ${allTotal} cliente${allTotal !== 1 ? 's' : ''}`;
 
       if (total === 0) {
         setGrid(`<div class="state-container">
           <i class="fas fa-users-slash state-icon"></i>
           <div class="state-title">Nenhum cliente encontrado</div>
-          <div class="state-sub">Tente outro termo ou cadastre um novo cliente.</div>
+          <div class="state-sub">Tente outro termo ou mude o filtro.</div>
         </div>`);
         return;
       }
@@ -557,17 +842,18 @@
     }
 
     function clienteCard(c) {
-      const isNA      = !c.nome || c.nome === 'N/A';
+      const isNA      = !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
       const initial   = isNA ? '?' : c.nome.charAt(0).toUpperCase();
       const veiculos  = c.veiculos || [];
-      const totalGasto= c._sum?.valorTotal || 0;
-      const totalOrdens = c.ordens?.length || c._count?.ordens || 0;
+      const totalGasto= calcTotalGasto(c);
+      const totalOrdens = (c.ordens || []).filter(o => o.status !== 'CANCELADO').length || c._count?.ordens || 0;
+      const visitaBadge = badgeVisitaHtml(c);
 
-      const vehicleTags = veiculos.slice(0, 3).map(v =>
+      const vehicleTags = veiculos.slice(0, 2).map(v =>
         `<span class="tag tag-plate">${v.placa}</span>
          ${v.modelo ? `<span class="tag tag-model">${v.modelo}</span>` : ''}`
       ).join('');
-      const moreVeh = veiculos.length > 3 ? `<span class="tag tag-model">+${veiculos.length - 3}</span>` : '';
+      const moreVeh = veiculos.length > 2 ? `<span class="tag tag-model">+${veiculos.length - 2}</span>` : '';
 
       const waBtn = c.telefone
         ? `<a href="https://wa.me/55${cleanPhone(c.telefone)}" target="_blank" class="cc-action-btn wa" title="WhatsApp" onclick="event.stopPropagation()">
@@ -575,17 +861,23 @@
            </a>`
         : '';
 
+      const semNomeBadge = isNA ? `<span class="badge-semnom">N/A</span>` : '';
+
       return `
         <div class="client-card" onclick="openDetail('${c.id}')">
           <div class="cc-top">
             <div class="cc-avatar ${isNA ? 'na' : ''}">${initial}</div>
             <div class="cc-info">
-              <div class="cc-name ${isNA ? 'na-name' : ''}">${isNA ? 'Sem nome' : escHtml(c.nome)}</div>
+              <div class="cc-name-row">
+                <div class="cc-name ${isNA ? 'na-name' : ''}">${isNA ? 'Sem nome' : escHtml(c.nome)}</div>
+                ${semNomeBadge}
+              </div>
               <div class="cc-phone">
                 <i class="fas fa-phone" style="font-size:10px"></i>
                 ${c.telefone ? escHtml(c.telefone) : '<span class="no-phone">Sem telefone</span>'}
               </div>
             </div>
+            ${visitaBadge ? `<div>${visitaBadge}</div>` : ''}
           </div>
           ${veiculos.length > 0 ? `<div class="cc-tags">${vehicleTags}${moreVeh}</div>` : ''}
           <div class="cc-bottom">
@@ -615,21 +907,28 @@
     function onSearch(input) {
       const q = input.value.trim().toLowerCase();
       document.getElementById('searchClear').classList.toggle('visible', q.length > 0);
-      filtered = q
-        ? allClientes.filter(c =>
-            (c.nome || '').toLowerCase().includes(q) ||
-            (c.telefone || '').includes(q) ||
-            (c.veiculos || []).some(v => (v.placa || '').toLowerCase().includes(q) || (v.modelo || '').toLowerCase().includes(q))
-          )
-        : [...allClientes];
+      applyFilters(q);
+    }
+
+    function applyFilters(q) {
+      filtered = allClientes.filter(c => {
+        const matchSearch = !q ||
+          (c.nome || '').toLowerCase().includes(q) ||
+          (c.telefone || '').includes(q) ||
+          (c.veiculos || []).some(v =>
+            (v.placa || '').toLowerCase().includes(q) ||
+            (v.modelo || '').toLowerCase().includes(q)
+          );
+        const matchFilter = filtroAtivo === 'todos' || matchFiltro(c, filtroAtivo);
+        return matchSearch && matchFilter;
+      });
       renderGrid();
     }
 
     function clearSearch() {
       document.getElementById('searchInput').value = '';
       document.getElementById('searchClear').classList.remove('visible');
-      filtered = [...allClientes];
-      renderGrid();
+      applyFilters('');
     }
 
     // ── DRAWER DETALHE ────────────────────────────
@@ -641,15 +940,48 @@
       document.getElementById('drawerTitle').textContent = c.nome && c.nome !== 'N/A' ? c.nome : 'Cliente sem nome';
       document.getElementById('drawerFooter').style.display = 'none';
 
-      const totalGasto  = c._sum?.valorTotal || 0;
-      const totalOrdens = c.ordens?.length || c._count?.ordens || 0;
+      const totalGasto  = calcTotalGasto(c);
+      const ordensValidas = (c.ordens || []).filter(o => o.status !== 'CANCELADO');
+      const totalOrdens = ordensValidas.length || c._count?.ordens || 0;
       const veiculos    = c.veiculos || [];
+      const dias        = diasDesdeUltimaVisita(c);
+      const uvData      = ultimaVisitaDate(c);
+      const ultimaVisitaFmt = uvData ? uvData.toLocaleDateString('pt-BR') : '—';
 
       const waAction = c.telefone
         ? `<a href="https://wa.me/55${cleanPhone(c.telefone)}" target="_blank" class="btn-detail-action wa">
              <i class="fab fa-whatsapp"></i> WhatsApp
            </a>`
         : '';
+
+      // Box de reengajamento (15+ dias sem visita e tem telefone)
+      let reengageBox = '';
+      if (c.telefone && dias !== null && dias >= 15) {
+        const link = gerarLinkWhatsApp(c, dias);
+        reengageBox = `
+          <div class="wa-reengage-box">
+            <div class="wa-reengage-title"><i class="fab fa-whatsapp"></i> Reengajar cliente</div>
+            <div class="wa-reengage-msg">Última visita há <strong>${dias} dias</strong>. Envie uma mensagem personalizada para trazer o cliente de volta.</div>
+            <a href="${link}" target="_blank" class="btn-wa-reengage">
+              <i class="fab fa-whatsapp"></i> Enviar via WhatsApp
+            </a>
+          </div>`;
+      }
+
+      const veiculosHtml = veiculos.length > 0
+        ? `<div class="detail-section-title" style="margin-top:20px">Veículos (${veiculos.length})</div>
+           <div class="veh-grid">
+             ${veiculos.map(v => `
+               <div class="veh-card">
+                 <div class="veh-card-plate">${v.placa}</div>
+                 <div class="veh-card-model">${v.modelo || '—'}</div>
+                 <button class="btn-transfer-veh" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')">
+                   <i class="fas fa-exchange-alt"></i> Transferir
+                 </button>
+               </div>
+             `).join('')}
+           </div>`
+        : `<div style="color:var(--light);font-size:13px;margin-top:16px;text-align:center">Nenhum veículo vinculado</div>`;
 
       document.getElementById('drawerBody').innerHTML = `
         <div class="detail-stat-row">
@@ -666,6 +998,8 @@
             <div class="detail-stat-lbl">Total gasto</div>
           </div>
         </div>
+
+        ${reengageBox}
 
         <div class="detail-action-row">
           ${waAction}
@@ -686,19 +1020,116 @@
           <span class="detail-row-label">Telefone</span>
           <span class="detail-row-val">${c.telefone ? escHtml(c.telefone) : '—'}</span>
         </div>
+        <div class="detail-row">
+          <span class="detail-row-label">Última visita</span>
+          <span class="detail-row-val">${ultimaVisitaFmt}${dias !== null ? ` <span style="color:var(--mid);font-weight:400;font-size:11px">(${dias}d atrás)</span>` : ''}</span>
+        </div>
 
-        ${veiculos.length > 0 ? `
-          <div class="detail-section-title" style="margin-top:20px">Veículos (${veiculos.length})</div>
-          <div class="veh-grid">
-            ${veiculos.map(v => `
-              <div class="veh-card">
-                <div class="veh-card-plate">${v.placa}</div>
-                <div class="veh-card-model">${v.modelo || '—'}</div>
+        ${veiculosHtml}
+      `;
+    }
+
+    // ── TRANSFER MODAL ────────────────────────────
+    function openTransferModal(veiculoId, placa, modelo, clienteAtualId, clienteAtualNome) {
+      transferVeiculoData = { id: veiculoId, placa, modelo, clienteAtualId };
+      transferClienteSel  = null;
+
+      document.getElementById('transferInfo').innerHTML =
+        `<strong>Veículo:</strong> <span>${placa}${modelo ? ' — ' + modelo : ''}</span><br>
+         <strong>Proprietário atual:</strong> <span>${escHtml(clienteAtualNome)}</span>`;
+
+      document.getElementById('transferSearch').value = '';
+      document.getElementById('transferResults').innerHTML = '';
+      document.getElementById('selectedClientBox').style.display = 'none';
+      document.getElementById('btnConfirmTransfer').disabled = true;
+
+      document.getElementById('transferModal').classList.add('open');
+    }
+
+    function closeTransferModal() {
+      document.getElementById('transferModal').classList.remove('open');
+      clearTimeout(transferTimer);
+      transferVeiculoData = null;
+      transferClienteSel  = null;
+    }
+
+    function onTransferSearch(input) {
+      clearTimeout(transferTimer);
+      const q = input.value.trim().toLowerCase();
+      if (q.length < 2) {
+        document.getElementById('transferResults').innerHTML = '';
+        return;
+      }
+      transferTimer = setTimeout(() => {
+        const resultados = allClientes.filter(c =>
+          c.id !== transferVeiculoData?.clienteAtualId &&
+          ((c.nome || '').toLowerCase().includes(q) || (c.telefone || '').includes(q))
+        ).slice(0, 8);
+
+        if (!resultados.length) {
+          document.getElementById('transferResults').innerHTML =
+            `<p style="font-size:12px;color:var(--light);text-align:center;padding:10px">Nenhum cliente encontrado</p>`;
+          return;
+        }
+
+        document.getElementById('transferResults').innerHTML = `
+          <div class="transfer-search-results">
+            ${resultados.map(c => `
+              <div class="transfer-result-item ${transferClienteSel?.id === c.id ? 'selected' : ''}"
+                   onclick="selecionarClienteTransfer('${c.id}', '${escHtml(c.nome || 'N/A')}', '${escHtml(c.telefone || '')}')">
+                <div>
+                  <div class="transfer-result-name">${escHtml(c.nome || 'N/A')}</div>
+                  ${c.telefone ? `<div class="transfer-result-phone">${escHtml(c.telefone)}</div>` : ''}
+                </div>
+                ${transferClienteSel?.id === c.id ? '<i class="fas fa-check" style="color:var(--blue-d)"></i>' : ''}
               </div>
             `).join('')}
+          </div>`;
+      }, 300);
+    }
+
+    function selecionarClienteTransfer(id, nome, telefone) {
+      transferClienteSel = { id, nome, telefone };
+      document.getElementById('btnConfirmTransfer').disabled = false;
+
+      const box = document.getElementById('selectedClientBox');
+      box.style.display = 'flex';
+      box.innerHTML = `
+        <div class="selected-client-box">
+          <div>
+            <div class="selected-client-name">${escHtml(nome)}</div>
+            ${telefone ? `<div style="font-size:11px;color:var(--mid)">${escHtml(telefone)}</div>` : ''}
           </div>
-        ` : `<div style="color:var(--light);font-size:13px;margin-top:16px;text-align:center">Nenhum veículo vinculado</div>`}
-      `;
+          <button class="btn-deselect" onclick="desselecionarTransfer()"><i class="fas fa-times"></i></button>
+        </div>`;
+
+      // Atualizar resultados para mostrar selecionado
+      onTransferSearch(document.getElementById('transferSearch'));
+    }
+
+    function desselecionarTransfer() {
+      transferClienteSel = null;
+      document.getElementById('btnConfirmTransfer').disabled = true;
+      document.getElementById('selectedClientBox').style.display = 'none';
+    }
+
+    async function confirmarTransferencia() {
+      if (!transferVeiculoData || !transferClienteSel) return;
+      const btn = document.getElementById('btnConfirmTransfer');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transferindo...';
+
+      try {
+        const result = await window.api.transferirVeiculo(transferVeiculoData.id, transferClienteSel.id);
+        showToast(result.message || 'Veículo transferido com sucesso!', 'success');
+        closeTransferModal();
+        closeDrawer();
+        await loadClientes();
+      } catch (err) {
+        showToast(err?.error || 'Erro ao transferir veículo', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
+      }
     }
 
     // ── DRAWER FORM (novo / editar) ───────────────
@@ -855,7 +1286,7 @@
     }
 
     // ── UTILS ─────────────────────────────────────
-    function cleanPhone(p) { return p.replace(/\D/g, ''); }
+    function cleanPhone(p) { return (p || '').replace(/\D/g, ''); }
 
     function escHtml(str) {
       if (!str) return '';

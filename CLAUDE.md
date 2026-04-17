@@ -27,10 +27,12 @@ Guia para o Claude Code ao trabalhar neste repositório.
 
 ## Deploy & Produção
 
-- **Frontend**: Vercel — auto-deploy ao push no GitHub
-- **Backend**: Railway — auto-deploy ao push no GitHub
-- ⚠️ **Railway free tier**: deploys bloqueados das **9h às 21h (horário de Brasília)**. Só funciona entre 21h–9h.
+- **Frontend**: Vercel — auto-deploy ao push no GitHub. **Atualiza imediatamente a qualquer hora.**
+- **Backend**: Railway — auto-deploy ao push no GitHub. ⚠️ **Railway free tier**: deploys bloqueados das **9h às 21h (horário de Brasília)**. Só funciona entre **21h–9h**.
 - Toda mudança requer `git commit + push` para ser testada em produção.
+
+> **Regra prática**: mudanças **só de frontend** (HTML/CSS/JS em `/DESKTOPV2`) são imediatas no Vercel.
+> Mudanças de **backend** (controllers, rotas, services) só entram em produção a partir das **21h BRT**.
 
 ---
 

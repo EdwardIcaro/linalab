@@ -372,3 +372,62 @@ export const deleteVeiculo = async (req: EmpresaRequest, res: Response) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
+
+/**
+ * Transferir veículo para outro cliente (move veículo + todas as ordens)
+ */
+export const transferirVeiculo = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    const { novoClienteId } = req.body;
+    if (!novoClienteId) {
+      return res.status(400).json({ error: 'novoClienteId é obrigatório' });
+    }
+
+    // Verificar veículo pertence à empresa
+    const veiculo = await prisma.veiculo.findFirst({
+      where: { id, cliente: { empresaId: req.empresaId } },
+      include: { cliente: { select: { id: true, nome: true } } }
+    });
+    if (!veiculo) {
+      return res.status(404).json({ error: 'Veículo não encontrado' });
+    }
+    if (veiculo.clienteId === novoClienteId) {
+      return res.status(400).json({ error: 'Veículo já pertence a este cliente' });
+    }
+
+    // Verificar cliente destino pertence à empresa
+    const novoCliente = await prisma.cliente.findFirst({
+      where: { id: novoClienteId, empresaId: req.empresaId },
+      select: { id: true, nome: true }
+    });
+    if (!novoCliente) {
+      return res.status(404).json({ error: 'Cliente destino não encontrado' });
+    }
+
+    // Transação: mover veículo + atualizar clienteId em todas as ordens
+    await prisma.$transaction([
+      prisma.veiculo.update({
+        where: { id },
+        data: { clienteId: novoClienteId }
+      }),
+      prisma.ordemServico.updateMany({
+        where: { veiculoId: id },
+        data: { clienteId: novoClienteId }
+      })
+    ]);
+
+    res.json({
+      message: `Veículo ${veiculo.placa} transferido de "${veiculo.cliente.nome}" para "${novoCliente.nome}" com sucesso`,
+      placa: veiculo.placa,
+      clienteAnterior: veiculo.cliente.nome,
+      novoCliente: novoCliente.nome
+    });
+  } catch (error) {
+    console.error('Erro ao transferir veículo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
