@@ -1421,7 +1421,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       include: {
         lavador: true,
         cliente: true,
-        veiculo: true
+        veiculo: true,
+        items: {
+          include: { servico: true }
+        }
       }
     });
 
@@ -1483,9 +1486,22 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       });
     }
 
-    // Calcular comissão se houver lavador (sobre valorFinal após desconto)
+    // Calcular comissão item a item, respeitando comissaoPercentual de cada serviço.
+    // O desconto é aplicado proporcionalmente sobre os subtotais.
     let comissaoCalculada = 0;
-    if (ordem.lavador) {
+    if (ordem.lavador && ordem.items && ordem.items.length > 0) {
+      const lavadorComissaoPadrao = ordem.lavador.comissao;
+      const descontoFator = ordem.valorTotal > 0 ? valorFinal / ordem.valorTotal : 1;
+
+      comissaoCalculada = ordem.items.reduce((sum: number, item: any) => {
+        let percentual = lavadorComissaoPadrao;
+        if (item.tipo === 'SERVICO' && item.servico?.comissaoPercentual != null) {
+          percentual = item.servico.comissaoPercentual;
+        }
+        return sum + item.subtotal * descontoFator * (percentual / 100);
+      }, 0);
+    } else if (ordem.lavador) {
+      // fallback: sem items detalhados, aplica % padrão sobre valorFinal
       comissaoCalculada = (valorFinal * ordem.lavador.comissao) / 100;
     }
 
