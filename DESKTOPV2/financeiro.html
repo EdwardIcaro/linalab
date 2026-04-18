@@ -6,6 +6,7 @@
     <title>LinaX - Financeiro</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1619,6 +1620,10 @@
                                     <i class="fas fa-arrow-up"></i>
                                     Lancar Despesa
                                 </button>
+                                <button class="btn btn-secondary" type="button" @click="exportTransacoesXLS()" x-show="transactions.length > 0" title="Exportar tabela como planilha Excel">
+                                    <i class="fas fa-file-excel" style="color:#217346;"></i>
+                                    Exportar XLS
+                                </button>
                             </div>
                         </div>
 
@@ -2136,6 +2141,16 @@
                             >
                                 <i class="fas fa-arrow-left" style="margin-right: 8px;"></i>
                                 Voltar
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="exportRelatorioXLS()"
+                                style="color:#217346; border-color:rgba(33,115,70,.3);"
+                                title="Exportar relatório completo como planilha Excel"
+                            >
+                                <i class="fas fa-file-excel" style="color:#217346;"></i>
+                                Exportar XLS
                             </button>
                             <button
                                 type="button"
@@ -3935,6 +3950,182 @@
                     if (tipo === 'PAGAMENTO') return 'value-positive';
                     if (tipo === 'PENDENTE') return 'value-pending';
                     return 'value-negative';
+                },
+
+                // ==========================================
+                // EXPORTAÇÃO XLS
+                // ==========================================
+
+                _xlsDate(dateStr) {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                },
+                _xlsTime(dateStr) {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+                },
+                _xlsN(v) { return Number(Number(v || 0).toFixed(2)); },
+
+                exportTransacoesXLS() {
+                    if (!window.XLSX) { alert('Biblioteca XLSX não carregada.'); return; }
+                    const X = window.XLSX;
+                    const wb = X.utils.book_new();
+
+                    // Aba 1 — Movimentações (tabela completa filtrada)
+                    const mov = [['Data', 'Hora', 'Tipo', 'Descrição', 'Forma Pgto', 'Responsável', 'Valor (R$)']];
+                    for (const tx of this.transactions) {
+                        const sinal = tx.tipo === 'PAGAMENTO' || tx.tipo === 'PENDENTE' ? 1 : -1;
+                        mov.push([
+                            this._xlsDate(tx.data),
+                            this._xlsTime(tx.data),
+                            this.getTypeLabel(tx.tipo, tx.formaPagamento, tx),
+                            tx.descricao || '',
+                            tx.formaPagamento || '',
+                            tx.lavador?.nome || tx.fornecedor?.nome || '',
+                            this._xlsN(sinal * (tx.valor || 0)),
+                        ]);
+                    }
+                    const wsMov = X.utils.aoa_to_sheet(mov);
+                    wsMov['!cols'] = [{ wch:12 },{ wch:8 },{ wch:14 },{ wch:42 },{ wch:14 },{ wch:22 },{ wch:14 }];
+                    X.utils.book_append_sheet(wb, wsMov, 'Movimentações');
+
+                    // Aba 2 — Resumo do período
+                    const res = [
+                        ['Resumo do Período'],
+                        ['Período', `${this.filters.dataInicio} a ${this.filters.dataFim}`],
+                        [],
+                        ['Indicador', 'Valor (R$)'],
+                        ['Faturamento Total', this._xlsN(this.balance.totalReceived)],
+                        ['Saídas Operacionais', this._xlsN(this.balance.saidasOperacionais)],
+                        ['Adiantamentos', this._xlsN(this.balance.adiantamentos)],
+                        ['Sangrias', this._xlsN(this.balance.sangrias)],
+                        ['Saldo Líquido', this._xlsN(this.balance.netBalance)],
+                        ['Pendências', this._xlsN(this.balance.pending)],
+                        [],
+                        ['Por Forma de Pagamento', ''],
+                        ['Dinheiro', this._xlsN(this.balance.cash)],
+                        ['Cartão', this._xlsN(this.balance.card)],
+                        ['PIX', this._xlsN(this.balance.pix)],
+                    ];
+                    const wsRes = X.utils.aoa_to_sheet(res);
+                    wsRes['!cols'] = [{ wch:30 },{ wch:16 }];
+                    X.utils.book_append_sheet(wb, wsRes, 'Resumo');
+
+                    const per = `${(this.filters.dataInicio||'').replace(/-/g,'')}`;
+                    X.writeFile(wb, `movimentacoes_${per}.xlsx`);
+                },
+
+                exportRelatorioXLS() {
+                    if (!window.XLSX) { alert('Biblioteca XLSX não carregada.'); return; }
+                    if (!this.reportData) { alert('Gere o relatório primeiro.'); return; }
+                    const X = window.XLSX;
+                    const wb = X.utils.book_new();
+
+                    // Aba 1 — Resumo Executivo
+                    const bruto  = this._xlsN(this.reportData?.stats?.valorTotal);
+                    const saidas = this._xlsN(this.reportData?.historico?.totais?.totalSaidasOperacionais ?? this.reportData?.historico?.totais?.totalSaidas);
+                    const adiant = this._xlsN(this.reportData?.historico?.totais?.totalAdiantamentos);
+                    const liquid = this._xlsN(this.calcLiquidoSaidas());
+                    const pend   = this._xlsN(this.reportData?.stats?.valorPendente);
+                    const ordens = this.reportData?.stats?.ordensFinalizadas || 0;
+
+                    const res = [
+                        ['Relatório Financeiro — Lina X'],
+                        ['Período', `${this.reportDates.inicio} a ${this.reportDates.fim}`],
+                        [],
+                        ['Indicador', 'Valor (R$)'],
+                        ['Faturamento Bruto', bruto],
+                        ['Saídas Operacionais', saidas],
+                        ['Adiantamentos (provisório)', adiant],
+                        ['Saldo Líquido', liquid],
+                        ['Pendências', pend],
+                        ['Total de Ordens', ordens],
+                    ];
+                    const wsRes = X.utils.aoa_to_sheet(res);
+                    wsRes['!cols'] = [{ wch:34 },{ wch:16 }];
+                    X.utils.book_append_sheet(wb, wsRes, 'Resumo');
+
+                    // Aba 2 — Movimentações do período
+                    const registros = this.reportData?.historico?.registros || [];
+                    const mov = [['Data', 'Hora', 'Tipo', 'Descrição', 'Forma Pgto', 'Responsável', 'Valor (R$)']];
+                    for (const r of registros) {
+                        const sinal = r.tipo === 'PAGAMENTO' || r.tipo === 'PENDENTE' ? 1 : -1;
+                        mov.push([
+                            this._xlsDate(r.data),
+                            this._xlsTime(r.data),
+                            r.tipo,
+                            r.descricao || '',
+                            r.formaPagamento || '',
+                            r.lavador?.nome || r.fornecedor?.nome || '',
+                            this._xlsN(sinal * (r.valor || 0)),
+                        ]);
+                    }
+                    const wsMov = X.utils.aoa_to_sheet(mov);
+                    wsMov['!cols'] = [{ wch:12 },{ wch:8 },{ wch:14 },{ wch:42 },{ wch:14 },{ wch:22 },{ wch:14 }];
+                    X.utils.book_append_sheet(wb, wsMov, 'Movimentações');
+
+                    // Aba 3 — Top Serviços
+                    const svcs = this.reportData?.stats?.topServicos || [];
+                    const svcsRows = [
+                        ['Serviço', 'Qtd Realizações', 'Valor Total (R$)'],
+                        ...svcs.map(s => [
+                            s.servico?.nome || s.nome || '—',
+                            s._count?.id || 0,
+                            this._xlsN(s._sum?.valorTotal),
+                        ])
+                    ];
+                    const wsSvcs = X.utils.aoa_to_sheet(svcsRows);
+                    wsSvcs['!cols'] = [{ wch:30 },{ wch:16 },{ wch:18 }];
+                    X.utils.book_append_sheet(wb, wsSvcs, 'Serviços');
+
+                    // Aba 4 — Pagamentos por Método
+                    const pagtos = this.getPaymentBreakdown();
+                    const totalPag = pagtos.reduce((s, p) => s + (p.valor || 0), 0);
+                    const pagtosRows = [
+                        ['Método', 'Valor (R$)', '% do Faturamento'],
+                        ...pagtos.map(p => [
+                            p.metodo,
+                            this._xlsN(p.valor),
+                            totalPag > 0 ? Number(((p.valor / totalPag) * 100).toFixed(1)) : 0,
+                        ])
+                    ];
+                    const wsPag = X.utils.aoa_to_sheet(pagtosRows);
+                    wsPag['!cols'] = [{ wch:16 },{ wch:16 },{ wch:18 }];
+                    X.utils.book_append_sheet(wb, wsPag, 'Pagamentos');
+
+                    // Aba 5 — Lavadores
+                    const lavs = this.reportData?.stats?.topLavadores || [];
+                    const lavsRows = [
+                        ['Lavador', 'Ordens', 'Faturamento (R$)', 'Comissão Est. (R$)', 'Comissão (%)'],
+                        ...lavs.map(l => {
+                            const pct = l.lavador?.comissao || 0;
+                            const fat = this._xlsN(l._sum?.valorTotal);
+                            return [l.lavador?.nome || '—', l._count?.id || 0, fat, this._xlsN(fat * pct / 100), pct];
+                        })
+                    ];
+                    const wsLavs = X.utils.aoa_to_sheet(lavsRows);
+                    wsLavs['!cols'] = [{ wch:24 },{ wch:10 },{ wch:18 },{ wch:20 },{ wch:14 }];
+                    X.utils.book_append_sheet(wb, wsLavs, 'Lavadores');
+
+                    // Aba 6 — Saídas por Categoria
+                    const cats = this.groupSaidasByCategory();
+                    const catsRows = [
+                        ['Categoria', 'Qtd Movimentações', 'Total (R$)', 'Tipo'],
+                        ...Object.entries(cats).map(([cat, v]) => [
+                            cat, v.count, this._xlsN(v.total), v.provisorio ? 'Provisório' : 'Definitivo'
+                        ])
+                    ];
+                    const wsCats = X.utils.aoa_to_sheet(catsRows);
+                    wsCats['!cols'] = [{ wch:22 },{ wch:20 },{ wch:16 },{ wch:14 }];
+                    X.utils.book_append_sheet(wb, wsCats, 'Saídas');
+
+                    const ini = (this.reportDates.inicio || '').replace(/-/g, '');
+                    const fim = (this.reportDates.fim || '').replace(/-/g, '');
+                    X.writeFile(wb, `relatorio_${ini}_${fim}.xlsx`);
+                },
+
           }
             };
             window.financeDashboardInstance = component;
