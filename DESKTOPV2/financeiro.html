@@ -1711,6 +1711,11 @@
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </template>
+                                                <template x-if="tx.tipo === 'FECHAMENTO'">
+                                                    <button class="action-btn view" @click="openFechamentoRelatorio(tx)" title="Ver Relatório">
+                                                        <i class="fas fa-file-alt"></i>
+                                                    </button>
+                                                </template>
                                             </td>
                                         </tr>
                                     </template>
@@ -2466,53 +2471,141 @@
              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
              x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              @click.self="relatorioModal.isOpen = false">
-            <div class="modal-content wide" @click.stop>
+            <div class="modal-content wide" @click.stop style="max-height:90vh; overflow-y:auto;">
                 <div class="modal-header">
                     <h2 class="modal-title"><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
                     <button type="button" class="modal-close" @click="relatorioModal.isOpen = false"><i class="fas fa-times"></i></button>
                 </div>
 
-                <!-- Badge status -->
-                <div style="text-align:center; margin-bottom: 20px;">
-                    <span x-show="relatorioModal.status === 'CONFERIDO'"
-                          style="display:inline-block; padding: 8px 24px; background: var(--finance-green-light); color: var(--finance-green); border-radius: 20px; font-weight: 700; font-size: 16px;">
-                        ✅ CONFERIDO — Tudo certo!
-                    </span>
-                    <span x-show="relatorioModal.status === 'DIVERGENTE'"
-                          style="display:inline-block; padding: 8px 24px; background: var(--finance-red-light); color: var(--finance-red); border-radius: 20px; font-weight: 700; font-size: 16px;">
-                        ⚠️ DIVERGENTE — Há diferenças!
-                    </span>
-                </div>
+                <!-- Loading -->
+                <template x-if="relatorioModal.isLoading">
+                    <div style="text-align:center; padding:40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:28px; color:var(--finance-blue);"></i>
+                        <p style="margin-top:12px; color:var(--finance-text-secondary);">Carregando relatório...</p>
+                    </div>
+                </template>
 
-                <!-- Tabela -->
-                <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--finance-border);">
-                            <th style="text-align:left; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Método</th>
-                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Digitado</th>
-                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Computado</th>
-                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:13px;">Diferença</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="[metodo, dados] in Object.entries(relatorioModal.relatorio)" :key="metodo">
-                            <tr style="border-bottom: 1px solid var(--finance-border);"
-                                :style="dados.diferenca !== 0 ? 'background: var(--finance-red-light)' : ''">
-                                <td style="padding:10px 8px; font-weight:600;" x-text="{ DINHEIRO: '💵 Dinheiro', PIX: '📱 PIX', CARTAO: '💳 Cartão', NFE: '🧾 NFe' }[metodo] || metodo"></td>
-                                <td style="text-align:right; padding:10px 8px;" x-text="formatCurrency(dados.digitado)"></td>
-                                <td style="text-align:right; padding:10px 8px;" x-text="formatCurrency(dados.computado)"></td>
-                                <td style="text-align:right; padding:10px 8px; font-weight:700;"
-                                    :style="dados.diferenca === 0 ? 'color: var(--finance-green)' : 'color: var(--finance-red)'"
-                                    x-text="(dados.diferenca >= 0 ? '+' : '') + formatCurrency(dados.diferenca)"></td>
-                            </tr>
+                <template x-if="!relatorioModal.isLoading">
+                    <div>
+                        <!-- Data + status -->
+                        <div style="text-align:center; margin-bottom:20px;">
+                            <div style="font-size:13px; color:var(--finance-text-secondary); margin-bottom:8px;"
+                                 x-text="relatorioModal.data ? new Date(relatorioModal.data).toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long', year:'numeric', timeZone:'America/Sao_Paulo'}) : ''">
+                            </div>
+                            <span x-show="relatorioModal.status === 'CONFERIDO'"
+                                  style="display:inline-block; padding:6px 20px; background:var(--finance-green-light); color:var(--finance-green); border-radius:20px; font-weight:700; font-size:14px;">
+                                ✅ CONFERIDO
+                            </span>
+                            <span x-show="relatorioModal.status === 'DIVERGENTE'"
+                                  style="display:inline-block; padding:6px 20px; background:var(--finance-red-light); color:var(--finance-red); border-radius:20px; font-weight:700; font-size:14px;">
+                                ⚠️ DIVERGENTE
+                            </span>
+                        </div>
+
+                        <!-- Cards resumo -->
+                        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;">
+                            <div style="background:var(--finance-green-light); border-radius:12px; padding:14px; text-align:center;">
+                                <div style="font-size:11px; font-weight:600; color:var(--finance-green); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Faturamento</div>
+                                <div style="font-size:20px; font-weight:800; color:var(--finance-green);" x-text="formatCurrency(relatorioModal.totalEntradas)"></div>
+                            </div>
+                            <div style="background:var(--finance-red-light); border-radius:12px; padding:14px; text-align:center;">
+                                <div style="font-size:11px; font-weight:600; color:var(--finance-red); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Saídas Totais</div>
+                                <div style="font-size:20px; font-weight:800; color:var(--finance-red);" x-text="formatCurrency(relatorioModal.totalSaidas)"></div>
+                            </div>
+                            <div style="background:var(--finance-blue-light); border-radius:12px; padding:14px; text-align:center;">
+                                <div style="font-size:11px; font-weight:600; color:var(--finance-blue); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Saldo Líquido</div>
+                                <div style="font-size:20px; font-weight:800;"
+                                     :style="relatorioModal.saldoLiquido >= 0 ? 'color:var(--finance-green)' : 'color:var(--finance-red)'"
+                                     x-text="formatCurrency(relatorioModal.saldoLiquido)"></div>
+                            </div>
+                            <div style="background:#f1f5f9; border-radius:12px; padding:14px; text-align:center;">
+                                <div style="font-size:11px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Fechado por</div>
+                                <div style="font-size:14px; font-weight:700; color:#1e293b;" x-text="relatorioModal.fechadoPor || '—'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Detalhe saídas -->
+                        <template x-if="relatorioModal.totalSaidas > 0">
+                            <div style="background:#f8fafc; border:1px solid var(--finance-border); border-radius:10px; padding:12px; margin-bottom:20px;">
+                                <div style="font-size:12px; font-weight:700; color:var(--finance-text-secondary); margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px;">Detalhe das Saídas</div>
+                                <template x-if="relatorioModal.totalSaidasOperacionais > 0">
+                                    <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0; border-bottom:1px solid var(--finance-border);">
+                                        <span style="color:var(--finance-text-secondary);">Operacionais</span>
+                                        <span style="font-weight:600; color:var(--finance-red);" x-text="'- ' + formatCurrency(relatorioModal.totalSaidasOperacionais)"></span>
+                                    </div>
+                                </template>
+                                <template x-if="relatorioModal.totalAdiantamentos > 0">
+                                    <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0; border-bottom:1px solid var(--finance-border);">
+                                        <span style="color:var(--finance-text-secondary);">Adiantamentos (Vales)</span>
+                                        <span style="font-weight:600; color:var(--finance-orange);" x-text="'- ' + formatCurrency(relatorioModal.totalAdiantamentos)"></span>
+                                    </div>
+                                </template>
+                                <template x-if="relatorioModal.totalSangrias > 0">
+                                    <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0;">
+                                        <span style="color:var(--finance-text-secondary);">Sangrias</span>
+                                        <span style="font-weight:600; color:#64748b;" x-text="'- ' + formatCurrency(relatorioModal.totalSangrias)"></span>
+                                    </div>
+                                </template>
+                            </div>
                         </template>
-                    </tbody>
-                </table>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--finance-text-secondary); margin-top:8px;">
-                    <span x-text="'Fechado por: ' + (relatorioModal.fechadoPor || '—')"></span>
-                    <span x-show="relatorioModal.totalSaidas > 0" x-text="'Saídas do dia: ' + formatCurrency(relatorioModal.totalSaidas)"></span>
-                </div>
+                        <!-- Tabela de conferência (digitado vs computado) -->
+                        <template x-if="Object.keys(relatorioModal.relatorio).length > 0">
+                            <div style="margin-bottom:20px;">
+                                <div style="font-size:12px; font-weight:700; color:var(--finance-text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px;">Conferência de Caixa</div>
+                                <table style="width:100%; border-collapse:collapse;">
+                                    <thead>
+                                        <tr style="border-bottom:2px solid var(--finance-border);">
+                                            <th style="text-align:left; padding:8px; color:var(--finance-text-secondary); font-size:12px;">Método</th>
+                                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:12px;">Digitado</th>
+                                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:12px;">Sistema</th>
+                                            <th style="text-align:right; padding:8px; color:var(--finance-text-secondary); font-size:12px;">Diferença</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="[metodo, dados] in Object.entries(relatorioModal.relatorio)" :key="metodo">
+                                            <tr style="border-bottom:1px solid var(--finance-border);"
+                                                :style="dados.diferenca !== 0 ? 'background:var(--finance-red-light)' : ''">
+                                                <td style="padding:10px 8px; font-weight:600; font-size:13px;" x-text="{ DINHEIRO: '💵 Dinheiro', PIX: '📱 PIX', CARTAO: '💳 Cartão', NFE: '🧾 NFe' }[metodo] || metodo"></td>
+                                                <td style="text-align:right; padding:10px 8px; font-size:13px;" x-text="formatCurrency(dados.digitado)"></td>
+                                                <td style="text-align:right; padding:10px 8px; font-size:13px;" x-text="formatCurrency(dados.computado)"></td>
+                                                <td style="text-align:right; padding:10px 8px; font-weight:700; font-size:13px;"
+                                                    :style="dados.diferenca === 0 ? 'color:var(--finance-green)' : 'color:var(--finance-red)'"
+                                                    x-text="(dados.diferenca >= 0 ? '+' : '') + formatCurrency(dados.diferenca)"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Movimentações do dia -->
+                        <template x-if="relatorioModal.movimentacoes.length > 0">
+                            <div>
+                                <div style="font-size:12px; font-weight:700; color:var(--finance-text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px;">
+                                    Movimentações do Dia
+                                    <span style="font-weight:400; text-transform:none;" x-text="'(' + relatorioModal.movimentacoes.filter(m => m.tipo !== 'FECHAMENTO').length + ')'"></span>
+                                </div>
+                                <div style="max-height:280px; overflow-y:auto; border:1px solid var(--finance-border); border-radius:10px;">
+                                    <template x-for="(mov, i) in relatorioModal.movimentacoes.filter(m => m.tipo !== 'FECHAMENTO')" :key="mov.id || i">
+                                        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px;"
+                                             :style="i % 2 === 0 ? '' : 'background:#f8fafc'">
+                                            <span class="type-badge"
+                                                  :class="mov.tipo === 'PAGAMENTO' ? 'entrada' : mov.descricao?.includes('[Adiantamento]') ? 'adiantamento' : mov.tipo === 'SANGRIA' ? 'sangria' : 'saida'"
+                                                  style="flex-shrink:0; font-size:10px;">
+                                                <span x-text="mov.tipo === 'PAGAMENTO' ? 'Entrada' : mov.descricao?.includes('[Adiantamento]') ? 'Vale' : mov.tipo === 'SANGRIA' ? 'Sangria' : 'Saída'"></span>
+                                            </span>
+                                            <span style="flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="mov.descricao || '—'"></span>
+                                            <span style="font-size:13px; font-weight:700; white-space:nowrap; flex-shrink:0;"
+                                                  :style="mov.tipo === 'PAGAMENTO' ? 'color:var(--finance-green)' : 'color:var(--finance-red)'"
+                                                  x-text="(mov.tipo === 'PAGAMENTO' ? '+ ' : '- ') + formatCurrency(mov.valor)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
 
                 <div class="modal-actions" style="margin-top:16px;">
                     <button type="button" class="btn btn-primary" @click="relatorioModal.isOpen = false">Fechar</button>
@@ -2759,10 +2852,18 @@
                 // Relatorio Modal
                 relatorioModal: {
                     isOpen: false,
+                    isLoading: false,
                     relatorio: {},
                     status: '',
                     fechadoPor: '',
-                    totalSaidas: 0
+                    totalSaidas: 0,
+                    data: null,
+                    movimentacoes: [],
+                    totalEntradas: 0,
+                    totalSaidasOperacionais: 0,
+                    totalAdiantamentos: 0,
+                    totalSangrias: 0,
+                    saldoLiquido: 0
                 },
 
                 // Quitar Pendencia Modal
@@ -2947,15 +3048,12 @@
                         this.balance.cash = 0;
                         this.balance.card = 0;
                         this.balance.pix = 0;
-                        this.balance.pending = 0;
 
                         this.transactions.forEach(tx => {
                             if (tx.tipo === 'PAGAMENTO') {
                                 if (tx.formaPagamento === 'DINHEIRO') this.balance.cash += tx.valor;
                                 else if (tx.formaPagamento === 'CARTAO') this.balance.card += tx.valor;
                                 else if (tx.formaPagamento === 'PIX') this.balance.pix += tx.valor;
-                            } else if (tx.tipo === 'PENDENTE') {
-                                this.balance.pending += tx.valor;
                             }
                         });
 
@@ -3010,8 +3108,15 @@
 
                 async loadPendenciasCount() {
                     try {
-                        const response = await window.api.getOrdens(1, 1, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
+                        const response = await window.api.getOrdens(1, 500, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
                         this.pendenciasCount = response.pagination?.total || 0;
+                        const ordens = response.ordens || [];
+                        this.balance.pending = ordens.reduce((sum, o) => {
+                            const valorPendente = (o.pagamentos || [])
+                                .filter(p => p.metodo === 'PENDENTE' || p.status === 'PENDENTE')
+                                .reduce((s, p) => s + (p.valor || 0), 0);
+                            return sum + (valorPendente || parseFloat(o.valorTotal) || 0);
+                        }, 0);
                     } catch (error) {
                         console.error('Error loading pendencias count:', error);
                     }
@@ -3446,6 +3551,42 @@
                 // ==========================================
                 // FECHAMENTO MODAL
                 // ==========================================
+                async openFechamentoRelatorio(tx) {
+                    this.relatorioModal.isLoading = true;
+                    this.relatorioModal.isOpen = true;
+                    this.relatorioModal.movimentacoes = [];
+                    this.relatorioModal.relatorio = {};
+                    this.relatorioModal.status = '';
+                    try {
+                        const result = await window.api.getFechamentoById(tx.id);
+                        const f = result.fechamento || {};
+                        const movs = result.movimentacoes || [];
+
+                        this.relatorioModal.data = f.data || tx.data;
+                        this.relatorioModal.status = f.status || '';
+                        this.relatorioModal.fechadoPor = f.fechadoPor || '—';
+                        this.relatorioModal.relatorio = f.relatorio || {};
+                        this.relatorioModal.movimentacoes = movs;
+
+                        const entradas = movs.filter(m => m.tipo === 'PAGAMENTO').reduce((s, m) => s + m.valor, 0);
+                        const saidas = movs.filter(m => m.tipo === 'SAIDA' && !m.descricao?.includes('[Adiantamento]')).reduce((s, m) => s + m.valor, 0);
+                        const adiant = movs.filter(m => m.tipo === 'SAIDA' && m.descricao?.includes('[Adiantamento]')).reduce((s, m) => s + m.valor, 0);
+                        const sangrias = movs.filter(m => m.tipo === 'SANGRIA').reduce((s, m) => s + m.valor, 0);
+
+                        this.relatorioModal.totalEntradas = entradas;
+                        this.relatorioModal.totalSaidasOperacionais = saidas;
+                        this.relatorioModal.totalAdiantamentos = adiant;
+                        this.relatorioModal.totalSangrias = sangrias;
+                        this.relatorioModal.totalSaidas = saidas + adiant + sangrias;
+                        this.relatorioModal.saldoLiquido = entradas - saidas;
+                    } catch (e) {
+                        showToast('Erro ao carregar relatório do fechamento.', 'error');
+                        this.relatorioModal.isOpen = false;
+                    } finally {
+                        this.relatorioModal.isLoading = false;
+                    }
+                },
+
                 openFechamentoModal() {
                     this.fechamentoModal.valores = { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' };
                     this.fechamentoModal.isOpen = true;
