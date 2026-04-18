@@ -728,6 +728,30 @@
       .nav-btn { padding: 18px 16px; }
       .nav-label { font-size: 15px; }
     }
+
+    /* ===== SHEET SAÍDA/SANGRIA ===== */
+    .sheet-overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .25s; z-index:999; }
+    .sheet-overlay.open { opacity:1; pointer-events:all; }
+    .sheet { position:fixed; bottom:0; left:0; right:0; background:#fff; border-radius:20px 20px 0 0; transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); z-index:1000; max-height:92vh; overflow-y:auto; }
+    .sheet.open { transform:translateY(0); }
+    .sheet-handle { width:40px; height:4px; background:#e2e8f0; border-radius:2px; margin:12px auto 0; }
+    .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; }
+    .sheet-title { font-size:16px; font-weight:700; }
+    .sheet-close { width:30px; height:30px; border-radius:50%; background:#f1f5f9; border:none; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:#64748b; }
+    .sheet-body { padding:18px; }
+    .sheet-footer { padding:14px 18px 24px; border-top:1px solid #e2e8f0; }
+    .btn-submit-sheet { width:100%; padding:14px; border-radius:12px; background:#0f172a; color:#fff; border:none; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .btn-submit-sheet:disabled { opacity:.5; cursor:not-allowed; }
+    .cat-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+    .cat-chip { padding:8px 14px; border-radius:20px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .cat-chip.sel-despesa { background:#fef2f2; border-color:#ef4444; color:#ef4444; }
+    .cat-chip.sel-adiant  { background:#fffbeb; border-color:#f59e0b; color:#b45309; }
+    .cat-chip.sel-outro   { background:#f5f3ff; border-color:#8b5cf6; color:#7c3aed; }
+    .sfield { margin-bottom:14px; }
+    .sfield label { display:block; font-weight:600; font-size:13px; margin-bottom:6px; color:#374151; }
+    .sfield input, .sfield select { width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box; }
+    .sfield input:focus, .sfield select:focus { border-color:#2563eb; }
+    .saldo-banner { background:#f1f5f9; border-radius:10px; padding:11px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
   </style>
 </head>
 <body>
@@ -841,6 +865,66 @@
     </button>
   </div>
   <div class="fab-dropup-overlay" id="saidaDropupOverlay" onclick="closeSaidaDropup()"></div>
+
+  <!-- SHEET: Saída / Sangria (via FAB dropup) -->
+  <div class="sheet-overlay" id="indexSaidaOverlay" onclick="closeIndexSaidaSheet()"></div>
+  <div class="sheet" id="indexSaidaSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title" id="indexSaidaTitle">Lançar Saída</span>
+      <button class="sheet-close" onclick="closeIndexSaidaSheet()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div id="indexSaldoBanner" class="saldo-banner" style="display:none">
+        <span style="font-size:12px;font-weight:600;color:#64748b;">💵 Saldo disponível</span>
+        <span id="indexSaldoDisp" style="font-size:15px;font-weight:800;color:#0f172a;">R$ 0,00</span>
+      </div>
+      <div id="indexCatChipsWrap">
+        <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Categoria</div>
+        <div class="cat-chips" id="indexCatChips">
+          <button class="cat-chip" data-cat="Despesa" onclick="selectIndexCat('Despesa')"><i class="fas fa-receipt" style="color:#ef4444"></i> Despesa</button>
+          <button class="cat-chip" data-cat="Adiantamento" onclick="selectIndexCat('Adiantamento')"><i class="fas fa-hand-holding-usd" style="color:#f59e0b"></i> Vale</button>
+          <button class="cat-chip" data-cat="Outro" onclick="selectIndexCat('Outro')"><i class="fas fa-ellipsis-h" style="color:#8b5cf6"></i> Outro</button>
+        </div>
+      </div>
+      <div class="sfield" style="margin-top:14px">
+        <label>Valor (R$) *</label>
+        <input type="number" id="indexSValor" step="0.01" min="0.01" placeholder="0,00">
+      </div>
+      <div class="sfield">
+        <label>Forma de Pagamento *</label>
+        <select id="indexSFormaPag">
+          <option value="">Selecione...</option>
+          <option value="DINHEIRO">💵 Dinheiro</option>
+          <option value="PIX">📱 PIX</option>
+          <option value="CARTAO">💳 Cartão</option>
+          <option value="NFE">🧾 NFe</option>
+          <option value="CHEQUE">📄 Cheque</option>
+        </select>
+      </div>
+      <div class="sfield" id="indexSDescField">
+        <label id="indexSDescLabel">Descrição *</label>
+        <input type="text" id="indexSDescricao" placeholder="Ex: Compra de produto de limpeza">
+      </div>
+      <div class="sfield" id="indexSRespField">
+        <label id="indexSRespLabel">Fornecedor (opcional)</label>
+        <div style="position:relative">
+          <input type="text" id="indexSResp" placeholder="Nome do fornecedor ou responsável">
+          <div id="indexLavDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;z-index:10;max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <input type="hidden" id="indexSLavadorId">
+      </div>
+      <div class="sfield">
+        <label>Data (deixe vazio para agora)</label>
+        <input type="date" id="indexSData">
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn-submit-sheet" id="indexSaidaSubmitBtn" onclick="submitIndexSaida()">
+        <i class="fas fa-check"></i> Confirmar Saída
+      </button>
+    </div>
+  </div>
 
   <!-- MODAL: Abrir Caixa -->
   <div class="caixa-modal-overlay" id="modalAbrirCaixa" onclick="if(event.target===this)closeCaixaModal('modalAbrirCaixa')">
@@ -1169,38 +1253,14 @@
         { key: 'NFE',      label: '🧾 NFe',      show: true },
       ];
 
-      // Carregar valores esperados
-      let valoresEsperados = {};
-      let valorInicial = 0;
-      let pagamentosDinheiro = 0;
-      try {
-        const response = await window.api.getValoresEsperados();
-        valoresEsperados = response.esperado || {};
-        valorInicial = response.valorInicial || 0;
-        pagamentosDinheiro = response.pagamentosDinheiro || 0;
-      } catch (err) {
-        console.error('Erro ao buscar valores esperados:', err);
-      }
-
-      const fmt = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
-
       const gridHtml = metodos
         .filter(m => m.show)
-        .map(m => {
-          const valorEsperado = valoresEsperados[m.key] || 0;
-          const dinheiro = m.key === 'DINHEIRO';
-          const detalhes = dinheiro && valorInicial > 0
-            ? `<div style="font-size:11px;color:#666;margin-top:4px">Troco: ${fmt(valorInicial)} + Entradas: ${fmt(pagamentosDinheiro)} = ${fmt(valorEsperado)}</div>`
-            : '';
-          return `
-            <div class="caixa-fech-item">
-              <div class="label">${m.label}</div>
-              <input type="number" id="fechar_${m.key}" step="0.01" min="0" placeholder="0,00" data-esperado="${valorEsperado}">
-              <div style="font-size:12px;color:#0066cc;font-weight:600;margin-top:6px">Esperado: ${fmt(valorEsperado)}</div>
-              ${detalhes}
-            </div>
-          `;
-        }).join('');
+        .map(m => `
+          <div class="caixa-fech-item">
+            <div class="label">${m.label}</div>
+            <input type="number" id="fechar_${m.key}" step="0.01" min="0" placeholder="0,00">
+          </div>
+        `).join('');
 
       document.getElementById('fecharCampos').innerHTML = gridHtml;
       document.getElementById('modalFecharCaixa').classList.add('active');
@@ -1367,15 +1427,145 @@
 
     function dropupAcao(acao) {
       closeSaidaDropup();
-      if (acao === 'saida') {
-        window.location.href = 'funcionario/financeiro-funcionario.html';
-      } else if (acao === 'sangria') {
-        window.location.href = 'funcionario/financeiro-funcionario.html';
-      } else if (acao === 'abrir') {
-        openAbrirCaixaModal();
-      } else if (acao === 'fechar') {
-        openFecharCaixaModal();
+      if (acao === 'saida')   { openIndexSaidaSheet('saida'); }
+      else if (acao === 'sangria') { openIndexSaidaSheet('sangria'); }
+      else if (acao === 'abrir')   { openAbrirCaixaModal(); }
+      else if (acao === 'fechar')  { openFecharCaixaModal(); }
+    }
+
+    // ===== SHEET SAÍDA/SANGRIA =====
+    let indexSaidaModeLocal = 'saida';
+    let indexCatSelecionada = '';
+    let indexLavadoresCache = [];
+
+    async function openIndexSaidaSheet(mode) {
+      indexSaidaModeLocal = mode;
+      indexCatSelecionada = '';
+      document.getElementById('indexSaidaTitle').textContent = mode === 'sangria' ? 'Registrar Sangria' : 'Lançar Saída';
+      document.getElementById('indexCatChipsWrap').style.display = mode === 'sangria' ? 'none' : 'block';
+      document.getElementById('indexSDescField').style.display   = mode === 'sangria' ? 'none' : 'block';
+      document.getElementById('indexSRespField').style.display   = mode === 'sangria' ? 'none' : 'block';
+      document.getElementById('indexSaidaSubmitBtn').innerHTML   = '<i class="fas fa-check"></i> ' + (mode === 'sangria' ? 'Registrar Sangria' : 'Confirmar Saída');
+
+      const banner = document.getElementById('indexSaldoBanner');
+      if (mode === 'sangria') {
+        const saldo = caixaStatus?.saldoDinheiro || 0;
+        document.getElementById('indexSaldoDisp').textContent = 'R$ ' + Number(saldo).toFixed(2).replace('.', ',');
+        banner.style.display = 'flex';
+      } else {
+        banner.style.display = 'none';
       }
+
+      ['indexSValor','indexSFormaPag','indexSDescricao','indexSResp','indexSData','indexSLavadorId'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      document.querySelectorAll('#indexCatChips .cat-chip').forEach(c => c.className = 'cat-chip');
+
+      if (mode !== 'sangria') await loadIndexLavadores();
+
+      document.getElementById('indexSaidaOverlay').classList.add('open');
+      document.getElementById('indexSaidaSheet').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeIndexSaidaSheet() {
+      document.getElementById('indexSaidaOverlay').classList.remove('open');
+      document.getElementById('indexSaidaSheet').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function selectIndexCat(cat) {
+      indexCatSelecionada = cat;
+      document.querySelectorAll('#indexCatChips .cat-chip').forEach(c => {
+        c.className = 'cat-chip';
+        if (c.dataset.cat === cat) {
+          const map = { Despesa:'sel-despesa', Adiantamento:'sel-adiant', Outro:'sel-outro' };
+          c.className = 'cat-chip ' + (map[cat] || '');
+        }
+      });
+      const isAdiant = cat === 'Adiantamento';
+      document.getElementById('indexSRespLabel').textContent   = isAdiant ? 'Funcionário (lavador) *' : 'Fornecedor (opcional)';
+      document.getElementById('indexSDescLabel').textContent   = isAdiant ? 'Descrição (opcional, ex: vale marmitex)' : 'Descrição *';
+      document.getElementById('indexSDescricao').placeholder   = isAdiant ? 'Ex: vale marmitex, adiantamento salário...' : 'Ex: Compra de produto de limpeza';
+      document.getElementById('indexSDescField').style.display = 'block';
+      document.getElementById('indexLavDropdown').style.display = 'none';
+      if (isAdiant) renderIndexLavDropdown('');
+    }
+
+    async function loadIndexLavadores() {
+      if (indexLavadoresCache.length > 0) return;
+      try { const r = await window.api.getLavadores(); indexLavadoresCache = r.lavadores || r || []; } catch(e) {}
+    }
+
+    function renderIndexLavDropdown(query) {
+      const drop = document.getElementById('indexLavDropdown');
+      const filtered = indexLavadoresCache.filter(l => !query || l.nome?.toLowerCase().includes(query.toLowerCase()));
+      if (!filtered.length) { drop.style.display = 'none'; return; }
+      drop.innerHTML = filtered.map(l =>
+        `<div onclick="selectIndexLavador('${l.id}','${l.nome.replace(/'/g,"\\'")}' )" style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #e2e8f0;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">${l.nome}</div>`
+      ).join('');
+      drop.style.display = 'block';
+    }
+
+    function selectIndexLavador(id, nome) {
+      document.getElementById('indexSResp').value     = nome;
+      document.getElementById('indexSLavadorId').value = id;
+      document.getElementById('indexLavDropdown').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('indexSResp')?.addEventListener('input', e => {
+        if (indexCatSelecionada === 'Adiantamento') renderIndexLavDropdown(e.target.value);
+        else document.getElementById('indexLavDropdown').style.display = 'none';
+      });
+    });
+
+    async function submitIndexSaida() {
+      const btn   = document.getElementById('indexSaidaSubmitBtn');
+      const valor = parseFloat(document.getElementById('indexSValor').value);
+      const forma = document.getElementById('indexSFormaPag').value;
+      const desc  = document.getElementById('indexSDescricao').value.trim();
+      const resp  = document.getElementById('indexSResp').value.trim();
+      const lavId = document.getElementById('indexSLavadorId').value;
+      const data  = document.getElementById('indexSData').value;
+
+      if (!valor || valor <= 0) { showToastIndex('Informe um valor válido', 'error'); return; }
+      if (!forma)               { showToastIndex('Selecione a forma de pagamento', 'error'); return; }
+
+      if (indexSaidaModeLocal === 'sangria') {
+        btn.disabled = true; btn.textContent = 'Registrando...';
+        try {
+          await window.api.createSangria({ valor, observacao: desc || undefined });
+          showToastIndex('Sangria registrada!', 'success');
+          closeIndexSaidaSheet();
+          const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
+          loadCaixaStatus(perms);
+        } catch(e) { showToastIndex(e?.error || e?.message || 'Erro ao registrar sangria', 'error'); }
+        finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Registrar Sangria'; }
+        return;
+      }
+
+      if (!indexCatSelecionada)                                    { showToastIndex('Selecione a categoria', 'error'); return; }
+      if (indexCatSelecionada !== 'Adiantamento' && !desc)         { showToastIndex('Informe a descrição', 'error'); return; }
+      if (indexCatSelecionada === 'Adiantamento' && !lavId)        { showToastIndex('Selecione o funcionário', 'error'); return; }
+
+      btn.disabled = true; btn.textContent = 'Confirmando...';
+      try {
+        await window.api.createSaida({
+          tipo: indexCatSelecionada,
+          valor,
+          formaPagamento: forma,
+          descricao: desc || undefined,
+          fornecedorNome: indexCatSelecionada !== 'Adiantamento' && resp ? resp : undefined,
+          lavadorId: indexCatSelecionada === 'Adiantamento' ? lavId : undefined,
+          dataRetroativo: data || undefined,
+        });
+        showToastIndex('Saída lançada com sucesso!', 'success');
+        closeIndexSaidaSheet();
+        const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
+        loadCaixaStatus(perms);
+      } catch(e) { showToastIndex(e?.message || 'Erro ao lançar saída', 'error'); }
+      finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
     }
   </script>
 </body>

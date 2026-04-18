@@ -1101,15 +1101,10 @@ async function openFechamentoModal() {
     { key:'NFE',      label:'🧾 NFe',      show: cfg.NFE === true },
   ];
 
-  let vals = {};
-  try { const r = await window.api.getValoresEsperados(); vals = r.esperado || {}; } catch(e) {}
-
-  const fmt = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
   document.getElementById('fechGrid').innerHTML = metodos.filter(m => m.show).map(m => `
     <div class="fech-item">
       <div class="flabel">${m.label}</div>
       <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00">
-      <div class="fech-esp">Esperado: ${fmt(vals[m.key]||0)}</div>
     </div>`).join('');
   document.getElementById('fechamentoModal').classList.add('active');
 }
