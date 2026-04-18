@@ -239,6 +239,79 @@
       flex-shrink: 0;
     }
 
+    /* ===== FAB SAÍDA (controle de caixa) ===== */
+    .fab-saida {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(calc(-50% - 52px));
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      z-index: 499;
+      box-shadow: 0 4px 14px rgba(239,68,68,.5);
+      outline: 2.5px solid rgba(255,255,255,0.22);
+      outline-offset: 2px;
+      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.18s;
+    }
+    .fab-saida:hover {
+      filter: brightness(1.12);
+      transform: translateX(calc(-50% - 52px)) scale(1.1);
+    }
+    .fab-saida:active {
+      transform: translateX(calc(-50% - 52px)) scale(0.92);
+    }
+
+    /* Drop-up caixa */
+    .fab-dropup {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(calc(-50% - 52px));
+      background: #1e293b;
+      border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.35);
+      overflow: hidden;
+      min-width: 196px;
+      z-index: 600;
+      opacity: 0;
+      pointer-events: none;
+      transform-origin: bottom left;
+      transition: opacity .18s, transform .2s cubic-bezier(.34,1.4,.64,1);
+      transform: translateX(calc(-50% - 52px)) scale(.85) translateY(8px);
+    }
+    .fab-dropup.open {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(calc(-50% - 52px)) scale(1) translateY(0);
+    }
+    .dropup-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 12px 16px;
+      color: rgba(255,255,255,.9);
+      font-size: 13px; font-weight: 600;
+      border: none; background: none; width: 100%;
+      cursor: pointer; font-family: inherit;
+      text-align: left; transition: background .15s;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .dropup-item:last-child { border-bottom: none; }
+    .dropup-item:hover:not(.disabled) { background: rgba(255,255,255,.1); }
+    .dropup-item.disabled { opacity: 0.35; cursor: not-allowed; }
+    .dropup-item i { width: 16px; text-align: center; font-size: 14px; }
+    .fab-dropup-overlay {
+      display: none; position: fixed; inset: 0; z-index: 599;
+    }
+    .fab-dropup-overlay.open { display: block; }
+
     /* ===== FAB FILA DE ENTRADA ===== */
     .fab-fila {
       position: fixed;
@@ -747,6 +820,28 @@
   </a>
   <div class="fab-fila-label" id="fabFilaLabel">Fila</div>
 
+  <!-- FAB: Saída / Caixa — ao lado esquerdo do gota -->
+  <button class="fab-saida" id="fabSaida" style="display:none" title="Controle de Caixa" onclick="toggleSaidaDropup()">
+    <i class="fas fa-receipt"></i>
+  </button>
+
+  <!-- Drop-up controle de caixa -->
+  <div class="fab-dropup" id="saidaDropup">
+    <button class="dropup-item" id="dropItemSaida" onclick="dropupAcao('saida')">
+      <i class="fas fa-receipt" style="color:#f97316"></i> Lançar Saída
+    </button>
+    <button class="dropup-item" id="dropItemSangria" onclick="dropupAcao('sangria')">
+      <i class="fas fa-money-bill-wave" style="color:#8b5cf6"></i> Sangria
+    </button>
+    <button class="dropup-item" id="dropItemAbrirCaixa" onclick="dropupAcao('abrir')">
+      <i class="fas fa-door-open" style="color:#10b981"></i> Abrir Caixa
+    </button>
+    <button class="dropup-item" id="dropItemFecharCaixa" onclick="dropupAcao('fechar')">
+      <i class="fas fa-door-closed" style="color:#ef4444"></i> Fechar Caixa
+    </button>
+  </div>
+  <div class="fab-dropup-overlay" id="saidaDropupOverlay" onclick="closeSaidaDropup()"></div>
+
   <!-- MODAL: Abrir Caixa -->
   <div class="caixa-modal-overlay" id="modalAbrirCaixa" onclick="if(event.target===this)closeCaixaModal('modalAbrirCaixa')">
     <div class="caixa-modal-content">
@@ -906,6 +1001,11 @@
         document.getElementById('fabNovaOrdem').style.display = 'flex';
         document.getElementById('fabFila').style.display = 'flex';
         document.getElementById('fabFilaLabel').style.display = 'block';
+      }
+
+      // FAB saída (quem tem ver_financeiro)
+      if (permissoes.includes('ver_financeiro')) {
+        document.getElementById('fabSaida').style.display = 'flex';
       }
 
       // Hero caixa (quem tem ver_financeiro ou gerenciar_ordens pode ver o status)
@@ -1235,6 +1335,47 @@
         localStorage.clear();
         window.location.href = 'login.html';
       });
+    }
+
+    // ===== FAB SAÍDA — DROP-UP =====
+    function toggleSaidaDropup() {
+      const dropup  = document.getElementById('saidaDropup');
+      const overlay = document.getElementById('saidaDropupOverlay');
+      if (dropup.classList.contains('open')) {
+        closeSaidaDropup();
+      } else {
+        const caixaIsOpen = caixaStatus?.isOpen || false;
+        const itemSaida   = document.getElementById('dropItemSaida');
+        const itemSangria = document.getElementById('dropItemSangria');
+        const itemAbrir   = document.getElementById('dropItemAbrirCaixa');
+        const itemFechar  = document.getElementById('dropItemFecharCaixa');
+
+        itemSaida.classList.toggle('disabled', !caixaIsOpen);
+        itemSangria.classList.toggle('disabled', !caixaIsOpen);
+        itemAbrir.style.display  = caixaIsOpen ? 'none' : 'flex';
+        itemFechar.style.display = caixaIsOpen ? 'flex' : 'none';
+
+        dropup.classList.add('open');
+        overlay.classList.add('open');
+      }
+    }
+
+    function closeSaidaDropup() {
+      document.getElementById('saidaDropup').classList.remove('open');
+      document.getElementById('saidaDropupOverlay').classList.remove('open');
+    }
+
+    function dropupAcao(acao) {
+      closeSaidaDropup();
+      if (acao === 'saida') {
+        window.location.href = 'funcionario/financeiro-funcionario.html';
+      } else if (acao === 'sangria') {
+        window.location.href = 'funcionario/financeiro-funcionario.html';
+      } else if (acao === 'abrir') {
+        openAbrirCaixaModal();
+      } else if (acao === 'fechar') {
+        openFecharCaixaModal();
+      }
     }
   </script>
 </body>

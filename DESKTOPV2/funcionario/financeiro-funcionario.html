@@ -416,7 +416,7 @@
 
     /* Menu dropdown */
     .menu-dropdown {
-      display: none; position: fixed; bottom: 72px; right: 14px;
+      display: none; position: fixed; top: 58px; right: 14px;
       background: var(--white); border-radius: 12px;
       box-shadow: 0 8px 30px rgba(0,0,0,.18); border: 1px solid var(--border);
       min-width: 180px; z-index: 1000; overflow: hidden;
@@ -429,8 +429,8 @@
       font-size: 13px; font-weight: 500; font-family: inherit; transition: background .15s;
     }
     .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--bg); color: var(--primary); }
-    .menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 999; }
-    .menu-overlay.active { display: block; }
+    .overlay { display: none; position: fixed; inset: 0; z-index: 999; }
+    .overlay.active { display: block; }
 
     @media (min-width: 500px) {
       .bal-value { font-size: 20px; }
@@ -440,11 +440,30 @@
 <body>
 
 <!-- HEADER -->
-<div id="header"></div>
+<header class="hdr">
+  <div class="hdr-left">
+    <a href="../index-funcionario.html" class="hdr-logo">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <div class="hdr-title">Financeiro</div>
+      <div class="hdr-sub" id="empresaNome">Carregando...</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <a href="../perfil-funcionario.html" class="icon-btn" title="Perfil"><i class="fas fa-user-circle"></i></a>
+    <button class="icon-btn" onclick="logout()" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
+    <button class="icon-btn" onclick="toggleMenu()" title="Menu"><i class="fas fa-ellipsis-v"></i></button>
+  </div>
+</header>
 
-<!-- MENU -->
-<div id="menu"></div>
-<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+<!-- MENU DROPDOWN -->
+<div class="menu-dropdown" id="menuDropdown">
+  <a href="../perfil-funcionario.html"><i class="fas fa-id-card"></i><span>Meu Perfil</span></a>
+  <a href="../index-funcionario.html"><i class="fas fa-home"></i><span>Início</span></a>
+  <button onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button>
+</div>
+<div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
 <!-- MAIN -->
 <main class="main">
@@ -706,8 +725,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  document.getElementById('header').innerHTML    = createFuncionarioHeader(PAGE_TITLE);
-  document.getElementById('menu').innerHTML      = createFuncionarioMenu();
   document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
 
   await loadUserInfo();
