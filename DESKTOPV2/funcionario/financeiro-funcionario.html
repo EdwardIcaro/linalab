@@ -536,6 +536,12 @@
     <button class="sheet-close" onclick="closeSaidaSheet()"><i class="fas fa-times"></i></button>
   </div>
   <div class="sheet-body">
+    <!-- Saldo disponível (visível só na sangria) -->
+    <div id="saldoBanner" style="display:none; background:var(--bg); border-radius:10px; padding:11px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:12px; font-weight:600; color:var(--muted);">💵 Saldo disponível</span>
+      <span id="saldoDisp" style="font-size:15px; font-weight:800; color:var(--text);">R$ 0,00</span>
+    </div>
+
     <!-- Categoria chips -->
     <div id="catChipsWrap">
       <div style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;">Categoria</div>
@@ -854,7 +860,7 @@ async function loadCaixa() {
 
   try {
     const status = await window.api.getStatusCaixa();
-    caixaStatus = { isOpen: status.isOpen||false, notOpened: status.notOpened??true, paymentMethodsConfig: status.paymentMethodsConfig||caixaStatus.paymentMethodsConfig, currentUserNome: status.currentUserNome||'' };
+    caixaStatus = { isOpen: status.isOpen||false, notOpened: status.notOpened??true, paymentMethodsConfig: status.paymentMethodsConfig||caixaStatus.paymentMethodsConfig, currentUserNome: status.currentUserNome||'', saldoDinheiro: status.saldoDinheiro||0 };
   } catch(e) {}
 
   let html = '<div class="caixa-btns">';
@@ -937,6 +943,16 @@ async function openSaidaSheet(mode) {
   document.getElementById('catChipsWrap').style.display = mode === 'sangria' ? 'none' : 'block';
   document.getElementById('sDescField').style.display  = mode === 'sangria' ? 'none' : 'block';
   document.getElementById('sRespField').style.display  = mode === 'sangria' ? 'none' : 'block';
+
+  // Banner de saldo (sangria)
+  const banner = document.getElementById('saldoBanner');
+  if (mode === 'sangria') {
+    const saldo = caixaStatus.saldoDinheiro || 0;
+    document.getElementById('saldoDisp').textContent = formatCurrency(saldo);
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
 
   // Reset campos
   ['sValor','sFormaPag','sDescricao','sResp','sData','sLavadorId'].forEach(id => {
@@ -1025,7 +1041,7 @@ async function submitSaida() {
       await window.api.createSangria({ valor, observacao: desc || undefined });
       showToast('Sangria registrada!', 'success');
       closeSaidaSheet(); await Promise.all([loadBalanceCards(), loadCaixa()]);
-    } catch(e) { showToast('Erro ao registrar sangria', 'error'); }
+    } catch(e) { showToast(e?.error || e?.message || 'Erro ao registrar sangria', 'error'); }
     finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
     return;
   }

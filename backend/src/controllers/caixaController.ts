@@ -91,6 +91,26 @@ export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
             } catch (_) {}
         }
 
+        // Saldo físico em dinheiro (útil para o modal de sangria)
+        let saldoDinheiro = 0;
+        if (isOpen && abertura) {
+            const [pagsDinheiro, saidasDinheiro] = await Promise.all([
+                prisma.pagamento.aggregate({
+                    where: { empresaId, status: 'PAGO', metodo: 'DINHEIRO', pagoEm: { gte: start, lte: end } },
+                    _sum: { valor: true },
+                }),
+                prisma.caixaRegistro.aggregate({
+                    where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, formaPagamento: 'DINHEIRO', data: { gte: start, lte: end } },
+                    _sum: { valor: true },
+                }),
+            ]);
+            saldoDinheiro = Math.max(0,
+                (abertura.valorInicial || 0)
+                + (pagsDinheiro._sum.valor || 0)
+                - (saidasDinheiro._sum.valor || 0)
+            );
+        }
+
         return res.json({
             isOpen,
             notOpened,
@@ -98,6 +118,7 @@ export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
             fechamento: fechamento || null,
             paymentMethodsConfig,
             currentUserNome: req.usuarioNome || '',
+            saldoDinheiro,
         });
     } catch (error) {
         console.error('Erro ao buscar status do caixa:', error);
@@ -273,10 +294,16 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
             }),
         ]);
 
-        // Computado por método (valores reais do sistema)
-        // Para DINHEIRO: inclui troco inicial da abertura + pagamentos do dia
+        // Saídas físicas em dinheiro (SAIDA + SANGRIA com formaPagamento DINHEIRO)
+        // reduzem o saldo físico esperado no caixa
+        const saidasDinheiro = saidas
+            .filter(s => s.formaPagamento === 'DINHEIRO')
+            .reduce((a, s) => a + s.valor, 0);
+
+        // Computado por método: quanto o sistema espera que tenha fisicamente
+        // DINHEIRO = troco_inicial + pagamentos_dinheiro − saídas_em_dinheiro (sangrias + despesas)
         const computado: Record<string, number> = {
-            DINHEIRO: (abertura?.valorInicial || 0) + pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0),
+            DINHEIRO: Math.max(0, (abertura?.valorInicial || 0) + pagamentos.filter(p => p.metodo === 'DINHEIRO').reduce((a, p) => a + p.valor, 0) - saidasDinheiro),
             PIX:      pagamentos.filter(p => p.metodo === 'PIX').reduce((a, p) => a + p.valor, 0),
             CARTAO:   pagamentos.filter(p => p.metodo === 'CARTAO').reduce((a, p) => a + p.valor, 0),
             NFE:      pagamentos.filter(p => (p.metodo as string) === 'NFE').reduce((a, p) => a + p.valor, 0),
@@ -301,7 +328,8 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
         }
 
         const diferencaTotal = Object.values(relatorio).reduce((a, r) => a + Math.abs(r.diferenca), 0);
-        const faturamentoDia = Object.values(computado).reduce((a, v) => a + v, 0);
+        // faturamentoDia = receita bruta de pagamentos (exclui valorInicial e sangrías)
+        const faturamentoDia = pagamentos.reduce((a, p) => a + p.valor, 0);
         const totalSaidas = saidas.reduce((a, s) => a + s.valor, 0);
         const status = diferencaTotal < 0.01 ? 'CONFERIDO' : 'DIVERGENTE';
         const fechadoPor = req.usuarioNome || 'Administrador';
@@ -433,6 +461,37 @@ export const createSangria = async (req: EmpresaRequest, res: Response) => {
     }
 
     try {
+        const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+        const horarioAbertura = empresa?.horarioAbertura || '07:00';
+        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+
+        // Calcular saldo físico disponível em dinheiro
+        const [abertura, pagamentosDinheiro, saidasDinheiro] = await Promise.all([
+            prisma.aberturaCaixa.findFirst({
+                where: { empresaId, data: { gte: start, lte: end } },
+                select: { valorInicial: true },
+            }),
+            prisma.pagamento.aggregate({
+                where: { empresaId, status: 'PAGO', metodo: 'DINHEIRO', pagoEm: { gte: start, lte: end } },
+                _sum: { valor: true },
+            }),
+            prisma.caixaRegistro.aggregate({
+                where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, formaPagamento: 'DINHEIRO', data: { gte: start, lte: end } },
+                _sum: { valor: true },
+            }),
+        ]);
+
+        const saldoDisponivel = (abertura?.valorInicial || 0)
+            + (pagamentosDinheiro._sum.valor || 0)
+            - (saidasDinheiro._sum.valor || 0);
+
+        if (valor > saldoDisponivel + 0.01) {
+            return res.status(400).json({
+                error: `Saldo insuficiente. Disponível em dinheiro: R$ ${saldoDisponivel.toFixed(2)}`,
+                saldoDisponivel,
+            });
+        }
+
         const sangria = await prisma.caixaRegistro.create({
             data: {
                 empresaId,
@@ -442,7 +501,9 @@ export const createSangria = async (req: EmpresaRequest, res: Response) => {
                 descricao: observacao || 'Retirada de caixa (Sangria)',
             }
         });
-        res.status(201).json(sangria);
+
+        const saldoRestante = Math.max(0, saldoDisponivel - valor);
+        res.status(201).json({ ...sangria, saldoDisponivel, saldoRestante });
     } catch (error) {
         console.error('Erro ao registrar sangria:', error);
         res.status(500).json({ error: 'Erro ao registrar sangria.' });

@@ -2253,6 +2253,11 @@
                 </div>
 
                 <form @submit.prevent="saveTransaction()">
+                    <!-- Saldo disponível (visível apenas na sangria) -->
+                    <div x-show="transactionModal.type === 'sangria'" style="background:#f1f5f9;border-radius:10px;padding:11px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:12px;font-weight:600;color:#64748b;">💵 Saldo disponível em dinheiro</span>
+                        <span style="font-size:15px;font-weight:800;color:#0f172a;" x-text="formatCurrency(saldoDinheiro)"></span>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Valor *</label>
@@ -2823,6 +2828,7 @@
                 isRegisterOpen: false,
                 caixaNotOpened: true,
                 paymentMethodsConfig: { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false },
+                saldoDinheiro: 0,
 
                 // Lookups
                 lavadores: [],
@@ -2912,6 +2918,7 @@
                         this.caixaNotOpened = status.notOpened;
                         this.paymentMethodsConfig = status.paymentMethodsConfig || this.paymentMethodsConfig;
                         this.aberturaModal.responsavel = status.currentUserNome || '';
+                        this.saldoDinheiro = status.saldoDinheiro || 0;
                     } catch (e) {
                         console.warn('[financeDashboard] Erro ao carregar status do caixa:', e);
                     }
@@ -3483,7 +3490,8 @@
 
                     } catch (error) {
                         console.error('Error saving transaction:', error);
-                        showToast('Erro ao salvar transacao.', 'error');
+                        const msg = error?.error || error?.message || 'Erro ao salvar transação.';
+                        showToast(msg, 'error');
 
                         // Rollback optimistic update on error
                         if (modal.type === 'sangria') {
