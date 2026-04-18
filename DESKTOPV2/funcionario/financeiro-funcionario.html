@@ -577,9 +577,9 @@
       </select>
     </div>
 
-    <!-- Descrição (oculto para Adiantamento) -->
+    <!-- Descrição (obrigatório para não-Adiantamento; opcional para Adiantamento) -->
     <div class="field" id="sDescField">
-      <label>Descrição *</label>
+      <label id="sDescLabel">Descrição *</label>
       <input type="text" id="sDescricao" placeholder="Ex: Compra de produto de limpeza">
     </div>
 
@@ -986,7 +986,9 @@ function selectCat(cat) {
   // Adiantamento: campo responsável vira lavador obrigatório
   const isAdiant = cat === 'Adiantamento';
   document.getElementById('sRespLabel').textContent = isAdiant ? 'Funcionário (lavador) *' : 'Fornecedor (opcional)';
-  document.getElementById('sDescField').style.display = isAdiant ? 'none' : 'block';
+  document.getElementById('sDescLabel').textContent = isAdiant ? 'Descrição (opcional, ex: vale marmitex)' : 'Descrição *';
+  document.getElementById('sDescricao').placeholder = isAdiant ? 'Ex: vale marmitex, adiantamento salário...' : 'Ex: Compra de produto de limpeza';
+  document.getElementById('sDescField').style.display = 'block';
   document.getElementById('lavDropdown').style.display = 'none';
   if (isAdiant) renderLavDropdown('');
 }
@@ -1056,7 +1058,7 @@ async function submitSaida() {
       tipo: catSelecionada,
       valor,
       formaPagamento: forma,
-      descricao: catSelecionada !== 'Adiantamento' ? desc : undefined,
+      descricao: desc || undefined,
       fornecedorNome: catSelecionada !== 'Adiantamento' && resp ? resp : undefined,
       lavadorId: catSelecionada === 'Adiantamento' ? lavId : undefined,
       dataRetroativo: data || undefined,

@@ -129,6 +129,9 @@ export const getLavadorPublicData = async (req: Request, res: Response) => {
                 lavadorId: lavador.id,
                 status: { not: 'QUITADO' }
             },
+            include: {
+                caixaRegistro: { select: { descricao: true } }
+            },
             orderBy: { data: 'desc' }
         });
 

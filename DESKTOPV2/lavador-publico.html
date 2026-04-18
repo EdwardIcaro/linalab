@@ -1316,7 +1316,7 @@ function renderAdiantamentos() {
       <div class="adiant-ico"><i class="fas fa-hand-holding-usd"></i></div>
       <div class="adiant-info">
         <div class="adiant-data">${formatDate(toLocaleDateISOString(a.createdAt || a.data || new Date()))}</div>
-        ${a.observacao ? `<div class="adiant-obs">${a.observacao}</div>` : ''}
+        ${(() => { const raw = a.caixaRegistro?.descricao || ''; const sep = raw.indexOf(' — '); const desc = sep !== -1 ? raw.slice(sep + 3) : ''; return desc ? `<div class="adiant-obs">${desc}</div>` : ''; })()}
       </div>
       <div class="adiant-value">-${formatCurrency(parseFloat(a.valor)||0)}</div>
     `;

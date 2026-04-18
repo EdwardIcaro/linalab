@@ -413,7 +413,7 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
             }
 
             const finalDescricao = tipo === 'Adiantamento'
-                ? `[Adiantamento] ${fornecedorNome || 'funcionário'}`
+                ? `[Adiantamento] ${fornecedorNome || 'funcionário'}${descricao ? ` — ${descricao}` : ''}`
                 : `[${tipo}] ${descricao}`;
 
             return await tx.caixaRegistro.create({
