@@ -7,1944 +7,1165 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *,*::before,*::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
       --navy:    #0f172a;
       --navy-m:  #1e293b;
       --primary: #2563eb;
-      --primary-h:#1d4ed8;
       --success: #10b981;
-      --success-h:#059669;
       --warning: #f59e0b;
       --danger:  #ef4444;
-      --danger-h:#dc2626;
-      --light:   #f1f5f9;
-      --dark:    #0f172a;
-      --mid:     #64748b;
+      --orange:  #f97316;
+      --purple:  #8b5cf6;
+      --bg:      #f1f5f9;
+      --white:   #ffffff;
       --border:  #e2e8f0;
-      --shadow:  0 2px 8px rgba(0,0,0,0.08);
-      --shadow-md:0 4px 16px rgba(0,0,0,0.12);
-      --green:   #10b981;
-      --red:     #ef4444;
-      --orange:  #f59e0b;
-      --r:       10px;
+      --muted:   #64748b;
+      --faint:   #94a3b8;
+      --text:    #1e293b;
+      --shadow:  0 1px 3px rgba(0,0,0,.08);
+      --shadow-md:0 4px 12px rgba(0,0,0,.10);
     }
 
-    html, body { height: 100%; }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--light);
-      color: var(--dark);
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
 
-    /* HEADER */
-    .header-funcionario {
+    /* ===== HEADER ===== */
+    .hdr {
       background: var(--navy);
-      padding: 14px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 40;
+      padding: 13px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 40;
       box-shadow: 0 1px 0 rgba(255,255,255,.06);
     }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-    }
-
-    .logo-link { text-decoration: none; }
-
-    .logo {
-      width: 36px; height: 36px;
-      background: rgba(255,255,255,.12);
-      border: 1.5px solid rgba(255,255,255,.18);
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(255,255,255,.85);
-      font-size: 16px;
-      transition: background .18s;
-    }
-    .logo-link:hover .logo { background: rgba(255,255,255,.2); }
-
-    .page-info h1, .page-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-      margin: 0;
-      letter-spacing: -.2px;
-    }
-
-    .page-info p, .page-subtitle {
-      font-size: 11px;
-      color: rgba(255,255,255,.45);
-      margin: 0;
-    }
-
-    .header-right { display: flex; align-items: center; gap: 6px; }
-
-    .icon-btn {
-      width: 34px; height: 34px;
+    .hdr-left { display: flex; align-items: center; gap: 10px; }
+    .hdr-logo {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.18);
       display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,.1);
-      border: 1.5px solid rgba(255,255,255,.12);
-      border-radius: 9px;
-      color: rgba(255,255,255,.75);
-      font-size: 14px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background .18s;
+      color: rgba(255,255,255,.85); font-size: 15px; text-decoration: none;
     }
-
-    .icon-btn:hover {
-      background: rgba(255,255,255,.2);
-      color: #fff;
+    .hdr-title  { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+    .hdr-sub    { font-size: 11px; color: rgba(255,255,255,.4); }
+    .hdr-right  { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.1); border: 1.5px solid rgba(255,255,255,.12);
+      border-radius: 8px; color: rgba(255,255,255,.75); font-size: 13px;
+      cursor: pointer; text-decoration: none; transition: background .15s;
     }
+    .icon-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
 
-    /* MAIN */
-    .main-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 18px 16px 100px;
+    /* ===== MAIN ===== */
+    .main { max-width: 640px; margin: 0 auto; padding: 14px 14px 100px; }
+
+    /* ===== BALANCE CARDS ===== */
+    .balance-row {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 8px; margin-bottom: 16px;
     }
-
-    /* BALANCE CARDS */
-    .balance-hero {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 18px;
+    .bal-card {
+      background: var(--white); border-radius: 12px;
+      padding: 12px 10px; border: 1px solid var(--border);
+      box-shadow: var(--shadow); border-top: 3px solid var(--border);
     }
+    .bal-card.green  { border-top-color: var(--success); }
+    .bal-card.red    { border-top-color: var(--danger); }
+    .bal-card.orange { border-top-color: var(--warning); }
+    .bal-label  { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+    .bal-value  { font-size: 17px; font-weight: 800; letter-spacing: -.5px; }
+    .bal-card.green  .bal-value { color: var(--success); }
+    .bal-card.red    .bal-value { color: var(--danger); }
+    .bal-card.orange .bal-value { color: var(--warning); }
 
-    @media (max-width: 900px) {
-      .balance-hero { grid-template-columns: 1fr 1fr; }
+    /* ===== TABS ===== */
+    .tabs-wrap {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden;
     }
-    @media (max-width: 500px) {
-      .balance-hero { grid-template-columns: 1fr; }
+    .tabs-bar {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--bg); overflow-x: auto; scrollbar-width: none;
     }
-
-    .balance-card {
-      background: #fff;
-      border-radius: var(--r);
-      padding: 18px 16px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .balance-card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 4px;
-      border-radius: 4px 0 0 4px;
-    }
-
-    .balance-card.green::before { background: var(--green); }
-    .balance-card.red::before   { background: var(--red); }
-    .balance-card.orange::before{ background: var(--orange); }
-
-    .balance-label {
-      font-size: 11px;
-      color: var(--mid);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .4px;
-      margin-bottom: 6px;
-    }
-
-    .balance-value {
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      letter-spacing: -.5px;
-    }
-
-    .balance-card.green  .balance-value { color: var(--green); }
-    .balance-card.red    .balance-value { color: var(--red); }
-    .balance-card.orange .balance-value { color: var(--orange); }
-
-    /* TABS */
-    .tabs-container {
-      background: #fff;
-      border-radius: var(--r);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    .tabs-header {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--light);
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .tabs-header::-webkit-scrollbar { display: none; }
-
+    .tabs-bar::-webkit-scrollbar { display: none; }
     .tab-btn {
-      flex: 1;
-      min-width: 100px;
-      padding: 13px 12px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--mid);
-      background: none;
-      border: none;
-      cursor: pointer;
-      position: relative;
-      transition: all .2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      font-family: 'Inter', sans-serif;
-      white-space: nowrap;
+      flex: 1; min-width: 90px; padding: 12px 8px;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      white-space: nowrap; position: relative; font-family: inherit;
+      transition: color .15s;
     }
-
-    .tab-btn:hover {
-      color: var(--primary);
-      background: rgba(37,99,235,.05);
-    }
-
-    .tab-btn.active {
-      color: var(--primary);
-      background: #fff;
-    }
-
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active { color: var(--primary); background: var(--white); }
     .tab-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: -1px; left: 0; right: 0;
-      height: 2px;
-      background: var(--primary);
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 2px; background: var(--primary);
     }
-
-    .tabs-content { min-height: 300px; }
-
-    .tab-pane {
-      display: none;
-      padding: 20px;
-      animation: fadeIn .25s ease;
+    .tab-badge {
+      background: var(--warning); color: #fff;
+      border-radius: 999px; font-size: 10px; font-weight: 700;
+      padding: 1px 6px; line-height: 1.4;
     }
-
+    .tab-pane { display: none; padding: 16px; animation: fadeIn .2s ease; }
     .tab-pane.active { display: block; }
-
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* COMISSÕES SECTION */
-    .comissoes-filters {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-      background: #fff;
-      padding: 16px;
-      border-radius: var(--r);
-      border: 1px solid var(--border);
+    /* ===== MOV CARDS ===== */
+    .filter-row {
+      display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
     }
-
-    @media (max-width: 600px) {
-      .comissoes-filters { grid-template-columns: 1fr; }
+    .filter-row input, .filter-row select {
+      flex: 1; min-width: 120px;
+      padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 13px; font-family: inherit; background: var(--white); color: var(--text);
+      outline: none; transition: border-color .15s;
     }
-
-    .comissoes-filters label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--mid);
-      text-transform: uppercase;
-      letter-spacing: .4px;
-      display: block;
-      margin-bottom: 5px;
-    }
-
-    .comissoes-filters input {
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 13px;
-      width: 100%;
-      font-family: 'Inter', sans-serif;
-    }
-
-    .comissoes-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .comissoes-grid { grid-template-columns: 1fr; }
-    }
-
-    .comissoes-column {
-      background: #fff;
-      border-radius: var(--r);
-      padding: 16px;
-      border: 1px solid var(--border);
-    }
-
-    .comissoes-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1.5px solid var(--border);
-    }
-
-    .comissoes-icon {
-      width: 36px; height: 36px;
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; color: #fff;
-    }
-
-    .comissoes-icon.creditos { background: var(--green); }
-    .comissoes-icon.debitos  { background: var(--red); }
-
-    .comissoes-header h3 {
-      font-size: 15px;
-      font-weight: 700;
-      flex: 1; margin: 0;
-    }
-
-    .comissoes-badge {
-      background: rgba(37,99,235,.1);
-      color: var(--primary);
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .comissoes-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px;
-      border-radius: 8px;
-      background: var(--light);
-      margin-bottom: 8px;
-      border: 1px solid var(--border);
-      transition: all .18s;
-    }
-
-    .comissoes-item:hover {
-      box-shadow: var(--shadow);
-      transform: translateX(3px);
-    }
-
-    .comissoes-item-details { flex: 1; min-width: 0; }
-
-    .comissoes-item-title {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 3px;
-      color: var(--dark);
-    }
-
-    .comissoes-item-subtitle {
-      font-size: 11px;
-      color: var(--mid);
-    }
-
-    .comissoes-item-value {
-      font-size: 15px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .comissoes-item-value.credito { color: var(--green); }
-    .comissoes-item-value.debito  { color: var(--red); }
-
-    .comissoes-summary {
-      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-m) 100%);
-      border-radius: var(--r);
-      padding: 20px;
-      color: #fff;
-      margin-bottom: 16px;
-    }
-
-    .comissoes-summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-    }
-
-    .comissoes-summary-row:last-child {
-      border-bottom: none;
-      padding-top: 14px;
-      margin-top: 6px;
-      border-top: 1.5px solid rgba(255,255,255,.2);
-    }
-
-    .comissoes-summary-label { font-size: 13px; opacity: .85; }
-    .comissoes-summary-value { font-size: 17px; font-weight: 700; }
-    .comissoes-summary-total { font-size: 26px; font-weight: 800; }
-
-    /* ACTION BUTTONS */
-    .action-buttons {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    @media (max-width: 700px) {
-      .action-buttons { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    .action-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 16px 12px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--r);
-      background: #fff;
-      cursor: pointer;
-      transition: all .2s;
-      font-family: 'Inter', sans-serif;
-    }
-
-    .action-btn:hover {
-      border-color: var(--primary);
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
-    }
-
-    .action-btn i { font-size: 22px; }
-
-    .action-btn span {
-      font-weight: 600;
-      font-size: 13px;
-      text-align: center;
-    }
-
-    /* FILTERS */
-    .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .filter-select,
-    .filter-input {
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 13px;
-      font-family: 'Inter', sans-serif;
-      background: #fff;
-      color: var(--dark);
-    }
-
-    .filter-select:focus,
-    .filter-input:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .preset-buttons {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
+    .filter-row input:focus, .filter-row select:focus { border-color: var(--primary); }
+    .preset-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
     .preset-btn {
-      padding: 7px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 999px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--mid);
-      font-family: 'Inter', sans-serif;
-      transition: all .18s;
+      padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 999px;
+      background: var(--white); font-size: 12px; font-weight: 600; color: var(--muted);
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .preset-btn.active, .preset-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .mov-card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .mov-ico {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+    .mov-ico.entrada  { background: #d1fae5; color: var(--success); }
+    .mov-ico.saida    { background: #fee2e2; color: var(--danger); }
+    .mov-ico.adiant   { background: #fef3c7; color: var(--warning); }
+    .mov-ico.sangria  { background: #f1f5f9; color: var(--muted); }
+    .mov-ico.fecham   { background: #dbeafe; color: var(--primary); }
+    .mov-ico.pendente { background: #ede9fe; color: var(--purple); }
+    .mov-info { flex: 1; min-width: 0; }
+    .mov-desc { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mov-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .mov-val  { font-size: 15px; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
+    .mov-val.pos { color: var(--success); }
+    .mov-val.neg { color: var(--danger); }
+    .mov-val.neu { color: var(--muted); }
+
+    .type-chip {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+      text-transform: uppercase; letter-spacing: .3px;
+    }
+    .chip-entrada  { background: #d1fae5; color: #065f46; }
+    .chip-saida    { background: #fee2e2; color: #991b1b; }
+    .chip-adiant   { background: #fef3c7; color: #92400e; }
+    .chip-sangria  { background: #f1f5f9; color: #475569; }
+    .chip-fecham   { background: #dbeafe; color: #1e40af; }
+    .chip-pendente { background: #ede9fe; color: #5b21b6; }
+
+    /* ===== CAIXA ===== */
+    .caixa-btns {
+      display: grid; grid-template-columns: repeat(2,1fr);
+      gap: 10px; margin-bottom: 18px;
+    }
+    .caixa-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 14px 8px; border-radius: 12px; border: 1.5px solid var(--border);
+      background: var(--white); cursor: pointer; font-family: inherit;
+      transition: all .2s; font-size: 12px; font-weight: 600; color: var(--muted);
+    }
+    .caixa-btn:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .caixa-btn i { font-size: 22px; }
+    .caixa-btn.btn-green  { background: linear-gradient(135deg,#10b981,#059669); color: #fff; border: none; }
+    .caixa-btn.btn-red    { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; border: none; }
+    .caixa-btn.btn-orange { color: var(--warning); }
+    .caixa-btn.btn-purple { color: var(--purple); }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 10px;
     }
 
-    .preset-btn:hover,
-    .preset-btn.active {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
+    /* ===== PENDÊNCIAS ===== */
+    .pend-card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; margin-bottom: 8px; box-shadow: var(--shadow);
     }
-
-    /* TABLE */
-    .table-container {
-      background: #fff;
-      border-radius: var(--r);
-      overflow: hidden;
-      border: 1px solid var(--border);
+    .pend-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .pend-veiculo { font-size: 14px; font-weight: 700; }
+    .pend-val { font-size: 16px; font-weight: 800; color: var(--purple); }
+    .pend-meta { font-size: 12px; color: var(--muted); }
+    .pend-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-quitar {
+      flex: 1; padding: 10px; border-radius: 10px;
+      background: var(--primary); color: #fff;
+      border: none; cursor: pointer; font-family: inherit;
+      font-size: 13px; font-weight: 700; transition: opacity .15s;
     }
+    .btn-quitar:hover { opacity: .9; }
 
-    .table-responsive { overflow-x: auto; }
-
-    table { width: 100%; border-collapse: collapse; }
-
-    thead {
-      background: var(--light);
-      border-bottom: 1px solid var(--border);
+    /* ===== EMPTY / LOADING ===== */
+    .empty {
+      text-align: center; padding: 48px 20px; color: var(--muted);
     }
-
-    th {
-      padding: 11px 14px;
-      text-align: left;
-      font-weight: 700;
-      font-size: 12px;
-      color: var(--mid);
-      text-transform: uppercase;
-      letter-spacing: .3px;
-    }
-
-    td {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: #f8fafc; }
-
-    /* EMPTY STATE */
-    .empty-state {
-      text-align: center;
-      padding: 50px 20px;
-      color: var(--mid);
-    }
-
-    .empty-state i {
-      font-size: 52px;
-      color: #cbd5e1;
-      margin-bottom: 16px;
-      display: block;
-    }
-
-    .empty-state h2 {
-      font-size: 17px;
-      color: var(--dark);
-      margin-bottom: 6px;
-      font-weight: 700;
-    }
-
-    /* LOADING */
-    .loading-container {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
+    .empty i    { font-size: 44px; color: var(--faint); margin-bottom: 12px; display: block; }
+    .empty h3   { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .empty p    { font-size: 13px; }
+    .loading    { text-align: center; padding: 48px 20px; }
     .spinner {
-      border: 3px solid var(--border);
-      border-top: 3px solid var(--primary);
-      border-radius: 50%;
-      width: 36px; height: 36px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 3px solid var(--border); border-top-color: var(--primary);
+      animation: spin .9s linear infinite; margin: 0 auto 12px;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p  { font-size: 13px; color: var(--muted); }
 
-    /* STATUS BADGE */
-    .status-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .3px;
+    /* ===== BOTTOM SHEET MODAL ===== */
+    .sheet-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 1000;
+      opacity: 0; pointer-events: none; transition: opacity .25s;
     }
-
-    .status-pendente  { background: #fef3c7; color: #92400e; }
-    .status-completo  { background: #d1fae5; color: #065f46; }
-
-    /* MODAL */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+    .sheet-overlay.open { opacity: 1; pointer-events: all; }
+    .sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      max-width: 640px; margin: 0 auto;
+      background: var(--white); border-radius: 20px 20px 0 0;
+      max-height: 92vh; overflow-y: auto;
+      transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+      z-index: 1001;
     }
-
-    .modal.active {
-      display: flex;
+    .sheet.open { transform: translateY(0); }
+    .sheet-handle {
+      width: 40px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 12px auto 0;
     }
-
-    .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    .sheet-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--white); z-index: 10;
     }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+    .sheet-title { font-size: 16px; font-weight: 700; }
+    .sheet-close {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--bg); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--muted); transition: background .15s;
     }
+    .sheet-close:hover { background: var(--border); }
+    .sheet-body { padding: 18px; }
 
-    .modal-header h2 {
-      margin: 0;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: #666;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      font-weight: 600;
+    /* ===== FORM FIELDS ===== */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .4px;
       margin-bottom: 6px;
-      font-size: 14px;
     }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-      font-family: inherit;
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 11px 13px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 14px; font-family: inherit; color: var(--text);
+      background: var(--white); outline: none; transition: border-color .15s;
     }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); }
+    .field textarea { resize: none; min-height: 80px; }
 
-    .form-group textarea {
-      resize: vertical;
-      min-height: 100px;
+    /* Categoria chips */
+    .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .cat-chip {
+      flex: 1; min-width: 90px; padding: 10px 8px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      background: var(--white); cursor: pointer; font-family: inherit;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      text-align: center; transition: all .15s; display: flex;
+      flex-direction: column; align-items: center; gap: 4px;
     }
+    .cat-chip i { font-size: 18px; }
+    .cat-chip.sel-despesa  { border-color: var(--danger);  background: #fee2e2; color: var(--danger); }
+    .cat-chip.sel-adiant   { border-color: var(--warning); background: #fef3c7; color: var(--warning); }
+    .cat-chip.sel-sangria  { border-color: var(--muted);   background: #f1f5f9; color: var(--muted); }
+    .cat-chip.sel-outro    { border-color: var(--purple);  background: #ede9fe; color: var(--purple); }
 
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: var(--primary);
+    .sheet-footer {
+      padding: 14px 18px 24px;
+      border-top: 1px solid var(--border);
+      position: sticky; bottom: 0; background: var(--white);
     }
-
-    .modal-buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      margin-top: 24px;
+    .btn-submit-sheet {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: var(--primary); color: #fff; border: none;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s;
     }
+    .btn-submit-sheet:hover { opacity: .9; }
+    .btn-submit-sheet:disabled { opacity: .5; cursor: not-allowed; }
 
-    .btn-cancel,
-    .btn-submit {
-      padding: 10px 20px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
+    /* ===== MODAIS EXISTENTES (abertura/fechamento/relatório) ===== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 2000;
+      align-items: center; justify-content: center; padding: 16px;
     }
-
-    .btn-cancel {
-      background: var(--light);
-      color: var(--dark);
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--white); border-radius: 16px;
+      padding: 22px; max-width: 480px; width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,.2); max-height: 90vh; overflow-y: auto;
     }
-
-    .btn-cancel:hover {
-      background: #e0e0e0;
+    .modal-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px;
     }
-
-    .btn-submit {
-      background: var(--primary);
-      color: white;
+    .modal-hdr h2 { font-size: 16px; font-weight: 700; }
+    .modal-close-btn {
+      background: none; border: none; font-size: 22px;
+      cursor: pointer; color: var(--muted); line-height: 1;
     }
-
-    .btn-submit:hover {
-      background: #0052a3;
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+    .modal-field input, .modal-field select {
+      width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px; font-family: inherit; outline: none;
     }
+    .modal-field input:focus, .modal-field select:focus { border-color: var(--primary); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .btn-cancel { padding: 10px 18px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13px; }
+    .btn-confirm { padding: 10px 18px; border-radius: 10px; border: none; background: var(--primary); color: #fff; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13px; }
+    .btn-confirm-danger { background: var(--danger); }
+    .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
 
-    .btn-danger {
-      background: var(--danger);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
+    /* Fechamento grid */
+    .fech-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 16px; }
+    .fech-item { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+    .fech-item .flabel { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .fech-item input { width: 100%; padding: 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; font-weight: 700; text-align: center; font-family: inherit; outline: none; }
+    .fech-item input:focus { border-color: var(--primary); }
+    .fech-esp { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 6px; }
 
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* FECHAMENTO GRID */
-    .fechamento-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .fechamento-item {
-      background: var(--light);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-    }
-
-    .fechamento-item .label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 8px;
-    }
-
-    .fechamento-item input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 700;
-      text-align: center;
-      color: var(--dark);
-    }
-
-    /* RELATORIO TABLE */
-    .relatorio-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 16px;
-    }
-
-    .relatorio-table th {
-      text-align: left;
-      padding: 8px;
-      color: #666;
-      font-size: 13px;
-      border-bottom: 2px solid var(--border);
-    }
-
-    .relatorio-table th:not(:first-child) { text-align: right; }
-
-    .relatorio-table td {
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
-
-    .relatorio-table td:not(:first-child) { text-align: right; }
-
-    .relatorio-table .divergente { background: #fee2e2; }
-
+    /* Relatório */
+    .rel-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    .rel-table th { text-align: left; padding: 8px; font-size: 12px; color: var(--muted); border-bottom: 2px solid var(--border); font-weight: 600; }
+    .rel-table th:not(:first-child) { text-align: right; }
+    .rel-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .rel-table td:not(:first-child) { text-align: right; }
+    .rel-table tr.diverg { background: #fee2e2; }
     .diff-ok { color: var(--success); font-weight: 700; }
     .diff-err { color: var(--danger); font-weight: 700; }
+    .status-big { display: inline-block; padding: 6px 20px; border-radius: 20px; font-weight: 700; font-size: 14px; }
+    .status-big.conferido  { background: #d1fae5; color: #065f46; }
+    .status-big.divergente { background: #fee2e2; color: #991b1b; }
 
-    .status-badge-big {
-      display: inline-block;
-      padding: 8px 24px;
-      border-radius: 20px;
-      font-weight: 700;
-      font-size: 16px;
+    /* ===== QUITAR PENDÊNCIA ===== */
+    .pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .pay-btn {
+      padding: 14px; border-radius: 12px; border: 1.5px solid var(--border);
+      background: var(--white); cursor: pointer; font-family: inherit;
+      font-size: 14px; font-weight: 600; text-align: center; transition: all .15s;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
     }
+    .pay-btn i { font-size: 22px; }
+    .pay-btn.dinheiro { border-color: var(--success); color: var(--success); }
+    .pay-btn.pix      { border-color: var(--primary); color: var(--primary); }
+    .pay-btn.cartao   { border-color: var(--purple);  color: var(--purple); }
+    .pay-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    .status-badge-big.conferido { background: #d1fae5; color: #065f46; }
-    .status-badge-big.divergente { background: #fee2e2; color: #991b1b; }
-
-    .spinner-icon {
-      animation: spin 1s linear infinite;
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed; bottom: 88px; left: 14px; right: 14px;
+      max-width: 400px; margin: 0 auto;
+      background: var(--white); padding: 13px 15px; border-radius: 12px;
+      box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 10px;
+      z-index: 3000; transform: translateY(120px); transition: transform .28s ease;
     }
+    .toast.show { transform: translateY(0); }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.success i { color: var(--success); }
+    .toast.error   { border-left: 3px solid var(--danger); }
+    .toast.error i { color: var(--danger); }
+    .toast-msg { font-size: 13px; font-weight: 500; }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* MENU DROPDOWN */
-    .menu-dropdown {
-      display: none;
-      position: fixed;
-      bottom: 80px;
-      right: 16px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.18);
-      border: 1px solid var(--border);
-      min-width: 190px;
-      z-index: 999;
-      overflow: hidden;
-      animation: slideUp .25s ease;
-    }
-
-    .menu-dropdown.active { display: block; }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .menu-dropdown a,
-    .menu-dropdown button {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px;
-      color: var(--dark); text-decoration: none;
-      border: none; background: none;
-      width: 100%; cursor: pointer;
-      font-size: 13px; font-weight: 500;
-      font-family: 'Inter', sans-serif;
-      transition: background .15s;
-    }
-
-    .menu-dropdown a:hover,
-    .menu-dropdown button:hover { background: var(--light); color: var(--primary); }
-    .menu-dropdown button:last-child { color: var(--red); }
-
-    /* OVERLAY */
-    .overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.4);
-      z-index: 998;
-    }
-    .overlay.active { display: block; }
-
-    /* MOBILE NAV */
+    /* ===== MOBILE NAV ===== */
     .mobile-bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
-      background: #fff;
-      border-top: 1px solid var(--border);
+      background: var(--white); border-top: 1px solid var(--border);
       display: flex; justify-content: space-around;
-      height: 66px;
-      z-index: 999;
+      height: 64px; z-index: 999;
       box-shadow: 0 -2px 12px rgba(0,0,0,.08);
     }
-
     .nav-item {
-      flex: 1;
-      display: flex; flex-direction: column;
+      flex: 1; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      text-decoration: none;
-      color: var(--mid); font-size: 10px; font-weight: 600;
-      gap: 3px; transition: all .18s;
+      text-decoration: none; color: var(--muted);
+      font-size: 10px; font-weight: 600; gap: 3px;
       border: none; background: none; cursor: pointer;
-      border-top: 2.5px solid transparent;
-      font-family: 'Inter', sans-serif;
+      border-top: 2.5px solid transparent; font-family: inherit;
     }
-
-    .nav-item:hover { color: var(--primary); }
     .nav-item.active { color: var(--primary); border-top-color: var(--primary); }
-    .nav-item i { font-size: 20px; }
+    .nav-item i { font-size: 19px; }
 
-    /* TOAST */
-    .toast {
-      position: fixed;
-      bottom: 90px; left: 16px; right: 16px;
-      max-width: 400px; margin: 0 auto;
-      background: #fff;
-      padding: 14px 16px;
-      border-radius: 10px;
-      box-shadow: var(--shadow-md);
-      display: flex; align-items: center; gap: 10px;
-      z-index: 2000;
-      transform: translateY(130px);
-      transition: transform .28s ease;
+    /* Menu dropdown */
+    .menu-dropdown {
+      display: none; position: fixed; bottom: 72px; right: 14px;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.18); border: 1px solid var(--border);
+      min-width: 180px; z-index: 1000; overflow: hidden;
     }
+    .menu-dropdown.active { display: block; }
+    .menu-dropdown a, .menu-dropdown button {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; color: var(--text); text-decoration: none;
+      border: none; background: none; width: 100%; cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit; transition: background .15s;
+    }
+    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--bg); color: var(--primary); }
+    .menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 999; }
+    .menu-overlay.active { display: block; }
 
-    .toast.show { transform: translateY(0); }
-    .toast-success { border-left: 3px solid var(--success); }
-    .toast-success i { color: var(--success); }
-    .toast-error { border-left: 3px solid var(--danger); }
-    .toast-error i { color: var(--danger); }
-
-    /* RESPONSIVE */
-    @media (max-width: 600px) {
-      .main-container { padding: 12px 12px 100px; }
-      .tab-pane { padding: 14px; }
-      th, td { padding: 9px 10px; font-size: 12px; }
-      .filters { flex-direction: column; }
-      .filter-select, .filter-input { width: 100%; }
-      .action-buttons { grid-template-columns: 1fr 1fr; }
+    @media (min-width: 500px) {
+      .bal-value { font-size: 20px; }
     }
   </style>
 </head>
 <body>
-  <!-- HEADER -->
-  <div id="header"></div>
 
-  <!-- MENU -->
-  <div id="menu"></div>
-  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+<!-- HEADER -->
+<div id="header"></div>
 
-  <!-- MAIN CONTENT -->
-  <main class="main-container">
-    <!-- BALANCE CARDS -->
-    <section class="balance-hero" id="balanceCards"></section>
+<!-- MENU -->
+<div id="menu"></div>
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
-    <!-- TABS CONTAINER -->
-    <section class="tabs-container">
-      <div class="tabs-header">
-        <button class="tab-btn active" data-tab="movimentacoes" onclick="switchTab('movimentacoes')">
-          <i class="fas fa-exchange-alt"></i>
-          <span>Movimentações</span>
-        </button>
-        <button class="tab-btn" data-tab="caixa" onclick="switchTab('caixa')">
-          <i class="fas fa-cash-register"></i>
-          <span>Controle de Caixa</span>
-        </button>
-        <button class="tab-btn" data-tab="comissoes" onclick="switchTab('comissoes')">
-          <i class="fas fa-coins"></i>
-          <span>Comissões</span>
-        </button>
-        <button class="tab-btn" data-tab="pendencias" onclick="switchTab('pendencias')">
-          <i class="fas fa-clock"></i>
-          <span>Pendências</span>
-        </button>
-      </div>
-
-      <div class="tabs-content">
-        <div id="tab-movimentacoes" class="tab-pane active"></div>
-        <div id="tab-caixa" class="tab-pane"></div>
-        <div id="tab-comissoes" class="tab-pane"></div>
-        <div id="tab-pendencias" class="tab-pane"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- MOBILE NAV -->
-  <nav id="mobileNav"></nav>
-
-  <!-- TRANSACTION MODAL -->
-  <div id="transactionModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modalTitle">Lançar Transação</h2>
-        <button class="modal-close" onclick="closeTransactionModal()">&times;</button>
-      </div>
-      <form id="transactionForm" onsubmit="submitTransaction(event)">
-        <div class="form-group">
-          <label>Descrição</label>
-          <input type="text" id="transactionDescription" required placeholder="Ex: Compra de material">
-        </div>
-        <div class="form-group">
-          <label>Forma de Pagamento</label>
-          <select id="transactionFormaPagamento" required>
-            <option value="">Selecione...</option>
-            <option value="DINHEIRO">Dinheiro</option>
-            <option value="CARTAO">Cartão</option>
-            <option value="PIX">Pix</option>
-            <option value="NFE">NFe</option>
-            <option value="CHEQUE">Cheque</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Valor (R$)</label>
-          <input type="number" id="transactionValue" required placeholder="0.00" step="0.01" min="0">
-        </div>
-        <div class="form-group" id="fornecedorGroup" style="display: none;">
-          <label>Fornecedor (Opcional)</label>
-          <input type="text" id="transactionFornecedor" placeholder="Nome do fornecedor">
-        </div>
-        <input type="hidden" id="transactionType" value="">
-        <div class="modal-buttons">
-          <button type="button" class="btn-cancel" onclick="closeTransactionModal()">Cancelar</button>
-          <button type="submit" class="btn-submit">Lançar</button>
-        </div>
-      </form>
-    </div>
+<!-- MAIN -->
+<main class="main">
+  <!-- Balance Cards -->
+  <div class="balance-row" id="balCards">
+    <div class="bal-card green"><div class="bal-label">Faturamento</div><div class="bal-value" id="balFat">—</div></div>
+    <div class="bal-card red"><div class="bal-label">Saídas</div><div class="bal-value" id="balSai">—</div></div>
+    <div class="bal-card orange"><div class="bal-label">Pendências</div><div class="bal-value" id="balPend">—</div></div>
   </div>
 
-  <!-- MODAL: ABERTURA DE CAIXA -->
-  <div id="aberturaModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2><i class="fas fa-door-open"></i> Abrir Caixa</h2>
-        <button class="modal-close" onclick="closeAberturaModal()">&times;</button>
+  <!-- Tabs -->
+  <div class="tabs-wrap">
+    <div class="tabs-bar">
+      <button class="tab-btn active" id="tb-mov" onclick="switchTab('mov')">
+        <i class="fas fa-exchange-alt"></i> Movimentações
+      </button>
+      <button class="tab-btn" id="tb-caixa" onclick="switchTab('caixa')">
+        <i class="fas fa-cash-register"></i> Caixa
+      </button>
+      <button class="tab-btn" id="tb-pend" onclick="switchTab('pend')">
+        <i class="fas fa-clock"></i> Pendências
+        <span class="tab-badge" id="pendBadge" style="display:none">0</span>
+      </button>
+    </div>
+
+    <!-- TAB MOVIMENTAÇÕES -->
+    <div id="tab-mov" class="tab-pane active">
+      <div class="filter-row">
+        <input type="date" id="fDataInicio" onchange="applyFilters()">
+        <input type="date" id="fDataFim" onchange="applyFilters()">
+        <select id="fTipo" onchange="applyFilters()">
+          <option value="">Todos</option>
+          <option value="PAGAMENTO">Entradas</option>
+          <option value="SAIDA">Saídas</option>
+          <option value="PENDENTE">Pendentes</option>
+          <option value="SANGRIA">Sangrias</option>
+        </select>
       </div>
-      <div class="form-group">
-        <label>Troco inicial em dinheiro (opcional)</label>
-        <input type="number" id="aberturaValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="font-size:18px; font-weight:700;">
-        <small style="color:var(--mid); display:block; margin-top:4px;">Deixe em branco se não houver troco no caixa.</small>
+      <div class="preset-row">
+        <button class="preset-btn active" id="pre-today" onclick="setPreset('today')">Hoje</button>
+        <button class="preset-btn" id="pre-week" onclick="setPreset('week')">Semana</button>
+        <button class="preset-btn" id="pre-month" onclick="setPreset('month')">Mês</button>
       </div>
-      <div class="form-group">
-        <label>Responsável pela abertura</label>
-        <input type="text" id="aberturaResponsavel" placeholder="Nome do responsável">
-      </div>
-      <div class="modal-buttons">
-        <button type="button" class="btn-cancel" onclick="closeAberturaModal()">Cancelar</button>
-        <button type="button" id="btnConfirmarAbertura" class="btn-submit" onclick="confirmarAbertura()">
-          <i class="fas fa-door-open"></i> Abrir Caixa
+      <div id="movList"></div>
+    </div>
+
+    <!-- TAB CAIXA -->
+    <div id="tab-caixa" class="tab-pane">
+      <div id="caixaBtns"></div>
+      <div class="section-label" id="caixaHistLabel" style="display:none">Hoje</div>
+      <div id="caixaHist"></div>
+    </div>
+
+    <!-- TAB PENDÊNCIAS -->
+    <div id="tab-pend" class="tab-pane">
+      <div id="pendList"></div>
+    </div>
+  </div>
+</main>
+
+<!-- NAV -->
+<nav id="mobileNav"></nav>
+
+<!-- ==================== SHEET: SAÍDA ==================== -->
+<div class="sheet-overlay" id="saidaOverlay" onclick="closeSaidaSheet()"></div>
+<div class="sheet" id="saidaSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="saidaSheetTitle">Lançar Saída</span>
+    <button class="sheet-close" onclick="closeSaidaSheet()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="sheet-body">
+    <!-- Categoria chips -->
+    <div id="catChipsWrap">
+      <div style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;">Categoria</div>
+      <div class="cat-chips" id="catChips">
+        <button class="cat-chip" data-cat="Despesa" onclick="selectCat('Despesa')">
+          <i class="fas fa-receipt" style="color:var(--danger)"></i> Despesa
+        </button>
+        <button class="cat-chip" data-cat="Adiantamento" onclick="selectCat('Adiantamento')">
+          <i class="fas fa-hand-holding-usd" style="color:var(--warning)"></i> Vale
+        </button>
+        <button class="cat-chip" data-cat="Outro" onclick="selectCat('Outro')">
+          <i class="fas fa-ellipsis-h" style="color:var(--purple)"></i> Outro
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- MODAL: FECHAMENTO DE CAIXA -->
-  <div id="fechamentoModal" class="modal">
-    <div class="modal-content" style="max-width: 560px;">
-      <div class="modal-header">
-        <h2><i class="fas fa-door-closed"></i> Fechar Caixa do Dia</h2>
-        <button class="modal-close" onclick="closeFechamentoModal()">&times;</button>
+    <!-- Valor -->
+    <div class="field">
+      <label>Valor (R$) *</label>
+      <input type="number" id="sValor" step="0.01" min="0.01" placeholder="0,00">
+    </div>
+
+    <!-- Forma de pagamento -->
+    <div class="field">
+      <label>Forma de Pagamento *</label>
+      <select id="sFormaPag">
+        <option value="">Selecione...</option>
+        <option value="DINHEIRO">💵 Dinheiro</option>
+        <option value="PIX">📱 PIX</option>
+        <option value="CARTAO">💳 Cartão</option>
+        <option value="NFE">🧾 NFe</option>
+        <option value="CHEQUE">📄 Cheque</option>
+      </select>
+    </div>
+
+    <!-- Descrição (oculto para Adiantamento) -->
+    <div class="field" id="sDescField">
+      <label>Descrição *</label>
+      <input type="text" id="sDescricao" placeholder="Ex: Compra de produto de limpeza">
+    </div>
+
+    <!-- Responsável / Fornecedor -->
+    <div class="field" id="sRespField">
+      <label id="sRespLabel">Fornecedor (opcional)</label>
+      <div style="position:relative">
+        <input type="text" id="sResp" placeholder="Nome do fornecedor ou responsável">
+        <div id="lavDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--white); border:1.5px solid var(--border); border-top:none; border-radius:0 0 10px 10px; z-index:10; max-height:200px; overflow-y:auto;"></div>
       </div>
-      <p style="color:#666; font-size:14px; margin-bottom:20px;">
-        Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
-      </p>
-      <div class="fechamento-grid" id="fechamentoGrid">
-        <!-- Preenchido dinamicamente ao abrir o modal -->
+      <input type="hidden" id="sLavadorId">
+    </div>
+
+    <!-- Data (opcional) -->
+    <div class="field">
+      <label>Data (deixe vazio para agora)</label>
+      <input type="date" id="sData">
+    </div>
+  </div>
+  <div class="sheet-footer">
+    <button class="btn-submit-sheet" id="saidaSubmitBtn" onclick="submitSaida()">
+      <i class="fas fa-check"></i> Confirmar Saída
+    </button>
+  </div>
+</div>
+
+<!-- ==================== MODAL: ABERTURA ==================== -->
+<div class="modal-overlay" id="aberturaModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h2><i class="fas fa-door-open"></i> Abrir Caixa</h2>
+      <button class="modal-close-btn" onclick="closeAberturaModal()">×</button>
+    </div>
+    <div class="modal-field">
+      <label>Troco inicial (opcional)</label>
+      <input type="number" id="abValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="font-size:18px;font-weight:700;">
+      <small style="color:var(--muted);display:block;margin-top:4px;">Deixe em branco se não houver troco.</small>
+    </div>
+    <div class="modal-field">
+      <label>Responsável</label>
+      <input type="text" id="abResponsavel" placeholder="Nome do responsável">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAberturaModal()">Cancelar</button>
+      <button class="btn-confirm" id="btnAbrirConfirm" onclick="confirmarAbertura()">
+        <i class="fas fa-door-open"></i> Abrir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL: FECHAMENTO ==================== -->
+<div class="modal-overlay" id="fechamentoModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h2><i class="fas fa-door-closed"></i> Fechar Caixa</h2>
+      <button class="modal-close-btn" onclick="closeFechamentoModal()">×</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Informe o valor físico para cada método. Deixe em branco para R$ 0,00.</p>
+    <div class="fech-grid" id="fechGrid"></div>
+    <div style="padding:10px 14px;background:#fef3c7;border-radius:8px;text-align:center;color:#92400e;font-size:13px;margin-bottom:12px;">
+      <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeFechamentoModal()">Cancelar</button>
+      <button class="btn-confirm btn-confirm-danger" id="btnFechConfirm" onclick="confirmarFechamento()">
+        <i class="fas fa-lock"></i> Confirmar Fechamento
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL: RELATÓRIO ==================== -->
+<div class="modal-overlay" id="relatorioModal">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-hdr">
+      <h2><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
+      <button class="modal-close-btn" onclick="closeRelatorioModal()">×</button>
+    </div>
+    <div style="text-align:center;margin-bottom:18px;" id="relStatus"></div>
+    <table class="rel-table">
+      <thead>
+        <tr>
+          <th>Método</th>
+          <th style="text-align:right">Digitado</th>
+          <th style="text-align:right">Sistema</th>
+          <th style="text-align:right">Diferença</th>
+        </tr>
+      </thead>
+      <tbody id="relTbody"></tbody>
+    </table>
+    <div id="relRodape" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="closeRelatorioModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL: QUITAR PENDÊNCIA ==================== -->
+<div class="modal-overlay" id="quitarModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h2><i class="fas fa-money-bill-wave"></i> Quitar Pendência</h2>
+      <button class="modal-close-btn" onclick="closeQuitarModal()">×</button>
+    </div>
+    <div id="quitarInfo" style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;"></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Escolha a forma de pagamento:</p>
+    <div class="pay-methods">
+      <button class="pay-btn dinheiro" id="qBtnDinheiro" onclick="processarQuitar('DINHEIRO')">
+        <i class="fas fa-money-bill-wave"></i> Dinheiro
+      </button>
+      <button class="pay-btn pix" id="qBtnPix" onclick="processarQuitar('PIX')">
+        <i class="fas fa-qrcode"></i> PIX
+      </button>
+      <button class="pay-btn cartao" id="qBtnCartao" onclick="processarQuitar('CARTAO')">
+        <i class="fas fa-credit-card"></i> Cartão
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <i class="fas fa-check-circle" id="toastIco"></i>
+  <span class="toast-msg" id="toastMsg"></span>
+</div>
+
+<script src="../api.js"></script>
+<script src="utils-funcionario.js"></script>
+<script>
+const PAGE_TITLE  = 'Financeiro';
+const PAGE_ACTIVE = 'financeiro';
+
+let caixaStatus = { isOpen: false, notOpened: true, paymentMethodsConfig: { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false } };
+let activeTab    = 'mov';
+let activePreset = 'today';
+let saidaMode    = 'saida'; // 'saida' | 'sangria'
+let catSelecionada = '';
+let lavadoresCache = [];
+let quitarOrdemAtual = null;
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!validateFuncionarioAccess()) return;
+  const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
+  if (!perms.includes('ver_financeiro')) {
+    showToast('Sem permissão para o financeiro', 'error');
+    setTimeout(() => { window.location.href = '../index-funcionario.html'; }, 1500);
+    return;
+  }
+
+  document.getElementById('header').innerHTML    = createFuncionarioHeader(PAGE_TITLE);
+  document.getElementById('menu').innerHTML      = createFuncionarioMenu();
+  document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+
+  await loadUserInfo();
+
+  const today = todayStr();
+  document.getElementById('fDataInicio').value = today;
+  document.getElementById('fDataFim').value    = today;
+
+  await Promise.all([loadBalanceCards(), loadMovimentacoes(), loadPendenciasCount()]);
+});
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ===================== BALANCE =====================
+async function loadBalanceCards() {
+  try {
+    const r = await window.api.getResumoDia();
+    document.getElementById('balFat').textContent  = formatCurrency(r.faturamentoDia || 0);
+    document.getElementById('balSai').textContent  = formatCurrency(r.totalSaidas || 0);
+  } catch(e) {
+    document.getElementById('balFat').textContent = 'Erro';
+  }
+  // Pendentes carregado separado
+}
+
+async function loadPendenciasCount() {
+  try {
+    const r = await window.api.getOrdens(1, 500, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
+    const total = r.pagination?.total || 0;
+    const valor = (r.ordens || []).reduce((s, o) => s + (parseFloat(o.valorTotal)||0), 0);
+    document.getElementById('balPend').textContent = formatCurrency(valor);
+    const badge = document.getElementById('pendBadge');
+    if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+  } catch(e) {}
+}
+
+// ===================== TABS =====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tb-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  activeTab = tab;
+  if (tab === 'mov')   loadMovimentacoes();
+  if (tab === 'caixa') loadCaixa();
+  if (tab === 'pend')  loadPendencias();
+}
+
+// ===================== MOVIMENTAÇÕES =====================
+async function loadMovimentacoes() {
+  const container = document.getElementById('movList');
+  const inicio = document.getElementById('fDataInicio').value;
+  const fim    = document.getElementById('fDataFim').value;
+  const tipo   = document.getElementById('fTipo').value;
+  container.innerHTML = createLoadingHtml();
+  try {
+    const r = await window.api.getHistoricoCaixa({ dataInicio: inicio, dataFim: fim, tipo });
+    const movs = r.registros || [];
+    if (movs.length === 0) {
+      container.innerHTML = createEmptyHtml('fa-inbox', 'Sem movimentações', 'Nenhuma movimentação no período.');
+      return;
+    }
+    container.innerHTML = movs.map(m => buildMovCard(m)).join('');
+  } catch(e) {
+    container.innerHTML = createEmptyHtml('fa-exclamation-triangle', 'Erro ao carregar', 'Tente novamente.');
+  }
+}
+
+function buildMovCard(m) {
+  const tipo = m.tipo;
+  const isAdiant = tipo === 'SAIDA' && m.descricao?.includes('[Adiantamento]');
+  let icoClass = 'saida', chipClass = 'chip-saida', chipLabel = 'Saída', valClass = 'neg', valPre = '– ';
+  if (tipo === 'PAGAMENTO')  { icoClass='entrada';  chipClass='chip-entrada';  chipLabel='Entrada';  valClass='pos'; valPre='+ '; }
+  if (tipo === 'PENDENTE')   { icoClass='pendente'; chipClass='chip-pendente'; chipLabel='Pendente'; valClass='neu'; valPre=''; }
+  if (tipo === 'SANGRIA')    { icoClass='sangria';  chipClass='chip-sangria';  chipLabel='Sangria';  valClass='neg'; valPre='– '; }
+  if (tipo === 'FECHAMENTO') { icoClass='fecham';   chipClass='chip-fecham';   chipLabel='Fechamento'; valClass='neu'; valPre=''; }
+  if (isAdiant)              { icoClass='adiant';   chipClass='chip-adiant';   chipLabel='Vale'; }
+
+  const icoMap = { entrada:'fa-arrow-down', saida:'fa-arrow-up', adiant:'fa-hand-holding-usd', sangria:'fa-money-bill-wave', fecham:'fa-lock', pendente:'fa-clock' };
+  const ico = icoMap[icoClass] || 'fa-circle';
+
+  const desc = m.descricao || m.lavador?.nome || m.fornecedor?.nome || '—';
+  const hora = m.data ? new Date(m.data).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
+  const data = m.data ? new Date(m.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
+  const meta = [data, hora, m.formaPagamento, m.lavador?.nome || m.fornecedor?.nome].filter(Boolean).join(' · ');
+
+  return `
+    <div class="mov-card">
+      <div class="mov-ico ${icoClass}"><i class="fas ${ico}"></i></div>
+      <div class="mov-info">
+        <div class="mov-desc">${desc}</div>
+        <div class="mov-meta">
+          <span class="type-chip ${chipClass}">${chipLabel}</span>
+          ${meta ? `<span style="margin-left:6px">${meta}</span>` : ''}
+        </div>
       </div>
-      <div style="margin:16px 0; padding:12px 16px; background:#fff3cd; border-radius:8px; text-align:center; color:#856404;">
-        <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
+      <div class="mov-val ${valClass}">${valPre}${formatCurrency(m.valor)}</div>
+    </div>`;
+}
+
+// ===================== FILTROS =====================
+function applyFilters() { loadMovimentacoes(); }
+
+function setPreset(preset) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pre-' + preset).classList.add('active');
+  activePreset = preset;
+  const now = new Date();
+  let ini = now, fim = now;
+  if (preset === 'week') { ini = new Date(now); ini.setDate(now.getDate() - now.getDay()); }
+  if (preset === 'month') { ini = new Date(now.getFullYear(), now.getMonth(), 1); }
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('fDataInicio').value = fmt(ini);
+  document.getElementById('fDataFim').value    = fmt(fim);
+  loadMovimentacoes();
+}
+
+// ===================== CAIXA =====================
+async function loadCaixa() {
+  const btns = document.getElementById('caixaBtns');
+  const hist = document.getElementById('caixaHist');
+  const lbl  = document.getElementById('caixaHistLabel');
+
+  try {
+    const status = await window.api.getStatusCaixa();
+    caixaStatus = { isOpen: status.isOpen||false, notOpened: status.notOpened??true, paymentMethodsConfig: status.paymentMethodsConfig||caixaStatus.paymentMethodsConfig, currentUserNome: status.currentUserNome||'' };
+  } catch(e) {}
+
+  let html = '<div class="caixa-btns">';
+  if (!caixaStatus.isOpen) {
+    html += `<button class="caixa-btn btn-green" onclick="openAberturaModal()" style="grid-column:span 2">
+      <i class="fas fa-door-open"></i> <span>Abrir Caixa</span>
+    </button>`;
+  } else {
+    html += `
+      <button class="caixa-btn btn-orange" onclick="openSaidaSheet('saida')">
+        <i class="fas fa-receipt"></i><span>Lançar Saída</span>
+      </button>
+      <button class="caixa-btn btn-purple" onclick="openSaidaSheet('sangria')">
+        <i class="fas fa-money-bill-wave"></i><span>Sangria</span>
+      </button>
+      <button class="caixa-btn btn-red" onclick="openFechamentoModal()" style="grid-column:span 2">
+        <i class="fas fa-door-closed"></i><span>Fechar Caixa</span>
+      </button>`;
+  }
+  html += '</div>';
+  btns.innerHTML = html;
+
+  try {
+    const r = await window.api.getHistoricoCaixa({ dataInicio: todayStr(), dataFim: todayStr(), tipo: '' });
+    const movs = r.registros || [];
+    if (movs.length > 0) {
+      lbl.style.display = 'block';
+      hist.innerHTML = movs.map(m => buildMovCard(m)).join('');
+    } else {
+      lbl.style.display = 'none';
+      hist.innerHTML = createEmptyHtml('fa-cash-register', 'Sem movimentações', 'Nenhuma movimentação hoje.');
+    }
+  } catch(e) { hist.innerHTML = ''; }
+}
+
+// ===================== PENDÊNCIAS =====================
+async function loadPendencias() {
+  const container = document.getElementById('pendList');
+  container.innerHTML = createLoadingHtml();
+  try {
+    const r = await window.api.getOrdens(1, 100, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
+    const ordens = r.ordens || [];
+    if (ordens.length === 0) {
+      container.innerHTML = createEmptyHtml('fa-check-circle', 'Sem pendências', 'Nenhuma ordem com pagamento pendente.');
+      return;
+    }
+    container.innerHTML = ordens.map(o => buildPendCard(o)).join('');
+  } catch(e) {
+    container.innerHTML = createEmptyHtml('fa-exclamation-triangle', 'Erro ao carregar', 'Tente novamente.');
+  }
+}
+
+function buildPendCard(o) {
+  const dataCriacao = o.createdAt ? new Date(o.createdAt).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '—';
+  return `
+    <div class="pend-card">
+      <div class="pend-top">
+        <div>
+          <div class="pend-veiculo">${o.veiculo?.modelo || o.veiculo?.placa || 'Veículo'}</div>
+          <div class="pend-meta">
+            #${o.numeroOrdem || o.id?.slice(0,8)} · ${o.cliente?.nome || '—'} · ${dataCriacao}
+          </div>
+        </div>
+        <div class="pend-val">${formatCurrency(o.valorTotal||0)}</div>
       </div>
-      <div class="modal-buttons">
-        <button type="button" class="btn-cancel" onclick="closeFechamentoModal()">Cancelar</button>
-        <button type="button" id="btnConfirmarFechamento" class="btn-danger" onclick="confirmarFechamento()">
-          <i class="fas fa-lock"></i> Confirmar Fechamento
+      ${o.veiculo?.placa ? `<div class="pend-meta" style="margin-bottom:8px;">Placa: ${o.veiculo.placa}</div>` : ''}
+      <div class="pend-actions">
+        <button class="btn-quitar" onclick="openQuitarModal(${JSON.stringify(o).replace(/"/g,'&quot;')})">
+          <i class="fas fa-money-bill-wave"></i> Quitar Pagamento
         </button>
       </div>
-    </div>
-  </div>
+    </div>`;
+}
 
-  <!-- MODAL: RELATÓRIO DE FECHAMENTO -->
-  <div id="relatorioModal" class="modal">
-    <div class="modal-content" style="max-width: 560px;">
-      <div class="modal-header">
-        <h2><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
-        <button class="modal-close" onclick="closeRelatorioModal()">&times;</button>
-      </div>
-      <div style="text-align:center; margin-bottom:20px;" id="relatorioStatus"></div>
-      <table class="relatorio-table" id="relatorioTabela">
-        <thead>
-          <tr>
-            <th>Método</th>
-            <th style="text-align:right;">Digitado</th>
-            <th style="text-align:right;">Computado</th>
-            <th style="text-align:right;">Diferença</th>
-          </tr>
-        </thead>
-        <tbody id="relatorioTbody"></tbody>
-      </table>
-      <div id="relatorioRodape" style="font-size:13px; color:#666; margin-top:8px;"></div>
-      <div class="modal-buttons" style="margin-top:16px;">
-        <button type="button" class="btn-submit" onclick="closeRelatorioModal()">Fechar</button>
-      </div>
-    </div>
-  </div>
+// ===================== SHEET SAÍDA =====================
+async function openSaidaSheet(mode) {
+  saidaMode = mode;
+  catSelecionada = '';
+  document.getElementById('saidaSheetTitle').textContent = mode === 'sangria' ? 'Registrar Sangria' : 'Lançar Saída';
+  document.getElementById('catChipsWrap').style.display = mode === 'sangria' ? 'none' : 'block';
+  document.getElementById('sDescField').style.display  = mode === 'sangria' ? 'none' : 'block';
+  document.getElementById('sRespField').style.display  = mode === 'sangria' ? 'none' : 'block';
 
-  <!-- SCRIPTS -->
-  <script src="../api.js"></script>
-  <script src="utils-funcionario.js"></script>
+  // Reset campos
+  ['sValor','sFormaPag','sDescricao','sResp','sData','sLavadorId'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.querySelectorAll('.cat-chip').forEach(c => c.className = 'cat-chip');
 
-  <script>
-    // PAGE CONFIGURATION
-    const PAGE_TITLE = 'Financeiro';
-    const PAGE_ACTIVE = 'financeiro';
+  if (mode !== 'sangria') await loadLavadores();
 
-    let currentTab = 'movimentacoes';
-    let currentTransactionType = '';
-    let caixaStatus = { isOpen: false, notOpened: true, paymentMethodsConfig: { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false } };
-    let filters = {
-      dataInicio: new Date().toISOString().split('T')[0],
-      dataFim: new Date().toISOString().split('T')[0],
-      tipo: '',
-      preset: 'today'
+  document.getElementById('saidaOverlay').classList.add('open');
+  document.getElementById('saidaSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSaidaSheet() {
+  document.getElementById('saidaOverlay').classList.remove('open');
+  document.getElementById('saidaSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function selectCat(cat) {
+  catSelecionada = cat;
+  document.querySelectorAll('.cat-chip').forEach(c => {
+    c.className = 'cat-chip';
+    if (c.dataset.cat === cat) {
+      const map = { Despesa:'sel-despesa', Adiantamento:'sel-adiant', Outro:'sel-outro' };
+      c.className = 'cat-chip ' + (map[cat]||'');
+    }
+  });
+  // Adiantamento: campo responsável vira lavador obrigatório
+  const isAdiant = cat === 'Adiantamento';
+  document.getElementById('sRespLabel').textContent = isAdiant ? 'Funcionário (lavador) *' : 'Fornecedor (opcional)';
+  document.getElementById('sDescField').style.display = isAdiant ? 'none' : 'block';
+  document.getElementById('lavDropdown').style.display = 'none';
+  if (isAdiant) renderLavDropdown('');
+}
+
+async function loadLavadores() {
+  if (lavadoresCache.length > 0) return;
+  try {
+    const r = await window.api.getLavadores();
+    lavadoresCache = r.lavadores || r || [];
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sResp = document.getElementById('sResp');
+  sResp?.addEventListener('input', () => {
+    if (catSelecionada === 'Adiantamento') renderLavDropdown(sResp.value);
+    else document.getElementById('lavDropdown').style.display = 'none';
+  });
+});
+
+function renderLavDropdown(query) {
+  const drop = document.getElementById('lavDropdown');
+  const filtered = lavadoresCache.filter(l => !query || l.nome?.toLowerCase().includes(query.toLowerCase()));
+  if (filtered.length === 0) { drop.style.display = 'none'; return; }
+  drop.innerHTML = filtered.map(l =>
+    `<div onclick="selectLavador('${l.id}','${l.nome}')" style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${l.nome}</div>`
+  ).join('');
+  drop.style.display = 'block';
+}
+
+function selectLavador(id, nome) {
+  document.getElementById('sResp').value    = nome;
+  document.getElementById('sLavadorId').value = id;
+  document.getElementById('lavDropdown').style.display = 'none';
+}
+
+async function submitSaida() {
+  const btn    = document.getElementById('saidaSubmitBtn');
+  const valor  = parseFloat(document.getElementById('sValor').value);
+  const forma  = document.getElementById('sFormaPag').value;
+  const desc   = document.getElementById('sDescricao').value.trim();
+  const resp   = document.getElementById('sResp').value.trim();
+  const lavId  = document.getElementById('sLavadorId').value;
+  const data   = document.getElementById('sData').value;
+
+  if (!valor || valor <= 0) { showToast('Informe um valor válido', 'error'); return; }
+  if (!forma)               { showToast('Selecione a forma de pagamento', 'error'); return; }
+
+  if (saidaMode === 'sangria') {
+    btn.disabled = true; btn.textContent = 'Registrando...';
+    try {
+      await window.api.createSangria({ valor, observacao: desc || undefined });
+      showToast('Sangria registrada!', 'success');
+      closeSaidaSheet(); await Promise.all([loadBalanceCards(), loadCaixa()]);
+    } catch(e) { showToast('Erro ao registrar sangria', 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
+    return;
+  }
+
+  if (!catSelecionada)    { showToast('Selecione a categoria', 'error'); return; }
+  if (catSelecionada !== 'Adiantamento' && !desc) { showToast('Informe a descrição', 'error'); return; }
+  if (catSelecionada === 'Adiantamento' && !lavId) { showToast('Selecione o funcionário', 'error'); return; }
+
+  btn.disabled = true; btn.textContent = 'Confirmando...';
+  try {
+    const payload = {
+      tipo: catSelecionada,
+      valor,
+      formaPagamento: forma,
+      descricao: catSelecionada !== 'Adiantamento' ? desc : undefined,
+      fornecedorNome: catSelecionada !== 'Adiantamento' && resp ? resp : undefined,
+      lavadorId: catSelecionada === 'Adiantamento' ? lavId : undefined,
+      dataRetroativo: data || undefined,
     };
-
-    // INITIALIZE
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!validateFuncionarioAccess()) return;
-
-      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
-      if (!permissoes.includes('ver_financeiro')) {
-        showToast('Você não tem permissão para visualizar o financeiro', 'error');
-        setTimeout(() => {
-          window.location.href = '../index-funcionario.html';
-        }, 1500);
-        return;
-      }
-
-      document.getElementById('header').innerHTML = createFuncionarioHeader(PAGE_TITLE);
-      document.getElementById('menu').innerHTML = createFuncionarioMenu();
-      document.getElementById('mobileNav').innerHTML = createMobileNav(PAGE_ACTIVE);
-
-      await loadUserInfo();
-
-      await loadBalanceCards();
-      await loadMovimentacoes();
-    });
-
-    // SWITCH TAB
-    async function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tab);
-      });
-
-      document.querySelectorAll('.tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-      });
-      document.getElementById(`tab-${tab}`).classList.add('active');
-
-      currentTab = tab;
-
-      switch(tab) {
-        case 'movimentacoes':
-          await loadMovimentacoes();
-          break;
-        case 'caixa':
-          await loadCaixa();
-          break;
-        case 'comissoes':
-          await loadMinhasComissoes();
-          break;
-        case 'pendencias':
-          await loadPendencias();
-          break;
-      }
-    }
-
-    // LOAD BALANCE CARDS
-    async function loadBalanceCards() {
-      const container = document.getElementById('balanceCards');
-
-      try {
-        const response = await window.api.getResumoDia();
-        const resumo = response || {};
-
-        const totalRecebido = resumo.faturamentoDia || 0;
-        const totalSaidas = resumo.totalSaidas || 0;
-        const pendentes = resumo.pending || 0;
-
-        container.innerHTML = `
-          <div class="balance-card green">
-            <div class="balance-label">Total Recebido</div>
-            <div class="balance-value">${formatCurrency(totalRecebido)}</div>
-            <div style="font-size: 12px; color: #666; margin-top: 8px;">
-              💰 ${formatCurrency(resumo.totalDinheiro || 0)} | 💳 ${formatCurrency(resumo.totalCartao || 0)} | 📱 ${formatCurrency(resumo.totalPix || 0)}
-            </div>
-          </div>
-          <div class="balance-card red">
-            <div class="balance-label">Total de Saídas</div>
-            <div class="balance-value">${formatCurrency(totalSaidas)}</div>
-          </div>
-          <div class="balance-card orange">
-            <div class="balance-label">Pendências</div>
-            <div class="balance-value">${formatCurrency(pendentes)}</div>
-          </div>
-        `;
-      } catch (error) {
-        console.error('Erro ao carregar balanço:', error);
-        container.innerHTML = '<div class="empty-state"><p>Erro ao carregar balanço</p></div>';
-      }
-    }
-
-    // LOAD MOVIMENTAÇÕES
-    async function loadMovimentacoes() {
-      const container = document.getElementById('tab-movimentacoes');
-
-      try {
-        container.innerHTML = createLoading();
-
-        const response = await window.api.getHistoricoCaixa({
-          dataInicio: filters.dataInicio,
-          dataFim: filters.dataFim,
-          tipo: filters.tipo
-        });
-
-        const movimentacoes = response.historico || [];
-
-        let filterHtml = `
-          <div class="filters">
-            <input type="date" class="filter-input" id="dataInicio" value="${filters.dataInicio}" onchange="updateDateFilter()">
-            <input type="date" class="filter-input" id="dataFim" value="${filters.dataFim}" onchange="updateDateFilter()">
-            <select class="filter-select" id="tipoFilter" onchange="updateTipoFilter()">
-              <option value="">Todos os tipos</option>
-              <option value="entrada">Entrada</option>
-              <option value="saida">Saída</option>
-            </select>
-          </div>
-          <div class="preset-buttons">
-            <button class="preset-btn ${filters.preset === 'today' ? 'active' : ''}" onclick="applyPreset('today')">Hoje</button>
-            <button class="preset-btn ${filters.preset === 'week' ? 'active' : ''}" onclick="applyPreset('week')">Esta Semana</button>
-            <button class="preset-btn ${filters.preset === 'month' ? 'active' : ''}" onclick="applyPreset('month')">Este Mês</button>
-          </div>
-        `;
-
-        if (movimentacoes.length === 0) {
-          container.innerHTML = filterHtml + createEmptyState(
-            'fa-inbox',
-            'Nenhuma movimentação',
-            'Não há movimentações neste período.'
-          );
-          return;
-        }
-
-        let html = filterHtml + `
-          <div class="table-container">
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th>Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-        `;
-
-        movimentacoes.forEach(mov => {
-          const tipoLabel = mov.tipo === 'entrada' ? 'Entrada' : 'Saída';
-          const tipoClass = mov.tipo === 'entrada' ? 'status-completo' : 'status-pendente';
-          html += `
-            <tr>
-              <td>${formatDate(mov.data)}</td>
-              <td>${mov.descricao || '-'}</td>
-              <td><span class="status-badge ${tipoClass}">${tipoLabel}</span></td>
-              <td>${formatCurrency(mov.valor)}</td>
-            </tr>
-          `;
-        });
-
-        html += `
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-
-        container.innerHTML = html;
-      } catch (error) {
-        console.error('Erro ao carregar movimentações:', error);
-        container.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar as movimentações.',
-          'Tentar novamente',
-          'loadMovimentacoes()'
-        );
-      }
-    }
-
-    // LOAD CONTROLE DE CAIXA
-    async function loadCaixa() {
-      const container = document.getElementById('tab-caixa');
-
-      try {
-        // Buscar status real do caixa
-        try {
-          const status = await window.api.getStatusCaixa();
-          caixaStatus = {
-            isOpen: status.isOpen || false,
-            notOpened: status.notOpened !== false ? (status.notOpened ?? true) : false,
-            paymentMethodsConfig: status.paymentMethodsConfig || caixaStatus.paymentMethodsConfig,
-            currentUserNome: status.currentUserNome || ''
-          };
-        } catch (e) {
-          console.warn('Erro ao buscar status do caixa:', e);
-        }
-
-        // Botões dinâmicos baseados no status
-        const btnAbrirHtml = !caixaStatus.isOpen ? `
-          <button class="action-btn" onclick="openAberturaModal()" style="background:linear-gradient(135deg,#10b981,#059669); color:white; border:none;">
-            <i class="fas fa-door-open"></i>
-            <span>Abrir Caixa</span>
-          </button>` : '';
-
-        const btnFecharHtml = caixaStatus.isOpen ? `
-          <button class="action-btn" onclick="openFechamentoModal()" style="background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none;">
-            <i class="fas fa-door-closed"></i>
-            <span>Fechar Caixa</span>
-          </button>` : '';
-
-        const btnsOperacoesHtml = caixaStatus.isOpen ? `
-          <button class="action-btn" onclick="openTransactionModal('despesa')">
-            <i class="fas fa-receipt"></i>
-            <span>Lançar Despesa</span>
-          </button>
-          <button class="action-btn" onclick="openTransactionModal('sangria')">
-            <i class="fas fa-money-bill"></i>
-            <span>Sangria</span>
-          </button>
-          <button class="action-btn" onclick="openTransactionModal('suprimento')">
-            <i class="fas fa-plus-circle"></i>
-            <span>Suprimento</span>
-          </button>` : '';
-
-        container.innerHTML = `
-          <div class="action-buttons">
-            ${btnAbrirHtml}
-            ${btnsOperacoesHtml}
-            ${btnFecharHtml}
-          </div>
-          <div id="caixaHistory"></div>
-        `;
-
-        const response = await window.api.getHistoricoCaixa({
-          dataInicio: new Date().toISOString().split('T')[0],
-          dataFim: new Date().toISOString().split('T')[0],
-          tipo: ''
-        });
-
-        const movimentacoes = response.historico || [];
-        let historyHtml = '';
-
-        if (movimentacoes.length > 0) {
-          historyHtml = `
-            <h3 style="margin-bottom: 16px;">Movimentações de Hoje</h3>
-            <div class="table-container">
-              <div class="table-responsive">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Hora</th>
-                      <th>Descrição</th>
-                      <th>Tipo</th>
-                      <th>Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-          `;
-
-          movimentacoes.forEach(mov => {
-            const tipoLabel = mov.tipo === 'entrada' ? 'Entrada' : 'Saída';
-            const tipoClass = mov.tipo === 'entrada' ? 'status-completo' : 'status-pendente';
-            const time = new Date(mov.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            historyHtml += `
-              <tr>
-                <td>${time}</td>
-                <td>${mov.descricao || '-'}</td>
-                <td><span class="status-badge ${tipoClass}">${tipoLabel}</span></td>
-                <td>${formatCurrency(mov.valor)}</td>
-              </tr>
-            `;
-          });
-
-          historyHtml += `
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          `;
-        }
-
-        document.getElementById('caixaHistory').innerHTML = historyHtml;
-      } catch (error) {
-        console.error('Erro ao carregar controle de caixa:', error);
-        container.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar o controle de caixa.',
-          'Tentar novamente',
-          'loadCaixa()'
-        );
-      }
-    }
-
-    // LOAD MINHAS COMISSÕES
-    async function loadMinhasComissoes() {
-      const container = document.getElementById('tab-comissoes');
-
-      try {
-        container.innerHTML = createLoading();
-
-        // Get current user's lavador data
-        const lavador = await getUserLavador();
-        if (!lavador) {
-          container.innerHTML = createEmptyState(
-            'fa-user-slash',
-            'Perfil não encontrado',
-            'Seu perfil de funcionário não foi encontrado no sistema.'
-          );
-          return;
-        }
-
-        // Get commission data
-        const dataInicio = new Date();
-        dataInicio.setDate(dataInicio.getDate() - 30); // Last 30 days
-        const dataInicioStr = dataInicio.toISOString().split('T')[0];
-        const dataFimStr = new Date().toISOString().split('T')[0];
-
-        const response = await window.api.getDadosComissao({
-          lavadorId: lavador.id,
-          dataInicio: dataInicioStr,
-          dataFim: dataFimStr
-        });
-
-        const comissoes = response.comissoes || [];
-        const adiantamentos = response.adiantamentos || [];
-        const debitosOS = response.debitosOS || [];
-
-        let html = `
-          <div class="comissoes-filters">
-            <div>
-              <label>Data Início</label>
-              <input type="date" id="comissaoDataInicio" value="${dataInicioStr}" onchange="reloadComissoes()">
-            </div>
-            <div>
-              <label>Data Fim</label>
-              <input type="date" id="comissaoDataFim" value="${dataFimStr}" onchange="reloadComissoes()">
-            </div>
-          </div>
-
-          <div class="comissoes-grid">
-            <!-- CRÉDITOS -->
-            <div class="comissoes-column">
-              <div class="comissoes-header">
-                <div class="comissoes-icon creditos">
-                  <i class="fas fa-plus"></i>
-                </div>
-                <h3>Créditos</h3>
-                <span class="comissoes-badge" id="creditsBadge">${comissoes.filter(c => hasWasherInOrder(c, lavador.id)).length}</span>
-              </div>
-              <div id="creditos-list">
-                ${renderComissoesList(comissoes, lavador.id)}
-              </div>
-            </div>
-
-            <!-- DÉBITOS -->
-            <div class="comissoes-column">
-              <div class="comissoes-header">
-                <div class="comissoes-icon debitos">
-                  <i class="fas fa-minus"></i>
-                </div>
-                <h3>Débitos</h3>
-                <span class="comissoes-badge" id="debitsBadge">${adiantamentos.length + debitosOS.filter(d => hasWasherInOrder(d, lavador.id)).length}</span>
-              </div>
-              <div id="debitos-list">
-                ${renderDebitosList(adiantamentos, debitosOS, lavador.id)}
-              </div>
-            </div>
-          </div>
-
-          <!-- RESUMO -->
-          <div class="comissoes-summary">
-            <div class="comissoes-summary-row">
-              <span class="comissoes-summary-label">Total de Comissões</span>
-              <span class="comissoes-summary-value" id="summary-creditos">${formatCurrency(calculateTotalComissoes(comissoes, lavador.id))}</span>
-            </div>
-            <div class="comissoes-summary-row">
-              <span class="comissoes-summary-label">Total de Débitos</span>
-              <span class="comissoes-summary-value" id="summary-debitos">- ${formatCurrency(calculateTotalDebitos(adiantamentos, debitosOS, lavador.id))}</span>
-            </div>
-            <div class="comissoes-summary-row">
-              <span class="comissoes-summary-label">Saldo Estimado</span>
-              <span class="comissoes-summary-total" id="summary-total">${formatCurrency(calculateSaldoComissoes(comissoes, adiantamentos, debitosOS, lavador.id))}</span>
-            </div>
-          </div>
-
-          <div style="padding: 20px; background: var(--light); border-radius: 8px; text-align: center; color: #666; font-size: 13px;">
-            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
-            Este é um resumo das suas comissões. Valores finais sujeitos a confirmação administrativa.
-          </div>
-        `;
-
-        container.innerHTML = html;
-      } catch (error) {
-        console.error('Erro ao carregar comissões:', error);
-        container.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar suas comissões.',
-          'Tentar novamente',
-          'loadMinhasComissoes()'
-        );
-      }
-    }
-
-    // HELPER FUNCTIONS FOR COMISSÕES
-    function hasWasherInOrder(order, washerId) {
-      if (!order) return false;
-      if (order.lavadorId === washerId) return true;
-      if (Array.isArray(order.lavadores)) {
-        return order.lavadores.some(l => (l.id || l.value || l) === washerId);
-      }
-      return false;
-    }
-
-    function getWasherShare(order, washerId) {
-      if (!order || !washerId) return 0;
-
-      const washers = [];
-      if (Array.isArray(order.lavadores) && order.lavadores.length > 0) {
-        washers.push(...order.lavadores.map(lav => ({
-          id: lav.id || lav.value || lav,
-          nome: lav.nome || lav.name,
-          ganho: typeof lav.ganho === 'number' ? lav.ganho : undefined
-        })));
-      } else if (order.lavadorId) {
-        washers.push({ id: order.lavadorId, nome: order.lavador?.nome });
-      }
-
-      const existing = washers.find(w => w.id === washerId && typeof w.ganho === 'number');
-      if (existing) return existing.ganho;
-
-      if (washers.length === 0) return 0;
-
-      const percent = order?.lavador?.comissao || (order?.comissao && order?.valorTotal ? (order.comissao / order.valorTotal) * 100 : 0);
-      const totalCents = Math.round((order?.valorTotal || 0) * (percent / 100) * 100);
-      if (totalCents <= 0) return 0;
-
-      const base = Math.floor(totalCents / washers.length);
-      let remainder = totalCents % washers.length;
-
-      const shareMap = {};
-      washers.forEach(washer => {
-        let cents = base;
-        if (remainder > 0) {
-          cents += 1;
-          remainder -= 1;
-        }
-        shareMap[washer.id] = cents / 100;
-      });
-
-      return shareMap[washerId] || 0;
-    }
-
-    function renderComissoesList(comissoes, washerId) {
-      const items = (comissoes || []).map(c => {
-        const share = getWasherShare(c, washerId);
-        if (!share || share <= 0) return null;
-        return `
-          <div class="comissoes-item">
-            <div class="comissoes-item-details">
-              <div class="comissoes-item-title">OS #${c.numeroOrdem} - ${c.veiculo?.modelo || 'Sem Modelo'}</div>
-              <div class="comissoes-item-subtitle">Finalizada em: ${new Date(c.dataFim).toLocaleDateString('pt-BR')}</div>
-            </div>
-            <span class="comissoes-item-value credito">${formatCurrency(share)}</span>
-          </div>
-        `;
-      }).filter(Boolean);
-
-      return items.length > 0
-        ? items.join('')
-        : '<div style="padding: 20px; text-align: center; color: #999;"><i class="fas fa-check-circle" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>Nenhuma comissão no período.</div>';
-    }
-
-    function renderDebitosList(adiantamentos, debitosOS, washerId) {
-      const adiantamentoItems = (adiantamentos || []).map(a => `
-        <div class="comissoes-item">
-          <div class="comissoes-item-details">
-            <div class="comissoes-item-title">${a.descricao || 'Adiantamento (Vale)'}</div>
-            <div class="comissoes-item-subtitle">Data: ${a.data ? new Date(a.data).toLocaleDateString('pt-BR') : 'Sem data'}</div>
-          </div>
-          <span class="comissoes-item-value debito">${formatCurrency(a.valor)}</span>
-        </div>
-      `);
-
-      const debitoItems = (debitosOS || []).map(d => {
-        const share = getWasherShare(d, washerId);
-        if (!share || share <= 0) return null;
-        return `
-          <div class="comissoes-item">
-            <div class="comissoes-item-details">
-              <div class="comissoes-item-title">Débito OS #${d.numeroOrdem} (${d.veiculo?.placa || 'S/ Placa'})</div>
-              <div class="comissoes-item-subtitle">Finalizada em: ${new Date(d.dataFim).toLocaleDateString('pt-BR')}</div>
-            </div>
-            <span class="comissoes-item-value debito">${formatCurrency(share)}</span>
-          </div>
-        `;
-      }).filter(Boolean);
-
-      const allItems = [...adiantamentoItems, ...debitoItems];
-      return allItems.length > 0
-        ? allItems.join('')
-        : '<div style="padding: 20px; text-align: center; color: #999;"><i class="fas fa-thumbs-up" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>Nenhum débito no período.</div>';
-    }
-
-    function calculateTotalComissoes(comissoes, washerId) {
-      return (comissoes || []).reduce((total, c) => total + getWasherShare(c, washerId), 0);
-    }
-
-    function calculateTotalDebitos(adiantamentos, debitosOS, washerId) {
-      const adiantamentoTotal = (adiantamentos || []).reduce((total, a) => total + a.valor, 0);
-      const debitoOsTotal = (debitosOS || []).reduce((total, d) => total + getWasherShare(d, washerId), 0);
-      return adiantamentoTotal + debitoOsTotal;
-    }
-
-    function calculateSaldoComissoes(comissoes, adiantamentos, debitosOS, washerId) {
-      const creditos = calculateTotalComissoes(comissoes, washerId);
-      const debitos = calculateTotalDebitos(adiantamentos, debitosOS, washerId);
-      return creditos - debitos;
-    }
-
-    async function reloadComissoes() {
-      const dataInicio = document.getElementById('comissaoDataInicio')?.value || new Date().toISOString().split('T')[0];
-      const dataFim = document.getElementById('comissaoDataFim')?.value || new Date().toISOString().split('T')[0];
-
-      const container = document.getElementById('tab-comissoes');
-      container.innerHTML = createLoading();
-
-      try {
-        const lavador = await getUserLavador();
-        if (!lavador) {
-          container.innerHTML = createEmptyState('fa-user-slash', 'Perfil não encontrado', 'Seu perfil de funcionário não foi encontrado.');
-          return;
-        }
-
-        const response = await window.api.getDadosComissao({
-          lavadorId: lavador.id,
-          dataInicio,
-          dataFim
-        });
-
-        // Reload the entire aba
-        await loadMinhasComissoes();
-      } catch (error) {
-        console.error('Erro ao recarregar comissões:', error);
-        container.innerHTML = createEmptyState('fa-exclamation-triangle', 'Erro ao carregar', 'Houve um erro ao carregar suas comissões.', 'Tentar novamente', 'reloadComissoes()');
-      }
-    }
-
-    // LOAD PENDÊNCIAS
-    async function loadPendencias() {
-      const container = document.getElementById('tab-pendencias');
-
-      try {
-        container.innerHTML = createLoading();
-
-        const response = await window.api.getOrdens(1, 100, '', 'AGUARDANDO_PAGAMENTO');
-        const ordens = response.data || response.ordens || [];
-
-        if (ordens.length === 0) {
-          container.innerHTML = createEmptyState(
-            'fa-check-circle',
-            'Sem pendências',
-            'Não há ordens aguardando pagamento.'
-          );
-          return;
-        }
-
-        let html = `
-          <div class="table-container">
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Veículo</th>
-                    <th>Valor</th>
-                    <th>Data</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-        `;
-
-        ordens.forEach(ordem => {
-          html += `
-            <tr>
-              <td>#${ordem.numeroOrdem || ordem.id.substring(0, 8)}</td>
-              <td>${ordem.cliente?.nome || '-'}</td>
-              <td>${ordem.veiculo?.placa || '-'}</td>
-              <td>${formatCurrency(ordem.valorTotal || ordem.valor)}</td>
-              <td>${formatDate(ordem.createdAt)}</td>
-              <td><span class="status-badge status-pendente">AGUARDANDO</span></td>
-            </tr>
-          `;
-        });
-
-        html += `
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-
-        container.innerHTML = html;
-      } catch (error) {
-        console.error('Erro ao carregar pendências:', error);
-        container.innerHTML = createEmptyState(
-          'fa-exclamation-triangle',
-          'Erro ao carregar',
-          'Houve um erro ao carregar as pendências.',
-          'Tentar novamente',
-          'loadPendencias()'
-        );
-      }
-    }
-
-    // TRANSACTION MODAL
-    function openTransactionModal(type) {
-      currentTransactionType = type;
-      const modal = document.getElementById('transactionModal');
-      const title = document.getElementById('modalTitle');
-      const fornecedorGroup = document.getElementById('fornecedorGroup');
-
-      let titleText = '';
-      switch(type) {
-        case 'despesa':
-          titleText = 'Lançar Despesa';
-          fornecedorGroup.style.display = 'block';
-          break;
-        case 'sangria':
-          titleText = 'Sangria';
-          fornecedorGroup.style.display = 'none';
-          break;
-        case 'suprimento':
-          titleText = 'Suprimento';
-          fornecedorGroup.style.display = 'none';
-          break;
-      }
-
-      title.textContent = titleText;
-      document.getElementById('transactionType').value = type;
-
-      document.getElementById('transactionForm').reset();
-      modal.classList.add('active');
-    }
-
-    function closeTransactionModal() {
-      document.getElementById('transactionModal').classList.remove('active');
-      document.getElementById('transactionForm').reset();
-    }
-
-    async function submitTransaction(event) {
-      event.preventDefault();
-
-      const description = document.getElementById('transactionDescription').value;
-      const value = parseFloat(document.getElementById('transactionValue').value);
-      const type = document.getElementById('transactionType').value;
-      const formaPagamento = document.getElementById('transactionFormaPagamento').value;
-      const fornecedor = document.getElementById('transactionFornecedor').value;
-
-      if (!description || !value || !formaPagamento) {
-        showToast('Preencha todos os campos obrigatórios', 'error');
-        return;
-      }
-
-      try {
-        const transactionData = {
-          descricao: description,
-          valor: value,
-          tipo: type,
-          formaPagamento: formaPagamento,
-          fornecedorNome: fornecedor || undefined
-        };
-
-        await window.api.createSaida(transactionData);
-
-        showToast('Transação lançada com sucesso!', 'success');
-        closeTransactionModal();
-        await loadBalanceCards();
-        await loadCaixa();
-      } catch (error) {
-        console.error('Erro ao lançar transação:', error);
-        showToast('Erro ao lançar transação', 'error');
-      }
-    }
-
-    // ABERTURA DE CAIXA
-    function openAberturaModal() {
-      document.getElementById('aberturaValorInicial').value = '';
-      document.getElementById('aberturaResponsavel').value = caixaStatus.currentUserNome || '';
-      document.getElementById('aberturaModal').classList.add('active');
-    }
-
-    function closeAberturaModal() {
-      document.getElementById('aberturaModal').classList.remove('active');
-    }
-
-    async function confirmarAbertura() {
-      const btn = document.getElementById('btnConfirmarAbertura');
-      const valorInicial = parseFloat(document.getElementById('aberturaValorInicial').value) || 0;
-      const responsavel = document.getElementById('aberturaResponsavel').value.trim();
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner spinner-icon"></i> Abrindo...';
-
-      try {
-        await window.api.abrirCaixa({ valorInicial, abertoPor: responsavel });
-        caixaStatus.isOpen = true;
-        caixaStatus.notOpened = false;
-        closeAberturaModal();
-        showToast('Caixa aberto com sucesso!', 'success');
-        await loadCaixa();
-      } catch (error) {
-        console.error('Erro ao abrir caixa:', error);
-        showToast(error?.message || 'Erro ao abrir o caixa.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-door-open"></i> Abrir Caixa';
-      }
-    }
-
-    // FECHAMENTO DE CAIXA
-    async function openFechamentoModal() {
-      const cfg = caixaStatus.paymentMethodsConfig || {};
-      const metodos = [
-        { key: 'DINHEIRO', label: '💵 Dinheiro', show: cfg.DINHEIRO !== false },
-        { key: 'PIX',      label: '📱 PIX',      show: cfg.PIX !== false },
-        { key: 'CARTAO',   label: '💳 Cartão',   show: cfg.CARTAO !== false },
-        { key: 'NFE',      label: '🧾 NFe',      show: true },
-      ];
-
-      // Carregar valores esperados
-      let valoresEsperados = {};
-      let valorInicial = 0;
-      let pagamentosDinheiro = 0;
-      try {
-        const response = await window.api.getValoresEsperados();
-        valoresEsperados = response.esperado || {};
-        valorInicial = response.valorInicial || 0;
-        pagamentosDinheiro = response.pagamentosDinheiro || 0;
-      } catch (err) {
-        console.error('Erro ao buscar valores esperados:', err);
-      }
-
-      const fmt = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
-
-      const gridHtml = metodos
-        .filter(m => m.show)
-        .map(m => {
-          const valorEsperado = valoresEsperados[m.key] || 0;
-          const dinheiro = m.key === 'DINHEIRO';
-          const detalhes = dinheiro && valorInicial > 0
-            ? `<div style="font-size:11px;color:#666;margin-top:4px">Troco: ${fmt(valorInicial)} + Entradas: ${fmt(pagamentosDinheiro)} = ${fmt(valorEsperado)}</div>`
-            : '';
-          return `
-            <div class="fechamento-item">
-              <div class="label">${m.label}</div>
-              <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00" data-esperado="${valorEsperado}">
-              <div style="font-size:12px;color:#0066cc;font-weight:600;margin-top:6px">Esperado: ${fmt(valorEsperado)}</div>
-              ${detalhes}
-            </div>
-          `;
-        }).join('');
-
-      document.getElementById('fechamentoGrid').innerHTML = gridHtml;
-      document.getElementById('fechamentoModal').classList.add('active');
-    }
-
-    function closeFechamentoModal() {
-      document.getElementById('fechamentoModal').classList.remove('active');
-    }
-
-    async function confirmarFechamento() {
-      const btn = document.getElementById('btnConfirmarFechamento');
-      const cfg = caixaStatus.paymentMethodsConfig || {};
-
-      const valoresDigitados = {
-        DINHEIRO: cfg.DINHEIRO !== false ? (parseFloat(document.getElementById('fech_DINHEIRO')?.value) || 0) : 0,
-        PIX:      cfg.PIX !== false      ? (parseFloat(document.getElementById('fech_PIX')?.value)      || 0) : 0,
-        CARTAO:   cfg.CARTAO !== false   ? (parseFloat(document.getElementById('fech_CARTAO')?.value)   || 0) : 0,
-        NFE:      parseFloat(document.getElementById('fech_NFE')?.value) || 0,
-      };
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner spinner-icon"></i> Fechando...';
-
-      try {
-        const result = await window.api.createFechamento({ valoresDigitados });
-        caixaStatus.isOpen = false;
-        closeFechamentoModal();
-        showToast('Caixa fechado com sucesso!', 'success');
-        await loadBalanceCards();
-        await loadCaixa();
-        // Exibir relatório
-        exibirRelatorioFechamento(result);
-      } catch (error) {
-        console.error('Erro ao fechar caixa:', error);
-        showToast(error?.message || 'Erro ao fechar o caixa.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-lock"></i> Confirmar Fechamento';
-      }
-    }
-
-    // RELATÓRIO DE FECHAMENTO
-    function exibirRelatorioFechamento(result) {
-      const relatorio = result.relatorio || {};
-      const status = result.fechamento?.status || '';
-      const fechadoPor = result.fechamento?.fechadoPor || '';
-      const totalSaidas = result.totalSaidas || 0;
-
-      const LABELS = { DINHEIRO: '💵 Dinheiro', PIX: '📱 PIX', CARTAO: '💳 Cartão', NFE: '🧾 NFe' };
-
-      const badgeClass = status === 'CONFERIDO' ? 'conferido' : 'divergente';
-      const badgeText = status === 'CONFERIDO' ? '✅ CONFERIDO — Tudo certo!' : '⚠️ DIVERGENTE — Há diferenças!';
-      document.getElementById('relatorioStatus').innerHTML = `<span class="status-badge-big ${badgeClass}">${badgeText}</span>`;
-
-      const tbody = document.getElementById('relatorioTbody');
-      tbody.innerHTML = Object.entries(relatorio).map(([metodo, dados]) => {
-        const diff = dados.diferenca ?? 0;
-        const rowClass = diff !== 0 ? 'divergente' : '';
-        const diffClass = diff === 0 ? 'diff-ok' : 'diff-err';
-        const diffText = (diff >= 0 ? '+' : '') + formatCurrency(diff);
-        return `<tr class="${rowClass}">
-          <td style="font-weight:600;">${LABELS[metodo] || metodo}</td>
-          <td style="text-align:right;">${formatCurrency(dados.digitado)}</td>
-          <td style="text-align:right;">${formatCurrency(dados.computado)}</td>
-          <td style="text-align:right;" class="${diffClass}">${diffText}</td>
-        </tr>`;
-      }).join('');
-
-      let rodape = fechadoPor ? `<span>Fechado por: ${fechadoPor}</span>` : '';
-      if (totalSaidas > 0) rodape += `<span style="float:right;">Saídas do dia: ${formatCurrency(totalSaidas)}</span>`;
-      document.getElementById('relatorioRodape').innerHTML = rodape;
-
-      document.getElementById('relatorioModal').classList.add('active');
-    }
-
-    function closeRelatorioModal() {
-      document.getElementById('relatorioModal').classList.remove('active');
-    }
-
-    // FILTER FUNCTIONS
-    function updateDateFilter() {
-      filters.dataInicio = document.getElementById('dataInicio').value;
-      filters.dataFim = document.getElementById('dataFim').value;
-      filters.preset = '';
-      loadMovimentacoes();
-    }
-
-    function updateTipoFilter() {
-      filters.tipo = document.getElementById('tipoFilter').value;
-      loadMovimentacoes();
-    }
-
-    function applyPreset(preset) {
-      const dates = getDatePreset(preset);
-      filters.dataInicio = dates.dataInicio;
-      filters.dataFim = dates.dataFim;
-      filters.preset = preset;
-
-      const dataInicioInput = document.getElementById('dataInicio');
-      const dataFimInput = document.getElementById('dataFim');
-      if (dataInicioInput) dataInicioInput.value = dates.dataInicio;
-      if (dataFimInput) dataFimInput.value = dates.dataFim;
-
-      document.querySelectorAll('.preset-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.innerText.toLowerCase().includes(preset));
-      });
-
-      loadMovimentacoes();
-    }
-  </script>
+    await window.api.createSaida(payload);
+    showToast('Saída lançada com sucesso!', 'success');
+    closeSaidaSheet(); await Promise.all([loadBalanceCards(), loadCaixa()]);
+  } catch(e) { showToast(e?.message || 'Erro ao lançar saída', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
+}
+
+// ===================== ABERTURA =====================
+function openAberturaModal() {
+  document.getElementById('abValorInicial').value = '';
+  document.getElementById('abResponsavel').value  = caixaStatus.currentUserNome || '';
+  document.getElementById('aberturaModal').classList.add('active');
+}
+function closeAberturaModal() { document.getElementById('aberturaModal').classList.remove('active'); }
+
+async function confirmarAbertura() {
+  const btn  = document.getElementById('btnAbrirConfirm');
+  const val  = parseFloat(document.getElementById('abValorInicial').value) || 0;
+  const resp = document.getElementById('abResponsavel').value.trim();
+  btn.disabled = true; btn.textContent = 'Abrindo...';
+  try {
+    await window.api.abrirCaixa({ valorInicial: val, abertoPor: resp });
+    caixaStatus.isOpen = true; caixaStatus.notOpened = false;
+    closeAberturaModal(); showToast('Caixa aberto!', 'success'); await loadCaixa();
+  } catch(e) { showToast(e?.message || 'Erro ao abrir caixa', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-door-open"></i> Abrir'; }
+}
+
+// ===================== FECHAMENTO =====================
+async function openFechamentoModal() {
+  const cfg = caixaStatus.paymentMethodsConfig || {};
+  const metodos = [
+    { key:'DINHEIRO', label:'💵 Dinheiro', show: cfg.DINHEIRO !== false },
+    { key:'PIX',      label:'📱 PIX',      show: cfg.PIX !== false },
+    { key:'CARTAO',   label:'💳 Cartão',   show: cfg.CARTAO !== false },
+    { key:'NFE',      label:'🧾 NFe',      show: cfg.NFE === true },
+  ];
+
+  let vals = {};
+  try { const r = await window.api.getValoresEsperados(); vals = r.esperado || {}; } catch(e) {}
+
+  const fmt = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
+  document.getElementById('fechGrid').innerHTML = metodos.filter(m => m.show).map(m => `
+    <div class="fech-item">
+      <div class="flabel">${m.label}</div>
+      <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00">
+      <div class="fech-esp">Esperado: ${fmt(vals[m.key]||0)}</div>
+    </div>`).join('');
+  document.getElementById('fechamentoModal').classList.add('active');
+}
+function closeFechamentoModal() { document.getElementById('fechamentoModal').classList.remove('active'); }
+
+async function confirmarFechamento() {
+  const btn = document.getElementById('btnFechConfirm');
+  const cfg = caixaStatus.paymentMethodsConfig || {};
+  const vals = {
+    DINHEIRO: cfg.DINHEIRO!==false ? (parseFloat(document.getElementById('fech_DINHEIRO')?.value)||0) : 0,
+    PIX:      cfg.PIX!==false      ? (parseFloat(document.getElementById('fech_PIX')?.value)||0)      : 0,
+    CARTAO:   cfg.CARTAO!==false   ? (parseFloat(document.getElementById('fech_CARTAO')?.value)||0)   : 0,
+    NFE:                             (parseFloat(document.getElementById('fech_NFE')?.value)||0),
+  };
+  btn.disabled = true; btn.textContent = 'Fechando...';
+  try {
+    const r = await window.api.createFechamento({ valoresDigitados: vals });
+    caixaStatus.isOpen = false; closeFechamentoModal();
+    showToast('Caixa fechado!', 'success');
+    await Promise.all([loadBalanceCards(), loadCaixa()]);
+    exibirRelatorio(r);
+  } catch(e) { showToast(e?.message || 'Erro ao fechar caixa', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock"></i> Confirmar Fechamento'; }
+}
+
+// ===================== RELATÓRIO =====================
+function exibirRelatorio(result) {
+  const rel    = result.relatorio || {};
+  const status = result.fechamento?.status || '';
+  const por    = result.fechamento?.fechadoPor || '';
+  const saidas = result.totalSaidas || 0;
+  const LABELS = { DINHEIRO:'💵 Dinheiro', PIX:'📱 PIX', CARTAO:'💳 Cartão', NFE:'🧾 NFe' };
+  document.getElementById('relStatus').innerHTML =
+    `<span class="status-big ${status==='CONFERIDO'?'conferido':'divergente'}">${status==='CONFERIDO'?'✅ CONFERIDO — Tudo certo!':'⚠️ DIVERGENTE — Há diferenças!'}</span>`;
+  document.getElementById('relTbody').innerHTML = Object.entries(rel).map(([m, d]) => {
+    const diff = d.diferenca ?? 0;
+    return `<tr class="${diff!==0?'diverg':''}">
+      <td style="font-weight:600">${LABELS[m]||m}</td>
+      <td>${formatCurrency(d.digitado)}</td>
+      <td>${formatCurrency(d.computado)}</td>
+      <td class="${diff===0?'diff-ok':'diff-err'}">${(diff>=0?'+':'')+formatCurrency(diff)}</td>
+    </tr>`;
+  }).join('');
+  let rodape = por ? `Fechado por: ${por}` : '';
+  if (saidas > 0) rodape += `&nbsp;&nbsp;·&nbsp;&nbsp;Saídas: ${formatCurrency(saidas)}`;
+  document.getElementById('relRodape').innerHTML = rodape;
+  document.getElementById('relatorioModal').classList.add('active');
+}
+function closeRelatorioModal() { document.getElementById('relatorioModal').classList.remove('active'); }
+
+// ===================== QUITAR PENDÊNCIA =====================
+function openQuitarModal(ordemStr) {
+  const ordem = typeof ordemStr === 'string' ? JSON.parse(ordemStr.replace(/&quot;/g,'"')) : ordemStr;
+  quitarOrdemAtual = ordem;
+  document.getElementById('quitarInfo').innerHTML = `
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">${ordem.veiculo?.modelo || 'Veículo'} — ${formatCurrency(ordem.valorTotal||0)}</div>
+    <div style="font-size:12px;color:var(--muted)">Cliente: ${ordem.cliente?.nome||'—'} · OS #${ordem.numeroOrdem||'—'}</div>`;
+  ['qBtnDinheiro','qBtnPix','qBtnCartao'].forEach(id => document.getElementById(id).disabled = false);
+  document.getElementById('quitarModal').classList.add('active');
+}
+function closeQuitarModal() { document.getElementById('quitarModal').classList.remove('active'); quitarOrdemAtual = null; }
+
+async function processarQuitar(metodo) {
+  if (!quitarOrdemAtual) return;
+  ['qBtnDinheiro','qBtnPix','qBtnCartao'].forEach(id => document.getElementById(id).disabled = true);
+  try {
+    await window.api.quitarPendencia(quitarOrdemAtual.id, { metodo });
+    showToast('Pendência quitada!', 'success');
+    closeQuitarModal();
+    await Promise.all([loadBalanceCards(), loadPendenciasCount(), loadPendencias()]);
+  } catch(e) { showToast(e?.message || 'Erro ao quitar', 'error'); ['qBtnDinheiro','qBtnPix','qBtnCartao'].forEach(id => document.getElementById(id).disabled = false); }
+}
+
+// ===================== HELPERS =====================
+function createLoadingHtml() {
+  return `<div class="loading"><div class="spinner"></div><p>Carregando...</p></div>`;
+}
+function createEmptyHtml(ico, title, msg) {
+  return `<div class="empty"><i class="fas ${ico}"></i><h3>${title}</h3><p>${msg}</p></div>`;
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  const i = document.getElementById('toastIco');
+  const m = document.getElementById('toastMsg');
+  t.className = `toast ${type}`;
+  i.className = `fas ${type==='success'?'fa-check-circle':'fa-exclamation-circle'}`;
+  m.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
 </body>
 </html>
