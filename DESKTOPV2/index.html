@@ -2945,11 +2945,12 @@
         .relatorio-full-backdrop.visible .relatorio-full-modal { transform: translateY(0) scale(1); }
 
         .rf-body {
-            flex: 1; overflow-y: auto; padding: 20px;
+            flex: 1; min-height: 0; overflow-y: auto; padding: 20px;
             display: grid;
             grid-template-columns: 1.2fr 0.8fr;
             grid-template-rows: auto auto auto;
             gap: 16px;
+            align-content: start;
         }
         /* barras: linha inteira */
         .rf-section-bars     { grid-column: 1 / -1; }
@@ -5582,16 +5583,13 @@
                 body.innerHTML = '';
                 const secBars     = buildBarsSection(ordens, range);
                 const secEquipe   = buildFuncionariosSection(ordens, lavadores);
-                const secSaidas   = buildSaidasSection(saidas, totalSaidas);
+                const secSaidas   = buildSaidasSection(saidas);
                 const secInsights = buildInsightsSection(ordens, lavadores, totalFat, totalOrdens, ticketMedio);
                 secBars.classList.add('rf-section-bars');
                 secEquipe.classList.add('rf-section-equipe');
                 secSaidas.classList.add('rf-section-saidas');
                 secInsights.classList.add('rf-section-insights');
-                body.appendChild(secBars);
-                body.appendChild(secEquipe);
-                body.appendChild(secSaidas);
-                body.appendChild(secInsights);
+                [secBars, secEquipe, secSaidas, secInsights].forEach(s => body.appendChild(s));
 
                 // Disparar animação das barras após render
                 requestAnimationFrame(() => {
@@ -5718,33 +5716,47 @@
             return sec;
         }
 
-        function buildSaidasSection(saidas, totalSaidas) {
+        function isOperacional(r) {
+            const desc = r.descricao || '';
+            return !desc.includes('[Adiantamento]') && !desc.startsWith('Pagamento de comissão');
+        }
+
+        function buildSaidasSection(saidas) {
             const sec = document.createElement('div');
             sec.className = 'rf-section';
-            sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-arrow-trend-down"></i> Saídas & Despesas</div>`;
+            sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-arrow-trend-down"></i> Custo Operacional</div>`;
 
             const wrap = document.createElement('div');
             wrap.className = 'rf-saidas';
 
-            if (saidas.length === 0) {
-                wrap.innerHTML = `<div style="padding:6px 0;color:#6b7280;font-size:13px">Nenhuma saída no período</div>`;
+            // Apenas saídas operacionais (sem adiantamentos nem pagamentos de comissão)
+            const operacionais = saidas.filter(isOperacional);
+
+            if (operacionais.length === 0) {
+                wrap.innerHTML = `<div style="padding:10px 0;color:#6b7280;font-size:13px">Nenhuma despesa operacional no período</div>`;
             } else {
-                // Agrupar por categoria
+                // Agrupar por subconta ou descrição resumida
                 const pCat = {};
-                saidas.forEach(r => {
-                    const cat = r.subconta || r.descricao?.split(' ')[0] || 'Outros';
+                operacionais.forEach(r => {
+                    const cat = r.subconta || (r.descricao || 'Outros').split(' ').slice(0, 3).join(' ');
                     if (!pCat[cat]) pCat[cat] = 0;
                     pCat[cat] += parseFloat(r.valor) || 0;
                 });
-                Object.entries(pCat).sort((a, b) => b[1] - a[1]).slice(0, 6).forEach(([cat, val]) => {
-                    const row = document.createElement('div');
-                    row.className = 'rf-saida-row';
-                    row.innerHTML = `<span class="s-label">${cat}</span><span class="s-val">- R$ ${formatBRL(val)}</span>`;
-                    wrap.appendChild(row);
-                });
+
+                Object.entries(pCat)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 8)
+                    .forEach(([cat, val]) => {
+                        const row = document.createElement('div');
+                        row.className = 'rf-saida-row';
+                        row.innerHTML = `<span class="s-label">${cat}</span><span class="s-val">- R$ ${formatBRL(val)}</span>`;
+                        wrap.appendChild(row);
+                    });
+
+                const totalOp = operacionais.reduce((s, r) => s + (parseFloat(r.valor) || 0), 0);
                 const total = document.createElement('div');
                 total.className = 'rf-saida-row';
-                total.innerHTML = `<span class="s-label">Total saídas</span><span class="s-val">- R$ ${formatBRL(totalSaidas)}</span>`;
+                total.innerHTML = `<span class="s-label">Total operacional</span><span class="s-val">- R$ ${formatBRL(totalOp)}</span>`;
                 wrap.appendChild(total);
             }
             sec.appendChild(wrap);
