@@ -2935,7 +2935,7 @@
         .relatorio-full-backdrop.visible { opacity: 1; pointer-events: all; }
 
         .relatorio-full-modal {
-            background: #f8fafc; border-radius: 20px; width: 100%; max-width: 680px;
+            background: #f8fafc; border-radius: 20px; width: 100%; max-width: 1050px;
             overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,.25);
             transform: translateY(30px); transition: transform .3s;
         }
@@ -5432,11 +5432,17 @@
         }
 
         function mesRange() {
+            // Sempre o mês anterior (relatório só fica pronto após fechar o mês)
             const now = new Date();
-            const ini = new Date(now.getFullYear(), now.getMonth(), 1);
-            const fim = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const ini = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const fim = new Date(now.getFullYear(), now.getMonth(), 0);
             const fmt = d => d.toISOString().split('T')[0];
             return { inicio: fmt(ini), fim: fmt(fim), label: ini.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) };
+        }
+
+        function isMesFechado() {
+            // Relatório mensal só disponível no dia 1 do novo mês em diante
+            return new Date().getDate() === 1;
         }
 
         function formatBRL(v) {
@@ -5454,11 +5460,14 @@
         function deveExibir() {
             const now = new Date();
             const semKey = getISOWeekKey(now);
-            const mesKey = getMesKey(now);
+            // Chave do mês anterior (relatório do mês fechado)
+            const mesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const mesKey = getMesKey(mesAnterior);
             const storedSem = localStorage.getItem('linax_rel_sem');
             const storedMes = localStorage.getItem('linax_rel_mes');
             const novaSemana = storedSem !== semKey;
-            const novoMes   = storedMes !== mesKey;
+            // Mensal só fica disponível no dia 1 do mês novo
+            const novoMes = isMesFechado() && storedMes !== mesKey;
             return { novaSemana, novoMes, semKey, mesKey };
         }
 
@@ -5467,30 +5476,18 @@
                 const { novaSemana, novoMes } = deveExibir();
                 if (!novaSemana && !novoMes) return;
 
-                const tabs = document.getElementById('relNotifTabs');
                 const titulo = document.getElementById('relNotifTitle');
                 const sub    = document.getElementById('relNotifSub');
-                tabs.innerHTML = '';
 
-                if (novaSemana && novoMes) {
-                    titulo.textContent = 'Relatórios disponíveis!';
-                    sub.textContent = 'Temos dados novos da semana e do mês para você analisar.';
-                    ['semana', 'mes'].forEach(p => {
-                        const b = document.createElement('button');
-                        b.className = 'relatorio-notif-tab' + (p === 'semana' ? ' active' : '');
-                        b.textContent = p === 'semana' ? 'Semanal' : 'Mensal';
-                        b.onclick = () => { _relPeriodo = p; tabs.querySelectorAll('.relatorio-notif-tab').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
-                        tabs.appendChild(b);
-                    });
-                    _relPeriodo = 'semana';
-                } else if (novaSemana) {
+                // Relatório mensal nunca aparece como tab — sempre separado ou só semanal
+                if (novoMes && !novaSemana) {
+                    titulo.textContent = 'Relatório mensal pronto!';
+                    sub.textContent = 'O mês foi concluído. Veja receita, despesas e performance da equipe.';
+                    _relPeriodo = 'mes';
+                } else {
                     titulo.textContent = 'Relatório semanal pronto!';
                     sub.textContent = 'Confira o desempenho completo da semana: faturamento, saídas e lavadores.';
                     _relPeriodo = 'semana';
-                } else {
-                    titulo.textContent = 'Relatório mensal pronto!';
-                    sub.textContent = 'Veja um resumo completo do mês: receita, despesas e performance da equipe.';
-                    _relPeriodo = 'mes';
                 }
 
                 // Mostra com pequeno delay para o DOM estabilizar
@@ -5828,7 +5825,6 @@
             <div class="relatorio-notif-icon"><i class="fas fa-chart-bar"></i></div>
             <div class="relatorio-notif-title" id="relNotifTitle">Relatório disponível!</div>
             <div class="relatorio-notif-sub" id="relNotifSub">Os números do período já estão prontos para você analisar.</div>
-            <div class="relatorio-notif-tabs" id="relNotifTabs"></div>
             <div class="relatorio-notif-btns">
                 <button class="btn-gerar" onclick="abrirRelatorioCompleto()"><i class="fas fa-bolt"></i> Gerar Relatório</button>
                 <button class="btn-dispensar" onclick="dispensarRelatorio()">Dispensar</button>
