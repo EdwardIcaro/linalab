@@ -5435,12 +5435,12 @@
         }
 
         function semanaRange() {
+            // Últimos 7 dias: hoje - 6 até hoje
             const now = new Date();
-            const day = now.getDay() || 7;
-            const mon = new Date(now); mon.setDate(now.getDate() - (day - 1));
-            const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+            const fim = new Date(now);
+            const ini = new Date(now); ini.setDate(now.getDate() - 6);
             const fmt = d => d.toISOString().split('T')[0];
-            return { inicio: fmt(mon), fim: fmt(sun), label: `${mon.toLocaleDateString('pt-BR')} – ${sun.toLocaleDateString('pt-BR')}` };
+            return { inicio: fmt(ini), fim: fmt(fim), label: `${ini.toLocaleDateString('pt-BR')} – ${fim.toLocaleDateString('pt-BR')}` };
         }
 
         function mesRange() {
@@ -5609,10 +5609,10 @@
             sec.className = 'rf-section';
             sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-chart-bar"></i> Faturamento por Dia</div>`;
 
-            // Agrupar por data
+            // Agrupar por dataFim (campo usado pelo backend em tipo=historico)
             const byDay = {};
             ordens.forEach(o => {
-                const d = (o.updatedAt || o.createdAt || '').split('T')[0];
+                const d = (o.dataFim || o.updatedAt || o.createdAt || '').split('T')[0];
                 if (!byDay[d]) byDay[d] = 0;
                 byDay[d] += (o.valorTotal || 0);
             });
@@ -5651,15 +5651,17 @@
             sec.className = 'rf-section';
             sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-users"></i> Desempenho da Equipe</div>`;
 
-            // Agrupar por lavador
+            // Agrupar por lavador — mostra valor total das ordens que cada um participou
             const porLav = {};
             ordens.forEach(o => {
-                (o.lavadores || []).forEach(l => {
-                    const id = l.lavadorId || l.id;
-                    if (!porLav[id]) porLav[id] = { qtd: 0, total: 0 };
+                const lavs = o.lavadores || [];
+                lavs.forEach(l => {
+                    const id = l.id || l.lavadorId;
+                    if (!id) return;
+                    if (!porLav[id]) porLav[id] = { qtd: 0, total: 0, nome: l.nome || null };
                     porLav[id].qtd++;
-                    const pct = (l.percentual || l.comissaoPct || 40) / 100;
-                    porLav[id].total += (o.valorTotal || 0) * pct;
+                    // Valor proporcional: se mais de um lavador, divide igualmente
+                    porLav[id].total += (o.valorTotal || 0) / Math.max(lavs.length, 1);
                 });
             });
 
@@ -5667,7 +5669,7 @@
             (lavadores || []).forEach(l => { lavMap[l.id] = l.nome || l.name; });
 
             const lista = Object.entries(porLav)
-                .map(([id, v]) => ({ id, nome: lavMap[id] || 'Lavador', ...v }))
+                .map(([id, v]) => ({ id, nome: v.nome || lavMap[id] || 'Lavador', qtd: v.qtd, total: v.total }))
                 .sort((a, b) => b.total - a.total);
 
             const wrap = document.createElement('div');
@@ -5727,7 +5729,7 @@
             // Melhor dia
             const byDay = {};
             ordens.forEach(o => {
-                const d = (o.updatedAt || o.createdAt || '').split('T')[0];
+                const d = (o.dataFim || o.updatedAt || o.createdAt || '').split('T')[0];
                 if (!byDay[d]) byDay[d] = 0;
                 byDay[d] += (o.valorTotal || 0);
             });
@@ -5806,7 +5808,7 @@
             const ordensData = [['ID', 'Data', 'Serviço', 'Valor', 'Lavadores']];
             ordens.forEach(o => {
                 const lavs = (o.lavadores || []).map(l => lavMap[l.lavadorId || l.id] || 'Lav.').join(', ');
-                ordensData.push([o.id, (o.updatedAt || o.createdAt || '').split('T')[0], o.tipoServico || '', o.valorTotal || 0, lavs]);
+                ordensData.push([o.id, (o.dataFim || o.updatedAt || o.createdAt || '').split('T')[0], o.tipoServico || '', o.valorTotal || 0, lavs]);
             });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ordensData), 'Ordens');
 
