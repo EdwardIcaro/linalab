@@ -2946,13 +2946,23 @@
 
         .rf-body {
             flex: 1; overflow-y: auto; padding: 20px;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            grid-template-rows: auto auto auto;
+            gap: 16px;
         }
-        .rf-body .rf-section:first-child { grid-column: 1 / -1; } /* barras ocupa linha inteira */
+        /* barras: linha inteira */
+        .rf-section-bars     { grid-column: 1 / -1; }
+        /* equipe: coluna esquerda, 2 linhas de altura */
+        .rf-section-equipe   { grid-column: 1; grid-row: 2 / 4; }
+        /* saídas e insights: coluna direita */
+        .rf-section-saidas   { grid-column: 2; grid-row: 2; }
+        .rf-section-insights { grid-column: 2; grid-row: 3; }
 
         @media (max-width: 768px) {
             .rf-body { grid-template-columns: 1fr; }
-            .rf-body .rf-section:first-child { grid-column: 1; }
+            .rf-section-bars, .rf-section-equipe,
+            .rf-section-saidas, .rf-section-insights { grid-column: 1; grid-row: auto; }
         }
 
         .rf-header {
@@ -5570,10 +5580,18 @@
 
                 // Montar body
                 body.innerHTML = '';
-                body.appendChild(buildBarsSection(ordens, range));
-                body.appendChild(buildFuncionariosSection(ordens, lavadores));
-                body.appendChild(buildSaidasSection(saidas, totalSaidas));
-                body.appendChild(buildInsightsSection(ordens, lavadores, totalFat, totalOrdens, ticketMedio));
+                const secBars     = buildBarsSection(ordens, range);
+                const secEquipe   = buildFuncionariosSection(ordens, lavadores);
+                const secSaidas   = buildSaidasSection(saidas, totalSaidas);
+                const secInsights = buildInsightsSection(ordens, lavadores, totalFat, totalOrdens, ticketMedio);
+                secBars.classList.add('rf-section-bars');
+                secEquipe.classList.add('rf-section-equipe');
+                secSaidas.classList.add('rf-section-saidas');
+                secInsights.classList.add('rf-section-insights');
+                body.appendChild(secBars);
+                body.appendChild(secEquipe);
+                body.appendChild(secSaidas);
+                body.appendChild(secInsights);
 
                 // Disparar animação das barras após render
                 requestAnimationFrame(() => {
@@ -5659,13 +5677,16 @@
             // Agrupar por lavador — mostra valor total das ordens que cada um participou
             const porLav = {};
             ordens.forEach(o => {
-                const lavs = o.lavadores || [];
+                // ordemLavadores (multi-wash) tem prioridade; fallback para o.lavador (legado)
+                let lavs = (o.lavadores || []).filter(l => l.id || l.lavadorId);
+                if (lavs.length === 0 && o.lavador?.id) {
+                    lavs = [{ id: o.lavador.id, nome: o.lavador.nome }];
+                }
                 lavs.forEach(l => {
                     const id = l.id || l.lavadorId;
                     if (!id) return;
                     if (!porLav[id]) porLav[id] = { qtd: 0, total: 0, nome: l.nome || null };
                     porLav[id].qtd++;
-                    // Valor proporcional: se mais de um lavador, divide igualmente
                     porLav[id].total += (o.valorTotal || 0) / Math.max(lavs.length, 1);
                 });
             });
@@ -5747,10 +5768,13 @@
             const lavMap = {};
             (lavadores || []).forEach(l => { lavMap[l.id] = l.nome || l.name; });
             ordens.forEach(o => {
-                (o.lavadores || []).forEach(l => {
-                    const id = l.lavadorId || l.id;
+                let lavs = (o.lavadores || []).filter(l => l.id || l.lavadorId);
+                if (lavs.length === 0 && o.lavador?.id) lavs = [{ id: o.lavador.id }];
+                lavs.forEach(l => {
+                    const id = l.id || l.lavadorId;
+                    if (!id) return;
                     if (!porLav[id]) porLav[id] = 0;
-                    porLav[id] += (o.valorTotal || 0);
+                    porLav[id] += (o.valorTotal || 0) / Math.max(lavs.length, 1);
                 });
             });
             const topLav = Object.entries(porLav).sort((a, b) => b[1] - a[1])[0];
