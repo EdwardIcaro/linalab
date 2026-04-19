@@ -358,6 +358,28 @@
     .toast.success { background: #064e3b; }
     .toast.error   { background: #7f1d1d; }
 
+    /* ── MOBILE NAV (gerado por utils-funcionario.js) ── */
+    .mobile-bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white); border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around;
+      height: 64px; z-index: 200;
+      box-shadow: 0 -2px 12px rgba(0,0,0,.07);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-decoration: none; color: var(--light);
+      font-size: 10px; font-weight: 600; gap: 4px;
+      border: none; background: none; cursor: pointer;
+      border-top: 3px solid transparent;
+      font-family: 'Inter', sans-serif;
+      transition: color .18s;
+    }
+    .nav-item i { font-size: 20px; }
+    .nav-item:hover { color: var(--blue-d); }
+    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
+
     @media (min-width: 600px) {
       .main { padding: 18px 20px 100px; max-width: 640px; margin: 0 auto; }
       .stats-total-value { font-size: 34px; }
@@ -406,6 +428,7 @@
       <button class="period-chip active" id="pre-today"  onclick="setPreset('today')">Hoje</button>
       <button class="period-chip"        id="pre-week"   onclick="setPreset('week')">Semana</button>
       <button class="period-chip"        id="pre-month"  onclick="setPreset('month')">Mês</button>
+      <button class="period-chip"        id="pre-abertas" onclick="setPreset('abertas')">Abertas</button>
       <button class="period-chip"        id="pre-custom" onclick="setPreset('custom')">Período</button>
     </div>
     <div class="date-row" id="dateRow">
@@ -449,6 +472,7 @@
     let funcionarios       = [];
     let selectedId         = null;
     let ordens             = [];
+    let totalAdiantamentos = 0;
     let activePreset       = 'today';
     let activeStatusFilter = '';
     let dateInicio         = '';
@@ -478,15 +502,12 @@
       document.getElementById('pre-' + preset)?.classList.add('active');
       const dateRow = document.getElementById('dateRow');
 
-      if (preset === 'custom') {
-        dateRow.classList.add('show');
-        return;
-      }
+      if (preset === 'custom') { dateRow.classList.add('show'); return; }
       dateRow.classList.remove('show');
 
-      const now  = new Date();
-      const pad  = n => String(n).padStart(2, '0');
-      const fmt  = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const now   = new Date();
+      const pad   = n => String(n).padStart(2, '0');
+      const fmt   = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       const today = fmt(now);
 
       if (preset === 'today') {
@@ -498,6 +519,8 @@
       } else if (preset === 'month') {
         dateInicio = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
         dateFim = today;
+      } else if (preset === 'abertas') {
+        dateInicio = ''; dateFim = '';
       }
 
       if (reload && selectedId) loadOrdens();
@@ -569,7 +592,7 @@
       await loadOrdens();
     }
 
-    // ── ORDENS ──
+    // ── ORDENS + ADIANTAMENTOS ──
     async function loadOrdens() {
       document.getElementById('statsCard').innerHTML = loadingHtml();
       document.getElementById('orderList').innerHTML = '';
@@ -577,8 +600,20 @@
       document.getElementById('listLabel').style.display = 'none';
 
       try {
-        const r = await window.api.getOrdens(1, 200, '', '', selectedId, '', dateInicio, dateFim, '', 'historico');
+        // Para "Abertas": sem filtro de data, mostra tudo
+        const [r, adiantResp] = await Promise.all([
+          window.api.getOrdens(1, 500, '', '', selectedId, '', dateInicio, dateFim, '', 'historico'),
+          window.api.getHistoricoCaixa({ tipo: 'SAIDA', lavadorId: selectedId })
+        ]);
+
         ordens = r.ordens || r.data || [];
+
+        // Soma todos os adiantamentos do lavador (sem filtro de data)
+        const registros = adiantResp?.registros || [];
+        totalAdiantamentos = registros
+          .filter(rec => rec.descricao?.startsWith('[Adiantamento]'))
+          .reduce((s, rec) => s + (parseFloat(rec.valor) || 0), 0);
+
         renderStats();
         renderOrdens();
         document.getElementById('statusFilter').style.display = ordens.length ? 'flex' : 'none';
@@ -594,13 +629,11 @@
       const func = funcionarios.find(f => f.id === selectedId);
       if (!func) return;
 
-      const contaveis = ordens.filter(o => ['FINALIZADO','AGUARDANDO_PAGAMENTO','EM_ANDAMENTO'].includes(o.status));
-      const totalValor   = contaveis.reduce((s, o) => s + (parseFloat(o.valorTotal) || 0), 0);
-      const pct          = parseFloat(func.comissao) || 0;
-      const totalComiss  = totalValor * pct / 100;
-      const finalizadas  = ordens.filter(o => o.status === 'FINALIZADO').length;
-      const aguardando   = ordens.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length;
-      const labelPeriodo = { today: 'Hoje', week: 'Esta semana', month: 'Este mês', custom: 'Período' }[activePreset] || '';
+      const contaveis   = ordens.filter(o => ['FINALIZADO','AGUARDANDO_PAGAMENTO','EM_ANDAMENTO'].includes(o.status));
+      const totalValor  = contaveis.reduce((s, o) => s + (parseFloat(o.valorTotal) || 0), 0);
+      const pct         = parseFloat(func.comissao) || 0;
+      const totalComiss = totalValor * pct / 100;
+      const labelPeriodo = { today: 'Hoje', week: 'Esta semana', month: 'Este mês', abertas: 'Todas abertas', custom: 'Período' }[activePreset] || '';
 
       document.getElementById('statsCard').innerHTML = `
         <div class="stats-card">
@@ -620,8 +653,8 @@
               <div class="stats-pill-lbl">Faturado</div>
             </div>
             <div class="stats-pill">
-              <div class="stats-pill-val">${finalizadas + aguardando}</div>
-              <div class="stats-pill-lbl">Fechadas</div>
+              <div class="stats-pill-val">${formatCurrency(totalAdiantamentos)}</div>
+              <div class="stats-pill-lbl">Adiantamentos</div>
             </div>
           </div>
         </div>`;

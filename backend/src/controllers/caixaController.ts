@@ -564,6 +564,7 @@ async function getPagamentosDoPeriodoOptimizado(
 export const getHistorico = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { dataInicio, dataFim } = req.query;
+    const lavadorIdFilter = req.query.lavadorId as string | undefined;
     const tipoRaw = req.query.tipo as string | string[] | undefined;
     const tipo = Array.isArray(tipoRaw) ? tipoRaw[0] : (tipoRaw || '');
 
@@ -602,6 +603,7 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
                         empresaId,
                         ...(tipo ? { tipo: tipo as any } : {}),
                         ...(dateRange ? { data: dateRange } : {}),
+                        ...(lavadorIdFilter ? { lavadorId: lavadorIdFilter } : {}),
                     },
                     select: {
                         id: true,
