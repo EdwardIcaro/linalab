@@ -2875,6 +2875,186 @@
         .caixa-modal .relatorio-table td:not(:first-child) {
             text-align: right;
         }
+
+        /* ==========================================
+           MODAL RELATÓRIO PERIÓDICO
+           ========================================== */
+        .relatorio-notif-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45);
+            z-index: 9990; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity .25s;
+        }
+        .relatorio-notif-backdrop.visible { opacity: 1; pointer-events: all; }
+
+        .relatorio-notif-card {
+            background: #fff; border-radius: 18px; padding: 32px 28px 24px;
+            max-width: 380px; width: 92%; text-align: center;
+            box-shadow: 0 24px 60px rgba(0,0,0,.18);
+            transform: translateY(20px) scale(.97); transition: transform .28s;
+        }
+        .relatorio-notif-backdrop.visible .relatorio-notif-card { transform: translateY(0) scale(1); }
+
+        .relatorio-notif-icon {
+            width: 62px; height: 62px; border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px; font-size: 26px; color: #fff;
+        }
+        .relatorio-notif-title { font-size: 17px; font-weight: 700; color: #111; margin-bottom: 6px; }
+        .relatorio-notif-sub   { font-size: 13px; color: #6b7280; margin-bottom: 22px; line-height: 1.5; }
+
+        .relatorio-notif-tabs {
+            display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
+        }
+        .relatorio-notif-tab {
+            padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e2e8f0;
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s;
+            background: transparent; color: #374151;
+        }
+        .relatorio-notif-tab.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+        .relatorio-notif-btns { display: flex; gap: 10px; }
+        .relatorio-notif-btns .btn-gerar {
+            flex: 1; padding: 11px; border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff;
+            border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+        }
+        .relatorio-notif-btns .btn-gerar:hover { opacity: .88; }
+        .relatorio-notif-btns .btn-dispensar {
+            padding: 11px 16px; border-radius: 10px; background: #f1f5f9;
+            color: #64748b; border: none; font-size: 13px; cursor: pointer;
+        }
+
+        /* Relatório completo */
+        .relatorio-full-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,.55);
+            z-index: 9995; display: flex; align-items: flex-start; justify-content: center;
+            overflow-y: auto; padding: 20px 10px;
+            opacity: 0; pointer-events: none; transition: opacity .25s;
+        }
+        .relatorio-full-backdrop.visible { opacity: 1; pointer-events: all; }
+
+        .relatorio-full-modal {
+            background: #f8fafc; border-radius: 20px; width: 100%; max-width: 680px;
+            overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,.25);
+            transform: translateY(30px); transition: transform .3s;
+        }
+        .relatorio-full-backdrop.visible .relatorio-full-modal { transform: translateY(0); }
+
+        .rf-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            padding: 24px 24px 20px; color: #fff;
+        }
+        .rf-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+        .rf-header-top h2 { font-size: 17px; font-weight: 700; margin: 0; }
+        .rf-header-close {
+            width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.12);
+            border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .rf-period { font-size: 12px; color: rgba(255,255,255,.6); }
+
+        .rf-hero {
+            background: rgba(255,255,255,.08); border-radius: 12px; margin: 14px 0 0;
+            padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .rf-hero-label { font-size: 11px; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .8px; }
+        .rf-hero-value { font-size: 28px; font-weight: 800; color: #fff; line-height: 1.1; }
+        .rf-hero-value span { font-size: 14px; font-weight: 500; }
+        .rf-hero-stats { display: flex; gap: 20px; }
+        .rf-hero-stat { text-align: right; }
+        .rf-hero-stat .label { font-size: 10px; color: rgba(255,255,255,.5); }
+        .rf-hero-stat .val { font-size: 16px; font-weight: 700; color: #fff; }
+
+        .rf-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+        .rf-section {
+            background: #fff; border-radius: 14px; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+        .rf-section-title {
+            padding: 12px 16px; font-size: 13px; font-weight: 700; color: #374151;
+            border-bottom: 1px solid #f1f5f9; background: #fafafa;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .rf-section-title i { color: #2563eb; font-size: 14px; }
+
+        /* Barras por dia */
+        .rf-bars { padding: 16px; }
+        .rf-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .rf-bar-row:last-child { margin-bottom: 0; }
+        .rf-bar-day { font-size: 11px; color: #6b7280; width: 26px; text-align: center; font-weight: 600; }
+        .rf-bar-wrap { flex: 1; height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
+        .rf-bar-fill {
+            height: 100%; border-radius: 6px;
+            background: linear-gradient(90deg, #2563eb, #7c3aed);
+            width: 0; transition: width 1s cubic-bezier(.4,0,.2,1);
+        }
+        .rf-bar-val { font-size: 11px; font-weight: 600; color: #374151; width: 72px; text-align: right; }
+
+        /* Funcionários */
+        .rf-funcionarios { padding: 0; }
+        .rf-func-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 16px; border-bottom: 1px solid #f8fafc;
+        }
+        .rf-func-row:last-child { border-bottom: none; }
+        .rf-func-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .rf-func-name { flex: 1; font-size: 13px; font-weight: 600; color: #111; }
+        .rf-func-sub  { font-size: 11px; color: #6b7280; }
+        .rf-func-val  { font-size: 13px; font-weight: 700; color: #059669; }
+
+        /* Saídas */
+        .rf-saidas { padding: 12px 16px; }
+        .rf-saida-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f8fafc; }
+        .rf-saida-row:last-child { border-bottom: none; font-weight: 700; color: #ef4444; }
+        .rf-saida-row .s-label { color: #374151; }
+        .rf-saida-row .s-val   { font-weight: 600; color: #ef4444; }
+
+        /* Insights */
+        .rf-insights { padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .rf-insight-chip {
+            background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+        }
+        .rf-insight-chip .i-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+        .rf-insight-chip .i-val   { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .rf-insight-chip .i-sub   { font-size: 11px; color: #6b7280; }
+
+        .rf-footer {
+            padding: 16px 20px; background: #fff; border-top: 1px solid #f1f5f9;
+            display: flex; gap: 10px; justify-content: flex-end;
+        }
+        .rf-footer .btn-export {
+            padding: 9px 18px; border-radius: 9px; background: #059669; color: #fff;
+            border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .rf-footer .btn-export:hover { opacity: .88; }
+        .rf-footer .btn-fechar-rel {
+            padding: 9px 18px; border-radius: 9px; background: #f1f5f9; color: #374151;
+            border: none; font-size: 13px; cursor: pointer;
+        }
+
+        /* Loading do relatório */
+        .rf-loading {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 60px 20px; gap: 16px;
+        }
+        .rf-loading-spinner {
+            width: 42px; height: 42px; border: 3px solid #e2e8f0;
+            border-top-color: #2563eb; border-radius: 50%;
+            animation: rfSpin .8s linear infinite;
+        }
+        @keyframes rfSpin { to { transform: rotate(360deg); } }
+        .rf-loading p { color: #6b7280; font-size: 14px; }
+
+        /* Counter animation */
+        @keyframes rfCountUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .rf-animated { animation: rfCountUp .5s ease forwards; }
     </style>
 </head>
 <body data-permission="ver_dashboard">
@@ -5222,9 +5402,478 @@
         });
     </script>
 
+    <!-- ===== RELATÓRIO PERIÓDICO ===== -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script>
+    (function() {
+
+        // ---- Utilitários de período ----
+        function getISOWeekKey(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const day = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - day);
+            const y = d.getUTCFullYear();
+            const jan1 = new Date(Date.UTC(y, 0, 1));
+            const w = Math.ceil((((d - jan1) / 86400000) + 1) / 7);
+            return `${y}-W${String(w).padStart(2, '0')}`;
+        }
+
+        function getMesKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function semanaRange() {
+            const now = new Date();
+            const day = now.getDay() || 7;
+            const mon = new Date(now); mon.setDate(now.getDate() - (day - 1));
+            const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+            const fmt = d => d.toISOString().split('T')[0];
+            return { inicio: fmt(mon), fim: fmt(sun), label: `${mon.toLocaleDateString('pt-BR')} – ${sun.toLocaleDateString('pt-BR')}` };
+        }
+
+        function mesRange() {
+            const now = new Date();
+            const ini = new Date(now.getFullYear(), now.getMonth(), 1);
+            const fim = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const fmt = d => d.toISOString().split('T')[0];
+            return { inicio: fmt(ini), fim: fmt(fim), label: ini.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) };
+        }
+
+        function formatBRL(v) {
+            return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        const DIAS_ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const AVATAR_COLORS = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#65a30d'];
+
+        // ---- Estado global do módulo ----
+        let _relPeriodo = 'semana'; // 'semana' | 'mes'
+        let _relData = null;        // dados carregados para exportação
+
+        // ---- Verificação de exibição ----
+        function deveExibir() {
+            const now = new Date();
+            const semKey = getISOWeekKey(now);
+            const mesKey = getMesKey(now);
+            const storedSem = localStorage.getItem('linax_rel_sem');
+            const storedMes = localStorage.getItem('linax_rel_mes');
+            const novaSemana = storedSem !== semKey;
+            const novoMes   = storedMes !== mesKey;
+            return { novaSemana, novoMes, semKey, mesKey };
+        }
+
+        function iniciarVerificacaoRelatorio() {
+            try {
+                const { novaSemana, novoMes } = deveExibir();
+                if (!novaSemana && !novoMes) return;
+
+                const tabs = document.getElementById('relNotifTabs');
+                const titulo = document.getElementById('relNotifTitle');
+                const sub    = document.getElementById('relNotifSub');
+                tabs.innerHTML = '';
+
+                if (novaSemana && novoMes) {
+                    titulo.textContent = 'Relatórios disponíveis!';
+                    sub.textContent = 'Temos dados novos da semana e do mês para você analisar.';
+                    ['semana', 'mes'].forEach(p => {
+                        const b = document.createElement('button');
+                        b.className = 'relatorio-notif-tab' + (p === 'semana' ? ' active' : '');
+                        b.textContent = p === 'semana' ? 'Semanal' : 'Mensal';
+                        b.onclick = () => { _relPeriodo = p; tabs.querySelectorAll('.relatorio-notif-tab').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+                        tabs.appendChild(b);
+                    });
+                    _relPeriodo = 'semana';
+                } else if (novaSemana) {
+                    titulo.textContent = 'Relatório semanal pronto!';
+                    sub.textContent = 'Confira o desempenho completo da semana: faturamento, saídas e lavadores.';
+                    _relPeriodo = 'semana';
+                } else {
+                    titulo.textContent = 'Relatório mensal pronto!';
+                    sub.textContent = 'Veja um resumo completo do mês: receita, despesas e performance da equipe.';
+                    _relPeriodo = 'mes';
+                }
+
+                // Mostra com pequeno delay para o DOM estabilizar
+                setTimeout(() => {
+                    document.getElementById('relatorioNotifBackdrop').classList.add('visible');
+                }, 1800);
+            } catch(e) {
+                console.warn('[Relatorio] verificação falhou:', e);
+            }
+        }
+
+        window.fecharNotifRelatorio = function(e) {
+            if (e && e.target !== document.getElementById('relatorioNotifBackdrop')) return;
+            document.getElementById('relatorioNotifBackdrop').classList.remove('visible');
+        };
+
+        window.dispensarRelatorio = function() {
+            document.getElementById('relatorioNotifBackdrop').classList.remove('visible');
+            const { semKey, mesKey, novaSemana, novoMes } = deveExibir();
+            if (novaSemana) localStorage.setItem('linax_rel_sem', semKey);
+            if (novoMes)    localStorage.setItem('linax_rel_mes', mesKey);
+        };
+
+        // ---- Abrir relatório completo ----
+        window.abrirRelatorioCompleto = async function() {
+            document.getElementById('relatorioNotifBackdrop').classList.remove('visible');
+            const backdrop = document.getElementById('relatorioFullBackdrop');
+            backdrop.classList.add('visible');
+
+            const range = _relPeriodo === 'semana' ? semanaRange() : mesRange();
+            document.getElementById('rfTitulo').textContent = _relPeriodo === 'semana' ? 'Relatório Semanal' : 'Relatório Mensal';
+            document.getElementById('rfPeriodo').textContent = range.label;
+            document.getElementById('rfFaturamento').textContent = '...';
+            document.getElementById('rfOrdens').textContent = '...';
+            document.getElementById('rfTicket').textContent = '...';
+
+            const body = document.getElementById('rfBody');
+            body.innerHTML = `<div class="rf-loading"><div class="rf-loading-spinner"></div><p>Carregando dados do período...</p></div>`;
+
+            try {
+                const [statsResp, ordensResp, saidasResp, lavadoresResp] = await Promise.all([
+                    window.api.getOrdensStats({ dataInicio: range.inicio, dataFim: range.fim }),
+                    window.api.getOrdens(1, 500, '', '', '', '', range.inicio, range.fim, '', 'historico'),
+                    window.api.getHistoricoCaixa({ dataInicio: range.inicio, dataFim: range.fim, tipo: 'SAIDA' }).catch(() => ({ registros: [] })),
+                    window.api.getLavadoresSimple().catch(() => ({ lavadores: [] }))
+                ]);
+
+                const ordens = ordensResp.ordens || [];
+                const totalFat = statsResp.valorTotal || 0;
+                const totalOrdens = statsResp.ordensFinalizadas || ordens.length;
+                const ticketMedio = totalOrdens > 0 ? totalFat / totalOrdens : 0;
+                const saidas = saidasResp.registros || [];
+                const totalSaidas = saidas.reduce((s, r) => s + (parseFloat(r.valor) || 0), 0);
+                const lavadores = lavadoresResp.lavadores || [];
+
+                // Animar contadores do header
+                animateCounter('rfFaturamento', totalFat, formatBRL);
+                animateCounter('rfOrdens', totalOrdens, v => Math.round(v).toString());
+                document.getElementById('rfTicket').textContent = 'R$ ' + formatBRL(ticketMedio);
+
+                // Guardar para exportação
+                _relData = { range, ordens, saidas, lavadores, totalFat, totalOrdens, ticketMedio, totalSaidas };
+
+                // Montar body
+                body.innerHTML = '';
+                body.appendChild(buildBarsSection(ordens, range));
+                body.appendChild(buildFuncionariosSection(ordens, lavadores));
+                body.appendChild(buildSaidasSection(saidas, totalSaidas));
+                body.appendChild(buildInsightsSection(ordens, lavadores, totalFat, totalOrdens, ticketMedio));
+
+                // Disparar animação das barras após render
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('.rf-bar-fill[data-pct]').forEach(el => {
+                        const pct = el.getAttribute('data-pct');
+                        el.style.width = pct + '%';
+                    });
+                });
+
+                // Marcar como exibido
+                const { semKey, mesKey } = deveExibir();
+                if (_relPeriodo === 'semana') localStorage.setItem('linax_rel_sem', semKey);
+                else                          localStorage.setItem('linax_rel_mes', mesKey);
+
+            } catch(e) {
+                console.error('[Relatorio] erro ao carregar dados:', e);
+                body.innerHTML = `<div class="rf-loading"><p style="color:#ef4444">Erro ao carregar dados. Tente novamente.</p></div>`;
+            }
+        };
+
+        function animateCounter(id, target, formatter) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const duration = 900;
+            const start = performance.now();
+            function step(now) {
+                const p = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - p, 3);
+                el.textContent = formatter(target * eased);
+                if (p < 1) requestAnimationFrame(step);
+                else el.textContent = formatter(target);
+            }
+            requestAnimationFrame(step);
+        }
+
+        function buildBarsSection(ordens, range) {
+            const sec = document.createElement('div');
+            sec.className = 'rf-section';
+            sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-chart-bar"></i> Faturamento por Dia</div>`;
+
+            // Agrupar por data
+            const byDay = {};
+            ordens.forEach(o => {
+                const d = (o.updatedAt || o.createdAt || '').split('T')[0];
+                if (!byDay[d]) byDay[d] = 0;
+                byDay[d] += (o.valorTotal || 0);
+            });
+
+            // Gerar datas do range
+            const dates = [];
+            let cur = new Date(range.inicio + 'T12:00:00');
+            const end = new Date(range.fim + 'T12:00:00');
+            while (cur <= end) {
+                dates.push(cur.toISOString().split('T')[0]);
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            const valores = dates.map(d => byDay[d] || 0);
+            const maxVal = Math.max(...valores, 1);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'rf-bars';
+            dates.forEach((d, i) => {
+                const dt = new Date(d + 'T12:00:00');
+                const row = document.createElement('div');
+                row.className = 'rf-bar-row';
+                const pct = Math.round((valores[i] / maxVal) * 100);
+                row.innerHTML = `
+                    <div class="rf-bar-day">${DIAS_ABREV[dt.getDay()]}</div>
+                    <div class="rf-bar-wrap"><div class="rf-bar-fill" data-pct="${pct}" style="width:0%"></div></div>
+                    <div class="rf-bar-val">${valores[i] > 0 ? 'R$ ' + formatBRL(valores[i]) : '—'}</div>`;
+                wrap.appendChild(row);
+            });
+            sec.appendChild(wrap);
+            return sec;
+        }
+
+        function buildFuncionariosSection(ordens, lavadores) {
+            const sec = document.createElement('div');
+            sec.className = 'rf-section';
+            sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-users"></i> Desempenho da Equipe</div>`;
+
+            // Agrupar por lavador
+            const porLav = {};
+            ordens.forEach(o => {
+                (o.lavadores || []).forEach(l => {
+                    const id = l.lavadorId || l.id;
+                    if (!porLav[id]) porLav[id] = { qtd: 0, total: 0 };
+                    porLav[id].qtd++;
+                    const pct = (l.percentual || l.comissaoPct || 40) / 100;
+                    porLav[id].total += (o.valorTotal || 0) * pct;
+                });
+            });
+
+            const lavMap = {};
+            (lavadores || []).forEach(l => { lavMap[l.id] = l.nome || l.name; });
+
+            const lista = Object.entries(porLav)
+                .map(([id, v]) => ({ id, nome: lavMap[id] || 'Lavador', ...v }))
+                .sort((a, b) => b.total - a.total);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'rf-funcionarios';
+            if (lista.length === 0) {
+                wrap.innerHTML = `<div style="padding:16px;text-align:center;color:#6b7280;font-size:13px">Nenhuma ordem com lavador no período</div>`;
+            } else {
+                lista.forEach((l, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'rf-func-row rf-animated';
+                    row.style.animationDelay = `${i * 0.06}s`;
+                    row.innerHTML = `
+                        <div class="rf-func-avatar" style="background:${AVATAR_COLORS[i % AVATAR_COLORS.length]}">${(l.nome||'?')[0].toUpperCase()}</div>
+                        <div><div class="rf-func-name">${l.nome}</div><div class="rf-func-sub">${l.qtd} ordem${l.qtd !== 1 ? 's' : ''}</div></div>
+                        <div class="rf-func-val">R$ ${formatBRL(l.total)}</div>`;
+                    wrap.appendChild(row);
+                });
+            }
+            sec.appendChild(wrap);
+            return sec;
+        }
+
+        function buildSaidasSection(saidas, totalSaidas) {
+            const sec = document.createElement('div');
+            sec.className = 'rf-section';
+            sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-arrow-trend-down"></i> Saídas & Despesas</div>`;
+
+            const wrap = document.createElement('div');
+            wrap.className = 'rf-saidas';
+
+            if (saidas.length === 0) {
+                wrap.innerHTML = `<div style="padding:6px 0;color:#6b7280;font-size:13px">Nenhuma saída no período</div>`;
+            } else {
+                // Agrupar por categoria
+                const pCat = {};
+                saidas.forEach(r => {
+                    const cat = r.subconta || r.descricao?.split(' ')[0] || 'Outros';
+                    if (!pCat[cat]) pCat[cat] = 0;
+                    pCat[cat] += parseFloat(r.valor) || 0;
+                });
+                Object.entries(pCat).sort((a, b) => b[1] - a[1]).slice(0, 6).forEach(([cat, val]) => {
+                    const row = document.createElement('div');
+                    row.className = 'rf-saida-row';
+                    row.innerHTML = `<span class="s-label">${cat}</span><span class="s-val">- R$ ${formatBRL(val)}</span>`;
+                    wrap.appendChild(row);
+                });
+                const total = document.createElement('div');
+                total.className = 'rf-saida-row';
+                total.innerHTML = `<span class="s-label">Total saídas</span><span class="s-val">- R$ ${formatBRL(totalSaidas)}</span>`;
+                wrap.appendChild(total);
+            }
+            sec.appendChild(wrap);
+            return sec;
+        }
+
+        function buildInsightsSection(ordens, lavadores, totalFat, totalOrdens, ticketMedio) {
+            // Melhor dia
+            const byDay = {};
+            ordens.forEach(o => {
+                const d = (o.updatedAt || o.createdAt || '').split('T')[0];
+                if (!byDay[d]) byDay[d] = 0;
+                byDay[d] += (o.valorTotal || 0);
+            });
+            const melhorDia = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
+            const melhorDiaLabel = melhorDia ? new Date(melhorDia[0] + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
+            const melhorDiaVal = melhorDia ? 'R$ ' + formatBRL(melhorDia[1]) : '—';
+
+            // Melhor lavador
+            const porLav = {};
+            const lavMap = {};
+            (lavadores || []).forEach(l => { lavMap[l.id] = l.nome || l.name; });
+            ordens.forEach(o => {
+                (o.lavadores || []).forEach(l => {
+                    const id = l.lavadorId || l.id;
+                    if (!porLav[id]) porLav[id] = 0;
+                    porLav[id] += (o.valorTotal || 0);
+                });
+            });
+            const topLav = Object.entries(porLav).sort((a, b) => b[1] - a[1])[0];
+            const topLavNome = topLav ? (lavMap[topLav[0]] || 'Lavador') : '—';
+
+            // Dias com ordens
+            const diasAtivos = Object.values(byDay).filter(v => v > 0).length || 1;
+            const mediasPorDia = totalFat / diasAtivos;
+
+            const sec = document.createElement('div');
+            sec.className = 'rf-section';
+            sec.innerHTML = `<div class="rf-section-title"><i class="fas fa-lightbulb"></i> Destaques do Período</div>`;
+
+            const grid = document.createElement('div');
+            grid.className = 'rf-insights';
+            const chips = [
+                { label: 'Melhor dia', val: melhorDiaLabel, sub: melhorDiaVal },
+                { label: 'Destaque equipe', val: topLavNome, sub: topLav ? 'R$ ' + formatBRL(topLav[1]) + ' gerado' : '' },
+                { label: 'Média/dia ativo', val: 'R$ ' + formatBRL(mediasPorDia), sub: diasAtivos + ' dias c/ mov.' },
+                { label: 'Ticket médio', val: 'R$ ' + formatBRL(ticketMedio), sub: totalOrdens + ' ordens finalizadas' },
+            ];
+            chips.forEach(c => {
+                const chip = document.createElement('div');
+                chip.className = 'rf-insight-chip rf-animated';
+                chip.innerHTML = `<div class="i-label">${c.label}</div><div class="i-val">${c.val}</div><div class="i-sub">${c.sub}</div>`;
+                grid.appendChild(chip);
+            });
+            sec.appendChild(grid);
+            return sec;
+        }
+
+        window.fecharRelatorioCompleto = function(e, force) {
+            if (!force && e && e.target !== document.getElementById('relatorioFullBackdrop')) return;
+            document.getElementById('relatorioFullBackdrop').classList.remove('visible');
+        };
+
+        // ---- Exportar XLS ----
+        window.exportarRelatorioXLS = function() {
+            if (!_relData || typeof XLSX === 'undefined') {
+                alert('Dados não disponíveis. Abra o relatório primeiro.');
+                return;
+            }
+            const { range, ordens, saidas, lavadores, totalFat, totalOrdens, ticketMedio, totalSaidas } = _relData;
+            const lavMap = {};
+            lavadores.forEach(l => { lavMap[l.id] = l.nome || l.name; });
+
+            const wb = XLSX.utils.book_new();
+
+            // Aba resumo
+            const resumo = [
+                ['Período', range.label],
+                ['Faturamento Total', totalFat],
+                ['Ordens Finalizadas', totalOrdens],
+                ['Ticket Médio', ticketMedio],
+                ['Total Saídas', totalSaidas],
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumo), 'Resumo');
+
+            // Aba ordens
+            const ordensData = [['ID', 'Data', 'Serviço', 'Valor', 'Lavadores']];
+            ordens.forEach(o => {
+                const lavs = (o.lavadores || []).map(l => lavMap[l.lavadorId || l.id] || 'Lav.').join(', ');
+                ordensData.push([o.id, (o.updatedAt || o.createdAt || '').split('T')[0], o.tipoServico || '', o.valorTotal || 0, lavs]);
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ordensData), 'Ordens');
+
+            // Aba saídas
+            const saidasData = [['Data', 'Descrição', 'Valor']];
+            saidas.forEach(r => saidasData.push([r.createdAt?.split('T')[0] || '', r.descricao || '', parseFloat(r.valor) || 0]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(saidasData), 'Saídas');
+
+            const tipo = _relPeriodo === 'semana' ? 'Semanal' : 'Mensal';
+            XLSX.writeFile(wb, `Relatorio_${tipo}_${range.inicio}.xlsx`);
+        };
+
+        // ---- Iniciar na carga ----
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(iniciarVerificacaoRelatorio, 2000);
+        });
+
+    })();
+    </script>
+
     <script src="nav-menu-helper.js"></script>
     <script src="mobile-nav.js"></script>
     <script src="webapp-bottom-nav.js"></script>
+
+    <!-- ===== MODAL NOTIFICAÇÃO RELATÓRIO ===== -->
+    <div id="relatorioNotifBackdrop" class="relatorio-notif-backdrop" onclick="fecharNotifRelatorio(event)">
+        <div class="relatorio-notif-card">
+            <div class="relatorio-notif-icon"><i class="fas fa-chart-bar"></i></div>
+            <div class="relatorio-notif-title" id="relNotifTitle">Relatório disponível!</div>
+            <div class="relatorio-notif-sub" id="relNotifSub">Os números do período já estão prontos para você analisar.</div>
+            <div class="relatorio-notif-tabs" id="relNotifTabs"></div>
+            <div class="relatorio-notif-btns">
+                <button class="btn-gerar" onclick="abrirRelatorioCompleto()"><i class="fas fa-bolt"></i> Gerar Relatório</button>
+                <button class="btn-dispensar" onclick="dispensarRelatorio()">Dispensar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL RELATÓRIO COMPLETO ===== -->
+    <div id="relatorioFullBackdrop" class="relatorio-full-backdrop" onclick="fecharRelatorioCompleto(event)">
+        <div class="relatorio-full-modal">
+            <div class="rf-header">
+                <div class="rf-header-top">
+                    <h2 id="rfTitulo">Relatório</h2>
+                    <button class="rf-header-close" onclick="fecharRelatorioCompleto(null, true)"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="rf-period" id="rfPeriodo"></div>
+                <div class="rf-hero">
+                    <div>
+                        <div class="rf-hero-label">Faturamento Total</div>
+                        <div class="rf-hero-value"><span>R$</span> <span id="rfFaturamento">0,00</span></div>
+                    </div>
+                    <div class="rf-hero-stats">
+                        <div class="rf-hero-stat">
+                            <div class="label">Ordens</div>
+                            <div class="val" id="rfOrdens">0</div>
+                        </div>
+                        <div class="rf-hero-stat">
+                            <div class="label">Ticket Médio</div>
+                            <div class="val" id="rfTicket">R$ 0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="rfBody" class="rf-body">
+                <div class="rf-loading">
+                    <div class="rf-loading-spinner"></div>
+                    <p>Carregando dados do período...</p>
+                </div>
+            </div>
+            <div class="rf-footer">
+                <button class="btn-export" onclick="exportarRelatorioXLS()"><i class="fas fa-file-excel"></i> Exportar XLS</button>
+                <button class="btn-fechar-rel" onclick="fecharRelatorioCompleto(null, true)">Fechar</button>
+            </div>
+        </div>
+    </div>
 
     <nav class="bottom-navigation">
         <a href="index.html" class="bottom-nav-item active" data-page="home" title="Dashboard">
