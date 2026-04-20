@@ -93,16 +93,18 @@ model Cliente {
 }
 
 model Veiculo {
-  id        String         @id @default(cuid())
-  clienteId String
-  placa     String         @unique
-  modelo    String?
-  cor       String?
-  ano       Int?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  ordens    OrdemServico[]
-  cliente   Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  clienteId       String
+  placa           String         @unique
+  modelo          String?
+  cor             String?
+  ano             Int?
+  tipoVeiculo     String?
+  subtipoVeiculo  String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  ordens          OrdemServico[]
+  cliente         Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("veiculos")
 }

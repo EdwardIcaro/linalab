@@ -168,6 +168,8 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
               placa: novoVeiculo.placa,
               modelo: novoVeiculo.modelo,
               cor: novoVeiculo.cor,
+              tipoVeiculo: novoVeiculo.tipoVeiculo || null,
+              subtipoVeiculo: novoVeiculo.subtipoVeiculo || null,
               clienteId: finalClienteId!,
             },
             include: {

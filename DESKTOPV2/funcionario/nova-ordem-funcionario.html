@@ -1311,13 +1311,15 @@
                 const r = await window.api.getVeiculoByPlaca(cleanPlate);
                 if (r?.veiculo && r?.cliente) {
                   this.results = [{
-                    clienteId: r.cliente.id,
-                    veiculoId: r.veiculo.id,
-                    nome:      r.cliente.nome,
-                    modelo:    r.veiculo.modelo || '',
-                    placa:     r.veiculo.placa,
-                    telefone:  r.cliente.telefone || '',
-                    cor:       r.veiculo.cor || '',
+                    clienteId:      r.cliente.id,
+                    veiculoId:      r.veiculo.id,
+                    nome:           r.cliente.nome,
+                    modelo:         r.veiculo.modelo || '',
+                    placa:          r.veiculo.placa,
+                    telefone:       r.cliente.telefone || '',
+                    cor:            r.veiculo.cor || '',
+                    tipoVeiculo:    r.veiculo.tipoVeiculo || null,
+                    subtipoVeiculo: r.veiculo.subtipoVeiculo || null,
                   }];
                 } else {
                   this.results = [];
@@ -1375,6 +1377,14 @@
           this.cliente = { ...r };
           this.q = '';
           this.showDrop = false;
+
+          // Auto-preenche tipo e categoria do veículo cadastrado
+          if (r.tipoVeiculo) {
+            this.tipo = r.tipoVeiculo;
+            this.$nextTick(() => {
+              if (r.subtipoVeiculo) this.cat = r.subtipoVeiculo;
+            });
+          }
         },
 
         abrirFormNovoCliente() {
@@ -1713,16 +1723,22 @@
               telefone: this.cliente.telefone || null,
             };
             payload.novoVeiculo = {
-              placa:  this.cliente.placa,
-              modelo: this.cliente.modelo || null,
-              cor:    this.cliente.cor    || null,
+              placa:          this.cliente.placa,
+              modelo:         this.cliente.modelo || null,
+              cor:            this.cliente.cor    || null,
+              tipoVeiculo:    this.tipo || null,
+              subtipoVeiculo: this.cat  || null,
             };
           }
 
           // Cliente existente, novo veículo
           if (this.cliente?.novoVeiculo) {
             payload.veiculoId = null;
-            payload.novoVeiculo = this.cliente.novoVeiculo;
+            payload.novoVeiculo = {
+              ...this.cliente.novoVeiculo,
+              tipoVeiculo:    this.tipo || null,
+              subtipoVeiculo: this.cat  || null,
+            };
           }
 
           try {
@@ -1802,6 +1818,25 @@
             const data = await window.api.reconhecerPlaca(base64);
             if (data?.placa) {
               this.closeCameraModal();
+              // Tenta encontrar cliente/veículo pela placa no banco
+              try {
+                const r = await window.api.getVeiculoByPlaca(data.placa);
+                if (r?.veiculo && r?.cliente) {
+                  this.pick({
+                    clienteId:      r.cliente.id,
+                    veiculoId:      r.veiculo.id,
+                    nome:           r.cliente.nome,
+                    modelo:         r.veiculo.modelo || '',
+                    placa:          r.veiculo.placa,
+                    telefone:       r.cliente.telefone || '',
+                    cor:            r.veiculo.cor || '',
+                    tipoVeiculo:    r.veiculo.tipoVeiculo || null,
+                    subtipoVeiculo: r.veiculo.subtipoVeiculo || null,
+                  });
+                  return;
+                }
+              } catch { /* não encontrado → abre form */ }
+              // Placa não cadastrada → abre form pré-preenchido
               this.abrirFormNovoCliente();
               this.form.placa = data.placa;
             } else {
