@@ -3079,6 +3079,128 @@
         /* Counter animation */
         @keyframes rfCountUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .rf-animated { animation: rfCountUp .5s ease forwards; }
+
+        /* ── User Profile Dropdown ─────────────────── */
+        .user-dd-wrap { position: relative; }
+
+        .nav-user-profile {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-user-profile .dd-chevron {
+            font-size: 10px;
+            color: var(--dashboard-text-muted);
+            margin-left: 2px;
+            transition: transform .2s;
+        }
+        .nav-user-profile.is-open .dd-chevron { transform: rotate(180deg); }
+
+        .user-dd {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 272px;
+            background: var(--dashboard-card);
+            border-radius: var(--radius-md, 12px);
+            box-shadow: 0 8px 32px rgba(0,0,0,.13), 0 0 0 1px rgba(0,0,0,.07);
+            padding: 4px;
+            z-index: 1100;
+            transform-origin: top right;
+        }
+        [x-cloak] { display: none !important; }
+
+        /* Seção de perfil no topo */
+        .udd-profile {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(160deg, rgba(139,92,246,.08) 0%, rgba(6,182,212,.08) 100%);
+            border-radius: 8px;
+            padding: 26px 12px 16px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .udd-plan-badge {
+            position: absolute;
+            top: 8px; left: 8px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .4px;
+            background: rgba(139,92,246,.12); color: #6d28d9;
+        }
+        .udd-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+            color: #fff;
+            font-size: 20px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 14px rgba(139,92,246,.28);
+        }
+        .udd-name  { font-size: 14px; font-weight: 600; color: var(--dashboard-text); line-height: 1.2; }
+        .udd-role  { font-size: 11px; color: var(--dashboard-text-secondary); margin-top: 2px; }
+        .udd-company {
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 8px; padding: 3px 10px;
+            background: var(--dashboard-card);
+            border: 1px solid rgba(0,0,0,.07);
+            border-radius: 20px;
+            font-size: 11px; font-weight: 600; color: #0891b2;
+        }
+
+        /* Itens de menu */
+        .udd-item {
+            display: flex; align-items: center; gap: 11px;
+            padding: 0 12px; height: 36px;
+            border-radius: 8px;
+            font-size: 13px; font-weight: 500;
+            color: var(--dashboard-text-secondary);
+            text-decoration: none; cursor: pointer;
+            transition: background .12s, color .12s;
+            border: none; background: none;
+            width: 100%; text-align: left;
+            font-family: 'Poppins', sans-serif;
+        }
+        .udd-item i { width: 15px; text-align: center; font-size: 12px; flex-shrink: 0; }
+        .udd-item:hover { background: var(--dashboard-card-hover, #fafafa); color: var(--dashboard-text); }
+        .udd-item.purple:hover { background: rgba(139,92,246,.08); color: #7c3aed; }
+        .udd-item.blue:hover   { background: rgba(59,130,246,.08);  color: #2563eb; }
+        .udd-item.cyan:hover   { background: rgba(6,182,212,.08);   color: #0891b2; }
+
+        /* Separador */
+        .udd-sep { height: 1px; background: rgba(0,0,0,.06); margin: 6px 0; }
+
+        /* Linha bottom */
+        .udd-bottom { display: flex; align-items: center; gap: 4px; }
+        .udd-btn-theme {
+            flex: 1; display: flex; align-items: center; gap: 10px;
+            padding: 0 12px; height: 36px;
+            border-radius: 8px;
+            font-size: 13px; font-weight: 500; color: var(--dashboard-text-secondary);
+            background: none; border: none; cursor: pointer;
+            transition: background .12s, color .12s;
+            font-family: 'Poppins', sans-serif; text-align: left;
+        }
+        .udd-btn-theme i { width: 15px; text-align: center; font-size: 12px; }
+        .udd-btn-theme:hover { background: var(--dashboard-card-hover, #fafafa); color: var(--dashboard-text); }
+
+        .udd-btn-logout {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none; background: transparent;
+            color: #ef4444;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: background .12s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .udd-btn-logout:hover { background: rgba(239,68,68,.10); }
+        .udd-btn-logout svg { width: 14px; height: 14px; flex-shrink: 0; }
     </style>
 </head>
 <body data-permission="ver_dashboard">
@@ -3461,20 +3583,70 @@
                         </div>
                     </div>
 
-                    <!-- User Profile -->
-                    <a href="perfil.html" class="nav-user-profile">
-                        <div class="nav-user-avatar" x-text="getUserInitials()"></div>
-                        <div class="nav-user-info">
-                            <span class="nav-user-name" x-text="getUserName()"></span>
-                            <span class="nav-user-role" x-text="getUserRole()"></span>
-                        </div>
-                    </a>
+                    <!-- User Profile Dropdown -->
+                    <div class="user-dd-wrap" x-data="{ open: false }" @click.outside="open = false">
 
-                    <!-- Logout Button -->
-                    <button class="nav-logout-btn" @click="handleLogout()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Sair</span>
-                    </button>
+                        <!-- Trigger -->
+                        <div class="nav-user-profile" :class="{ 'is-open': open }" @click="open = !open">
+                            <div class="nav-user-avatar" x-text="getUserInitials()"></div>
+                            <div class="nav-user-info">
+                                <span class="nav-user-name" x-text="getUserName()"></span>
+                                <span class="nav-user-role" x-text="getUserRole()"></span>
+                            </div>
+                            <i class="fas fa-chevron-down dd-chevron"></i>
+                        </div>
+
+                        <!-- Dropdown panel -->
+                        <div class="user-dd" x-show="open" x-cloak
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95">
+
+                            <!-- Seção de perfil -->
+                            <div class="udd-profile">
+                                <span class="udd-plan-badge">Pro</span>
+                                <div class="udd-avatar" x-text="getUserInitials()"></div>
+                                <div class="udd-name" x-text="getUserName()"></div>
+                                <div class="udd-role" x-text="getUserRole()"></div>
+                                <div class="udd-company">
+                                    <i class="fas fa-building" style="font-size:10px"></i>
+                                    <span x-text="$store?.empresaNome || localStorage.getItem('empresaNome') || 'Empresa'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Links de conta -->
+                            <a href="perfil.html" class="udd-item purple">
+                                <i class="fas fa-user-circle"></i>
+                                Meu Perfil
+                            </a>
+                            <a href="assinatura.html" class="udd-item blue">
+                                <i class="fas fa-credit-card"></i>
+                                Minha Assinatura
+                            </a>
+                            <a href="configuracoes.html" class="udd-item">
+                                <i class="fas fa-cog"></i>
+                                Configurações
+                            </a>
+
+                            <div class="udd-sep"></div>
+
+                            <!-- Bottom: tema + logout -->
+                            <div class="udd-bottom">
+                                <button class="udd-btn-theme">
+                                    <i class="fas fa-moon"></i>
+                                    Tema Escuro
+                                </button>
+                                <button class="udd-btn-logout" @click="handleLogout()">
+                                    Sair
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
             </nav>
 
