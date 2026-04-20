@@ -5773,31 +5773,39 @@
             document.getElementById('udBackdrop').classList.remove('open');
         }
         function _populateUserDropdown() {
-            const name    = localStorage.getItem('userName')    || 'Usuário';
-            const email   = localStorage.getItem('userEmail')   || '';
-            const company = localStorage.getItem('companyName') || '—';
-            const plan    = (localStorage.getItem('userPlan')   || 'free').toLowerCase();
+            const name    = localStorage.getItem('usuarioNome') || 'Usuário';
+            const company = localStorage.getItem('empresaNome') || '—';
+            const role    = localStorage.getItem('userRole')    || '';
             const initial = name.charAt(0).toUpperCase();
+            const isOwner = role === 'OWNER' || role === 'LINA_OWNER';
 
             // Trigger
             document.getElementById('udTrigger').textContent = initial;
 
-            // Header
-            document.getElementById('udAvatar').textContent     = initial;
-            document.getElementById('udName').textContent       = name;
-            document.getElementById('udEmail').textContent      = email;
-            document.getElementById('udCompanyName').textContent = company;
-            document.getElementById('udEmpresaNome').textContent = company;
-            document.getElementById('udEmpresaIcon').textContent = company.charAt(0).toUpperCase();
+            // Avatar
+            document.getElementById('udAvatar').textContent = initial;
 
-            // Badge de plano
+            // Nome + coroa para proprietário
+            const nameEl = document.getElementById('udName');
+            nameEl.innerHTML = isOwner
+                ? `${name} <i class="fas fa-crown" style="font-size:11px;color:#f59e0b;margin-left:4px"></i>`
+                : name;
+
+            // Email oculto — limpa o campo
+            document.getElementById('udEmail').textContent = '';
+
+            // Empresa
+            document.getElementById('udCompanyName').textContent = company;
+            document.getElementById('udEmpresaNome').textContent  = company;
+            document.getElementById('udEmpresaIcon').textContent  = company.charAt(0).toUpperCase();
+
+            // Badge de plano — oculta se não disponível
             const badge = document.getElementById('udPlanBadge');
-            badge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
-            badge.className = 'ud-plan-badge ' + plan;
+            badge.style.display = 'none';
         }
         // Popula trigger na carga (sem abrir dropdown)
         document.addEventListener('DOMContentLoaded', () => {
-            const name = localStorage.getItem('userName') || 'U';
+            const name = localStorage.getItem('usuarioNome') || 'U';
             document.getElementById('udTrigger').textContent = name.charAt(0).toUpperCase();
         });
 
