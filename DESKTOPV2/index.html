@@ -5863,6 +5863,10 @@
         // ---- Abrir relatório completo ----
         window.abrirRelatorioCompleto = async function() {
             document.getElementById('relatorioNotifBackdrop').classList.remove('visible');
+            // Marca como visto para não reaparecer na mesma semana/mês
+            const { semKey, mesKey, novaSemana, novoMes } = deveExibir();
+            if (novaSemana) localStorage.setItem('linax_rel_sem', semKey);
+            if (novoMes)    localStorage.setItem('linax_rel_mes', mesKey);
             const backdrop = document.getElementById('relatorioFullBackdrop');
             backdrop.classList.add('visible');
 
