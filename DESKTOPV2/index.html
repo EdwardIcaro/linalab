@@ -3201,6 +3201,92 @@
         }
         .udd-btn-logout:hover { background: rgba(239,68,68,.10); }
         .udd-btn-logout svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+        /* ── Profile Flyout Panel ─────────────────── */
+        .profile-flyout-backdrop {
+            display: none;
+            position: fixed; inset: 0;
+            z-index: 1099;
+        }
+        .profile-flyout-backdrop.open { display: block; }
+        .profile-flyout {
+            display: none;
+            position: fixed;
+            left: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1100;
+            width: 280px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.07);
+            padding: 4px;
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+        }
+        .profile-flyout.open { display: block; }
+
+        .pf-profile {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);
+            border-radius: 8px;
+            padding: 24px 12px 18px;
+            margin-bottom: 4px;
+            position: relative;
+        }
+        .pf-plan-badge {
+            position: absolute; top: 8px; left: 8px;
+            background: rgba(255,255,255,.18);
+            border-radius: 4px; padding: 2px 8px;
+            font-size: 10px; font-weight: 700;
+            color: #fff; text-transform: uppercase; letter-spacing: .5px;
+        }
+        .pf-avatar {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: linear-gradient(135deg,#7c3aed,#2563eb);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 700; color: #fff;
+            margin-bottom: 10px;
+        }
+        .pf-name { font-size: 14px; font-weight: 600; color: #fff; }
+        .pf-email { font-size: 11px; color: rgba(255,255,255,.7); margin-top: 2px; }
+        .pf-company {
+            margin-top: 8px;
+            background: rgba(255,255,255,.15);
+            border-radius: 20px; padding: 3px 10px;
+            font-size: 11px; color: rgba(255,255,255,.9); font-weight: 500;
+        }
+
+        .pf-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 0 12px; height: 36px; border-radius: 6px;
+            font-size: 13px; font-weight: 500;
+            color: #52525b; cursor: pointer;
+            text-decoration: none;
+            transition: background .12s, color .12s;
+            background: transparent; border: none; width: 100%;
+            font-family: 'Poppins', sans-serif;
+        }
+        .pf-item:hover { background: #f4f4f5; color: #09090b; }
+        .pf-item i { width: 16px; text-align: center; font-size: 14px; }
+
+        .pf-sep { height: 1px; background: #f1f5f9; margin: 6px 0; }
+
+        .pf-bottom {
+            display: flex; align-items: center;
+            justify-content: space-between; padding: 0 4px 0 0;
+        }
+        .pf-btn-logout {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 6px;
+            border: none; background: transparent;
+            color: #ef4444; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: background .12s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .pf-btn-logout:hover { background: rgba(239,68,68,.10); }
+        .pf-btn-logout svg { width: 14px; height: 14px; flex-shrink: 0; }
     </style>
 </head>
 <body data-permission="ver_dashboard">
@@ -3223,15 +3309,42 @@
             <span class="floating-menu-label" style="color:#f59e0b">[DEBUG] Relatório</span>
         </button>
         <hr style="margin: 8px 0; border: none; height: 1px; background: var(--dashboard-border);">
-        <a href="perfil.html" class="floating-menu-item" title="Perfil">
+        <button class="floating-menu-item" onclick="toggleProfilePanel()" title="Perfil">
             <i class="fas fa-user-circle"></i>
             <span class="floating-menu-label">Perfil</span>
-        </a>
-        <button class="floating-menu-item" onclick="logout()" title="Sair">
-            <i class="fas fa-sign-out-alt"></i>
-            <span class="floating-menu-label">Sair</span>
         </button>
     </nav>
+
+    <!-- Profile Flyout Panel -->
+    <div class="profile-flyout-backdrop" id="profileFlyoutBackdrop" onclick="closeProfilePanel()"></div>
+    <div class="profile-flyout" id="profileFlyout">
+        <div class="pf-profile">
+            <span class="pf-plan-badge" id="pfPlanBadge">Free</span>
+            <div class="pf-avatar" id="pfAvatar">U</div>
+            <div class="pf-name" id="pfName">Usuário</div>
+            <div class="pf-email" id="pfEmail"></div>
+            <div class="pf-company" id="pfCompany"></div>
+        </div>
+
+        <a href="perfil.html" class="pf-item">
+            <i class="fas fa-user"></i> Meu Perfil
+        </a>
+        <a href="configuracoes.html" class="pf-item">
+            <i class="fas fa-cog"></i> Configurações
+        </a>
+        <a href="assinatura.html" class="pf-item">
+            <i class="fas fa-crown"></i> Assinatura
+        </a>
+
+        <div class="pf-sep"></div>
+
+        <div class="pf-bottom">
+            <button class="pf-btn-logout" onclick="logout()">
+                Sair
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+            </button>
+        </div>
+    </div>
 
     <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
     <div id="screenLockModal" class="screen-lock-overlay">
@@ -5539,6 +5652,41 @@
             const menu = document.getElementById('floatingMenu');
             const isCollapsed = menu.classList.toggle('collapsed');
             localStorage.setItem('floatingMenuCollapsed', isCollapsed);
+        }
+
+        // Profile Flyout Panel
+        function toggleProfilePanel() {
+            const panel = document.getElementById('profileFlyout');
+            const backdrop = document.getElementById('profileFlyoutBackdrop');
+            if (panel.classList.contains('open')) {
+                closeProfilePanel();
+            } else {
+                _populateProfilePanel();
+                panel.classList.add('open');
+                backdrop.classList.add('open');
+            }
+        }
+        function closeProfilePanel() {
+            document.getElementById('profileFlyout').classList.remove('open');
+            document.getElementById('profileFlyoutBackdrop').classList.remove('open');
+        }
+        function _populateProfilePanel() {
+            const name = localStorage.getItem('userName') || 'Usuário';
+            const email = localStorage.getItem('userEmail') || '';
+            const company = localStorage.getItem('companyName') || '';
+            const plan = localStorage.getItem('userPlan') || 'Free';
+            const initial = name.charAt(0).toUpperCase();
+
+            document.getElementById('pfAvatar').textContent = initial;
+            document.getElementById('pfName').textContent = name;
+            document.getElementById('pfEmail').textContent = email;
+            document.getElementById('pfCompany').textContent = company;
+
+            const badge = document.getElementById('pfPlanBadge');
+            badge.textContent = plan;
+            const colors = { Trial:'#f59e0b', Basic:'#3b82f6', Pro:'#7c3aed', Premium:'#059669' };
+            badge.style.background = colors[plan] || 'rgba(255,255,255,.18)';
+
         }
 
 
