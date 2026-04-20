@@ -889,9 +889,16 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       const updateComissaoMap = new Map(updateLavadoresData.map((l: any) => [l.id, l.comissao]));
 
       let valorTotal = existingOrdem.valorTotal;
+
+      // Auto-muda status para EM_ANDAMENTO quando lavador é atribuído a uma ordem PENDENTE
+      const autoStatus =
+        primaryLavadorId && existingOrdem.status === 'PENDENTE' && !status
+          ? 'EM_ANDAMENTO'
+          : status;
+
       const dataToUpdate: Prisma.OrdemServicoUpdateInput = {
         observacoes,
-        status,
+        status: autoStatus,
         lavador: primaryLavadorId ? { connect: { id: primaryLavadorId } } : undefined,
       };
 

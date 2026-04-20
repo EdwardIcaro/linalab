@@ -916,6 +916,30 @@
     </div>
   </div>
 
+  <!-- ══ MODAL: SETAR FUNCIONÁRIO ════════════════ -->
+  <div class="edit-modal-overlay" id="setarLavadorModal" style="display:none" onclick="if(event.target===this)closeSetarLavadorModal()">
+    <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:70vh">
+      <div class="modal-handle"></div>
+      <div class="edit-modal-title">
+        <i class="fas fa-user-hard-hat" style="color:var(--blue-d)"></i>
+        Setar Funcionário
+      </div>
+      <p style="font-size:13px;color:var(--mid);margin-bottom:14px">Selecione quem vai lavar essa ordem. O status passará para <strong>Em Andamento</strong>.</p>
+      <div class="edit-form-group">
+        <div class="edit-form-label">Funcionários</div>
+        <div class="lavador-chip-wrap" id="setarLavadoresWrap">
+          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="closeSetarLavadorModal()">Cancelar</button>
+        <button class="btn-modal-submit" id="confirmarSetarLavBtn" onclick="confirmarSetarLavador()">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ PIX QR MODAL ═══════════════════════════ -->
   <div class="edit-modal-overlay" id="pixQrModal" style="display:none;z-index:3000" onclick="if(event.target===this)closePixQrModal()">
     <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:70vh">
@@ -1038,7 +1062,9 @@
               COMPLETO: 'Concluído'
             }[status] || status;
 
-            const canDone = status === 'PENDENTE' || status === 'EM_ANDAMENTO';
+            const temLavador = (ordem.lavadores?.length > 0) || !!ordem.lavadorId;
+            const pendenteSemLav = status === 'PENDENTE' && !temLavador;
+            const canDone = status === 'EM_ANDAMENTO' || (status === 'PENDENTE' && temLavador);
             const canPay  = status === 'AGUARDANDO_PAGAMENTO';
 
             listHTML += `
@@ -1062,6 +1088,10 @@
                   <div class="card-bottom">
                     <div class="card-value">${formatCurrency(ordem.valorTotal || ordem.valor)}</div>
                     <div class="card-actions" onclick="event.stopPropagation()">
+                      ${pendenteSemLav ? `
+                        <button class="btn-card btn-card-done" style="background:var(--amber);color:#fff" onclick="openSetarLavadorModal('${ordem.id}')" title="Setar Funcionário">
+                          <i class="fas fa-user-plus"></i>
+                        </button>` : ''}
                       ${canDone ? `
                         <button class="btn-card btn-card-done" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir">
                           <i class="fas fa-flag-checkered"></i>
@@ -1163,7 +1193,13 @@
           <i class="fas fa-arrow-left"></i> Voltar
         </button>`;
 
-        if (status === 'EM_ANDAMENTO' || status === 'PENDENTE') {
+        const temLavadorDetalhe = (currentOrdem.lavadores?.length > 0) || !!currentOrdem.lavadorId;
+
+        if (status === 'PENDENTE' && !temLavadorDetalhe) {
+          actionsHtml += `<button class="btn-action" style="background:var(--amber);color:#fff;border:none" onclick="openSetarLavadorModal('${currentOrdem.id}')">
+            <i class="fas fa-user-plus"></i> Setar Funcionário
+          </button>`;
+        } else if (status === 'EM_ANDAMENTO' || status === 'PENDENTE') {
           actionsHtml += `<button class="btn-action btn-action-done" onclick="markAsComplete()">
             <i class="fas fa-flag-checkered"></i> Concluir
           </button>`;
@@ -1920,6 +1956,80 @@
       } else {
         editModalState.lavadoresSelecionados.splice(idx, 1);
         el.classList.remove('selected');
+      }
+    }
+
+    // ── SETAR LAVADOR (MODAL RÁPIDO) ──────────────
+    let setarLavadorState = { ordemId: null, selecionados: [], todosLavadores: [] };
+
+    async function openSetarLavadorModal(ordemId) {
+      setarLavadorState = { ordemId, selecionados: [], todosLavadores: [] };
+      const modal = document.getElementById('setarLavadorModal');
+      const wrap  = document.getElementById('setarLavadoresWrap');
+      if (!modal || !wrap) return;
+      wrap.innerHTML = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
+      modal.style.display = 'flex';
+      try {
+        const data = await window.api.getLavadoresSimple();
+        setarLavadorState.todosLavadores = data.lavadores || [];
+        renderSetarLavadores();
+      } catch {
+        wrap.innerHTML = '<div style="font-size:13px;color:var(--red)">Erro ao carregar funcionários.</div>';
+      }
+    }
+
+    function renderSetarLavadores() {
+      const wrap = document.getElementById('setarLavadoresWrap');
+      if (!wrap) return;
+      if (setarLavadorState.todosLavadores.length === 0) {
+        wrap.innerHTML = '<div style="font-size:13px;color:var(--mid)">Nenhum funcionário cadastrado.</div>';
+        return;
+      }
+      wrap.innerHTML = setarLavadorState.todosLavadores.map(lav => {
+        const sel = setarLavadorState.selecionados.includes(lav.id);
+        return `<div class="lavador-chip ${sel ? 'selected' : ''}" onclick="toggleSetarLavador('${lav.id}', this)">${lav.nome}</div>`;
+      }).join('');
+    }
+
+    function toggleSetarLavador(id, el) {
+      const idx = setarLavadorState.selecionados.indexOf(id);
+      if (idx === -1) { setarLavadorState.selecionados.push(id); el.classList.add('selected'); }
+      else { setarLavadorState.selecionados.splice(idx, 1); el.classList.remove('selected'); }
+    }
+
+    function closeSetarLavadorModal() {
+      const modal = document.getElementById('setarLavadorModal');
+      if (modal) modal.style.display = 'none';
+      setarLavadorState = { ordemId: null, selecionados: [], todosLavadores: [] };
+    }
+
+    async function confirmarSetarLavador() {
+      if (setarLavadorState.selecionados.length === 0) {
+        showToast('Selecione ao menos um funcionário.', 'error');
+        return;
+      }
+      const btn = document.getElementById('confirmarSetarLavBtn');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+      try {
+        const ordemId = setarLavadorState.ordemId;
+        const lavIds  = [...setarLavadorState.selecionados];
+        await window.api.updateOrdem(ordemId, {
+          lavadorId:  lavIds[0],
+          lavadorIds: lavIds,
+        });
+        showToast('Funcionário setado! Ordem em andamento.', 'success');
+        closeSetarLavadorModal();
+        if (currentView === 'detail') {
+          await loadOrdemDetail(ordemId);
+        } else {
+          await loadOrdens();
+        }
+      } catch {
+        showToast('Erro ao setar funcionário.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirmar';
       }
     }
 
