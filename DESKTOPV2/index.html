@@ -3202,91 +3202,157 @@
         .udd-btn-logout:hover { background: rgba(239,68,68,.10); }
         .udd-btn-logout svg { width: 14px; height: 14px; flex-shrink: 0; }
 
-        /* ── Profile Flyout Panel ─────────────────── */
-        .profile-flyout-backdrop {
-            display: none;
-            position: fixed; inset: 0;
-            z-index: 1099;
+        /* ── User Dropdown (elemento isolado, canto inf. esq.) ── */
+        .ud-backdrop {
+            display: none; position: fixed; inset: 0; z-index: 1099;
         }
-        .profile-flyout-backdrop.open { display: block; }
-        .profile-flyout {
-            display: none;
-            position: fixed;
-            left: 90px;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 1100;
+        .ud-backdrop.open { display: block; }
+
+        /* Trigger — avatar redondo fixo */
+        .ud-trigger {
+            position: fixed; bottom: 20px; left: 20px; z-index: 1100;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            color: #fff; font-size: 18px; font-weight: 700;
+            border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 14px rgba(139,92,246,.40);
+            transition: transform .15s, box-shadow .15s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .ud-trigger:hover { transform: scale(1.07); box-shadow: 0 6px 20px rgba(139,92,246,.50); }
+
+        /* Dropdown — abre para cima */
+        .ud-dropdown {
+            display: none; position: fixed;
+            bottom: 74px; left: 20px; z-index: 1100;
             width: 280px;
             background: #fff;
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.07);
+            box-shadow: 0 8px 32px rgba(0,0,0,.13), 0 0 0 1px rgba(0,0,0,.07);
             padding: 4px;
             font-family: 'Poppins', sans-serif;
-            overflow: hidden;
+            transform-origin: bottom left;
+            transform: scale(.95) translateY(8px);
+            opacity: 0;
+            transition: transform .15s ease, opacity .15s ease;
         }
-        .profile-flyout.open { display: block; }
+        .ud-dropdown.open {
+            display: block;
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
 
-        .pf-profile {
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            background: linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);
-            border-radius: 8px;
-            padding: 24px 12px 18px;
-            margin-bottom: 4px;
+        /* Seção de perfil (header gradient) */
+        .ud-profile {
             position: relative;
+            display: flex; flex-direction: column;
+            align-items: center;
+            background: linear-gradient(160deg, rgba(139,92,246,.12) 0%, rgba(6,182,212,.10) 100%);
+            border-radius: 8px;
+            padding: 28px 12px 18px;
+            margin-bottom: 4px;
+            text-align: center;
         }
-        .pf-plan-badge {
+        .ud-plan-badge {
             position: absolute; top: 8px; left: 8px;
-            background: rgba(255,255,255,.18);
-            border-radius: 4px; padding: 2px 8px;
+            padding: 2px 8px; border-radius: 20px;
             font-size: 10px; font-weight: 700;
-            color: #fff; text-transform: uppercase; letter-spacing: .5px;
+            text-transform: uppercase; letter-spacing: .4px;
         }
-        .pf-avatar {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: linear-gradient(135deg,#7c3aed,#2563eb);
+        .ud-plan-badge.trial   { background: rgba(245,158,11,.12); color: #92400e; }
+        .ud-plan-badge.basic   { background: rgba(59,130,246,.12);  color: #1d4ed8; }
+        .ud-plan-badge.pro     { background: rgba(139,92,246,.12);  color: #6d28d9; }
+        .ud-plan-badge.premium { background: rgba(16,185,129,.12);  color: #065f46; }
+
+        .ud-avatar {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            color: #fff; font-size: 22px; font-weight: 700;
             display: flex; align-items: center; justify-content: center;
-            font-size: 20px; font-weight: 700; color: #fff;
             margin-bottom: 10px;
+            box-shadow: 0 4px 14px rgba(139,92,246,.30);
         }
-        .pf-name { font-size: 14px; font-weight: 600; color: #fff; }
-        .pf-email { font-size: 11px; color: rgba(255,255,255,.7); margin-top: 2px; }
-        .pf-company {
-            margin-top: 8px;
-            background: rgba(255,255,255,.15);
-            border-radius: 20px; padding: 3px 10px;
-            font-size: 11px; color: rgba(255,255,255,.9); font-weight: 500;
+        .ud-name  { font-size: 14px; font-weight: 600; color: #1a1a1a; line-height: 1.2; }
+        .ud-email { font-size: 11px; color: #5c5c5c; margin-top: 2px; }
+        .ud-company-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 8px; padding: 3px 10px;
+            background: #fff; border: 1px solid rgba(0,0,0,.07);
+            border-radius: 20px; font-size: 11px; font-weight: 600;
+            color: #06b6d4;
         }
+        .ud-company-badge i { font-size: 10px; }
 
-        .pf-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 0 12px; height: 36px; border-radius: 6px;
+        /* Itens de menu */
+        .ud-item {
+            display: flex; align-items: center; gap: 11px;
+            padding: 0 12px; height: 36px; border-radius: 8px;
             font-size: 13px; font-weight: 500;
-            color: #52525b; cursor: pointer;
+            color: #5c5c5c; cursor: pointer;
             text-decoration: none;
-            transition: background .12s, color .12s;
-            background: transparent; border: none; width: 100%;
-            font-family: 'Poppins', sans-serif;
+            transition: background .13s, color .13s;
+            border: none; background: none; width: 100%;
+            text-align: left; font-family: 'Poppins', sans-serif;
         }
-        .pf-item:hover { background: #f4f4f5; color: #09090b; }
-        .pf-item i { width: 16px; text-align: center; font-size: 14px; }
+        .ud-item i { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
+        .ud-item:hover                { background: #fafafa; color: #1a1a1a; }
+        .ud-item.c-purple:hover { background: rgba(139,92,246,.10); color: #6d28d9; }
+        .ud-item.c-blue:hover   { background: rgba(59,130,246,.10);  color: #1d4ed8; }
+        .ud-item.c-cyan:hover   { background: rgba(6,182,212,.10);   color: #0e7490; }
 
-        .pf-sep { height: 1px; background: #f1f5f9; margin: 6px 0; }
-
-        .pf-bottom {
-            display: flex; align-items: center;
-            justify-content: space-between; padding: 0 4px 0 0;
+        /* Seletor de empresa */
+        .ud-empresa-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 12px; height: 36px; border-radius: 8px;
+            cursor: pointer; transition: background .13s;
         }
-        .pf-btn-logout {
+        .ud-empresa-item:hover { background: #fafafa; }
+        .ud-empresa-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .ud-empresa-icon {
+            width: 24px; height: 24px; border-radius: 6px;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 10px; font-weight: 700; flex-shrink: 0;
+        }
+        .ud-empresa-name {
+            font-size: 13px; font-weight: 500; color: #1a1a1a;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ud-empresa-check { color: #06b6d4; font-size: 13px; }
+
+        /* Separador */
+        .ud-sep { height: 1px; background: rgba(0,0,0,.07); margin: 6px 0; }
+
+        /* Seção empresas label */
+        .ud-section-label {
+            font-size: 10px; font-weight: 700;
+            color: #8c8c8c; text-transform: uppercase;
+            letter-spacing: .5px; padding: 4px 12px 6px;
+        }
+
+        /* Bottom row */
+        .ud-bottom { display: flex; align-items: center; gap: 4px; }
+        .ud-btn-theme {
+            flex: 1; display: flex; align-items: center; gap: 10px;
+            padding: 0 12px; height: 36px; border-radius: 8px;
+            font-size: 13px; font-weight: 500; color: #5c5c5c;
+            background: none; border: none; cursor: pointer;
+            transition: background .13s, color .13s;
+            font-family: 'Poppins', sans-serif; text-align: left;
+        }
+        .ud-btn-theme i { width: 16px; text-align: center; font-size: 13px; }
+        .ud-btn-theme:hover { background: #fafafa; color: #1a1a1a; }
+        .ud-btn-logout {
             display: flex; align-items: center; gap: 6px;
-            padding: 6px 12px; border-radius: 6px;
+            padding: 6px 12px; border-radius: 8px;
             border: none; background: transparent;
             color: #ef4444; font-size: 13px; font-weight: 500;
-            cursor: pointer; transition: background .12s;
+            cursor: pointer; transition: background .13s;
             font-family: 'Poppins', sans-serif;
         }
-        .pf-btn-logout:hover { background: rgba(239,68,68,.10); }
-        .pf-btn-logout svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .ud-btn-logout:hover { background: rgba(239,68,68,.10); }
+        .ud-btn-logout svg { width: 14px; height: 14px; flex-shrink: 0; }
     </style>
 </head>
 <body data-permission="ver_dashboard">
@@ -3308,42 +3374,79 @@
             <i class="fas fa-bug"></i>
             <span class="floating-menu-label" style="color:#f59e0b">[DEBUG] Relatório</span>
         </button>
-        <hr style="margin: 8px 0; border: none; height: 1px; background: var(--dashboard-border);">
-        <button class="floating-menu-item" onclick="toggleProfilePanel()" title="Perfil">
-            <i class="fas fa-user-circle"></i>
-            <span class="floating-menu-label">Perfil</span>
-        </button>
     </nav>
 
-    <!-- Profile Flyout Panel -->
-    <div class="profile-flyout-backdrop" id="profileFlyoutBackdrop" onclick="closeProfilePanel()"></div>
-    <div class="profile-flyout" id="profileFlyout">
-        <div class="pf-profile">
-            <span class="pf-plan-badge" id="pfPlanBadge">Free</span>
-            <div class="pf-avatar" id="pfAvatar">U</div>
-            <div class="pf-name" id="pfName">Usuário</div>
-            <div class="pf-email" id="pfEmail"></div>
-            <div class="pf-company" id="pfCompany"></div>
+    <!-- User Dropdown — elemento isolado, canto inferior esquerdo -->
+    <div class="ud-backdrop" id="udBackdrop" onclick="closeUserDropdown()"></div>
+
+    <!-- Trigger: avatar redondo -->
+    <button class="ud-trigger" id="udTrigger" onclick="toggleUserDropdown()" title="Perfil"></button>
+
+    <!-- Dropdown -->
+    <div class="ud-dropdown" id="udDropdown">
+
+        <!-- Header perfil -->
+        <div class="ud-profile">
+            <span class="ud-plan-badge" id="udPlanBadge">Free</span>
+            <div class="ud-avatar" id="udAvatar">U</div>
+            <div class="ud-name" id="udName">Usuário</div>
+            <div class="ud-email" id="udEmail"></div>
+            <div class="ud-company-badge" id="udCompanyBadge">
+                <i class="fas fa-building"></i>
+                <span id="udCompanyName">—</span>
+            </div>
         </div>
 
-        <a href="perfil.html" class="pf-item">
-            <i class="fas fa-user"></i> Meu Perfil
+        <!-- Links de conta -->
+        <a href="perfil.html" class="ud-item c-purple">
+            <i class="fas fa-user-circle"></i> Meu Perfil
         </a>
-        <a href="configuracoes.html" class="pf-item">
+        <a href="assinatura.html" class="ud-item c-blue">
+            <i class="fas fa-credit-card"></i> Minha Assinatura
+        </a>
+        <a href="configuracoes.html" class="ud-item">
             <i class="fas fa-cog"></i> Configurações
         </a>
-        <a href="assinatura.html" class="pf-item">
-            <i class="fas fa-crown"></i> Assinatura
+
+        <div class="ud-sep"></div>
+
+        <!-- Seletor de empresa -->
+        <div class="ud-section-label">Empresa Ativa</div>
+        <div class="ud-empresa-item">
+            <div class="ud-empresa-left">
+                <div class="ud-empresa-icon" id="udEmpresaIcon">L</div>
+                <span class="ud-empresa-name" id="udEmpresaNome">—</span>
+            </div>
+            <i class="fas fa-check ud-empresa-check"></i>
+        </div>
+        <a href="selecionar-empresa.html" class="ud-item c-cyan" style="margin-top:2px">
+            <i class="fas fa-exchange-alt"></i> Trocar Empresa
         </a>
 
-        <div class="pf-sep"></div>
+        <div class="ud-sep"></div>
 
-        <div class="pf-bottom">
-            <button class="pf-btn-logout" onclick="logout()">
+        <!-- Links externos -->
+        <a href="#" class="ud-item">
+            <i class="fas fa-question-circle"></i> Suporte
+        </a>
+        <a href="#" class="ud-item">
+            <i class="fas fa-book"></i> Documentação
+        </a>
+
+        <div class="ud-sep"></div>
+
+        <!-- Bottom: tema + logout -->
+        <div class="ud-bottom">
+            <button class="ud-btn-theme" id="udBtnTheme">
+                <i class="fas fa-moon" id="udThemeIcon"></i>
+                <span id="udThemeLabel">Tema Escuro</span>
+            </button>
+            <button class="ud-btn-logout" onclick="logout(); closeUserDropdown();">
                 Sair
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
             </button>
         </div>
+
     </div>
 
     <!-- Modal de Bloqueio de Tela (Acesso Negado) -->
@@ -5654,40 +5757,49 @@
             localStorage.setItem('floatingMenuCollapsed', isCollapsed);
         }
 
-        // Profile Flyout Panel
-        function toggleProfilePanel() {
-            const panel = document.getElementById('profileFlyout');
-            const backdrop = document.getElementById('profileFlyoutBackdrop');
-            if (panel.classList.contains('open')) {
-                closeProfilePanel();
+        // User Dropdown — canto inferior esquerdo
+        function toggleUserDropdown() {
+            const dd = document.getElementById('udDropdown');
+            if (dd.classList.contains('open')) {
+                closeUserDropdown();
             } else {
-                _populateProfilePanel();
-                panel.classList.add('open');
-                backdrop.classList.add('open');
+                _populateUserDropdown();
+                document.getElementById('udBackdrop').classList.add('open');
+                dd.classList.add('open');
             }
         }
-        function closeProfilePanel() {
-            document.getElementById('profileFlyout').classList.remove('open');
-            document.getElementById('profileFlyoutBackdrop').classList.remove('open');
+        function closeUserDropdown() {
+            document.getElementById('udDropdown').classList.remove('open');
+            document.getElementById('udBackdrop').classList.remove('open');
         }
-        function _populateProfilePanel() {
-            const name = localStorage.getItem('userName') || 'Usuário';
-            const email = localStorage.getItem('userEmail') || '';
-            const company = localStorage.getItem('companyName') || '';
-            const plan = localStorage.getItem('userPlan') || 'Free';
+        function _populateUserDropdown() {
+            const name    = localStorage.getItem('userName')    || 'Usuário';
+            const email   = localStorage.getItem('userEmail')   || '';
+            const company = localStorage.getItem('companyName') || '—';
+            const plan    = (localStorage.getItem('userPlan')   || 'free').toLowerCase();
             const initial = name.charAt(0).toUpperCase();
 
-            document.getElementById('pfAvatar').textContent = initial;
-            document.getElementById('pfName').textContent = name;
-            document.getElementById('pfEmail').textContent = email;
-            document.getElementById('pfCompany').textContent = company;
+            // Trigger
+            document.getElementById('udTrigger').textContent = initial;
 
-            const badge = document.getElementById('pfPlanBadge');
-            badge.textContent = plan;
-            const colors = { Trial:'#f59e0b', Basic:'#3b82f6', Pro:'#7c3aed', Premium:'#059669' };
-            badge.style.background = colors[plan] || 'rgba(255,255,255,.18)';
+            // Header
+            document.getElementById('udAvatar').textContent     = initial;
+            document.getElementById('udName').textContent       = name;
+            document.getElementById('udEmail').textContent      = email;
+            document.getElementById('udCompanyName').textContent = company;
+            document.getElementById('udEmpresaNome').textContent = company;
+            document.getElementById('udEmpresaIcon').textContent = company.charAt(0).toUpperCase();
 
+            // Badge de plano
+            const badge = document.getElementById('udPlanBadge');
+            badge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+            badge.className = 'ud-plan-badge ' + plan;
         }
+        // Popula trigger na carga (sem abrir dropdown)
+        document.addEventListener('DOMContentLoaded', () => {
+            const name = localStorage.getItem('userName') || 'U';
+            document.getElementById('udTrigger').textContent = name.charAt(0).toUpperCase();
+        });
 
 
         function openNotifications() {
