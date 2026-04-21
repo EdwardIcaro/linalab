@@ -339,6 +339,73 @@
         .subscription-link .kpi-card {
             cursor: pointer;
         }
+
+        /* Bot Lina Section */
+        .bot-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .bot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .bot-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bot-status-row {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        #botQrImg {
+            border-radius: 12px;
+            border: 3px solid #25d366;
+            box-shadow: 0 4px 16px rgba(37,211,102,0.2);
+        }
+
+        .bot-info-block p {
+            margin: 0.3rem 0;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .bot-phone-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #25d366;
+        }
+
+        .btn-wa {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 1.2rem;
+            background: #25d366;
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -459,6 +526,60 @@
             </a>
         </div>
 
+        <!-- Bot Lina -->
+        <div class="bot-section">
+            <div class="bot-header">
+                <h2><i class="fab fa-whatsapp" style="color:#25d366;"></i> Bot Lina (WhatsApp Global)</h2>
+                <span id="botBadge" class="status-badge" style="background:#F1F5F9;color:#64748B;">Verificando...</span>
+            </div>
+
+            <!-- Desconectado -->
+            <div id="botDisconnected" style="display:none;">
+                <p style="color:#64748B;margin-bottom:1rem;">O bot global não está conectado. Clique em "Conectar Bot" para gerar o QR code.</p>
+                <button class="action-btn primary" id="btnSetup" onclick="setupBot()">
+                    <i class="fas fa-plug"></i> Conectar Bot
+                </button>
+            </div>
+
+            <!-- QR Code aguardando escaneamento -->
+            <div id="botQrState" style="display:none;">
+                <div class="bot-status-row">
+                    <canvas id="botQrCanvas" width="160" height="160" style="border-radius:12px;border:3px solid #f59e0b;"></canvas>
+                    <div class="bot-info-block">
+                        <p style="font-weight:600;color:#1E293B;margin-bottom:0.5rem;">Escaneie o QR code com o WhatsApp do número do bot</p>
+                        <p>Abra o WhatsApp → <strong>Dispositivos vinculados</strong> → <strong>Vincular dispositivo</strong></p>
+                        <p id="botQrTimer" style="color:#f59e0b;font-weight:600;margin-top:0.5rem;"></p>
+                        <button class="action-btn danger" style="margin-top:0.75rem;" onclick="disconnectBot()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conectado -->
+            <div id="botConnected" style="display:none;">
+                <div class="bot-status-row">
+                    <canvas id="botWaCanvas" width="140" height="140" style="border-radius:12px;border:3px solid #25d366;"></canvas>
+                    <div class="bot-info-block">
+                        <p class="bot-phone-display" id="botPhoneText"></p>
+                        <p>Bot ativo e recebendo mensagens</p>
+                        <a id="botWaLink" href="#" target="_blank" class="btn-wa">
+                            <i class="fab fa-whatsapp"></i> Abrir no WhatsApp
+                        </a>
+                        <br>
+                        <button class="action-btn danger" style="margin-top:0.75rem;" onclick="disconnectBot()">
+                            <i class="fas fa-unlink"></i> Desconectar Bot
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reconectando -->
+            <div id="botReconnecting" style="display:none;">
+                <p style="color:#f59e0b;"><i class="fas fa-sync fa-spin"></i> Reconectando automaticamente...</p>
+            </div>
+        </div>
+
         <!-- Companies Table -->
         <div class="table-section">
             <div class="table-header">
@@ -491,6 +612,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="../api.js"></script>
     <script>
         let allCompanies = [];
@@ -501,6 +623,107 @@
             init();
         });
 
+        // ═══════════════════════════════════════
+        // BOT LINA
+        // ═══════════════════════════════════════
+        let botPollInterval = null;
+        let botQrData = null;
+
+        function showBotState(state, data = {}) {
+            ['botDisconnected','botQrState','botConnected','botReconnecting'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            const badge = document.getElementById('botBadge');
+
+            if (state === 'connected') {
+                document.getElementById('botConnected').style.display = '';
+                badge.textContent = '✅ Conectado';
+                badge.style.background = '#D1FAE5'; badge.style.color = '#065F46';
+
+                const phone = (data.ownerPhone || '').replace(/\D/g, '');
+                document.getElementById('botPhoneText').textContent = phone ? `+${phone}` : 'Número não disponível';
+                if (phone) {
+                    const url = `https://wa.me/${phone}`;
+                    document.getElementById('botWaLink').href = url;
+                    if (typeof QRCode !== 'undefined') {
+                        QRCode.toCanvas(document.getElementById('botWaCanvas'), url, { width: 140, margin: 1 });
+                    }
+                }
+                stopBotPoll();
+            } else if (state === 'qr_code') {
+                document.getElementById('botQrState').style.display = '';
+                badge.textContent = '⏳ Aguardando QR';
+                badge.style.background = '#FEF3C7'; badge.style.color = '#92400E';
+
+                if (data.qrCode && data.qrCode !== botQrData && typeof QRCode !== 'undefined') {
+                    botQrData = data.qrCode;
+                    QRCode.toCanvas(document.getElementById('botQrCanvas'), data.qrCode, { width: 160, margin: 1 });
+                }
+                startBotPoll();
+            } else if (state === 'reconnecting') {
+                document.getElementById('botReconnecting').style.display = '';
+                badge.textContent = '🔄 Reconectando';
+                badge.style.background = '#FEF3C7'; badge.style.color = '#92400E';
+                startBotPoll();
+            } else {
+                document.getElementById('botDisconnected').style.display = '';
+                badge.textContent = '❌ Desconectado';
+                badge.style.background = '#FEE2E2'; badge.style.color = '#991B1B';
+                stopBotPoll();
+            }
+        }
+
+        async function loadBotStatus() {
+            try {
+                const res = await fetchApi('/whatsapp/status');
+                showBotState(res.status, res);
+            } catch (e) {
+                showBotState('disconnected');
+            }
+        }
+
+        function startBotPoll() {
+            if (botPollInterval) return;
+            botPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetchApi('/whatsapp/status');
+                    showBotState(res.status, res);
+                } catch (e) { /* silenciar */ }
+            }, 3000);
+        }
+
+        function stopBotPoll() {
+            if (botPollInterval) { clearInterval(botPollInterval); botPollInterval = null; }
+        }
+
+        async function setupBot() {
+            const btn = document.getElementById('btnSetup');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando...';
+            try {
+                const res = await fetchApi('/whatsapp/setup', { method: 'POST' });
+                showBotState(res.status, res);
+            } catch (e) {
+                alert(e?.message || 'Erro ao iniciar bot');
+                showBotState('disconnected');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plug"></i> Conectar Bot';
+            }
+        }
+
+        async function disconnectBot() {
+            if (!confirm('Desconectar o Bot Lina?')) return;
+            try {
+                await fetchApi('/whatsapp/disconnect', { method: 'DELETE' });
+            } catch (e) { /* ignorar */ }
+            stopBotPoll();
+            botQrData = null;
+            showBotState('disconnected');
+        }
+
+        // ═══════════════════════════════════════
+
         async function init() {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -508,6 +731,7 @@
                 return;
             }
 
+            loadBotStatus();
             await loadDashboardData();
         }
 

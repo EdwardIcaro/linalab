@@ -17,6 +17,7 @@ interface AuthenticatedRequest extends Request {
   empresaId?: string;
   usuarioId?: string;
   userRole?:  string;
+  role?:      string; // set by adminMiddleware
 }
 
 const GLOBAL_INSTANCE_NAME = 'lina-global';
@@ -27,7 +28,7 @@ const GLOBAL_INSTANCE_NAME = 'lina-global';
 // ──────────────────────────────────────────────────────────────
 export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.userRole !== 'LINA_OWNER') {
+    if (req.userRole !== 'LINA_OWNER' && req.role !== 'LINA_OWNER') {
       return res.status(403).json({ error: 'Apenas o administrador Lina pode configurar o bot global' });
     }
 
@@ -92,7 +93,7 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
 // ──────────────────────────────────────────────────────────────
 export async function disconnectWhatsapp(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.userRole !== 'LINA_OWNER') {
+    if (req.userRole !== 'LINA_OWNER' && req.role !== 'LINA_OWNER') {
       return res.status(403).json({ error: 'Apenas o administrador Lina pode desconectar o bot global' });
     }
     await disconnectBaileys();

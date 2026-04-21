@@ -162,8 +162,13 @@ app.use('/api/tipos-veiculo', authMiddleware, tipoVeiculoRoutes); // Usa middlew
 app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middleware de empresa
 app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
 
-// Rotas WhatsApp Bot
-app.use('/api/whatsapp', authMiddleware, whatsappRoutes); // Rotas protegidas (com auth)
+// Bot Lina global — sem escopo de empresa, apenas LINA_OWNER (adminMiddleware)
+import { setupWhatsapp, getWhatsappStatus, disconnectWhatsapp } from './controllers/whatsappController';
+app.post('/api/whatsapp/setup', adminMiddleware, setupWhatsapp);
+app.get('/api/whatsapp/status', adminMiddleware, getWhatsappStatus);
+app.delete('/api/whatsapp/disconnect', adminMiddleware, disconnectWhatsapp);
+// Demais rotas WhatsApp (empresa-scoped)
+app.use('/api/whatsapp', authMiddleware, whatsappRoutes);
 app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas autenticação de usuário)
 
 // Rota de saúde
