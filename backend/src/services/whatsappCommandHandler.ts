@@ -134,8 +134,6 @@ export async function handleIncomingMessage(
       return handleComissoesEmAberto(extrairNomeLavador(message), empresaId);
     }
 
-    const dailyContext = await buildDailyContext(empresaId);
-
     if (pendingSaidas.has(from)) {
       return handlePendingSaidaStep(message, from, senderName);
     }
@@ -144,10 +142,10 @@ export async function handleIncomingMessage(
     if (isSaida) return handleSaidaWhatsapp(message, from, senderName, empresaId);
 
     if (command === 'ordens')    return handleOrdensAtivas(empresaId, user);
-    if (command === 'resumo')    return handleResumoCommand(dailyContext);
-    if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
-    if (command === 'caixa')     return handleCaixaCommand(dailyContext);
-    if (command === 'pendentes') return handlePendentesCommand(dailyContext);
+    if (command === 'resumo')    return handleResumoCommand(empresaId);
+    if (command === 'lavadores') return handleLavadoresCommand(empresaId);
+    if (command === 'caixa')     return handleCaixaCommand(empresaId);
+    if (command === 'pendentes') return handlePendentesCommand(empresaId);
     if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
     if (command === 'ajuda')     return handleAjudaCommand();
     if (command === 'empresa')   return `📍 Contexto ativo: *${empresaNome}*\n\nEnvie "mudar empresa" para trocar.`;
@@ -158,9 +156,11 @@ export async function handleIncomingMessage(
     const reenviarMatch = message.trim().match(/^reenviar\s+pix(?:\s+ordem)?\s+(\d+)$/i);
     if (reenviarMatch) return handlePixOrdem(parseInt(reenviarMatch[1]), empresaId, from, user, true);
 
-    const lavadorResponse = await handleLavadorEspecifico(message, empresaId, dailyContext);
+    const lavadorResponse = await handleLavadorEspecifico(message, empresaId);
     if (lavadorResponse) return lavadorResponse;
 
+    // Só constrói o contexto pesado quando vai para a IA
+    const dailyContext = await buildDailyContext(empresaId);
     return chatCompletion(message, dailyContext);
 
   } catch (error) {
@@ -917,73 +917,124 @@ async function buildDailyContext(empresaId: string): Promise<string> {
 }
 
 /*
- * Handler: /resumo
+ * Handler: /resumo — query direta ao banco
  */
-function handleResumoCommand(context: string): string {
-  const linhas = context.split('\n');
-  const resumo = linhas.slice(0, 10).join('\n');
+async function handleResumoCommand(empresaId: string): Promise<string> {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
 
-  return `📊 RESUMO DO DIA\n\n${resumo}\n\nPara mais detalhes, acesse o painel.`;
+  const [ordens, caixa] = await Promise.all([
+    prisma.ordemServico.findMany({
+      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+    }),
+    prisma.caixaRegistro.findMany({
+      where: { empresaId, data: { gte: hoje, lt: amanha } },
+    }),
+  ]);
+
+  const fat       = ordens.reduce((s,o) => s + o.valorTotal, 0);
+  const entradas  = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s,c) => s + c.valor, 0);
+  const saidas    = caixa.filter(c => c.tipo === 'SAIDA').reduce((s,c) => s + c.valor, 0);
+  const final_    = ordens.filter(o => o.status === 'FINALIZADO').length;
+  const andamento = ordens.filter(o => o.status === 'EM_ANDAMENTO').length;
+  const pend      = ordens.filter(o => o.status === 'PENDENTE').length;
+  const aguard    = ordens.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length;
+
+  return `📊 *RESUMO DO DIA*\n\n` +
+    `Ordens: *${ordens.length}* | Faturamento: *R$ ${fat.toFixed(2)}*\n` +
+    `✅ Finalizadas: *${final_}* · 🔄 Em andamento: *${andamento}*\n` +
+    `⏳ Pendentes: *${pend}* · 💳 Aguard. pagamento: *${aguard}*\n\n` +
+    `💰 CAIXA:\n` +
+    `Entradas: *R$ ${entradas.toFixed(2)}* | Saídas: *R$ ${saidas.toFixed(2)}*\n` +
+    `Saldo: *R$ ${(entradas - saidas).toFixed(2)}*`;
 }
 
 /*
- * Handler: /lavadores
+ * Handler: /lavadores — query direta ao banco
  */
-function handleLavadoresCommand(context: string): string {
-  const lines = context.split('\n');
-  const lavadoresStart = lines.findIndex(l => l.includes('LAVADORES:'));
+async function handleLavadoresCommand(empresaId: string): Promise<string> {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
 
-  if (lavadoresStart === -1) {
-    return '❌ Nenhum lavador encontrado hoje.';
+  const [lavadores, ordens] = await Promise.all([
+    prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
+    prisma.ordemServico.findMany({
+      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+    }),
+  ]);
+
+  if (lavadores.length === 0) return '❌ Nenhum lavador cadastrado.';
+
+  let r = `👷 *LAVADORES HOJE*\n\n`;
+  for (const lav of lavadores) {
+    const ords = ordens.filter(o => o.lavadorId === lav.id);
+    const fat  = ords.reduce((s,o) => s + o.valorTotal, 0);
+    const com  = fat * (lav.comissao / 100);
+    r += `• *${lav.nome}*: ${ords.length} ordem(ns) | Fat.: *R$ ${fat.toFixed(2)}* | Com.: *R$ ${com.toFixed(2)}*\n`;
   }
 
-  let lavadoresSection = lines[lavadoresStart];
-  for (let i = lavadoresStart + 1; i < lines.length; i++) {
-    if (lines[i].startsWith('•')) {
-      lavadoresSection += '\n' + lines[i];
-    } else if (lines[i].trim() === '') {
-      continue;
-    } else {
-      break;
+  return r.trim();
+}
+
+/*
+ * Handler: /caixa — query direta ao banco
+ */
+async function handleCaixaCommand(empresaId: string): Promise<string> {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+
+  const caixa = await prisma.caixaRegistro.findMany({
+    where: { empresaId, data: { gte: hoje, lt: amanha } },
+    orderBy: { data: 'desc' },
+  });
+
+  const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s,c) => s + c.valor, 0);
+  const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s,c) => s + c.valor, 0);
+
+  let r = `💰 *CAIXA DO DIA*\n\n`;
+  r += `Entradas: *R$ ${entradas.toFixed(2)}*\n`;
+  r += `Saídas: *R$ ${saidas.toFixed(2)}*\n`;
+  r += `Saldo: *R$ ${(entradas - saidas).toFixed(2)}*`;
+
+  const ultSaidas = caixa.filter(c => c.tipo === 'SAIDA').slice(0, 5);
+  if (ultSaidas.length > 0) {
+    r += `\n\n📋 Últimas saídas:\n`;
+    for (const s of ultSaidas) {
+      r += `• ${s.descricao}: *R$ ${s.valor.toFixed(2)}*\n`;
     }
   }
 
-  return `👷 LAVADORES DO DIA\n\n${lavadoresSection}\n\nDigite o nome do lavador para detalhes específicos.`;
+  return r.trim();
 }
 
 /*
- * Handler: /caixa
+ * Handler: /pendentes — query direta ao banco
  */
-function handleCaixaCommand(context: string): string {
-  const lines = context.split('\n');
-  const caixaStart = lines.findIndex(l => l.includes('CAIXA:'));
+async function handlePendentesCommand(empresaId: string): Promise<string> {
+  const ordens = await prisma.ordemServico.findMany({
+    where: { empresaId, status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] } },
+    include: {
+      veiculo: { select: { modelo: true, placa: true } },
+      lavador: { select: { nome: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+  });
 
-  if (caixaStart === -1) {
-    return '❌ Dados de caixa não encontrados.';
+  if (ordens.length === 0) return '✅ Nenhuma ordem ativa no momento.';
+
+  const lbl: Record<string, string> = {
+    PENDENTE: 'PENDENTE', EM_ANDAMENTO: 'EM ANDAMENTO', AGUARDANDO_PAGAMENTO: 'AGUARD. PAGAMENTO',
+  };
+
+  let r = `⏳ *ORDENS ATIVAS (${ordens.length})*\n\n`;
+  for (const o of ordens) {
+    const modelo = (o.veiculo.modelo ?? 'Veículo').toUpperCase();
+    r += `#${o.numeroOrdem} · ${modelo} ${o.veiculo.placa ?? ''} · *R$ ${o.valorTotal.toFixed(2)}*\n`;
+    r += `  ${lbl[o.status] ?? o.status} · ${o.lavador?.nome ?? '(sem lavador)'}\n\n`;
   }
 
-  let caixaSection = lines[caixaStart];
-  for (let i = caixaStart + 1; i < Math.min(caixaStart + 4, lines.length); i++) {
-    if (lines[i].includes('R$')) {
-      caixaSection += '\n' + lines[i];
-    }
-  }
-
-  return `💰 CAIXA DO DIA\n\n${caixaSection}`;
-}
-
-/*
- * Handler: /pendentes
- */
-function handlePendentesCommand(context: string): string {
-  const lines = context.split('\n');
-  const pendentesLine = lines.find(l => l.includes('pendentes'));
-
-  if (!pendentesLine) {
-    return '✅ Nenhuma ordem pendente!';
-  }
-
-  return `⏳ ORDENS PENDENTES\n\n${pendentesLine}\n\nAbra o painel para mais detalhes.`;
+  return r.trim();
 }
 
 /*
@@ -1023,7 +1074,6 @@ function handleAjudaCommand(): string {
 async function handleLavadorEspecifico(
   message: string,
   empresaId: string,
-  _context: string
 ): Promise<string | null> {
   try {
     const lavadores = await prisma.lavador.findMany({
