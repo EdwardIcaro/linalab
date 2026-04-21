@@ -433,19 +433,20 @@ model Theme {
 
 model WhatsappInstance {
   id           String              @id @default(cuid())
-  empresaId    String              @unique
+  empresaId    String?             @unique  // null = instância global do Bot Lina
   instanceName String              @unique
   status       String              @default("disconnected") // connected | disconnected | qr_code
   qrCode       String?
   ownerPhone   String?
-  authState    String?             @map("auth_state") // JSON com credenciais Baileys - persistir sessão no banco
-  pairingMode  Boolean             @default(false) @map("pairing_mode") // Aguardando próxima msg para parear como admin
-  pairingNome  String?             @map("pairing_nome") // Nome a atribuir ao admin que será pareado
+  authState    String?             @map("auth_state")
+  pairingMode  Boolean             @default(false) @map("pairing_mode")
+  pairingNome  String?             @map("pairing_nome")
+  mode         String              @default("ADMIN") // ADMIN | CLIENTE | AMBOS (Phase 2)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
-  empresa   Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  messages  WhatsappMessage[]
+  empresa     Empresa?            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  messages    WhatsappMessage[]
   adminPhones WhatsappAdminPhone[]
 
   @@map("whatsapp_instances")
@@ -454,22 +455,24 @@ model WhatsappInstance {
 model WhatsappAdminPhone {
   id          String              @id @default(cuid())
   instanceId  String              @map("instance_id")
-  telefone    String              // Número de WhatsApp do admin
-  jid         String?             // JID resolvido pelo WhatsApp (@s.whatsapp.net ou @lid)
-  nome        String?             // Nome/descrição do admin (ex: "Gerente João")
+  empresaId   String              // empresa que este admin gerencia via bot
+  telefone    String
+  jid         String?
+  nome        String?
   ativo       Boolean             @default(true)
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
   instance WhatsappInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
-  @@unique([instanceId, telefone])
+  @@unique([empresaId, telefone])
   @@map("whatsapp_admin_phones")
 }
 
 model WhatsappMessage {
   id          String   @id @default(cuid())
   instanceId  String
+  empresaId   String?  // empresa do contexto no momento da mensagem
   direction   String   // INCOMING | OUTGOING
   phoneNumber String
   senderName  String?

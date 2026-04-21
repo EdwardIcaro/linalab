@@ -84,7 +84,7 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     }
 
     // Tentar resolver JID real (necessário para @lid do novo protocolo WhatsApp)
-    const resolvedJid = await resolvePhoneToJid(empresaId, telefone);
+    const resolvedJid = await resolvePhoneToJid(telefone);
 
     // Criar número de admin
     const adminPhone = await prisma.whatsappAdminPhone.create({
@@ -109,7 +109,6 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     // Isso resolve o problema do @lid — ao enviar, o Baileys retorna o JID real usado
     const nomeAdmin = adminPhone.nome ? ` ${adminPhone.nome}` : '';
     const actualJid = await sendMessageAndCaptureJid(
-      empresaId,
       telefone,
       `✅ Olá${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`
     );
@@ -325,7 +324,7 @@ export async function gerarCodigoPareamento(req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'WhatsApp não está conectado. Conecte primeiro para usar o código.' });
     }
 
-    const code = generateCode(empresaId, nome?.trim() || undefined);
+    const code = generateCode(req.usuarioId!, empresaId, nome?.trim() || undefined);
     console.log(`[WhatsApp Admin] Código de pareamento gerado para ${empresaId}: ${code}`);
 
     return res.json({ data: { code, expiresIn: 300 } });

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script src="utils.js"></script>
     <script src="api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         .whatsapp-config {
             max-width: 900px;
@@ -670,6 +671,36 @@
                 </div>
             </div>
 
+            <!-- ===== Status do Bot Lina ===== -->
+            <div class="admin-section" id="botStatusSection">
+                <div class="section-header">
+                    <h2>🤖 Bot Lina</h2>
+                    <span id="botStatusBadge" class="status-badge" style="background:#f5f5f5;color:#999;">Verificando...</span>
+                </div>
+                <div id="botDisconnectedMsg" style="display:none;color:#666;font-size:0.9rem;padding:0.5rem 0;">
+                    ⚠️ O Bot Lina não está conectado. Contate o administrador Lina para conectar o bot.
+                </div>
+                <div id="botConnectedInfo" style="display:none;">
+                    <p style="color:#666;font-size:0.9rem;margin:0 0 1rem 0;">
+                        Para adicionar um admin via código, escaneie o QR abaixo ou clique no link para abrir a conversa com o Bot Lina no WhatsApp, depois envie o código de 4 dígitos gerado.
+                    </p>
+                    <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
+                        <canvas id="botQrCanvas" style="border-radius:8px;border:1px solid #e0e0e0;"></canvas>
+                        <div>
+                            <p id="botPhoneDisplay" style="font-size:1rem;font-weight:600;color:#333;margin:0 0 0.4rem 0;font-family:monospace;"></p>
+                            <p style="font-size:0.85rem;color:#666;margin:0;line-height:1.5;">
+                                Escaneie para abrir o chat com o Bot Lina.<br>
+                                Depois envie o código de 4 dígitos gerado abaixo.
+                            </p>
+                            <a id="botWaMeLink" href="#" target="_blank"
+                               style="display:inline-block;margin-top:0.75rem;padding:0.5rem 1.2rem;background:#25d366;color:white;border-radius:6px;text-decoration:none;font-size:0.9rem;font-weight:600;">
+                                📱 Abrir no WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Seção de Admins -->
             <div class="admin-section">
                 <div class="section-header">
@@ -772,7 +803,7 @@
                             <span class="pairing-pulse-icon">⌨️</span>
                         </div>
                         <h3>Aguardando código...</h3>
-                        <p>Peça ao admin para enviar exatamente <strong id="codeDisplayInline">——</strong> no WhatsApp do bot.</p>
+                        <p>Peça ao admin para enviar exatamente <strong id="codeDisplayInline">——</strong> no WhatsApp do <strong>Bot Lina</strong>.</p>
                         <p style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">A página será atualizada automaticamente.</p>
                     </div>
                     <div class="modal-footer-phone">
@@ -1090,8 +1121,49 @@
             }
         }
 
+        // ===== STATUS DO BOT LINA =====
+        async function loadBotStatus() {
+            try {
+                const res = await window.api.call('GET', '/whatsapp/status');
+                const { status, ownerPhone } = res;
+                const badge = document.getElementById('botStatusBadge');
+
+                if (status === 'connected' && ownerPhone) {
+                    badge.textContent = '✅ Conectado';
+                    badge.style.background = '#d4edda';
+                    badge.style.color = '#155724';
+
+                    const phone = ownerPhone.replace(/\D/g, '');
+                    const waUrl = `https://wa.me/${phone}`;
+
+                    document.getElementById('botPhoneDisplay').textContent = `+${phone}`;
+                    document.getElementById('botWaMeLink').href = waUrl;
+                    document.getElementById('botConnectedInfo').style.display = '';
+                    document.getElementById('botDisconnectedMsg').style.display = 'none';
+
+                    if (typeof QRCode !== 'undefined') {
+                        QRCode.toCanvas(document.getElementById('botQrCanvas'), waUrl, { width: 140, margin: 1 });
+                    }
+                } else {
+                    const labels = {
+                        reconnecting: '🔄 Reconectando',
+                        qr_code: '⏳ Aguardando QR',
+                        disconnected: '❌ Desconectado',
+                    };
+                    badge.textContent = labels[status] || '❌ Desconectado';
+                    badge.style.background = '#f8d7da';
+                    badge.style.color = '#721c24';
+                    document.getElementById('botDisconnectedMsg').style.display = '';
+                    document.getElementById('botConnectedInfo').style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Erro ao carregar status do bot:', e);
+            }
+        }
+
         // Inicializar
         async function init() {
+            await loadBotStatus();
             await loadAdminPhones();
             await loadLavadores();
             await loadConfig();

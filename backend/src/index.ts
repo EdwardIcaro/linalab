@@ -217,18 +217,14 @@ cron.schedule('*/10 * * * *', async () => {
     });
 
     if (desconectadas.length > 0) {
-      console.log(`[${new Date().toISOString()}] [WhatsApp Cron] ${desconectadas.length} instância(s) desconectada(s) com credenciais — tentando reconectar...`);
-
-      for (const instance of desconectadas) {
-        const statusMemoria = getStatus(instance.empresaId);
-        // Se em memória também está desconectado → tentar reconectar
-        if (statusMemoria === 'disconnected' && instance.authState) {
-          console.log(`[WhatsApp Cron] Reconectando ${instance.empresaId}...`);
-          try {
-            await initBaileys(instance.empresaId);
-          } catch (err) {
-            console.error(`[WhatsApp Cron] Erro ao reconectar ${instance.empresaId}:`, err);
-          }
+      console.log(`[${new Date().toISOString()}] [WhatsApp Cron] ${desconectadas.length} instância(s) desconectada(s) — tentando reconectar...`);
+      const statusMemoria = getStatus();
+      if (statusMemoria === 'disconnected') {
+        console.log('[WhatsApp Cron] Reconectando socket global...');
+        try {
+          await initBaileys();
+        } catch (err) {
+          console.error('[WhatsApp Cron] Erro ao reconectar socket global:', err);
         }
       }
     }

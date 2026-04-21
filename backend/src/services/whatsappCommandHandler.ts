@@ -6,6 +6,7 @@
 import prisma from '../db';
 import { chatCompletion } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type WhatsAppUser } from './whatsappAuthService';
+import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
 
@@ -28,7 +29,7 @@ interface PendingSaida {
   userName: string;
   expiresAt: number;
 }
-const pendingSaidas = new Map<string, PendingSaida>();
+const pendingSaidas = new Map<string, PendingSaida>(); // chave = JID (empresa vem do contexto)
 
 // Limpa sessões expiradas a cada 5 minutos
 setInterval(() => {
@@ -42,156 +43,135 @@ setInterval(() => {
  * Processa mensagem recebida do WhatsApp
  */
 export async function handleIncomingMessage(
-  instanceId: string,
   from: string,
   senderName: string,
   message: string,
-  empresaId: string
 ): Promise<string> {
   try {
-    // ── AUTENTICAÇÃO: Identificar usuário ────────────────────────────────────
-    const user = await identifyWhatsAppUser(from, empresaId);
+    // ── AUTENTICAÇÃO ─────────────────────────────────────────────────────────
+    const user = await identifyWhatsAppUser(from);
 
-    // Se não cadastrado, verificar configuração
     if (user.type === 'unknown') {
-      let blockUnknown = true;
-      try {
-        const empresa = await prisma.empresa.findUnique({
-          where: { id: empresaId },
-          select: { whatsappBlockUnknown: true },
-        });
-        if (empresa?.whatsappBlockUnknown !== undefined && empresa?.whatsappBlockUnknown !== null) {
-          blockUnknown = empresa.whatsappBlockUnknown;
-        }
-      } catch (error) {
-        // Se o campo não existir, usar padrão (true)
-        console.warn('[WhatsApp] Erro ao carregar whatsappBlockUnknown:', error);
-      }
-
-      // Se blockUnknown é false, apenas ignorar (retornar string vazia)
-      if (blockUnknown === false) {
-        return ''; // Ignorar silenciosamente
-      }
-
-      // Caso contrário, enviar mensagem de acesso negado
       return getDeniedAccessMessage(user);
     }
 
     const command = message.trim().toLowerCase().replace(/\//g, '');
 
-    // ── Relatório de período / semanal / data específica (ADMIN ONLY) ─────────
-    const isRelatorioRequest = /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
-    if ((isRelatorioRequest || /^ontem$/.test(command)) && user.type === 'lavador') {
+    // ── LAVADOR: empresa implícita ────────────────────────────────────────────
+    if (user.type === 'lavador') {
+      const empresaId = user.empresaId!;
+      if (command === 'resumo')   return handleResumoLavador(user.lavadorId!, empresaId);
+      if (command === 'ajuda')    return handleAjudaLavador();
+      if (['status','meu-status','minhas-comissoes'].includes(command))
+        return handleStatusLavador(user.lavadorId!, empresaId);
+      if (['comissoes','comissão','comissao'].includes(command))
+        return handleComissoesLavador(user.lavadorId!, empresaId);
+
+      const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
+        /(em aberto|abertas?|pendentes?)\s*(comiss[aã][eo]s?|comiss[oõ]es)/i.test(message);
+      if (isComissaoAberto) return handleComissoesLavador(user.lavadorId!, empresaId);
+
+      const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
+      if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
+
       return getDeniedAccessMessage(user);
     }
-    if (isRelatorioRequest || /^ontem$/.test(command)) {
-      // Período tem prioridade sobre data única (detectar ANTES)
-      const range = parseDateRangeFromMessage(message);
-      if (range) {
-        return handleRelatorioPeriodo(range.inicio, range.fim, empresaId);
-      }
-      const date = parseDateFromMessage(message);
-      if (date) {
-        return handleRelatorioData(date, empresaId);
+
+    // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
+    const empresas = user.empresas ?? [];
+
+    // Comando "mudar empresa" → reseta contexto
+    if (/mudar\s+empresa|trocar\s+empresa|mudar\s+contexto/i.test(message)) {
+      clearContext(from);
+      return buildEmpresaMenu(empresas, 'Contexto resetado. Qual empresa você quer gerenciar?');
+    }
+
+    // Tentar detectar empresa pelo nome na mensagem (shortcut)
+    const empresaDetectada = detectEmpresaNoTexto(message, empresas);
+    if (empresaDetectada) {
+      setContext(from, empresaDetectada.id, empresaDetectada.nome);
+    }
+
+    // Verificar contexto ativo
+    let ctx = getContext(from);
+
+    // Admin com 1 empresa → contexto automático sem menu
+    if (!ctx && empresas.length === 1) {
+      setContext(from, empresas[0].id, empresas[0].nome);
+      ctx = getContext(from)!;
+    }
+
+    // Admin com múltiplas empresas sem contexto → pede seleção
+    if (!ctx && empresas.length > 1) {
+      // Se digitou número de 1 a N → selecionar empresa
+      const escolha = parseInt(command);
+      if (!isNaN(escolha) && escolha >= 1 && escolha <= empresas.length) {
+        const escolhida = empresas[escolha - 1];
+        setContext(from, escolhida.id, escolhida.nome);
+        ctx = getContext(from)!;
+      } else {
+        return buildEmpresaMenu(empresas, `Olá *${user.nome}*! Você tem acesso a múltiplas empresas.\nQual deseja gerenciar?`);
       }
     }
 
-    // ── Comissões em aberto ──────────────────────────────────────────────────
+    if (!ctx) return '❌ Nenhuma empresa disponível para este usuário.';
+
+    const empresaId   = ctx.empresaId;
+    const empresaNome = ctx.empresaNome;
+
+    // ── Comandos do admin com empresa resolvida ───────────────────────────────
+    const isRelatorioRequest = /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
+    if (isRelatorioRequest || /^ontem$/.test(command)) {
+      const range = parseDateRangeFromMessage(message);
+      if (range) return handleRelatorioPeriodo(range.inicio, range.fim, empresaId);
+      const date  = parseDateFromMessage(message);
+      if (date)  return handleRelatorioData(date, empresaId);
+    }
+
     const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
       /(em aberto|abertas?|pendentes?)\s*(comiss[aã][eo]s?|comiss[oõ]es)/i.test(message);
     if (isComissaoAberto) {
-      // Lavador: apenas suas comissões
-      if (user.type === 'lavador') {
-        return handleComissoesLavador(user.lavadorId!, empresaId);
-      }
-      // Admin: todas as comissões
-      const nomeLavador = extrairNomeLavador(message);
-      return handleComissoesEmAberto(nomeLavador, empresaId);
+      return handleComissoesEmAberto(extrairNomeLavador(message), empresaId);
     }
 
-    // ── Comandos fixos ───────────────────────────────────────────────────────
     const dailyContext = await buildDailyContext(empresaId);
 
-    // ── Saída em andamento — coleta por etapas ───────────────────────────────
-    const pendingKey = `${empresaId}:${from}`;
-    if (pendingSaidas.has(pendingKey)) {
-      return await handlePendingSaidaStep(message, pendingKey, senderName);
+    if (pendingSaidas.has(from)) {
+      return handlePendingSaidaStep(message, from, senderName);
     }
 
-    // ── Detecção de intenção de saída (não-lavador) ───────────────────────
-    if (user.type !== 'lavador') {
-      const isSaida = /\b(sa[íi]da|despesa|gasto|gastei|paguei|comprei|lancei|lan[çc]ar)\b/i.test(message);
-      if (isSaida) {
-        return await handleSaidaWhatsapp(message, from, senderName, empresaId);
-      }
-    }
+    const isSaida = /\b(sa[íi]da|despesa|gasto|gastei|paguei|comprei|lancei|lan[çc]ar)\b/i.test(message);
+    if (isSaida) return handleSaidaWhatsapp(message, from, senderName, empresaId);
 
-    // ── Comandos PIX (admin e lavador) ──────────────────────────────────────
-    // ordens
-    if (command === 'ordens') {
-      return await handleOrdensAtivas(empresaId, user);
-    }
-
-    // pix N / pix ordem N / pagamento N / pagamento ordem N
-    const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
-    if (pixMatch) {
-      const numOrdem = parseInt(pixMatch[1]);
-      return await handlePixOrdem(numOrdem, empresaId, from, user, false);
-    }
-
-    // reenviar pix N / reenviar pix ordem N
-    const reenviarMatch = message.trim().match(/^reenviar\s+pix(?:\s+ordem)?\s+(\d+)$/i);
-    if (reenviarMatch) {
-      const numOrdem = parseInt(reenviarMatch[1]);
-      return await handlePixOrdem(numOrdem, empresaId, from, user, true);
-    }
-
-    // Admin do bot: acesso completo (igual ao admin da empresa)
-    if (user.type === 'admin') {
-      if (command === 'resumo') return handleResumoCommand(dailyContext);
-      if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
-      if (command === 'caixa') return handleCaixaCommand(dailyContext);
-      if (command === 'pendentes') return handlePendentesCommand(dailyContext);
-      if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
-      if (command === 'ajuda') return handleAjudaCommand();
-
-      const lavadorResponse = await handleLavadorEspecifico(message, empresaId, dailyContext);
-      if (lavadorResponse) return lavadorResponse;
-
-      return await chatCompletion(message, dailyContext);
-    }
-
-    // Lavador: apenas resumo e comissões pessoais
-    if (user.type === 'lavador') {
-      if (command === 'resumo') return handleResumoLavador(user.lavadorId!, empresaId);
-      if (command === 'ajuda') return handleAjudaLavador();
-      if (command === 'status' || command === 'minhas-comissoes' || command === 'meu-status') {
-        return await handleStatusLavador(user.lavadorId!, empresaId);
-      }
-      if (command === 'comissoes' || command === 'comissão' || command === 'minhas-comissoes') {
-        return await handleComissoesLavador(user.lavadorId!, empresaId);
-      }
-      return getDeniedAccessMessage(user);
-    }
-
-    // Admin: acesso completo
-    if (command === 'resumo') return handleResumoCommand(dailyContext);
+    if (command === 'ordens')    return handleOrdensAtivas(empresaId, user);
+    if (command === 'resumo')    return handleResumoCommand(dailyContext);
     if (command === 'lavadores') return handleLavadoresCommand(dailyContext);
-    if (command === 'caixa') return handleCaixaCommand(dailyContext);
+    if (command === 'caixa')     return handleCaixaCommand(dailyContext);
     if (command === 'pendentes') return handlePendentesCommand(dailyContext);
     if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
-    if (command === 'ajuda') return handleAjudaCommand();
+    if (command === 'ajuda')     return handleAjudaCommand();
+    if (command === 'empresa')   return `📍 Contexto ativo: *${empresaNome}*\n\nEnvie "mudar empresa" para trocar.`;
 
-    // ── Lavador por nome (ADMIN ONLY) ────────────────────────────────────────
+    const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
+    if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
+
+    const reenviarMatch = message.trim().match(/^reenviar\s+pix(?:\s+ordem)?\s+(\d+)$/i);
+    if (reenviarMatch) return handlePixOrdem(parseInt(reenviarMatch[1]), empresaId, from, user, true);
+
     const lavadorResponse = await handleLavadorEspecifico(message, empresaId, dailyContext);
     if (lavadorResponse) return lavadorResponse;
 
-    // ── Fallback: IA com contexto ────────────────────────────────────────────
-    return await chatCompletion(message, dailyContext);
+    return chatCompletion(message, dailyContext);
+
   } catch (error) {
     console.error('[WhatsApp] Erro ao processar mensagem:', error);
-    return '❌ Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.';
+    return '❌ Desculpe, ocorreu um erro. Tente novamente.';
   }
+}
+
+function buildEmpresaMenu(empresas: Array<{ id: string; nome: string }>, header: string): string {
+  const lista = empresas.map((e, i) => `${i + 1}. ${e.nome}`).join('\n');
+  return `${header}\n\n${lista}\n\n_Responda com o número da empresa._`;
 }
 
 // ==========================================
@@ -1250,7 +1230,7 @@ Mensagem: "${message}"`;
  */
 async function handleSaidaWhatsapp(message: string, from: string, senderName: string, empresaId: string): Promise<string> {
   const dados = await extrairDadosSaida(message);
-  const pendingKey = `${empresaId}:${from}`;
+  const pendingKey = from; // chave = JID; empresa vem do adminContextStore
 
   const pending: PendingSaida = {
     valor:          dados?.valor ?? 0,
@@ -1569,7 +1549,7 @@ async function handlePixOrdem(
       `Mostre este QR Code para o cliente escanear e pagar.`;
 
     // Enviar imagem diretamente (retornar string vazia para não duplicar msg)
-    await sendImageBuffer(empresaId, from, qrCodeBuffer, caption);
+    await sendImageBuffer(from, qrCodeBuffer, caption);
     return ''; // Baileys ignora string vazia
 
   } catch (error) {

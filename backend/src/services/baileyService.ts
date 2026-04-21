@@ -1,6 +1,6 @@
 /**
- * Serviço Baileys para WhatsApp
- * Usa useMultiFileAuthState (oficial) com /tmp + persistência no banco PostgreSQL
+ * Serviço Baileys — socket único global (Bot Lina, Phase 1)
+ * Um único número WhatsApp atende admins e lavadores de todas as empresas.
  */
 
 import type { WASocket } from '@whiskeysockets/baileys';
@@ -11,148 +11,115 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
 import { handleIncomingMessage } from './whatsappCommandHandler';
-import { validateAndClaim } from './pairingCodeStore';
+import { validateAndClaimByCode } from './pairingCodeStore';
 
 // ==========================================
-// STATE INTERNO
+// CONSTANTES
 // ==========================================
-const sockets = new Map<string, WASocket>();
-const qrCodes = new Map<string, string>();
-const statuses = new Map<string, string>();
-const reconnectAttempts = new Map<string, number>();
-const reconnectDelays = new Map<string, number>();
+const GLOBAL_INSTANCE_NAME = 'lina-global';
+const GLOBAL_AUTH_DIR      = join(tmpdir(), 'baileys-global');
 
-// Backoff exponencial para reconexão
-const BASE_DELAY = 3000; // 3 segundos
-const MAX_DELAY = 60000; // 60 segundos
-const MAX_RECONNECT = 100; // Aumentado de 10 para 100 (com backoff exponencial)
+const BASE_DELAY    = 3000;
+const MAX_DELAY     = 60000;
+const MAX_RECONNECT = 100;
 
-function getNextReconnectDelay(empresaId: string): number {
-  let delay = reconnectDelays.get(empresaId) || BASE_DELAY;
-  // Próximo delay = delay * 1.5, com cap em MAX_DELAY
-  const nextDelay = Math.min(delay * 1.5, MAX_DELAY);
-  reconnectDelays.set(empresaId, nextDelay);
-  return delay;
-}
+// ==========================================
+// STATE GLOBAL
+// ==========================================
+let globalSocket:   WASocket | null = null;
+let globalQrCode:   string   | null = null;
+let globalStatus:   string          = 'disconnected';
+let globalStore:    any             = null;
+let reconnectCount: number          = 0;
+let reconnectDelay: number          = BASE_DELAY;
+let freshCreds:     boolean         = false;
 
-function resetReconnectDelay(empresaId: string): void {
-  reconnectDelays.delete(empresaId);
-}
-
-// Mapeamento de @lid → número de telefone (novo protocolo WhatsApp)
 const lidToPhone = new Map<string, string>();
 
-// Store em memória por empresa (makeInMemoryStore do Baileys — mantém @lid mappings)
-const stores = new Map<string, any>();
-
-// Empresas com credenciais recém-atualizadas via creds.update (QR scan)
-// Protege /tmp de ser limpo entre o scan e o reconnect bem-sucedido
-const freshCredsSet = new Set<string>();
+function nextDelay(): number {
+  const d = reconnectDelay;
+  reconnectDelay = Math.min(reconnectDelay * 1.5, MAX_DELAY);
+  return d;
+}
+function resetDelay() { reconnectDelay = BASE_DELAY; }
 
 // ==========================================
 // AUTH STATE — DB ↔ /tmp
 // ==========================================
 
-/**
- * Caminho do diretório de auth no sistema de arquivos temporário
- */
-function getAuthDir(empresaId: string): string {
-  const dir = join(tmpdir(), `baileys-${empresaId}`);
-  mkdirSync(dir, { recursive: true });
-  return dir;
+async function getGlobalInstance() {
+  return prisma.whatsappInstance.findFirst({ where: { instanceName: GLOBAL_INSTANCE_NAME } });
 }
 
-/**
- * Carrega auth state do banco para o diretório /tmp antes de iniciar o socket
- */
-async function restoreAuthDirFromDb(empresaId: string): Promise<void> {
+async function restoreAuthFromDb(): Promise<void> {
   try {
-    const authDir = getAuthDir(empresaId);
+    mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
+    const instance = await getGlobalInstance();
 
-    // Verificar estado no banco ANTES de decidir o que fazer com /tmp
-    const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId },
-    });
-
-    if (existsSync(authDir)) {
-      const files = readdirSync(authDir);
+    if (existsSync(GLOBAL_AUTH_DIR)) {
+      const files = readdirSync(GLOBAL_AUTH_DIR);
       if (files.length > 0) {
-        if (!instance?.authState && !freshCredsSet.has(empresaId)) {
-          // /tmp tem arquivos mas DB não tem authState e não há scan recente
-          // → arquivos stale (sessão desconectada anteriormente) — limpar
-          rmSync(authDir, { recursive: true, force: true });
-          mkdirSync(authDir, { recursive: true });
-          console.log(`[Baileys] Credenciais stale removidas para ${empresaId} (DB null, não há scan recente)`);
+        if (!instance?.authState && !freshCreds) {
+          rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
+          mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
+          console.log('[Baileys] Credenciais stale removidas (DB null, sem scan recente)');
         } else {
-          // /tmp tem arquivos recém-salvos por creds.update (QR scan em andamento)
-          console.log(`[Baileys] /tmp já tem ${files.length} arquivo(s) para ${empresaId}, mantendo`);
+          console.log(`[Baileys] /tmp já tem ${files.length} arquivo(s), mantendo`);
           return;
         }
       }
     }
 
     if (!instance?.authState) {
-      // Sem authState no banco e /tmp vazio → início limpo, vai gerar QR
-      mkdirSync(authDir, { recursive: true });
-      console.log(`[Baileys] Início limpo para ${empresaId} (sem credenciais)`);
+      console.log('[Baileys] Início limpo — sem credenciais salvas');
       return;
     }
 
     const authFiles = JSON.parse(instance.authState) as Record<string, string>;
     for (const [filename, content] of Object.entries(authFiles)) {
-      writeFileSync(join(authDir, filename), content, 'utf-8');
+      writeFileSync(join(GLOBAL_AUTH_DIR, filename), content, 'utf-8');
     }
-    console.log(`[Baileys] Auth state restaurado do banco para ${empresaId}`);
-  } catch (error) {
-    console.error(`[Baileys] Erro ao restaurar auth state: ${error}`);
+    console.log('[Baileys] Auth state restaurado do banco');
+  } catch (err) {
+    console.error('[Baileys] Erro ao restaurar auth state:', err);
   }
 }
 
-/**
- * Persiste todos os arquivos do /tmp auth dir de volta no banco
- */
-async function persistAuthDirToDb(empresaId: string): Promise<void> {
+async function persistAuthToDb(): Promise<void> {
   try {
-    const authDir = getAuthDir(empresaId);
-    const files = readdirSync(authDir);
-
+    const files = readdirSync(GLOBAL_AUTH_DIR);
     if (files.length === 0) return;
 
     const authFiles: Record<string, string> = {};
-    for (const file of files) {
-      authFiles[file] = readFileSync(join(authDir, file), 'utf-8');
+    for (const f of files) {
+      authFiles[f] = readFileSync(join(GLOBAL_AUTH_DIR, f), 'utf-8');
     }
 
-    await prisma.whatsappInstance.update({
-      where: { empresaId },
+    await prisma.whatsappInstance.updateMany({
+      where: { instanceName: GLOBAL_INSTANCE_NAME },
       data: { authState: JSON.stringify(authFiles) },
     });
-  } catch (error) {
-    console.error(`[Baileys] Erro ao persistir auth state: ${error}`);
+  } catch (err) {
+    console.error('[Baileys] Erro ao persistir auth state:', err);
   }
 }
 
 // ==========================================
-// MAIN API
+// MAIN: INICIAR SOCKET GLOBAL
 // ==========================================
 
-/**
- * Inicia/reconecta socket Baileys para uma empresa
- */
-export async function initBaileys(empresaId: string): Promise<void> {
+export async function initBaileys(): Promise<void> {
   try {
-    console.log(`[Baileys] Iniciando para empresa: ${empresaId}`);
-
-    // Verificar se já tem socket ativo
-    if (sockets.has(empresaId)) {
-      console.log(`[Baileys] Socket já ativo para ${empresaId}`);
+    if (globalSocket) {
+      console.log('[Baileys] Socket global já ativo');
       return;
     }
 
-    // Dynamic import (ESM) — new Function evita que TypeScript converta para require()
+    console.log('[Baileys] Iniciando socket global...');
+
     const dynamicImport = new Function('module', 'return import(module)');
-    const baileysMod = await dynamicImport('@whiskeysockets/baileys') as any;
-    const qrcodeMod = await dynamicImport('qrcode') as any;
+    const baileysMod    = await dynamicImport('@whiskeysockets/baileys') as any;
+    const qrcodeMod     = await dynamicImport('qrcode') as any;
 
     const {
       default: _baileysDefault,
@@ -165,185 +132,114 @@ export async function initBaileys(empresaId: string): Promise<void> {
       makeInMemoryStore,
     } = baileysMod;
 
-    // Baileys pode expor makeWASocket como named export ou via default
     const _makeWASocket: typeof makeWASocket =
-      makeWASocket ??
-      _baileysDefault?.makeWASocket ??
-      _baileysDefault;
+      makeWASocket ?? _baileysDefault?.makeWASocket ?? _baileysDefault;
     const QRCode = qrcodeMod.default || qrcodeMod;
 
-    // Criar/reusar store em memória (persiste entre reconexões para manter @lid mappings)
-    if (!stores.has(empresaId) && makeInMemoryStore) {
-      const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
-      stores.set(empresaId, store);
-      console.log(`[Baileys] Store criado para ${empresaId}`);
+    if (!globalStore && makeInMemoryStore) {
+      globalStore = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
     }
 
-    // Restaurar auth state do banco para /tmp (se existir)
-    await restoreAuthDirFromDb(empresaId);
-    const authDir = getAuthDir(empresaId);
+    await restoreAuthFromDb();
+    mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
 
-    // Se há credenciais salvas → marcar como 'reconnecting' para evitar que o
-    // setup manual cancele a reconexão automática antes dela completar
-    const instanceCheck = await prisma.whatsappInstance.findUnique({
-      where: { empresaId },
-      select: { authState: true },
-    });
-    if (instanceCheck?.authState && statuses.get(empresaId) !== 'connected') {
-      statuses.set(empresaId, 'reconnecting');
-      console.log(`[Baileys] Reconectando com credenciais salvas para ${empresaId}`);
+    const instance = await getGlobalInstance();
+    if (instance?.authState && globalStatus !== 'connected') {
+      globalStatus = 'reconnecting';
+      console.log('[Baileys] Reconectando com credenciais salvas...');
     }
 
-    // useMultiFileAuthState — implementação oficial do Baileys (SignalKeyStore correto)
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    const { state, saveCreds } = await useMultiFileAuthState(GLOBAL_AUTH_DIR);
 
-    // Buscar versão atual do WhatsApp para evitar rejeição por versão desatualizada
     let version: number[] = [2, 3000, 1015901307];
     try {
-      const versionData = await fetchLatestBaileysVersion();
-      version = versionData.version;
-      console.log(`[Baileys] Versão WA: ${version.join('.')}`);
-    } catch {
-      console.warn(`[Baileys] Não conseguiu buscar versão WA, usando fallback`);
-    }
+      const v = await fetchLatestBaileysVersion();
+      version = v.version;
+    } catch { /* usa fallback */ }
 
-    // Criar socket com configuração oficial
     const sock = _makeWASocket({
       version,
       auth: state,
       printQRInTerminal: false,
-      logger: pino({ level: 'silent' }), // suprimir logs internos do Baileys
-      browser: Browsers.ubuntu('Chrome'), // identificação correta de navegador
+      logger: pino({ level: 'silent' }),
+      browser: Browsers.ubuntu('Chrome'),
       generateHighQualityLinkPreview: false,
       getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
     });
 
-    // Flag: credenciais foram atualizadas (indica QR escaneado com sucesso)
     let credsJustUpdated = false;
+    if (globalStore) globalStore.bind(sock.ev);
 
-    // Vincular store ao socket (popula @lid ↔ phone mappings automaticamente)
-    const store = stores.get(empresaId);
-    if (store) {
-      store.bind(sock.ev);
-      console.log(`[Baileys] Store vinculado ao socket de ${empresaId}`);
-    }
-
-    // Salvar credenciais quando mudarem (em /tmp e no banco)
     sock.ev.on('creds.update', async () => {
       credsJustUpdated = true;
-      freshCredsSet.add(empresaId); // Marcar como recém-atualizado (protege /tmp durante reconexão)
+      freshCreds = true;
       saveCreds();
-      await persistAuthDirToDb(empresaId);
+      await persistAuthToDb();
     });
 
-    // Evento: Conexão
     sock.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr } = update;
 
-      console.log(`[Baileys] connection.update para ${empresaId}:`, {
-        connection,
-        qr: !!qr,
-        errorCode: (lastDisconnect?.error as Boom)?.output?.statusCode,
-        errorMsg: (lastDisconnect?.error as any)?.message,
-      });
-
-      // QR Code gerado
       if (qr) {
         try {
-          const qrBase64 = await QRCode.toDataURL(qr);
-          qrCodes.set(empresaId, qrBase64);
-          statuses.set(empresaId, 'qr_code');
-
-          await prisma.whatsappInstance.update({
-            where: { empresaId },
-            data: { status: 'qr_code', qrCode: qrBase64 },
+          globalQrCode  = await QRCode.toDataURL(qr);
+          globalStatus  = 'qr_code';
+          await prisma.whatsappInstance.updateMany({
+            where: { instanceName: GLOBAL_INSTANCE_NAME },
+            data: { status: 'qr_code', qrCode: globalQrCode },
           });
-
-          console.log(`[Baileys] QR code gerado para ${empresaId}`);
-        } catch (error) {
-          console.error(`[Baileys] Erro ao gerar QR code:`, error);
+          console.log('[Baileys] QR code gerado');
+        } catch (err) {
+          console.error('[Baileys] Erro ao gerar QR:', err);
         }
       }
 
-      // Conectado
       if (connection === 'open') {
-        qrCodes.delete(empresaId);
-        statuses.set(empresaId, 'connected');
-        sockets.set(empresaId, sock);
-        reconnectAttempts.set(empresaId, 0);
-        resetReconnectDelay(empresaId); // Reset delay ao conectar com sucesso
-        freshCredsSet.delete(empresaId); // Conexão estabelecida, creds já persistidos no DB
+        globalSocket  = sock;
+        globalQrCode  = null;
+        globalStatus  = 'connected';
+        reconnectCount = 0;
+        resetDelay();
+        freshCreds     = false;
 
-        const jid = sock.user?.id;
-        const phoneNumber = jid ? jid.split(':')[0] : null;
-
-        await prisma.whatsappInstance.update({
-          where: { empresaId },
-          data: { status: 'connected', qrCode: null, ownerPhone: phoneNumber },
+        const phone = sock.user?.id?.split(':')[0] ?? null;
+        await prisma.whatsappInstance.updateMany({
+          where: { instanceName: GLOBAL_INSTANCE_NAME },
+          data: { status: 'connected', qrCode: null, ownerPhone: phone },
         });
-
-        console.log(`[Baileys] ✅ Conectado para ${empresaId}:`, phoneNumber);
+        console.log('[Baileys] ✅ Conectado:', phone);
       }
 
-      // Desconectado
       if (connection === 'close') {
-        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const errorMsg = (lastDisconnect?.error as any)?.message || 'Sem mensagem';
+        const statusCode   = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
-        const isLoggedOut = statusCode === loggedOutCode;
-        const attempts = reconnectAttempts.get(empresaId) || 0;
-        // 401 durante fase QR (sem sessão ativa) = não é logout real, deve tentar novamente
-        const wasAuthenticated = statuses.get(empresaId) === 'connected';
-        const isRealLogout = isLoggedOut && wasAuthenticated;
-        const shouldReconnect = !isRealLogout && attempts < MAX_RECONNECT;
+        const wasConnected  = globalStatus === 'connected';
+        const isRealLogout  = statusCode === loggedOutCode && wasConnected;
+        const shouldRetry   = !isRealLogout && reconnectCount < MAX_RECONNECT;
 
-        console.log(`[Baileys] Desconexão para ${empresaId}:`, {
-          statusCode,
-          errorMsg,
-          wasAuthenticated,
-          isRealLogout,
-          tentativaAtual: attempts + 1,
-          maxTentativas: MAX_RECONNECT,
-          shouldReconnect,
-        });
+        globalSocket = null;
 
-        if (shouldReconnect) {
-          reconnectAttempts.set(empresaId, attempts + 1);
-          sockets.delete(empresaId);
-
-          // QR escaneado → creds atualizadas → reconectar imediatamente (1s)
-          // Sessão ativa caiu → usar backoff exponencial (3s, 4.5s, 6.7s, ..., 60s)
-          // Erro durante fase QR sem scan → delay maior para QR não mudar (15s)
-          const reconnectDelay = credsJustUpdated
-            ? 1000
-            : (wasAuthenticated ? getNextReconnectDelay(empresaId) : 15000);
-
+        if (shouldRetry) {
+          reconnectCount++;
+          const delay = credsJustUpdated ? 1000 : (wasConnected ? nextDelay() : 15000);
           credsJustUpdated = false;
-          console.log(`[Baileys] Reconectando em ${reconnectDelay / 1000}s (tentativa ${attempts + 1}/${MAX_RECONNECT})...`);
-          setTimeout(() => {
-            initBaileys(empresaId).catch(console.error);
-          }, reconnectDelay);
+          console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
+          setTimeout(() => initBaileys().catch(console.error), delay);
         } else {
-          qrCodes.delete(empresaId);
-          sockets.delete(empresaId);
-          statuses.set(empresaId, 'disconnected');
-          // NÃO deletar attempts — mantém histórico para logging
-          freshCredsSet.delete(empresaId);
+          globalStatus = 'disconnected';
+          globalQrCode = null;
+          freshCreds   = false;
 
           if (isRealLogout) {
-            // WhatsApp explicitamente invalidou a sessão (logout real pelo celular ou expiração)
-            // Limpa authState pois as credenciais não são mais válidas → necessário novo QR
-            console.log(`[Baileys] ⚠️ Logout real para ${empresaId} — credenciais invalidadas, limpando authState`);
-            await prisma.whatsappInstance.update({
-              where: { empresaId },
+            console.log('[Baileys] ⚠️ Logout real — limpando credenciais');
+            await prisma.whatsappInstance.updateMany({
+              where: { instanceName: GLOBAL_INSTANCE_NAME },
               data: { status: 'disconnected', authState: null, qrCode: null },
             });
           } else {
-            // Máximo de tentativas atingido por problema de rede/servidor — NÃO limpar authState
-            // Cron job a cada 10 min tentará reconectar novamente
-            console.log(`[Baileys] ⚠️ Max tentativas (${MAX_RECONNECT}) para ${empresaId} — preservando authState. Cron tentará novamente em 10 min`);
-            await prisma.whatsappInstance.update({
-              where: { empresaId },
+            console.log(`[Baileys] ⚠️ Max tentativas — preservando credenciais`);
+            await prisma.whatsappInstance.updateMany({
+              where: { instanceName: GLOBAL_INSTANCE_NAME },
               data: { status: 'disconnected', qrCode: null },
             });
           }
@@ -351,226 +247,159 @@ export async function initBaileys(empresaId: string): Promise<void> {
       }
     });
 
-    // Evento: Sincronização de contatos (mapeia @lid → telefone)
+    // Mapear @lid → telefone
     const processContacts = (contacts: any[]) => {
       let added = 0;
-      for (const contact of contacts) {
-        const id = contact.id || '';
-        const lid = contact.lid || '';
-
-        // Caso 1: id é @s.whatsapp.net e tem lid associado
+      for (const c of contacts) {
+        const id  = c.id  || '';
+        const lid = c.lid || '';
         if (id.endsWith('@s.whatsapp.net') && lid) {
-          const phone = id.split('@')[0];
+          const phone  = id.split('@')[0];
           const lidNum = lid.split('@')[0].replace(/\D/g, '');
           if (phone && lidNum) { lidToPhone.set(lidNum, phone); added++; }
         }
-        // Caso 2: id é @lid e tem phoneNumber
-        if (id.endsWith('@lid') && contact.phoneNumber) {
-          const lidNum = id.split('@')[0];
-          lidToPhone.set(lidNum, contact.phoneNumber.replace(/\D/g, ''));
+        if (id.endsWith('@lid') && c.phoneNumber) {
+          lidToPhone.set(id.split('@')[0], c.phoneNumber.replace(/\D/g, ''));
           added++;
         }
       }
       return added;
     };
 
-    sock.ev.on('contacts.set', (data: any) => {
-      const contacts = Array.isArray(data) ? data : (data?.contacts || []);
-      // Log da estrutura do primeiro contato para debug
-      if (contacts.length > 0) {
-        console.log(`[Baileys] contacts.set sample:`, JSON.stringify(contacts[0]).slice(0, 200));
-      } else {
-        console.log(`[Baileys] contacts.set: array vazio (${JSON.stringify(data).slice(0, 100)})`);
-      }
-      const added = processContacts(contacts);
-      console.log(`[Baileys] Contatos sincronizados: ${contacts.length} total, ${added} @lid mapeados`);
-    });
+    sock.ev.on('contacts.set',    (d: any) => { const cs = Array.isArray(d) ? d : (d?.contacts || []); processContacts(cs); });
+    sock.ev.on('contacts.upsert', (d: any) => { const cs = Array.isArray(d) ? d : (d?.contacts || []); processContacts(cs); });
 
-    sock.ev.on('contacts.upsert', (data: any) => {
-      const contacts = Array.isArray(data) ? data : (data?.contacts || []);
-      const added = processContacts(contacts);
-      if (added > 0) console.log(`[Baileys] contacts.upsert: ${added} @lid mapeados`);
-    });
-
-    // Evento: Mensagens recebidas
+    // ==========================================
+    // MENSAGENS RECEBIDAS
+    // ==========================================
     sock.ev.on('messages.upsert', async (m: any) => {
       try {
         const message = m.messages[0];
-
-        if (message.key.fromMe || isJidBroadcast(message.key.remoteJid!)) {
-          return;
-        }
+        if (message.key.fromMe || isJidBroadcast(message.key.remoteJid!)) return;
 
         const rawFrom = message.key.remoteJid!;
-        const text =
+        const text    =
           message.message?.conversation ||
-          message.message?.extendedTextMessage?.text ||
-          '';
-
+          message.message?.extendedTextMessage?.text || '';
         if (!text.trim()) return;
 
-        // Resolver @lid para número de telefone
+        // Resolver @lid
         let from = rawFrom;
         if (rawFrom.endsWith('@lid')) {
           const lidNum = rawFrom.split('@')[0];
-
-          // 1. Verificar mapa manual lidToPhone
-          let resolvedPhone = lidToPhone.get(lidNum);
-
-          // 2. Tentar via makeInMemoryStore (contacts map)
-          if (!resolvedPhone && store?.contacts) {
-            const contact = store.contacts[rawFrom] as any;
-            const phoneFromContact: string | undefined = contact?.phoneNumber
-              ? String(contact.phoneNumber).replace(/\D/g, '')
-              : undefined;
-            if (phoneFromContact) {
-              resolvedPhone = phoneFromContact;
-              lidToPhone.set(lidNum, resolvedPhone);
+          let resolved = lidToPhone.get(lidNum);
+          if (!resolved && globalStore?.contacts) {
+            const contact = globalStore.contacts[rawFrom] as any;
+            if (contact?.phoneNumber) {
+              resolved = String(contact.phoneNumber).replace(/\D/g, '');
+              lidToPhone.set(lidNum, resolved);
             } else {
-              // Procurar contato @s.whatsapp.net que tenha lid = rawFrom
-              for (const [jid, c] of Object.entries(store.contacts as Record<string, any>)) {
+              for (const [jid, c] of Object.entries(globalStore.contacts as Record<string, any>)) {
                 if (jid.endsWith('@s.whatsapp.net') && (c as any)?.lid === rawFrom) {
-                  const phone = jid.split('@')[0];
-                  if (phone) {
-                    resolvedPhone = phone;
-                    lidToPhone.set(lidNum, phone);
-                  }
+                  resolved = jid.split('@')[0];
+                  lidToPhone.set(lidNum, resolved!);
                   break;
                 }
               }
             }
           }
-
-          if (resolvedPhone) {
-            from = `${resolvedPhone}@s.whatsapp.net`;
-            console.log(`[Baileys] @lid resolvido: ${rawFrom} → ${from}`);
-
-            // Atualizar registro de admin que ainda tem telefone "lid_xxx" com o número real
-            const lidNum = rawFrom.split('@')[0];
+          if (resolved) {
+            from = `${resolved}@s.whatsapp.net`;
+            // Atualizar registro com lid não resolvido
             prisma.whatsappAdminPhone.updateMany({
               where: { jid: rawFrom, telefone: `lid_${lidNum}` },
-              data: { telefone: resolvedPhone },
-            }).catch(() => {}); // silencioso — não bloqueia o fluxo
-          } else {
-            console.log(`[Baileys] @lid sem mapeamento: ${rawFrom} (store contacts: ${Object.keys(store?.contacts || {}).length})`);
+              data: { telefone: resolved },
+            }).catch(() => {});
           }
         }
-
-        console.log(`[Baileys] Mensagem recebida de ${from}: ${text}`);
 
         const senderName = message.pushName || 'Usuário';
+        const trimmed    = text.trim();
 
-        // Verificar código de pareamento de 4 dígitos
-        const trimmedText = text.trim();
-        if (/^\d{4}$/.test(trimmedText)) {
-          const claimed = validateAndClaim(empresaId, trimmedText);
+        // ── Código de pareamento (4 dígitos) ──────────────────────────────────
+        if (/^\d{4}$/.test(trimmed)) {
+          const claimed = validateAndClaimByCode(trimmed);
           if (claimed) {
-            const instanceForCode = await prisma.whatsappInstance.findUnique({
-              where: { empresaId },
-              select: { id: true },
-            });
-            if (instanceForCode) {
-              const lidOrPhone = rawFrom.split('@')[0];
-              const phoneToStore = (rawFrom.endsWith('@lid') && from !== rawFrom)
-                ? from.split('@')[0]
-                : rawFrom.endsWith('@lid')
-                  ? `lid_${lidOrPhone}`
-                  : lidOrPhone;
+            const globalInst = await getGlobalInstance();
+            if (!globalInst) return;
 
-              const nomeAdmin = claimed.nome || senderName;
+            // Buscar todas as empresas do userId que gerou o código
+            const empresas = await prisma.empresa.findMany({
+              where: { usuarioId: claimed.userId },
+              select: { id: true, nome: true },
+            });
+
+            const lidOrPhone = rawFrom.split('@')[0];
+            const phoneToStore =
+              rawFrom.endsWith('@lid') && from !== rawFrom ? from.split('@')[0]
+              : rawFrom.endsWith('@lid') ? `lid_${lidOrPhone}`
+              : lidOrPhone;
+
+            const nomeAdmin = claimed.nome || senderName;
+            let vinculadas = 0;
+
+            for (const empresa of empresas) {
               try {
-                await prisma.whatsappAdminPhone.create({
-                  data: {
-                    instanceId: instanceForCode.id,
-                    telefone: phoneToStore,
-                    jid: rawFrom,
-                    nome: nomeAdmin,
-                    ativo: true,
-                  },
+                // empresaId_telefone compound key disponível após prisma generate
+                await (prisma.whatsappAdminPhone as any).upsert({
+                  where: { empresaId_telefone: { empresaId: empresa.id, telefone: phoneToStore } },
+                  create: { instanceId: globalInst.id, empresaId: empresa.id, telefone: phoneToStore, jid: rawFrom, nome: nomeAdmin, ativo: true },
+                  update: { jid: rawFrom, nome: nomeAdmin, ativo: true },
                 });
-                console.log(`[Baileys] ✅ Admin cadastrado via código: ${rawFrom} como "${nomeAdmin}"`);
-                await sock.sendMessage(rawFrom, {
-                  text: `✅ Olá ${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
-                });
-              } catch (codeError: any) {
-                if (codeError?.message?.includes('unique') || codeError?.message?.includes('Unique')) {
-                  await sock.sendMessage(rawFrom, {
-                    text: `✅ Seu número já está cadastrado como administrador, ${nomeAdmin}!`,
-                  });
-                } else {
-                  console.error('[Baileys] Erro ao cadastrar admin via código:', codeError);
-                  await sock.sendMessage(rawFrom, { text: '❌ Erro ao registrar. Tente gerar um novo código.' });
-                }
-              }
+                vinculadas++;
+              } catch { /* ignora */ }
             }
-            return; // Não processar como mensagem normal
+
+            console.log(`[Baileys] ✅ Admin ${nomeAdmin} vinculado em ${vinculadas} empresa(s)`);
+            const empresasNomes = empresas.map(e => `• ${e.nome}`).join('\n');
+            await sock.sendMessage(rawFrom, {
+              text: `✅ Olá *${nomeAdmin}*! Você foi vinculado como administrador em ${vinculadas} empresa(s):\n\n${empresasNomes}\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+            });
+            return;
           }
         }
 
-        // Verificar modo de pareamento: próxima msg de qualquer pessoa = novo admin
-        const instanceForPairing = await prisma.whatsappInstance.findUnique({
-          where: { empresaId },
-          select: { id: true, pairingMode: true, pairingNome: true },
-        });
+        // ── Modo de pareamento legado (pairingMode) ────────────────────────────
+        const globalInst = await getGlobalInstance();
+        if (globalInst?.pairingMode) {
+          const lidOrPhone  = rawFrom.split('@')[0];
+          const nomeAdmin   = globalInst.pairingNome || senderName;
+          const phoneToStore =
+            rawFrom.endsWith('@lid') && from !== rawFrom ? from.split('@')[0]
+            : rawFrom.endsWith('@lid') ? `lid_${lidOrPhone}`
+            : lidOrPhone;
 
-        if (instanceForPairing?.pairingMode) {
-          const lidOrPhone = rawFrom.split('@')[0];
-          const nomeAdmin = instanceForPairing.pairingNome || senderName;
-          try {
-            // Se o @lid já foi resolvido para o número real (from !== rawFrom),
-            // persiste o número real no banco. Isso garante que o admin seja
-            // reconhecido mesmo após reconexão (sem depender do mapa em memória).
-            const phoneToStore = (rawFrom.endsWith('@lid') && from !== rawFrom)
-              ? from.split('@')[0]                    // número real ex: "559981956046"
-              : rawFrom.endsWith('@lid')
-                ? `lid_${lidOrPhone}`                 // fallback: @lid não resolvido
-                : lidOrPhone;                         // já é número real
-
-            await prisma.whatsappAdminPhone.create({
-              data: {
-                instanceId: instanceForPairing.id,
-                telefone: phoneToStore,
-                jid: rawFrom, // JID real (pode ser @lid ou @s.whatsapp.net)
-                nome: nomeAdmin,
-                ativo: true,
-              },
-            });
-
-            await prisma.whatsappInstance.update({
-              where: { empresaId },
-              data: { pairingMode: false, pairingNome: null },
-            });
-
-            console.log(`[Baileys] ✅ Admin pareado: ${rawFrom} como "${nomeAdmin}" (telefone: ${phoneToStore})`);
-
-            await sock.sendMessage(rawFrom, {
-              text: `✅ Olá ${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
-            });
-          } catch (pairError) {
-            console.error('[Baileys] Erro ao parear admin:', pairError);
-            await sock.sendMessage(rawFrom, {
-              text: '❌ Erro ao registrar como admin. Tente novamente.',
-            });
+          // Vincula à empresa do pairingMode (armazenada em pairingNome como "nome|empresaId")
+          const [nome, empId] = (globalInst.pairingNome || '').split('|');
+          if (empId) {
+            try {
+              await (prisma.whatsappAdminPhone as any).upsert({
+                where: { empresaId_telefone: { empresaId: empId, telefone: phoneToStore } },
+                create: { instanceId: globalInst.id, empresaId: empId, telefone: phoneToStore, jid: rawFrom, nome: nome || senderName, ativo: true },
+                update: { jid: rawFrom, nome: nome || senderName, ativo: true },
+              });
+            } catch { /* ignora */ }
           }
-          return; // Não processar como mensagem normal
+
+          await prisma.whatsappInstance.updateMany({
+            where: { instanceName: GLOBAL_INSTANCE_NAME },
+            data: { pairingMode: false, pairingNome: null },
+          });
+
+          await sock.sendMessage(rawFrom, {
+            text: `✅ Olá *${nome || senderName}*! Você foi adicionado como administrador.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+          });
+          return;
         }
 
-        const response = await handleIncomingMessage(
-          empresaId,
-          from,
-          senderName,
-          text,
-          empresaId
-        );
+        // ── Processar comando ──────────────────────────────────────────────────
+        const response = await handleIncomingMessage(from, senderName, text);
 
-        const instance = await prisma.whatsappInstance.findUnique({
-          where: { empresaId },
-        });
-
-        if (instance) {
+        // Registrar mensagem (empresaId vem do contexto interno do handler)
+        if (globalInst) {
           await prisma.whatsappMessage.create({
             data: {
-              instanceId: instance.id,
+              instanceId: globalInst.id,
               direction: 'INCOMING',
               phoneNumber: from,
               senderName,
@@ -578,214 +407,108 @@ export async function initBaileys(empresaId: string): Promise<void> {
               response,
               status: 'processed',
             },
-          });
+          }).catch(() => {});
         }
 
-        // Só envia se houver resposta (string vazia = ignorar silenciosamente)
-        if (response && response.trim()) {
+        if (response?.trim()) {
           await sock.sendMessage(from, { text: response });
-          console.log(`[Baileys] Resposta enviada para ${from}`);
-        } else {
-          console.log(`[Baileys] Mensagem ignorada silenciosamente de ${from}`);
         }
-      } catch (error) {
-        console.error('[Baileys] Erro ao processar mensagem:', error);
+      } catch (err) {
+        console.error('[Baileys] Erro ao processar mensagem:', err);
       }
     });
-  } catch (error) {
-    console.error(`[Baileys] Erro ao iniciar para ${empresaId}:`, error);
-    statuses.set(empresaId, 'disconnected');
-    throw error;
+
+  } catch (err) {
+    console.error('[Baileys] Erro fatal ao iniciar socket global:', err);
+    globalStatus = 'disconnected';
+    throw err;
   }
 }
 
-/**
- * Retorna QR code em base64 (ou null se conectado/não iniciado)
- */
-export async function getQRCode(empresaId: string): Promise<string | null> {
-  return qrCodes.get(empresaId) || null;
+// ==========================================
+// API PÚBLICA
+// ==========================================
+
+export function getQRCode(): string | null { return globalQrCode; }
+export function getStatus(): string        { return globalStatus; }
+
+export async function sendMessage(to: string, text: string): Promise<void> {
+  if (!globalSocket) throw new Error('Bot Lina não está conectado');
+  const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+  await globalSocket.sendMessage(jid, { text });
 }
 
-/**
- * Retorna status: 'connected' | 'qr_code' | 'disconnected'
- */
-export function getStatus(empresaId: string): string {
-  return statuses.get(empresaId) || 'disconnected';
+export async function sendImageBuffer(to: string, imageBuffer: Buffer, caption?: string): Promise<void> {
+  if (!globalSocket) throw new Error('Bot Lina não está conectado');
+  const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+  await globalSocket.sendMessage(jid, { image: imageBuffer, caption: caption ?? '', mimetype: 'image/png' });
 }
 
-/**
- * Envia mensagem e retorna o JID real usado pelo WhatsApp (pode ser @lid)
- * Útil para capturar o mapeamento @lid → phone ao enviar para admins
- */
-export async function sendMessageAndCaptureJid(
-  empresaId: string,
-  toPhone: string,
-  text: string
-): Promise<string | null> {
-  const sock = sockets.get(empresaId);
-  if (!sock) return null;
-
+export async function sendMessageAndCaptureJid(toPhone: string, text: string): Promise<string | null> {
+  if (!globalSocket) return null;
   try {
     const cleanPhone = toPhone.replace(/\D/g, '');
-    const jid = `${cleanPhone}@s.whatsapp.net`;
-    const result = await sock.sendMessage(jid, { text });
-
-    // O remoteJid retornado pode ser @lid — capturar mapeamento
-    const actualJid = result?.key?.remoteJid;
-    if (actualJid && actualJid.endsWith('@lid')) {
-      const lidNum = actualJid.split('@')[0];
-      lidToPhone.set(lidNum, cleanPhone);
-      console.log(`[Baileys] Mapeamento capturado ao enviar: ${actualJid} → ${cleanPhone}`);
+    const jid        = `${cleanPhone}@s.whatsapp.net`;
+    const result     = await globalSocket.sendMessage(jid, { text });
+    const actualJid  = result?.key?.remoteJid;
+    if (actualJid?.endsWith('@lid')) {
+      lidToPhone.set(actualJid.split('@')[0], cleanPhone);
     }
     return actualJid || jid;
-  } catch (error) {
-    console.warn(`[Baileys] Erro ao enviar mensagem para ${toPhone}:`, error);
-    return null;
-  }
+  } catch { return null; }
 }
 
-/**
- * Envia mensagem de texto
- */
-export async function sendMessage(
-  empresaId: string,
-  to: string,
-  text: string
-): Promise<void> {
-  try {
-    const sock = sockets.get(empresaId);
-    if (!sock) {
-      throw new Error(
-        `Socket não encontrado para empresa: ${empresaId}. Conecte primeiro.`
-      );
-    }
-
-    const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
-    await sock.sendMessage(jid, { text });
-
-    console.log(`[Baileys] Mensagem enviada para ${jid}`);
-  } catch (error) {
-    console.error(`[Baileys] Erro ao enviar mensagem:`, error);
-    throw error;
-  }
-}
-
-/**
- * Envia uma imagem (Buffer PNG) com legenda opcional
- */
-export async function sendImageBuffer(
-  empresaId: string,
-  to: string,
-  imageBuffer: Buffer,
-  caption?: string
-): Promise<void> {
-  try {
-    const sock = sockets.get(empresaId);
-    if (!sock) {
-      throw new Error(`Socket não encontrado para empresa: ${empresaId}. Conecte primeiro.`);
-    }
-
-    const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
-    await sock.sendMessage(jid, {
-      image: imageBuffer,
-      caption: caption ?? '',
-      mimetype: 'image/png',
-    });
-
-    console.log(`[Baileys] Imagem enviada para ${jid}`);
-  } catch (error) {
-    console.error(`[Baileys] Erro ao enviar imagem:`, error);
-    throw error;
-  }
-}
-
-/**
- * Resolve número de telefone para JID do WhatsApp (@s.whatsapp.net ou @lid)
- * Necessário para identificar números no novo protocolo WhatsApp (@lid)
- */
-export async function resolvePhoneToJid(empresaId: string, phone: string): Promise<string | null> {
-  const sock = sockets.get(empresaId);
-  if (!sock) return null;
-
+export async function resolvePhoneToJid(phone: string): Promise<string | null> {
+  if (!globalSocket) return null;
   try {
     const cleanPhone = phone.replace(/\D/g, '');
-    const results = await sock.onWhatsApp(cleanPhone);
-    const result = Array.isArray(results) ? results[0] : results;
-    if (result?.exists && result?.jid) {
-      console.log(`[Baileys] JID resolvido: ${cleanPhone} → ${result.jid}`);
-      return result.jid;
-    }
-    return null;
-  } catch (error) {
-    console.warn(`[Baileys] Não foi possível resolver JID para ${phone}:`, error);
-    return null;
-  }
+    const results    = await globalSocket.onWhatsApp(cleanPhone);
+    const result     = Array.isArray(results) ? results[0] : results;
+    return result?.exists ? result.jid : null;
+  } catch { return null; }
 }
 
-/**
- * Desconecta e limpa estado
- */
-export async function disconnect(empresaId: string): Promise<void> {
+export async function disconnect(): Promise<void> {
   try {
-    const sock = sockets.get(empresaId);
-    if (sock) {
-      await sock.logout();
-      sockets.delete(empresaId);
+    if (globalSocket) {
+      await globalSocket.logout();
+      globalSocket = null;
+    }
+    globalQrCode   = null;
+    globalStatus   = 'disconnected';
+    reconnectCount = 0;
+    freshCreds     = false;
+
+    if (existsSync(GLOBAL_AUTH_DIR)) {
+      rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
     }
 
-    qrCodes.delete(empresaId);
-    statuses.set(empresaId, 'disconnected');
-    reconnectAttempts.delete(empresaId); // Reset para não bloquear nova conexão
-    freshCredsSet.delete(empresaId);
-
-    // Limpar /tmp para evitar credenciais stale na próxima conexão
-    const authDir = join(tmpdir(), `baileys-${empresaId}`);
-    if (existsSync(authDir)) {
-      rmSync(authDir, { recursive: true, force: true });
-      console.log(`[Baileys] /tmp limpo para ${empresaId}`);
-    }
-
-    await prisma.whatsappInstance.update({
-      where: { empresaId },
+    await prisma.whatsappInstance.updateMany({
+      where: { instanceName: GLOBAL_INSTANCE_NAME },
       data: { status: 'disconnected', authState: null, qrCode: null },
     });
-
-    console.log(`[Baileys] Desconectado para ${empresaId}`);
-  } catch (error) {
-    console.error(`[Baileys] Erro ao desconectar:`, error);
-    throw error;
+    console.log('[Baileys] Socket global desconectado');
+  } catch (err) {
+    console.error('[Baileys] Erro ao desconectar:', err);
+    throw err;
   }
 }
 
-/**
- * Restaura sessões ativas do banco (chamado no startup)
- */
+/** Chamado no startup do servidor para restaurar sessão salva. */
 export async function restoreActiveSessions(): Promise<void> {
   try {
-    console.log('[Baileys] Restaurando sessões ativas...');
-
-    // Reconecta qualquer instância que tenha authState salvo — independente do status.
-    // Isso cobre casos onde o status ficou 'disconnected' por falha de rede mas as
-    // credenciais ainda são válidas (ex: deploy/restart do servidor).
-    const instances = await prisma.whatsappInstance.findMany({
-      where: { authState: { not: null } },
-      select: { empresaId: true, status: true },
-    });
-
-    if (instances.length === 0) {
-      console.log('[Baileys] Nenhuma sessão com credenciais salvas para restaurar');
+    const instance = await getGlobalInstance();
+    if (!instance) {
+      console.log('[Baileys] Nenhuma instância global — aguardando setup');
       return;
     }
-
-    console.log(`[Baileys] ${instances.length} instância(s) com credenciais — iniciando reconexão...`);
-
-    for (const instance of instances) {
-      console.log(`[Baileys] Restaurando ${instance.empresaId} (status anterior: ${instance.status})...`);
-      await initBaileys(instance.empresaId).catch((err) => {
-        console.error(`[Baileys] Erro ao restaurar ${instance.empresaId}:`, err);
-      });
+    if (!instance.authState) {
+      console.log('[Baileys] Instância global sem credenciais salvas');
+      return;
     }
-  } catch (error) {
-    console.error('[Baileys] Erro ao restaurar sessões:', error);
+    console.log('[Baileys] Restaurando sessão global...');
+    await initBaileys();
+  } catch (err) {
+    console.error('[Baileys] Erro ao restaurar sessão global:', err);
   }
 }
