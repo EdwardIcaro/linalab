@@ -544,7 +544,7 @@
             <!-- QR Code aguardando escaneamento -->
             <div id="botQrState" style="display:none;">
                 <div class="bot-status-row">
-                    <canvas id="botQrCanvas" width="160" height="160" style="border-radius:12px;border:3px solid #f59e0b;"></canvas>
+                    <img id="botQrImg" src="" alt="QR Code" width="160" height="160" style="border-radius:12px;border:3px solid #f59e0b;display:block;">
                     <div class="bot-info-block">
                         <p style="font-weight:600;color:#1E293B;margin-bottom:0.5rem;">Escaneie o QR code com o WhatsApp do número do bot</p>
                         <p>Abra o WhatsApp → <strong>Dispositivos vinculados</strong> → <strong>Vincular dispositivo</strong></p>
@@ -559,7 +559,7 @@
             <!-- Conectado -->
             <div id="botConnected" style="display:none;">
                 <div class="bot-status-row">
-                    <canvas id="botWaCanvas" width="140" height="140" style="border-radius:12px;border:3px solid #25d366;"></canvas>
+                    <img id="botWaImg" src="" alt="WhatsApp" width="140" height="140" style="border-radius:12px;border:3px solid #25d366;display:block;">
                     <div class="bot-info-block">
                         <p class="bot-phone-display" id="botPhoneText"></p>
                         <p>Bot ativo e recebendo mensagens</p>
@@ -612,7 +612,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="../api.js"></script>
     <script>
         let allCompanies = [];
@@ -645,9 +644,9 @@
                 if (phone) {
                     const url = `https://wa.me/${phone}`;
                     document.getElementById('botWaLink').href = url;
-                    if (typeof QRCode !== 'undefined') {
-                        QRCode.toCanvas(document.getElementById('botWaCanvas'), url, { width: 140, margin: 1 });
-                    }
+                    // Gera QR via CDN para o link wa.me
+                    document.getElementById('botWaImg').src =
+                        `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}`;
                 }
                 stopBotPoll();
             } else if (state === 'qr_code') {
@@ -655,9 +654,10 @@
                 badge.textContent = '⏳ Aguardando QR';
                 badge.style.background = '#FEF3C7'; badge.style.color = '#92400E';
 
-                if (data.qrCode && data.qrCode !== botQrData && typeof QRCode !== 'undefined') {
+                // qrCode já vem como data URL (data:image/png;base64,...) do servidor
+                if (data.qrCode && data.qrCode !== botQrData) {
                     botQrData = data.qrCode;
-                    QRCode.toCanvas(document.getElementById('botQrCanvas'), data.qrCode, { width: 160, margin: 1 });
+                    document.getElementById('botQrImg').src = data.qrCode;
                 }
                 startBotPoll();
             } else if (state === 'reconnecting') {
