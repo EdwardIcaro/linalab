@@ -80,13 +80,27 @@ export async function handleIncomingMessage(
     // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
     const empresas = user.empresas ?? [];
 
-    // Comando "mudar empresa" → reseta contexto
-    if (/mudar\s+empresa|trocar\s+empresa|mudar\s+contexto/i.test(message)) {
-      clearContext(from);
-      return buildEmpresaMenu(empresas, 'Contexto resetado. Qual empresa você quer gerenciar?');
+    // "trocar para [nome]" → troca direta sem mostrar menu
+    const trocarParaMatch = message.match(/(?:trocar?|mudar|ir)\s+(?:para|pra|p\/|pro?)\s+(.+)/i);
+    if (trocarParaMatch) {
+      const alvo = detectEmpresaNoTexto(trocarParaMatch[1].trim(), empresas);
+      if (alvo) {
+        setContext(from, alvo.id, alvo.nome);
+        return `✅ Empresa alterada para *${alvo.nome}*.`;
+      }
     }
 
-    // Tentar detectar empresa pelo nome na mensagem (shortcut)
+    // "trocar empresa / mudar empresa" → abre menu de seleção
+    if (/trocar?\s*(?:de\s*)?empresa|mudar\s*(?:de\s*)?empresa|trocar\s*contexto|mudar\s*contexto|\btrocar\b|\bmudar\b/i.test(message)) {
+      clearContext(from);
+      if (empresas.length === 1) {
+        setContext(from, empresas[0].id, empresas[0].nome);
+        return `ℹ️ Você só tem uma empresa: *${empresas[0].nome}*.`;
+      }
+      return buildEmpresaMenu(empresas, '🔄 Qual empresa você quer gerenciar?');
+    }
+
+    // Detectar empresa pelo nome na mensagem (shortcut tipo "dados da Empresa X")
     const empresaDetectada = detectEmpresaNoTexto(message, empresas);
     if (empresaDetectada) {
       setContext(from, empresaDetectada.id, empresaDetectada.nome);
@@ -148,7 +162,14 @@ export async function handleIncomingMessage(
     if (command === 'pendentes') return handlePendentesCommand(empresaId);
     if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
     if (command === 'ajuda')     return handleAjudaCommand();
-    if (command === 'empresa')   return `📍 Contexto ativo: *${empresaNome}*\n\nEnvie "mudar empresa" para trocar.`;
+    if (command === 'empresa')   return `📍 *${empresaNome}*\n_Envie "trocar empresa" para mudar._`;
+
+    // Fechamento de caixa
+    const isFechamento = /\bfechamento\b|\bfechament[oa]\b|\babertura\b/i.test(message);
+    if (isFechamento) {
+      const dataFech = parseDateFromMessage(message) ?? new Date();
+      return handleFechamentoCaixa(empresaId, dataFech);
+    }
 
     const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
     if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
@@ -169,9 +190,11 @@ export async function handleIncomingMessage(
   }
 }
 
+const NUM_EMOJIS = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+
 function buildEmpresaMenu(empresas: Array<{ id: string; nome: string }>, header: string): string {
-  const lista = empresas.map((e, i) => `${i + 1}. ${e.nome}`).join('\n');
-  return `${header}\n\n${lista}\n\n_Responda com o número da empresa._`;
+  const lista = empresas.map((e, i) => `${NUM_EMOJIS[i] ?? `${i+1}.`} *${e.nome}*`).join('\n');
+  return `${header}\n\n${lista}\n\n_Responda com o número._`;
 }
 
 // ==========================================
@@ -575,6 +598,75 @@ async function handleComissoesEmAberto(
   }
 
   return resultado.trim();
+}
+
+// ==========================================
+// FECHAMENTO DE CAIXA
+// ==========================================
+
+async function handleFechamentoCaixa(empresaId: string, data: Date): Promise<string> {
+  const inicio = new Date(data); inicio.setHours(0,0,0,0);
+  const fim    = new Date(data); fim.setHours(23,59,59,999);
+  const dataFmt = inicio.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+
+  const [fechamento, abertura, registros] = await Promise.all([
+    prisma.fechamentoCaixa.findFirst({
+      where: { empresaId, data: { gte: inicio, lte: fim } },
+      orderBy: { data: 'desc' },
+    }),
+    prisma.aberturaCaixa.findFirst({
+      where: { empresaId, data: { gte: inicio, lte: fim } },
+      orderBy: { data: 'asc' },
+    }),
+    prisma.caixaRegistro.findMany({
+      where: { empresaId, data: { gte: inicio, lte: fim } },
+    }),
+  ]);
+
+  const entradas = registros.filter(r => r.tipo === 'ENTRADA').reduce((s,r) => s + r.valor, 0);
+  const saidas   = registros.filter(r => r.tipo === 'SAIDA').reduce((s,r) => s + r.valor, 0);
+  const saldo    = entradas - saidas;
+
+  let r = `📅 *${dataFmt.toUpperCase()}*\n\n`;
+
+  // Abertura
+  if (abertura) {
+    r += `🔓 Abertura: *R$ ${abertura.valorInicial.toFixed(2)}*\n`;
+  } else {
+    r += `🔓 Abertura: _não registrada_\n`;
+  }
+
+  // Movimento do dia
+  r += `\n💰 Movimento:\n`;
+  r += `Entradas: *R$ ${entradas.toFixed(2)}*\n`;
+  r += `Saídas: *R$ ${saidas.toFixed(2)}*\n`;
+  r += `Saldo: *R$ ${saldo.toFixed(2)}*\n`;
+
+  // Fechamento
+  if (!fechamento) {
+    r += `\n🔒 Fechamento: _não realizado neste dia_`;
+    return r.trim();
+  }
+
+  r += `\n🔒 *Fechamento:*\n`;
+  r += `PIX: *R$ ${fechamento.pix.toFixed(2)}*\n`;
+  r += `Dinheiro: *R$ ${fechamento.dinheiro.toFixed(2)}*\n`;
+  r += `Cartão: *R$ ${fechamento.cartao.toFixed(2)}*\n`;
+  if (fechamento.nfe) r += `NFe: *R$ ${fechamento.nfe.toFixed(2)}*\n`;
+
+  const totalDigitado = fechamento.pix + fechamento.dinheiro + fechamento.cartao + (fechamento.nfe ?? 0);
+  r += `Total digitado: *R$ ${totalDigitado.toFixed(2)}*\n`;
+
+  // Divergência
+  if (Math.abs(fechamento.diferenca) > 0.01) {
+    const sinal = fechamento.diferenca > 0 ? '📈 Sobra' : '📉 Falta';
+    r += `\n${sinal}: *R$ ${Math.abs(fechamento.diferenca).toFixed(2)}*`;
+    if (fechamento.observacao) r += `\n_Obs: ${fechamento.observacao}_`;
+  } else {
+    r += `\n✅ Sem divergência`;
+  }
+
+  return r.trim();
 }
 
 // ==========================================
@@ -1041,31 +1133,25 @@ async function handlePendentesCommand(empresaId: string): Promise<string> {
  * Handler: /ajuda
  */
 function handleAjudaCommand(): string {
-  return `📚 COMANDOS DISPONÍVEIS\n\n` +
+  return `📚 *COMANDOS*\n\n` +
     `*Dia a dia:*\n` +
-    `/resumo - Resumo de hoje\n` +
-    `/lavadores - Lavadores e comissões de hoje\n` +
-    `/caixa - Caixa do dia\n` +
-    `/pendentes - Ordens em andamento\n\n` +
-    `*PIX pelo WhatsApp:*\n` +
-    `ordens - Lista ordens ativas\n` +
-    `pix [nº] - Gera QR Code PIX (ex: _pix 321_)\n` +
-    `pix ordem [nº] - Também funciona\n` +
-    `reenviar pix [nº] - Reenvia QR Code já gerado\n\n` +
-    `*Relatórios por data:*\n` +
-    `relatório de ontem\n` +
-    `relatório dia 02/04\n` +
-    `relatório semanal _(últimos 7 dias)_\n` +
-    `relatório do dia 01/04 ao dia 07/04\n` +
-    `relatório de 01/04 a 07/04\n` +
-    `relatório dos últimos 15 dias\n\n` +
+    `resumo · lavadores · caixa · pendentes · pátio\n\n` +
+    `*Caixa:*\n` +
+    `fechamento _(hoje)_\n` +
+    `fechamento ontem · fechamento 02/04\n` +
+    `fechamento terça-feira\n\n` +
+    `*Relatórios:*\n` +
+    `relatório de ontem · relatório 02/04\n` +
+    `relatório semanal · relatório dos últimos 15 dias\n` +
+    `relatório de 01/04 a 07/04\n\n` +
     `*Comissões:*\n` +
-    `comissões em aberto - Todas as comissões pendentes\n` +
-    `comissão em aberto do [nome] - Comissões de um lavador\n\n` +
-    `*Busca:*\n` +
-    `[nome do lavador] - Detalhes do mês do lavador\n` +
-    `[qualquer pergunta] - IA com contexto do negócio\n\n` +
-    `/ajuda - Este menu`;
+    `comissões em aberto\n` +
+    `comissão em aberto do [nome]\n\n` +
+    `*PIX:*\n` +
+    `ordens · pix [nº] · reenviar pix [nº]\n\n` +
+    `*Empresa:*\n` +
+    `trocar empresa · trocar para [nome]\n\n` +
+    `_[nome do lavador] ou qualquer pergunta → IA_`;
 }
 
 /*
