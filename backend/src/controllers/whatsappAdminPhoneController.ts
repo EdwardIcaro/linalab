@@ -87,9 +87,10 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     const resolvedJid = await resolvePhoneToJid(telefone);
 
     // Criar número de admin
-    const adminPhone = await prisma.whatsappAdminPhone.create({
+    const adminPhone = await (prisma.whatsappAdminPhone as any).create({
       data: {
         instanceId: instance.id,
+        empresaId,
         telefone: telefone.trim(),
         jid: resolvedJid || null,
         nome: nome?.trim() || null,
