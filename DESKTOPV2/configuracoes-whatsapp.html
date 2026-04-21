@@ -593,6 +593,109 @@
             border-radius: 12px;
             margin-left: 0.4rem;
         }
+
+        /* ── Modal de Preferências de Notificação ── */
+        .modal-notif {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-notif.active { display: flex; }
+        .modal-notif-content {
+            background: #fff;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18);
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-notif-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 1;
+        }
+        .modal-notif-header h2 { margin: 0; font-size: 1.15rem; }
+        .modal-notif-body { padding: 1.25rem 1.5rem; flex: 1; }
+        .modal-notif-footer {
+            display: flex;
+            gap: .75rem;
+            justify-content: flex-end;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+        }
+
+        .notif-group { margin-bottom: 1.5rem; }
+        .notif-group-label {
+            font-size: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: #9ca3af;
+            margin-bottom: .75rem;
+        }
+        .notif-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .notif-row:last-child { border-bottom: none; }
+        .notif-info { flex: 1; }
+        .notif-title {
+            font-size: .9rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: .2rem;
+        }
+        .notif-desc {
+            font-size: .8rem;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+        .notif-badge-default {
+            font-size: .7rem;
+            background: #fef3c7;
+            color: #92400e;
+            padding: .15rem .45rem;
+            border-radius: 8px;
+            margin-left: .4rem;
+            font-weight: 600;
+        }
+
+        .btn-notif-open {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .55rem 1.1rem;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: .875rem;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .btn-notif-open:hover { background: #e5e7eb; }
     </style>
 </head>
 <body>
@@ -613,6 +716,19 @@
                         <input type="checkbox" id="blockUnknownToggle" onchange="updateBlockUnknown()">
                         <span class="toggle-slider"></span>
                     </label>
+                </div>
+            </div>
+
+            <!-- ===== Notificações Proativas ===== -->
+            <div class="config-card">
+                <div class="config-item">
+                    <div class="config-text">
+                        <h3>Notificações Proativas do Bot</h3>
+                        <p>Defina quais eventos o bot deve notificar automaticamente via WhatsApp — novas ordens, resumo diário, alertas de caixa e mais.</p>
+                    </div>
+                    <button class="btn-notif-open" onclick="openNotifModal()">
+                        🔔 Configurar eventos
+                    </button>
                 </div>
             </div>
 
@@ -810,6 +926,120 @@
                         <button type="button" class="btn-modal btn-cancel" onclick="cancelCodeMode()">Cancelar</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal Preferências de Notificação ===== -->
+    <div id="notifModal" class="modal-notif">
+        <div class="modal-notif-content">
+            <div class="modal-notif-header">
+                <h2>🔔 Notificações do Bot Lina</h2>
+                <button class="close-modal" onclick="closeNotifModal()">&times;</button>
+            </div>
+            <div class="modal-notif-body">
+                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1.25rem 0;">
+                    Ative ou desative cada evento. As notificações são enviadas para todos os admins cadastrados desta empresa.
+                </p>
+
+                <!-- Grupo: Ordens -->
+                <div class="notif-group">
+                    <div class="notif-group-label">Ordens de serviço</div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                🆕 Nova ordem criada
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Avisa quando qualquer nova ordem é aberta, com placa, serviço e lavador.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_novaOrdem">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">✅ Ordem finalizada</div>
+                            <div class="notif-desc">Avisa quando uma ordem é paga e fechada, com valor e método de pagamento.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_ordemFinalizada">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">⚠️ Ordens paradas há 1h+</div>
+                            <div class="notif-desc">Alerta de hora em hora quando ordens ficam "Em andamento" sem movimentação. Máx. 5 por vez.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_ordemParada">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Grupo: Clientes -->
+                <div class="notif-group">
+                    <div class="notif-group-label">Clientes</div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                🏆 Cliente VIP chegou
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Avisa na 10ª, 15ª, 20ª... visita do cliente, com gasto acumulado.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_clienteVip">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Grupo: Relatórios -->
+                <div class="notif-group">
+                    <div class="notif-group-label">Relatórios automáticos</div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                📊 Resumo diário (20h)
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Faturamento, saídas, líquido e top lavadores do dia, enviados todo dia às 20h.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_resumoDiario">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                🕙 Alerta de caixa aberto (21h)
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Se o caixa foi aberto hoje mas ainda não foi fechado, lembra o admin às 21h.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_alertaCaixaAberto">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-notif-footer">
+                <button class="btn-modal btn-cancel" onclick="closeNotifModal()">Cancelar</button>
+                <button class="btn-modal btn-save-phone" id="btnSalvarNotif" onclick="salvarNotifPrefs()">
+                    Salvar preferências
+                </button>
             </div>
         </div>
     </div>
@@ -1329,6 +1559,75 @@
             alertEl.style.display = 'block';
             setTimeout(() => alertEl.style.display = 'none', 4000);
         }
+
+        // ===== PREFERÊNCIAS DE NOTIFICAÇÃO =====
+        const NOTIF_DEFAULTS = {
+            novaOrdem:         true,
+            ordemFinalizada:   false,
+            resumoDiario:      true,
+            alertaCaixaAberto: true,
+            ordemParada:       false,
+            clienteVip:        true,
+        };
+
+        async function openNotifModal() {
+            // Carregar prefs atuais da empresa
+            try {
+                const empresaId = localStorage.getItem('empresaId');
+                const empresa = await window.api.getEmpresaById(empresaId);
+                const wappPrefs = (empresa.notificationPreferences?.whatsapp) ?? {};
+
+                for (const [key, def] of Object.entries(NOTIF_DEFAULTS)) {
+                    const el = document.getElementById(`notif_${key}`);
+                    if (el) el.checked = key in wappPrefs ? wappPrefs[key] : def;
+                }
+            } catch (e) {
+                // Fallback: usa defaults
+                for (const [key, def] of Object.entries(NOTIF_DEFAULTS)) {
+                    const el = document.getElementById(`notif_${key}`);
+                    if (el) el.checked = def;
+                }
+            }
+            document.getElementById('notifModal').classList.add('active');
+        }
+
+        function closeNotifModal() {
+            document.getElementById('notifModal').classList.remove('active');
+        }
+
+        async function salvarNotifPrefs() {
+            const btn = document.getElementById('btnSalvarNotif');
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+
+            const whatsapp = {};
+            for (const key of Object.keys(NOTIF_DEFAULTS)) {
+                const el = document.getElementById(`notif_${key}`);
+                if (el) whatsapp[key] = el.checked;
+            }
+
+            try {
+                const empresaId = localStorage.getItem('empresaId');
+                // Busca prefs atuais para não sobrescrever outras chaves (ex: notifs internas)
+                const empresa = await window.api.getEmpresaById(empresaId);
+                const currentPrefs = empresa.notificationPreferences || {};
+                const updatedPrefs = { ...currentPrefs, whatsapp };
+
+                await window.api.updateEmpresa(empresaId, { notificationPreferences: updatedPrefs });
+                showAlert('✅ Preferências de notificação salvas!', 'success');
+                closeNotifModal();
+            } catch (e) {
+                showAlert('Erro ao salvar preferências', 'error');
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Salvar preferências';
+            }
+        }
+
+        document.getElementById('notifModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'notifModal') closeNotifModal();
+        });
 
         // Fechar modais ao clicar fora
         document.getElementById('phoneModal')?.addEventListener('click', (e) => {
