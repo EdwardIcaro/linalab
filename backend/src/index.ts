@@ -35,6 +35,7 @@ import ocrRoutes from './routes/ocr';
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
 import { restoreActiveSessions, initBaileys, getStatus } from './services/baileyService';
+import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas } from './services/whatsappNotificationService';
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
@@ -209,6 +210,21 @@ cron.schedule('0 9 * * *', () => {
 }, {
   timezone: "America/Sao_Paulo"
 });
+
+// WhatsApp: Resumo diário às 20h
+cron.schedule('0 20 * * *', () => {
+  cronResumoDiario();
+}, { timezone: "America/Sao_Paulo" });
+
+// WhatsApp: Alerta de caixa aberto às 21h
+cron.schedule('0 21 * * *', () => {
+  cronAlertaCaixaAberto();
+}, { timezone: "America/Sao_Paulo" });
+
+// WhatsApp: Ordens paradas há 1h+ (a cada hora)
+cron.schedule('0 * * * *', () => {
+  cronOrdensParadas();
+}, { timezone: "America/Sao_Paulo" });
 
 // Cron job para verificar e reconectar bots desconectados (a cada 10 minutos)
 // Reforça reconexões que atingiram MAX_RECONNECT, garantindo sessão mantida em produção

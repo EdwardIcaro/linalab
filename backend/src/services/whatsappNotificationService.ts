@@ -1,0 +1,253 @@
+/**
+ * Notificações proativas do Bot Lina — enviadas automaticamente sem o admin perguntar.
+ * Todas as funções são fire-and-forget: erros são logados mas nunca quebram o fluxo principal.
+ */
+
+import prisma from '../db';
+import { sendMessage, getStatus } from './baileyService';
+
+// ─── Tipos ───────────────────────────────────────────────────────────────────
+
+type NotifKey =
+  | 'novaOrdem'
+  | 'ordemFinalizada'
+  | 'resumoDiario'
+  | 'alertaCaixaAberto'
+  | 'ordemParada'
+  | 'clienteVip'
+  | 'funcionarioOcioso';
+
+const DEFAULTS: Record<NotifKey, boolean> = {
+  novaOrdem:          true,
+  ordemFinalizada:    false,
+  resumoDiario:       true,
+  alertaCaixaAberto:  true,
+  ordemParada:        false,
+  clienteVip:         true,
+  funcionarioOcioso:  false,
+};
+
+function prefs(empresa: { notificationPreferences: any }): Record<NotifKey, boolean> {
+  const p = (empresa.notificationPreferences as any)?.whatsapp ?? {};
+  return { ...DEFAULTS, ...p };
+}
+
+// ─── Core: enviar para todos os admins da empresa ─────────────────────────────
+
+export async function notifyAdmins(empresaId: string, message: string): Promise<void> {
+  if (getStatus() !== 'connected') return;
+
+  const admins = await (prisma.whatsappAdminPhone as any).findMany({
+    where: { empresaId, ativo: true },
+    select: { jid: true, telefone: true },
+  }) as Array<{ jid: string | null; telefone: string }>;
+
+  for (const admin of admins) {
+    const dest = admin.jid ?? `${admin.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
+    try {
+      await sendMessage(dest, message);
+    } catch (e) {
+      console.error(`[Notif] Erro ao enviar para ${dest}:`, e);
+    }
+  }
+}
+
+// ─── Hooks (chamados pelos controllers) ──────────────────────────────────────
+
+export async function notifyNovaOrdem(empresaId: string, dados: {
+  numeroOrdem: number;
+  clienteNome: string;
+  placa: string;
+  servico: string;
+  valor: number;
+  lavadorNome: string | null;
+}): Promise<void> {
+  try {
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+    if (!empresa || !prefs(empresa).novaOrdem) return;
+
+    let msg = `🆕 *Nova Ordem #${dados.numeroOrdem}*\n` +
+      `🚗 ${dados.placa} · ${dados.clienteNome}\n` +
+      `🧹 ${dados.servico} · *R$ ${dados.valor.toFixed(2)}*`;
+    if (dados.lavadorNome) msg += `\n👤 ${dados.lavadorNome}`;
+
+    await notifyAdmins(empresaId, msg);
+  } catch (e) {
+    console.error('[Notif] notifyNovaOrdem:', e);
+  }
+}
+
+export async function notifyOrdemFinalizada(empresaId: string, dados: {
+  numeroOrdem: number;
+  clienteNome: string;
+  placa: string;
+  valor: number;
+  metodoPagamento: string;
+}): Promise<void> {
+  try {
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+    if (!empresa || !prefs(empresa).ordemFinalizada) return;
+
+    const msg = `✅ *Ordem #${dados.numeroOrdem} finalizada*\n` +
+      `🚗 ${dados.placa} · ${dados.clienteNome}\n` +
+      `💰 *R$ ${dados.valor.toFixed(2)}* · ${dados.metodoPagamento}`;
+
+    await notifyAdmins(empresaId, msg);
+  } catch (e) {
+    console.error('[Notif] notifyOrdemFinalizada:', e);
+  }
+}
+
+export async function notifyClienteVip(empresaId: string, dados: {
+  clienteNome: string;
+  placa: string;
+  totalVisitas: number;
+  gastoTotal: number;
+}): Promise<void> {
+  try {
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+    if (!empresa || !prefs(empresa).clienteVip) return;
+
+    const msg = `🏆 *Cliente VIP chegou!*\n` +
+      `👤 ${dados.clienteNome} · 🚗 ${dados.placa}\n` +
+      `${dados.totalVisitas}ª visita · Total: *R$ ${dados.gastoTotal.toFixed(2)}*`;
+
+    await notifyAdmins(empresaId, msg);
+  } catch (e) {
+    console.error('[Notif] notifyClienteVip:', e);
+  }
+}
+
+// ─── Cron Jobs ────────────────────────────────────────────────────────────────
+
+export async function cronResumoDiario(): Promise<void> {
+  if (getStatus() !== 'connected') return;
+
+  const empresas = await prisma.empresa.findMany({
+    where: { ativo: true },
+    select: { id: true, notificationPreferences: true },
+  });
+
+  for (const empresa of empresas) {
+    if (!prefs(empresa).resumoDiario) continue;
+    try {
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+
+      const [ordens, caixa] = await Promise.all([
+        prisma.ordemServico.findMany({
+          where: { empresaId: empresa.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+          include: { lavador: { select: { nome: true, comissao: true } } },
+        }),
+        prisma.caixaRegistro.findMany({
+          where: { empresaId: empresa.id, data: { gte: hoje, lt: amanha } },
+        }),
+      ]);
+
+      const finalizadas = ordens.filter(o => o.status === 'FINALIZADO');
+      const emAberto   = ordens.filter(o => ['PENDENTE','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status));
+      const fat        = finalizadas.reduce((s, o) => s + o.valorTotal, 0);
+      const saidas     = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
+
+      // Top lavadores por comissão
+      const comPorLav: Record<string, { nome: string; ordens: number; com: number }> = {};
+      for (const o of finalizadas) {
+        if (!o.lavador || !o.lavadorId) continue;
+        if (!comPorLav[o.lavadorId]) comPorLav[o.lavadorId] = { nome: o.lavador.nome, ordens: 0, com: 0 };
+        comPorLav[o.lavadorId].ordens++;
+        comPorLav[o.lavadorId].com += o.valorTotal * (o.lavador.comissao / 100);
+      }
+      const topLavs = Object.values(comPorLav).sort((a, b) => b.com - a.com).slice(0, 3);
+
+      let msg = `📊 *Resumo do dia — ${hoje.toLocaleDateString('pt-BR')}*\n`;
+      msg += `━━━━━━━━━━━━━━━\n`;
+      msg += `🚗 *${finalizadas.length}* finalizada(s)`;
+      if (emAberto.length > 0) msg += ` · ⏳ *${emAberto.length}* em aberto`;
+      msg += `\n💰 Faturamento: *R$ ${fat.toFixed(2)}*`;
+      msg += `\n💸 Saídas: *R$ ${saidas.toFixed(2)}*`;
+      msg += `\n💵 Líquido: *R$ ${(fat - saidas).toFixed(2)}*`;
+
+      if (topLavs.length > 0) {
+        msg += `\n━━━━━━━━━━━━━━━\n👷 Lavadores:\n`;
+        for (const l of topLavs) {
+          msg += `• *${l.nome}*: ${l.ordens} ord. · *R$ ${l.com.toFixed(2)}*\n`;
+        }
+      }
+
+      await notifyAdmins(empresa.id, msg.trim());
+    } catch (e) {
+      console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
+    }
+  }
+}
+
+export async function cronAlertaCaixaAberto(): Promise<void> {
+  if (getStatus() !== 'connected') return;
+
+  const empresas = await prisma.empresa.findMany({
+    where: { ativo: true },
+    select: { id: true, notificationPreferences: true },
+  });
+
+  for (const empresa of empresas) {
+    if (!prefs(empresa).alertaCaixaAberto) continue;
+    try {
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+
+      const [abertura, fechamento] = await Promise.all([
+        prisma.aberturaCaixa.findFirst({ where: { empresaId: empresa.id, data: { gte: hoje, lt: amanha } } }),
+        prisma.fechamentoCaixa.findFirst({ where: { empresaId: empresa.id, data: { gte: hoje, lt: amanha } } }),
+      ]);
+
+      if (abertura && !fechamento) {
+        await notifyAdmins(empresa.id, `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`);
+      }
+    } catch (e) {
+      console.error(`[Notif Caixa] empresa ${empresa.id}:`, e);
+    }
+  }
+}
+
+export async function cronOrdensParadas(): Promise<void> {
+  if (getStatus() !== 'connected') return;
+
+  const umHoraAtras = new Date(Date.now() - 60 * 60 * 1000);
+
+  const empresas = await prisma.empresa.findMany({
+    where: { ativo: true },
+    select: { id: true, notificationPreferences: true },
+  });
+
+  for (const empresa of empresas) {
+    if (!prefs(empresa).ordemParada) continue;
+    try {
+      const paradas = await prisma.ordemServico.findMany({
+        where: { empresaId: empresa.id, status: 'EM_ANDAMENTO', updatedAt: { lt: umHoraAtras } },
+        include: { veiculo: { select: { modelo: true, placa: true } } },
+        take: 5,
+      });
+
+      if (paradas.length === 0) continue;
+
+      let msg = `⚠️ *${paradas.length} ordem(ns) parada(s) há 1h+:*\n`;
+      for (const o of paradas) {
+        const horas = Math.floor((Date.now() - o.updatedAt.getTime()) / 3600000);
+        msg += `• #${o.numeroOrdem} ${o.veiculo.modelo ?? 'Veículo'} ${o.veiculo.placa ?? ''} (${horas}h)\n`;
+      }
+
+      await notifyAdmins(empresa.id, msg.trim());
+    } catch (e) {
+      console.error(`[Notif Paradas] empresa ${empresa.id}:`, e);
+    }
+  }
+}

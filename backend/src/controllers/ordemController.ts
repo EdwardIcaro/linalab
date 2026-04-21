@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
+import { notifyNovaOrdem, notifyOrdemFinalizada, notifyClienteVip } from '../services/whatsappNotificationService';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
 
@@ -417,6 +418,36 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       } catch (notificationError) {
         console.error('Erro ao criar notificação:', notificationError);
       }
+
+      // WhatsApp: notificar nova ordem
+      const servicoNome = ordemFinal.items?.[0]?.servico?.nome ?? 'Serviço';
+      notifyNovaOrdem(empresaId, {
+        numeroOrdem: ordemFinal.numeroOrdem,
+        clienteNome: ordemFinal.cliente.nome,
+        placa: ordemFinal.veiculo?.placa ?? '',
+        servico: servicoNome,
+        valor: ordemFinal.valorTotal,
+        lavadorNome: ordemFinal.lavador?.nome ?? null,
+      }).catch(() => {});
+
+      // WhatsApp: notificar cliente VIP (10ª visita em diante)
+      try {
+        const totalVisitas = await prisma.ordemServico.count({
+          where: { clienteId: ordemFinal.clienteId, empresaId, status: { not: 'CANCELADO' } },
+        });
+        if (totalVisitas >= 10 && totalVisitas % 5 === 0) {
+          const gastoTotal = await prisma.ordemServico.aggregate({
+            where: { clienteId: ordemFinal.clienteId, empresaId, status: 'FINALIZADO' },
+            _sum: { valorTotal: true },
+          });
+          notifyClienteVip(empresaId, {
+            clienteNome: ordemFinal.cliente.nome,
+            placa: ordemFinal.veiculo?.placa ?? '',
+            totalVisitas,
+            gastoTotal: gastoTotal._sum.valorTotal ?? 0,
+          }).catch(() => {});
+        }
+      } catch { /* fire-and-forget */ }
     });
   } catch (error: any) {
     if (error.code === 'ACTIVE_ORDER_EXISTS') {
@@ -1599,6 +1630,16 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
 
     // ✅ CACHE: Invalida cache desta empresa quando ordem é finalizada
     invalidateCache(empresaId);
+
+    // WhatsApp: notificar ordem finalizada (fire-and-forget)
+    const metodoPrincipal = pagamentos[0]?.metodo ?? 'OUTRO';
+    notifyOrdemFinalizada(empresaId, {
+      numeroOrdem: ordem.numeroOrdem,
+      clienteNome: ordem.cliente.nome,
+      placa: ordem.veiculo?.placa ?? '',
+      valor: valorFinal,
+      metodoPagamento: metodoPrincipal,
+    }).catch(() => {});
 
     // Resposta de sucesso
     res.status(200).json({
