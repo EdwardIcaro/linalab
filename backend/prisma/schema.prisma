@@ -59,6 +59,7 @@ model Empresa {
   tipoVeiculos               TipoVeiculo[]
   whatsappInstance           WhatsappInstance?
   bankIntegration            BankIntegration?
+  whatsappBotUsers           WhatsappBotUser[]
 
   @@map("empresas")
 }
@@ -125,6 +126,7 @@ model Lavador {
   empresa             Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   ordens              OrdemServico[]
   ordemLavadores      OrdemServicoLavador[]
+  whatsappBotUsers    WhatsappBotUser[]
 
   @@unique([nome, empresaId])
   @@map("lavadores")
@@ -467,6 +469,24 @@ model WhatsappAdminPhone {
 
   @@unique([empresaId, telefone])
   @@map("whatsapp_admin_phones")
+}
+
+model WhatsappBotUser {
+  id         String   @id @default(cuid())
+  empresaId  String
+  nome       String
+  role       String   // LAVADOR | CAIXA | FINANCEIRO
+  jid        String?  // preenchido após registro via PIN
+  telefone   String?
+  lavadorId  String?  // vínculo opcional com Lavador do sistema
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lavador  Lavador? @relation(fields: [lavadorId], references: [id], onDelete: SetNull)
+
+  @@map("whatsapp_bot_users")
 }
 
 model WhatsappMessage {

@@ -12,6 +12,7 @@ import { tmpdir } from 'os';
 import prisma from '../db';
 import { handleIncomingMessage } from './whatsappCommandHandler';
 import { validateAndClaimByCode } from './pairingCodeStore';
+import { validateAndClaimBotCode } from './botUserCodeStore';
 
 // ==========================================
 // CONSTANTES
@@ -354,6 +355,29 @@ export async function initBaileys(): Promise<void> {
             const empresasNomes = empresas.map(e => `• ${e.nome}`).join('\n');
             await sock.sendMessage(rawFrom, {
               text: `✅ Olá *${nomeAdmin}*! Você foi vinculado como administrador em ${vinculadas} empresa(s):\n\n${empresasNomes}\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+            });
+            return;
+          }
+        }
+
+        // ── PIN de usuário do bot (LAVADOR / CAIXA / FINANCEIRO) ─────────────
+        if (/^\d{4}$/.test(trimmed)) {
+          const botClaimed = validateAndClaimBotCode(trimmed);
+          if (botClaimed) {
+            const lidOrPhone = rawFrom.split('@')[0];
+            const phoneToStore =
+              rawFrom.endsWith('@lid') && from !== rawFrom ? from.split('@')[0]
+              : rawFrom.endsWith('@lid') ? `lid_${lidOrPhone}`
+              : lidOrPhone;
+
+            await (prisma as any).whatsappBotUser.update({
+              where: { id: botClaimed.botUserId },
+              data: { jid: rawFrom, telefone: phoneToStore, ativo: true },
+            });
+
+            const roleLabel: Record<string, string> = { LAVADOR: 'Lavador', CAIXA: 'Caixa', FINANCEIRO: 'Financeiro' };
+            await sock.sendMessage(rawFrom, {
+              text: `✅ Olá *${botClaimed.nome}*! Você foi registrado como *${roleLabel[botClaimed.role] ?? botClaimed.role}*.\n\nEnvie *ajuda* para ver o que posso fazer por você.`,
             });
             return;
           }

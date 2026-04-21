@@ -32,6 +32,14 @@ import {
   getBankIntegration,
   saveBankIntegration,
 } from '../controllers/bankIntegrationController';
+import {
+  listBotUsers,
+  createBotUser,
+  updateBotUser,
+  deleteBotUser,
+  generatePin,
+  getPinStatus,
+} from '../controllers/whatsappBotUserController';
 
 const router: Router = Router();
 
@@ -70,5 +78,13 @@ router.delete('/admin-phones/pair-code', cancelarCodigoPareamento);
 // Rotas com parâmetro (devem vir depois das rotas específicas)
 router.delete('/admin-phones/:adminPhoneId', deleteAdminPhone);
 router.patch('/admin-phones/:adminPhoneId', updateAdminPhone);
+
+// Usuários do bot (LAVADOR / CAIXA / FINANCEIRO)
+router.get('/bot-users',             listBotUsers);
+router.post('/bot-users',            createBotUser);
+router.patch('/bot-users/:id',       updateBotUser);
+router.delete('/bot-users/:id',      deleteBotUser);
+router.post('/bot-users/:id/pin',    generatePin);
+router.get('/bot-users/:id/pin',     getPinStatus);
 
 export default router;
