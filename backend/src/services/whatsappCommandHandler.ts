@@ -100,6 +100,29 @@ export async function handleIncomingMessage(
       return buildEmpresaMenu(empresas, '🔄 Qual empresa você quer gerenciar?');
     }
 
+    // ── MULTI-EMPRESA: "resumo das duas", "relatório de todas", etc. ──────────
+    const isMultiEmpresaRequest = empresas.length > 1 &&
+      /\b(das?\s+duas?|de\s+todas?|ambas?|as\s+duas?|todas?\s+(?:as\s+)?empresas?|os\s+dois|todo[as]?\s*mundo|ambas?\s+empresas?)\b/i.test(message);
+
+    if (isMultiEmpresaRequest) {
+      const rangeM  = parseDateRangeFromMessage(message);
+      const dateM   = parseDateFromMessage(message);
+      const isCaixa = /\bcaixa\b/.test(command);
+      const isLavs  = /\blavadores?\b/.test(command);
+
+      const blocos = await Promise.all(empresas.map(async e => {
+        let r: string;
+        if (rangeM)       r = await handleRelatorioPeriodo(rangeM.inicio, rangeM.fim, e.id);
+        else if (dateM)   r = await handleRelatorioData(dateM, e.id);
+        else if (isCaixa) r = await handleCaixaCommand(e.id);
+        else if (isLavs)  r = await handleLavadoresCommand(e.id);
+        else              r = await handleResumoCommand(e.id);
+        return `━━ *${e.nome}* ━━\n${r}`;
+      }));
+
+      return blocos.join('\n\n');
+    }
+
     // Detectar empresa pelo nome na mensagem (shortcut tipo "dados da Empresa X")
     const empresaDetectada = detectEmpresaNoTexto(message, empresas);
     if (empresaDetectada) {
@@ -115,16 +138,20 @@ export async function handleIncomingMessage(
       ctx = getContext(from)!;
     }
 
-    // Admin com múltiplas empresas sem contexto → pede seleção
+    // Admin com múltiplas empresas sem contexto → pede seleção com mini-dica
     if (!ctx && empresas.length > 1) {
-      // Se digitou número de 1 a N → selecionar empresa
       const escolha = parseInt(command);
       if (!isNaN(escolha) && escolha >= 1 && escolha <= empresas.length) {
         const escolhida = empresas[escolha - 1];
         setContext(from, escolhida.id, escolhida.nome);
         ctx = getContext(from)!;
       } else {
-        return buildEmpresaMenu(empresas, `Olá *${user.nome}*! Você tem acesso a múltiplas empresas.\nQual deseja gerenciar?`);
+        // Saudação simples → menu rápido
+        const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina)$/i.test(command);
+        const header = isSaudacao
+          ? `Olá *${user.nome}*! 👋\nVocê gerencia *${empresas.length} empresas*. Para qual deseja o resumo?`
+          : `Qual empresa você quer consultar?`;
+        return buildEmpresaMenu(empresas, header + `\n\n_Dica: "resumo das duas" para ver todas juntas_`);
       }
     }
 
@@ -152,7 +179,16 @@ export async function handleIncomingMessage(
       return handlePendingSaidaStep(message, from, senderName);
     }
 
-    const isSaida = /\b(sa[íi]da|despesa|gasto|gastei|paguei|comprei|lancei|lan[çc]ar)\b/i.test(message);
+    // Detectar intenção de lançar despesa — padrões claros apenas
+    // Evita falsos positivos como "saída do caixa de ontem" ou "ver saída"
+    const isSaida = (
+      /^(sa[íi]da|despesa|gasto|desp)$/i.test(command) ||                                         // comando exato
+      /\b(sa[íi]da|despesa)\s+[\d,\.]/i.test(message) ||                                          // "saída 50", "despesa 120,50"
+      /\b(gastei|paguei|comprei)\b/i.test(message) ||                                             // verbos de gasto
+      /\b(nova\s+sa[íi]da|lan[çc]ar\s+sa[íi]da|lan[çc]ar\s+despesa|registrar?\s+(sa[íi]da|despesa))\b/i.test(message) ||
+      /\badiantamento\s+(?:de\s+)?[\d,\.]/i.test(message) ||                                      // "adiantamento de 200"
+      /\b(sa[íi]da|despesa)\s+d[eo]\s+\w/i.test(message)                                          // "saída de gasolina"
+    );
     if (isSaida) return handleSaidaWhatsapp(message, from, senderName, empresaId);
 
     if (command === 'ordens')    return handleOrdensAtivas(empresaId, user);
@@ -1136,22 +1172,25 @@ function handleAjudaCommand(): string {
   return `📚 *COMANDOS*\n\n` +
     `*Dia a dia:*\n` +
     `resumo · lavadores · caixa · pendentes · pátio\n\n` +
+    `*Despesas:*\n` +
+    `saída 50 · saída de gasolina 80\n` +
+    `gastei 120 conta de luz · despesa 200 pix\n` +
+    `adiantamento de 150 · nova saída\n\n` +
     `*Caixa:*\n` +
-    `fechamento _(hoje)_\n` +
-    `fechamento ontem · fechamento 02/04\n` +
-    `fechamento terça-feira\n\n` +
+    `fechamento · fechamento ontem · fechamento 02/04\n\n` +
     `*Relatórios:*\n` +
-    `relatório de ontem · relatório 02/04\n` +
-    `relatório semanal · relatório dos últimos 15 dias\n` +
+    `relatório ontem · relatório 02/04\n` +
+    `relatório semanal · últimos 15 dias\n` +
     `relatório de 01/04 a 07/04\n\n` +
+    `*Multi-empresa:*\n` +
+    `resumo das duas · caixa de todas · lavadores das duas\n\n` +
     `*Comissões:*\n` +
-    `comissões em aberto\n` +
-    `comissão em aberto do [nome]\n\n` +
+    `comissões em aberto · comissão do [nome]\n\n` +
     `*PIX:*\n` +
     `ordens · pix [nº] · reenviar pix [nº]\n\n` +
     `*Empresa:*\n` +
     `trocar empresa · trocar para [nome]\n\n` +
-    `_[nome do lavador] ou qualquer pergunta → IA_`;
+    `_Qualquer pergunta livre → respondo com IA_`;
 }
 
 /*
@@ -1246,16 +1285,17 @@ function promptForSaidaStep(p: PendingSaida): string {
   switch (p.step) {
     case 'valor':
       return (
-        `💸 *Nova saída de caixa*\n\n` +
-        `💰 *Qual o valor da saída?*\n` +
-        `_Ex: 50, 120,50, 200_`
+        `💸 *Lançar despesa*\n\n` +
+        `💰 *Qual o valor?*\n` +
+        `_Ex: 50, 120,50, 200_\n\n` +
+        `_Envie "cancelar" para abortar._`
       );
 
     case 'descricao':
       return (
-        `💸 Saída de *R$ ${p.valor.toFixed(2)}*\n\n` +
-        `📝 *Qual a descrição do gasto?*\n` +
-        `_Ex: Produto químico, Conta de luz, Material de limpeza_`
+        `💸 *R$ ${p.valor.toFixed(2)}*\n\n` +
+        `📝 *O que foi pago? (descrição breve)*\n` +
+        `_Ex: Produto químico, Conta de luz, Gasolina_`
       );
 
     case 'formaPagamento':
@@ -1284,17 +1324,17 @@ function promptForSaidaStep(p: PendingSaida): string {
 
     case 'confirming': {
       const formaLabel = FORMA_LABELS[p.formaPagamento || 'DINHEIRO'] || p.formaPagamento;
-      const fornLine    = p.fornecedorNome ? `\n  🏪 Fornecedor: ${p.fornecedorNome}` : '';
-      const lavLine     = p.lavadorNome    ? `\n  👤 Funcionário: ${p.lavadorNome}` : '';
+      const fornLine    = p.fornecedorNome ? `\n  🏪 ${p.fornecedorNome}` : '';
+      const lavLine     = p.lavadorNome    ? `\n  👤 ${p.lavadorNome}` : '';
       return (
-        `💸 *Confirmar lançamento?*\n\n` +
-        `  💰 Valor: *R$ ${p.valor.toFixed(2)}*\n` +
-        `  📝 Descrição: ${p.descricao}\n` +
-        `  💳 Pagamento: ${formaLabel}\n` +
-        `  🏷️ Categoria: ${p.categoria}` +
+        `💸 *Confirmar despesa?*\n\n` +
+        `  💰 *R$ ${p.valor.toFixed(2)}*\n` +
+        `  📝 ${p.descricao}\n` +
+        `  💳 ${formaLabel}\n` +
+        `  🏷️ ${p.categoria}` +
         lavLine +
         fornLine +
-        `\n\nResponda *sim* para confirmar ou *não* para cancelar.`
+        `\n\n*sim* para lançar · *não* para cancelar`
       );
     }
   }
