@@ -27,13 +27,14 @@ const MAX_RECONNECT = 100;
 // ==========================================
 // STATE GLOBAL
 // ==========================================
-let globalSocket:   WASocket | null = null;
-let globalQrCode:   string   | null = null;
-let globalStatus:   string          = 'disconnected';
-let globalStore:    any             = null;
-let reconnectCount: number          = 0;
-let reconnectDelay: number          = BASE_DELAY;
-let freshCreds:     boolean         = false;
+let globalSocket:      WASocket | null = null;
+let globalQrCode:      string   | null = null;
+let globalStatus:      string          = 'disconnected';
+let globalStore:       any             = null;
+let reconnectCount:    number          = 0;
+let reconnectDelay:    number          = BASE_DELAY;
+let freshCreds:        boolean         = false;
+let isInitializing:    boolean         = false;
 
 const lidToPhone = new Map<string, string>();
 
@@ -54,23 +55,13 @@ async function getGlobalInstance() {
 
 async function restoreAuthFromDb(): Promise<void> {
   try {
-    mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
-    const instance = await getGlobalInstance();
-
+    // Sempre limpar /tmp e restaurar do banco — garante consistência em restarts/deploys
     if (existsSync(GLOBAL_AUTH_DIR)) {
-      const files = readdirSync(GLOBAL_AUTH_DIR);
-      if (files.length > 0) {
-        if (!instance?.authState && !freshCreds) {
-          rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
-          mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
-          console.log('[Baileys] Credenciais stale removidas (DB null, sem scan recente)');
-        } else {
-          console.log(`[Baileys] /tmp já tem ${files.length} arquivo(s), mantendo`);
-          return;
-        }
-      }
+      rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
     }
+    mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
 
+    const instance = await getGlobalInstance();
     if (!instance?.authState) {
       console.log('[Baileys] Início limpo — sem credenciais salvas');
       return;
@@ -80,7 +71,7 @@ async function restoreAuthFromDb(): Promise<void> {
     for (const [filename, content] of Object.entries(authFiles)) {
       writeFileSync(join(GLOBAL_AUTH_DIR, filename), content, 'utf-8');
     }
-    console.log('[Baileys] Auth state restaurado do banco');
+    console.log(`[Baileys] Auth state restaurado do banco (${Object.keys(authFiles).length} arquivos)`);
   } catch (err) {
     console.error('[Baileys] Erro ao restaurar auth state:', err);
   }
@@ -115,6 +106,11 @@ export async function initBaileys(): Promise<void> {
       console.log('[Baileys] Socket global já ativo');
       return;
     }
+    if (isInitializing) {
+      console.log('[Baileys] Inicialização já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    isInitializing = true;
 
     console.log('[Baileys] Iniciando socket global...');
 
@@ -202,6 +198,7 @@ export async function initBaileys(): Promise<void> {
         reconnectCount = 0;
         resetDelay();
         freshCreds     = false;
+        isInitializing = false;
 
         const phone = sock.user?.id?.split(':')[0] ?? null;
         await prisma.whatsappInstance.updateMany({
@@ -218,7 +215,8 @@ export async function initBaileys(): Promise<void> {
         const isRealLogout  = statusCode === loggedOutCode && wasConnected;
         const shouldRetry   = !isRealLogout && reconnectCount < MAX_RECONNECT;
 
-        globalSocket = null;
+        globalSocket   = null;
+        isInitializing = false;
 
         if (shouldRetry) {
           reconnectCount++;
@@ -444,7 +442,8 @@ export async function initBaileys(): Promise<void> {
 
   } catch (err) {
     console.error('[Baileys] Erro fatal ao iniciar socket global:', err);
-    globalStatus = 'disconnected';
+    globalStatus   = 'disconnected';
+    isInitializing = false;
     throw err;
   }
 }

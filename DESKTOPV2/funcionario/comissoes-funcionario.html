@@ -450,8 +450,12 @@
     </div>
 
     <!-- Orders list -->
-    <div class="section-lbl" id="listLabel" style="display:none">Ordens</div>
+    <div class="section-lbl" id="listLabel" style="display:none">Ordens a receber</div>
     <div id="orderList"></div>
+
+    <!-- Debits section -->
+    <div class="section-lbl" id="debitLabel" style="display:none;margin-top:14px">Débitos pendentes</div>
+    <div id="debitList"></div>
   </main>
 
   <!-- MOBILE NAV -->
@@ -471,8 +475,10 @@
 
     let funcionarios       = [];
     let selectedId         = null;
-    let ordens             = [];
-    let totalAdiantamentos = 0;
+    // Dados retornados pelo getDadosComissao
+    let ordensComissao     = []; // ordens com comissaoPaga: false
+    let adiantamentosPend  = []; // adiantamentos com status PENDENTE
+    let debitosOS          = []; // OS com pagamento DEBITO_FUNCIONARIO
     let activePreset       = 'today';
     let activeStatusFilter = '';
     let dateInicio         = '';
@@ -520,6 +526,7 @@
         dateInicio = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
         dateFim = today;
       } else if (preset === 'abertas') {
+        // Sem datas: backend retorna todas as comissões pendentes (sem limite de data)
         dateInicio = ''; dateFim = '';
       }
 
@@ -537,14 +544,44 @@
     // ── STATUS FILTER ──
     function setStatusFilter(status) {
       activeStatusFilter = status;
-      document.querySelectorAll('.sf-chip').forEach(c => {
-        c.className = 'sf-chip';
-      });
+      document.querySelectorAll('.sf-chip').forEach(c => { c.className = 'sf-chip'; });
       const map = { '':'active-all', 'FINALIZADO':'active-fin', 'AGUARDANDO_PAGAMENTO':'active-ag', 'EM_ANDAMENTO':'active-em' };
-      const id  = { '':'sf-all', 'FINALIZADO':'sf-fin', 'AGUARDANDO_PAGAMENTO':'sf-ag', 'EM_ANDAMENTO':'sf-em' };
-      const el  = document.getElementById(id[status]);
-      if (el) el.classList.add(map[status]);
+      const ids = { '':'sf-all', 'FINALIZADO':'sf-fin', 'AGUARDANDO_PAGAMENTO':'sf-ag', 'EM_ANDAMENTO':'sf-em' };
+      document.getElementById(ids[status])?.classList.add(map[status]);
       renderOrdens();
+    }
+
+    // ── MULTI-WASH: retorna o ganho do lavador numa ordem ──
+    function getWasherShare(order, lavadorId) {
+      const washers = [];
+      if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
+        order.ordemLavadores.forEach(ol => {
+          const id = ol.lavadorId || ol.id;
+          if (id) washers.push({ id, ganho: typeof ol.ganho === 'number' ? ol.ganho : undefined });
+        });
+      } else if (order.lavadorId) {
+        const ganho = typeof order.comissao === 'number' ? order.comissao : undefined;
+        washers.push({ id: order.lavadorId, ganho });
+      }
+      if (!washers.length) return 0;
+
+      // Se o registro já tem ganho individual calculado, usa direto
+      const existing = washers.find(w => w.id === lavadorId && typeof w.ganho === 'number');
+      if (existing) return existing.ganho;
+
+      // Fallback: divide proporcionalmente
+      const pct = order.lavador?.comissao ?? 0;
+      const totalCents = Math.round((order.valorTotal || 0) * (pct / 100) * 100);
+      if (totalCents <= 0) return 0;
+      const base = Math.floor(totalCents / washers.length);
+      let remainder = totalCents % washers.length;
+      const shareMap = {};
+      washers.forEach(w => {
+        let cents = base;
+        if (remainder > 0) { cents += 1; remainder--; }
+        shareMap[w.id] = cents / 100;
+      });
+      return shareMap[lavadorId] || 0;
     }
 
     // ── FUNCIONÁRIOS ──
@@ -577,7 +614,7 @@
         const inicial = (f.nome || 'F').charAt(0).toUpperCase();
         const color   = colors[i % colors.length];
         return `
-          <button class="emp-chip" data-id="${f.id}" onclick="selectFuncionario('${f.id}')" style="">
+          <button class="emp-chip" data-id="${f.id}" onclick="selectFuncionario('${f.id}')">
             <div class="emp-avatar" style="background:${color}22;color:${color}">${inicial}</div>
             ${f.nome.split(' ')[0]}
           </button>`;
@@ -592,35 +629,40 @@
       await loadOrdens();
     }
 
-    // ── ORDENS + ADIANTAMENTOS ──
+    // ── CARREGAR DADOS (usa getDadosComissao — mesma fonte do admin) ──
     async function loadOrdens() {
       document.getElementById('statsCard').innerHTML = loadingHtml();
       document.getElementById('orderList').innerHTML = '';
+      document.getElementById('debitList').innerHTML = '';
       document.getElementById('statusFilter').style.display = 'none';
-      document.getElementById('listLabel').style.display = 'none';
+      document.getElementById('listLabel').style.display    = 'none';
+      document.getElementById('debitLabel').style.display   = 'none';
 
       try {
-        // Para "Abertas": sem filtro de data, mostra tudo
-        const [r, adiantResp] = await Promise.all([
-          window.api.getOrdens(1, 500, '', '', selectedId, '', dateInicio, dateFim, '', 'historico'),
-          window.api.getHistoricoCaixa({ tipo: 'SAIDA', lavadorId: selectedId })
-        ]);
+        const params = { lavadorId: selectedId };
+        // Para "abertas": sem datas → backend retorna todas as pendentes
+        if (dateInicio && dateFim) {
+          params.dataInicio = dateInicio;
+          params.dataFim    = dateFim;
+        }
 
-        ordens = r.ordens || r.data || [];
-
-        // Soma todos os adiantamentos do lavador (sem filtro de data)
-        const registros = adiantResp?.registros || [];
-        totalAdiantamentos = registros
-          .filter(rec => rec.descricao?.startsWith('[Adiantamento]'))
-          .reduce((s, rec) => s + (parseFloat(rec.valor) || 0), 0);
+        const resp = await window.api.getDadosComissao(params);
+        ordensComissao    = resp.comissoes    || [];
+        adiantamentosPend = resp.adiantamentos || [];
+        debitosOS         = resp.debitosOS    || [];
 
         renderStats();
         renderOrdens();
-        document.getElementById('statusFilter').style.display = ordens.length ? 'flex' : 'none';
-        document.getElementById('listLabel').style.display    = ordens.length ? 'block' : 'none';
+        renderDebitos();
+
+        document.getElementById('statusFilter').style.display = ordensComissao.length ? 'flex'  : 'none';
+        document.getElementById('listLabel').style.display    = ordensComissao.length ? 'block' : 'none';
+
+        const temDebitos = adiantamentosPend.length > 0 || debitosOS.length > 0;
+        document.getElementById('debitLabel').style.display = temDebitos ? 'block' : 'none';
       } catch (e) {
         document.getElementById('statsCard').innerHTML = emptyHtml('fa-exclamation-triangle', 'Erro ao carregar', 'Tente novamente.');
-        showToast('Erro ao carregar ordens', 'error');
+        showToast('Erro ao carregar comissões', 'error');
       }
     }
 
@@ -628,11 +670,19 @@
     function renderStats() {
       const func = funcionarios.find(f => f.id === selectedId);
       if (!func) return;
+      const pct = parseFloat(func.comissao) || 0;
 
-      const contaveis   = ordens.filter(o => ['FINALIZADO','AGUARDANDO_PAGAMENTO','EM_ANDAMENTO'].includes(o.status));
-      const totalValor  = contaveis.reduce((s, o) => s + (parseFloat(o.valorTotal) || 0), 0);
-      const pct         = parseFloat(func.comissao) || 0;
-      const totalComiss = totalValor * pct / 100;
+      // Comissão bruta: soma o ganho deste lavador em cada ordem pendente
+      const totalComissao = ordensComissao.reduce((s, o) => s + getWasherShare(o, selectedId), 0);
+
+      // Débitos: adiantamentos pendentes + débitos de OS
+      const totalAdianto  = adiantamentosPend.reduce((s, a) => s + (parseFloat(a.valor) || 0), 0);
+      const totalDebOS    = debitosOS.reduce((s, o) => s + getWasherShare(o, selectedId), 0);
+      const totalDebitos  = totalAdianto + totalDebOS;
+
+      // Saldo real a receber
+      const saldoLiquido  = totalComissao - totalDebitos;
+
       const labelPeriodo = { today: 'Hoje', week: 'Esta semana', month: 'Este mês', abertas: 'Todas abertas', custom: 'Período' }[activePreset] || '';
 
       document.getElementById('statsCard').innerHTML = `
@@ -641,52 +691,48 @@
             ${func.nome}
             <span class="stats-comiss-pct">${pct}% comissão</span>
           </div>
-          <div class="stats-total-label">A receber — ${labelPeriodo}</div>
-          <div class="stats-total-value">${formatCurrency(totalComiss)}</div>
+          <div class="stats-total-label">A receber (líquido) — ${labelPeriodo}</div>
+          <div class="stats-total-value" style="color:${saldoLiquido < 0 ? 'var(--red)' : '#fff'}">${formatCurrency(saldoLiquido)}</div>
           <div class="stats-grid">
             <div class="stats-pill">
-              <div class="stats-pill-val">${ordens.length}</div>
+              <div class="stats-pill-val">${ordensComissao.length}</div>
               <div class="stats-pill-lbl">Ordens</div>
             </div>
             <div class="stats-pill">
-              <div class="stats-pill-val">${formatCurrency(totalValor)}</div>
-              <div class="stats-pill-lbl">Faturado</div>
+              <div class="stats-pill-val">${formatCurrency(totalComissao)}</div>
+              <div class="stats-pill-lbl">Comissão</div>
             </div>
             <div class="stats-pill">
-              <div class="stats-pill-val">${formatCurrency(totalAdiantamentos)}</div>
-              <div class="stats-pill-lbl">Adiantamentos</div>
+              <div class="stats-pill-val" style="color:${totalDebitos > 0 ? '#fca5a5' : '#6ee7b7'}">${formatCurrency(totalDebitos)}</div>
+              <div class="stats-pill-lbl">Débitos</div>
             </div>
           </div>
         </div>`;
     }
 
-    // ── RENDER ORDENS ──
+    // ── RENDER ORDENS PENDENTES ──
     function renderOrdens() {
       const list = document.getElementById('orderList');
       const func = funcionarios.find(f => f.id === selectedId);
       if (!func) return;
 
-      const pct = parseFloat(func.comissao) || 0;
-
-      let filtered = ordens;
-      if (activeStatusFilter) filtered = ordens.filter(o => o.status === activeStatusFilter);
+      let filtered = ordensComissao;
+      if (activeStatusFilter) filtered = ordensComissao.filter(o => o.status === activeStatusFilter);
 
       if (!filtered.length) {
-        list.innerHTML = emptyHtml('fa-receipt', 'Sem ordens', activeStatusFilter ? 'Nenhuma ordem com esse status no período.' : 'Nenhuma ordem no período selecionado.');
+        list.innerHTML = emptyHtml('fa-receipt', 'Sem ordens pendentes', activeStatusFilter ? 'Nenhuma ordem com esse status.' : 'Nenhuma comissão a receber no período.');
         return;
       }
 
       const STATUS_LABEL = {
-        FINALIZADO:           'Finalizado',
-        AGUARDANDO_PAGAMENTO: 'Aguardando',
-        EM_ANDAMENTO:         'Em andamento',
-        PENDENTE:             'Pendente',
-        CANCELADO:            'Cancelado',
+        FINALIZADO: 'Finalizado', AGUARDANDO_PAGAMENTO: 'Aguardando',
+        EM_ANDAMENTO: 'Em andamento', PENDENTE: 'Pendente', CANCELADO: 'Cancelado',
       };
+      const pct = parseFloat(func.comissao) || 0;
 
       list.innerHTML = `<div class="orders-list">${filtered.map(o => {
+        const comiss  = getWasherShare(o, selectedId);
         const valor   = parseFloat(o.valorTotal) || 0;
-        const comiss  = valor * pct / 100;
         const status  = o.status || 'PENDENTE';
         const sLabel  = STATUS_LABEL[status] || status;
         const data    = o.createdAt ? new Date(o.createdAt).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
@@ -715,7 +761,7 @@
               </div>
               <div class="ord-divider"></div>
               <div class="ord-bottom">
-                <div class="ord-valor">Valor: <strong>${formatCurrency(valor)}</strong></div>
+                <div class="ord-valor">Valor OS: <strong>${formatCurrency(valor)}</strong></div>
                 <div class="ord-comiss">
                   <span class="comiss-pill">${pct}%</span>
                   <span class="comiss-val">${formatCurrency(comiss)}</span>
@@ -724,6 +770,52 @@
             </div>
           </div>`;
       }).join('')}</div>`;
+    }
+
+    // ── RENDER DÉBITOS PENDENTES ──
+    function renderDebitos() {
+      const list = document.getElementById('debitList');
+      const allDebits = [
+        ...adiantamentosPend.map(a => ({
+          tipo: 'adiantamento',
+          label: a.descricao || 'Adiantamento (Vale)',
+          sub: a.data ? new Date(a.data).toLocaleDateString('pt-BR') : '—',
+          valor: parseFloat(a.valor) || 0,
+        })),
+        ...debitosOS.map(d => ({
+          tipo: 'debitos_os',
+          label: `Débito OS #${d.numeroOrdem || d.id?.slice(0,8)}`,
+          sub: d.dataFim ? new Date(d.dataFim).toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo' }) : '—',
+          valor: getWasherShare(d, selectedId),
+        })),
+      ].filter(d => d.valor > 0);
+
+      if (!allDebits.length) {
+        list.innerHTML = '';
+        return;
+      }
+
+      list.innerHTML = `<div class="orders-list">${allDebits.map(d => `
+        <div class="ord-card">
+          <div class="ord-accent" style="background:var(--red)"></div>
+          <div class="ord-body">
+            <div class="ord-top">
+              <div>
+                <div class="ord-num">${d.tipo === 'adiantamento' ? 'ADIANTAMENTO' : 'DÉBITO OS'}</div>
+                <div class="ord-date">${d.sub}</div>
+              </div>
+              <span class="s-badge" style="background:rgba(239,68,68,.1);color:#b91c1c">Pendente</span>
+            </div>
+            <div class="ord-client">${d.label}</div>
+            <div class="ord-divider"></div>
+            <div class="ord-bottom">
+              <div class="ord-valor">A descontar</div>
+              <div class="ord-comiss">
+                <span class="comiss-val" style="color:var(--red)">-${formatCurrency(d.valor)}</span>
+              </div>
+            </div>
+          </div>
+        </div>`).join('')}</div>`;
     }
 
     // ── HELPERS ──
