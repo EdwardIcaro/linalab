@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { generateBotUserCode, getBotUserCode, cancelBotUserCode } from '../services/botUserCodeStore';
+import { botGeneratePin, botGetPin, botCancelPin } from '../services/botServiceClient';
 
 interface AuthReq extends Request {
   empresaId?: string;
@@ -84,6 +84,7 @@ export async function deleteBotUser(req: AuthReq, res: Response) {
       where: { id, empresaId: req.empresaId },
     });
     if (!existing) return res.status(404).json({ error: 'Usuário não encontrado' });
+    await botCancelPin(id);
     await db.whatsappBotUser.delete({ where: { id } });
     return res.json({ message: 'Usuário removido' });
   } catch (e) {
@@ -100,8 +101,7 @@ export async function generatePin(req: AuthReq, res: Response) {
     });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
-    cancelBotUserCode(id);
-    const code = generateBotUserCode(id, req.empresaId!, user.role as string, user.nome as string, user.lavadorId as string | null);
+    const code = await botGeneratePin(id, req.empresaId!, user.role as string, user.nome as string, user.lavadorId as string | null);
     return res.json({ code, expiresInSeconds: 300 });
   } catch (e) {
     return res.status(500).json({ error: 'Erro ao gerar PIN', details: String(e) });
@@ -111,7 +111,6 @@ export async function generatePin(req: AuthReq, res: Response) {
 // GET /api/whatsapp/bot-users/:id/pin
 export async function getPinStatus(req: AuthReq, res: Response) {
   const id = req.params['id'] as string;
-  const entry = getBotUserCode(id);
-  if (!entry) return res.json({ active: false });
-  return res.json({ active: true, claimed: entry.claimed, expiresAt: entry.expiresAt });
+  const entry = await botGetPin(id);
+  return res.json(entry);
 }

@@ -1,0 +1,759 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            String         @id @default(cuid())
+  nome          String         @unique
+  email         String         @unique
+  senha         String
+  role          UserRole       @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  empresas      Empresa[]
+  subscriptions Subscription[]
+
+  @@map("usuarios")
+}
+
+model Empresa {
+  id                         String                @id @default(cuid())
+  nome                       String                @unique
+  cnpj                       String?               @unique
+  ativo                      Boolean               @default(true)
+  config                     Json?
+  horarioAbertura            String?
+  horarioFechamento          String?
+  finalizacaoAutomatica      Boolean?              @default(false)
+  exigirLavadorParaFinalizar Boolean?              @default(false)
+  paginaInicialPadrao        String?               @default("index.html")
+  notificationPreferences    Json?
+  paymentMethodsConfig       Json?
+  whatsappBlockUnknown       Boolean?              @default(true) @map("whatsapp_block_unknown")  // Bloqueia mensagens de números não cadastrados
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  usuarioId                  String
+  ordem                      Int?
+  caixaRegistros             CaixaRegistro[]
+  adiantamentos              Adiantamento[]
+  adicionais                 Adicional[]
+  clientes                   Cliente[]
+  usuario                    Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  fechamentosCaixa           FechamentoCaixa[]
+  aberturasCaixa             AberturaCaixa[]
+  fechamentosComissao        FechamentoComissao[]
+  fornecedores               Fornecedor[]
+  lavadores                  Lavador[]
+  notificacoes               Notificacao[]
+  ordens                     OrdemServico[]
+  pagamentos                 Pagamento[]
+  roles                      Role[]
+  servicos                   Servico[]
+  subaccounts                Subaccount[]
+  theme                      Theme?
+  tipoVeiculos               TipoVeiculo[]
+  whatsappInstance           WhatsappInstance?
+  bankIntegration            BankIntegration?
+  whatsappBotUsers           WhatsappBotUser[]
+
+  @@map("empresas")
+}
+
+model Notificacao {
+  id        String   @id @default(cuid())
+  empresaId String
+  mensagem  String
+  lida      Boolean  @default(false)
+  type      String   @default("info")
+  link      String?
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("notificacoes")
+}
+
+model Cliente {
+  id        String         @id @default(cuid())
+  empresaId String
+  nome      String
+  telefone  String?
+  email     String?        @unique
+  ativo     Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  empresa   Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens    OrdemServico[]
+  veiculos  Veiculo[]
+
+  @@map("clientes")
+}
+
+model Veiculo {
+  id              String         @id @default(cuid())
+  clienteId       String
+  placa           String         @unique
+  modelo          String?
+  cor             String?
+  ano             Int?
+  tipoVeiculo     String?
+  subtipoVeiculo  String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  ordens          OrdemServico[]
+  cliente         Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("veiculos")
+}
+
+model Lavador {
+  id                  String                @id @default(cuid())
+  empresaId           String
+  nome                String
+  telefone            String?               // WhatsApp/telefone para identificação no bot
+  comissao            Float
+  ativo               Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  caixaRegistros      CaixaRegistro[]
+  adiantamentos       Adiantamento[]
+  fechamentosComissao FechamentoComissao[]
+  tokens              LavadorToken[]
+  empresa             Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens              OrdemServico[]
+  ordemLavadores      OrdemServicoLavador[]
+  whatsappBotUsers    WhatsappBotUser[]
+
+  @@unique([nome, empresaId])
+  @@map("lavadores")
+}
+
+model LavadorToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  ativo     Boolean   @default(true)
+  lavadorId String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime?
+  lavador   Lavador   @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+
+  @@map("lavador_tokens")
+}
+
+model Fornecedor {
+  id            String          @id @default(cuid())
+  empresaId     String
+  nome          String
+  cnpj          String?
+  telefone      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  caixaRegistro CaixaRegistro[]
+  empresa       Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+  @@map("fornecedores")
+}
+
+model FechamentoCaixa {
+  id             String           @id @default(cuid())
+  empresaId      String
+  data           DateTime         @default(now())
+  faturamentoDia Float
+  pix            Float
+  dinheiro       Float
+  cartao         Float
+  nfe            Float?           @default(0)
+  diferenca      Float            @default(0)
+  status         StatusFechamento @default(PENDENTE)
+  observacao     String?
+  relatorio      String?
+  fechadoPor     String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  empresa        Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("fechamentos_caixa")
+}
+
+model AberturaCaixa {
+  id           String   @id @default(cuid())
+  empresaId    String
+  data         DateTime @default(now())
+  valorInicial Float    @default(0)
+  abertoPor    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+model CaixaRegistro {
+  id             String         @id @default(cuid())
+  empresaId      String
+  tipo           TipoCaixa      @default(SAIDA)
+  data           DateTime       @default(now())
+  valor          Float
+  formaPagamento FormaPagamento
+  fornecedorId   String?
+  lavadorId      String?
+  descricao      String
+  comprovante    String?
+  origem         String?
+  lancadoPor     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  empresa        Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fornecedor     Fornecedor?    @relation(fields: [fornecedorId], references: [id])
+  lavador        Lavador?       @relation(fields: [lavadorId], references: [id])
+  adiantamento   Adiantamento?
+}
+
+model TipoVeiculo {
+  empresaId String
+  id        String    @id @default(cuid())
+  nome      String
+  categoria String?
+  descricao String?
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  servicos  Servico[] @relation("ServicoToTipoVeiculo")
+
+  @@unique([empresaId, nome, categoria])
+  @@map("tipo_veiculos")
+}
+
+model Servico {
+  id                 String             @id @default(cuid())
+  empresaId          String
+  nome               String
+  descricao          String?
+  preco              Float
+  duracao            Int?
+  comissaoPercentual Float?             @map("comissao_percentual") // % de comissão específica deste serviço (sobrepõe % padrão do lavador)
+  ativo              Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  ordemItems   OrdemServicoItem[]
+  empresa      Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tiposVeiculo TipoVeiculo[]      @relation("ServicoToTipoVeiculo")
+
+  @@map("servicos")
+}
+
+model Adicional {
+  id         String             @id @default(cuid())
+  empresaId  String
+  nome       String
+  descricao  String?
+  preco      Float
+  ativo      Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  empresa    Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordemItems OrdemServicoItem[]
+
+  @@map("adicionais")
+}
+
+model OrdemServico {
+  id                   String                @id @default(cuid())
+  numeroOrdem          Int
+  empresaId            String
+  clienteId            String
+  veiculoId            String
+  lavadorId            String?
+  status               OrdemStatus           @default(PENDENTE)
+  valorTotal           Float
+  observacoes          String?
+  dataInicio           DateTime?
+  dataFim              DateTime?
+  pago                 Boolean               @default(false)
+  desconto             Float                 @default(0)
+  comissao             Float                 @default(0)
+  comissaoPaga         Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  fechamentoComissaoId String?
+  // Campos PIX
+  pixTxId              String?
+  pixStatus            String?               // "PENDENTE" | "PAGO" | "EXPIRADO"
+  pixPagoEm            DateTime?
+  pixValor             Float?
+  pixQrCode            String?               // payload do QR Code (salvo para reenvio)
+  pixExpiraEm          DateTime?             // quando o QR expira
+  cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
+  lavador              Lavador?              @relation(fields: [lavadorId], references: [id])
+  veiculo              Veiculo               @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  items                OrdemServicoItem[]
+  ordemLavadores       OrdemServicoLavador[]
+  pagamentos           Pagamento[]
+
+  @@unique([empresaId, numeroOrdem])
+  @@map("ordens_servico")
+}
+
+model OrdemServicoLavador {
+  ordemId              String
+  lavadorId            String
+  ganho                Float               @default(0)   // comissão individual calculada no momento da criação
+  createdAt            DateTime            @default(now())
+  comissaoPaga         Boolean             @default(false)
+  fechamentoComissaoId String?
+  fechamentoComissao   FechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id])
+  lavador              Lavador             @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+  ordem                OrdemServico        @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+
+  @@id([ordemId, lavadorId])
+  @@map("ordens_servico_lavadores")
+}
+
+model OrdemServicoItem {
+  id          String        @id @default(cuid())
+  ordemId     String
+  tipo        OrdemItemType
+  servicoId   String?
+  adicionalId String?
+  quantidade  Int           @default(1)
+  precoUnit   Float
+  subtotal    Float
+  createdAt   DateTime      @default(now())
+  adicional   Adicional?    @relation(fields: [adicionalId], references: [id], onDelete: Cascade)
+  ordem       OrdemServico  @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  servico     Servico?      @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+
+  @@map("ordens_servico_items")
+}
+
+model Pagamento {
+  id          String          @id @default(cuid())
+  ordemId     String
+  empresaId   String
+  metodo      MetodoPagamento
+  valor       Float
+  status      StatusPagamento @default(PENDENTE)
+  observacoes String?
+  pagoEm      DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  empresa     Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordem       OrdemServico    @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+
+  @@map("pagamentos")
+}
+
+model Role {
+  id         String       @id @default(cuid())
+  nome       String
+  empresaId  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  permissoes Permission[]
+  empresa    Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarios   Subaccount[]
+
+  @@unique([empresaId, nome])
+  @@map("roles")
+}
+
+model Permission {
+  id     String @id @default(cuid())
+  name   String
+  nome   String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("permissions")
+}
+
+model Subaccount {
+  id          String   @id @default(cuid())
+  nome        String
+  email       String   @unique
+  senha       String
+  roleId      String
+  maxDesconto Int      @default(0)
+  empresaId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  roleInt     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("subaccounts")
+}
+
+model Adiantamento {
+  id                   String              @id @default(cuid())
+  valor                Float
+  data                 DateTime            @default(now())
+  status               String              @default("PENDENTE")
+  lavadorId            String
+  empresaId            String
+  caixaRegistroId      String?             @unique
+  fechamentoComissaoId String?
+  caixaRegistro        CaixaRegistro?      @relation(fields: [caixaRegistroId], references: [id])
+  empresa              Empresa             @relation(fields: [empresaId], references: [id])
+  fechamentoComissao   FechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id])
+  lavador              Lavador             @relation(fields: [lavadorId], references: [id])
+
+  @@map("adiantamentos")
+}
+
+model FechamentoComissao {
+  id                    String                @id @default(cuid())
+  data                  DateTime              @default(now())
+  valorPago             Float
+  empresaId             String
+  lavadorId             String
+  adiantamentosQuitados Adiantamento[]
+  empresa               Empresa               @relation(fields: [empresaId], references: [id])
+  lavador               Lavador               @relation(fields: [lavadorId], references: [id])
+  ordensPagas           OrdemServico[]
+  ordemLavadoresPagos   OrdemServicoLavador[]
+
+  @@map("fechamentos_comissao")
+}
+
+model Theme {
+  id            String   @id @default(cuid())
+  empresaId     String   @unique
+  corPrimaria   String   @default("#F59E0B")
+  corSecundaria String   @default("#1F2937")
+  logoUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("themes")
+}
+
+model WhatsappInstance {
+  id           String              @id @default(cuid())
+  empresaId    String?             @unique  // null = instância global do Bot Lina
+  instanceName String              @unique
+  status       String              @default("disconnected") // connected | disconnected | qr_code
+  qrCode       String?
+  ownerPhone   String?
+  authState    String?             @map("auth_state")
+  pairingMode  Boolean             @default(false) @map("pairing_mode")
+  pairingNome  String?             @map("pairing_nome")
+  mode         String              @default("ADMIN") // ADMIN | CLIENTE | AMBOS (Phase 2)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  empresa     Empresa?            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  messages    WhatsappMessage[]
+  adminPhones WhatsappAdminPhone[]
+
+  @@map("whatsapp_instances")
+}
+
+model WhatsappAdminPhone {
+  id          String              @id @default(cuid())
+  instanceId  String              @map("instance_id")
+  empresaId   String              // empresa que este admin gerencia via bot
+  telefone    String
+  jid         String?
+  nome        String?
+  ativo       Boolean             @default(true)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  instance WhatsappInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, telefone])
+  @@map("whatsapp_admin_phones")
+}
+
+model WhatsappBotUser {
+  id         String   @id @default(cuid())
+  empresaId  String
+  nome       String
+  role       String   // LAVADOR | CAIXA | FINANCEIRO
+  jid        String?  // preenchido após registro via PIN
+  telefone   String?
+  lavadorId  String?  // vínculo opcional com Lavador do sistema
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lavador  Lavador? @relation(fields: [lavadorId], references: [id], onDelete: SetNull)
+
+  @@map("whatsapp_bot_users")
+}
+
+model WhatsappMessage {
+  id          String   @id @default(cuid())
+  instanceId  String
+  empresaId   String?  // empresa do contexto no momento da mensagem
+  direction   String   // INCOMING | OUTGOING
+  phoneNumber String
+  senderName  String?
+  message     String
+  response    String?
+  status      String   @default("processed") // processed | error | ignored
+  createdAt   DateTime @default(now())
+
+  instance WhatsappInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_messages")
+}
+
+model SubscriptionPlan {
+  id            String         @id @default(cuid())
+  nome          String         @unique
+  descricao     String?
+  preco         Float
+  intervalo     String         @default("MONTHLY")
+  ativo         Boolean        @default(true)
+  ordem         Int            @default(0)
+  maxEmpresas   Int            @default(1)
+  maxUsuarios   Int?
+  features      Json
+  maxAddons     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  trialDays     Int            @default(0)
+  priceHistory  PriceHistory[]
+  promotions    Promotion[]
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                        String                @id @default(cuid())
+  usuarioId                 String
+  planId                    String
+  status                    SubscriptionStatus    @default(ACTIVE)
+  isTrialUsed               Boolean               @default(false)
+  isCurrentlyTrial          Boolean               @default(false)
+  trialStartDate            DateTime?
+  trialEndDate              DateTime?
+  startDate                 DateTime              @default(now())
+  endDate                   DateTime?
+  nextBillingDate           DateTime?
+  canceledAt                DateTime?
+  preco                     Float
+  currency                  String                @default("BRL")
+  stripeSubscriptionId      String?               @unique
+  mercadoPagoSubscriptionId String?               @unique
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  addons                    SubscriptionAddon[]
+  payments                  SubscriptionPayment[]
+  plan                      SubscriptionPlan      @relation(fields: [planId], references: [id])
+  usuario                   Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model SubscriptionPayment {
+  id                   String        @id @default(cuid())
+  subscriptionId       String
+  valor                Float
+  currency             String        @default("BRL")
+  status               PaymentStatus @default(PENDING)
+  metodo               String?
+  stripePaymentId      String?       @unique
+  mercadoPagoPaymentId String?       @unique
+  paidAt               DateTime?
+  failedAt             DateTime?
+  errorMessage         String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  subscription         Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([mercadoPagoPaymentId])
+  @@map("subscription_payments")
+}
+
+model Addon {
+  id            String              @id @default(cuid())
+  nome          String              @unique
+  descricao     String?
+  preco         Float
+  ativo         Boolean             @default(true)
+  featureKey    String              @unique
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  subscriptions SubscriptionAddon[]
+
+  @@map("addons")
+}
+
+model SubscriptionAddon {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  addonId        String
+  ativo          Boolean      @default(true)
+  addedAt        DateTime     @default(now())
+  removedAt      DateTime?
+  addon          Addon        @relation(fields: [addonId], references: [id])
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, addonId])
+  @@map("subscription_addons")
+}
+
+model Promotion {
+  id          String            @id @default(cuid())
+  nome        String            @unique
+  descricao   String?
+  tipo        TipoPromo         @default(PERCENTUAL)
+  valor       Float
+  planId      String?
+  dataInicio  DateTime
+  dataFim     DateTime
+  ativo       Boolean           @default(true)
+  usosMaximos Int?
+  usosAtuais  Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  plan        SubscriptionPlan? @relation(fields: [planId], references: [id])
+
+  @@map("promotions")
+}
+
+model PriceHistory {
+  id          String           @id @default(cuid())
+  planId      String
+  precoAntigo Float
+  precoNovo   Float
+  alteradoPor String
+  motivo      String?
+  createdAt   DateTime         @default(now())
+  plan        SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("price_histories")
+}
+
+enum UserRole {
+  LINA_OWNER
+  OWNER
+  MANAGER
+  USER
+}
+
+enum OrdemStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  AGUARDANDO_PAGAMENTO
+  FINALIZADO
+  CANCELADO
+}
+
+enum OrdemItemType {
+  SERVICO
+  ADICIONAL
+}
+
+enum MetodoPagamento {
+  DINHEIRO
+  CARTAO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  PIX
+  NFE
+  OUTRO
+  PENDENTE
+  DEBITO_FUNCIONARIO
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+  FALHOU
+  CANCELADO
+}
+
+enum StatusFechamento {
+  PENDENTE
+  CONCLUIDO
+  DIVERGENCIA
+  CONFERIDO
+  DIVERGENTE
+}
+
+enum TipoCaixa {
+  ENTRADA
+  SAIDA
+  SANGRIA
+  VALE
+  FECHAMENTO
+}
+
+enum FormaPagamento {
+  DINHEIRO
+  PIX
+  CARTAO
+  NFE
+  NA
+}
+
+enum TipoPromo {
+  PERCENTUAL
+  FIXO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  SUSPENDED
+  LIFETIME
+  PENDING
+  PAYMENT_FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
+model BankIntegration {
+  id              String    @id @default(cuid())
+  empresaId       String    @unique
+  ativo           Boolean   @default(true)
+
+  // Fase 1 — chave PIX estática
+  chavePix        String?
+  tipoPix         String?   // "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "ALEATORIA"
+
+  // Fase 2 — credenciais bancárias (Inter / Cora)
+  banco           String?   // "INTER" | "CORA"
+  clientId        String?
+  clientSecret    String?   // criptografado em produção
+  certCrt         String?   // certificado .crt (Inter MTLS)
+  certKey         String?   // chave .key (Inter MTLS)
+  accessToken     String?
+  tokenExpiresAt  DateTime?
+
+  // Configurações
+  pixExpiracaoMin Int       @default(30) // minutos para o QR expirar
+  nomeRecebedor   String?   // nome que aparece no QR Code
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  empresa         Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("bank_integrations")
+}
