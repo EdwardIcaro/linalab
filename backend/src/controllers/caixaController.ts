@@ -1118,6 +1118,8 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
             include: {
                 veiculo: true,
                 lavador: true,
+                cliente: { select: { nome: true } },
+                items: { include: { servico: { select: { nome: true } } } },
                 ordemLavadores: {
                     include: {
                         lavador: true
@@ -1197,10 +1199,16 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
                 id: ordem.id,
                 numeroOrdem: ordem.numeroOrdem,
                 valorTotal: ordem.valorTotal,
+                status: ordem.status,
+                createdAt: ordem.createdAt,
                 dataFim: ordem.dataFim,
                 comissao: ganhoDoLavador,
                 veiculo: ordem.veiculo,
+                cliente: ordem.cliente,
+                servico: ordem.items?.[0]?.servico ?? null,
                 lavadorId: ordem.lavadorId,
+                lavador: ordem.lavador,
+                ordemLavadores: ordem.ordemLavadores,
                 lavadores: normalizeOrderWashers(ordem)
             };
         });
