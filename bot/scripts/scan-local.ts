@@ -1,0 +1,106 @@
+/**
+ * Roda localmente para fazer o scan inicial do QR e salvar o auth state no Neon.
+ * Uso: npx ts-node scripts/scan-local.ts
+ */
+import * as qrcode from 'qrcode-terminal';
+import { mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { PrismaClient } from '@prisma/client';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const prisma = new PrismaClient();
+const AUTH_DIR = join(tmpdir(), 'baileys-scan-local');
+const INSTANCE_NAME = 'lina-global';
+
+async function main() {
+  mkdirSync(AUTH_DIR, { recursive: true });
+
+  const dynamicImport = new Function('module', 'return import(module)');
+  const baileysMod = await dynamicImport('@whiskeysockets/baileys') as any;
+
+  const {
+    default: _def,
+    makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    Browsers,
+    DisconnectReason,
+  } = baileysMod;
+
+  const _makeWASocket = makeWASocket ?? _def?.makeWASocket ?? _def;
+
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+
+  let version = [2, 3000, 1023000166];
+  try {
+    const v = await fetchLatestBaileysVersion();
+    if (v?.version?.length === 3) version = v.version;
+  } catch {}
+
+  console.log('🤖 Iniciando conexão local para scan do QR...');
+  console.log('📱 Abra o WhatsApp → Aparelhos conectados → Conectar aparelho → escaneie o QR abaixo:\n');
+
+  const sock = _makeWASocket({
+    version,
+    auth: state,
+    printQRInTerminal: false,
+    browser: Browsers.macOS('Safari'),
+    generateHighQualityLinkPreview: false,
+  });
+
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('connection.update', async (update: any) => {
+    const { connection, qr, lastDisconnect } = update;
+
+    if (qr) {
+      qrcode.generate(qr, { small: true });
+      console.log('\n⏳ Escaneie o QR acima com seu WhatsApp...');
+    }
+
+    if (connection === 'open') {
+      console.log('\n✅ Conectado! Salvando auth state no banco...');
+
+      const { readdirSync, readFileSync } = await import('fs');
+      const files = readdirSync(AUTH_DIR);
+      const authFiles: Record<string, string> = {};
+      for (const f of files) {
+        authFiles[f] = readFileSync(join(AUTH_DIR, f), 'utf-8');
+      }
+
+      await prisma.whatsappInstance.upsert({
+        where: { instanceName: INSTANCE_NAME } as any,
+        update: { authState: JSON.stringify(authFiles), status: 'connected' },
+        create: {
+          instanceName: INSTANCE_NAME,
+          authState: JSON.stringify(authFiles),
+          status: 'connected',
+        } as any,
+      });
+
+      console.log(`✅ Auth state salvo (${files.length} arquivos). O bot no Railway vai reconectar automaticamente!`);
+      console.log('🔌 Fechando script local...');
+      await prisma.$disconnect();
+      sock.end(undefined);
+      process.exit(0);
+    }
+
+    if (connection === 'close') {
+      const code = (lastDisconnect?.error as any)?.output?.statusCode;
+      if (code === DisconnectReason?.loggedOut) {
+        console.error('❌ Logout detectado. Tente novamente.');
+        process.exit(1);
+      }
+      console.log(`Conexão fechada (${code}), tentando novamente...`);
+      main().catch(console.error);
+    }
+  });
+}
+
+main().catch(e => {
+  console.error('Erro:', e);
+  process.exit(1);
+});
