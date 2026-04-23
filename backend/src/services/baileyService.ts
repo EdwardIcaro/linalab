@@ -225,8 +225,14 @@ export async function initBaileys(): Promise<void> {
 
         if (shouldRetry) {
           reconnectCount++;
+          const qrExpiredCode = 408;
           let delay: number;
-          if (statusCode === restartCode) {
+          if (statusCode === qrExpiredCode) {
+            // QR expirou por excesso de tentativas — esperar 5 min para evitar rate-limit
+            delay = 300000;
+            console.log('[Baileys] ⏳ QR expirado (408) — aguardando 5 minutos antes de gerar novo QR');
+          } else if (statusCode === restartCode) {
+            // 515 = WA pede restart para completar sessão — reconectar rápido com as creds salvas
             delay = 2000;
           } else if (wasConnected) {
             delay = credsJustUpdated ? 5000 : nextDelay();
