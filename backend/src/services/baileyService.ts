@@ -232,6 +232,7 @@ export async function initBaileys(): Promise<void> {
             delay = credsJustUpdated ? 30000 : 45000;
           }
           credsJustUpdated = false;
+          globalStatus = 'reconnecting';
           console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => initBaileys().catch(console.error), delay);
         } else {

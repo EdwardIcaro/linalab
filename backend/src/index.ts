@@ -230,23 +230,23 @@ cron.schedule('0 * * * *', () => {
 // Reforça reconexões que atingiram MAX_RECONNECT, garantindo sessão mantida em produção
 cron.schedule('*/10 * * * *', async () => {
   try {
+    const statusMemoria = getStatus();
+    // Só tenta reconectar se realmente desconectado — não interferir com QR em exibição
+    if (statusMemoria !== 'disconnected') return;
+
     const desconectadas = await prisma.whatsappInstance.findMany({
       where: {
         authState: { not: null },
-        status: { in: ['disconnected', 'qr_code'] } // excluir 'connected' e 'reconnecting'
+        status: 'disconnected' // apenas verdadeiramente desconectadas, não qr_code
       }
     });
 
     if (desconectadas.length > 0) {
       console.log(`[${new Date().toISOString()}] [WhatsApp Cron] ${desconectadas.length} instância(s) desconectada(s) — tentando reconectar...`);
-      const statusMemoria = getStatus();
-      if (statusMemoria === 'disconnected') {
-        console.log('[WhatsApp Cron] Reconectando socket global...');
-        try {
-          await initBaileys();
-        } catch (err) {
-          console.error('[WhatsApp Cron] Erro ao reconectar socket global:', err);
-        }
+      try {
+        await initBaileys();
+      } catch (err) {
+        console.error('[WhatsApp Cron] Erro ao reconectar socket global:', err);
       }
     }
   } catch (err) {
