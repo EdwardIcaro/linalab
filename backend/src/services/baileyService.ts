@@ -209,18 +209,28 @@ export async function initBaileys(): Promise<void> {
       }
 
       if (connection === 'close') {
-        const statusCode   = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
-        const wasConnected  = globalStatus === 'connected';
-        const isRealLogout  = statusCode === loggedOutCode && wasConnected;
-        const shouldRetry   = !isRealLogout && reconnectCount < MAX_RECONNECT;
+        const statusCode    = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const errorMsg      = (lastDisconnect?.error as any)?.message || 'sem mensagem';
+        console.log(`[Baileys] Conexão fechada — status: ${statusCode}, motivo: ${errorMsg}`);
+        const loggedOutCode  = BaileysDisconnectReason?.loggedOut ?? 401;
+        const restartCode    = BaileysDisconnectReason?.restartRequired ?? 515;
+        const wasConnected   = globalStatus === 'connected';
+        const isRealLogout   = statusCode === loggedOutCode && wasConnected;
+        const shouldRetry    = !isRealLogout && reconnectCount < MAX_RECONNECT;
 
         globalSocket   = null;
         isInitializing = false;
 
         if (shouldRetry) {
           reconnectCount++;
-          const delay = credsJustUpdated ? 1000 : (wasConnected ? nextDelay() : 15000);
+          let delay: number;
+          if (statusCode === restartCode) {
+            delay = 2000;
+          } else if (wasConnected) {
+            delay = credsJustUpdated ? 5000 : nextDelay();
+          } else {
+            delay = credsJustUpdated ? 30000 : 45000;
+          }
           credsJustUpdated = false;
           console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => initBaileys().catch(console.error), delay);
