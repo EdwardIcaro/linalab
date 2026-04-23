@@ -174,11 +174,15 @@ export async function initBaileys(): Promise<void> {
       logger: pino({ level: 'silent' }),
       browser: Browsers.macOS('Safari'),
       generateHighQualityLinkPreview: false,
+      keepAliveIntervalMs: 15000,
       getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
     });
 
     let credsJustUpdated = false;
-    let hadCredsOnStart  = existsSync(join(GLOBAL_AUTH_DIR, 'creds.json'));
+    // Sessão real = múltiplos arquivos (creds.json sozinho = só noise keys, sem sessão)
+    const authFilesOnStart = existsSync(GLOBAL_AUTH_DIR) ? readdirSync(GLOBAL_AUTH_DIR) : [];
+    let hadCredsOnStart  = authFilesOnStart.length > 2;
+    console.log(`[Baileys] Arquivos de auth no disco: ${authFilesOnStart.length} (sessão real: ${hadCredsOnStart})`);
     if (globalStore) globalStore.bind(sock.ev);
 
     sock.ev.on('creds.update', async () => {
@@ -250,6 +254,8 @@ export async function initBaileys(): Promise<void> {
 
       if (connection === 'close') {
         const statusCode   = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const errorMsg     = (lastDisconnect?.error as any)?.message || 'sem mensagem';
+        console.log(`[Baileys] Conexão fechada — status: ${statusCode}, motivo: ${errorMsg}`);
         const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
         const wasConnected  = globalStatus === 'connected';
         const isRealLogout  = statusCode === loggedOutCode && wasConnected;
