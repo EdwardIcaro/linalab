@@ -27,14 +27,15 @@ const MAX_RECONNECT = 100;
 // ==========================================
 // STATE GLOBAL
 // ==========================================
-let globalSocket:      WASocket | null = null;
-let globalQrCode:      string   | null = null;
-let globalStatus:      string          = 'disconnected';
-let globalStore:       any             = null;
-let reconnectCount:    number          = 0;
-let reconnectDelay:    number          = BASE_DELAY;
-let freshCreds:        boolean         = false;
-let isInitializing:    boolean         = false;
+let globalSocket:         WASocket | null = null;
+let globalQrCode:         string   | null = null;
+let globalStatus:         string          = 'disconnected';
+let globalStore:          any             = null;
+let reconnectCount:       number          = 0;
+let reconnectDelay:       number          = BASE_DELAY;
+let freshCreds:           boolean         = false;
+let isInitializing:       boolean         = false;
+let failedCredsAttempts:  number          = 0;
 
 const lidToPhone = new Map<string, string>();
 
@@ -142,8 +143,19 @@ export async function initBaileys(): Promise<void> {
 
     const instance = await getGlobalInstance();
     if (instance?.authState && globalStatus !== 'connected') {
-      globalStatus = 'reconnecting';
-      console.log('[Baileys] Reconectando com credenciais salvas...');
+      failedCredsAttempts++;
+      if (failedCredsAttempts > 3) {
+        console.log('[Baileys] ⚠️ Muitas falhas com creds salvas — limpando para QR fresco');
+        await prisma.whatsappInstance.updateMany({
+          where: { instanceName: GLOBAL_INSTANCE_NAME },
+          data: { authState: null, qrCode: null, status: 'disconnected' },
+        });
+        failedCredsAttempts = 0;
+        await restoreAuthFromDb();
+      } else {
+        globalStatus = 'reconnecting';
+        console.log(`[Baileys] Reconectando com credenciais salvas (tentativa ${failedCredsAttempts}/3)...`);
+      }
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(GLOBAL_AUTH_DIR);
@@ -194,10 +206,11 @@ export async function initBaileys(): Promise<void> {
       }
 
       if (connection === 'open') {
-        globalSocket  = sock;
-        globalQrCode  = null;
-        globalStatus  = 'connected';
-        reconnectCount = 0;
+        globalSocket       = sock;
+        globalQrCode       = null;
+        globalStatus       = 'connected';
+        reconnectCount     = 0;
+        failedCredsAttempts = 0;
         resetDelay();
         freshCreds     = false;
         isInitializing = false;
@@ -222,7 +235,11 @@ export async function initBaileys(): Promise<void> {
 
         if (shouldRetry) {
           reconnectCount++;
-          const delay = credsJustUpdated ? 1000 : (wasConnected ? nextDelay() : 45000);
+          // credsJustUpdated=true significa que o handshake do QR iniciou mas não completou
+          // Usar delay generoso para não interromper o processo de scan
+          const delay = wasConnected
+            ? (credsJustUpdated ? 3000 : nextDelay())
+            : (credsJustUpdated ? 10000 : 45000);
           credsJustUpdated = false;
           console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => initBaileys().catch(console.error), delay);
