@@ -202,19 +202,6 @@ export async function initBaileys(): Promise<void> {
 
       if (qr) {
         try {
-          // Se havia creds no disco mas WA pediu QR = creds inválidas/expiradas → limpar imediatamente
-          if (hadCredsOnStart) {
-            console.log('[Baileys] ⚠️ Creds existiam mas WA pediu QR — credenciais inválidas, limpando banco...');
-            await prisma.whatsappInstance.updateMany({
-              where: { instanceName: GLOBAL_INSTANCE_NAME },
-              data: { authState: null },
-            });
-            rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
-            mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
-            hadCredsOnStart  = false;
-            failedCredsAttempts = 0;
-          }
-
           qrGeneratedAt = Date.now();
           globalQrCode  = await QRCode.toDataURL(qr);
           globalStatus  = 'qr_code';
@@ -275,8 +262,9 @@ export async function initBaileys(): Promise<void> {
           reconnectCount++;
           let delay: number;
           if (isStreamError) {
-            delay = 60000;
-            console.log('[Baileys] ⚠️ Stream error 515 — aguardando 60s antes de reconectar');
+            // 515 = "restart required" — WA pede reconexão imediata, não espera longa
+            delay = 2000;
+            console.log('[Baileys] ⚠️ Stream error 515 — reiniciando em 2s (restart required)');
           } else if (wasConnected) {
             delay = credsJustUpdated ? 5000 : nextDelay();
           } else {
