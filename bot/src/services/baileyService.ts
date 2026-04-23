@@ -172,10 +172,8 @@ export async function initBaileys(): Promise<void> {
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }),
-      browser: Browsers.ubuntu('Chrome'),
+      browser: Browsers.macOS('Safari'),
       generateHighQualityLinkPreview: false,
-      qrTimeout: 60000,
-      connectTimeoutMs: 60000,
       getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
     });
 
@@ -264,9 +262,11 @@ export async function initBaileys(): Promise<void> {
           reconnectCount++;
           // credsJustUpdated=true significa que o handshake do QR iniciou mas não completou
           // Usar delay generoso para não interromper o processo de scan
+          // credsJustUpdated=true = usuário escaneou mas handshake falhou
+          // Aguardar bastante para não gerar novo QR antes do WA processar
           const delay = wasConnected
-            ? (credsJustUpdated ? 3000 : nextDelay())
-            : (credsJustUpdated ? 10000 : 45000);
+            ? (credsJustUpdated ? 5000 : nextDelay())
+            : (credsJustUpdated ? 30000 : 45000);
           credsJustUpdated = false;
           console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => initBaileys().catch(console.error), delay);
