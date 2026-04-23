@@ -161,6 +161,8 @@ export async function initBaileys(): Promise<void> {
       logger: pino({ level: 'silent' }),
       browser: Browsers.ubuntu('Chrome'),
       generateHighQualityLinkPreview: false,
+      qrTimeout: 60000,
+      connectTimeoutMs: 60000,
       getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
     });
 
@@ -220,7 +222,7 @@ export async function initBaileys(): Promise<void> {
 
         if (shouldRetry) {
           reconnectCount++;
-          const delay = credsJustUpdated ? 1000 : (wasConnected ? nextDelay() : 15000);
+          const delay = credsJustUpdated ? 1000 : (wasConnected ? nextDelay() : 45000);
           credsJustUpdated = false;
           console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => initBaileys().catch(console.error), delay);
