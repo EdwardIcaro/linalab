@@ -161,11 +161,16 @@ export async function initBaileys(): Promise<void> {
 
     const { state, saveCreds } = await useMultiFileAuthState(GLOBAL_AUTH_DIR);
 
-    let version: number[] = [2, 3000, 1015901307];
+    let version: number[] = [2, 3000, 1023000166];
     try {
       const v = await fetchLatestBaileysVersion();
-      version = v.version;
-    } catch { /* usa fallback */ }
+      if (v?.version?.length === 3) {
+        version = v.version;
+        console.log(`[Baileys] Versão WA obtida: ${version.join('.')}`);
+      }
+    } catch {
+      console.log(`[Baileys] Usando versão fallback: ${version.join('.')}`);
+    }
 
     const sock = _makeWASocket({
       version,
@@ -253,26 +258,30 @@ export async function initBaileys(): Promise<void> {
       }
 
       if (connection === 'close') {
-        const statusCode   = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const errorMsg     = (lastDisconnect?.error as any)?.message || 'sem mensagem';
+        const statusCode    = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const errorMsg      = (lastDisconnect?.error as any)?.message || 'sem mensagem';
         console.log(`[Baileys] Conexão fechada — status: ${statusCode}, motivo: ${errorMsg}`);
-        const loggedOutCode = BaileysDisconnectReason?.loggedOut ?? 401;
-        const wasConnected  = globalStatus === 'connected';
-        const isRealLogout  = statusCode === loggedOutCode && wasConnected;
-        const shouldRetry   = !isRealLogout && reconnectCount < MAX_RECONNECT;
+        const loggedOutCode  = BaileysDisconnectReason?.loggedOut ?? 401;
+        const restartCode    = BaileysDisconnectReason?.restartRequired ?? 515;
+        const wasConnected   = globalStatus === 'connected';
+        const isRealLogout   = statusCode === loggedOutCode && wasConnected;
+        const isStreamError  = statusCode === restartCode;
+        const shouldRetry    = !isRealLogout && reconnectCount < MAX_RECONNECT;
 
         globalSocket   = null;
         isInitializing = false;
 
         if (shouldRetry) {
           reconnectCount++;
-          // credsJustUpdated=true significa que o handshake do QR iniciou mas não completou
-          // Usar delay generoso para não interromper o processo de scan
-          // credsJustUpdated=true = usuário escaneou mas handshake falhou
-          // Aguardar bastante para não gerar novo QR antes do WA processar
-          const delay = wasConnected
-            ? (credsJustUpdated ? 5000 : nextDelay())
-            : (credsJustUpdated ? 30000 : 45000);
+          let delay: number;
+          if (isStreamError) {
+            delay = 60000;
+            console.log('[Baileys] ⚠️ Stream error 515 — aguardando 60s antes de reconectar');
+          } else if (wasConnected) {
+            delay = credsJustUpdated ? 5000 : nextDelay();
+          } else {
+            delay = credsJustUpdated ? 30000 : 45000;
+          }
           credsJustUpdated = false;
           console.log(`[Baileys] Reconectando em ${delay / 1000}s (tentativa ${reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => initBaileys().catch(console.error), delay);
