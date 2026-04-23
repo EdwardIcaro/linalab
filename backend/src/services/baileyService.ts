@@ -70,16 +70,6 @@ async function restoreAuthFromDb(): Promise<void> {
     const authFiles = JSON.parse(instance.authState) as Record<string, string>;
     const fileCount = Object.keys(authFiles).length;
 
-    // Sessão real precisa de vários arquivos — noise keys sozinhas (1-2 arquivos) não representam sessão válida
-    if (fileCount <= 2) {
-      console.log(`[Baileys] Auth state ignorado — apenas ${fileCount} arquivo(s), não é sessão real. Limpando...`);
-      await prisma.whatsappInstance.updateMany({
-        where: { instanceName: GLOBAL_INSTANCE_NAME },
-        data: { authState: null },
-      });
-      return;
-    }
-
     for (const [filename, content] of Object.entries(authFiles)) {
       writeFileSync(join(GLOBAL_AUTH_DIR, filename), content, 'utf-8');
     }
