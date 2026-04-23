@@ -789,31 +789,19 @@ function toggleBalance() {
 function normalizeOrderWashers(order) {
   if (!order) return [];
   if (Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 0) {
-    const norm = order.ordemLavadores.filter(ol => ol?.lavador).map(ol => ({
-      id: ol.lavador?.id || ol.lavadorId,
+    const norm = order.ordemLavadores.map(ol => ({
+      id: ol.lavadorId || ol.lavador?.id,
       nome: ol.lavador?.nome || 'N/A',
-      comissao: parseFloat(ol.lavador?.comissao) || 0
-    }));
+      comissao: parseFloat(ol.lavador?.comissao) || 0,
+      ganho: typeof ol.ganho === 'number' ? ol.ganho : null
+    })).filter(w => w.id);
     if (norm.length > 0) return norm;
   }
   if (order.lavadorId) {
     const lav = order.lavador || {};
-    return [{ id: lav?.id || order.lavadorId, nome: lav?.nome || 'N/A', comissao: parseFloat(lav?.comissao || 0) || 0 }];
+    return [{ id: lav?.id || order.lavadorId, nome: lav?.nome || 'N/A', comissao: parseFloat(lav?.comissao || 0) || 0, ganho: null }];
   }
   return [];
-}
-
-function getCommissionPercent(order) {
-  if (order?.lavador?.comissao) {
-    const c = parseFloat(order.lavador.comissao);
-    return isFinite(c) ? c : 0;
-  }
-  if (order?.comissao && order?.valorTotal) {
-    const c = parseFloat(order.comissao), vt = parseFloat(order.valorTotal);
-    if (!isFinite(c) || !isFinite(vt) || vt === 0) return 0;
-    return (c / vt) * 100;
-  }
-  return 0;
 }
 
 function getWasherShare(order, washerId, lavadorComissao) {
@@ -821,12 +809,28 @@ function getWasherShare(order, washerId, lavadorComissao) {
   if (!washers.length || !washerId) return 0;
   const valorTotal = parseFloat(order?.valorTotal || 0);
   if (!isFinite(valorTotal) || valorTotal <= 0) return 0;
-  if (washers.length === 1) {
-    const pct = (lavadorComissao !== undefined && lavadorComissao !== null) ? parseFloat(lavadorComissao) : getCommissionPercent(order);
-    return isFinite(pct) ? valorTotal * (pct / 100) : 0;
+
+  // Usar ganho pré-calculado do ordemLavadores (já considera override do serviço)
+  const washer = washers.find(w => w.id === washerId);
+  if (washer && typeof washer.ganho === 'number' && washer.ganho > 0) {
+    return washer.ganho;
   }
-  const pct = (lavadorComissao !== undefined && lavadorComissao !== null) ? parseFloat(lavadorComissao) : getCommissionPercent(order);
-  if (!isFinite(pct)) return 0;
+
+  // Fallback: calcular pela porcentagem
+  let pct;
+  if (lavadorComissao !== undefined && lavadorComissao !== null) {
+    pct = parseFloat(lavadorComissao);
+  } else if (order?.comissao && order?.valorTotal) {
+    pct = (parseFloat(order.comissao) / parseFloat(order.valorTotal)) * 100;
+  } else if (order?.lavador?.comissao) {
+    pct = parseFloat(order.lavador.comissao);
+  } else {
+    return 0;
+  }
+  if (!isFinite(pct) || pct <= 0) return 0;
+
+  if (washers.length === 1) return valorTotal * (pct / 100);
+
   const totalCents = Math.round(valorTotal * (pct / 100) * 100);
   if (totalCents <= 0) return 0;
   const base = Math.floor(totalCents / washers.length);

@@ -177,23 +177,19 @@ function normalizeOrderWashers(order) {
     return [];
 }
 
-function getCommissionPercent(order) {
-    if (order?.lavador?.comissao) {
-        return order.lavador.comissao;
-    }
-    if (order?.comissao && order?.valorTotal) {
-        return (order.comissao / order.valorTotal) * 100;
-    }
-    return 0;
-}
-
 function getWasherShare(order, washerId) {
     const washers = normalizeOrderWashers(order);
     if (!washers.length || !washerId) return 0;
+
+    // Ganho pré-calculado do ordemLavadores (considera override do serviço)
     const existing = washers.find(w => w.id === washerId && typeof w.ganho === 'number');
     if (existing) return existing.ganho;
 
-    const percent = getCommissionPercent(order);
+    // order.comissao do getDadosComissao já é o ganho correto para este lavador
+    if (typeof order.comissao === 'number' && order.comissao > 0) return order.comissao;
+
+    // Fallback: calcular pela porcentagem (sem override de serviço)
+    const percent = order?.lavador?.comissao || 0;
     const totalCents = Math.round((order?.valorTotal || 0) * (percent / 100) * 100);
     if (totalCents <= 0) return 0;
 
