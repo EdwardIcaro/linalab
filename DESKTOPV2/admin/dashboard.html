@@ -626,7 +626,26 @@
         // BOT LINA
         // ═══════════════════════════════════════
         let botPollInterval = null;
+        let botCountdownInterval = null;
         let botQrData = null;
+
+        function startQrCountdown(expiresIn) {
+            if (botCountdownInterval) clearInterval(botCountdownInterval);
+            let remaining = expiresIn != null ? expiresIn : 60;
+            const timerEl = document.getElementById('botQrTimer');
+            const update = () => {
+                if (!timerEl) return;
+                if (remaining <= 0) {
+                    timerEl.textContent = 'QR expirado, aguardando novo...';
+                    clearInterval(botCountdownInterval);
+                    return;
+                }
+                timerEl.textContent = `⏳ ${remaining}s para escanear`;
+                remaining--;
+            };
+            update();
+            botCountdownInterval = setInterval(update, 1000);
+        }
 
         function showBotState(state, data = {}) {
             ['botDisconnected','botQrState','botConnected','botReconnecting'].forEach(id => {
@@ -644,20 +663,21 @@
                 if (phone) {
                     const url = `https://wa.me/${phone}`;
                     document.getElementById('botWaLink').href = url;
-                    // Gera QR via CDN para o link wa.me
                     document.getElementById('botWaImg').src =
                         `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}`;
                 }
+                if (botCountdownInterval) { clearInterval(botCountdownInterval); botCountdownInterval = null; }
                 stopBotPoll();
             } else if (state === 'qr_code') {
                 document.getElementById('botQrState').style.display = '';
                 badge.textContent = '⏳ Aguardando QR';
                 badge.style.background = '#FEF3C7'; badge.style.color = '#92400E';
 
-                // qrCode já vem como data URL (data:image/png;base64,...) do servidor
+                // Só atualiza QR se realmente mudou (evita piscar a imagem no poll)
                 if (data.qrCode && data.qrCode !== botQrData) {
                     botQrData = data.qrCode;
                     document.getElementById('botQrImg').src = data.qrCode;
+                    startQrCountdown(data.qrExpiresIn);
                 }
                 startBotPoll();
             } else if (state === 'reconnecting') {
