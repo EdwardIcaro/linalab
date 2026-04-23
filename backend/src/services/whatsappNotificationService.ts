@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Notificações proativas do Bot Lina — enviadas automaticamente sem o admin perguntar.
  * Todas as funções são fire-and-forget: erros são logados mas nunca quebram o fluxo principal.
  */
 
 import prisma from '../db';
-import { botSend, botGetStatus } from './botServiceClient';
+import { sendMessage, getStatus } from './baileyService';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -35,8 +35,7 @@ function prefs(empresa: { notificationPreferences: any }): Record<NotifKey, bool
 // ─── Core: enviar para todos os admins da empresa ─────────────────────────────
 
 export async function notifyAdmins(empresaId: string, message: string): Promise<void> {
-  const { status } = await botGetStatus().catch(() => ({ status: 'disconnected' }));
-  if (status !== 'connected') return;
+  if (getStatus() !== 'connected') return;
 
   const admins = await (prisma.whatsappAdminPhone as any).findMany({
     where: { empresaId, ativo: true },
@@ -46,7 +45,7 @@ export async function notifyAdmins(empresaId: string, message: string): Promise<
   for (const admin of admins) {
     const dest = admin.jid ?? `${admin.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
     try {
-      await botSend(dest, message);
+      await sendMessage(dest, message);
     } catch (e) {
       console.error(`[Notif] Erro ao enviar para ${dest}:`, e);
     }
@@ -131,8 +130,7 @@ export async function notifyClienteVip(empresaId: string, dados: {
 // ─── Cron Jobs ────────────────────────────────────────────────────────────────
 
 export async function cronResumoDiario(): Promise<void> {
-  const { status } = await botGetStatus().catch(() => ({ status: 'disconnected' }));
-  if (status !== 'connected') return;
+  if (getStatus() !== 'connected') return;
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
@@ -193,8 +191,7 @@ export async function cronResumoDiario(): Promise<void> {
 }
 
 export async function cronAlertaCaixaAberto(): Promise<void> {
-  const { status } = await botGetStatus().catch(() => ({ status: 'disconnected' }));
-  if (status !== 'connected') return;
+  if (getStatus() !== 'connected') return;
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
@@ -222,8 +219,7 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
 }
 
 export async function cronOrdensParadas(): Promise<void> {
-  const { status } = await botGetStatus().catch(() => ({ status: 'disconnected' }));
-  if (status !== 'connected') return;
+  if (getStatus() !== 'connected') return;
 
   const umHoraAtras = new Date(Date.now() - 60 * 60 * 1000);
 

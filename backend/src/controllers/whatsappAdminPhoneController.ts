@@ -1,16 +1,11 @@
-/**
+﻿/**
  * Controller para gerenciar números de WhatsApp dos admins
  */
 
 import { Request, Response } from 'express';
 import prisma from '../db';
-import {
-  botResolveJid,
-  botSendCaptureJid,
-  botGeneratePairingCode,
-  botGetPairingCode,
-  botCancelPairingCode,
-} from '../services/botServiceClient';
+import { resolvePhoneToJid, sendMessageAndCaptureJid } from '../services/baileyService';
+import { generateCode, getCodeEntry, cancelCode } from '../services/pairingCodeStore';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -89,7 +84,7 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     }
 
     // Tentar resolver JID real (necessário para @lid do novo protocolo WhatsApp)
-    const resolvedJid = await botResolveJid(telefone);
+    const resolvedJid = await resolvePhoneToJid(telefone);
 
     // Criar número de admin
     const adminPhone = await (prisma.whatsappAdminPhone as any).create({
@@ -114,7 +109,7 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     // Enviar mensagem de boas-vindas e capturar JID real (@lid ou @s.whatsapp.net)
     // Isso resolve o problema do @lid — ao enviar, o Baileys retorna o JID real usado
     const nomeAdmin = adminPhone.nome ? ` ${adminPhone.nome}` : '';
-    const actualJid = await botSendCaptureJid(
+    const actualJid = await sendMessageAndCaptureJid(
       telefone,
       `✅ Olá${nomeAdmin}! Você foi adicionado como administrador do bot *LinaX*.\n\nEnvie *ajuda* para ver os comandos disponíveis.`
     );
@@ -330,7 +325,7 @@ export async function gerarCodigoPareamento(req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'WhatsApp não está conectado. Conecte primeiro para usar o código.' });
     }
 
-    const code = await botGeneratePairingCode(req.usuarioId!, empresaId, nome?.trim() || undefined);
+    const code = generateCode(req.usuarioId!, empresaId, nome?.trim() || undefined);
     console.log(`[WhatsApp Admin] Código de pareamento gerado para ${empresaId}: ${code}`);
 
     return res.json({ data: { code, expiresIn: 300 } });
@@ -349,12 +344,19 @@ export async function statusCodigoPareamento(req: AuthenticatedRequest, res: Res
     const empresaId = req.empresaId;
     if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
 
-    const entry = await botGetPairingCode(req.usuarioId!);
-    if (!entry.active) {
+    const entry = getCodeEntry(empresaId);
+    if (!entry) {
       return res.json({ data: { active: false, claimed: false } });
     }
 
-    return res.json({ data: { ...entry } });
+    return res.json({
+      data: {
+        active: true,
+        claimed: entry.claimed,
+        code: entry.code,
+        expiresAt: new Date(entry.expiresAt),
+      },
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return res.status(500).json({ error: 'Erro ao obter status do código', details: errorMsg });
@@ -369,7 +371,7 @@ export async function cancelarCodigoPareamento(req: AuthenticatedRequest, res: R
   try {
     const empresaId = req.empresaId;
     if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
-    await botCancelPairingCode(req.usuarioId!);
+    cancelCode(empresaId);
     return res.json({ message: 'Código cancelado' });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);

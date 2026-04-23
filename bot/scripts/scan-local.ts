@@ -15,6 +15,8 @@ const prisma = new PrismaClient();
 const AUTH_DIR = join(tmpdir(), 'baileys-scan-local');
 const INSTANCE_NAME = 'lina-global';
 
+let savedSuccessfully = false;
+
 async function main() {
   mkdirSync(AUTH_DIR, { recursive: true });
 
@@ -81,21 +83,38 @@ async function main() {
         } as any,
       });
 
+      savedSuccessfully = true;
       console.log(`✅ Auth state salvo (${files.length} arquivos). O bot no Railway vai reconectar automaticamente!`);
       console.log('🔌 Fechando script local...');
       await prisma.$disconnect();
       sock.end(undefined);
-      process.exit(0);
+      setTimeout(() => process.exit(0), 2000);
     }
 
     if (connection === 'close') {
       const code = (lastDisconnect?.error as any)?.output?.statusCode;
-      if (code === DisconnectReason?.loggedOut) {
-        console.error('❌ Logout detectado. Tente novamente.');
-        process.exit(1);
+      console.log(`Conexão fechada — código: ${code}`);
+
+      // Se já salvou com sucesso, ignora qualquer close
+      if (savedSuccessfully) return;
+
+      // Sessão inválida (logout ou falha de conexão com creds existentes) — limpar e reiniciar
+      const isInvalid = code === (DisconnectReason?.loggedOut ?? 401) || code === 500;
+      if (isInvalid) {
+        console.log('🧹 Limpando sessão inválida do banco e reiniciando com QR fresco...');
+        await prisma.whatsappInstance.updateMany({
+          where: { instanceName: INSTANCE_NAME } as any,
+          data: { authState: null, status: 'disconnected' },
+        });
+        const { rmSync } = await import('fs');
+        rmSync(AUTH_DIR, { recursive: true, force: true });
+        mkdirSync(AUTH_DIR, { recursive: true });
+        setTimeout(() => main().catch(console.error), 2000);
+        return;
       }
-      console.log(`Conexão fechada (${code}), tentando novamente...`);
-      main().catch(console.error);
+
+      console.log('Reconectando...');
+      setTimeout(() => main().catch(console.error), 2000);
     }
   });
 }
