@@ -36,6 +36,7 @@ let reconnectDelay:       number          = BASE_DELAY;
 let freshCreds:           boolean         = false;
 let isInitializing:       boolean         = false;
 let failedCredsAttempts:  number          = 0;
+let qrGeneratedAt:        number | null   = null;
 
 const lidToPhone = new Map<string, string>();
 
@@ -179,6 +180,7 @@ export async function initBaileys(): Promise<void> {
     });
 
     let credsJustUpdated = false;
+    let hadCredsOnStart  = existsSync(join(GLOBAL_AUTH_DIR, 'creds.json'));
     if (globalStore) globalStore.bind(sock.ev);
 
     sock.ev.on('creds.update', async () => {
@@ -193,13 +195,38 @@ export async function initBaileys(): Promise<void> {
 
       if (qr) {
         try {
+          // Se havia creds no disco mas WA pediu QR = creds inválidas/expiradas → limpar imediatamente
+          if (hadCredsOnStart) {
+            console.log('[Baileys] ⚠️ Creds existiam mas WA pediu QR — credenciais inválidas, limpando banco...');
+            await prisma.whatsappInstance.updateMany({
+              where: { instanceName: GLOBAL_INSTANCE_NAME },
+              data: { authState: null },
+            });
+            rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
+            mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
+            hadCredsOnStart  = false;
+            failedCredsAttempts = 0;
+          }
+
+          qrGeneratedAt = Date.now();
           globalQrCode  = await QRCode.toDataURL(qr);
           globalStatus  = 'qr_code';
+          const expiresIn = 60;
           await prisma.whatsappInstance.updateMany({
             where: { instanceName: GLOBAL_INSTANCE_NAME },
             data: { status: 'qr_code', qrCode: globalQrCode },
           });
-          console.log('[Baileys] QR code gerado');
+          console.log(`[Baileys] QR code gerado — você tem ${expiresIn}s para escanear`);
+          // Temporizador visual no log
+          let remaining = expiresIn;
+          const timer = setInterval(() => {
+            remaining -= 10;
+            if (remaining > 0 && globalStatus === 'qr_code') {
+              console.log(`[Baileys] ⏳ ${remaining}s restantes para escanear o QR`);
+            } else {
+              clearInterval(timer);
+            }
+          }, 10000);
         } catch (err) {
           console.error('[Baileys] Erro ao gerar QR:', err);
         }
@@ -471,8 +498,9 @@ export async function initBaileys(): Promise<void> {
 // API PÚBLICA
 // ==========================================
 
-export function getQRCode(): string | null { return globalQrCode; }
-export function getStatus(): string        { return globalStatus; }
+export function getQRCode(): string | null  { return globalQrCode; }
+export function getStatus(): string         { return globalStatus; }
+export function getQrGeneratedAt(): number | null { return qrGeneratedAt; }
 
 export async function sendMessage(to: string, text: string): Promise<void> {
   if (!globalSocket) throw new Error('Bot Lina não está conectado');

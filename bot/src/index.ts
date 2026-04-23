@@ -8,6 +8,7 @@ import {
   restoreActiveSessions,
   getStatus,
   getQRCode,
+  getQrGeneratedAt,
   disconnect,
   sendMessage,
   sendImageBuffer,
@@ -44,9 +45,11 @@ app.use(botAuth);
 
 // ── Status + QR ──────────────────────────────────────────────────────────────
 app.get('/status', (_req, res) => {
-  const status = getStatus();
-  const qrCode = getQRCode();
-  res.json({ status, ...(qrCode && { qrCode }) });
+  const status       = getStatus();
+  const qrCode       = getQRCode();
+  const generatedAt  = getQrGeneratedAt();
+  const qrExpiresIn  = generatedAt ? Math.max(0, 60 - Math.floor((Date.now() - generatedAt) / 1000)) : null;
+  res.json({ status, ...(qrCode && { qrCode, qrExpiresIn }) });
 });
 
 // ── Inicializar socket ───────────────────────────────────────────────────────
