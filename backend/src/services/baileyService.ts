@@ -27,14 +27,15 @@ const MAX_RECONNECT = 100;
 // ==========================================
 // STATE GLOBAL
 // ==========================================
-let globalSocket:      WASocket | null = null;
-let globalQrCode:      string   | null = null;
-let globalStatus:      string          = 'disconnected';
-let globalStore:       any             = null;
-let reconnectCount:    number          = 0;
-let reconnectDelay:    number          = BASE_DELAY;
-let freshCreds:        boolean         = false;
-let isInitializing:    boolean         = false;
+let globalSocket:        WASocket | null = null;
+let globalQrCode:        string   | null = null;
+let globalStatus:        string          = 'disconnected';
+let globalStore:         any             = null;
+let reconnectCount:      number          = 0;
+let reconnectDelay:      number          = BASE_DELAY;
+let freshCreds:          boolean         = false;
+let isInitializing:      boolean         = false;
+let consecutive515Count: number          = 0;
 
 const lidToPhone = new Map<string, string>();
 
@@ -194,10 +195,11 @@ export async function initBaileys(): Promise<void> {
       }
 
       if (connection === 'open') {
-        globalSocket  = sock;
-        globalQrCode  = null;
-        globalStatus  = 'connected';
-        reconnectCount = 0;
+        globalSocket       = sock;
+        globalQrCode       = null;
+        globalStatus       = 'connected';
+        reconnectCount     = 0;
+        consecutive515Count = 0;
         resetDelay();
         freshCreds     = false;
         isInitializing = false;
@@ -228,13 +230,22 @@ export async function initBaileys(): Promise<void> {
           const qrExpiredCode = 408;
           let delay: number;
           if (statusCode === qrExpiredCode) {
-            // QR expirou por excesso de tentativas — esperar 5 min para evitar rate-limit
+            consecutive515Count = 0;
             delay = 300000;
-            console.log('[Baileys] ⏳ QR expirado (408) — aguardando 5 minutos antes de gerar novo QR');
+            console.log('[Baileys] ⏳ QR expirado (408) — aguardando 5 minutos');
           } else if (statusCode === restartCode) {
-            // 515 = WA pede restart para completar sessão — reconectar rápido com as creds salvas
-            delay = 2000;
+            consecutive515Count++;
+            if (consecutive515Count >= 5) {
+              // IP provavelmente bloqueado temporariamente — pausar 1 hora
+              delay = 3600000;
+              console.log(`[Baileys] 🚫 515 repetido ${consecutive515Count}x — IP possivelmente bloqueado. Pausando por 1 hora.`);
+              consecutive515Count = 0;
+            } else {
+              delay = 2000;
+              console.log(`[Baileys] ⚠️ Stream error 515 (${consecutive515Count}/5) — reconectando em 2s`);
+            }
           } else if (wasConnected) {
+            consecutive515Count = 0;
             delay = credsJustUpdated ? 5000 : nextDelay();
           } else {
             delay = credsJustUpdated ? 30000 : 45000;
