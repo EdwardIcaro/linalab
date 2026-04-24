@@ -687,17 +687,7 @@
     </div>
     <div id="quitarInfo" style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;"></div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Escolha a forma de pagamento:</p>
-    <div class="pay-methods">
-      <button class="pay-btn dinheiro" id="qBtnDinheiro" onclick="processarQuitar('DINHEIRO')">
-        <i class="fas fa-money-bill-wave"></i> Dinheiro
-      </button>
-      <button class="pay-btn pix" id="qBtnPix" onclick="processarQuitar('PIX')">
-        <i class="fas fa-qrcode"></i> PIX
-      </button>
-      <button class="pay-btn cartao" id="qBtnCartao" onclick="processarQuitar('CARTAO')">
-        <i class="fas fa-credit-card"></i> Cartão
-      </button>
-    </div>
+    <div class="pay-methods" id="quitarPayMethods"></div>
   </div>
 </div>
 
@@ -1162,20 +1152,44 @@ function openQuitarModal(ordemStr) {
   document.getElementById('quitarInfo').innerHTML = `
     <div style="font-weight:700;font-size:14px;margin-bottom:4px">${ordem.veiculo?.modelo || 'Veículo'} — ${formatCurrency(ordem.valorTotal||0)}</div>
     <div style="font-size:12px;color:var(--muted)">Cliente: ${ordem.cliente?.nome||'—'} · OS #${ordem.numeroOrdem||'—'}</div>`;
-  ['qBtnDinheiro','qBtnPix','qBtnCartao'].forEach(id => document.getElementById(id).disabled = false);
+
+  const cfg = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false };
+  const metodos = [
+    { key: 'DINHEIRO', label: '💵 Dinheiro', cls: 'dinheiro', show: cfg.DINHEIRO !== false },
+    { key: 'PIX',      label: '📱 PIX',      cls: 'pix',      show: cfg.PIX !== false },
+    { key: 'CARTAO',   label: '💳 Cartão',   cls: 'cartao',   show: cfg.CARTAO !== false },
+    { key: 'NFE',      label: '🧾 NFe',      cls: 'cartao',   show: cfg.NFE === true },
+  ];
+  document.getElementById('quitarPayMethods').innerHTML = metodos.filter(m => m.show).map(m =>
+    `<button class="pay-btn ${m.cls}" onclick="processarQuitar('${m.key}')">${m.label}</button>`
+  ).join('');
+
   document.getElementById('quitarModal').classList.add('active');
 }
+
 function closeQuitarModal() { document.getElementById('quitarModal').classList.remove('active'); quitarOrdemAtual = null; }
 
 async function processarQuitar(metodo) {
   if (!quitarOrdemAtual) return;
-  ['qBtnDinheiro','qBtnPix','qBtnCartao'].forEach(id => document.getElementById(id).disabled = true);
+  document.querySelectorAll('#quitarPayMethods .pay-btn').forEach(b => b.disabled = true);
+
+  // Encontrar o pagamento pendente na ordem
+  const pagamentoPendente = (quitarOrdemAtual.pagamentos || []).find(p => p.metodo === 'PENDENTE' || p.status === 'PENDENTE');
+  if (!pagamentoPendente) {
+    showToast('Pagamento pendente não encontrado na ordem', 'error');
+    document.querySelectorAll('#quitarPayMethods .pay-btn').forEach(b => b.disabled = false);
+    return;
+  }
+
   try {
-    await window.api.quitarPendencia(quitarOrdemAtual.id, { metodo });
+    await window.api.quitarPendencia(quitarOrdemAtual.id, pagamentoPendente.id, metodo);
     showToast('Pendência quitada!', 'success');
     closeQuitarModal();
     await Promise.all([loadBalanceCards(), loadPendenciasCount(), loadPendencias()]);
-  } catch(e) { showToast(e?.message || 'Erro ao quitar', 'error'); ['qBtnDinheiro','qBtnPix','qBtnCartao'].forEach(id => document.getElementById(id).disabled = false); }
+  } catch(e) {
+    showToast(e?.message || 'Erro ao quitar', 'error');
+    document.querySelectorAll('#quitarPayMethods .pay-btn').forEach(b => b.disabled = false);
+  }
 }
 
 // ===================== HELPERS =====================
