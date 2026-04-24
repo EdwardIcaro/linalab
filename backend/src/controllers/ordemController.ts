@@ -1009,15 +1009,21 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       });
 
       const valorFinalParaGanho = Number(dataToUpdate.valorTotal?.toString() || existingOrdem.valorTotal.toString());
-      await tx.ordemServicoLavador.deleteMany({ where: { ordemId: id } });
-      if (normalizedLavadorIds.length > 0) {
-        await tx.ordemServicoLavador.createMany({
-          data: normalizedLavadorIds.map(lavadorIdValue => ({
-            ordemId: id,
-            lavadorId: lavadorIdValue,
-            ganho: valorFinalParaGanho * ((updateComissaoMap.get(lavadorIdValue) || 0) / 100)
-          }))
-        });
+
+      // Só atualizar ordemLavadores se lavadores foram explicitamente enviados
+      // Evita apagar multi-wash ao mudar apenas status/observacoes
+      const lavadoresForamEspecificados = lavadorIds !== undefined || lavadorId !== undefined;
+      if (lavadoresForamEspecificados) {
+        await tx.ordemServicoLavador.deleteMany({ where: { ordemId: id } });
+        if (normalizedLavadorIds.length > 0) {
+          await tx.ordemServicoLavador.createMany({
+            data: normalizedLavadorIds.map(lavadorIdValue => ({
+              ordemId: id,
+              lavadorId: lavadorIdValue,
+              ganho: valorFinalParaGanho * ((updateComissaoMap.get(lavadorIdValue) || 0) / 100)
+            }))
+          });
+        }
       }
 
       const ordemComLavadores = await tx.ordemServico.findUnique({
