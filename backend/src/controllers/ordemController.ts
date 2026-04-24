@@ -933,6 +933,9 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         lavador: primaryLavadorId ? { connect: { id: primaryLavadorId } } : undefined,
       };
 
+      // servicoComissaoMap: servicoId → comissaoPercentual (para calcular ganho com override do serviço)
+      const servicoComissaoUpdateMap = new Map<string, number | null>();
+
       if (itens && Array.isArray(itens)) {
         await tx.ordemServicoItem.deleteMany({ where: { ordemId: id } });
 
@@ -946,14 +949,15 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
           }
 
           let itemData;
-                    let precoUnitario = 0;
+          let precoUnitario = 0;
 
-                    if (tipo === 'SERVICO') {
+          if (tipo === 'SERVICO') {
             const servico = await tx.servico.findUnique({ where: { id: itemId, empresaId: req.empresaId! } });
             if (!servico) throw new Error(`Serviço com ID ${itemId} não encontrado`);
             precoUnitario = servico.preco;
-                        itemData = { tipo: 'SERVICO' as any, servico: { connect: { id: itemId } }, quantidade, precoUnit: precoUnitario, subtotal: precoUnitario * quantidade };
-                    } else if (tipo === 'ADICIONAL') {
+            servicoComissaoUpdateMap.set(itemId, (servico as any).comissaoPercentual ?? null);
+            itemData = { tipo: 'SERVICO' as any, servico: { connect: { id: itemId } }, quantidade, precoUnit: precoUnitario, subtotal: precoUnitario * quantidade };
+          } else if (tipo === 'ADICIONAL') {
             const adicional = await tx.adicional.findUnique({ where: { id: itemId, empresaId: req.empresaId! } });
             if (!adicional) throw new Error(`Adicional com ID ${itemId} não encontrado`);
             precoUnitario = adicional.preco;
@@ -1016,11 +1020,43 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       if (lavadoresForamEspecificados) {
         await tx.ordemServicoLavador.deleteMany({ where: { ordemId: id } });
         if (normalizedLavadorIds.length > 0) {
+          // Função que calcula ganho por lavador respeitando comissaoPercentual do serviço
+          // Se itens foram enviados no update, usa servicoComissaoUpdateMap
+          // Caso contrário, busca itens existentes da ordem
+          let calcGanhoUpdate: (lavadorComissaoPct: number) => number;
+
+          if (servicoComissaoUpdateMap.size > 0 && dataToUpdate.items) {
+            // Itens foram recriados — usar os novos itens já calculados em itensData
+            const itensParaCalculo = (dataToUpdate.items as any).create || [];
+            calcGanhoUpdate = (pctDefault: number) =>
+              itensParaCalculo.reduce((sum: number, item: any) => {
+                let pct = pctDefault;
+                const servicoId = item.servico?.connect?.id;
+                if (servicoId && servicoComissaoUpdateMap.has(servicoId)) {
+                  const override = servicoComissaoUpdateMap.get(servicoId);
+                  if (override != null) pct = override;
+                }
+                return sum + (item.subtotal || 0) * (pct / 100);
+              }, 0);
+          } else {
+            // Itens não mudaram — buscar itens existentes com comissaoPercentual
+            const existingItems = await tx.ordemServicoItem.findMany({
+              where: { ordemId: id },
+              include: { servico: { select: { id: true, comissaoPercentual: true } } }
+            });
+            calcGanhoUpdate = (pctDefault: number) =>
+              existingItems.reduce((sum: number, item: any) => {
+                let pct = pctDefault;
+                if (item.servico?.comissaoPercentual != null) pct = item.servico.comissaoPercentual;
+                return sum + (item.subtotal || 0) * (pct / 100);
+              }, 0);
+          }
+
           await tx.ordemServicoLavador.createMany({
             data: normalizedLavadorIds.map(lavadorIdValue => ({
               ordemId: id,
               lavadorId: lavadorIdValue,
-              ganho: valorFinalParaGanho * ((updateComissaoMap.get(lavadorIdValue) || 0) / 100)
+              ganho: calcGanhoUpdate(updateComissaoMap.get(lavadorIdValue) || 0)
             }))
           });
         }

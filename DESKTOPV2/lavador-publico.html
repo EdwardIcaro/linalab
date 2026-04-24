@@ -811,33 +811,40 @@ function getWasherShare(order, washerId, lavadorComissao) {
   if (!isFinite(valorTotal) || valorTotal <= 0) return 0;
 
   // Usar ganho pré-calculado do ordemLavadores (já considera override do serviço)
+  // ganho === 0 é válido (serviço com 0% de comissão) — só pula se for null/undefined
   const washer = washers.find(w => w.id === washerId);
-  if (washer && typeof washer.ganho === 'number' && washer.ganho > 0) {
+  if (washer && washer.ganho !== null && washer.ganho !== undefined) {
     return washer.ganho;
   }
 
-  // Fallback: calcular pela porcentagem
-  let pct;
-  if (lavadorComissao !== undefined && lavadorComissao !== null) {
-    pct = parseFloat(lavadorComissao);
-  } else if (order?.comissao && order?.valorTotal) {
-    pct = (parseFloat(order.comissao) / parseFloat(order.valorTotal)) * 100;
-  } else if (order?.lavador?.comissao) {
-    pct = parseFloat(order.lavador.comissao);
-  } else {
-    return 0;
+  // Fallback para ordens sem ganho calculado (ordens antigas):
+  // 1. order.comissao / valorTotal → já usa % do serviço se disponível
+  // 2. lavadorComissao (% padrão do lavador) → último recurso
+  const orderComissao = parseFloat(order?.comissao || 0);
+  if (orderComissao > 0 && valorTotal > 0) {
+    if (washers.length <= 1) return orderComissao;
+    // Multi-wash sem ganho individual: divide proporcionalmente
+    const totalCentsOC = Math.round(orderComissao * 100);
+    const base = Math.floor(totalCentsOC / washers.length);
+    let rem = totalCentsOC % washers.length;
+    const map: Record<string, number> = {};
+    washers.forEach((w: any) => { let c = base; if (rem > 0) { c++; rem--; } map[w.id] = c / 100; });
+    return map[washerId] || 0;
   }
+
+  // Último recurso: calcular pela % padrão do lavador
+  const pct = (lavadorComissao !== undefined && lavadorComissao !== null)
+    ? parseFloat(lavadorComissao)
+    : parseFloat(order?.lavador?.comissao || 0);
   if (!isFinite(pct) || pct <= 0) return 0;
-
   if (washers.length === 1) return valorTotal * (pct / 100);
-
   const totalCents = Math.round(valorTotal * (pct / 100) * 100);
   if (totalCents <= 0) return 0;
-  const base = Math.floor(totalCents / washers.length);
-  let rem = totalCents % washers.length;
-  const map = {};
-  washers.forEach(w => { let c = base; if (rem > 0) { c++; rem--; } map[w.id] = c / 100; });
-  return map[washerId] || 0;
+  const base2 = Math.floor(totalCents / washers.length);
+  let rem2 = totalCents % washers.length;
+  const map2: Record<string, number> = {};
+  washers.forEach((w: any) => { let c = base2; if (rem2 > 0) { c++; rem2--; } map2[w.id] = c / 100; });
+  return map2[washerId] || 0;
 }
 
 function isMultiWash(order) {
