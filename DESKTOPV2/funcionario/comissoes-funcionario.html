@@ -776,12 +776,17 @@
     function renderDebitos() {
       const list = document.getElementById('debitList');
       const allDebits = [
-        ...adiantamentosPend.map(a => ({
-          tipo: 'adiantamento',
-          label: a.descricao || 'Adiantamento (Vale)',
-          sub: a.data ? new Date(a.data).toLocaleDateString('pt-BR') : '—',
-          valor: parseFloat(a.valor) || 0,
-        })),
+        ...adiantamentosPend.map(a => {
+          const raw  = a.caixaRegistro?.descricao || '';
+          const sep  = raw.indexOf(' — ');
+          const desc = sep !== -1 ? raw.slice(sep + 3).trim() : '';
+          return {
+            tipo: 'adiantamento',
+            label: desc || 'Adiantamento (Vale)',
+            sub: a.data ? new Date(a.data).toLocaleDateString('pt-BR') : '—',
+            valor: parseFloat(a.valor) || 0,
+          };
+        }),
         ...debitosOS.map(d => ({
           tipo: 'debitos_os',
           label: `Débito OS #${d.numeroOrdem || d.id?.slice(0,8)}`,

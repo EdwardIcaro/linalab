@@ -1134,6 +1134,9 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
                 lavadorId: lavadorId as string,
                 status: 'PENDENTE',
             },
+            include: {
+                caixaRegistro: { select: { descricao: true } }
+            },
         });
 
         // ✅ CORRIGIDO: Buscar débitos com mesmo critério (status != PENDENTE, comissão não paga)
