@@ -825,11 +825,11 @@ function getWasherShare(order, washerId, lavadorComissao) {
     if (washers.length <= 1) return orderComissao;
     // Multi-wash sem ganho individual: divide proporcionalmente
     const totalCentsOC = Math.round(orderComissao * 100);
-    const base = Math.floor(totalCentsOC / washers.length);
-    let rem = totalCentsOC % washers.length;
-    const map: Record<string, number> = {};
-    washers.forEach((w: any) => { let c = base; if (rem > 0) { c++; rem--; } map[w.id] = c / 100; });
-    return map[washerId] || 0;
+    const baseOC = Math.floor(totalCentsOC / washers.length);
+    let remOC = totalCentsOC % washers.length;
+    const mapOC = {};
+    washers.forEach(w => { let c = baseOC; if (remOC > 0) { c++; remOC--; } mapOC[w.id] = c / 100; });
+    return mapOC[washerId] || 0;
   }
 
   // Último recurso: calcular pela % padrão do lavador
@@ -840,11 +840,11 @@ function getWasherShare(order, washerId, lavadorComissao) {
   if (washers.length === 1) return valorTotal * (pct / 100);
   const totalCents = Math.round(valorTotal * (pct / 100) * 100);
   if (totalCents <= 0) return 0;
-  const base2 = Math.floor(totalCents / washers.length);
-  let rem2 = totalCents % washers.length;
-  const map2: Record<string, number> = {};
-  washers.forEach((w: any) => { let c = base2; if (rem2 > 0) { c++; rem2--; } map2[w.id] = c / 100; });
-  return map2[washerId] || 0;
+  const basePct = Math.floor(totalCents / washers.length);
+  let remPct = totalCents % washers.length;
+  const mapPct = {};
+  washers.forEach(w => { let c = basePct; if (remPct > 0) { c++; remPct--; } mapPct[w.id] = c / 100; });
+  return mapPct[washerId] || 0;
 }
 
 function isMultiWash(order) {
