@@ -843,17 +843,22 @@
 
     function clienteCard(c) {
       const isNA      = !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
-      const initial   = isNA ? '?' : c.nome.charAt(0).toUpperCase();
       const veiculos  = c.veiculos || [];
+      // Clientes sem nome: usar placa como identificador primário
+      const primeiraPlaca = veiculos[0]?.placa || null;
+      const displayNome   = isNA ? (primeiraPlaca || 'Sem nome') : c.nome;
+      const initial       = isNA ? (primeiraPlaca ? primeiraPlaca.charAt(0).toUpperCase() : '?') : c.nome.charAt(0).toUpperCase();
       const totalGasto= calcTotalGasto(c);
       const totalOrdens = (c.ordens || []).filter(o => o.status !== 'CANCELADO').length || c._count?.ordens || 0;
       const visitaBadge = badgeVisitaHtml(c);
 
-      const vehicleTags = veiculos.slice(0, 2).map(v =>
+      // Se sem nome, não mostrar a placa novamente nas tags (já está no nome)
+      const veiculosParaTags = isNA && primeiraPlaca ? veiculos.slice(1) : veiculos;
+      const vehicleTags = veiculosParaTags.slice(0, 2).map(v =>
         `<span class="tag tag-plate">${v.placa}</span>
          ${v.modelo ? `<span class="tag tag-model">${v.modelo}</span>` : ''}`
       ).join('');
-      const moreVeh = veiculos.length > 2 ? `<span class="tag tag-model">+${veiculos.length - 2}</span>` : '';
+      const moreVeh = veiculosParaTags.length > 2 ? `<span class="tag tag-model">+${veiculosParaTags.length - 2}</span>` : '';
 
       const waBtn = c.telefone
         ? `<a href="https://wa.me/55${cleanPhone(c.telefone)}" target="_blank" class="cc-action-btn wa" title="WhatsApp" onclick="event.stopPropagation()">
@@ -861,7 +866,7 @@
            </a>`
         : '';
 
-      const semNomeBadge = isNA ? `<span class="badge-semnom">N/A</span>` : '';
+      const semNomeBadge = isNA ? `<span class="badge-semnom">sem nome</span>` : '';
 
       return `
         <div class="client-card" onclick="openDetail('${c.id}')">
@@ -869,7 +874,7 @@
             <div class="cc-avatar ${isNA ? 'na' : ''}">${initial}</div>
             <div class="cc-info">
               <div class="cc-name-row">
-                <div class="cc-name ${isNA ? 'na-name' : ''}">${isNA ? 'Sem nome' : escHtml(c.nome)}</div>
+                <div class="cc-name">${escHtml(displayNome)}</div>
                 ${semNomeBadge}
               </div>
               <div class="cc-phone">
