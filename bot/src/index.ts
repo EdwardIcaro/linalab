@@ -3,6 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Evita crash por promises não tratadas (ex: saveCreds com dir deletado)
+process.on('unhandledRejection', (reason) => {
+  console.error('[Bot] Unhandled rejection (ignorado para evitar crash):', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Bot] Uncaught exception (ignorado para evitar crash):', err);
+});
+
 import {
   initBaileys,
   restoreActiveSessions,

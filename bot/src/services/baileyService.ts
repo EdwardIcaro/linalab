@@ -182,7 +182,12 @@ export async function initBaileys(): Promise<void> {
     sock.ev.on('creds.update', async () => {
       credsJustUpdated = true;
       freshCreds = true;
-      saveCreds();
+      try {
+        mkdirSync(GLOBAL_AUTH_DIR, { recursive: true }); // garante que o dir existe antes de salvar
+        saveCreds();
+      } catch (e) {
+        console.error('[Baileys] Erro ao salvar creds localmente:', e);
+      }
       await persistAuthToDb();
     });
 
