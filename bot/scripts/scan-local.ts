@@ -64,7 +64,11 @@ async function main() {
     }
 
     if (connection === 'open') {
-      console.log('\n✅ Conectado! Salvando auth state no banco...');
+      console.log('\n✅ Conectado! Aguardando 8s para todos os creds.update estabilizarem...');
+
+      // WhatsApp dispara múltiplos creds.update após conectar.
+      // Aguardar antes de salvar garante que Neon recebe o estado final.
+      await new Promise(r => setTimeout(r, 8000));
 
       const { readdirSync, readFileSync } = await import('fs');
       const files = readdirSync(AUTH_DIR);
@@ -84,11 +88,11 @@ async function main() {
       });
 
       savedSuccessfully = true;
-      console.log(`✅ Auth state salvo (${files.length} arquivos). O bot no Railway vai reconectar automaticamente!`);
-      console.log('🔌 Fechando script local...');
+      console.log(`✅ Auth state salvo (${files.length} arquivos).`);
+      console.log('🔌 Encerrando script (sem chamar sock.end para não invalidar sessão)...');
       await prisma.$disconnect();
-      sock.end(undefined);
-      setTimeout(() => process.exit(0), 2000);
+      // Não chamar sock.end() — evita que WA invalide a sessão antes do VPS reconectar
+      process.exit(0);
     }
 
     if (connection === 'close') {
