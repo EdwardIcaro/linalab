@@ -6,12 +6,11 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import {
-  initBaileys,
-  getQRCode,
-  getStatus,
-  disconnect as disconnectBaileys,
-} from '../services/baileyService';
-import { generateCode } from '../services/pairingCodeStore';
+  botInitialize,
+  botGetStatus,
+  botDisconnect,
+  botGeneratePairingCode,
+} from '../services/botServiceClient';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -32,32 +31,22 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Apenas o administrador Lina pode configurar o bot global' });
     }
 
-    const current = getStatus();
-    if (current === 'connected') {
+    const current = await botGetStatus();
+    if (current.status === 'connected') {
       return res.status(400).json({ error: 'Bot Lina já está conectado' });
     }
-    if (current === 'reconnecting') {
+    if (current.status === 'reconnecting') {
       return res.status(409).json({ status: 'reconnecting', message: 'Reconexão automática em andamento. Aguarde.' });
     }
 
-    // Garantir registro da instância global no banco
-    // empresaId é nullable após migration — cast para any até prisma generate
     await (prisma.whatsappInstance as any).upsert({
       where:  { instanceName: GLOBAL_INSTANCE_NAME },
       update: { status: 'qr_code', updatedAt: new Date() },
       create: { instanceName: GLOBAL_INSTANCE_NAME, status: 'qr_code' },
     });
 
-    await initBaileys();
-
-    // Aguardar QR (até 30s)
-    let qrCode: string | null = null;
-    for (let i = 0; i < 30 && !qrCode; i++) {
-      await new Promise(r => setTimeout(r, 1000));
-      qrCode = getQRCode();
-    }
-
-    return res.json({ status: 'qr_code', qrCode, message: 'Bot Lina iniciado. Escaneie o QR code.' });
+    const result = await botInitialize();
+    return res.json({ status: result.status, qrCode: result.qrCode, message: 'Bot Lina iniciado. Escaneie o QR code.' });
   } catch (err) {
     console.error('[WhatsApp Setup] Erro:', err);
     return res.status(500).json({ error: 'Erro ao configurar bot', details: String(err) });
@@ -69,17 +58,17 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
 // ──────────────────────────────────────────────────────────────
 export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response) {
   try {
-    const status = getStatus();
+    const bot = await botGetStatus();
 
-    if (status === 'connected') {
+    if (bot.status === 'connected') {
       const inst = await prisma.whatsappInstance.findFirst({ where: { instanceName: GLOBAL_INSTANCE_NAME } });
       return res.json({ status: 'connected', ownerPhone: inst?.ownerPhone, message: 'Bot Lina conectado' });
     }
-    if (status === 'reconnecting') {
+    if (bot.status === 'reconnecting') {
       return res.json({ status: 'reconnecting', message: 'Reconectando automaticamente...' });
     }
-    if (status === 'qr_code') {
-      return res.json({ status: 'qr_code', qrCode: getQRCode(), message: 'Aguardando escaneamento do QR' });
+    if (bot.status === 'qr_code') {
+      return res.json({ status: 'qr_code', qrCode: bot.qrCode, qrExpiresIn: bot.qrExpiresIn, message: 'Aguardando escaneamento do QR' });
     }
 
     return res.json({ status: 'disconnected', message: 'Bot Lina desconectado' });
@@ -96,7 +85,7 @@ export async function disconnectWhatsapp(req: AuthenticatedRequest, res: Respons
     if (req.userRole !== 'LINA_OWNER' && req.role !== 'LINA_OWNER') {
       return res.status(403).json({ error: 'Apenas o administrador Lina pode desconectar o bot global' });
     }
-    await disconnectBaileys();
+    await botDisconnect();
     return res.json({ message: 'Bot Lina desconectado com sucesso' });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao desconectar', details: String(err) });
@@ -118,7 +107,7 @@ export async function generatePairingCode(req: AuthenticatedRequest, res: Respon
 
     const { nome } = req.body as { nome?: string };
 
-    const code = generateCode(usuarioId, empresaId, nome);
+    const code = await botGeneratePairingCode(usuarioId, empresaId, nome);
     console.log(`[WhatsApp Pairing] Código gerado para usuário ${usuarioId}: ${code}`);
 
     return res.json({ code, expiresInSeconds: 300 });

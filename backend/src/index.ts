@@ -34,7 +34,6 @@ import ocrRoutes from './routes/ocr';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
-import { restoreActiveSessions, initBaileys, getStatus } from './services/baileyService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas } from './services/whatsappNotificationService';
 
 // Importar middleware
@@ -226,48 +225,12 @@ cron.schedule('0 * * * *', () => {
   cronOrdensParadas();
 }, { timezone: "America/Sao_Paulo" });
 
-// Cron job para verificar e reconectar bots desconectados (a cada 10 minutos)
-// Reforça reconexões que atingiram MAX_RECONNECT, garantindo sessão mantida em produção
-cron.schedule('*/10 * * * *', async () => {
-  try {
-    const statusMemoria = getStatus();
-    // Só tenta reconectar se realmente desconectado — não interferir com QR em exibição
-    if (statusMemoria !== 'disconnected') return;
-
-    const desconectadas = await prisma.whatsappInstance.findMany({
-      where: {
-        authState: { not: null },
-        status: 'disconnected' // apenas verdadeiramente desconectadas, não qr_code
-      }
-    });
-
-    if (desconectadas.length > 0) {
-      console.log(`[${new Date().toISOString()}] [WhatsApp Cron] ${desconectadas.length} instância(s) desconectada(s) — tentando reconectar...`);
-      try {
-        await initBaileys();
-      } catch (err) {
-        console.error('[WhatsApp Cron] Erro ao reconectar socket global:', err);
-      }
-    }
-  } catch (err) {
-    console.error('[WhatsApp Cron] Erro ao verificar status:', err);
-  }
-}, {
-  timezone: "America/Sao_Paulo"
-});
 
 // Iniciar servidor com aguardo do banco de dados
 async function startServer() {
   try {
     // Aguardar banco de dados estar pronto
     await waitForDatabase();
-
-    // Restaurar sessões ativas do WhatsApp (Baileys)
-    // Delay de 5s para o servidor e rede estabilizarem antes de conectar ao WA
-    console.log('🔄 Aguardando estabilização antes de restaurar sessões WhatsApp...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    console.log('🔄 Restaurando sessões do WhatsApp...');
-    await restoreActiveSessions();
 
     // Iniciar servidor
     app.listen(PORT, () => {

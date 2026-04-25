@@ -4,7 +4,7 @@
  */
 
 import prisma from '../db';
-import { sendMessage, getStatus } from './baileyService';
+import { botSend, botGetStatus } from './botServiceClient';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,12 @@ function prefs(empresa: { notificationPreferences: any }): Record<NotifKey, bool
 // ─── Core: enviar para todos os admins da empresa ─────────────────────────────
 
 export async function notifyAdmins(empresaId: string, message: string): Promise<void> {
-  if (getStatus() !== 'connected') return;
+  try {
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') return;
+  } catch {
+    return; // bot service inacessível
+  }
 
   const admins = await (prisma.whatsappAdminPhone as any).findMany({
     where: { empresaId, ativo: true },
@@ -45,7 +50,7 @@ export async function notifyAdmins(empresaId: string, message: string): Promise<
   for (const admin of admins) {
     const dest = admin.jid ?? `${admin.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
     try {
-      await sendMessage(dest, message);
+      await botSend(dest, message);
     } catch (e) {
       console.error(`[Notif] Erro ao enviar para ${dest}:`, e);
     }
@@ -130,7 +135,7 @@ export async function notifyClienteVip(empresaId: string, dados: {
 // ─── Cron Jobs ────────────────────────────────────────────────────────────────
 
 export async function cronResumoDiario(): Promise<void> {
-  if (getStatus() !== 'connected') return;
+  try { const s = await botGetStatus(); if (s.status !== 'connected') return; } catch { return; }
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
@@ -191,7 +196,7 @@ export async function cronResumoDiario(): Promise<void> {
 }
 
 export async function cronAlertaCaixaAberto(): Promise<void> {
-  if (getStatus() !== 'connected') return;
+  try { const s = await botGetStatus(); if (s.status !== 'connected') return; } catch { return; }
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
@@ -219,7 +224,7 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
 }
 
 export async function cronOrdensParadas(): Promise<void> {
-  if (getStatus() !== 'connected') return;
+  try { const s = await botGetStatus(); if (s.status !== 'connected') return; } catch { return; }
 
   const umHoraAtras = new Date(Date.now() - 60 * 60 * 1000);
 
