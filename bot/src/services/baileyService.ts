@@ -143,20 +143,9 @@ export async function initBaileys(): Promise<void> {
     mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
 
     const instance = await getGlobalInstance();
-    if (instance?.authState && globalStatus !== 'connected') {
-      failedCredsAttempts++;
-      if (failedCredsAttempts > 3) {
-        console.log('[Baileys] ⚠️ Muitas falhas com creds salvas — limpando para QR fresco');
-        await prisma.whatsappInstance.updateMany({
-          where: { instanceName: GLOBAL_INSTANCE_NAME },
-          data: { authState: null, qrCode: null, status: 'disconnected' },
-        });
-        failedCredsAttempts = 0;
-        await restoreAuthFromDb();
-      } else {
-        globalStatus = 'reconnecting';
-        console.log(`[Baileys] Reconectando com credenciais salvas (tentativa ${failedCredsAttempts}/3)...`);
-      }
+    if (instance?.authState) {
+      globalStatus = 'reconnecting';
+      console.log('[Baileys] Reconectando com credenciais salvas...');
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(GLOBAL_AUTH_DIR);
