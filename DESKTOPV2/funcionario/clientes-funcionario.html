@@ -1185,7 +1185,7 @@
           <div class="form-section-title">Veículos</div>
           <div id="fVeiculos">
             ${veiculos.length > 0
-              ? veiculos.map(v => buildVehRow(v.placa, v.modelo)).join('')
+              ? veiculos.map(v => buildVehRow(v.placa, v.modelo, v.id)).join('')
               : buildVehRow()}
           </div>
           <button type="button" class="btn-add-veh" onclick="addVehRow()">
@@ -1203,11 +1203,11 @@
       `;
     }
 
-    function buildVehRow(placa = '', modelo = '') {
+    function buildVehRow(placa = '', modelo = '', vehId = '') {
       vehCount++;
       const n = vehCount;
       return `
-        <div class="vehicle-row" id="vr${n}">
+        <div class="vehicle-row" id="vr${n}" data-veh-id="${escHtml(vehId)}">
           <input type="text" class="form-input veh-placa" placeholder="Placa (ABC1234)" value="${escHtml(placa)}"
                  style="text-transform:uppercase;font-weight:700;letter-spacing:.5px">
           <input type="text" class="form-input veh-modelo" placeholder="Modelo" value="${escHtml(modelo)}">
@@ -1236,6 +1236,20 @@
 
         if (editingId) {
           await window.api.updateCliente(editingId, data);
+
+          const rows = document.querySelectorAll('.vehicle-row');
+          for (const row of rows) {
+            const placa  = row.querySelector('.veh-placa')?.value.trim().toUpperCase();
+            const modelo = row.querySelector('.veh-modelo')?.value.trim() || null;
+            const vehId  = row.dataset.vehId;
+            if (!placa) continue;
+            if (vehId) {
+              await window.api.updateVeiculo(vehId, { placa, modelo });
+            } else {
+              await window.api.createVeiculo({ clienteId: editingId, placa, modelo, cor: null });
+            }
+          }
+
           showToast('Cliente atualizado!', 'success');
         } else {
           const created = await window.api.createCliente(data);
