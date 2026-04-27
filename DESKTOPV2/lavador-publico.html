@@ -576,11 +576,15 @@
       </div>
     </div>
 
-    <div class="hero-balance-label">A RECEBER</div>
+    <div class="hero-balance-label">A RECEBER (finalizados)</div>
     <div id="heroSaldo" class="hero-balance">R$ 0,00</div>
     <div id="heroDividaRow" class="hero-debt-row hidden">
       <span>Adiantamentos:</span>
       <span id="heroDividaVal" class="badge-red">–R$ 0,00</span>
+    </div>
+    <div id="heroPendenteRow" class="hero-debt-row hidden" style="color:var(--amber)">
+      <span>Em andamento:</span>
+      <span id="heroPendenteVal">+R$ 0,00</span>
     </div>
 
     <div class="stat-pills">
@@ -919,20 +923,26 @@ function renderHeroStats() {
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  let semana = 0, mes = 0, creditosNaoPagos = 0;
+  let semana = 0, mes = 0, creditosFinalizados = 0, creditosPendentes = 0;
   (lavadorData.ordens || []).forEach(o => {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (!isFinite(g) || g < 0) return;
-    if (!o.comissaoPaga) creditosNaoPagos += g;
-    const d = new Date(o.createdAt);
-    if (d >= weekStart) semana += g;
-    if (d >= monthStart) mes += g;
+
+    if (o.status === 'FINALIZADO') {
+      if (!o.comissaoPaga) creditosFinalizados += g;
+      const d = new Date(o.createdAt);
+      if (d >= weekStart) semana += g;
+      if (d >= monthStart) mes += g;
+    } else {
+      // EM_ANDAMENTO ou AGUARDANDO_PAGAMENTO — valor que pode ainda entrar
+      creditosPendentes += g;
+    }
   });
 
   let divida = 0;
   (lavadorData.adiantamentosNaoQuitados || []).forEach(a => divida += parseFloat(a.valor) || 0);
-  const saldo = creditosNaoPagos - divida;
+  const saldo = creditosFinalizados - divida;
 
   document.getElementById('heroSaldo').textContent = formatCurrency(saldo);
   if (saldo < 0) document.getElementById('heroSaldo').style.color = '#ef4444';
@@ -943,12 +953,19 @@ function renderHeroStats() {
     document.getElementById('heroDividaVal').textContent = '-' + formatCurrency(divida);
   }
 
+  if (creditosPendentes > 0) {
+    document.getElementById('heroPendenteRow').classList.remove('hidden');
+    document.getElementById('heroPendenteVal').textContent = '+' + formatCurrency(creditosPendentes);
+  } else {
+    document.getElementById('heroPendenteRow').classList.add('hidden');
+  }
+
   document.getElementById('pillSemana').textContent = formatCurrencyShort(semana);
   document.getElementById('pillMes').textContent = formatCurrencyShort(mes);
   document.getElementById('pillDivida').textContent = formatCurrencyShort(divida);
 
   // Para uso em outras seções
-  window._stats = { semana, mes, divida, saldo };
+  window._stats = { semana, mes, divida, saldo, pendentes: creditosPendentes };
 }
 
 // ===================== TOKEN TIMER =====================
