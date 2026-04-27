@@ -1676,9 +1676,11 @@
           this.criando = true;
 
           // Monta payload antes do try para poder reusar no catch (forçar criação)
-          const lavadoresComissao = this.lavs.length > 0
+          const numLavs = this.lavs.length;
+          const lavadoresComissao = numLavs > 0
             ? this.lavs.map(id => {
-                const ganho = Math.round((this.svc.preco / this.lavs.length) * 100) / 100;
+                const lav = this.lavadores.find((l: any) => l.id === id);
+                const ganho = Math.round(this.svc.preco * ((lav?.comissao || 0) / numLavs / 100) * 100) / 100;
                 return { id, ganho, ganhoCentavos: Math.round(ganho * 100) };
               })
             : [];

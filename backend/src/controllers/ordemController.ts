@@ -289,8 +289,9 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       // 5. Calcular comissão item a item:
       // - Se o serviço tem comissaoPercentual definida, usa essa % para aquele item
       // - Caso contrário, usa a % padrão do lavador
-      // Ex: Lavagem R$100 (comissaoPercentual=40%) + Adicional R$30 com lavador 35%
-      //     → ganho = 100*40% + 30*35% = R$40 + R$10,50 = R$50,50
+      // - A % de cada lavador é dividida pelo número de lavadores (divisão proporcional)
+      // Ex: 2 lavadores (35% e 40%) em R$100 → cada um recebe sua % ÷ 2 = R$17,50 e R$20,00
+      const numLavadores = Math.max(normalizedLavadorIds.length, 1);
       const calcGanhoPorLavador = (lavadorComissaoDefault: number): number => {
         return ordemItemsData.reduce((sum: number, item: any) => {
           let percentual = lavadorComissaoDefault;
@@ -300,7 +301,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
               percentual = (servico as any).comissaoPercentual;
             }
           }
-          return sum + item.subtotal * (percentual / 100);
+          return sum + item.subtotal * ((percentual / numLavadores) / 100);
         }, 0);
       };
 
@@ -1025,6 +1026,8 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
           // Caso contrário, busca itens existentes da ordem
           let calcGanhoUpdate: (lavadorComissaoPct: number) => number;
 
+          const numLavadoresUpdate = Math.max(normalizedLavadorIds.length, 1);
+
           if (servicoComissaoUpdateMap.size > 0 && dataToUpdate.items) {
             // Itens foram recriados — usar os novos itens já calculados em itensData
             const itensParaCalculo = (dataToUpdate.items as any).create || [];
@@ -1036,7 +1039,7 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
                   const override = servicoComissaoUpdateMap.get(servicoId);
                   if (override != null) pct = override;
                 }
-                return sum + (item.subtotal || 0) * (pct / 100);
+                return sum + (item.subtotal || 0) * ((pct / numLavadoresUpdate) / 100);
               }, 0);
           } else {
             // Itens não mudaram — buscar itens existentes com comissaoPercentual
@@ -1048,7 +1051,7 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
               existingItems.reduce((sum: number, item: any) => {
                 let pct = pctDefault;
                 if (item.servico?.comissaoPercentual != null) pct = item.servico.comissaoPercentual;
-                return sum + (item.subtotal || 0) * (pct / 100);
+                return sum + (item.subtotal || 0) * ((pct / numLavadoresUpdate) / 100);
               }, 0);
           }
 
