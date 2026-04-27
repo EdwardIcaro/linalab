@@ -1094,24 +1094,30 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
     }
 
     try {
-        // ✅ CORRIGIDO: Buscar ALL ordens com lavador EXCETO as com status PENDENTE
-        // Se houver datas, filtrar por período; caso contrário, mostrar TODAS
+        // Apenas ordens FINALIZADAS com comissão não paga para este lavador.
+        // Usar status:'FINALIZADO' evita incluir ordens em andamento/aguardando pagamento.
+        // O OR verifica o comissaoPaga no nível correto: ordemLavadores para multi-lavador,
+        // OrdemServico para lavador único — evita double-count em fechamentos parciais.
         const comissoesPendentes = await prisma.ordemServico.findMany({
             where: {
                 empresaId,
-                status: { not: 'PENDENTE' as any }, // ✅ NÃO mostrar ordens pendentes
-                comissaoPaga: false, // ✅ Mas comissão ainda não foi paga
-                ...(dateFilter && { createdAt: dateFilter }), // ✅ NOVO: Filtrar por createdAt se datas fornecidas
+                status: 'FINALIZADO' as any,
+                ...(dateFilter && { createdAt: dateFilter }),
                 OR: [
                     {
+                        // Multi-lavador: entrada específica deste lavador ainda não paga
                         ordemLavadores: {
                             some: {
                                 lavadorId: lavadorId as string,
+                                comissaoPaga: false,
                             }
                         }
                     },
                     {
+                        // Lavador único: comissão do registro principal não paga
                         lavadorId: lavadorId as string,
+                        comissaoPaga: false,
+                        ordemLavadores: { none: {} },
                     }
                 ]
             },
@@ -1139,28 +1145,22 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
             },
         });
 
-        // ✅ CORRIGIDO: Buscar débitos com mesmo critério (status != PENDENTE, comissão não paga)
         const debitosPendentes = await prisma.ordemServico.findMany({
             where: {
                 empresaId,
-                status: { not: 'PENDENTE' as any }, // ✅ NÃO mostrar ordens pendentes
-                comissaoPaga: false, // ✅ Mas comissão ainda não foi paga
-                ...(dateFilter && { createdAt: dateFilter }), // ✅ NOVO: Filtrar por createdAt se datas fornecidas
-                pagamentos: {
-                    some: {
-                        metodo: 'DEBITO_FUNCIONARIO'
-                    }
-                },
+                status: 'FINALIZADO' as any,
+                ...(dateFilter && { createdAt: dateFilter }),
+                pagamentos: { some: { metodo: 'DEBITO_FUNCIONARIO' } },
                 OR: [
                     {
                         ordemLavadores: {
-                            some: {
-                                lavadorId: lavadorId as string,
-                            }
+                            some: { lavadorId: lavadorId as string, comissaoPaga: false }
                         }
                     },
                     {
                         lavadorId: lavadorId as string,
+                        comissaoPaga: false,
+                        ordemLavadores: { none: {} },
                     }
                 ]
             },
