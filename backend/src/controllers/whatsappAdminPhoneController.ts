@@ -10,7 +10,10 @@ import {
   botGeneratePairingCode,
   botGetPairingCode,
   botCancelPairingCode,
+  botGetStatus,
 } from '../services/botServiceClient';
+
+const GLOBAL_INSTANCE_NAME = 'lina-global';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -258,18 +261,14 @@ export async function startPairing(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    const instance = await prisma.whatsappInstance.findUnique({ where: { empresaId } });
-    if (!instance) {
-      return res.status(404).json({ error: 'Instância WhatsApp não encontrada. Conecte o WhatsApp primeiro.' });
-    }
-
-    if (instance.status !== 'connected') {
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') {
       return res.status(400).json({ error: 'WhatsApp não está conectado. Conecte primeiro para usar o pareamento.' });
     }
 
-    await prisma.whatsappInstance.update({
-      where: { empresaId },
-      data: { pairingMode: true, pairingNome: nome?.trim() || null },
+    await (prisma.whatsappInstance as any).updateMany({
+      where: { instanceName: GLOBAL_INSTANCE_NAME },
+      data: { pairingMode: true, pairingNome: nome?.trim() || null, pairingEmpresaId: empresaId },
     });
 
     console.log(`[WhatsApp Admin] Modo de pareamento ativado para ${empresaId}, nome: ${nome || 'não definido'}`);
@@ -287,19 +286,12 @@ export async function startPairing(req: AuthenticatedRequest, res: Response) {
  */
 export async function cancelPairing(req: AuthenticatedRequest, res: Response) {
   try {
-    const empresaId = req.empresaId;
-
-    if (!empresaId) {
+    if (!req.empresaId) {
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    const instance = await prisma.whatsappInstance.findUnique({ where: { empresaId } });
-    if (!instance) {
-      return res.status(404).json({ error: 'Instância não encontrada' });
-    }
-
-    await prisma.whatsappInstance.update({
-      where: { empresaId },
+    await (prisma.whatsappInstance as any).updateMany({
+      where: { instanceName: GLOBAL_INSTANCE_NAME },
       data: { pairingMode: false, pairingNome: null },
     });
 
@@ -322,11 +314,8 @@ export async function gerarCodigoPareamento(req: AuthenticatedRequest, res: Resp
 
     if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
 
-    const instance = await prisma.whatsappInstance.findUnique({ where: { empresaId } });
-    if (!instance) {
-      return res.status(404).json({ error: 'Instância WhatsApp não encontrada. Conecte o WhatsApp primeiro.' });
-    }
-    if (instance.status !== 'connected') {
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') {
       return res.status(400).json({ error: 'WhatsApp não está conectado. Conecte primeiro para usar o código.' });
     }
 
@@ -389,8 +378,8 @@ export async function getPairingStatus(req: AuthenticatedRequest, res: Response)
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId },
+    const instance = await (prisma.whatsappInstance as any).findFirst({
+      where: { instanceName: GLOBAL_INSTANCE_NAME },
       select: { pairingMode: true, pairingNome: true },
     });
 
