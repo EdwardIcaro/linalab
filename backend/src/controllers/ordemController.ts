@@ -1509,6 +1509,9 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
         veiculo: true,
         items: {
           include: { servico: true }
+        },
+        ordemLavadores: {
+          include: { lavador: { select: { id: true, nome: true, comissao: true } } }
         }
       }
     });
@@ -1571,22 +1574,41 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       });
     }
 
-    // Calcular comissão item a item, respeitando comissaoPercentual de cada serviço.
-    // O desconto é aplicado proporcionalmente sobre os subtotais.
-    let comissaoCalculada = 0;
-    if (ordem.lavador && ordem.items && ordem.items.length > 0) {
-      const lavadorComissaoPadrao = ordem.lavador.comissao;
-      const descontoFator = ordem.valorTotal > 0 ? valorFinal / ordem.valorTotal : 1;
+    // Calcular comissão com desconto proporcional e divisão entre lavadores.
+    // descontoFator reduz cada subtotal na mesma proporção do desconto total.
+    const descontoFator = ordem.valorTotal > 0 ? valorFinal / ordem.valorTotal : 1;
+    const ordemLavadoresData = (ordem as any).ordemLavadores ?? [];
+    const numLavadores = Math.max(ordemLavadoresData.length, 1);
 
-      comissaoCalculada = ordem.items.reduce((sum: number, item: any) => {
-        let percentual = lavadorComissaoPadrao;
+    // Ganho individual de cada lavador com desconto e divisão proporcional
+    const ganhosPorLavador: { lavadorId: string; ganho: number }[] = [];
+    let comissaoCalculada = 0;
+
+    if (ordemLavadoresData.length > 0 && ordem.items && ordem.items.length > 0) {
+      for (const rel of ordemLavadoresData) {
+        const pctPadrao = rel.lavador.comissao;
+        const ganho = (ordem.items as any[]).reduce((sum: number, item: any) => {
+          let pct = pctPadrao;
+          if (item.tipo === 'SERVICO' && item.servico?.comissaoPercentual != null) {
+            pct = item.servico.comissaoPercentual;
+          }
+          return sum + item.subtotal * descontoFator * ((pct / numLavadores) / 100);
+        }, 0);
+        ganhosPorLavador.push({ lavadorId: rel.lavadorId, ganho });
+      }
+      comissaoCalculada = ganhosPorLavador.reduce((s, g) => s + g.ganho, 0);
+    } else if (ordem.lavador && ordem.items && ordem.items.length > 0) {
+      // fallback: apenas lavador primário
+      const pctPadrao = ordem.lavador.comissao;
+      const ganho = (ordem.items as any[]).reduce((sum: number, item: any) => {
+        let pct = pctPadrao;
         if (item.tipo === 'SERVICO' && item.servico?.comissaoPercentual != null) {
-          percentual = item.servico.comissaoPercentual;
+          pct = item.servico.comissaoPercentual;
         }
-        return sum + item.subtotal * descontoFator * (percentual / 100);
+        return sum + item.subtotal * descontoFator * (pct / 100);
       }, 0);
+      comissaoCalculada = ganho;
     } else if (ordem.lavador) {
-      // fallback: sem items detalhados, aplica % padrão sobre valorFinal
       comissaoCalculada = (valorFinal * ordem.lavador.comissao) / 100;
     }
 
@@ -1647,7 +1669,19 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
         )
       );
 
-      // 3. Se houver débito de lavador, criar registro de adiantamento
+      // 3. Atualizar ganho individual de cada lavador com o valor já descontado
+      if (ganhosPorLavador.length > 0) {
+        await Promise.all(
+          ganhosPorLavador.map(({ lavadorId, ganho }) =>
+            tx.ordemServicoLavador.update({
+              where: { ordemId_lavadorId: { ordemId: id, lavadorId } },
+              data: { ganho }
+            })
+          )
+        );
+      }
+
+      // 4. Se houver débito de lavador, criar registro de adiantamento
       if (lavadorDebitoId && ordem.lavador) {
         await tx.adiantamento.create({
           data: {
