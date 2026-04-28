@@ -29,12 +29,12 @@ Guia para o Claude Code ao trabalhar neste repositório.
 
 - **Frontend**: Vercel — auto-deploy ao push no GitHub. **Atualiza imediatamente a qualquer hora.**
 - **Backend**: Railway — auto-deploy ao push no GitHub. ⚠️ **Railway free tier**: deploys bloqueados das **9h às 21h (horário de Brasília)**. Só funciona entre **21h–9h**.
-- **Bot WhatsApp**: Oracle Cloud Free Tier VPS (IP: `168.75.107.236`) — gerenciado via PM2. **Não reinicia com deploys do backend.** Porta 3000.
+- **Bot WhatsApp**: PC local — gerenciado via PM2 + **ngrok** (túnel público). **Não reinicia com deploys do backend.** Porta 3000.
 - Toda mudança requer `git commit + push` para ser testada em produção.
 
 > **Regra prática**: mudanças **só de frontend** (HTML/CSS/JS em `/DESKTOPV2`) são imediatas no Vercel.
 > Mudanças de **backend** (controllers, rotas, services) só entram em produção a partir das **21h BRT**.
-> Mudanças no **bot** (`/bot`) precisam de `git pull && pnpm build && pm2 restart lina-bot` no VPS manualmente.
+> Mudanças no **bot** (`/bot`) precisam de `pnpm build && pm2 restart lina-bot` no PC local.
 
 ---
 
@@ -302,25 +302,25 @@ ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixExpiraEm" TIMESTAMP(3)
 
 ## WhatsApp (Baileys)
 
-### Arquitetura — Bot Separado no VPS
+### Arquitetura — Bot no PC Local via ngrok
 
 ```
-[Backend Railway] ──HTTP POST /send──▶ [Bot VPS Oracle :3000] ──▶ WhatsApp
+[Backend Railway] ──HTTP POST /send──▶ [ngrok túnel] ──▶ [PC local :3000] ──▶ WhatsApp
                  ◀──status/QR──────────
 ```
 
-- **Bot service**: roda em Oracle VPS (`168.75.107.236:3000`), gerenciado por PM2
-- **Backend**: comunica via `botServiceClient.ts` — todas as chamadas WhatsApp são HTTP para o VPS
+- **Bot service**: roda no **PC local** na porta 3000, gerenciado por PM2
+- **ngrok**: expõe a porta 3000 publicamente — a URL do ngrok é configurada em `BOT_SERVICE_URL` no Railway
+- **Backend**: comunica via `botServiceClient.ts` — todas as chamadas WhatsApp são HTTP para o ngrok
 - **Auth state**: persistido no Neon (`authState` em `WhatsappInstance`, instância `lina-global`)
-- **Sessão inicial**: rodar `npx ts-node --transpile-only bot/scripts/scan-local.ts` localmente (IP residencial), depois `pm2 restart lina-bot` no VPS
 - Deploys do backend **não afetam** o bot — sessão persiste
 
-### Bot — Comandos VPS
+### Bot — Comandos PC Local
 ```bash
 pm2 status                              # Ver status
 pm2 logs lina-bot --lines 30            # Ver logs
 pm2 restart lina-bot                    # Reiniciar
-cd ~/linalab/bot && git pull && pnpm build && pm2 restart lina-bot  # Atualizar
+git pull && pnpm build && pm2 restart lina-bot  # Atualizar (dentro de /bot)
 ```
 
 ### Estado de conexão (`baileyService.ts` no bot)
@@ -333,7 +333,7 @@ disconnected → reconnecting → connected
 1. `rmdir /s /q "%TEMP%\baileys-scan-local"` (limpar cache local Windows)
 2. `cd C:\LinaX\bot && npx ts-node --transpile-only scripts/scan-local.ts`
 3. Escanear QR, aguardar `✅ Auth state salvo`
-4. No VPS: `pm2 restart lina-bot`
+4. `pm2 restart lina-bot` (no PC local)
 
 ### Comandos PIX (Fase 1 — PIX estático)
 - `pix 432` ou `pix ordem 432` → gera QR Code PIX e envia como imagem
