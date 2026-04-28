@@ -929,14 +929,18 @@ function renderHeroStats() {
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (!isFinite(g) || g < 0) return;
 
+    // Verifica comissaoPaga para este lavador específico (multi-wash usa OrdemServicoLavador)
+    const relLavador = (o.ordemLavadores || []).find((rel) => rel.lavadorId === currentLavadorId);
+    const comissaoJaFoiPaga = relLavador ? relLavador.comissaoPaga : o.comissaoPaga;
+
     if (o.status === 'FINALIZADO') {
-      if (!o.comissaoPaga) creditosFinalizados += g;
-      const d = new Date(o.createdAt);
+      if (!comissaoJaFoiPaga) creditosFinalizados += g;
+      const d = new Date(o.dataFim || o.createdAt); // âncora: quando o serviço terminou
       if (d >= weekStart) semana += g;
       if (d >= monthStart) mes += g;
     } else {
-      // EM_ANDAMENTO ou AGUARDANDO_PAGAMENTO — valor que pode ainda entrar
-      creditosPendentes += g;
+      // EM_ANDAMENTO ou AGUARDANDO_PAGAMENTO — só conta se comissão ainda não foi paga
+      if (!comissaoJaFoiPaga) creditosPendentes += g;
     }
   });
 
@@ -1044,7 +1048,7 @@ function renderCalendario() {
   (lavadorData.ordens || []).forEach(o => {
     if (['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) {
       const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
-      if (g > 0) diasComOrdens.add(toLocaleDateISOString(o.createdAt));
+      if (g > 0) diasComOrdens.add(toLocaleDateISOString(o.dataFim || o.createdAt));
     }
   });
 
@@ -1097,7 +1101,7 @@ function ordemsPorDia(iso) {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return false;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (g <= 0) return false;
-    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const ref = o.dataFim || o.createdAt;
     return toLocaleDateISOString(ref) === iso;
   });
 }
@@ -1116,7 +1120,7 @@ function buildOrderCard(ordem, uid) {
 
   const horario = (() => {
     try {
-      const ref = ordem.status === 'FINALIZADO' && ordem.updatedAt ? ordem.updatedAt : ordem.createdAt;
+      const ref = ordem.dataFim || ordem.createdAt;
       return new Date(ref).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     } catch { return '—'; }
   })();
@@ -1166,7 +1170,7 @@ function renderHistorico() {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (!isFinite(g) || g <= 0) return;
-    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const ref = o.dataFim || o.createdAt;
     const key = toLocaleDateISOString(ref);
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(o);
@@ -1227,7 +1231,7 @@ function renderEstatisticas(days) {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (!isFinite(g) || g <= 0) return;
-    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const ref = o.dataFim || o.createdAt;
     const key = toLocaleDateISOString(ref);
     if (key in ganhosPorDia) ganhosPorDia[key] += g;
   });
@@ -1262,7 +1266,7 @@ function renderEstatisticas(days) {
   const melhor = Math.max(...valores, 0);
   const qtdOrdens = (lavadorData.ordens || []).filter(o => {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return false;
-    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const ref = o.dataFim || o.createdAt;
     return diasArr.includes(toLocaleDateISOString(ref));
   }).length;
 
@@ -1372,7 +1376,7 @@ function filtrarPeriodo() {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (!isFinite(g) || g <= 0) return;
-    const ref = o.status === 'FINALIZADO' && o.updatedAt ? o.updatedAt : o.createdAt;
+    const ref = o.dataFim || o.createdAt;
     const key = toLocaleDateISOString(ref);
     if (key < inicio || key > fim) return;
     if (!grouped[key]) grouped[key] = [];
