@@ -171,6 +171,14 @@
       font-weight: 600;
     }
 
+    /* KPI Hoje — swipeable */
+    .stat-card-hoje { overflow: hidden; cursor: pointer; user-select: none; touch-action: pan-y; }
+    .stat-hoje-inner { display: flex; width: 200%; transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); }
+    .stat-hoje-slide { width: 50%; }
+    .stat-hoje-dots { display: flex; justify-content: center; gap: 4px; margin-top: 5px; }
+    .stat-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(120,120,120,0.2); transition: background 0.2s; }
+    .stat-dot-active { background: var(--primary); }
+
     /* ===== HERO BUTTON (Caixa) ===== */
     .hero-btn {
       display: flex;
@@ -790,9 +798,21 @@
         <div class="stat-value" id="statAguardando">-</div>
         <div class="stat-label">Aguardando</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statFat">-</div>
-        <div class="stat-label">Hoje</div>
+      <div class="stat-card stat-card-hoje" id="statCardHoje">
+        <div class="stat-hoje-inner" id="statHojeInner">
+          <div class="stat-hoje-slide">
+            <div class="stat-value" id="statFat">-</div>
+            <div class="stat-label">Hoje</div>
+          </div>
+          <div class="stat-hoje-slide">
+            <div class="stat-value" id="statFatTotal">-</div>
+            <div class="stat-label">Total Bruto</div>
+          </div>
+        </div>
+        <div class="stat-hoje-dots">
+          <span class="stat-dot stat-dot-active"></span>
+          <span class="stat-dot"></span>
+        </div>
       </div>
     </div>
 
@@ -1172,21 +1192,46 @@
       const strip = document.getElementById('statsStrip');
       strip.style.display = 'grid';
       try {
-        const today = new Date().toISOString().split('T')[0];
-        const [ordens, aguardando, stats] = await Promise.all([
+        // BRT = UTC-3: garante data correta mesmo ap\u00f3s as 21h (quando UTC j\u00e1 virou o dia)
+        const nowBRT = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        const today = nowBRT.toISOString().split('T')[0];
+
+        const [ordens, aguardando, stats, statsBruto] = await Promise.all([
           window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'ACTIVE') : Promise.resolve({}),
           window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'AGUARDANDO_PAGAMENTO') : Promise.resolve({}),
-          window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today }) : Promise.resolve({})
+          window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today }) : Promise.resolve({}),
+          window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today, todosStatus: true }) : Promise.resolve({})
         ]);
+
         document.getElementById('statOrdens').textContent =
           ordens.pagination?.total ?? ordens.total ?? '-';
         document.getElementById('statAguardando').textContent =
           aguardando.pagination?.total ?? aguardando.total ?? '-';
-        const fat = stats.valorTotal || 0;
-        document.getElementById('statFat').textContent = fat > 0
-          ? 'R$\u00a0' + fat.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
-          : 'R$\u00a00';
+
+        const fmt = v => v > 0 ? 'R$\u00a0' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : 'R$\u00a00';
+        document.getElementById('statFat').textContent = fmt(stats.valorTotal || 0);
+        document.getElementById('statFatTotal').textContent = fmt(statsBruto.valorTotal || 0);
       } catch { /* silencioso */ }
+
+      // Swipe no card "Hoje"
+      (function() {
+        const card  = document.getElementById('statCardHoje');
+        const inner = document.getElementById('statHojeInner');
+        const dots  = card.querySelectorAll('.stat-dot');
+        let slide = 0, startX = 0;
+
+        function goTo(idx) {
+          slide = idx;
+          inner.style.transform = slide ? 'translateX(-50%)' : '';
+          dots.forEach((d, i) => d.classList.toggle('stat-dot-active', i === slide));
+        }
+
+        card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+        card.addEventListener('touchend', e => {
+          const diff = startX - e.changedTouches[0].clientX;
+          if (Math.abs(diff) > 30) goTo(diff > 0 ? 1 : 0);
+        }, { passive: true });
+      })();
     }
 
     async function loadCaixaStatus(permissoes) {

@@ -1194,23 +1194,31 @@ export const cancelOrdem = async (req: EmpresaRequest, res: Response) => {
  */
 export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
   try {
-    const { dataInicio, dataFim, lavadorId, servicoId } = req.query;
+    const { dataInicio, dataFim, lavadorId, servicoId, todosStatus } = req.query;
+    const usarTodosStatus = todosStatus === 'true';
 
     const where: Prisma.OrdemServicoWhereInput = {
       empresaId: req.empresaId,
-      // Inclui AGUARDANDO_PAGAMENTO: o serviço foi concluído, apenas o pagamento está pendente
-      status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }
     };
 
+    if (!usarTodosStatus) {
+      // Inclui AGUARDANDO_PAGAMENTO: o serviço foi concluído, apenas o pagamento está pendente
+      where.status = { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any };
+    }
+
     if (dataInicio || dataFim) {
-      where.dataFim = {};
+      // todosStatus usa createdAt (ordens em aberto não têm dataFim)
+      const filtroData: { gte?: Date; lte?: Date } = {};
       if (dataInicio && dataInicio !== '') {
-        // getDateRangeBRT interpreta a data como BRT (UTC-3) — 00:00 BRT = 03:00 UTC
-        where.dataFim.gte = getDateRangeBRT(dataInicio as string).start;
+        filtroData.gte = getDateRangeBRT(dataInicio as string).start;
       }
       if (dataFim && dataFim !== '') {
-        // 23:59:59.999 BRT = 02:59:59.999 UTC do dia seguinte
-        where.dataFim.lte = getDateRangeBRT(dataFim as string).end;
+        filtroData.lte = getDateRangeBRT(dataFim as string).end;
+      }
+      if (usarTodosStatus) {
+        where.createdAt = filtroData;
+      } else {
+        where.dataFim = filtroData;
       }
     }
 
