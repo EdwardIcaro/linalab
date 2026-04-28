@@ -318,10 +318,17 @@ ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixExpiraEm" TIMESTAMP(3)
 ### Bot — Comandos PC Local
 ```bash
 pm2 status                              # Ver status
-pm2 logs lina-bot --lines 30            # Ver logs
-pm2 restart lina-bot                    # Reiniciar
-git pull && pnpm build && pm2 restart lina-bot  # Atualizar (dentro de /bot)
+pm2 logs lina-bot --lines 30           # Ver logs
+pm2 flush lina-bot                     # Limpar logs acumulados
+
+# Atualização só de código (sem mudança no schema Prisma):
+git pull && pnpm build:fast && pm2 restart lina-bot
+
+# Atualização com mudança no schema Prisma (precisa regenerar cliente):
+pm2 stop lina-bot && git pull && pnpm build && pm2 start lina-bot
 ```
+> `pnpm build:fast` pula o `prisma generate` → evita o erro EPERM de DLL bloqueada.
+> Só usar `pnpm build` quando o `schema.prisma` foi alterado.
 
 ### Estado de conexão (`baileyService.ts` no bot)
 ```
