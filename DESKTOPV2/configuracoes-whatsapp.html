@@ -1932,7 +1932,7 @@
 
         async function openNotifModal() {
             try {
-                const data = await window.api.fetchApi('/whatsapp/notif-prefs');
+                const data = await window.api.call('GET', '/whatsapp/notif-prefs');
                 const prefs = data.data ?? {};
 
                 for (const [key, def] of Object.entries(NOTIF_DEFAULTS)) {
@@ -1969,7 +1969,7 @@
             if (horasEl) body['ordemParadaHoras'] = Math.max(1, parseInt(horasEl.value) || 2);
 
             try {
-                await window.api.fetchApi('/whatsapp/notif-prefs', { method: 'PATCH', body: JSON.stringify(body) });
+                await window.api.call('PATCH', '/whatsapp/notif-prefs', body);
                 showAlert('✅ Preferências de notificação salvas!', 'success');
                 closeNotifModal();
             } catch (e) {
