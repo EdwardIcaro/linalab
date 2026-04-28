@@ -822,10 +822,10 @@
             class="search-input"
             type="search"
             placeholder="Buscar cliente, placa ou veículo..."
-            x-model="q"
+            x-model="searchQuery"
             @input="buscar()"
             @blur="setTimeout(()=> showDrop=false, 180)"
-            @focus="if(results.length > 0 || q.length >= 2) showDrop=true"
+            @focus="if(results.length > 0 || searchQuery.length >= 2) showDrop=true"
             autocomplete="off"
           >
           <!-- Dropdown resultados -->
@@ -847,7 +847,7 @@
               <div class="dr-av new">+</div>
               <div>
                 <div class="dr-name" style="color:var(--blue)">Cadastrar novo cliente</div>
-                <div class="dr-sub" x-text="q.length > 0 ? 'Nome: &quot;' + q + '&quot;' : 'Preencher dados do cliente'"></div>
+                <div class="dr-sub" x-text="searchQuery.length > 0 ? 'Nome: &quot;' + searchQuery + '&quot;' : 'Preencher dados do cliente'"></div>
               </div>
             </div>
           </div>
@@ -867,7 +867,7 @@
       <button class="ct-edit" @click="abrirFormEdicao()" title="Editar">
         <i class="fas fa-pencil-alt"></i>
       </button>
-      <button class="ct-x" @click="cliente=null; q=''">✕</button>
+      <button class="ct-x" @click="cliente=null; searchQuery=''">✕</button>
     </div>
   </div>
 
@@ -1203,7 +1203,7 @@
     function app() {
       return {
         // ── Busca ─────────────────────────────
-        q: '', showDrop: false, results: [], buscando: false,
+        searchQuery: '', showDrop: false, results: [], buscando: false,
         _buscarTimer: null,
 
         // ── OCR câmera ─────────────────────────
@@ -1292,7 +1292,7 @@
         },
 
         async _buscarNow() {
-          const q = this.q.trim();
+          const q = this.searchQuery.trim();
           if (q.length < 2) {
             this.results = [];
             this.showDrop = q.length > 0; // mantém dropdown aberto para mostrar "Novo cliente"
@@ -1679,7 +1679,7 @@
           const numLavs = this.lavs.length;
           const lavadoresComissao = numLavs > 0
             ? this.lavs.map(id => {
-                const lav = this.lavadores.find((l: any) => l.id === id);
+                const lav = this.lavadores.find(l => l.id === id);
                 const ganho = Math.round(this.svc.preco * ((lav?.comissao || 0) / numLavs / 100) * 100) / 100;
                 return { id, ganho, ganhoCentavos: Math.round(ganho * 100) };
               })

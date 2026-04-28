@@ -26,6 +26,7 @@ Responda SEMPRE em português brasileiro, de forma concisa e clara.
 O contexto fornecido contém dados de HOJE, do MÊS ATUAL e do MÊS ANTERIOR — use os dados corretos conforme o período perguntado.
 Use SOMENTE dados presentes no contexto. Nunca diga que não tem informação se o dado estiver no contexto.
 Formate valores monetários como R$ X.XXX,XX. Use emojis moderadamente.
+FORMATAÇÃO WHATSAPP: use *texto* para negrito (um asterisco), NUNCA **texto** (dois asteriscos). Não use # para títulos.
 Máximo 2-3 parágrafos. Seja direto e objetivo.`;
 
     // Montar mensagem com contexto
@@ -50,7 +51,8 @@ Máximo 2-3 parágrafos. Seja direto e objetivo.`;
     });
 
     const content = response.choices[0]?.message?.content || '';
-    return content.trim();
+    // WhatsApp usa *negrito* — substituir **markdown** da IA
+    return content.trim().replace(/\*\*(.+?)\*\*/g, '*$1*');
   } catch (error) {
     console.error('[Groq] Erro ao processar mensagem:', error);
     throw new Error('Erro ao processar sua mensagem com a IA');

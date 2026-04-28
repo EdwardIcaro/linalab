@@ -183,10 +183,11 @@ export async function initBaileys(): Promise<void> {
       credsJustUpdated = true;
       freshCreds = true;
       try {
-        mkdirSync(GLOBAL_AUTH_DIR, { recursive: true }); // garante que o dir existe antes de salvar
-        saveCreds();
+        mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
+        await saveCreds(); // await garante que os arquivos estão escritos antes de persistir no Neon
       } catch (e) {
         console.error('[Baileys] Erro ao salvar creds localmente:', e);
+        return; // não persistir se a escrita local falhou
       }
       await persistAuthToDb();
     });

@@ -144,7 +144,7 @@ export async function handleIncomingMessage(
       if (!isNaN(escolha) && escolha >= 1 && escolha <= empresas.length) {
         const escolhida = empresas[escolha - 1];
         setContext(from, escolhida.id, escolhida.nome);
-        ctx = getContext(from)!;
+        return `✅ *${escolhida.nome}*\nDigite *ajuda* para ver o que posso fazer.`;
       } else {
         // Saudação simples → menu rápido
         const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina)$/i.test(command);
@@ -161,6 +161,21 @@ export async function handleIncomingMessage(
     const empresaNome = ctx.empresaNome;
 
     // ── Comandos do admin com empresa resolvida ───────────────────────────────
+    // "saídas ..." — verificar ANTES do isRelatorioRequest para "saídas da semana" não ser capturado por "semana"
+    if (/^sa[íi]das?(\s|$)/i.test(message)) {
+      const range = parseDateRangeFromMessage(message);
+      if (range) return handleSaidasDetalhadas(range.inicio, range.fim, empresaId);
+      const date = parseDateFromMessage(message);
+      if (date) {
+        const ini = new Date(date); ini.setHours(0,0,0,0);
+        const fim = new Date(date); fim.setHours(23,59,59,999);
+        return handleSaidasDetalhadas(ini, fim, empresaId);
+      }
+      const hoje = new Date(); hoje.setHours(0,0,0,0);
+      const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+      return handleSaidasDetalhadas(hoje, amanha, empresaId);
+    }
+
     const isRelatorioRequest = /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
     if (isRelatorioRequest || /^ontem$/.test(command)) {
       const range = parseDateRangeFromMessage(message);
@@ -174,6 +189,19 @@ export async function handleIncomingMessage(
     if (isComissaoAberto) {
       return handleComissoesEmAberto(extrairNomeLavador(message), empresaId);
     }
+
+    // "comissão [nome]" — acesso rápido por lavador
+    const comissaoNomeMatch = message.match(/^comiss[aã][eo](?:s)?\s+(?:do?\s+|da?\s+)?(.+)$/i);
+    if (comissaoNomeMatch) {
+      return handleComissoesEmAberto(comissaoNomeMatch[1].trim().toLowerCase(), empresaId);
+    }
+
+    // "vale [nome]" ou "vales [nome]"
+    const valeMatch = message.match(/^vales?\s+(?:do?\s+|da?\s+)?(.+)$/i);
+    if (valeMatch) {
+      return handleValesLavador(valeMatch[1].trim().toLowerCase(), empresaId);
+    }
+
 
     if (pendingSaidas.has(from)) {
       return handlePendingSaidaStep(message, from, senderName);
@@ -377,7 +405,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     const pagMethods = o.pagamentos.length > 0
       ? o.pagamentos.map(p => formatarMetodo(p.metodo)).join('/')
       : 'PENDENTE';
-    linhas += `${modelo.toUpperCase()}: [*R$ ${o.valorTotal.toFixed(2)}*] : *${pagMethods}*\n`;
+    linhas += `${modelo.toUpperCase()}: R$ ${o.valorTotal.toFixed(2)} · *${pagMethods}*\n`;
   }
 
   const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
@@ -424,8 +452,8 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     comissoesFmt += `(${dados.itens.join(' + ')})\n`;
   }
 
-  return `📋 RELATÓRIO DE SERVIÇOS\n` +
-    `*${dataFmt}* - *${diaSemana}*\n\n` +
+  return `📋 *RELATÓRIO DE SERVIÇOS*\n` +
+    `_${dataFmt} - ${diaSemana}_\n\n` +
     `${linhas}\n` +
     `TOTAL: *R$ ${total.toFixed(2)}* | *${ordens.length}* lavagem(ns)\n\n` +
     `📊 PAGAMENTOS:\n${pagamentosFmt}\n\n` +
@@ -549,6 +577,78 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
 }
 
 // ==========================================
+// SAÍDAS DETALHADAS
+// ==========================================
+
+async function handleSaidasDetalhadas(inicio: Date, fim: Date, empresaId: string): Promise<string> {
+  const saidas = await prisma.caixaRegistro.findMany({
+    where: {
+      empresaId,
+      tipo: 'SAIDA',
+      data: { gte: inicio, lte: fim },
+      // Excluir vales (adiantamentos) — registros vinculados a um Adiantamento
+      adiantamento: null,
+      // Excluir por descrição padrão de vale/comissão como fallback
+      NOT: [
+        { descricao: { startsWith: 'Adiantamento' } },
+        { descricao: { startsWith: 'Comissão' } },
+        { descricao: { startsWith: 'Comissao' } },
+      ],
+    },
+    orderBy: { data: 'asc' },
+  });
+
+  const iniciofmt = inicio.toLocaleDateString('pt-BR');
+  const fimfmt    = fim.toLocaleDateString('pt-BR');
+  const titulo    = iniciofmt === fimfmt ? `_${iniciofmt}_` : `_${iniciofmt} a ${fimfmt}_`;
+
+  if (saidas.length === 0) return `💸 *SAÍDAS*\n${titulo}\n\nNenhuma saída registrada.`;
+
+  let r = `💸 *SAÍDAS*\n${titulo}\n\n`;
+  for (const s of saidas) {
+    const data = s.data.toLocaleDateString('pt-BR');
+    const dataLabel = iniciofmt !== fimfmt ? `${data} · ` : '';
+    r += `• ${dataLabel}${s.descricao}: *R$ ${s.valor.toFixed(2)}*\n`;
+  }
+  const total = saidas.reduce((acc, s) => acc + s.valor, 0);
+  r += `\nTotal: *R$ ${total.toFixed(2)}* (${saidas.length} lançamento(s))`;
+  return r.trim();
+}
+
+// ==========================================
+// VALES EM ABERTO POR LAVADOR
+// ==========================================
+
+async function handleValesLavador(nomeLavador: string, empresaId: string): Promise<string> {
+  const lavadores = await prisma.lavador.findMany({ where: { empresaId, ativo: true } });
+  const lav = lavadores.find(l =>
+    l.nome.toLowerCase().includes(nomeLavador) ||
+    nomeLavador.includes(l.nome.toLowerCase())
+  );
+  if (!lav) return `❌ Lavador "${nomeLavador}" não encontrado.`;
+
+  const vales = await (prisma.adiantamento as any).findMany({
+    where: { lavadorId: lav.id, status: 'PENDENTE' },
+    include: { caixaRegistro: { select: { descricao: true } } },
+    orderBy: { data: 'asc' },
+  });
+
+  if (vales.length === 0) return `✅ *${lav.nome}* não tem vales em aberto.`;
+
+  let r = `💵 *VALES EM ABERTO — ${lav.nome.toUpperCase()}*\n\n`;
+  for (const v of vales) {
+    const descricaoCaixa = v.caixaRegistro?.descricao ?? '';
+    const partes = descricaoCaixa.split(' — ');
+    const desc = partes.length > 1 ? partes[1] : (v.descricao ?? 'Vale');
+    const data = new Date(v.data).toLocaleDateString('pt-BR');
+    r += `• ${data} · ${desc}: *R$ ${v.valor.toFixed(2)}*\n`;
+  }
+  const total = vales.reduce((acc: number, v: any) => acc + v.valor, 0);
+  r += `\nTotal em aberto: *R$ ${total.toFixed(2)}* (${vales.length} vale(s))`;
+  return r.trim();
+}
+
+// ==========================================
 // COMISSÕES EM ABERTO
 // ==========================================
 
@@ -596,7 +696,7 @@ async function handleComissoesEmAberto(
       include: {
         veiculo: { select: { modelo: true } },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (ordens.length === 0) {
@@ -624,13 +724,46 @@ async function handleComissoesEmAberto(
       .map(([m, v]) => `  *${m}*: *R$ ${v.toFixed(2)}*`)
       .join('\n');
 
+    // Comparação com mês anterior (quando consultando lavador específico)
+    let comparacaoFmt = '';
+    if (nomeLavador) {
+      const hoje = new Date();
+      const inicioMesAtual  = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      const fimMesAnterior    = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
+      const [ordensAtual, ordensAnterior] = await Promise.all([
+        prisma.ordemServico.findMany({
+          where: { empresaId, status: 'FINALIZADO', OR: [{ lavadorId: lav.id }, { ordemLavadores: { some: { lavadorId: lav.id } } }], createdAt: { gte: inicioMesAtual } },
+        }),
+        prisma.ordemServico.findMany({
+          where: { empresaId, status: 'FINALIZADO', OR: [{ lavadorId: lav.id }, { ordemLavadores: { some: { lavadorId: lav.id } } }], createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
+        }),
+      ]);
+      const fatAtual    = ordensAtual.reduce((s, o) => s + o.valorTotal, 0) * (lav.comissao / 100);
+      const fatAnterior = ordensAnterior.reduce((s, o) => s + o.valorTotal, 0) * (lav.comissao / 100);
+      if (fatAnterior > 0) {
+        const diff = fatAtual - fatAnterior;
+        const emoji = diff >= 0 ? '📈' : '📉';
+        const sinal = diff >= 0 ? '+' : '';
+        comparacaoFmt = `\n${emoji} vs mês passado: ${sinal}R$ ${diff.toFixed(2)}`;
+      }
+    }
+
+    // Listar ordens individualmente
+    const ordensDetalhe = ordens.slice(0, 10).map(o => {
+      const modelo = (o.veiculo?.modelo ?? 'Veículo').toUpperCase();
+      const data = o.createdAt.toLocaleDateString('pt-BR');
+      const com = o.valorTotal * (lav.comissao / 100);
+      return `  • ${data} · ${modelo}: *R$ ${com.toFixed(2)}*`;
+    }).join('\n');
+    const maisLabel = ordens.length > 10 ? `\n  _...e mais ${ordens.length - 10} ordens_` : '';
+
     resultado += `👤 *${lav.nome.toUpperCase()}* (${lav.comissao}%)\n` +
-      `Ordens em aberto: *${ordens.length}*\n` +
-      `Faturamento: *R$ ${totalFat.toFixed(2)}*\n` +
       `Comissão bruta: *R$ ${totalCom.toFixed(2)}*\n` +
-      `Adiantamentos a descontar: *R$ ${totalAdiant.toFixed(2)}*\n` +
-      `Comissão líquida a pagar: *R$ ${comLiquida.toFixed(2)}*\n` +
-      `Por mês:\n${porMesFmt}\n\n`;
+      `Adiantamentos: *R$ ${totalAdiant.toFixed(2)}*\n` +
+      `A receber: *R$ ${comLiquida.toFixed(2)}*` +
+      comparacaoFmt +
+      `\n\nOrdens (${ordens.length}):\n${ordensDetalhe}${maisLabel}\n\n`;
   }
 
   return resultado.trim();
@@ -1184,8 +1317,12 @@ function handleAjudaCommand(): string {
     `relatório de 01/04 a 07/04\n\n` +
     `*Multi-empresa:*\n` +
     `resumo das duas · caixa de todas · lavadores das duas\n\n` +
-    `*Comissões:*\n` +
-    `comissões em aberto · comissão do [nome]\n\n` +
+    `*Comissões e Vales:*\n` +
+    `comissões em aberto · comissão [nome]\n` +
+    `vale [nome] · vales em aberto\n\n` +
+    `*Saídas:*\n` +
+    `saídas · saídas hoje · saídas semana · saídas mês\n` +
+    `saídas 01/04 · saídas de 01/04 a 07/04\n\n` +
     `*PIX:*\n` +
     `ordens · pix [nº] · reenviar pix [nº]\n\n` +
     `*Empresa:*\n` +
