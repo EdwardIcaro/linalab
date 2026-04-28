@@ -31,6 +31,9 @@ interface PendingSaida {
 }
 const pendingSaidas = new Map<string, PendingSaida>(); // chave = JID (empresa vem do contexto)
 
+// Comando pendente aguardando seleção de empresa (JID → mensagem original)
+const pendingCommands = new Map<string, string>();
+
 // Limpa sessões expiradas a cada 5 minutos
 setInterval(() => {
   const now = Date.now();
@@ -144,13 +147,29 @@ export async function handleIncomingMessage(
       if (!isNaN(escolha) && escolha >= 1 && escolha <= empresas.length) {
         const escolhida = empresas[escolha - 1];
         setContext(from, escolhida.id, escolhida.nome);
+
+        // Se havia comando pendente, executa-o após conectar na empresa
+        const pendingMsg = pendingCommands.get(from);
+        pendingCommands.delete(from);
+
+        if (pendingMsg) {
+          const resultado = await handleIncomingMessage(from, senderName, pendingMsg);
+          return `✅ *${escolhida.nome}* selecionada.\n\n${resultado}`;
+        }
+
         return `✅ *${escolhida.nome}*\nDigite *ajuda* para ver o que posso fazer.`;
       } else {
-        // Saudação simples → menu rápido
+        // Saudação simples → menu sem salvar pending
         const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina)$/i.test(command);
         const header = isSaudacao
           ? `Olá *${user.nome}*! 👋\nVocê gerencia *${empresas.length} empresas*. Para qual deseja o resumo?`
           : `Qual empresa você quer consultar?`;
+
+        // Salva o comando original para executar após a seleção (só se não for saudação)
+        if (!isSaudacao) {
+          pendingCommands.set(from, message);
+        }
+
         return buildEmpresaMenu(empresas, header + `\n\n_Dica: "resumo das duas" para ver todas juntas_`);
       }
     }
