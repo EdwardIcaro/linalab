@@ -7,7 +7,9 @@ import { Router } from 'express';
 import {
   setupWhatsapp,
   getWhatsappStatus,
-  disconnectWhatsapp
+  disconnectWhatsapp,
+  getNotifPrefs,
+  updateNotifPrefs,
 } from '../controllers/whatsappController';
 import {
   listLavadorPhones,
@@ -47,6 +49,10 @@ const router: Router = Router();
 router.post('/setup', setupWhatsapp);
 router.get('/status', getWhatsappStatus);
 router.delete('/disconnect', disconnectWhatsapp);
+
+// Preferências de notificação
+router.get('/notif-prefs', getNotifPrefs);
+router.patch('/notif-prefs', updateNotifPrefs);
 
 // Rotas de gerenciamento de números de WhatsApp
 router.get('/phones', listLavadorPhones);

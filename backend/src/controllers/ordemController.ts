@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
-import { notifyNovaOrdem, notifyOrdemFinalizada, notifyClienteVip } from '../services/whatsappNotificationService';
+import { notifyNovaOrdem, notifyOrdemFinalizada, notifyOrdemCancelada, notifyClienteVip } from '../services/whatsappNotificationService';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
 
@@ -1169,6 +1169,13 @@ export const cancelOrdem = async (req: EmpresaRequest, res: Response) => {
           }
         }
       }
+    });
+
+    notifyOrdemCancelada(req.empresaId!, {
+      numeroOrdem: updatedOrdem.numeroOrdem,
+      clienteNome: updatedOrdem.cliente?.nome ?? 'Cliente',
+      placa: updatedOrdem.veiculo?.placa ?? '',
+      valor: updatedOrdem.valorTotal,
     });
 
     res.json({

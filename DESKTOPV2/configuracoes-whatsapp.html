@@ -1205,11 +1205,55 @@
 
                     <div class="notif-row">
                         <div class="notif-info">
-                            <div class="notif-title">⚠️ Ordens paradas há 1h+</div>
-                            <div class="notif-desc">Alerta de hora em hora quando ordens ficam "Em andamento" sem movimentação. Máx. 5 por vez.</div>
+                            <div class="notif-title">❌ Ordem cancelada</div>
+                            <div class="notif-desc">Avisa quando uma ordem é cancelada, com placa, cliente e valor.</div>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="notif_ordemParada">
+                            <input type="checkbox" id="notif_ordemCancelada">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notif-row" style="flex-wrap:wrap;gap:8px;">
+                        <div class="notif-info">
+                            <div class="notif-title">⚠️ Ordens paradas</div>
+                            <div class="notif-desc">Alerta de hora em hora quando ordens ficam em andamento sem movimentação. Máx. 5 por vez.</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                            <label style="font-size:.8rem;color:#6b7280;white-space:nowrap;">após
+                                <input type="number" id="notif_ordemParadaHoras" min="1" max="24" value="2"
+                                    style="width:48px;padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:.85rem;text-align:center;">
+                            h</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="notif_ordemParada">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grupo: Financeiro -->
+                <div class="notif-group">
+                    <div class="notif-group-label">Financeiro</div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">💸 Saída registrada</div>
+                            <div class="notif-desc">Avisa quando uma despesa é lançada no caixa, com descrição e valor.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_saidaRegistrada">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">💰 Comissão fechada</div>
+                            <div class="notif-desc">Avisa quando o pagamento de comissão de um funcionário é finalizado.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_comissaoFechada">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1877,25 +1921,28 @@
         const NOTIF_DEFAULTS = {
             novaOrdem:         true,
             ordemFinalizada:   false,
+            ordemCancelada:    false,
+            ordemParada:       false,
             resumoDiario:      true,
             alertaCaixaAberto: true,
-            ordemParada:       false,
+            saidaRegistrada:   false,
+            comissaoFechada:   false,
             clienteVip:        true,
         };
 
         async function openNotifModal() {
-            // Carregar prefs atuais da empresa
             try {
-                const empresaId = localStorage.getItem('empresaId');
-                const empresa = await window.api.getEmpresaById(empresaId);
-                const wappPrefs = (empresa.notificationPreferences?.whatsapp) ?? {};
+                const data = await window.api.fetchApi('/whatsapp/notif-prefs');
+                const prefs = data.data ?? {};
 
                 for (const [key, def] of Object.entries(NOTIF_DEFAULTS)) {
                     const el = document.getElementById(`notif_${key}`);
-                    if (el) el.checked = key in wappPrefs ? wappPrefs[key] : def;
+                    if (el) el.checked = key in prefs ? prefs[key] : def;
                 }
+
+                const horasEl = document.getElementById('notif_ordemParadaHoras');
+                if (horasEl) horasEl.value = prefs.ordemParadaHoras ?? 2;
             } catch (e) {
-                // Fallback: usa defaults
                 for (const [key, def] of Object.entries(NOTIF_DEFAULTS)) {
                     const el = document.getElementById(`notif_${key}`);
                     if (el) el.checked = def;
@@ -1913,20 +1960,16 @@
             btn.disabled = true;
             btn.textContent = 'Salvando...';
 
-            const whatsapp = {};
+            const body = {};
             for (const key of Object.keys(NOTIF_DEFAULTS)) {
                 const el = document.getElementById(`notif_${key}`);
-                if (el) whatsapp[key] = el.checked;
+                if (el) body[key] = el.checked;
             }
+            const horasEl = document.getElementById('notif_ordemParadaHoras');
+            if (horasEl) body['ordemParadaHoras'] = Math.max(1, parseInt(horasEl.value) || 2);
 
             try {
-                const empresaId = localStorage.getItem('empresaId');
-                // Busca prefs atuais para não sobrescrever outras chaves (ex: notifs internas)
-                const empresa = await window.api.getEmpresaById(empresaId);
-                const currentPrefs = empresa.notificationPreferences || {};
-                const updatedPrefs = { ...currentPrefs, whatsapp };
-
-                await window.api.updateEmpresa(empresaId, { notificationPreferences: updatedPrefs });
+                await window.api.fetchApi('/whatsapp/notif-prefs', { method: 'PATCH', body: JSON.stringify(body) });
                 showAlert('✅ Preferências de notificação salvas!', 'success');
                 closeNotifModal();
             } catch (e) {

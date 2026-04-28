@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import { Prisma, CaixaRegistro, FechamentoCaixa, Adiantamento, Fornecedor, Lavador, OrdemServico, Veiculo, Pagamento } from '@prisma/client';
+import { notifySaidaRegistrada, notifyComissaoFechada } from '../services/whatsappNotificationService';
 
 interface EmpresaRequest extends Request {
     empresaId?: string;
@@ -442,6 +443,16 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                     caixaRegistroId: registro.id,
                     data: dataRegistro,
                 }
+            });
+        }
+
+        // Notificar saída (exceto adiantamentos — esses têm fluxo próprio)
+        if (tipo !== 'Adiantamento') {
+            notifySaidaRegistrada(empresaId, {
+                descricao: registro.descricao,
+                valor: registro.valor,
+                formaPagamento: registro.formaPagamento,
+                lancadoPor: registro.lancadoPor ?? undefined,
             });
         }
 
@@ -932,6 +943,12 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
                 timeout: 30000  // 30 segundos
             }
         );
+
+        notifyComissaoFechada(empresaId, {
+            lavadorNome: lavador.nome,
+            valorPago: valorPago > 0 ? valorPago : 0,
+            ordensCount: comissaoIds.length,
+        });
 
         res.status(200).json(resultado);
 

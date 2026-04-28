@@ -11,6 +11,7 @@ import {
   botDisconnect,
   botGeneratePairingCode,
 } from '../services/botServiceClient';
+import { getDefaultPrefs } from '../services/whatsappNotificationService';
 
 interface AuthenticatedRequest extends Request {
   empresaId?: string;
@@ -113,5 +114,53 @@ export async function generatePairingCode(req: AuthenticatedRequest, res: Respon
     return res.json({ code, expiresInSeconds: 300 });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao gerar código', details: String(err) });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/whatsapp/notif-prefs
+// ──────────────────────────────────────────────────────────────
+export async function getNotifPrefs(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
+
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+
+    const raw = (empresa?.notificationPreferences as any)?.whatsapp ?? {};
+    const merged = { ...getDefaultPrefs(), ...raw };
+    return res.json({ data: merged });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao buscar preferências', details: String(err) });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// PATCH /api/whatsapp/notif-prefs
+// ──────────────────────────────────────────────────────────────
+export async function updateNotifPrefs(req: AuthenticatedRequest, res: Response) {
+  try {
+    const empresaId = req.empresaId;
+    if (!empresaId) return res.status(401).json({ error: 'Empresa não identificada' });
+
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+
+    const current = (empresa?.notificationPreferences as any) ?? {};
+    const updated = { ...current, whatsapp: { ...(current.whatsapp ?? {}), ...req.body } };
+
+    await prisma.empresa.update({
+      where: { id: empresaId },
+      data: { notificationPreferences: updated },
+    });
+
+    return res.json({ message: 'Preferências salvas' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao salvar preferências', details: String(err) });
   }
 }
