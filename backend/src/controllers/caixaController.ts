@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import { Prisma, CaixaRegistro, FechamentoCaixa, Adiantamento, Fornecedor, Lavador, OrdemServico, Veiculo, Pagamento } from '@prisma/client';
 import { notifySaidaRegistrada, notifyComissaoFechada } from '../services/whatsappNotificationService';
+import { getWorkdayRangeBRT } from '../utils/dateUtils';
 
 interface EmpresaRequest extends Request {
     empresaId?: string;
@@ -44,28 +45,14 @@ type HistoricoItem = {
     fornecedor?: Fornecedor | null;
 };
 
-const getWorkdayRange = (date: Date, horarioAbertura: string = '07:00') => {
-    const [hours, minutes] = horarioAbertura.split(':').map(Number);
-
-    const start = new Date(date);
-    start.setHours(hours, minutes, 0, 0);
-
-    if (new Date() < start && date.toDateString() === new Date().toDateString()) {
-        start.setDate(start.getDate() - 1);
-    }
-
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-    end.setMilliseconds(end.getMilliseconds() - 1);
-    return { start, end };
-};
+// getWorkdayRangeBRT importado de dateUtils — timezone correto (BRT/UTC-3)
 
 export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
         const [abertura, fechamento] = await Promise.all([
             prisma.aberturaCaixa.findFirst({
@@ -133,7 +120,7 @@ export const abrirCaixa = async (req: EmpresaRequest, res: Response) => {
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
         // Validar: caixa já aberto hoje?
         const aberturaExistente = await prisma.aberturaCaixa.findFirst({
@@ -161,7 +148,7 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
     const horarioAbertura = empresa?.horarioAbertura || '07:00';
 
     const today = new Date();
-    const { start, end } = getWorkdayRange(today, horarioAbertura);
+    const { start, end } = getWorkdayRangeBRT(today, horarioAbertura);
 
     try {
         // ✅ OTIMIZAÇÃO: Executar ambas as queries em paralelo com Promise.all()
@@ -236,7 +223,7 @@ export const getValoresEsperados = async (req: EmpresaRequest, res: Response) =>
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
         // Buscar pagamentos e abertura do dia
         const [pagamentos, abertura] = await Promise.all([
@@ -277,7 +264,7 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
         // Buscar pagamentos, saídas e abertura do dia
         const [pagamentos, saidas, abertura] = await Promise.all([
@@ -474,7 +461,7 @@ export const createSangria = async (req: EmpresaRequest, res: Response) => {
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRange(new Date(), horarioAbertura);
+        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
         // Calcular saldo físico disponível em dinheiro
         const [abertura, pagamentosDinheiro, saidasDinheiro] = await Promise.all([
@@ -689,12 +676,12 @@ export const getFechamentoById = async (req: EmpresaRequest, res: Response) => {
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
 
         const fechamento = await prisma.fechamentoCaixa.findFirst({
-            where: { empresaId, data: { gte: getWorkdayRange(registroFechamento.data, horarioAbertura).start, lte: getWorkdayRange(registroFechamento.data, horarioAbertura).end } },
+            where: { empresaId, data: { gte: getWorkdayRangeBRT(registroFechamento.data, horarioAbertura).start, lte: getWorkdayRangeBRT(registroFechamento.data, horarioAbertura).end } },
         });
 
         if (!fechamento) return res.status(404).json({ error: 'Detalhes do fechamento não encontrados para esta data.' });
 
-        const { start, end } = getWorkdayRange(fechamento.data, horarioAbertura);
+        const { start, end } = getWorkdayRangeBRT(fechamento.data, horarioAbertura);
 
         const pagamentos = await prisma.pagamento.findMany({
             where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },

@@ -5,6 +5,7 @@ import { createNotification } from '../services/notificationService';
 import { notifyNovaOrdem, notifyOrdemFinalizada, notifyOrdemCancelada, notifyClienteVip } from '../services/whatsappNotificationService';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
+import { getDateRangeBRT } from '../utils/dateUtils';
 
 // ✅ CACHE SIMPLES EM MEMÓRIA
 interface CacheEntry {
@@ -998,7 +999,7 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         }
       }
 
-      if (status && status === 'FINALIZADO' && !existingOrdem.dataFim) {
+      if (status && ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'].includes(status) && !existingOrdem.dataFim) {
         dataToUpdate.dataFim = new Date();
       }
 
@@ -1197,20 +1198,19 @@ export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
 
     const where: Prisma.OrdemServicoWhereInput = {
       empresaId: req.empresaId,
-      status: 'FINALIZADO' // Garante que todas as estatísticas sejam baseadas apenas em ordens finalizadas
+      // Inclui AGUARDANDO_PAGAMENTO: o serviço foi concluído, apenas o pagamento está pendente
+      status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }
     };
 
     if (dataInicio || dataFim) {
       where.dataFim = {};
       if (dataInicio && dataInicio !== '') {
-        const start = new Date(dataInicio as string);
-        start.setUTCHours(0, 0, 0, 0);
-        if (where.dataFim) where.dataFim.gte = start;
+        // getDateRangeBRT interpreta a data como BRT (UTC-3) — 00:00 BRT = 03:00 UTC
+        where.dataFim.gte = getDateRangeBRT(dataInicio as string).start;
       }
       if (dataFim && dataFim !== '') {
-        const end = new Date(dataFim as string);
-        end.setUTCHours(23, 59, 59, 999);
-        if (where.dataFim) where.dataFim.lte = end;
+        // 23:59:59.999 BRT = 02:59:59.999 UTC do dia seguinte
+        where.dataFim.lte = getDateRangeBRT(dataFim as string).end;
       }
     }
 

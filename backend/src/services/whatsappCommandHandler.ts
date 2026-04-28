@@ -9,6 +9,7 @@ import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type Whats
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
+import { getTodayRangeBRT, getMonthRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
 
 // ==========================================
 // ESTADO DE COLETA CONVERSACIONAL DE SAÍDAS
@@ -710,16 +711,13 @@ async function handleFechamentoCaixa(empresaId: string, data: Date): Promise<str
 // ==========================================
 
 async function handlePatioCommand(empresaId: string): Promise<string> {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const amanha = new Date(hoje);
-  amanha.setDate(amanha.getDate() + 1);
+  const { start, end } = getTodayRangeBRT();
 
   const ordensAtivas = await prisma.ordemServico.findMany({
     where: {
       empresaId,
       status: 'EM_ANDAMENTO',
-      createdAt: { gte: hoje, lt: amanha },
+      createdAt: { gte: start, lte: end },
     },
     include: {
       veiculo: { select: { modelo: true, placa: true } },
@@ -766,12 +764,10 @@ function handleResumoLavador(lavadorId: string, empresaId: string): string {
  * Status e comissões do lavador
  */
 async function handleStatusLavador(lavadorId: string, empresaId: string): Promise<string> {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const amanha = new Date(hoje);
-  amanha.setDate(amanha.getDate() + 1);
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+  const { start: hoje, end: amanha } = getTodayRangeBRT();
+  const todayStr = getTodayStrBRT();
+  const todayDate = new Date(todayStr + 'T00:00:00');
+  const { start: inicioMes, end: fimMes } = getMonthRangeBRT(todayDate.getFullYear(), todayDate.getMonth() + 1);
 
   const lavador = await prisma.lavador.findUnique({
     where: { id: lavadorId },
@@ -781,10 +777,10 @@ async function handleStatusLavador(lavadorId: string, empresaId: string): Promis
 
   const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, lavadorId, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: hoje, lte: amanha } },
     }),
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } },
+      where: { empresaId, lavadorId, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: inicioMes, lte: fimMes } },
     }),
     prisma.adiantamento.findMany({
       where: { lavadorId, status: 'PENDENTE' },
@@ -882,18 +878,18 @@ function handleAjudaLavador(): string {
  */
 async function buildDailyContext(empresaId: string): Promise<string> {
   try {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const amanha = new Date(hoje);
-    amanha.setDate(amanha.getDate() + 1);
+    // Datas em BRT — fonte de verdade para todos os filtros
+    const todayStr = getTodayStrBRT();
+    const todayDate = new Date(todayStr + 'T00:00:00'); // apenas para getMonth/getFullYear
+    const { start: hoje, end: amanha } = getTodayRangeBRT();
 
-    // Mês atual
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+    const mes = todayDate.getMonth() + 1;
+    const ano = todayDate.getFullYear();
+    const { start: inicioMes, end: fimMes } = getMonthRangeBRT(ano, mes);
 
-    // Mês anterior
-    const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-    const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
+    const mesAnterior = mes === 1 ? 12 : mes - 1;
+    const anoAnterior = mes === 1 ? ano - 1 : ano;
+    const { start: inicioMesAnterior, end: fimMesAnterior } = getMonthRangeBRT(anoAnterior, mesAnterior);
 
     // 1. Empresa
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
@@ -904,9 +900,13 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       where: { empresaId, ativo: true }
     });
 
-    // 3. Ordens do DIA
+    // 3. Ordens do DIA — usa dataFim como âncora (quando o serviço foi concluído em BRT)
     const ordensDia = await prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: {
+        empresaId,
+        status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any },
+        dataFim: { gte: hoje, lte: amanha }
+      },
       include: {
         cliente: { select: { nome: true } },
         veiculo: { select: { placa: true, modelo: true } },
@@ -914,9 +914,13 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       }
     });
 
-    // 4. Ordens do MÊS
+    // 4. Ordens do MÊS — mesma âncora
     const ordensMes = await prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } },
+      where: {
+        empresaId,
+        status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any },
+        dataFim: { gte: inicioMes, lte: fimMes }
+      },
       include: { lavador: { select: { nome: true } } }
     });
 
@@ -937,7 +941,11 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     // 6b. Ordens e caixa do mês anterior
     const [ordensMesAnterior, caixaMesAnterior] = await Promise.all([
       prisma.ordemServico.findMany({
-        where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
+        where: {
+          empresaId,
+          status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any },
+          dataFim: { gte: inicioMesAnterior, lte: fimMesAnterior }
+        },
         include: { lavador: { select: { nome: true } } }
       }),
       prisma.caixaRegistro.findMany({
@@ -1048,15 +1056,14 @@ async function buildDailyContext(empresaId: string): Promise<string> {
  * Handler: /resumo — query direta ao banco
  */
 async function handleResumoCommand(empresaId: string): Promise<string> {
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+  const { start: hoje, end: amanha } = getTodayRangeBRT();
 
   const [ordens, caixa] = await Promise.all([
     prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: hoje, lte: amanha } },
     }),
     prisma.caixaRegistro.findMany({
-      where: { empresaId, data: { gte: hoje, lt: amanha } },
+      where: { empresaId, data: { gte: hoje, lte: amanha } },
     }),
   ]);
 
@@ -1081,13 +1088,12 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
  * Handler: /lavadores — query direta ao banco
  */
 async function handleLavadoresCommand(empresaId: string): Promise<string> {
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+  const { start: hoje, end: amanha } = getTodayRangeBRT();
 
   const [lavadores, ordens] = await Promise.all([
     prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
     prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: hoje, lte: amanha } },
     }),
   ]);
 
@@ -1108,11 +1114,10 @@ async function handleLavadoresCommand(empresaId: string): Promise<string> {
  * Handler: /caixa — query direta ao banco
  */
 async function handleCaixaCommand(empresaId: string): Promise<string> {
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+  const { start: hoje, end: amanha } = getTodayRangeBRT();
 
   const caixa = await prisma.caixaRegistro.findMany({
-    where: { empresaId, data: { gte: hoje, lt: amanha } },
+    where: { empresaId, data: { gte: hoje, lte: amanha } },
     orderBy: { data: 'desc' },
   });
 
@@ -1213,19 +1218,17 @@ async function handleLavadorEspecifico(
 
     if (!lavador) return null;
 
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const amanha = new Date(hoje);
-    amanha.setDate(amanha.getDate() + 1);
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+    const { start: hoje, end: amanha } = getTodayRangeBRT();
+    const todayStr2 = getTodayStrBRT();
+    const td2 = new Date(todayStr2 + 'T00:00:00');
+    const { start: inicioMes, end: fimMes } = getMonthRangeBRT(td2.getFullYear(), td2.getMonth() + 1);
 
     const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
       prisma.ordemServico.findMany({
-        where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } }
+        where: { empresaId, lavadorId: lavador.id, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: hoje, lte: amanha } }
       }),
       prisma.ordemServico.findMany({
-        where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } }
+        where: { empresaId, lavadorId: lavador.id, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: inicioMes, lte: fimMes } }
       }),
       prisma.adiantamento.findMany({
         where: { lavadorId: lavador.id, status: 'PENDENTE' }
