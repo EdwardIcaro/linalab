@@ -903,6 +903,11 @@
                     >
                 </div>
 
+                <div x-show="calcTroco() > 0" style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;color:#065f46;font-size:14px;">
+                    <i class="fas fa-coins" style="color:#10b981;"></i>
+                    <span>Troco: <strong x-text="formatCurrency(calcTroco())"></strong></span>
+                </div>
+
                 <button
                     class="btn-secondary"
                     style="width: 100%; margin-bottom: 16px;"
@@ -1385,6 +1390,12 @@
                     this.paymentModal.inputValue = value.replace('.', ',');
                 },
 
+                calcTroco() {
+                    const digitado = parseFloat((this.paymentModal.inputValue || '').replace(',', '.')) || 0;
+                    const troco = digitado - this.paymentModal.remaining;
+                    return troco > 0.01 ? troco : 0;
+                },
+
                 fillRemainingAmount() {
                     this.paymentModal.inputValue = this.paymentModal.remaining.toFixed(2).replace('.', ',');
                 },
@@ -1407,8 +1418,12 @@
                     }
 
                     if (amount > this.paymentModal.remaining + 0.01) {
-                        showToast('Valor maior que o restante', 'error');
-                        return;
+                        if (method === 'DINHEIRO') {
+                            amount = this.paymentModal.remaining;
+                        } else {
+                            showToast('Valor maior que o restante', 'error');
+                            return;
+                        }
                     }
 
                     this.paymentModal.payments.push({ method, amount });

@@ -555,6 +555,14 @@
       font-family: 'Inter', sans-serif;
     }
 
+    .pay-troco {
+      background: #ecfdf5; border: 1px solid #6ee7b7;
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+      color: #065f46; font-size: 14px; font-weight: 600;
+    }
+    .pay-troco i { color: #10b981; }
+
     .pay-methods {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 8px; margin-bottom: 14px;
@@ -784,6 +792,11 @@
         <span class="pay-prefix">R$</span>
         <input type="text" class="pay-input" id="paymentValueInput" placeholder="0,00"
                oninput="formatPaymentInput(event)">
+      </div>
+
+      <div class="pay-troco" id="trocoDisplay" style="display:none">
+        <i class="fas fa-coins"></i>
+        Troco: <strong id="trocoValue"></strong>
       </div>
 
       <button class="btn-fill-remaining" onclick="fillRemainingAmount()">
@@ -1379,6 +1392,7 @@
     }
 
     function updatePaymentModalUI() {
+      updateTrocoDisplay();
       document.getElementById('remainingAmount').textContent = formatCurrency(paymentModal.remaining);
       // Mostra original + desconto ou apenas total
       const totalEl = document.getElementById('totalAmount');
@@ -1435,12 +1449,26 @@
       }
     }
 
+    function updateTrocoDisplay() {
+      const digitado = parseFloat((paymentModal.inputValue || '').replace(',', '.')) || 0;
+      const troco = digitado - paymentModal.remaining;
+      const el = document.getElementById('trocoDisplay');
+      if (!el) return;
+      if (troco > 0.01) {
+        el.style.display = 'flex';
+        document.getElementById('trocoValue').textContent = formatCurrency(troco);
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
     function formatPaymentInput(event) {
       let value = event.target.value.replace(/\D/g, '');
       value = (parseInt(value, 10) / 100).toFixed(2);
       if (isNaN(value)) value = '0.00';
       paymentModal.inputValue = value.replace('.', ',');
       event.target.value = paymentModal.inputValue;
+      updateTrocoDisplay();
     }
 
     function fillRemainingAmount() {
@@ -1452,10 +1480,17 @@
       let amount = parseFloat(paymentModal.inputValue.replace(',', '.')) || 0;
       if (method === 'PENDENTE' && amount === 0) amount = paymentModal.remaining > 0 ? paymentModal.remaining : 0;
       if (amount <= 0) { showToast('Valor deve ser maior que zero.', 'error'); return; }
-      if (amount > paymentModal.remaining + 0.01) { showToast('Valor maior que o restante.', 'error'); return; }
+      if (amount > paymentModal.remaining + 0.01) {
+        if (method === 'DINHEIRO') {
+          amount = paymentModal.remaining;
+        } else {
+          showToast('Valor maior que o restante.', 'error'); return;
+        }
+      }
       paymentModal.payments.push({ method, amount });
       paymentModal.remaining -= amount;
       paymentModal.inputValue = '';
+      updateTrocoDisplay();
       updatePaymentModalUI();
     }
 
