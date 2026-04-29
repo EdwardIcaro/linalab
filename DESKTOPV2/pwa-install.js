@@ -75,10 +75,10 @@ if ('serviceWorker' in navigator) {
                     <div class="pwa-alca-barra"></div>
                 </div>
                 <div class="pwa-logo-row">
-                    <img src="/image/logo-simples.png" alt="Logo Lina X" class="pwa-logo"
+                    <img src="/image/logo-icon.png" alt="Logo Lina" class="pwa-logo"
                          onerror="this.style.display='none'">
                     <div>
-                        <h2 class="pwa-titulo">Instale o Lina X</h2>
+                        <h2 class="pwa-titulo">Instale o Lina</h2>
                         <p class="pwa-subtitulo">Gratuito • Rápido • Sempre à mão</p>
                     </div>
                 </div>
