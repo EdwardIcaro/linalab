@@ -1204,6 +1204,9 @@ export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
     if (!usarTodosStatus) {
       // Inclui AGUARDANDO_PAGAMENTO: o serviço foi concluído, apenas o pagamento está pendente
       where.status = { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any };
+    } else {
+      // todosStatus=true: todos exceto CANCELADO (Total Bruto)
+      where.status = { not: 'CANCELADO' as any };
     }
 
     if (dataInicio || dataFim) {
