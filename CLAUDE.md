@@ -112,10 +112,12 @@ Usuario → Empresa → Cliente → Veiculo
     schema.prisma
     /migrations
 
-/bot                 → Bot WhatsApp (deploy no Oracle VPS via PM2, não no Railway)
+/bot                 → Bot WhatsApp (PC local via PM2, não no Railway)
   /src
     index.ts         → Express server com endpoints REST protegidos por X-Bot-Secret
     /services        → baileyService, whatsappCommandHandler, pairingCodeStore, botUserCodeStore…
+    /utils
+      dateUtils.ts   → cópia do backend (getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT…)
     /middleware
       botAuth.ts     → valida header X-Bot-Secret
   /scripts
@@ -209,6 +211,18 @@ Acesso separado para usuários com role `USER`. Regras:
 - `getLavadoresSimple()` → retorna `{ lavadores: [...] }` — extrair com `res.lavadores`
 - `getServicos()` → retorna `{ servicos: [...], pagination: {} }` — extrair com `res.servicos`
 - `getVeiculoByPlaca(placa)` → retorna objeto veículo ou null
+
+### Modal de Pagamento (`ordens.html` e `ordens-funcionario.html`)
+- `paymentMethodsConfig` tem **5 métodos**: `DINHEIRO`, `PIX`, `CARTAO`, `NFE`, `DEBITO_FUNCIONARIO`
+  - `NFE` defaults `!== false` (igual aos outros 3 principais); `DEBITO_FUNCIONARIO` defaults `=== true` (opt-in)
+- **Troco**: ao digitar valor maior que o restante, exibe banner verde com o troco calculado em tempo real
+  - Ao confirmar com **DINHEIRO**: registra apenas o valor restante (sem bloquear)
+  - Outros métodos (PIX, Cartão…): continuam bloqueando valor > restante
+
+### KPI "Hoje" — `index-funcionario.html`
+- Card swipeable: deslize para esquerda mostra **"Total Bruto"** (todos os status, âncora `createdAt`)
+- Deslize para direita volta para **"Hoje"** (FINALIZADO + AGUARDANDO, âncora `dataFim`)
+- Data calculada em BRT (`UTC-3`) — nunca usar `toISOString()` direto para gerar `today`
 
 ---
 
@@ -336,6 +350,11 @@ disconnected → reconnecting → connected
                            → qr_code → connected
 ```
 
+### Neon P1017 — reconexão automática
+O Neon free tier fecha conexões ociosas. `persistAuthToDb` captura `err.code === 'P1017'` e faz
+`prisma.$disconnect() → $connect()` antes de retentar. Se aparecer P1017 em outras funções do bot,
+aplicar o mesmo padrão.
+
 ### Quando sessão expirar / for revogada
 1. `rmdir /s /q "%TEMP%\baileys-scan-local"` (limpar cache local Windows)
 2. `cd C:\LinaX\bot && npx ts-node --transpile-only scripts/scan-local.ts`
@@ -355,39 +374,56 @@ disconnected → reconnecting → connected
 - Fase 2 (PIX dinâmico via Cora/Inter) — aguardando aprovação de parceria
 
 ### Relatórios — filtro de status e âncora de data
-Queries de resumo/faturamento no bot e no sistema usam:
+
+**Bot (`whatsappCommandHandler.ts`) — alinhado com sistema de comissões:**
 ```typescript
-status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] }
-dataFim: { gte: start, lte: end }  // âncora: quando o serviço foi concluído
+status: 'FINALIZADO'                           // igual às comissões — só dinheiro recebido
+dataFim: { gte: start, lte: end }             // âncora: quando o serviço foi concluído
 ```
-- `AGUARDANDO_PAGAMENTO` é incluído pois o serviço já foi concluído — apenas o pagamento está pendente
-- `dataFim` é setado automaticamente ao mudar para `AGUARDANDO_PAGAMENTO` ou `FINALIZADO`
-- Ordens canceladas nunca têm `dataFim` → ficam fora dos relatórios automaticamente
+- Janela do dia no bot: **07:00 → 23:59 BRT** (fixa, via `getTodayFixedRangeBRT()`)
+- `AGUARDANDO_PAGAMENTO` **não entra** nos relatórios do bot — serviço feito mas pagamento pendente não conta como faturamento nem como comissão
+- Ordens canceladas nunca têm `dataFim` → ficam fora automaticamente
+
+**`getOrdensStats` (backend — KPIs do sistema):**
+```typescript
+status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] }  // padrão
+// ?todosStatus=true → sem filtro de status, âncora muda para createdAt
+```
+- Aceita `?todosStatus=true` para mostrar todas as ordens do dia (KPI "Total Bruto" no index-funcionario)
+
+**`getResumoDia` (backend — financeiro):**
+- Âncora: `Pagamento.pagoEm` (dinheiro efetivamente recebido)
+- Usa `getWorkdayRangeBRT(today, horarioAbertura)` com o horário da empresa
 
 ---
 
 ## Timezone — Regra Crítica
 
-**O backend roda em UTC (Railway). O bot roda em UTC (Oracle VPS). Nunca usar `setHours()` ou `setDate()` diretamente.**
+**O backend roda em UTC (Railway). O bot roda no PC local (Windows, BRT). Nunca usar `setHours()` ou `setDate()` diretamente.**
 
-### Utilitário centralizado: `backend/src/utils/dateUtils.ts`
+### Utilitário centralizado: `backend/src/utils/dateUtils.ts` (espelhado em `bot/src/utils/dateUtils.ts`)
 
 ```typescript
-import { getDateRangeBRT, getTodayRangeBRT, getMonthRangeBRT, getWorkdayRangeBRT } from '../utils/dateUtils';
+import { getDateRangeBRT, getTodayRangeBRT, getMonthRangeBRT, getWorkdayRangeBRT,
+         getFixedDayRangeBRT, getTodayFixedRangeBRT } from '../utils/dateUtils';
 
-// Dia completo em BRT a partir de string YYYY-MM-DD
+// Dia completo em BRT a partir de string YYYY-MM-DD (00:00–23:59 BRT)
 const { start, end } = getDateRangeBRT('2026-04-28');
-// → start = 2026-04-28T03:00:00Z (00:00 BRT)
-// → end   = 2026-04-29T02:59:59.999Z (23:59 BRT)
+// → start = 2026-04-28T03:00:00Z | end = 2026-04-29T02:59:59.999Z
 
-// Hoje em BRT
+// Hoje completo em BRT
 const { start, end } = getTodayRangeBRT();
 
 // Mês em BRT (month é 1-based)
 const { start, end } = getMonthRangeBRT(2026, 4);
 
-// Turno da empresa (usa horarioAbertura configurado)
+// Turno da empresa — janela deslizante 24h baseada em horarioAbertura
+// ⚠️ Pode incluir ordens do dia anterior se horarioAbertura for tarde — usar só para caixa
 const { start, end } = getWorkdayRangeBRT(new Date(), empresa.horarioAbertura);
+
+// Janela fixa 07:00–23:59 BRT — usada nos relatórios do bot
+const { start, end } = getTodayFixedRangeBRT();
+const { start, end } = getFixedDayRangeBRT('2026-04-28');
 ```
 
 ### Por que isso importa
@@ -398,11 +434,12 @@ const { start, end } = getWorkdayRangeBRT(new Date(), empresa.horarioAbertura);
 ### Âncora de data nas ordens
 | Campo | Quando é preenchido | Usado por |
 |---|---|---|
-| `createdAt` | Criação da OS | Pátio (carros ativos criados hoje) |
-| `dataFim` | Status → `AGUARDANDO_PAGAMENTO` ou `FINALIZADO` | Todos os relatórios de faturamento |
-| `Pagamento.pagoEm` | Pagamento confirmado como PAGO | `getResumoDia` (caixa físico) |
+| `createdAt` | Criação da OS | Pátio (carros ativos criados hoje); KPI "Total Bruto" (`todosStatus=true`) |
+| `dataFim` | Status → `AGUARDANDO_PAGAMENTO` ou `FINALIZADO` | Relatórios de faturamento (bot, KPIs, histórico) |
+| `Pagamento.pagoEm` | Pagamento confirmado como PAGO | `getResumoDia` (financeiro — dinheiro no caixa) |
 
-**Regra:** relatórios de faturamento usam `dataFim`. A OS pertence ao dia em que o serviço foi concluído, não ao dia em que o pagamento entrou.
+**Regra geral:** relatórios de faturamento usam `dataFim`. A OS pertence ao dia em que o serviço foi concluído.
+**Bot especificamente:** usa `dataFim` + `status FINALIZADO` + janela fixa 07:00–23:59 BRT (igual ao critério de comissões).
 
 ---
 
