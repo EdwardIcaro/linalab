@@ -9,6 +9,7 @@ import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type Whats
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
+import { getWorkdayRangeBRT, getDateRangeBRT } from '../utils/dateUtils';
 
 // ==========================================
 // ESTADO DE COLETA CONVERSACIONAL DE SAÍDAS
@@ -396,18 +397,19 @@ function formatarMetodo(metodo: string): string {
 // ==========================================
 
 async function handleRelatorioData(date: Date, empresaId: string): Promise<string> {
-  const inicio = new Date(date); inicio.setHours(0,0,0,0);
-  const fim    = new Date(date); fim.setHours(23,59,59,999);
+  // Âncora: dataFim (quando o serviço foi concluído) — só ordens FINALIZADAS
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
+  const { start: inicio, end: fim } = getWorkdayRangeBRT(date, empresa?.horarioAbertura || '07:00');
 
   const ordens = await prisma.ordemServico.findMany({
-    where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicio, lte: fim } },
+    where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: inicio, lte: fim } },
     include: {
       veiculo:  { select: { modelo: true } },
       lavador:  { select: { nome: true, comissao: true } },
       ordemLavadores: { include: { lavador: { select: { nome: true, comissao: true } } } },
       pagamentos: { select: { metodo: true, valor: true, status: true } },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { dataFim: 'asc' },
   });
 
   if (ordens.length === 0) {
@@ -484,15 +486,16 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
 // ==========================================
 
 async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string): Promise<string> {
+  // Âncora: dataFim (quando o serviço foi concluído) — só ordens FINALIZADAS
   const ordens = await prisma.ordemServico.findMany({
-    where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicio, lte: fim } },
+    where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: inicio, lte: fim } },
     include: {
       veiculo:  { select: { modelo: true } },
       lavador:  { select: { nome: true, comissao: true } },
       ordemLavadores: { include: { lavador: { select: { nome: true, comissao: true } } } },
       pagamentos: { select: { metodo: true, valor: true } },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { dataFim: 'asc' },
   });
 
   const iniciofmt = inicio.toLocaleDateString('pt-BR');
@@ -501,14 +504,15 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
   const titulo    = iniciofmt === fimfmt ? `*${iniciofmt}*` : `*${iniciofmt} a ${fimfmt}* (${diasCount} dias)`;
 
   if (ordens.length === 0) {
-    return `📋 Sem ordens registradas de ${iniciofmt} a ${fimfmt}.`;
+    return `📋 Sem ordens finalizadas de ${iniciofmt} a ${fimfmt}.`;
   }
 
-  // Agrupamento por dia (chave: "dd/mm/yyyy")
+  // Agrupamento por dia de finalização (dataFim em BRT)
   const porDia = new Map<string, { date: Date; ordens: typeof ordens; total: number }>();
   for (const o of ordens) {
-    const chave = o.createdAt.toLocaleDateString('pt-BR');
-    if (!porDia.has(chave)) porDia.set(chave, { date: o.createdAt, ordens: [], total: 0 });
+    const dataRef = o.dataFim ?? o.createdAt;
+    const chave = dataRef.toLocaleDateString('pt-BR');
+    if (!porDia.has(chave)) porDia.set(chave, { date: dataRef, ordens: [], total: 0 });
     const d = porDia.get(chave)!;
     d.ordens.push(o);
     d.total += o.valorTotal;
@@ -1200,30 +1204,25 @@ async function buildDailyContext(empresaId: string): Promise<string> {
  * Handler: /resumo — query direta ao banco
  */
 async function handleResumoCommand(empresaId: string): Promise<string> {
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
+  const { start, end } = getWorkdayRangeBRT(new Date(), empresa?.horarioAbertura || '07:00');
 
   const [ordens, caixa] = await Promise.all([
+    // Só FINALIZADAS no turno de hoje (âncora: dataFim)
     prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
     }),
     prisma.caixaRegistro.findMany({
-      where: { empresaId, data: { gte: hoje, lt: amanha } },
+      where: { empresaId, data: { gte: start, lte: end } },
     }),
   ]);
 
-  const fat       = ordens.reduce((s,o) => s + o.valorTotal, 0);
-  const entradas  = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s,c) => s + c.valor, 0);
-  const saidas    = caixa.filter(c => c.tipo === 'SAIDA').reduce((s,c) => s + c.valor, 0);
-  const final_    = ordens.filter(o => o.status === 'FINALIZADO').length;
-  const andamento = ordens.filter(o => o.status === 'EM_ANDAMENTO').length;
-  const pend      = ordens.filter(o => o.status === 'PENDENTE').length;
-  const aguard    = ordens.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length;
+  const fat      = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
+  const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
   return `📊 *RESUMO DO DIA*\n\n` +
-    `Ordens: *${ordens.length}* | Faturamento: *R$ ${fat.toFixed(2)}*\n` +
-    `✅ Finalizadas: *${final_}* · 🔄 Em andamento: *${andamento}*\n` +
-    `⏳ Pendentes: *${pend}* · 💳 Aguard. pagamento: *${aguard}*\n\n` +
+    `✅ Ordens finalizadas: *${ordens.length}* | Faturamento: *R$ ${fat.toFixed(2)}*\n\n` +
     `💰 CAIXA:\n` +
     `Entradas: *R$ ${entradas.toFixed(2)}* | Saídas: *R$ ${saidas.toFixed(2)}*\n` +
     `Saldo: *R$ ${(entradas - saidas).toFixed(2)}*`;
@@ -1233,13 +1232,15 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
  * Handler: /lavadores — query direta ao banco
  */
 async function handleLavadoresCommand(empresaId: string): Promise<string> {
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
+  const { start, end } = getWorkdayRangeBRT(new Date(), empresa?.horarioAbertura || '07:00');
 
   const [lavadores, ordens] = await Promise.all([
     prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
+    // Só FINALIZADAS no turno de hoje (âncora: dataFim)
     prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
+      include: { ordemLavadores: { select: { lavadorId: true } } },
     }),
   ]);
 
@@ -1247,9 +1248,12 @@ async function handleLavadoresCommand(empresaId: string): Promise<string> {
 
   let r = `👷 *LAVADORES HOJE*\n\n`;
   for (const lav of lavadores) {
-    const ords = ordens.filter(o => o.lavadorId === lav.id);
-    const fat  = ords.reduce((s,o) => s + o.valorTotal, 0);
-    const com  = fat * (lav.comissao / 100);
+    // Conta ordens onde o lavador participou (principal ou multi-lavador)
+    const ords = ordens.filter(o =>
+      o.lavadorId === lav.id || o.ordemLavadores.some(ol => ol.lavadorId === lav.id)
+    );
+    const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
+    const com = fat * (lav.comissao / 100);
     r += `• *${lav.nome}*: ${ords.length} ordem(ns) | Fat.: *R$ ${fat.toFixed(2)}* | Com.: *R$ ${com.toFixed(2)}*\n`;
   }
 
