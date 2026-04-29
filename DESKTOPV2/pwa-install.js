@@ -23,7 +23,7 @@ if ('serviceWorker' in navigator) {
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const ehFuncionario = window.location.pathname.includes('index-funcionario');
-    const corPrimaria = ehFuncionario ? '#0066cc' : '#00bcd4';
+    const corPrimaria = '#6b3fa1';
 
     if (isIOS) {
         // Safari (iOS) não dispara beforeinstallprompt — instrução manual
@@ -78,7 +78,7 @@ if ('serviceWorker' in navigator) {
                     <img src="/image/logo-icon.png" alt="Logo Lina" class="pwa-logo"
                          onerror="this.style.display='none'">
                     <div>
-                        <h2 class="pwa-titulo">Instale o Lina</h2>
+                        <h2 class="pwa-titulo">Instale a Lina</h2>
                         <p class="pwa-subtitulo">Gratuito • Rápido • Sempre à mão</p>
                     </div>
                 </div>
