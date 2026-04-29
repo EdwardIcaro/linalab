@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina X</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f3f3;
+      font-family: 'Poppins', -apple-system, sans-serif;
+    }
+    .loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .loader img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      border-radius: 16px;
+    }
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #00bcd4;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg) } }
+  </style>
+</head>
+<body>
+  <div class="loader">
+    <img src="/image/logo-simples.png" alt="Lina X" onerror="this.style.display='none'">
+    <div class="spinner"></div>
+  </div>
+  <script>
+    (function () {
+      const token    = localStorage.getItem('token');
+      const role     = localStorage.getItem('userRole');
+
+      if (!token) {
+        window.location.replace('login.html');
+        return;
+      }
+
+      // Funcionários (USER) vão para o portal do funcionário
+      if (role === 'USER') {
+        window.location.replace('index-funcionario.html');
+        return;
+      }
+
+      // Donos e admins vão para o dashboard principal
+      window.location.replace('index.html');
+    })();
+  </script>
+</body>
+</html>
