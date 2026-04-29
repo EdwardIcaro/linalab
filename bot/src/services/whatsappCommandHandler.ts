@@ -9,7 +9,7 @@ import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type Whats
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
-import { getWorkdayRangeBRT, getDateRangeBRT } from '../utils/dateUtils';
+import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
 
 // ==========================================
 // ESTADO DE COLETA CONVERSACIONAL DE SAÍDAS
@@ -397,9 +397,9 @@ function formatarMetodo(metodo: string): string {
 // ==========================================
 
 async function handleRelatorioData(date: Date, empresaId: string): Promise<string> {
-  // Âncora: dataFim (quando o serviço foi concluído) — só ordens FINALIZADAS
-  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
-  const { start: inicio, end: fim } = getWorkdayRangeBRT(date, empresa?.horarioAbertura || '07:00');
+  // Janela fixa 07:00–23:59 BRT da data solicitada
+  const dateStr = new Date(date.getTime() - 3 * 3600000).toISOString().split('T')[0];
+  const { start: inicio, end: fim } = getFixedDayRangeBRT(dateStr);
 
   const ordens = await prisma.ordemServico.findMany({
     where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: inicio, lte: fim } },
@@ -1204,11 +1204,11 @@ async function buildDailyContext(empresaId: string): Promise<string> {
  * Handler: /resumo — query direta ao banco
  */
 async function handleResumoCommand(empresaId: string): Promise<string> {
-  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
-  const { start, end } = getWorkdayRangeBRT(new Date(), empresa?.horarioAbertura || '07:00');
+  // Janela fixa 07:00–23:59 BRT do dia atual — sem depender de horarioAbertura
+  const { start, end } = getTodayFixedRangeBRT();
 
   const [ordens, caixa] = await Promise.all([
-    // Só FINALIZADAS no turno de hoje (âncora: dataFim)
+    // Só FINALIZADAS com dataFim dentro da janela de hoje
     prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
     }),
@@ -1232,12 +1232,10 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
  * Handler: /lavadores — query direta ao banco
  */
 async function handleLavadoresCommand(empresaId: string): Promise<string> {
-  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
-  const { start, end } = getWorkdayRangeBRT(new Date(), empresa?.horarioAbertura || '07:00');
+  const { start, end } = getTodayFixedRangeBRT();
 
   const [lavadores, ordens] = await Promise.all([
     prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
-    // Só FINALIZADAS no turno de hoje (âncora: dataFim)
     prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
       include: { ordemLavadores: { select: { lavadorId: true } } },

@@ -40,3 +40,25 @@ export function getWorkdayRangeBRT(
   const end = new Date(start.getTime() + 86400000 - 1);
   return { start, end };
 }
+
+/**
+ * Janela fixa do dia em BRT: 07:00 → 23:59:59.999 do dia informado.
+ * Ordens finalizadas entre 00:00 e 06:59 ficam fora (pertencerão ao dia anterior).
+ * Sem dependência de horarioAbertura da empresa.
+ *
+ * Ex: '2026-04-28' → { start: 2026-04-28T10:00:00Z, end: 2026-04-29T02:59:59.999Z }
+ *   (07:00 BRT = UTC+3h → 10:00 UTC | 23:59 BRT = 02:59 UTC do dia seguinte)
+ */
+export function getFixedDayRangeBRT(dateStr: string): { start: Date; end: Date } {
+  // 07:00 BRT = 10:00 UTC do mesmo dia BRT
+  const start = new Date(`${dateStr}T10:00:00.000Z`);
+  // 23:59:59.999 BRT = fim do dia BRT (03:00 UTC do dia seguinte - 1ms)
+  const endOfDay = new Date(`${dateStr}T03:00:00.000Z`);
+  endOfDay.setTime(endOfDay.getTime() + 86400000 - 1);
+  return { start, end: endOfDay };
+}
+
+/** Janela fixa de hoje em BRT (07:00 → 23:59). */
+export function getTodayFixedRangeBRT(): { start: Date; end: Date } {
+  return getFixedDayRangeBRT(getTodayStrBRT());
+}
