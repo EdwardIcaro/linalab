@@ -89,10 +89,23 @@ async function persistAuthToDb(): Promise<void> {
       authFiles[f] = readFileSync(join(GLOBAL_AUTH_DIR, f), 'utf-8');
     }
 
-    await prisma.whatsappInstance.updateMany({
+    const doUpdate = () => prisma.whatsappInstance.updateMany({
       where: { instanceName: GLOBAL_INSTANCE_NAME },
       data: { authState: JSON.stringify(authFiles) },
     });
+
+    try {
+      await doUpdate();
+    } catch (err: any) {
+      // P1017 = Neon fechou conexão por idle timeout — reconectar e tentar de novo
+      if (err?.code === 'P1017') {
+        await prisma.$disconnect();
+        await prisma.$connect();
+        await doUpdate();
+      } else {
+        throw err;
+      }
+    }
   } catch (err) {
     console.error('[Baileys] Erro ao persistir auth state:', err);
   }
