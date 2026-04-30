@@ -5,7 +5,7 @@
 
 import prisma from '../db';
 import { botSend, botGetStatus } from './botServiceClient';
-import { getTodayRangeBRT } from '../utils/dateUtils';
+import { getTodayFixedRangeBRT, getTodayRangeBRT } from '../utils/dateUtils';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -217,24 +217,21 @@ export async function cronResumoDiario(): Promise<void> {
   for (const empresa of empresas) {
     if (!prefs(empresa).resumoDiario) continue;
     try {
-      const { start: hoje, end: fimHoje } = getTodayRangeBRT();
+      const { start: hoje, end: fimHoje } = getTodayFixedRangeBRT();
 
-      const [ordens, caixa] = await Promise.all([
+      const [finalizadas, caixa] = await Promise.all([
         prisma.ordemServico.findMany({
-          where: { empresaId: empresa.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lte: fimHoje } },
+          where: { empresaId: empresa.id, status: 'FINALIZADO', dataFim: { gte: hoje, lte: fimHoje } },
           include: { lavador: { select: { nome: true, comissao: true } } },
         }),
         prisma.caixaRegistro.findMany({
           where: { empresaId: empresa.id, data: { gte: hoje, lte: fimHoje } },
         }),
       ]);
+      const fat    = finalizadas.reduce((s, o) => s + o.valorTotal, 0);
+      const saidas = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
-      const finalizadas = ordens.filter(o => o.status === 'FINALIZADO');
-      const emAberto   = ordens.filter(o => ['PENDENTE','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status));
-      const fat        = finalizadas.reduce((s, o) => s + o.valorTotal, 0);
-      const saidas     = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
-
-      // Top lavadores por comissão
+      // Top lavadores por faturamento
       const comPorLav: Record<string, { nome: string; ordens: number; com: number }> = {};
       for (const o of finalizadas) {
         if (!o.lavador || !o.lavadorId) continue;
@@ -247,7 +244,6 @@ export async function cronResumoDiario(): Promise<void> {
       let msg = `📊 *Resumo do dia — ${hoje.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}*\n`;
       msg += `━━━━━━━━━━━━━━━\n`;
       msg += `🚗 *${finalizadas.length}* finalizada(s)`;
-      if (emAberto.length > 0) msg += ` · ⏳ *${emAberto.length}* em aberto`;
       msg += `\n💰 Faturamento: *R$ ${fat.toFixed(2)}*`;
       msg += `\n💸 Saídas: *R$ ${saidas.toFixed(2)}*`;
       msg += `\n💵 Líquido: *R$ ${(fat - saidas).toFixed(2)}*`;

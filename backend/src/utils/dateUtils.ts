@@ -54,6 +54,25 @@ export function getMonthRangeBRT(year: number, month: number): { start: Date; en
  * Ex: horarioAbertura='07:00', agora=2026-04-28 10:00 BRT
  *   → start=2026-04-28 07:00 BRT (10:00 UTC), end=2026-04-29 06:59:59.999 BRT
  */
+/**
+ * Janela fixa do dia em BRT: 07:00 → 23:59:59.999 do dia informado.
+ * Ordens entre 00:00 e 06:59 ficam fora (pertencem ao dia anterior).
+ * Sem dependência de horarioAbertura — usado em relatórios de faturamento.
+ *
+ * Ex: '2026-04-30' → { start: 2026-04-30T10:00:00Z, end: 2026-05-01T02:59:59.999Z }
+ */
+export function getFixedDayRangeBRT(dateStr: string): { start: Date; end: Date } {
+  const start = new Date(`${dateStr}T10:00:00.000Z`); // 07:00 BRT = 10:00 UTC
+  const endOfDay = new Date(`${dateStr}T03:00:00.000Z`);
+  endOfDay.setTime(endOfDay.getTime() + 86400000 - 1); // 23:59:59.999 BRT
+  return { start, end: endOfDay };
+}
+
+/** Janela fixa de hoje em BRT (07:00 → 23:59). */
+export function getTodayFixedRangeBRT(): { start: Date; end: Date } {
+  return getFixedDayRangeBRT(getTodayStrBRT());
+}
+
 export function getWorkdayRangeBRT(
   date: Date,
   horarioAbertura: string = '07:00'
