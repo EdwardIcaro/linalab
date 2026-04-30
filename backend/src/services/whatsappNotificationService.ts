@@ -44,22 +44,26 @@ function prefs(empresa: { notificationPreferences: any }): NotifPrefs {
 
 export function getDefaultPrefs(): NotifPrefs { return { ...DEFAULTS }; }
 
-// ─── Core: enviar para todos os admins da empresa ─────────────────────────────
+// ─── Core: enviar para admins da empresa, respeitando prefs individuais ───────
 
-export async function notifyAdmins(empresaId: string, message: string): Promise<void> {
+export async function notifyAdmins(empresaId: string, message: string, notifKey?: string): Promise<void> {
   try {
     const bot = await botGetStatus();
     if (bot.status !== 'connected') return;
   } catch {
-    return; // bot service inacessível
+    return;
   }
 
   const admins = await (prisma.whatsappAdminPhone as any).findMany({
     where: { empresaId, ativo: true },
-    select: { jid: true, telefone: true },
-  }) as Array<{ jid: string | null; telefone: string }>;
+    select: { jid: true, telefone: true, notifPrefs: true },
+  }) as Array<{ jid: string | null; telefone: string; notifPrefs: any }>;
 
   for (const admin of admins) {
+    if (notifKey) {
+      const prefs = (admin.notifPrefs as any) ?? {};
+      if (prefs[notifKey] === false) continue;
+    }
     const dest = admin.jid ?? `${admin.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
     try {
       await botSend(dest, message);
@@ -91,7 +95,7 @@ export async function notifyNovaOrdem(empresaId: string, dados: {
       `🧹 ${dados.servico} · *R$ ${dados.valor.toFixed(2)}*`;
     if (dados.lavadorNome) msg += `\n👤 ${dados.lavadorNome}`;
 
-    await notifyAdmins(empresaId, msg);
+    await notifyAdmins(empresaId, msg, 'novaOrdem');
   } catch (e) {
     console.error('[Notif] notifyNovaOrdem:', e);
   }
@@ -115,7 +119,7 @@ export async function notifyOrdemFinalizada(empresaId: string, dados: {
       `🚗 ${dados.placa} · ${dados.clienteNome}\n` +
       `💰 *R$ ${dados.valor.toFixed(2)}* · ${dados.metodoPagamento}`;
 
-    await notifyAdmins(empresaId, msg);
+    await notifyAdmins(empresaId, msg, 'ordemFinalizada');
   } catch (e) {
     console.error('[Notif] notifyOrdemFinalizada:', e);
   }
@@ -138,7 +142,7 @@ export async function notifyClienteVip(empresaId: string, dados: {
       `👤 ${dados.clienteNome} · 🚗 ${dados.placa}\n` +
       `${dados.totalVisitas}ª visita · Total: *R$ ${dados.gastoTotal.toFixed(2)}*`;
 
-    await notifyAdmins(empresaId, msg);
+    await notifyAdmins(empresaId, msg, 'clienteVip');
   } catch (e) {
     console.error('[Notif] notifyClienteVip:', e);
   }
@@ -158,7 +162,7 @@ export async function notifyOrdemCancelada(empresaId: string, dados: {
       `🚗 ${dados.placa} · ${dados.clienteNome}\n` +
       `💰 R$ ${dados.valor.toFixed(2)}`;
 
-    await notifyAdmins(empresaId, msg);
+    await notifyAdmins(empresaId, msg, 'ordemCancelada');
   } catch (e) {
     console.error('[Notif] notifyOrdemCancelada:', e);
   }
@@ -179,7 +183,7 @@ export async function notifySaidaRegistrada(empresaId: string, dados: {
       `💰 *R$ ${dados.valor.toFixed(2)}* · ${dados.formaPagamento}`;
     if (dados.lancadoPor) msg += `\n👤 ${dados.lancadoPor}`;
 
-    await notifyAdmins(empresaId, msg);
+    await notifyAdmins(empresaId, msg, 'saidaRegistrada');
   } catch (e) {
     console.error('[Notif] notifySaidaRegistrada:', e);
   }
@@ -198,7 +202,7 @@ export async function notifyComissaoFechada(empresaId: string, dados: {
       `📋 ${dados.ordensCount} ordem(ns)\n` +
       `💰 *R$ ${dados.valorPago.toFixed(2)}*`;
 
-    await notifyAdmins(empresaId, msg);
+    await notifyAdmins(empresaId, msg, 'comissaoFechada');
   } catch (e) {
     console.error('[Notif] notifyComissaoFechada:', e);
   }
@@ -255,7 +259,7 @@ export async function cronResumoDiario(): Promise<void> {
         }
       }
 
-      await notifyAdmins(empresa.id, msg.trim());
+      await notifyAdmins(empresa.id, msg.trim(), 'resumoDiario');
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
     }
@@ -281,7 +285,7 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
       ]);
 
       if (abertura && !fechamento) {
-        await notifyAdmins(empresa.id, `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`);
+        await notifyAdmins(empresa.id, `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`, 'alertaCaixaAberto');
       }
     } catch (e) {
       console.error(`[Notif Caixa] empresa ${empresa.id}:`, e);
@@ -318,7 +322,7 @@ export async function cronOrdensParadas(): Promise<void> {
         msg += `• #${o.numeroOrdem} ${o.veiculo.modelo ?? 'Veículo'} ${o.veiculo.placa ?? ''} (${horasParada}h)\n`;
       }
 
-      await notifyAdmins(empresa.id, msg.trim());
+      await notifyAdmins(empresa.id, msg.trim(), 'ordemParada');
     } catch (e) {
       console.error(`[Notif Paradas] empresa ${empresa.id}:`, e);
     }

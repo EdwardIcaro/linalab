@@ -215,8 +215,8 @@ async function notifyAdminsNewReport(empresaId: string, dados: {
 
   const admins = await (prisma.whatsappAdminPhone as any).findMany({
     where: { empresaId, ativo: true },
-    select: { jid: true, telefone: true },
-  }) as Array<{ jid: string | null; telefone: string }>;
+    select: { jid: true, telefone: true, notifPrefs: true },
+  }) as Array<{ jid: string | null; telefone: string; notifPrefs: any }>;
 
   if (admins.length === 0) return;
 
@@ -235,6 +235,8 @@ async function notifyAdminsNewReport(empresaId: string, dados: {
     `*1* · Ver fotos\n*2* · Ignorar`;
 
   for (const admin of admins) {
+    const adminPrefs = (admin.notifPrefs as any) ?? {};
+    if (adminPrefs.reportAvaria === false) continue;
     const dest = admin.jid ?? `${admin.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
     try {
       await botSend(dest, msg);

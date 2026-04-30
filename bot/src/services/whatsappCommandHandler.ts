@@ -51,6 +51,9 @@ const pendingSaidas = new Map<string, PendingSaida>(); // chave = JID (empresa v
 // Comando pendente aguardando seleção de empresa (JID → mensagem original)
 const pendingCommands = new Map<string, string>();
 
+// Admin navegando menu de notificações individuais (JID → empresaId)
+const pendingNotifMenu = new Map<string, string>();
+
 // Limpa sessões expiradas a cada 5 minutos
 setInterval(() => {
   const now = Date.now();
@@ -58,6 +61,72 @@ setInterval(() => {
     if (val.expiresAt < now) pendingSaidas.delete(key);
   }
 }, 5 * 60 * 1000);
+
+// ==========================================
+// MENU DE NOTIFICAÇÕES INDIVIDUAIS
+// ==========================================
+const NOTIF_MENU_ITEMS = [
+  { key: 'novaOrdem',         label: '🆕 Nova ordem criada' },
+  { key: 'ordemFinalizada',   label: '✅ Ordem finalizada' },
+  { key: 'ordemCancelada',    label: '❌ Ordem cancelada' },
+  { key: 'ordemParada',       label: '⚠️ Ordens paradas' },
+  { key: 'resumoDiario',      label: '📊 Resumo diário (20h)' },
+  { key: 'alertaCaixaAberto', label: '🕙 Alerta caixa aberto' },
+  { key: 'saidaRegistrada',   label: '💸 Saída registrada' },
+  { key: 'comissaoFechada',   label: '💰 Comissão fechada' },
+  { key: 'clienteVip',        label: '🏆 Cliente VIP chegou' },
+  { key: 'reportAvaria',      label: '📸 Report de avaria' },
+];
+
+async function buildNotifMenuText(jid: string, empresaId: string): Promise<string> {
+  const admin = await (prisma.whatsappAdminPhone as any).findFirst({
+    where: { empresaId, ativo: true, jid },
+    select: { notifPrefs: true },
+  });
+  const prefs: any = (admin?.notifPrefs as any) ?? {};
+
+  const lista = NOTIF_MENU_ITEMS.map((item, i) => {
+    const ativo = prefs[item.key] !== false;
+    return `*${i + 1}* ${item.label} — ${ativo ? '✅' : '❌'}`;
+  }).join('\n');
+
+  return `🔔 *Suas notificações*\n_Preferências individuais (ativo por padrão)_\n\n${lista}\n\n_Digite o número para ativar/desativar ou *0* para sair._`;
+}
+
+async function handleNotifMenuStep(jid: string, empresaId: string, choice: string): Promise<string> {
+  if (choice === '0') {
+    pendingNotifMenu.delete(jid);
+    return '✅ Preferências salvas.';
+  }
+
+  const idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= NOTIF_MENU_ITEMS.length) {
+    return buildNotifMenuText(jid, empresaId);
+  }
+
+  const item = NOTIF_MENU_ITEMS[idx];
+  const admin = await (prisma.whatsappAdminPhone as any).findFirst({
+    where: { empresaId, ativo: true, jid },
+    select: { id: true, notifPrefs: true },
+  });
+
+  if (!admin) {
+    pendingNotifMenu.delete(jid);
+    return '❌ Erro ao carregar preferências.';
+  }
+
+  const prefs: any = { ...((admin.notifPrefs as any) ?? {}) };
+  const eraAtivo = prefs[item.key] !== false;
+  prefs[item.key] = !eraAtivo;
+
+  await (prisma.whatsappAdminPhone as any).update({
+    where: { id: admin.id },
+    data: { notifPrefs: prefs },
+  });
+
+  const status = !eraAtivo ? '✅ ativada' : '❌ desativada';
+  return `${status} — *${item.label}*\n\n${await buildNotifMenuText(jid, empresaId)}`;
+}
 
 /*
  * Processa mensagem recebida do WhatsApp
@@ -247,6 +316,16 @@ export async function handleIncomingMessage(
 
     if (pendingSaidas.has(from)) {
       return handlePendingSaidaStep(message, from, senderName);
+    }
+
+    // Menu de notificações individuais do admin
+    if (pendingNotifMenu.has(from)) {
+      return handleNotifMenuStep(from, pendingNotifMenu.get(from)!, command);
+    }
+
+    if (/^notifica[çc][oõ]es?$|^notifs?$/.test(command)) {
+      pendingNotifMenu.set(from, empresaId);
+      return buildNotifMenuText(from, empresaId);
     }
 
     // Report de avaria — admin navegando lista de reports
