@@ -10,7 +10,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
-import { handleIncomingMessage } from './whatsappCommandHandler';
+import { handleIncomingMessage, handleIncomingImage } from './whatsappCommandHandler';
 import { validateAndClaimByCode } from './pairingCodeStore';
 import { validateAndClaimBotCode } from './botUserCodeStore';
 
@@ -39,6 +39,9 @@ let failedCredsAttempts:  number          = 0;
 let qrGeneratedAt:        number | null   = null;
 
 const lidToPhone = new Map<string, string>();
+
+// downloadMediaMessage do Baileys — preenchido após o dynamic import em initBaileys
+let _downloadMediaMessage: ((msg: any, type: string, opts: any, meta?: any) => Promise<any>) | null = null;
 
 function nextDelay(): number {
   const d = reconnectDelay;
@@ -142,7 +145,10 @@ export async function initBaileys(): Promise<void> {
       Browsers,
       DisconnectReason: BaileysDisconnectReason,
       makeInMemoryStore,
+      downloadMediaMessage,
     } = baileysMod;
+
+    _downloadMediaMessage = downloadMediaMessage;
 
     const _makeWASocket: typeof makeWASocket =
       makeWASocket ?? _baileysDefault?.makeWASocket ?? _baileysDefault;
@@ -337,6 +343,26 @@ export async function initBaileys(): Promise<void> {
         const text    =
           message.message?.conversation ||
           message.message?.extendedTextMessage?.text || '';
+
+        // Capturar imagens para o fluxo de report de avaria
+        const hasImage = !!message.message?.imageMessage;
+        if (hasImage && _downloadMediaMessage) {
+          let from = rawFrom;
+          if (rawFrom.endsWith('@lid')) {
+            const lidNum = rawFrom.split('@')[0];
+            const resolved = lidToPhone.get(lidNum);
+            if (resolved) from = `${resolved}@s.whatsapp.net`;
+          }
+          try {
+            const buf = await _downloadMediaMessage(message, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+            const reply = await handleIncomingImage(from, buf as Buffer);
+            if (reply?.trim()) await sock.sendMessage(rawFrom, { text: reply });
+          } catch (err) {
+            console.error('[Baileys] Erro ao baixar imagem:', err);
+          }
+          return;
+        }
+
         if (!text.trim()) return;
 
         // Resolver @lid

@@ -10,6 +10,22 @@ import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './ad
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
 import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
+import {
+  pendingReports,
+  hasPendingAdminReportView,
+  hasPendingReportsList,
+  handleReportarCommand,
+  handleReportStep,
+  handleIncomingImageForReport,
+  handleAdminReportResponse,
+  handleReportsCommand,
+  handleReportsListSelection,
+} from './reportService';
+
+/** Chamado pelo baileyService quando recebe uma imagem. */
+export async function handleIncomingImage(from: string, buffer: Buffer): Promise<string | null> {
+  return handleIncomingImageForReport(from, buffer);
+}
 
 // ==========================================
 // ESTADO DE COLETA CONVERSACIONAL DE SAÍDAS
@@ -64,16 +80,22 @@ export async function handleIncomingMessage(
     // ── LAVADOR: empresa implícita ────────────────────────────────────────────
     if (user.type === 'lavador') {
       const empresaId = user.empresaId!;
-      if (command === 'resumo')   return handleResumoLavador(user.lavadorId!, empresaId);
+      const lavadorId = user.lavadorId!;
+
+      // Step pendente de report tem prioridade
+      if (pendingReports.has(from)) return handleReportStep(from, message);
+
+      if (command === 'reportar') return handleReportarCommand(from, lavadorId, empresaId);
+      if (command === 'resumo')   return handleResumoLavador(lavadorId, empresaId);
       if (command === 'ajuda')    return handleAjudaLavador();
       if (['status','meu-status','minhas-comissoes'].includes(command))
-        return handleStatusLavador(user.lavadorId!, empresaId);
+        return handleStatusLavador(lavadorId, empresaId);
       if (['comissoes','comissão','comissao'].includes(command))
-        return handleComissoesLavador(user.lavadorId!, empresaId);
+        return handleComissoesLavador(lavadorId, empresaId);
 
       const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
         /(em aberto|abertas?|pendentes?)\s*(comiss[aã][eo]s?|comiss[oõ]es)/i.test(message);
-      if (isComissaoAberto) return handleComissoesLavador(user.lavadorId!, empresaId);
+      if (isComissaoAberto) return handleComissoesLavador(lavadorId, empresaId);
 
       const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
       if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
@@ -226,6 +248,19 @@ export async function handleIncomingMessage(
     if (pendingSaidas.has(from)) {
       return handlePendingSaidaStep(message, from, senderName);
     }
+
+    // Report de avaria — admin navegando lista de reports
+    if (hasPendingReportsList(from)) {
+      const r = await handleReportsListSelection(from, command);
+      if (r !== '') return r;
+    }
+
+    // Report de avaria — admin respondendo à notificação (1 = ver fotos / 2 = ignorar)
+    if (hasPendingAdminReportView(from) && (command === '1' || command === '2')) {
+      return handleAdminReportResponse(from, command);
+    }
+
+    if (command === 'reports') return handleReportsCommand(from, empresaId);
 
     // Detectar intenção de lançar despesa — padrões claros apenas
     // Evita falsos positivos como "saída do caixa de ontem" ou "ver saída"

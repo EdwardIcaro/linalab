@@ -1214,6 +1214,20 @@
                         </label>
                     </div>
 
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                📸 Report de avaria
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Avisa quando um lavador registra uma avaria no veículo, com fotos e opção de visualizar.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_reportAvaria">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
                     <div class="notif-row" style="flex-wrap:wrap;gap:8px;">
                         <div class="notif-info">
                             <div class="notif-title">⚠️ Ordens paradas</div>
@@ -1928,6 +1942,7 @@
             saidaRegistrada:   false,
             comissaoFechada:   false,
             clienteVip:        true,
+            reportAvaria:      true,
         };
 
         async function openNotifModal() {
@@ -1997,6 +2012,7 @@
             { key: 'resumo',       label: '📊 Resumo do dia' },
             { key: 'caixa',        label: '💵 Relatório de caixa' },
             { key: 'fechamento',   label: '🔒 Fechamento de caixa' },
+            { key: 'reportar',     label: '📸 Reportar avaria' },
             { key: 'lavadores',    label: '👷 Lista de lavadores' },
             { key: 'pendentes',    label: '⏳ Ordens pendentes' },
             { key: 'minhas_ordens',label: '📋 Minhas ordens' },
@@ -2006,13 +2022,14 @@
             { key: 'novaOrdem',         label: '🆕 Nova ordem criada' },
             { key: 'ordemFinalizada',   label: '✅ Ordem finalizada' },
             { key: 'ordemParada',       label: '⚠️ Ordens paradas 1h+' },
+            { key: 'reportAvaria',      label: '📸 Report de avaria (lavador)' },
             { key: 'clienteVip',        label: '🏆 Cliente VIP chegou' },
             { key: 'resumoDiario',      label: '📊 Resumo diário 20h' },
             { key: 'alertaCaixaAberto', label: '🕙 Alerta caixa aberto' },
         ];
 
         const ROLE_DEFAULTS = {
-            LAVADOR:    { commands: ['minhas_ordens'], notifs: [] },
+            LAVADOR:    { commands: ['minhas_ordens', 'reportar'], notifs: [] },
             CAIXA:      { commands: ['caixa', 'fechamento'], notifs: ['alertaCaixaAberto'] },
             FINANCEIRO: { commands: ['resumo', 'caixa', 'fechamento'], notifs: ['resumoDiario'] },
         };

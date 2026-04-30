@@ -37,6 +37,7 @@ import {
 } from './services/botUserCodeStore';
 
 import { botAuth } from './middleware/botAuth';
+import { scheduleCleanupReports } from './cron/cleanupReports';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -216,6 +217,8 @@ async function startBot() {
     app.listen(PORT, () => {
       console.log(`🚀 Bot service rodando na porta ${PORT}`);
     });
+
+    scheduleCleanupReports();
 
     // Restaurar sessão WhatsApp salva no banco
     console.log('🔄 Restaurando sessão WhatsApp...');

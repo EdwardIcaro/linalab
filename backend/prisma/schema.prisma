@@ -60,6 +60,7 @@ model Empresa {
   whatsappInstance           WhatsappInstance?
   bankIntegration            BankIntegration?
   whatsappBotUsers           WhatsappBotUser[]
+  reports                    OrdemReport[]
 
   @@map("empresas")
 }
@@ -127,6 +128,7 @@ model Lavador {
   ordens              OrdemServico[]
   ordemLavadores      OrdemServicoLavador[]
   whatsappBotUsers    WhatsappBotUser[]
+  reports             OrdemReport[]
 
   @@unique([nome, empresaId])
   @@map("lavadores")
@@ -294,6 +296,7 @@ model OrdemServico {
   items                OrdemServicoItem[]
   ordemLavadores       OrdemServicoLavador[]
   pagamentos           Pagamento[]
+  reports              OrdemReport[]
 
   @@unique([empresaId, numeroOrdem])
   @@map("ordens_servico")
@@ -756,4 +759,20 @@ model BankIntegration {
   empresa         Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("bank_integrations")
+}
+
+model OrdemReport {
+  id          String       @id @default(cuid())
+  ordemId     String
+  lavadorId   String
+  empresaId   String
+  descricao   String
+  fotos       String       @default("[]")
+  visto       Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  ordem       OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  lavador     Lavador      @relation(fields: [lavadorId], references: [id])
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("ordem_reports")
 }
