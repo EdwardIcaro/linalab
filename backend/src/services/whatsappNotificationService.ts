@@ -5,6 +5,7 @@
 
 import prisma from '../db';
 import { botSend, botGetStatus } from './botServiceClient';
+import { getTodayRangeBRT } from '../utils/dateUtils';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -216,16 +217,15 @@ export async function cronResumoDiario(): Promise<void> {
   for (const empresa of empresas) {
     if (!prefs(empresa).resumoDiario) continue;
     try {
-      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-      const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+      const { start: hoje, end: fimHoje } = getTodayRangeBRT();
 
       const [ordens, caixa] = await Promise.all([
         prisma.ordemServico.findMany({
-          where: { empresaId: empresa.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+          where: { empresaId: empresa.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lte: fimHoje } },
           include: { lavador: { select: { nome: true, comissao: true } } },
         }),
         prisma.caixaRegistro.findMany({
-          where: { empresaId: empresa.id, data: { gte: hoje, lt: amanha } },
+          where: { empresaId: empresa.id, data: { gte: hoje, lte: fimHoje } },
         }),
       ]);
 
@@ -244,7 +244,7 @@ export async function cronResumoDiario(): Promise<void> {
       }
       const topLavs = Object.values(comPorLav).sort((a, b) => b.com - a.com).slice(0, 3);
 
-      let msg = `📊 *Resumo do dia — ${hoje.toLocaleDateString('pt-BR')}*\n`;
+      let msg = `📊 *Resumo do dia — ${hoje.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}*\n`;
       msg += `━━━━━━━━━━━━━━━\n`;
       msg += `🚗 *${finalizadas.length}* finalizada(s)`;
       if (emAberto.length > 0) msg += ` · ⏳ *${emAberto.length}* em aberto`;
@@ -277,12 +277,11 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
   for (const empresa of empresas) {
     if (!prefs(empresa).alertaCaixaAberto) continue;
     try {
-      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-      const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+      const { start: hoje, end: fimHoje } = getTodayRangeBRT();
 
       const [abertura, fechamento] = await Promise.all([
-        prisma.aberturaCaixa.findFirst({ where: { empresaId: empresa.id, data: { gte: hoje, lt: amanha } } }),
-        prisma.fechamentoCaixa.findFirst({ where: { empresaId: empresa.id, data: { gte: hoje, lt: amanha } } }),
+        prisma.aberturaCaixa.findFirst({ where: { empresaId: empresa.id, data: { gte: hoje, lte: fimHoje } } }),
+        prisma.fechamentoCaixa.findFirst({ where: { empresaId: empresa.id, data: { gte: hoje, lte: fimHoje } } }),
       ]);
 
       if (abertura && !fechamento) {
