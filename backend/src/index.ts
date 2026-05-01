@@ -5,7 +5,6 @@ import cron from 'node-cron';
 
 import { waitForDatabase } from './waitForDb';
 import { getOrdensByLavadorPublic, getLavadorPublicData } from './controllers/publicController';
-import { processarFinalizacoesAutomaticas } from './controllers/ordemController';
 
 // Importar rotas
 import usuarioRoutes from './routes/usuario';
@@ -184,14 +183,6 @@ app.get('/health', (_req: express.Request, res: express.Response) => {
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Algo deu errado!' });
-});
-
-// Agendador de tarefas (Cron Job) para finalizar ordens em aberto
-cron.schedule('*/15 * * * *', () => {
-  console.log(`[${new Date().toISOString()}] Executando verificação para finalização automática de ordens...`);
-  processarFinalizacoesAutomaticas();
-}, {
-  timezone: "America/Sao_Paulo"
 });
 
 // Cron job para verificar assinaturas expiradas (a cada 6 horas)
