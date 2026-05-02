@@ -185,8 +185,8 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: 'Algo deu errado!' });
 });
 
-// Cron job para verificar assinaturas expiradas (a cada 6 horas)
-cron.schedule('0 */6 * * *', () => {
+// Cron job para verificar assinaturas expiradas (1x ao dia às 03:00)
+cron.schedule('0 3 * * *', () => {
   console.log(`[${new Date().toISOString()}] Verificando assinaturas expiradas...`);
   subscriptionService.checkExpiredSubscriptions();
 }, {
@@ -211,8 +211,8 @@ cron.schedule('0 21 * * *', () => {
   cronAlertaCaixaAberto();
 }, { timezone: "America/Sao_Paulo" });
 
-// WhatsApp: Ordens paradas há 1h+ (a cada hora)
-cron.schedule('0 * * * *', () => {
+// WhatsApp: Ordens paradas há 1h+ (a cada 2 horas)
+cron.schedule('0 */2 * * *', () => {
   cronOrdensParadas();
 }, { timezone: "America/Sao_Paulo" });
 
