@@ -740,6 +740,7 @@
     function renderFilterBar() {
       const filtros = [
         { id: 'todos',    label: 'Todos' },
+        { id: 'hoje',     label: 'Hoje' },
         { id: 'recentes', label: 'Recentes 7d' },
         { id: 'inativos', label: 'Inativos 30d+' },
         { id: 'semNome',  label: 'Sem Nome' }
@@ -767,10 +768,29 @@
 
     function matchFiltro(c, tipo) {
       const dias = diasDesdeUltimaVisita(c);
+      if (tipo === 'hoje')     return clienteTevOrdemHoje(c);
       if (tipo === 'recentes') return dias !== null && dias <= 7;
       if (tipo === 'inativos') return dias === null || dias > 30;
       if (tipo === 'semNome')  return !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
       return true;
+    }
+
+    // ── HELPERS BRT ───────────────────────────────
+    function getHojeBRT() {
+      const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      return brt.toISOString().slice(0, 10);
+    }
+
+    function dataBRT(dateStr) {
+      const brt = new Date(new Date(dateStr).getTime() - 3 * 60 * 60 * 1000);
+      return brt.toISOString().slice(0, 10);
+    }
+
+    function clienteTevOrdemHoje(c) {
+      const hoje = getHojeBRT();
+      return (c.ordens || []).some(o =>
+        o.status !== 'CANCELADO' && o.createdAt && dataBRT(o.createdAt) === hoje
+      );
     }
 
     // ── HELPERS DE DATA / VISITA ──────────────────

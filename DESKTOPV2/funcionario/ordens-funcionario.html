@@ -360,6 +360,7 @@
     .btn-action-done { background: linear-gradient(135deg, var(--green-d), var(--green)); color: #fff; box-shadow: 0 4px 12px rgba(5,150,105,.3); }
     .btn-action-pay  { background: linear-gradient(135deg, var(--orange), #ea580c); color: #fff; box-shadow: 0 4px 12px rgba(234,88,12,.3); }
     .btn-action-edit { background: rgba(59,130,246,.1); color: var(--blue-d); border: 1.5px solid rgba(59,130,246,.2); }
+    .btn-action-wa   { background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; box-shadow: 0 4px 12px rgba(37,211,102,.3); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
     /* ── PAYMENT MODAL ───────────────────────── */
     .modal-overlay {
@@ -1218,6 +1219,17 @@
           </button>`;
         }
         if (status === 'AGUARDANDO_PAGAMENTO') {
+          const telCliente = (currentOrdem.cliente?.telefone || '').replace(/\D/g, '');
+          if (telCliente) {
+            const nomeCliente = (currentOrdem.cliente?.nome && currentOrdem.cliente.nome !== 'N/A')
+              ? currentOrdem.cliente.nome.split(' ')[0]
+              : 'cliente';
+            const placaCliente = currentOrdem.veiculo?.placa || '';
+            const msgWa = encodeURIComponent(`Olá ${nomeCliente}! Seu veículo${placaCliente ? ' ' + placaCliente : ''} está pronto para retirada. 🚗✨`);
+            actionsHtml += `<a href="https://wa.me/55${telCliente}?text=${msgWa}" target="_blank" class="btn-action btn-action-wa">
+              <i class="fab fa-whatsapp"></i> Avisar
+            </a>`;
+          }
           actionsHtml += `<button class="btn-action btn-action-pay" onclick="openPaymentModal(currentOrdem)">
             <i class="fas fa-credit-card"></i> Pagar
           </button>`;
