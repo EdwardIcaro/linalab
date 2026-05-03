@@ -25,6 +25,14 @@ import {
 } from './services/baileyService';
 
 import {
+  connectEmpresa,
+  getEmpresaStatus,
+  sendEmpresaMessage,
+  disconnectEmpresa,
+  restoreAllEmpresaSessions,
+} from './services/empresaWaService';
+
+import {
   generateCode,
   getCodeEntry,
   cancelCode,
@@ -209,6 +217,54 @@ app.delete('/bot-pin/:id', (req, res) => {
   return res.json({ ok: true });
 });
 
+// ── WhatsApp por empresa (passivo) ───────────────────────────────────────────
+app.post('/empresa-wa/connect/:empresaId', async (req, res) => {
+  const empresaId = req.params['empresaId'] as string;
+  try {
+    const cur = getEmpresaStatus(empresaId);
+    if (cur.status === 'CONECTADO') return res.json({ status: 'CONECTADO' });
+    connectEmpresa(empresaId).catch(console.error);
+    let tries = 0;
+    while (tries < 30) {
+      await new Promise(r => setTimeout(r, 1000));
+      const s = getEmpresaStatus(empresaId);
+      if (s.status === 'CONECTADO') return res.json({ status: 'CONECTADO' });
+      if (s.status === 'QR')        return res.json({ status: 'QR', qrDataUrl: s.qrDataUrl });
+      tries++;
+    }
+    return res.json(getEmpresaStatus(empresaId));
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao conectar empresa', details: String(err) });
+  }
+});
+
+app.get('/empresa-wa/status/:empresaId', (req, res) => {
+  const empresaId = req.params['empresaId'] as string;
+  return res.json(getEmpresaStatus(empresaId));
+});
+
+app.post('/empresa-wa/send/:empresaId', async (req, res) => {
+  const empresaId = req.params['empresaId'] as string;
+  const { telefone, texto } = req.body as { telefone: string; texto: string };
+  if (!telefone || !texto) return res.status(400).json({ error: 'telefone e texto são obrigatórios' });
+  try {
+    await sendEmpresaMessage(empresaId, telefone, texto);
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
+app.post('/empresa-wa/disconnect/:empresaId', async (req, res) => {
+  const empresaId = req.params['empresaId'] as string;
+  try {
+    await disconnectEmpresa(empresaId);
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 // ── Iniciar servidor ─────────────────────────────────────────────────────────
 async function startBot() {
   try {
@@ -224,6 +280,8 @@ async function startBot() {
     console.log('🔄 Restaurando sessão WhatsApp...');
     await new Promise(resolve => setTimeout(resolve, 3000)); // aguarda estabilização
     await restoreActiveSessions();
+    // Restaurar sessões WhatsApp das empresas
+    await restoreAllEmpresaSessions();
   } catch (err) {
     console.error('❌ Erro ao iniciar bot:', err);
     process.exit(1);

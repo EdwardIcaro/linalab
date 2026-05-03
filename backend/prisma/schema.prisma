@@ -61,6 +61,8 @@ model Empresa {
   bankIntegration            BankIntegration?
   whatsappBotUsers           WhatsappBotUser[]
   reports                    OrdemReport[]
+  whatsappEmpresaSession     WhatsappEmpresaSession?
+  mensagensTemplate          MensagemTemplate[]
 
   @@map("empresas")
 }
@@ -641,6 +643,34 @@ model PriceHistory {
 
   @@index([planId])
   @@map("price_histories")
+}
+
+model WhatsappEmpresaSession {
+  id          String    @id @default(cuid())
+  empresaId   String    @unique
+  authState   String?   @map("auth_state")
+  status      String    @default("DESCONECTADO")
+  phoneNumber String?   @map("phone_number")
+  connectedAt DateTime? @map("connected_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_empresa_sessions")
+}
+
+model MensagemTemplate {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  categoria String
+  texto     String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("mensagens_template")
 }
 
 enum UserRole {

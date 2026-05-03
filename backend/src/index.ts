@@ -29,6 +29,7 @@ import subscriptionAdminRoutes from './routes/subscriptionAdmin';
 import promotionRoutes from './routes/promotionRoutes';
 import paymentRoutes from './routes/payment';
 import whatsappRoutes from './routes/whatsapp';
+import empresaWaRoutes from './routes/empresaWa';
 import ocrRoutes from './routes/ocr';
 
 import prisma from './db'; // Importa a instância do Prisma
@@ -168,6 +169,7 @@ app.get('/api/whatsapp/status', userAuthMiddleware, getWhatsappStatus);
 app.delete('/api/whatsapp/disconnect', adminMiddleware, disconnectWhatsapp);
 // Demais rotas WhatsApp (empresa-scoped)
 app.use('/api/whatsapp', authMiddleware, whatsappRoutes);
+app.use('/api/whatsapp-empresa', empresaWaRoutes);
 app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas autenticação de usuário)
 
 // Rota de saúde

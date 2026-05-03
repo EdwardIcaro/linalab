@@ -947,6 +947,96 @@
 
             <div id="alert" class="alert" style="display: none;"></div>
 
+            <!-- ===== WhatsApp da Empresa ===== -->
+            <div class="admin-section" id="empresaWaSection" style="margin-top:2rem;">
+                <div class="section-header">
+                    <h2>📱 WhatsApp da Empresa</h2>
+                    <span id="empresaWaStatusBadge" class="status-badge" style="background:#f5f5f5;color:#999;">Verificando...</span>
+                </div>
+                <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">
+                    Conecte o WhatsApp da sua empresa para enviar avisos diretamente aos clientes quando uma ordem estiver pronta.
+                    As mensagens saem do <strong>número da sua empresa</strong> — não do bot Lina.
+                </p>
+
+                <!-- Status conectado -->
+                <div id="empresaWaConnected" style="display:none;">
+                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                        <span style="font-size:1.5rem;">✅</span>
+                        <div>
+                            <div style="font-weight:700;color:#065f46;">Conectado</div>
+                            <div id="empresaWaPhone" style="font-family:monospace;color:#047857;font-size:0.9rem;"></div>
+                        </div>
+                        <button onclick="desconectarEmpresaWa()" style="margin-left:auto;padding:0.5rem 1rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                            Desconectar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status desconectado -->
+                <div id="empresaWaDisconnected">
+                    <button onclick="conectarEmpresaWa()" id="btnConectarEmpresaWa" class="btn-primary" style="margin-bottom:1.5rem;">
+                        📱 Conectar WhatsApp da Empresa
+                    </button>
+                </div>
+
+                <!-- Templates -->
+                <div id="empresaWaTemplates" style="display:none;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-top:1rem;border-top:1px solid #e0e0e0;">
+                        <h3 style="margin:0;font-size:1rem;">Modelos de Mensagem</h3>
+                        <button onclick="abrirModalNovoTemplate()" class="btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;">+ Novo</button>
+                    </div>
+                    <div id="templatesListWa" style="display:grid;gap:0.75rem;"></div>
+                </div>
+            </div>
+
+            <!-- Modal QR Empresa WA -->
+            <div id="modalEmpresaWaQr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+                <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+                    <h3 style="margin:0 0 0.5rem 0;">Conectar WhatsApp da Empresa</h3>
+                    <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Escaneie com o celular da empresa (o número que será usado para avisar clientes)</p>
+                    <div id="empresaWaQrContainer" style="margin-bottom:1.5rem;">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
+                            <div class="spinner"></div> Gerando QR Code...
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;justify-content:center;">
+                        <button onclick="verificarConexaoEmpresaWa()" style="padding:0.6rem 1.2rem;background:#25d366;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Já escaneei</button>
+                        <button onclick="fecharModalEmpresaWaQr()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Template -->
+            <div id="modalTemplate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+                <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+                    <h3 id="modalTemplateTitle" style="margin:0 0 1.5rem 0;">Novo Modelo</h3>
+                    <input type="hidden" id="templateEditId">
+                    <div class="form-group-phone">
+                        <label>Nome do modelo</label>
+                        <input type="text" id="templateNome" placeholder="Ex: Veículo pronto" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                    </div>
+                    <div class="form-group-phone">
+                        <label>Categoria</label>
+                        <select id="templateCategoria" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                            <option value="FINALIZACAO">Finalização de ordem</option>
+                            <option value="POS_VENDA">Pós-venda</option>
+                            <option value="PRE_VENDA">Pré-venda / Reativação</option>
+                            <option value="CUSTOM">Personalizado</option>
+                        </select>
+                    </div>
+                    <div class="form-group-phone">
+                        <label>Mensagem</label>
+                        <textarea id="templateTexto" rows="4" placeholder="Ex: Olá {{nome}}! Seu veículo {{placa}} está pronto. 🚗✨"
+                                  style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
+                        <div class="helper-text">Variáveis disponíveis: {{nome}}, {{placa}}, {{valor}}, {{dias}}, {{empresa}}</div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
+                        <button onclick="fecharModalTemplate()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                        <button onclick="salvarTemplate()" class="btn-primary">Salvar</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ===== Integração PIX ===== -->
             <div class="admin-section" style="margin-top:2rem;">
                 <div class="section-header">
@@ -1769,6 +1859,7 @@
             await loadBotUsers();
             await loadConfig();
             await loadPixConfig();
+            carregarStatusEmpresaWa();
         }
 
         // Carregar configuração
@@ -2302,6 +2393,203 @@
             window.location.href = 'login.html';
         } else {
             init();
+        }
+
+        // ══════════════════════════════════════════════════════
+        // WHATSAPP DA EMPRESA
+        // ══════════════════════════════════════════════════════
+
+        let _empresaWaQrPollTimer = null;
+
+        async function carregarStatusEmpresaWa() {
+            try {
+                const data = await window.api.empresaWaStatus();
+                const conectado = data.status === 'CONECTADO';
+                document.getElementById('empresaWaStatusBadge').textContent = conectado ? '✅ Conectado' : '⚪ Desconectado';
+                document.getElementById('empresaWaStatusBadge').style.cssText = conectado
+                    ? 'background:#d4edda;color:#155724;'
+                    : 'background:#f5f5f5;color:#999;';
+                document.getElementById('empresaWaConnected').style.display    = conectado ? 'block' : 'none';
+                document.getElementById('empresaWaDisconnected').style.display  = conectado ? 'none'  : 'block';
+                document.getElementById('empresaWaTemplates').style.display     = conectado ? 'block' : 'none';
+                if (data.phoneNumber) {
+                    document.getElementById('empresaWaPhone').textContent = formatarTelefone(data.phoneNumber);
+                }
+                if (conectado) await carregarTemplatesWa();
+            } catch {
+                document.getElementById('empresaWaStatusBadge').textContent = 'Indisponível';
+            }
+        }
+
+        function formatarTelefone(digits) {
+            if (!digits) return '';
+            const d = String(digits).replace(/\D/g, '');
+            if (d.length === 13) return `+${d.slice(0,2)} (${d.slice(2,4)}) ${d.slice(4,9)}-${d.slice(9)}`;
+            return `+${d}`;
+        }
+
+        async function conectarEmpresaWa() {
+            const btn = document.getElementById('btnConectarEmpresaWa');
+            btn.disabled = true;
+            btn.textContent = 'Aguardando QR...';
+            document.getElementById('modalEmpresaWaQr').style.display = 'flex';
+            document.getElementById('empresaWaQrContainer').innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
+                    <div class="spinner"></div> Gerando QR Code...
+                </div>`;
+            try {
+                const data = await window.api.empresaWaConnect();
+                if (data.status === 'CONECTADO') {
+                    fecharModalEmpresaWaQr();
+                    await carregarStatusEmpresaWa();
+                    return;
+                }
+                if (data.qrDataUrl) {
+                    document.getElementById('empresaWaQrContainer').innerHTML =
+                        `<img src="${data.qrDataUrl}" style="width:220px;height:220px;border-radius:8px;">`;
+                    iniciarPollConexaoEmpresaWa();
+                }
+            } catch (err) {
+                fecharModalEmpresaWaQr();
+                showAlert('Erro ao gerar QR Code. Bot offline?', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📱 Conectar WhatsApp da Empresa';
+            }
+        }
+
+        function iniciarPollConexaoEmpresaWa() {
+            if (_empresaWaQrPollTimer) clearInterval(_empresaWaQrPollTimer);
+            _empresaWaQrPollTimer = setInterval(async () => {
+                try {
+                    const data = await window.api.empresaWaStatus();
+                    if (data.status === 'CONECTADO') {
+                        clearInterval(_empresaWaQrPollTimer);
+                        fecharModalEmpresaWaQr();
+                        await carregarStatusEmpresaWa();
+                    }
+                } catch {}
+            }, 3000);
+        }
+
+        async function verificarConexaoEmpresaWa() {
+            try {
+                const data = await window.api.empresaWaStatus();
+                if (data.status === 'CONECTADO') {
+                    clearInterval(_empresaWaQrPollTimer);
+                    fecharModalEmpresaWaQr();
+                    await carregarStatusEmpresaWa();
+                } else {
+                    showAlert('Ainda não conectado. Verifique se escaneou o QR.', 'error');
+                }
+            } catch {}
+        }
+
+        function fecharModalEmpresaWaQr() {
+            if (_empresaWaQrPollTimer) { clearInterval(_empresaWaQrPollTimer); _empresaWaQrPollTimer = null; }
+            document.getElementById('modalEmpresaWaQr').style.display = 'none';
+        }
+
+        async function desconectarEmpresaWa() {
+            if (!confirm('Desconectar o WhatsApp da empresa? Precisará escanear o QR novamente para reconectar.')) return;
+            try {
+                await window.api.empresaWaDisconnect();
+                await carregarStatusEmpresaWa();
+            } catch { showAlert('Erro ao desconectar.', 'error'); }
+        }
+
+        // ── Templates ──────────────────────────────────────────
+        async function carregarTemplatesWa() {
+            try {
+                const data = await window.api.empresaWaGetTemplates();
+                const list = document.getElementById('templatesListWa');
+                if (!data.templates?.length) {
+                    list.innerHTML = '<p style="color:#999;font-size:0.9rem;text-align:center;">Nenhum modelo cadastrado.</p>';
+                    return;
+                }
+                const catLabel = { FINALIZACAO:'Finalização', POS_VENDA:'Pós-venda', PRE_VENDA:'Pré-venda', CUSTOM:'Personalizado' };
+                list.innerHTML = data.templates.map(t => `
+                    <div style="border:1px solid #e0e0e0;border-radius:8px;padding:1rem;background:${t.ativo?'#fff':'#f9f9f9'};">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+                            <div style="flex:1;">
+                                <div style="font-weight:700;margin-bottom:0.25rem;">${escHtml(t.nome)}</div>
+                                <div style="font-size:0.75rem;color:#999;margin-bottom:0.5rem;">${catLabel[t.categoria]||t.categoria}</div>
+                                <div style="font-size:0.9rem;color:#555;line-height:1.5;">${escHtml(t.texto)}</div>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+                                <button onclick="editarTemplate('${t.id}')" title="Editar" style="padding:0.3rem 0.6rem;border:1px solid #e0e0e0;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;">✏️</button>
+                                <button onclick="toggleTemplate('${t.id}',${!t.ativo})" title="${t.ativo?'Desativar':'Ativar'}"
+                                        style="padding:0.3rem 0.6rem;border:1px solid #e0e0e0;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;">
+                                    ${t.ativo?'⏸':'▶'}
+                                </button>
+                                <button onclick="excluirTemplate('${t.id}')" title="Excluir" style="padding:0.3rem 0.6rem;border:1px solid #fecaca;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;color:#dc2626;">🗑</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                // Salva para uso no modal de envio
+                window._empresaWaTemplates = data.templates;
+            } catch { }
+        }
+
+        function abrirModalNovoTemplate() {
+            document.getElementById('modalTemplateTitle').textContent = 'Novo Modelo';
+            document.getElementById('templateEditId').value = '';
+            document.getElementById('templateNome').value = '';
+            document.getElementById('templateCategoria').value = 'FINALIZACAO';
+            document.getElementById('templateTexto').value = '';
+            document.getElementById('modalTemplate').style.display = 'flex';
+        }
+
+        function editarTemplate(id) {
+            const t = (window._empresaWaTemplates || []).find(x => x.id === id);
+            if (!t) return;
+            document.getElementById('modalTemplateTitle').textContent = 'Editar Modelo';
+            document.getElementById('templateEditId').value = t.id;
+            document.getElementById('templateNome').value = t.nome;
+            document.getElementById('templateCategoria').value = t.categoria;
+            document.getElementById('templateTexto').value = t.texto;
+            document.getElementById('modalTemplate').style.display = 'flex';
+        }
+
+        function fecharModalTemplate() {
+            document.getElementById('modalTemplate').style.display = 'none';
+        }
+
+        async function salvarTemplate() {
+            const id       = document.getElementById('templateEditId').value;
+            const nome     = document.getElementById('templateNome').value.trim();
+            const categoria= document.getElementById('templateCategoria').value;
+            const texto    = document.getElementById('templateTexto').value.trim();
+            if (!nome || !texto) { showAlert('Preencha nome e mensagem.', 'error'); return; }
+            try {
+                if (id) {
+                    await window.api.empresaWaUpdateTemplate(id, { nome, texto });
+                } else {
+                    await window.api.empresaWaCreateTemplate({ nome, categoria, texto });
+                }
+                fecharModalTemplate();
+                await carregarTemplatesWa();
+            } catch { showAlert('Erro ao salvar modelo.', 'error'); }
+        }
+
+        async function toggleTemplate(id, ativo) {
+            try {
+                await window.api.empresaWaUpdateTemplate(id, { ativo });
+                await carregarTemplatesWa();
+            } catch { showAlert('Erro ao atualizar modelo.', 'error'); }
+        }
+
+        async function excluirTemplate(id) {
+            if (!confirm('Excluir este modelo?')) return;
+            try {
+                await window.api.empresaWaDeleteTemplate(id);
+                await carregarTemplatesWa();
+            } catch { showAlert('Erro ao excluir modelo.', 'error'); }
+        }
+
+        function escHtml(s) {
+            return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
     </script>
 </body>

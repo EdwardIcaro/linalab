@@ -437,6 +437,15 @@ const api = {
     body: JSON.stringify({ image: imageBase64 }),
   }),
 
+  // ── WhatsApp da Empresa ────────────────────────────────────────────────────
+  empresaWaStatus:       ()          => fetchApi('/api/whatsapp-empresa/status'),
+  empresaWaConnect:      ()          => fetchApi('/api/whatsapp-empresa/connect', { method: 'POST' }),
+  empresaWaDisconnect:   ()          => fetchApi('/api/whatsapp-empresa/disconnect', { method: 'POST' }),
+  empresaWaGetTemplates: ()          => fetchApi('/api/whatsapp-empresa/templates'),
+  empresaWaCreateTemplate: (data)    => fetchApi('/api/whatsapp-empresa/templates', { method: 'POST', body: JSON.stringify(data) }),
+  empresaWaUpdateTemplate: (id, data)=> fetchApi(`/api/whatsapp-empresa/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  empresaWaDeleteTemplate: (id)      => fetchApi(`/api/whatsapp-empresa/templates/${id}`, { method: 'DELETE' }),
+
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),
   logout: () => {
