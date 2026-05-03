@@ -90,10 +90,13 @@ Usuario → Empresa → Cliente → Veiculo
 - Permissões chave: `ver_financeiro`, `gerenciar_ordens`, `gerenciar_clientes`, `gerenciar_configuracoes`
 
 ### Background Jobs
-- Cron a cada 15 min: auto-finalização de ordens (`processarFinalizacoesAutomaticas`)
-- Cron a cada 6h: expiração de assinaturas
-- Cron 09h diário: avisos de trial expirando
-- ~~Cron a cada 10 min: reconexão WhatsApp~~ — removido; bot gerencia a própria sessão no VPS
+- ~~Cron a cada 15 min: auto-finalização de ordens~~ — **removido** (aliviou Neon CU-hrs)
+- Cron 03h diário: expiração de assinaturas (`checkExpiredSubscriptions`)
+- Cron 09h diário: avisos de trial expirando (`checkTrialExpirationWarnings`)
+- Cron 20h diário: resumo diário WhatsApp (`cronResumoDiario`) — só roda se bot conectado
+- Cron 21h diário: alerta caixa aberto WhatsApp (`cronAlertaCaixaAberto`) — só roda se bot conectado
+- Cron a cada 2h: ordens paradas WhatsApp (`cronOrdensParadas`) — só roda se bot conectado
+- ~~Cron a cada 10 min: reconexão WhatsApp~~ — removido; bot gerencia a própria sessão no PC local
 
 ---
 
@@ -479,11 +482,11 @@ DATABASE_URL        → PostgreSQL Neon (prod)
 SECRET_KEY          → JWT signing secret
 PORT                → porta do servidor (padrão 3001)
 SENDGRID_API_KEY    → email notifications
-BOT_SERVICE_URL     → http://168.75.107.236:3000  (VPS Oracle)
+BOT_SERVICE_URL     → URL ngrok atual do PC local (muda a cada reinício do ngrok — configurar no Railway)
 BOT_SECRET          → segredo compartilhado com o bot (header X-Bot-Secret)
 ```
 
-### Bot (Oracle VPS — ~/linalab/bot/.env)
+### Bot (PC local — C:\LinaX\bot\.env)
 ```
 DATABASE_URL        → mesmo Neon do backend
 BOT_SECRET          → mesmo valor do backend
