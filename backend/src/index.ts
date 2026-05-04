@@ -177,7 +177,7 @@ app.get('/health', (_req: express.Request, res: express.Response) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.1'
   });
 });
 
