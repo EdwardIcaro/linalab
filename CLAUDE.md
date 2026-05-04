@@ -364,6 +364,62 @@ aplicar o mesmo padrão.
 3. Escanear QR, aguardar `✅ Auth state salvo`
 4. `pm2 restart lina-bot` (no PC local)
 
+### WhatsApp por Empresa (`empresaWaService.ts`)
+
+Cada empresa pode conectar **seu próprio número WhatsApp** ao sistema, separado do bot Lina.
+As sessões são **passivas** — nunca respondem mensagens recebidas, apenas enviam quando acionadas.
+
+**Arquitetura:**
+```
+Frontend → POST /api/whatsapp-empresa/send → Backend (Railway)
+         → empresaWaClient.ts → bot ngrok → empresaWaService.ts → Baileys
+```
+
+**Auth state:** persistido em `whatsapp_empresa_sessions` no Neon (campo `authState`, igual ao bot global).
+Auth local fica em `/tmp/baileys-empresa-{empresaId}`.
+
+**Estados da sessão:** `DESCONECTADO → CONECTANDO → QR → CONECTADO`
+
+**Envio de mensagem — regra crítica:**
+```typescript
+// ❌ NÃO construir JID manualmente — número Brasil tem variação com/sem 9º dígito
+const jid = `55${digits}@s.whatsapp.net`; // pode ser JID errado
+
+// ✅ Sempre usar onWhatsApp() para resolver o JID real
+const results = await sock.onWhatsApp(digits);
+const found   = Array.isArray(results) ? results[0] : results;
+if (!found?.exists) throw new Error('Número não encontrado no WhatsApp');
+await sock.sendMessage(found.jid, { text: texto });
+```
+> `onWhatsApp()` retorna o JID que o WA conhece (ex: `559981956046` em vez de `5599981956046`).
+> `sendMessage` com JID errado retorna key ID sem erro — entrega no vácuo.
+
+**Endpoints do bot:**
+- `POST /empresa-wa/connect/:empresaId` — inicia conexão (retorna QR ou CONECTADO)
+- `GET  /empresa-wa/status/:empresaId` — status da sessão em memória
+- `POST /empresa-wa/send/:empresaId` — envia mensagem (body: `{ telefone, texto }`)
+- `POST /empresa-wa/disconnect/:empresaId` — desconecta e limpa auth
+
+**Endpoints do backend:**
+- `GET  /api/whatsapp-empresa/status` — status + phoneNumber
+- `POST /api/whatsapp-empresa/connect` — inicia + cria 3 templates padrão na 1ª vez
+- `POST /api/whatsapp-empresa/disconnect`
+- `POST /api/whatsapp-empresa/send` — body: `{ telefone, texto }`
+- CRUD `/api/whatsapp-empresa/templates`
+
+**Modelos Prisma:**
+- `WhatsappEmpresaSession` → `whatsapp_empresa_sessions` — sessão por empresa
+- `MensagemTemplate` → `mensagens_template` — templates editáveis (`{{nome}}`, `{{placa}}`, etc.)
+
+**Riscos de ban (WhatsApp):**
+- ⚠️ Números pessoais têm **tolerância zero** — 1 denúncia de spam já bane
+- ⚠️ Enviar para números que não têm o remetente na agenda aumenta risco
+- ⚠️ Volume alto em pouco tempo (>50 msgs/hora num número novo) → ban automático
+- ✅ Mitigação: usar número de chip dedicado ao negócio, nunca número pessoal
+- ✅ Mitigação: mensagens só para clientes que já interagiram (opt-in implícito)
+- ✅ Mitigação: espaçar envios em massa (não disparar tudo de uma vez)
+- ℹ️ Baileys usa protocolo não-oficial — WhatsApp pode banir a qualquer momento sem aviso
+
 ### Comandos PIX (Fase 1 — PIX estático)
 - `pix 432` ou `pix ordem 432` → gera QR Code PIX e envia como imagem
 - `reenviar pix 432` → reenvia QR existente sem criar novo
