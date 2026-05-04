@@ -960,7 +960,7 @@
 
                 <!-- Status conectado -->
                 <div id="empresaWaConnected" style="display:none;">
-                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
                         <span style="font-size:1.5rem;">✅</span>
                         <div>
                             <div style="font-weight:700;color:#065f46;">Conectado</div>
@@ -969,6 +969,16 @@
                         <button onclick="desconectarEmpresaWa()" style="margin-left:auto;padding:0.5rem 1rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.85rem;">
                             Desconectar
                         </button>
+                    </div>
+                    <!-- DEBUG -->
+                    <div style="padding:1rem;background:#fefce8;border:1px dashed #fbbf24;border-radius:8px;margin-bottom:1rem;">
+                        <div style="font-size:0.8rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">🧪 DEBUG — Enviar mensagem teste</div>
+                        <div style="display:flex;gap:0.5rem;align-items:center;">
+                            <input id="debugWaPhone" type="text" placeholder="Número (ex: 11999990000)" style="flex:1;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
+                            <input id="debugWaText" type="text" placeholder="Mensagem" value="Teste do WhatsApp da empresa 🚗" style="flex:2;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
+                            <button onclick="debugEnviarMensagemEmpresa()" style="padding:0.5rem 1rem;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;">Enviar</button>
+                        </div>
+                        <div id="debugWaResult" style="margin-top:0.5rem;font-size:0.82rem;"></div>
                     </div>
                 </div>
 
@@ -2496,6 +2506,20 @@
                 await window.api.empresaWaDisconnect();
                 await carregarStatusEmpresaWa();
             } catch { showAlert('Erro ao desconectar.', 'error'); }
+        }
+
+        async function debugEnviarMensagemEmpresa() {
+            const telefone = document.getElementById('debugWaPhone').value.trim();
+            const texto    = document.getElementById('debugWaText').value.trim();
+            const result   = document.getElementById('debugWaResult');
+            if (!telefone || !texto) { result.textContent = '⚠️ Preencha número e mensagem.'; result.style.color = '#b45309'; return; }
+            result.textContent = 'Enviando...'; result.style.color = '#6b7280';
+            try {
+                await window.api.empresaWaSend(telefone, texto);
+                result.textContent = '✅ Mensagem enviada com sucesso!'; result.style.color = '#065f46';
+            } catch (e) {
+                result.textContent = '❌ Erro: ' + (e?.message || e); result.style.color = '#991b1b';
+            }
         }
 
         // ── Templates ──────────────────────────────────────────

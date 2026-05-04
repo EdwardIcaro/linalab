@@ -445,6 +445,7 @@ const api = {
   empresaWaCreateTemplate: (data)    => fetchApi('/whatsapp-empresa/templates', { method: 'POST', body: JSON.stringify(data) }),
   empresaWaUpdateTemplate: (id, data)=> fetchApi(`/whatsapp-empresa/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   empresaWaDeleteTemplate: (id)      => fetchApi(`/whatsapp-empresa/templates/${id}`, { method: 'DELETE' }),
+  empresaWaSend:           (telefone, texto) => fetchApi('/whatsapp-empresa/send', { method: 'POST', body: JSON.stringify({ telefone, texto }) }),
 
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),

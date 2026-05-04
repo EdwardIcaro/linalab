@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
-import { empresaWaConnect, empresaWaStatus, empresaWaDisconnect } from '../services/empresaWaClient';
+import { empresaWaConnect, empresaWaStatus, empresaWaDisconnect, empresaWaSend } from '../services/empresaWaClient';
 
 const TEMPLATES_PADRAO = [
   { nome: 'Veículo pronto', categoria: 'FINALIZACAO', texto: 'Olá {{nome}}! Seu veículo {{placa}} está pronto para retirada. 🚗✨' },
@@ -56,6 +56,19 @@ export async function disconnect(req: Request, res: Response) {
   const empresaId = (req as any).empresaId as string;
   try {
     await empresaWaDisconnect(empresaId);
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// ── Enviar mensagem ───────────────────────────────────────────────────────────
+export async function send(req: Request, res: Response) {
+  const empresaId = (req as any).empresaId as string;
+  const { telefone, texto } = req.body as { telefone: string; texto: string };
+  if (!telefone || !texto) return res.status(400).json({ error: 'telefone e texto são obrigatórios' });
+  try {
+    await empresaWaSend(empresaId, telefone, texto);
     return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
