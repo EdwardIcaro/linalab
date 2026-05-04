@@ -245,20 +245,10 @@ export async function sendEmpresaMessage(empresaId: string, telefone: string, te
   const digits = telefone.replace(/\D/g, '');
   const jid    = `${digits.startsWith('55') ? digits : '55' + digits}@s.whatsapp.net`;
 
-  // Verificar se o número existe no WhatsApp antes de enviar
-  try {
-    const results = await st.socket.onWhatsApp(digits);
-    const found   = Array.isArray(results) ? results[0] : results;
-    console.log(`[EmpresaWA:${empresaId}] onWhatsApp(${digits}):`, found);
-    if (!found?.exists) throw new Error(`Número ${telefone} não encontrado no WhatsApp`);
-    const resolvedJid = found.jid ?? jid;
-    console.log(`[EmpresaWA:${empresaId}] Enviando para JID resolvido: ${resolvedJid}`);
-    const result = await st.socket.sendMessage(resolvedJid, { text: texto });
-    console.log(`[EmpresaWA:${empresaId}] sendMessage retornou:`, result?.key?.id ?? 'sem key');
-  } catch (err) {
-    console.error(`[EmpresaWA:${empresaId}] Erro ao enviar:`, err);
-    throw err;
-  }
+  const results = await st.socket.onWhatsApp(digits);
+  const found   = Array.isArray(results) ? results[0] : results;
+  if (!found?.exists) throw new Error(`Número ${telefone} não encontrado no WhatsApp`);
+  await st.socket.sendMessage(found.jid ?? jid, { text: texto });
 }
 
 export async function disconnectEmpresa(empresaId: string): Promise<void> {
