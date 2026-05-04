@@ -438,13 +438,13 @@ const api = {
   }),
 
   // ── WhatsApp da Empresa ────────────────────────────────────────────────────
-  empresaWaStatus:       ()          => fetchApi('/api/whatsapp-empresa/status'),
-  empresaWaConnect:      ()          => fetchApi('/api/whatsapp-empresa/connect', { method: 'POST' }),
-  empresaWaDisconnect:   ()          => fetchApi('/api/whatsapp-empresa/disconnect', { method: 'POST' }),
-  empresaWaGetTemplates: ()          => fetchApi('/api/whatsapp-empresa/templates'),
-  empresaWaCreateTemplate: (data)    => fetchApi('/api/whatsapp-empresa/templates', { method: 'POST', body: JSON.stringify(data) }),
-  empresaWaUpdateTemplate: (id, data)=> fetchApi(`/api/whatsapp-empresa/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  empresaWaDeleteTemplate: (id)      => fetchApi(`/api/whatsapp-empresa/templates/${id}`, { method: 'DELETE' }),
+  empresaWaStatus:       ()          => fetchApi('/whatsapp-empresa/status'),
+  empresaWaConnect:      ()          => fetchApi('/whatsapp-empresa/connect', { method: 'POST' }),
+  empresaWaDisconnect:   ()          => fetchApi('/whatsapp-empresa/disconnect', { method: 'POST' }),
+  empresaWaGetTemplates: ()          => fetchApi('/whatsapp-empresa/templates'),
+  empresaWaCreateTemplate: (data)    => fetchApi('/whatsapp-empresa/templates', { method: 'POST', body: JSON.stringify(data) }),
+  empresaWaUpdateTemplate: (id, data)=> fetchApi(`/whatsapp-empresa/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  empresaWaDeleteTemplate: (id)      => fetchApi(`/whatsapp-empresa/templates/${id}`, { method: 'DELETE' }),
 
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),
