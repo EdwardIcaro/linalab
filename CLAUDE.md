@@ -412,13 +412,11 @@ await sock.sendMessage(found.jid, { text: texto });
 - `MensagemTemplate` → `mensagens_template` — templates editáveis (`{{nome}}`, `{{placa}}`, etc.)
 
 **Riscos de ban (WhatsApp):**
-- ⚠️ Números pessoais têm **tolerância zero** — 1 denúncia de spam já bane
-- ⚠️ Enviar para números que não têm o remetente na agenda aumenta risco
-- ⚠️ Volume alto em pouco tempo (>50 msgs/hora num número novo) → ban automático
-- ✅ Mitigação: usar número de chip dedicado ao negócio, nunca número pessoal
-- ✅ Mitigação: mensagens só para clientes que já interagiram (opt-in implícito)
-- ✅ Mitigação: espaçar envios em massa (não disparar tudo de uma vez)
-- ℹ️ Baileys usa protocolo não-oficial — WhatsApp pode banir a qualquer momento sem aviso
+- O WA bane por **volume + frequência**, não por "primeiro contato". Perfil do lava-jato (5–30 msgs/dia, intervalos longos, texto personalizado com `{{nome}}/{{placa}}`) é praticamente risco zero de ban automático.
+- ✅ `onWhatsApp()` obrigatório antes de enviar — evita envio para JID inválido (que flaggeia a conta)
+- ⚠️ **Nunca usar número pessoal do dono** — se banirem, perde o número pessoal junto
+- ⚠️ Disparos em massa (>100 msgs/hora) aumentam risco — não é o caso do lava-jato
+- ℹ️ Baileys usa protocolo não-oficial — WhatsApp pode mudar protocolo e quebrar sem aviso
 
 ### Comandos PIX (Fase 1 — PIX estático)
 - `pix 432` ou `pix ordem 432` → gera QR Code PIX e envia como imagem
