@@ -244,7 +244,9 @@ export async function sendEmpresaMessage(empresaId: string, telefone: string, te
   if (!st?.socket || st.status !== 'CONECTADO') throw new Error('WhatsApp da empresa não está conectado');
   const digits = telefone.replace(/\D/g, '');
   const jid    = `${digits.startsWith('55') ? digits : '55' + digits}@s.whatsapp.net`;
-  await st.socket.sendMessage(jid, { text: texto });
+  console.log(`[EmpresaWA:${empresaId}] Enviando para JID: ${jid}`);
+  const result = await st.socket.sendMessage(jid, { text: texto });
+  console.log(`[EmpresaWA:${empresaId}] sendMessage retornou:`, result?.key?.id ?? 'sem key');
 }
 
 export async function disconnectEmpresa(empresaId: string): Promise<void> {
