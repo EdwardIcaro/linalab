@@ -2241,7 +2241,8 @@
 
         const cliente = _avModal.ordemData.cliente;
         const tel     = (cliente?.telefone || '').replace(/\D/g, '');
-        const telFmt  = tel ? `(${tel.slice(2,4)}) ${tel.slice(4,9)}-${tel.slice(9)}` : '—';
+        const telN    = tel && !tel.startsWith('55') ? `55${tel}` : tel;
+        const telFmt  = telN.length >= 12 ? `(${telN.slice(2,4)}) ${telN.slice(4,9)}-${telN.slice(9)}` : (tel || '—');
 
         const opcoesTemplate = _avModal.templates
           .map((t, i) => `<option value="${t.id}" ${i === 0 ? 'selected' : ''}>${t.nome}</option>`)

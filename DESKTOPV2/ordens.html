@@ -1757,7 +1757,8 @@
   let _avState = { ordemId: null, templates: [], ordemData: null };
   function _fmtTel(tel) {
     const d = (tel || '').replace(/\D/g, '');
-    return d.length >= 11 ? `(${d.slice(2,4)}) ${d.slice(4,9)}-${d.slice(9)}` : d;
+    const n = d && !d.startsWith('55') ? `55${d}` : d;
+    return n.length >= 12 ? `(${n.slice(2,4)}) ${n.slice(4,9)}-${n.slice(9)}` : n;
   }
   function _subst(texto, ordem) {
     const nome    = (ordem.cliente?.nome || 'cliente').split(' ')[0];
