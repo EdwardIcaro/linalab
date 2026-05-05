@@ -99,8 +99,9 @@ export async function enviarTemplate(req: Request, res: Response) {
     if (!ordem)    return res.status(404).json({ error: 'Ordem não encontrada' });
     if (!template) return res.status(404).json({ error: 'Template não encontrado' });
 
-    const telefone = (ordem.cliente?.telefone || '').replace(/\D/g, '');
-    if (!telefone) return res.status(400).json({ error: 'Cliente sem telefone cadastrado' });
+    const digits   = (ordem.cliente?.telefone || '').replace(/\D/g, '');
+    if (!digits) return res.status(400).json({ error: 'Cliente sem telefone cadastrado' });
+    const telefone = digits.startsWith('55') ? digits : `55${digits}`;
 
     // Dias desde última visita anterior (para {{dias}})
     let dias = 0;
