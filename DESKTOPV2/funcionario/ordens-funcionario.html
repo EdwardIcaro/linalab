@@ -954,6 +954,23 @@
     </div>
   </div>
 
+  <!-- ══ AVISAR CLIENTE MODAL ══════════════════ -->
+  <div class="edit-modal-overlay" id="avisarModal" style="display:none;z-index:3000"
+       onclick="if(event.target===this)fecharAvisarModal()">
+    <div class="edit-modal-content" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="edit-modal-title">
+        <i class="fab fa-whatsapp" style="color:#25D366"></i>
+        Avisar Cliente
+      </div>
+      <div id="avisarModalBody"></div>
+      <div class="modal-actions" style="padding-top:8px">
+        <button class="btn-modal-cancel" onclick="fecharAvisarModal()">Cancelar</button>
+        <button class="btn-modal-submit" id="btnEnviarAviso" onclick="enviarAviso()">Enviar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ PIX QR MODAL ═══════════════════════════ -->
   <div class="edit-modal-overlay" id="pixQrModal" style="display:none;z-index:3000" onclick="if(event.target===this)closePixQrModal()">
     <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:70vh">
@@ -982,11 +999,13 @@
       originalTotal: 0, desconto: 0, maxDesconto: 0
     };
     let paymentKeydownHandler = null;
+    let empresaWaConectado = false;
 
     // ── INIT ─────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
       await loadUserInfo();
+      window.api.empresaWaStatus().then(r => { empresaWaConectado = r.status === 'CONECTADO'; }).catch(() => {});
 
       const urlParams = new URLSearchParams(window.location.search);
       const ordemId = urlParams.get('id');
@@ -1221,14 +1240,19 @@
         if (status === 'AGUARDANDO_PAGAMENTO') {
           const telCliente = (currentOrdem.cliente?.telefone || '').replace(/\D/g, '');
           if (telCliente) {
-            const nomeCliente = (currentOrdem.cliente?.nome && currentOrdem.cliente.nome !== 'N/A')
-              ? currentOrdem.cliente.nome.split(' ')[0]
-              : 'cliente';
-            const placaCliente = currentOrdem.veiculo?.placa || '';
-            const msgWa = encodeURIComponent(`Olá ${nomeCliente}! Seu veículo${placaCliente ? ' ' + placaCliente : ''} está pronto para retirada. 🚗✨`);
-            actionsHtml += `<a href="https://wa.me/55${telCliente}?text=${msgWa}" target="_blank" class="btn-action btn-action-wa">
-              <i class="fab fa-whatsapp"></i> Avisar
-            </a>`;
+            if (empresaWaConectado) {
+              actionsHtml += `<button class="btn-action btn-action-wa" onclick="abrirAvisarModal('${currentOrdem.id}')">
+                <i class="fab fa-whatsapp"></i> Avisar
+              </button>`;
+            } else {
+              const nomeCliente = (currentOrdem.cliente?.nome && currentOrdem.cliente.nome !== 'N/A')
+                ? currentOrdem.cliente.nome.split(' ')[0] : 'cliente';
+              const placaCliente = currentOrdem.veiculo?.placa || '';
+              const msgWa = encodeURIComponent(`Olá ${nomeCliente}! Seu veículo${placaCliente ? ' ' + placaCliente : ''} está pronto para retirada. 🚗✨`);
+              actionsHtml += `<a href="https://wa.me/55${telCliente}?text=${msgWa}" target="_blank" class="btn-action btn-action-wa">
+                <i class="fab fa-whatsapp"></i> Avisar
+              </a>`;
+            }
           }
           actionsHtml += `<button class="btn-action btn-action-pay" onclick="openPaymentModal(currentOrdem)">
             <i class="fas fa-credit-card"></i> Pagar
@@ -2190,6 +2214,104 @@
       document.body.appendChild(d);
       d.querySelector('#cfnCancel').addEventListener('click', () => { d.remove(); onCancel?.(); });
       d.querySelector('#cfnOk').addEventListener('click', () => { d.remove(); onConfirm?.(); });
+    }
+
+    // ── AVISAR CLIENTE VIA WHATSAPP EMPRESA ──────
+    const _avModal = {
+      ordemId: null,
+      templates: [],
+      ordemData: null,
+    };
+
+    async function abrirAvisarModal(ordemId) {
+      _avModal.ordemId = ordemId;
+
+      const modal = document.getElementById('avisarModal');
+      const body  = document.getElementById('avisarModalBody');
+      modal.style.display = 'flex';
+      body.innerHTML = '<div style="padding:24px 0;text-align:center;color:var(--mid)"><div class="spin" style="width:24px;height:24px;border-top-color:var(--green-d);margin:0 auto 8px"></div>Carregando…</div>';
+
+      try {
+        const [ordemRes, tplRes] = await Promise.all([
+          window.api.getOrdemById(ordemId),
+          window.api.empresaWaGetTemplates(),
+        ]);
+        _avModal.ordemData  = ordemRes.data || ordemRes;
+        _avModal.templates  = (tplRes.templates || []).filter(t => t.ativo);
+
+        const cliente = _avModal.ordemData.cliente;
+        const tel     = (cliente?.telefone || '').replace(/\D/g, '');
+        const telFmt  = tel ? `(${tel.slice(2,4)}) ${tel.slice(4,9)}-${tel.slice(9)}` : '—';
+
+        const opcoesTemplate = _avModal.templates
+          .map((t, i) => `<option value="${t.id}" ${i === 0 ? 'selected' : ''}>${t.nome}</option>`)
+          .join('');
+
+        body.innerHTML = `
+          <div style="margin-bottom:14px">
+            <div style="font-size:13px;color:var(--mid);margin-bottom:4px">Para:</div>
+            <div style="font-weight:700;font-size:15px">${cliente?.nome || '—'}</div>
+            <div style="font-size:13px;color:var(--mid)">${telFmt}</div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Template:</label>
+            <select id="avisarTemplateSelect" onchange="atualizarPreviewAviso()"
+              style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:14px;font-family:inherit;color:var(--text)">
+              ${opcoesTemplate}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Prévia:</label>
+            <div id="avisarPreview"
+              style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;min-height:60px;white-space:pre-wrap"></div>
+          </div>
+        `;
+        atualizarPreviewAviso();
+      } catch {
+        body.innerHTML = '<div style="padding:16px;text-align:center;color:var(--red)">Erro ao carregar dados.</div>';
+      }
+    }
+
+    function _substituirVarsAviso(texto, ordem) {
+      const nome    = (ordem.cliente?.nome || 'cliente').split(' ')[0];
+      const placa   = ordem.veiculo?.placa || '';
+      const valor   = formatCurrency(ordem.valorTotal || 0);
+      const empresa = localStorage.getItem('empresaNome') || '';
+      return texto
+        .replace(/\{\{nome\}\}/g,    nome)
+        .replace(/\{\{placa\}\}/g,   placa)
+        .replace(/\{\{valor\}\}/g,   valor)
+        .replace(/\{\{empresa\}\}/g, empresa)
+        .replace(/\{\{dias\}\}/g,    '?');
+    }
+
+    function atualizarPreviewAviso() {
+      const sel     = document.getElementById('avisarTemplateSelect');
+      const preview = document.getElementById('avisarPreview');
+      if (!sel || !preview || !_avModal.ordemData) return;
+      const tpl = _avModal.templates.find(t => t.id === sel.value);
+      preview.textContent = tpl ? _substituirVarsAviso(tpl.texto, _avModal.ordemData) : '';
+    }
+
+    async function enviarAviso() {
+      const sel = document.getElementById('avisarTemplateSelect');
+      if (!sel || !_avModal.ordemId) return;
+      const btn = document.getElementById('btnEnviarAviso');
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      try {
+        await window.api.empresaWaEnviarTemplate(_avModal.ordemId, sel.value);
+        fecharAvisarModal();
+        showToast('Mensagem enviada! ✅');
+      } catch (err) {
+        showToast(err?.error || 'Erro ao enviar mensagem.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Enviar';
+      }
+    }
+
+    function fecharAvisarModal() {
+      document.getElementById('avisarModal').style.display = 'none';
     }
 
     // ── LOGOUT ────────────────────────────────────

@@ -242,6 +242,8 @@
         .order-action-btn.finish:hover { background: #10b981; border-color: #10b981; }
         .order-action-btn.complete:hover { background: #f59e0b; border-color: #f59e0b; }
         .order-action-btn.cancel:hover { background: #ef4444; border-color: #ef4444; }
+        .order-action-btn.notify { background: rgba(37,211,102,.12); color: #128C7E; border-color: rgba(37,211,102,.3); }
+        .order-action-btn.notify:hover { background: #25D366; color: #fff; border-color: #25D366; }
 
         /* Table View */
         .table-wrapper {
@@ -657,6 +659,14 @@
                                     <i class="fas fa-check"></i>
                                 </button>
                                 <button
+                                    class="order-action-btn notify"
+                                    @click="window.abrirAvisarModalAdmin(order)"
+                                    title="Avisar Cliente via WhatsApp"
+                                    x-show="order.status === 'AGUARDANDO_PAGAMENTO' && empresaWaConectado && order.cliente?.telefone"
+                                >
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                <button
                                     class="order-action-btn cancel"
                                     @click="cancelOrder(order.id)"
                                     title="Cancelar"
@@ -752,6 +762,14 @@
                                         x-show="order.status === 'AGUARDANDO_PAGAMENTO'"
                                     >
                                         <i class="fas fa-check-circle"></i>
+                                    </button>
+                                    <button
+                                        class="order-action-btn notify"
+                                        @click="window.abrirAvisarModalAdmin(order)"
+                                        title="Avisar Cliente via WhatsApp"
+                                        x-show="order.status === 'AGUARDANDO_PAGAMENTO' && empresaWaConectado && order.cliente?.telefone"
+                                    >
+                                        <i class="fab fa-whatsapp"></i>
                                     </button>
                                     <button class="order-action-btn cancel" @click="cancelOrder(order.id)" title="Cancelar">
                                         <i class="fas fa-times"></i>
@@ -1008,6 +1026,8 @@
                 isLoading: true,
                 viewMode: localStorage.getItem('ordensViewPreference') || 'cards',
 
+                empresaWaConectado: false,
+
                 // Filter State
                 searchQuery: '',
                 statusFilter: '',
@@ -1135,6 +1155,11 @@
 
                     // Load orders (depends on washers for display)
                     await this.loadOrders();
+
+                    // Verifica WhatsApp Empresa para exibir botão "Avisar" (não bloqueia)
+                    window.api.empresaWaStatus()
+                        .then(r => { this.empresaWaConectado = r.status === 'CONECTADO'; })
+                        .catch(() => {});
                 },
 
                 // ==========================================
@@ -1701,6 +1726,117 @@
     <script src="nav-menu-helper.js"></script>
 <script src="mobile-nav.js"></script>
 <script src="webapp-bottom-nav.js"></script>
+
+<!-- ══ AVISAR CLIENTE MODAL (admin) ══════════════════════════════════════ -->
+<div id="avisarModalAdmin" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);align-items:center;justify-content:center"
+     onclick="if(event.target===this)window._fecharAvisarAdmin()">
+  <div onclick="event.stopPropagation()"
+       style="background:#fff;border-radius:18px;width:min(440px,92vw);max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700">
+        <i class="fab fa-whatsapp" style="color:#25D366;font-size:20px"></i> Avisar Cliente
+      </div>
+      <button onclick="window._fecharAvisarAdmin()"
+              style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;line-height:1">&times;</button>
+    </div>
+    <div id="avisarAdminBody"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button onclick="window._fecharAvisarAdmin()"
+              style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #e2e8f0;background:transparent;cursor:pointer;font-size:14px;font-weight:600">
+        Cancelar
+      </button>
+      <button id="btnEnviarAvisarAdmin" onclick="window._enviarAvisarAdmin()"
+              style="flex:2;padding:12px;border-radius:10px;border:none;background:#25D366;color:#fff;cursor:pointer;font-size:14px;font-weight:700">
+        Enviar
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  let _avState = { ordemId: null, templates: [], ordemData: null };
+  function _fmtTel(tel) {
+    const d = (tel || '').replace(/\D/g, '');
+    return d.length >= 11 ? `(${d.slice(2,4)}) ${d.slice(4,9)}-${d.slice(9)}` : d;
+  }
+  function _subst(texto, ordem) {
+    const nome    = (ordem.cliente?.nome || 'cliente').split(' ')[0];
+    const placa   = ordem.veiculo?.placa || '';
+    const valor   = `R$ ${(ordem.valorTotal || 0).toFixed(2).replace('.', ',')}`;
+    const empresa = localStorage.getItem('empresaNome') || '';
+    return texto
+      .replace(/\{\{nome\}\}/g,    nome)
+      .replace(/\{\{placa\}\}/g,   placa)
+      .replace(/\{\{valor\}\}/g,   valor)
+      .replace(/\{\{empresa\}\}/g, empresa)
+      .replace(/\{\{dias\}\}/g,    '?');
+  }
+  window._renderPreview = function() {
+    const sel = document.getElementById('avisarAdminTplSelect');
+    const pre = document.getElementById('avisarAdminPreview');
+    if (!sel || !pre || !_avState.ordemData) return;
+    const tpl = _avState.templates.find(t => t.id === sel.value);
+    pre.textContent = tpl ? _subst(tpl.texto, _avState.ordemData) : '';
+  };
+  window.abrirAvisarModalAdmin = async function(order) {
+    _avState.ordemId   = order.id;
+    _avState.ordemData = order;
+    const modal = document.getElementById('avisarModalAdmin');
+    const body  = document.getElementById('avisarAdminBody');
+    modal.style.display = 'flex';
+    body.innerHTML = '<div style="padding:20px 0;text-align:center;color:#94a3b8">Carregando…</div>';
+    try {
+      const tplRes = await window.api.empresaWaGetTemplates();
+      _avState.templates = (tplRes.templates || []).filter(t => t.ativo);
+      const cliente = order.cliente;
+      const opts = _avState.templates
+        .map((t, i) => `<option value="${t.id}" ${i===0?'selected':''}>${t.nome}</option>`)
+        .join('');
+      body.innerHTML = `
+        <div style="margin-bottom:14px;padding:12px;background:#f8fafc;border-radius:10px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:2px">Para:</div>
+          <div style="font-weight:700">${cliente?.nome || '—'}</div>
+          <div style="font-size:13px;color:#64748b">${_fmtTel(cliente?.telefone)}</div>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Template:</label>
+          <select id="avisarAdminTplSelect" onchange="window._renderPreview()"
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-family:inherit">
+            ${opts}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Prévia:</label>
+          <div id="avisarAdminPreview"
+            style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:14px;line-height:1.6;min-height:60px;white-space:pre-wrap"></div>
+        </div>`;
+      window._renderPreview();
+    } catch {
+      body.innerHTML = '<div style="color:#ef4444;padding:12px">Erro ao carregar templates.</div>';
+    }
+  };
+  window._fecharAvisarAdmin = function() {
+    document.getElementById('avisarModalAdmin').style.display = 'none';
+  };
+  window._enviarAvisarAdmin = async function() {
+    const sel = document.getElementById('avisarAdminTplSelect');
+    if (!sel || !_avState.ordemId) return;
+    const btn = document.getElementById('btnEnviarAvisarAdmin');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    try {
+      await window.api.empresaWaEnviarTemplate(_avState.ordemId, sel.value);
+      window._fecharAvisarAdmin();
+      if (typeof showToast === 'function') showToast('Mensagem enviada! ✅');
+    } catch (err) {
+      if (typeof showToast === 'function') showToast(err?.error || 'Erro ao enviar.', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Enviar';
+    }
+  };
+})();
+</script>
+
 <nav class="bottom-navigation">
     <a href="index.html" class="bottom-nav-item" data-page="home" title="Dashboard">
         <i class="fas fa-home"></i>

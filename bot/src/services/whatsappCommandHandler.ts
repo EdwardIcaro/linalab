@@ -78,19 +78,50 @@ const NOTIF_MENU_ITEMS = [
   { key: 'reportAvaria',      label: '📸 Report de avaria' },
 ];
 
+// Defaults do sistema (espelha o backend whatsappNotificationService.ts)
+const NOTIF_SISTEMA_DEFAULTS: Record<string, boolean> = {
+  novaOrdem:          true,
+  ordemFinalizada:    false,
+  ordemCancelada:     false,
+  resumoDiario:       true,
+  alertaCaixaAberto:  true,
+  ordemParada:        false,
+  saidaRegistrada:    false,
+  comissaoFechada:    false,
+  clienteVip:         true,
+  reportAvaria:       true,
+};
+
 async function buildNotifMenuText(jid: string, empresaId: string): Promise<string> {
-  const admin = await (prisma.whatsappAdminPhone as any).findFirst({
-    where: { empresaId, ativo: true, jid },
-    select: { notifPrefs: true },
-  });
+  const [admin, empresa] = await Promise.all([
+    (prisma.whatsappAdminPhone as any).findFirst({
+      where: { empresaId, ativo: true, jid },
+      select: { notifPrefs: true },
+    }),
+    prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    }),
+  ]);
+
   const prefs: any = (admin?.notifPrefs as any) ?? {};
+  const sistemaPrefs: any = (empresa?.notificationPreferences as any)?.whatsapp ?? {};
 
   const lista = NOTIF_MENU_ITEMS.map((item, i) => {
-    const ativo = prefs[item.key] !== false;
-    return `*${i + 1}* ${item.label} — ${ativo ? '✅' : '❌'}`;
+    const defaultSistema = NOTIF_SISTEMA_DEFAULTS[item.key] !== false;
+    const sistemaAtivo = sistemaPrefs[item.key] !== undefined
+      ? sistemaPrefs[item.key] !== false
+      : defaultSistema;
+
+    if (!sistemaAtivo) {
+      return `*${i + 1}* ${item.label} — 🚫 _desativado no sistema_`;
+    }
+
+    const individualAtivo = prefs[item.key] !== false;
+    return `*${i + 1}* ${item.label} — ${individualAtivo ? '✅' : '❌'}`;
   }).join('\n');
 
-  return `🔔 *Suas notificações*\n_Preferências individuais (ativo por padrão)_\n\n${lista}\n\n_Digite o número para ativar/desativar ou *0* para sair._`;
+  return `🔔 *Suas notificações*\n_Preferências individuais (ativo por padrão)_\n\n${lista}\n\n_Digite o número para ativar/desativar ou *0* para sair._\n_🚫 = desativado nas configurações do sistema_`;
 }
 
 async function handleNotifMenuStep(jid: string, empresaId: string, choice: string): Promise<string> {
@@ -323,7 +354,7 @@ export async function handleIncomingMessage(
       return handleNotifMenuStep(from, pendingNotifMenu.get(from)!, command);
     }
 
-    if (/^notifica[çc][oõ]es?$|^notifs?$/.test(command)) {
+    if (/^notifica[çc]([aã]o|[oõ]es?)$|^notifs?$/.test(command)) {
       pendingNotifMenu.set(from, empresaId);
       return buildNotifMenuText(from, empresaId);
     }
