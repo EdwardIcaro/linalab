@@ -905,10 +905,10 @@ function applyFilters() {
     let filtered = allOrders;
 
     if (search) {
-        filtered = filtered.filter(order => 
-            order.numeroOrdem.toLowerCase().includes(search) ||
-            order.cliente.nome.toLowerCase().includes(search) ||
-            order.veiculo.placa.toLowerCase().includes(search)
+        filtered = filtered.filter(order =>
+            String(order.numeroOrdem ?? '').toLowerCase().includes(search) ||
+            (order.cliente?.nome ?? '').toLowerCase().includes(search) ||
+            (order.veiculo?.placa ?? '').toLowerCase().includes(search)
         );
     }
 
