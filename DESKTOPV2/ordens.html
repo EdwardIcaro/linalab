@@ -1787,7 +1787,7 @@
     body.innerHTML = '<div style="padding:20px 0;text-align:center;color:#94a3b8">Carregando…</div>';
     try {
       const tplRes = await window.api.empresaWaGetTemplates();
-      _avState.templates = (tplRes.templates || []).filter(t => t.ativo && t.categoria === 'FINALIZACAO');
+      _avState.templates = (tplRes.templates || []).filter(t => t.ativo && t.categoria !== 'POS_VENDA' && t.categoria !== 'PRE_VENDA');
       const cliente = order.cliente;
       const opts = _avState.templates
         .map((t, i) => `<option value="${t.id}" ${i===0?'selected':''}>${t.nome}</option>`)
