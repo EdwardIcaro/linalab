@@ -259,6 +259,86 @@
             display: inline-block; padding: 2px 7px; background: #fef3c7;
             color: #92400e; border-radius: 4px; font-size: 11px; font-weight: 600;
         }
+
+        /* Modal Enviar WA */
+        .wa-tab-bar {
+            display: flex; gap: 4px; background: var(--background-light);
+            border-radius: 10px; padding: 4px; margin-bottom: 20px;
+        }
+        .wa-tab-btn {
+            flex: 1; padding: 8px 12px; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            background: transparent; color: var(--text-secondary); transition: all 0.2s;
+        }
+        .wa-tab-btn.ativo {
+            background: var(--white); color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600;
+        }
+        .wa-template-card {
+            padding: 12px 14px; border: 1.5px solid var(--border-color);
+            border-radius: 10px; cursor: pointer; margin-bottom: 8px;
+            transition: all 0.18s; background: var(--white);
+        }
+        .wa-template-card:hover { border-color: #25D366; }
+        .wa-template-card.selecionado {
+            border-color: #25D366; background: #f0fdf4;
+            box-shadow: 0 0 0 3px rgba(37,211,102,0.12);
+        }
+        .wa-template-card .tc-nome {
+            font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;
+        }
+        .wa-template-card .tc-texto {
+            font-size: 12px; color: var(--text-secondary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        }
+        .wa-preview-box {
+            background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
+            padding: 12px 14px; font-size: 13px; color: #166534;
+            white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+        }
+        .wa-status-banner {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 8px; font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .wa-status-banner.desconectado {
+            background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+        }
+        .wa-status-banner.conectado {
+            background: #f0fdf4; border: 1px solid #86efac; color: #166534;
+        }
+        .wa-btn-send {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px; background: #25D366; color: white;
+            border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .wa-btn-send:hover { background: #1da851; }
+        .wa-btn-send:disabled { background: #9ca3af; cursor: not-allowed; }
+        .wa-templates-list { max-height: 220px; overflow-y: auto; }
+        .wa-cliente-info {
+            display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+            background: var(--background-light); border-radius: 8px; margin-bottom: 16px;
+        }
+        .wa-cliente-info .icon { font-size: 20px; color: #25D366; }
+        .wa-cliente-info .nome { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+        .wa-cliente-info .fone { font-size: 12px; color: var(--text-secondary); }
+        .wa-msg-textarea {
+            width: 100%; min-height: 120px; border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 10px 14px; font-size: 14px; resize: vertical;
+            font-family: inherit; color: var(--text-primary); background: var(--white);
+        }
+        .wa-msg-textarea:focus {
+            outline: none; border-color: #25D366;
+            box-shadow: 0 0 0 3px rgba(37,211,102,0.12);
+        }
+        .wa-send-btn-crm {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 14px; background: #25D366; color: white;
+            border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .wa-send-btn-crm:hover { background: #1da851; }
     </style>
 <link rel="stylesheet" href="webapp-mobile.css">
 <link rel="stylesheet" href="fix-responsive.css">
@@ -399,6 +479,11 @@
                                 </td>
                                 <td x-text="formatCurrency(calcTotalGasto(client.ordens))"></td>
                                 <td class="actions-cell">
+                                    <template x-if="client.telefone">
+                                        <button @click="openWaModal(client)" title="Enviar mensagem WhatsApp" style="color:#25D366;">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </button>
+                                    </template>
                                     <button @click="showClientDetails(client.id)" title="Detalhes">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -471,7 +556,14 @@
             <div class="modal-content" style="max-width:800px;">
                 <div class="modal-header">
                     <h2 class="modal-title" x-text="`Detalhes — ${detailsClient?.nome || ''}`"></h2>
-                    <button @click="closeDetailsModal()" class="modal-close">&times;</button>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <template x-if="detailsClient?.telefone">
+                            <button class="wa-send-btn-crm" @click="openWaModal(detailsClient)" title="Enviar mensagem WhatsApp">
+                                <i class="fab fa-whatsapp"></i> Enviar mensagem
+                            </button>
+                        </template>
+                        <button @click="closeDetailsModal()" class="modal-close">&times;</button>
+                    </div>
                 </div>
                 <div x-show="detailsClient">
 
@@ -596,6 +688,99 @@
             </div>
         </div>
 
+        <!-- ═══ MODAL ENVIAR MENSAGEM WHATSAPP ═══ -->
+        <div :class="{'active': showWaModal}" class="modal-overlay" @click.self="closeWaModal()">
+            <div class="modal-content" style="max-width:520px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fab fa-whatsapp" style="color:#25D366; margin-right:8px;"></i>Enviar mensagem</h2>
+                    <button @click="closeWaModal()" class="modal-close">&times;</button>
+                </div>
+
+                <!-- Info do cliente -->
+                <div class="wa-cliente-info">
+                    <i class="fas fa-user icon"></i>
+                    <div>
+                        <div class="nome" x-text="waCliente?.nome || '—'"></div>
+                        <div class="fone" x-text="waCliente?.telefone || ''"></div>
+                    </div>
+                </div>
+
+                <!-- Status de conexão -->
+                <template x-if="!waCarregando">
+                    <div class="wa-status-banner" :class="waStatus === 'CONECTADO' ? 'conectado' : 'desconectado'">
+                        <i :class="waStatus === 'CONECTADO' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'"></i>
+                        <span x-text="waStatus === 'CONECTADO' ? 'WhatsApp da empresa conectado' : 'WhatsApp da empresa desconectado — configure em Configurações'"></span>
+                    </div>
+                </template>
+                <template x-if="waCarregando">
+                    <div style="text-align:center; padding:12px 0;">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </template>
+
+                <!-- Abas -->
+                <div class="wa-tab-bar">
+                    <button class="wa-tab-btn" :class="{ativo: waTab==='template'}" @click="waTab='template'">
+                        <i class="fas fa-list" style="margin-right:5px;"></i>Templates
+                    </button>
+                    <button class="wa-tab-btn" :class="{ativo: waTab==='livre'}" @click="waTab='livre'">
+                        <i class="fas fa-pen" style="margin-right:5px;"></i>Mensagem livre
+                    </button>
+                </div>
+
+                <!-- Aba: Templates -->
+                <div x-show="waTab === 'template'">
+                    <template x-if="!waCarregando && waTemplates.length === 0">
+                        <p style="text-align:center; color:var(--text-secondary); font-size:13px; padding:20px 0;">
+                            Nenhum template cadastrado. Configure em <strong>Configurações → WhatsApp</strong>.
+                        </p>
+                    </template>
+                    <div class="wa-templates-list" x-show="waTemplates.length > 0">
+                        <template x-for="t in waTemplates" :key="t.id">
+                            <div
+                                class="wa-template-card"
+                                :class="{selecionado: waTemplateSelected?.id === t.id}"
+                                @click="selecionarWaTemplate(t)"
+                            >
+                                <div class="tc-nome" x-text="t.nome"></div>
+                                <div class="tc-texto" x-text="t.texto"></div>
+                            </div>
+                        </template>
+                    </div>
+                    <template x-if="waTemplateSelected">
+                        <div style="margin-top:14px;">
+                            <div style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Preview da mensagem</div>
+                            <div class="wa-preview-box" x-text="waPreview"></div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Aba: Mensagem livre -->
+                <div x-show="waTab === 'livre'">
+                    <textarea
+                        class="wa-msg-textarea"
+                        x-model="waMensagemLivre"
+                        placeholder="Digite a mensagem que será enviada ao cliente..."
+                        maxlength="1000"
+                    ></textarea>
+                    <div style="text-align:right; font-size:12px; color:var(--text-secondary); margin-top:4px;" x-text="waMensagemLivre.length + '/1000'"></div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" @click="closeWaModal()" class="btn btn-secondary">Cancelar</button>
+                    <button
+                        type="button"
+                        class="wa-btn-send"
+                        @click="enviarMensagemWa()"
+                        :disabled="waIsSending || waCarregando || (waTab==='template' && !waTemplateSelected) || (waTab==='livre' && !waMensagemLivre.trim())"
+                    >
+                        <i class="fab fa-whatsapp"></i>
+                        <span x-text="waIsSending ? 'Enviando...' : 'Enviar'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- ═══ MODAL TRANSFERÊNCIA DE VEÍCULO ═══ -->
         <div :class="{'active': showTransferModal}" class="modal-overlay" @click.self="fecharTransferencia()">
             <div class="modal-content" style="max-width:480px;">
@@ -692,6 +877,18 @@
                 editingClient: null,
                 detailsClient: null,
                 originalVehicleIds: [],
+
+                // WA — Enviar mensagem para cliente
+                showWaModal: false,
+                waCliente: null,
+                waTemplates: [],
+                waTab: 'template',
+                waTemplateSelected: null,
+                waMensagemLivre: '',
+                waIsSending: false,
+                waCarregando: false,
+                waStatus: null,
+                waPreview: '',
 
                 // Transferência
                 showTransferModal: false,
@@ -952,6 +1149,76 @@
                         showToast(error.error || 'Erro ao transferir veículo', 'error');
                     } finally {
                         this.isTransferring = false;
+                    }
+                },
+
+                // ── WhatsApp — Enviar mensagem ────────
+                async openWaModal(client) {
+                    this.waCliente = client;
+                    this.waTab = 'template';
+                    this.waTemplateSelected = null;
+                    this.waMensagemLivre = '';
+                    this.waPreview = '';
+                    this.waCarregando = true;
+                    this.waStatus = null;
+                    this.waTemplates = [];
+                    this.showWaModal = true;
+                    try {
+                        const [tRes, sRes] = await Promise.all([
+                            window.api.empresaWaGetTemplates(),
+                            window.api.empresaWaStatus(),
+                        ]);
+                        this.waTemplates = (tRes.templates || []).filter(t => t.ativo !== false);
+                        this.waStatus = sRes.status;
+                        if (this.waTemplates.length > 0) this.selecionarWaTemplate(this.waTemplates[0]);
+                    } catch {
+                        this.waTemplates = [];
+                    } finally {
+                        this.waCarregando = false;
+                    }
+                },
+
+                closeWaModal() {
+                    this.showWaModal = false;
+                    this.waCliente = null;
+                },
+
+                selecionarWaTemplate(template) {
+                    this.waTemplateSelected = template;
+                    this.waPreview = this.waResolverVariaveis(template.texto, this.waCliente);
+                },
+
+                waResolverVariaveis(texto, client) {
+                    if (!texto || !client) return texto;
+                    const nome = (client.nome || 'cliente').split(' ')[0];
+                    const placa = client.veiculos?.[0]?.placa || '';
+                    const dias = this.diasDesdeUltimaVisita(client) ?? '';
+                    return texto
+                        .replace(/\{\{nome\}\}/g,    nome)
+                        .replace(/\{\{placa\}\}/g,   placa)
+                        .replace(/\{\{dias\}\}/g,    String(dias))
+                        .replace(/\{\{valor\}\}/g,   '')
+                        .replace(/\{\{empresa\}\}/g, '');
+                },
+
+                async enviarMensagemWa() {
+                    if (!this.waCliente) return;
+                    this.waIsSending = true;
+                    try {
+                        if (this.waTab === 'template') {
+                            if (!this.waTemplateSelected) { showToast('Selecione um template', 'error'); return; }
+                            await window.api.empresaWaEnviarCliente(this.waCliente.id, this.waTemplateSelected.id, null);
+                        } else {
+                            const msg = this.waMensagemLivre.trim();
+                            if (!msg) { showToast('Digite uma mensagem', 'error'); return; }
+                            await window.api.empresaWaEnviarCliente(this.waCliente.id, null, msg);
+                        }
+                        showToast('Mensagem enviada com sucesso!', 'success');
+                        this.closeWaModal();
+                    } catch (err) {
+                        showToast(err?.error || 'Erro ao enviar mensagem', 'error');
+                    } finally {
+                        this.waIsSending = false;
                     }
                 },
 

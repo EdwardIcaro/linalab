@@ -134,6 +134,58 @@ export async function enviarTemplate(req: Request, res: Response) {
   }
 }
 
+// ── Enviar mensagem direta para cliente (CRM) ─────────────────────────────────
+export async function enviarParaCliente(req: Request, res: Response) {
+  const empresaId = (req as any).empresaId as string;
+  const { clienteId, templateId, texto } = req.body as { clienteId: string; templateId?: string; texto?: string };
+
+  if (!clienteId) return res.status(400).json({ error: 'clienteId é obrigatório' });
+  if (!templateId && !texto) return res.status(400).json({ error: 'templateId ou texto são obrigatórios' });
+
+  try {
+    const cliente = await prisma.cliente.findFirst({
+      where: { id: clienteId, empresaId },
+      include: {
+        veiculos: { take: 1, orderBy: { createdAt: 'asc' } },
+        ordens:   { where: { status: 'FINALIZADO' }, orderBy: { dataFim: 'desc' }, take: 1 },
+      },
+    });
+
+    if (!cliente) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+    const digits = (cliente.telefone || '').replace(/\D/g, '');
+    if (!digits) return res.status(400).json({ error: 'Cliente sem telefone cadastrado' });
+    const telefone = digits.startsWith('55') ? digits : `55${digits}`;
+
+    let mensagem = texto || '';
+
+    if (templateId) {
+      const [template, empresa] = await Promise.all([
+        prisma.mensagemTemplate.findFirst({ where: { id: templateId, empresaId } }),
+        prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } }),
+      ]);
+      if (!template) return res.status(404).json({ error: 'Template não encontrado' });
+
+      const nome  = (cliente.nome || 'cliente').split(' ')[0];
+      const placa = (cliente.veiculos[0]?.placa) || '';
+      let dias = 0;
+      if (cliente.ordens[0]?.dataFim)
+        dias = Math.floor((Date.now() - (cliente.ordens[0].dataFim as Date).getTime()) / 86400000);
+
+      mensagem = template.texto
+        .replace(/\{\{nome\}\}/g,    nome)
+        .replace(/\{\{placa\}\}/g,   placa)
+        .replace(/\{\{dias\}\}/g,    String(dias))
+        .replace(/\{\{empresa\}\}/g, empresa?.nome || '');
+    }
+
+    await empresaWaSend(empresaId, telefone, mensagem);
+    return res.json({ ok: true, mensagem });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Erro ao enviar mensagem' });
+  }
+}
+
 // ── Templates ─────────────────────────────────────────────────────────────────
 export async function getTemplates(req: Request, res: Response) {
   const empresaId = (req as any).empresaId as string;
