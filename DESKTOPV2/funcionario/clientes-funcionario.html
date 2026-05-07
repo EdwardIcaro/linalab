@@ -608,6 +608,58 @@
     @media (min-width: 640px) {
       .drawer { left: auto; right: 0; width: 420px; border-radius: 20px 0 0 20px; max-height: 100vh; }
     }
+
+    /* ── WA MODAL ── */
+    .wa-cliente-info {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: var(--bg);
+      border-radius: 8px; margin-bottom: 12px;
+    }
+    .wa-status-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; margin-bottom: 12px;
+    }
+    .wa-status-banner.conectado { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+    .wa-status-banner.desconectado { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+    .wa-tab-bar {
+      display: flex; gap: 4px; background: var(--bg);
+      border-radius: 10px; padding: 3px; margin-bottom: 12px;
+    }
+    .wa-tab-btn {
+      flex: 1; padding: 7px 10px; border: none;
+      border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; background: transparent; color: var(--mid);
+      transition: all .18s; font-family: inherit;
+    }
+    .wa-tab-btn.ativo {
+      background: var(--white); color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+    .wa-templates-list { max-height: 200px; overflow-y: auto; }
+    .wa-template-card {
+      padding: 10px 12px; border: 1.5px solid var(--border);
+      border-radius: 8px; cursor: pointer; margin-bottom: 6px;
+      transition: all .15s;
+    }
+    .wa-template-card:hover { border-color: #25D366; }
+    .wa-template-card.selecionado { border-color: #25D366; background: #f0fdf4; }
+    .tc-nome { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .tc-texto { font-size: 11px; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wa-preview-box {
+      background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;
+      padding: 10px 12px; font-size: 12px; color: #166534;
+      white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin-top: 12px;
+    }
+    .wa-msg-textarea {
+      width: 100%; min-height: 110px; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font-size: 13px;
+      resize: vertical; font-family: inherit; color: var(--text); background: var(--white);
+    }
+    .wa-msg-textarea:focus { outline: none; border-color: #25D366; }
+    .btn-f-wa { background: #25D366; color: #fff; }
+    .btn-f-wa:hover { background: #1da851; }
+    .btn-f-wa:disabled { opacity: .5; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -681,6 +733,23 @@
         <button class="btn-f btn-f-cancel" onclick="closeTransferModal()">Cancelar</button>
         <button class="btn-f btn-f-save" id="btnConfirmTransfer" onclick="confirmarTransferencia()" disabled>
           <i class="fas fa-check"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL WA -->
+  <div class="modal-overlay" id="waModal">
+    <div class="modal-box" style="max-width:480px">
+      <div class="modal-header">
+        <h3><i class="fab fa-whatsapp" style="color:#25D366;margin-right:6px"></i> Enviar mensagem</h3>
+        <button class="modal-close-btn" onclick="closeWaModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="waModalBody" style="min-height:160px"></div>
+      <div class="modal-footer">
+        <button class="btn-f btn-f-cancel" onclick="closeWaModal()">Cancelar</button>
+        <button class="btn-f btn-f-wa" id="waSendBtn" onclick="sendWaMessage()" disabled>
+          <i class="fab fa-whatsapp"></i> Enviar
         </button>
       </div>
     </div>
@@ -881,9 +950,9 @@
       const moreVeh = veiculosParaTags.length > 2 ? `<span class="tag tag-model">+${veiculosParaTags.length - 2}</span>` : '';
 
       const waBtn = c.telefone
-        ? `<a href="https://wa.me/55${cleanPhone(c.telefone)}" target="_blank" class="cc-action-btn wa" title="WhatsApp" onclick="event.stopPropagation()">
+        ? `<button class="cc-action-btn wa" title="Enviar mensagem WhatsApp" onclick="event.stopPropagation(); openWaModal('${c.id}')">
              <i class="fab fa-whatsapp"></i>
-           </a>`
+           </button>`
         : '';
 
       const semNomeBadge = isNA ? `<span class="badge-semnom">sem nome</span>` : '';
@@ -974,22 +1043,21 @@
       const ultimaVisitaFmt = uvData ? uvData.toLocaleDateString('pt-BR') : '—';
 
       const waAction = c.telefone
-        ? `<a href="https://wa.me/55${cleanPhone(c.telefone)}" target="_blank" class="btn-detail-action wa">
+        ? `<button class="btn-detail-action wa" onclick="openWaModal('${c.id}')">
              <i class="fab fa-whatsapp"></i> WhatsApp
-           </a>`
+           </button>`
         : '';
 
       // Box de reengajamento (15+ dias sem visita e tem telefone)
       let reengageBox = '';
       if (c.telefone && dias !== null && dias >= 15) {
-        const link = gerarLinkWhatsApp(c, dias);
         reengageBox = `
           <div class="wa-reengage-box">
             <div class="wa-reengage-title"><i class="fab fa-whatsapp"></i> Reengajar cliente</div>
             <div class="wa-reengage-msg">Última visita há <strong>${dias} dias</strong>. Envie uma mensagem personalizada para trazer o cliente de volta.</div>
-            <a href="${link}" target="_blank" class="btn-wa-reengage">
-              <i class="fab fa-whatsapp"></i> Enviar via WhatsApp
-            </a>
+            <button class="btn-wa-reengage" onclick="openWaModal('${c.id}')">
+              <i class="fab fa-whatsapp"></i> Enviar mensagem
+            </button>
           </div>`;
       }
 
@@ -1342,6 +1410,164 @@
       el.textContent = msg;
       document.getElementById('toastContainer').appendChild(el);
       setTimeout(() => el.remove(), 3000);
+    }
+
+    // ── WA MODAL ─────────────────────────────────
+    let waClienteId   = null;
+    let waTemplates   = [];
+    let waTabAtiva    = 'template';
+    let waTemplateSel = null;
+    let waStatus      = null;
+
+    async function openWaModal(clienteId) {
+      waClienteId   = clienteId;
+      waTabAtiva    = 'template';
+      waTemplateSel = null;
+      waStatus      = null;
+      waTemplates   = [];
+
+      document.getElementById('waModal').classList.add('open');
+      document.getElementById('waSendBtn').disabled = true;
+      document.getElementById('waModalBody').innerHTML =
+        `<div style="text-align:center;padding:30px"><div class="spin" style="margin:0 auto"></div></div>`;
+
+      try {
+        const [tRes, sRes] = await Promise.all([
+          window.api.empresaWaGetTemplates(),
+          window.api.empresaWaStatus(),
+        ]);
+        waTemplates = (tRes.templates || []).filter(t => t.ativo !== false);
+        waStatus    = sRes.status;
+        if (waTemplates.length > 0) waTemplateSel = waTemplates[0];
+      } catch {
+        waTemplates = [];
+      }
+
+      renderWaModal();
+    }
+
+    function closeWaModal() {
+      document.getElementById('waModal').classList.remove('open');
+      waClienteId = null;
+    }
+
+    function renderWaModal() {
+      const c = allClientes.find(x => x.id === waClienteId);
+      const body = document.getElementById('waModalBody');
+
+      const statusBanner = waStatus === 'CONECTADO'
+        ? `<div class="wa-status-banner conectado"><i class="fas fa-check-circle"></i> WhatsApp da empresa conectado</div>`
+        : `<div class="wa-status-banner desconectado"><i class="fas fa-exclamation-triangle"></i> WhatsApp desconectado — configure em Configurações</div>`;
+
+      body.innerHTML = `
+        <div class="wa-cliente-info">
+          <i class="fas fa-user" style="color:#25D366;font-size:18px"></i>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--text)">${escHtml(c?.nome || '—')}</div>
+            <div style="font-size:12px;color:var(--mid)">${escHtml(c?.telefone || '')}</div>
+          </div>
+        </div>
+        ${statusBanner}
+        <div class="wa-tab-bar">
+          <button class="wa-tab-btn ${waTabAtiva === 'template' ? 'ativo' : ''}" onclick="setWaTab('template')">
+            <i class="fas fa-list" style="margin-right:4px"></i>Templates
+          </button>
+          <button class="wa-tab-btn ${waTabAtiva === 'livre' ? 'ativo' : ''}" onclick="setWaTab('livre')">
+            <i class="fas fa-pen" style="margin-right:4px"></i>Mensagem livre
+          </button>
+        </div>
+        ${waTabAtiva === 'template' ? renderWaTemplateTab(c) : renderWaLivreTab()}
+      `;
+
+      updateWaSendBtn();
+    }
+
+    function renderWaTemplateTab(c) {
+      if (!waTemplates.length) {
+        return `<p style="text-align:center;color:var(--light);font-size:13px;padding:16px 0">Nenhum template cadastrado. Configure em <strong>Configurações → WhatsApp</strong>.</p>`;
+      }
+      const nome  = (c?.nome && c.nome !== 'N/A' ? c.nome : 'cliente').split(' ')[0];
+      const placa = c?.veiculos?.[0]?.placa || '';
+      const dias  = diasDesdeUltimaVisita(c) ?? '';
+
+      const lista = waTemplates.map(t => `
+        <div class="wa-template-card ${waTemplateSel?.id === t.id ? 'selecionado' : ''}"
+             onclick="selectWaTemplate('${t.id}')">
+          <div class="tc-nome">${escHtml(t.nome)}</div>
+          <div class="tc-texto">${escHtml(t.texto)}</div>
+        </div>
+      `).join('');
+
+      const preview = waTemplateSel
+        ? `<div>
+             <div style="font-size:11px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Preview</div>
+             <div class="wa-preview-box">${escHtml(waResolverVars(waTemplateSel.texto, nome, placa, String(dias)))}</div>
+           </div>`
+        : '';
+
+      return `<div class="wa-templates-list">${lista}</div>${preview}`;
+    }
+
+    function renderWaLivreTab() {
+      return `<textarea class="wa-msg-textarea" id="waMsgLivre"
+                placeholder="Digite a mensagem que será enviada ao cliente..."
+                maxlength="1000"
+                oninput="updateWaSendBtn()"></textarea>
+              <div style="text-align:right;font-size:11px;color:var(--light);margin-top:4px" id="waCharCount">0/1000</div>`;
+    }
+
+    function setWaTab(tab) {
+      waTabAtiva = tab;
+      renderWaModal();
+    }
+
+    function selectWaTemplate(id) {
+      waTemplateSel = waTemplates.find(t => t.id === id) || null;
+      renderWaModal();
+    }
+
+    function waResolverVars(texto, nome, placa, dias) {
+      return texto
+        .replace(/\{\{nome\}\}/g,    nome)
+        .replace(/\{\{placa\}\}/g,   placa)
+        .replace(/\{\{dias\}\}/g,    dias)
+        .replace(/\{\{valor\}\}/g,   '')
+        .replace(/\{\{empresa\}\}/g, '');
+    }
+
+    function updateWaSendBtn() {
+      const btn = document.getElementById('waSendBtn');
+      if (!btn) return;
+      if (waTabAtiva === 'template') {
+        btn.disabled = !waTemplateSel;
+      } else {
+        const val = document.getElementById('waMsgLivre')?.value.trim() || '';
+        const counter = document.getElementById('waCharCount');
+        if (counter) counter.textContent = val.length + '/1000';
+        btn.disabled = !val;
+      }
+    }
+
+    async function sendWaMessage() {
+      const btn = document.getElementById('waSendBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fab fa-whatsapp"></i> Enviando...';
+      try {
+        if (waTabAtiva === 'template') {
+          if (!waTemplateSel) return;
+          await window.api.empresaWaEnviarCliente(waClienteId, waTemplateSel.id, null);
+        } else {
+          const msg = document.getElementById('waMsgLivre')?.value.trim();
+          if (!msg) return;
+          await window.api.empresaWaEnviarCliente(waClienteId, null, msg);
+        }
+        showToast('Mensagem enviada com sucesso!', 'success');
+        closeWaModal();
+      } catch (err) {
+        showToast(err?.error || 'Erro ao enviar mensagem', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fab fa-whatsapp"></i> Enviar';
+      }
     }
   </script>
 </body>
