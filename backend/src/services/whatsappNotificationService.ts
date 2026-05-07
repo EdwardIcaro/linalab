@@ -259,6 +259,7 @@ export async function cronResumoDiario(): Promise<void> {
         }
       }
 
+      msg += `\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
       await notifyAdmins(empresa.id, msg.trim(), 'resumoDiario');
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);

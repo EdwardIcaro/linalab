@@ -324,6 +324,7 @@ export async function handleIncomingMessage(
       if (range) return handleRelatorioPeriodo(range.inicio, range.fim, empresaId);
       const date  = parseDateFromMessage(message);
       if (date)  return handleRelatorioData(date, empresaId);
+      if (/\b(mais\s+)?detalhes?\b/.test(command)) return handleRelatorioData(new Date(), empresaId);
     }
 
     const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
