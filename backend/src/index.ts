@@ -31,6 +31,7 @@ import paymentRoutes from './routes/payment';
 import whatsappRoutes from './routes/whatsapp';
 import empresaWaRoutes from './routes/empresaWa';
 import ocrRoutes from './routes/ocr';
+import portalPublicoRoutes from './routes/portalPublico';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
@@ -95,6 +96,9 @@ app.use('/api/usuarios', usuarioRoutes);
 // Rotas públicas para visualização
 app.get('/api/public/lavador/:id/ordens', getOrdensByLavadorPublic);
 app.post('/api/public/lavador-data', getLavadorPublicData);
+
+// Portal público do funcionário (resolve token curto sem autenticação)
+app.use('/api/p', portalPublicoRoutes);
 
 // Endpoints públicos de subscriptions (para ver planos e promoções antes de fazer login)
 app.get('/api/subscriptions/plans', async (_req, _res) => {

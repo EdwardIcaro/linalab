@@ -317,6 +317,19 @@ ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "pixExpiraEm" TIMESTAMP(3)
 
 ---
 
+## Ecossistema Multi-Sistema (Arquitetura em Evolução)
+
+O Lina X está evoluindo para um ecossistema de produtos independentes. Cada sistema tem assinatura própria e funciona standalone ou integrado.
+
+- **Sistemas planejados:** Lina Wash (atual) · Data Point (ponto CLT) · futuros
+- **`empresa_sistemas`** — tabela pivot que habilita sistemas por empresa (`lina-wash` | `data-point` | ...)
+- **Hub de empresas** — dividido por seção de sistema; mesma empresa pode aparecer em múltiplas seções
+- **Integração opt-in** — admin autoriza; Data Point importa empresa + funcionários do Lina Wash
+- **Planos independentes** — cada sistema tem seu limite de empresas separado
+- **Spec completa:** `Features/hub-ecossistema.md` · `Features/data-point-architecture.md`
+
+---
+
 ## WhatsApp (Baileys)
 
 ### Arquitetura — Bot no PC Local via ngrok

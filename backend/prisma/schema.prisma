@@ -63,6 +63,8 @@ model Empresa {
   reports                    OrdemReport[]
   whatsappEmpresaSession     WhatsappEmpresaSession?
   mensagensTemplate          MensagemTemplate[]
+  sistemasAtivos             EmpresaSistema[]
+  dpFuncionarios             DpFuncionario[]
 
   @@map("empresas")
 }
@@ -117,9 +119,16 @@ model Lavador {
   id                  String                @id @default(cuid())
   empresaId           String
   nome                String
-  telefone            String?               // WhatsApp/telefone para identificação no bot
+  telefone            String?
   comissao            Float
   ativo               Boolean               @default(true)
+  // Portal do funcionário (link curto + PIN + sessão diária)
+  pin                 String?
+  pinDefinido         Boolean               @default(false)
+  sessionVersion      Int                   @default(0)
+  linkTokenCurto      String?               @unique
+  codigoWpp           String?
+  codigoWppExpiraEm   DateTime?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   caixaRegistros      CaixaRegistro[]
@@ -806,4 +815,67 @@ model OrdemReport {
   empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("ordem_reports")
+}
+
+// ─── ECOSSISTEMA ─────────────────────────────────────────────────────────────
+
+model EmpresaSistema {
+  id           String   @id @default(cuid())
+  empresaId    String
+  sistema      String   // 'lina-wash' | 'data-point' | ...
+  ativo        Boolean  @default(true)
+  config       String?  // JSON com configurações do sistema (raio GPS, horário abertura, etc.)
+  autorizadoEm DateTime @default(now())
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, sistema])
+  @@map("empresa_sistemas")
+}
+
+// ─── DATA POINT ──────────────────────────────────────────────────────────────
+
+model DpFuncionario {
+  id                String       @id @default(cuid())
+  empresaId         String
+  nome              String
+  cpf               String?
+  cargo             String?
+  salarioBase       Float?
+  cargaHoraria      Int?         // horas por semana
+  telefone          String?
+  status            String       @default("ATIVO") // ATIVO | AFASTADO | FERIAS | DESLIGADO
+  lavadorId         String?      // vínculo opcional com Lavador do Lina Wash
+  usuarioId         String?      // vínculo opcional com Subaccount role USER
+  pin               String?
+  pinDefinido       Boolean      @default(false)
+  sessionVersion    Int          @default(0)
+  linkToken         String?      @unique
+  codigoWpp         String?
+  codigoWppExpiraEm DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  empresa           Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  marcacoes         DpMarcacao[]
+
+  @@map("dp_funcionarios")
+}
+
+model DpMarcacao {
+  id                  String        @id @default(cuid())
+  empresaId           String
+  funcionarioId       String
+  tipo                String        // ENTRADA | SAIDA
+  canal               String        // PWA | QR_CODE | WHATSAPP
+  timestamp           DateTime      @default(now())
+  lat                 Float?
+  lng                 Float?
+  gpsPrecisao         Float?
+  gpsPrecisaoSuspeita Boolean       @default(false)
+  gpsNegado           Boolean       @default(false)
+  ip                  String?
+  ajustado            Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@map("dp_marcacoes")
 }
