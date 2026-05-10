@@ -36,12 +36,14 @@ function showToast(message, type = 'success') {
     }, 5000);
 }
 
-let selectedLavadorId = null;
-let cachedTotalCreditos = 0;  // ✅ Armazenar valor real calculado
-let cachedTotalDebitos = 0;   // ✅ Armazenar valor real calculado
-let autoRefreshInterval = null;  // ✅ Armazenar intervalo de refresh automático
-let activeFilter = '7';  // ✅ NOVO: Rastrear filtro ativo (7, 15, 30 ou 'open')
-let autoRefreshPausedUntil = 0;  // ✅ NOVO: Pausar refresh até este timestamp
+let selectedLavadorId   = null;
+let selectedLavador     = null;   // objeto completo com tipoRemuneracao, salario, etc.
+let cachedTotalCreditos = 0;
+let cachedTotalDebitos  = 0;
+let cachedSalario       = 0;      // salário fixo incluído automaticamente
+let autoRefreshInterval = null;
+let activeFilter        = '7';
+let autoRefreshPausedUntil = 0;
 
 async function initializePage() {
     // Carregar funcionários no seletor de avatar
@@ -80,7 +82,7 @@ function renderEmployeeAvatars(lavadores) {
         const avatarEl = document.createElement('div');
         avatarEl.className = 'employee-avatar';
         avatarEl.dataset.id = l.id;
-        avatarEl.onclick = () => selectEmployee(l.id);
+        avatarEl.onclick = () => selectEmployee(l.id, l);
         avatarEl.innerHTML = `
             <div class="avatar-circle">
                 <div class="avatar-inner">${l.nome.charAt(0).toUpperCase()}</div>
@@ -91,17 +93,18 @@ function renderEmployeeAvatars(lavadores) {
     });
 
     if (!selectedLavadorId && lavadores.length > 0) {
-        selectEmployee(lavadores[0].id);
+        selectEmployee(lavadores[0].id, lavadores[0]);
     }
 }
 
-function selectEmployee(lavadorId) {
+function selectEmployee(lavadorId, lavadorObj = null) {
     selectedLavadorId = lavadorId;
+    selectedLavador   = lavadorObj;
     document.querySelectorAll('.employee-avatar').forEach(el => {
         el.classList.toggle('active', el.dataset.id === lavadorId);
     });
     loadCommissionData();
-    startAutoRefresh();  // ✅ NOVO: Iniciar auto-refresh quando seleciona um lavador
+    startAutoRefresh();
 }
 
 async function loadCommissionData() {
@@ -206,6 +209,40 @@ function getWasherShare(order, washerId) {
 function renderComissoes(comissoes, gorjetas = []) {
     const creditosList = document.getElementById('creditos-list');
 
+    // Card de salário fixo (pré-selecionado, não pode ser removido)
+    const tipo    = selectedLavador?.tipoRemuneracao || 'COMISSAO';
+    const salario = selectedLavador?.salario || 0;
+    let salaryHtml = '';
+    if ((tipo === 'SALARIO' || tipo === 'SALARIO_COMISSAO') && salario > 0) {
+        cachedSalario = salario;
+        salaryHtml = `
+            <div class="commission-item selected salary-card" data-id="salary" data-valor="${salario}" data-type="credit" data-salary="true" style="cursor:default; border-color: #8b5cf6; background: rgba(139,92,246,.08);">
+                <div class="item-checkbox" style="background:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-check"></i></div>
+                <div class="item-details">
+                    <div class="item-title" style="display:flex;align-items:center;gap:6px;">
+                        <span style="background:#8b5cf6;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;letter-spacing:.04em;">SALÁRIO</span>
+                        Salário Fixo
+                    </div>
+                    <div class="item-subtitle">Incluído automaticamente · não pode ser removido</div>
+                </div>
+                <span class="item-value credit">${formatCurrency(salario)}</span>
+            </div>
+        `;
+    } else {
+        cachedSalario = 0;
+    }
+
+    // Se tipo for SALARIO puro (sem comissão), não mostrar ordens
+    if (tipo === 'SALARIO') {
+        const badge = document.getElementById('creditsBadge');
+        if (badge) badge.textContent = salario > 0 ? '1' : '0';
+        const btn = document.getElementById('selectAllCreditsBtn');
+        if (btn) btn.style.display = 'none';
+        creditosList.innerHTML = salaryHtml || '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Salário fixo — sem comissões por OS.</p></div>';
+        calculateSummary();
+        return;
+    }
+
     const comissoesOrdenadas = [...(comissoes || [])].sort((a, b) => a.numeroOrdem - b.numeroOrdem);
 
     const creditItems = comissoesOrdenadas.map(c => {
@@ -242,15 +279,24 @@ function renderComissoes(comissoes, gorjetas = []) {
 
     const allCreditItems = [...creditItems, ...gorjetaItems];
 
-    document.getElementById('creditsBadge').textContent = allCreditItems.length;
+    const badge = document.getElementById('creditsBadge');
+    if (badge) badge.textContent = allCreditItems.length + (salaryHtml ? 1 : 0);
     const btn = document.getElementById('selectAllCreditsBtn');
-    if (btn) btn.innerHTML = '<i class="fas fa-check-double"></i> Todas';
+    if (btn) {
+        btn.style.display = allCreditItems.length ? 'inline-flex' : 'none';
+        btn.innerHTML = '<i class="fas fa-check-double"></i> Todas';
+    }
 
-    if (!allCreditItems.length) {
-        creditosList.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Nenhuma comissão pendente no período.</p></div>';
+    // Label de base de cálculo para tipos com comissão
+    const baseLabel = selectedLavador?.baseComissao === 'ADICIONAL'
+        ? '<div style="font-size:11px;color:#64748b;margin-bottom:8px;padding:4px 8px;background:#f1f5f9;border-radius:6px;"><i class="fas fa-info-circle"></i> Comissão calculada sobre <strong>adicionais</strong></div>'
+        : '';
+
+    if (!allCreditItems.length && !salaryHtml) {
+        creditosList.innerHTML = baseLabel + '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Nenhuma comissão pendente no período.</p></div>';
         return;
     }
-    creditosList.innerHTML = allCreditItems.join('');
+    creditosList.innerHTML = salaryHtml + baseLabel + allCreditItems.join('');
 }
 
 function renderAdiantamentos(adiantamentos, debitosOS = []) {
@@ -306,6 +352,7 @@ function renderAdiantamentos(adiantamentos, debitosOS = []) {
 }
 
 function toggleItemSelection(element) {
+    if (element.dataset.salary === 'true') return; // salário não pode ser desmarcado
     element.classList.toggle('selected');
     calculateSummary();
 }
@@ -336,8 +383,9 @@ function toggleSelectAllCredits() {
 
 function calculateSummary() {
     const creditosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="credit"]'));
-    const debitosSelecionados = Array.from(document.querySelectorAll('.commission-item.selected[data-type="debit"]'));
+    const debitosSelecionados  = Array.from(document.querySelectorAll('.commission-item.selected[data-type="debit"]'));
 
+    // Soma todos os créditos selecionados (inclui salário se existir)
     const totalCreditos = creditosSelecionados.reduce((sum, el) => {
         const valor = parseFloat(el.dataset.valor);
         return isNaN(valor) ? sum : sum + valor;
@@ -349,13 +397,20 @@ function calculateSummary() {
 
     const saldoFinal = totalCreditos - totalDebitos;
 
-    // ✅ Armazenar valores reais em variáveis globais (não no DOM)
     cachedTotalCreditos = totalCreditos;
-    cachedTotalDebitos = totalDebitos;
+    cachedTotalDebitos  = totalDebitos;
+
+    // Label dinâmico no summary dependendo do tipo
+    const tipo = selectedLavador?.tipoRemuneracao || 'COMISSAO';
+    const labelCreditos = tipo === 'SALARIO'           ? 'Salário'
+                        : tipo === 'SALARIO_COMISSAO'  ? 'Salário + Comissões'
+                        :                                'Total de Comissões';
+    const summaryLabelEl = document.getElementById('summary-label-creditos');
+    if (summaryLabelEl) summaryLabelEl.textContent = labelCreditos;
 
     document.getElementById('summary-creditos').textContent = formatCurrency(totalCreditos);
-    document.getElementById('summary-debitos').textContent = `- ${formatCurrency(totalDebitos)}`;
-    document.getElementById('summary-total').textContent = formatCurrency(saldoFinal);
+    document.getElementById('summary-debitos').textContent  = `- ${formatCurrency(totalDebitos)}`;
+    document.getElementById('summary-total').textContent    = formatCurrency(saldoFinal);
 
     const fecharBtn = document.getElementById('fecharComissaoBtn');
     const hasItemsToProcess = creditosSelecionados.length > 0 || debitosSelecionados.length > 0;

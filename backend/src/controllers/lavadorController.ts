@@ -7,16 +7,23 @@ interface EmpresaRequest extends Request {
 }
 
 export const createLavador = async (req: EmpresaRequest, res: Response) => {
-  const { nome, comissao } = req.body;
+  const { nome, comissao, tipoRemuneracao, baseComissao, salario } = req.body;
   const empresaId = req.empresaId;
 
-  if (!nome || comissao === undefined) {
-    return res.status(400).json({ error: 'Nome e comissão são obrigatórios.' });
+  if (!nome) {
+    return res.status(400).json({ error: 'Nome é obrigatório.' });
   }
 
   try {
     const lavador = await prisma.lavador.create({
-      data: { nome, comissao, empresaId: empresaId! },
+      data: {
+        nome,
+        comissao: comissao ?? 0,
+        tipoRemuneracao: tipoRemuneracao ?? 'COMISSAO',
+        baseComissao: baseComissao ?? 'OS',
+        salario: salario ?? null,
+        empresaId: empresaId!,
+      },
     });
     res.status(201).json(lavador);
   } catch (error) {
@@ -51,6 +58,10 @@ export const getLavadoresSimple = async (req: EmpresaRequest, res: Response) => 
       select: {
         id: true,
         nome: true,
+        comissao: true,
+        tipoRemuneracao: true,
+        baseComissao: true,
+        salario: true,
       },
       orderBy: { nome: 'asc' },
     });
@@ -198,12 +209,18 @@ export const updateLavador = async (req: EmpresaRequest, res: Response) => {
     if (Array.isArray(id)) {
       return res.status(400).json({ error: 'ID inválido' });
     }
-  const { nome, comissao } = req.body;
+  const { nome, comissao, tipoRemuneracao, baseComissao, salario } = req.body;
 
   try {
     const lavador = await prisma.lavador.update({
       where: { id, empresaId: req.empresaId },
-      data: { nome, comissao },
+      data: {
+        nome,
+        comissao,
+        ...(tipoRemuneracao !== undefined && { tipoRemuneracao }),
+        ...(baseComissao    !== undefined && { baseComissao }),
+        ...(salario         !== undefined && { salario: salario === null ? null : Number(salario) }),
+      },
     });
     res.json(lavador);
   } catch (error) {

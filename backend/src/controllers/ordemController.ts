@@ -275,7 +275,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       // ✅ OTIMIZAÇÃO: Paralelizar lookups dos lavadores e número da ordem
       const [lavadoresData, ultimaOrdem] = await Promise.all([
         normalizedLavadorIds.length > 0
-          ? tx.lavador.findMany({ where: { id: { in: normalizedLavadorIds } }, select: { id: true, comissao: true } })
+          ? tx.lavador.findMany({ where: { id: { in: normalizedLavadorIds } }, select: { id: true, comissao: true, baseComissao: true } })
           : Promise.resolve([]),
         tx.ordemServico.findFirst({
           where: { empresaId },
@@ -285,16 +285,19 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       ]);
 
       // Mapa lavadorId → % de comissão individual
-      const comissaoMap = new Map(lavadoresData.map((l: any) => [l.id, l.comissao]));
+      const comissaoMap    = new Map(lavadoresData.map((l: any) => [l.id, l.comissao]));
+      const baseComissaoMap = new Map(lavadoresData.map((l: any) => [l.id, l.baseComissao ?? 'OS']));
 
       // 5. Calcular comissão item a item:
       // - Se o serviço tem comissaoPercentual definida, usa essa % para aquele item
       // - Caso contrário, usa a % padrão do lavador
       // - A % de cada lavador é dividida pelo número de lavadores (divisão proporcional)
-      // Ex: 2 lavadores (35% e 40%) em R$100 → cada um recebe sua % ÷ 2 = R$17,50 e R$20,00
+      // - baseComissao='OS' → calcula sobre todos os itens (serviço + adicionais)
+      // - baseComissao='ADICIONAL' → calcula apenas sobre itens do tipo ADICIONAL
       const numLavadores = Math.max(normalizedLavadorIds.length, 1);
-      const calcGanhoPorLavador = (lavadorComissaoDefault: number): number => {
+      const calcGanhoPorLavador = (lavadorComissaoDefault: number, base: string = 'OS'): number => {
         return ordemItemsData.reduce((sum: number, item: any) => {
+          if (base === 'ADICIONAL' && item.tipo !== 'ADICIONAL') return sum;
           let percentual = lavadorComissaoDefault;
           if (item.tipo === 'SERVICO' && item.servicoId) {
             const servico = servicoMap.get(item.servicoId);
@@ -334,7 +337,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           data: normalizedLavadorIds.map(lavadorIdValue => ({
             ordemId: novaOrdem.id,
             lavadorId: lavadorIdValue,
-            ganho: calcGanhoPorLavador(comissaoMap.get(lavadorIdValue) || 0)
+            ganho: calcGanhoPorLavador(comissaoMap.get(lavadorIdValue) || 0, baseComissaoMap.get(lavadorIdValue) || 'OS')
           }))
         });
       }
@@ -917,9 +920,10 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
 
       // Buscar % de comissão de todos os lavadores envolvidos (um único query)
       const updateLavadoresData = normalizedLavadorIds.length > 0
-        ? await tx.lavador.findMany({ where: { id: { in: normalizedLavadorIds } }, select: { id: true, comissao: true } })
+        ? await tx.lavador.findMany({ where: { id: { in: normalizedLavadorIds } }, select: { id: true, comissao: true, baseComissao: true } })
         : [];
-      const updateComissaoMap = new Map(updateLavadoresData.map((l: any) => [l.id, l.comissao]));
+      const updateComissaoMap    = new Map(updateLavadoresData.map((l: any) => [l.id, l.comissao]));
+      const updateBaseComissaoMap = new Map(updateLavadoresData.map((l: any) => [l.id, l.baseComissao ?? 'OS']));
 
       let valorTotal = existingOrdem.valorTotal;
 
@@ -1025,15 +1029,16 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
           // Função que calcula ganho por lavador respeitando comissaoPercentual do serviço
           // Se itens foram enviados no update, usa servicoComissaoUpdateMap
           // Caso contrário, busca itens existentes da ordem
-          let calcGanhoUpdate: (lavadorComissaoPct: number) => number;
+          let calcGanhoUpdate: (lavadorComissaoPct: number, base: string) => number;
 
           const numLavadoresUpdate = Math.max(normalizedLavadorIds.length, 1);
 
           if (servicoComissaoUpdateMap.size > 0 && dataToUpdate.items) {
             // Itens foram recriados — usar os novos itens já calculados em itensData
             const itensParaCalculo = (dataToUpdate.items as any).create || [];
-            calcGanhoUpdate = (pctDefault: number) =>
+            calcGanhoUpdate = (pctDefault: number, base: string) =>
               itensParaCalculo.reduce((sum: number, item: any) => {
+                if (base === 'ADICIONAL' && item.tipo !== 'ADICIONAL') return sum;
                 let pct = pctDefault;
                 const servicoId = item.servico?.connect?.id;
                 if (servicoId && servicoComissaoUpdateMap.has(servicoId)) {
@@ -1048,8 +1053,9 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
               where: { ordemId: id },
               include: { servico: { select: { id: true, comissaoPercentual: true } } }
             });
-            calcGanhoUpdate = (pctDefault: number) =>
+            calcGanhoUpdate = (pctDefault: number, base: string) =>
               existingItems.reduce((sum: number, item: any) => {
+                if (base === 'ADICIONAL' && (item as any).tipo !== 'ADICIONAL') return sum;
                 let pct = pctDefault;
                 if (item.servico?.comissaoPercentual != null) pct = item.servico.comissaoPercentual;
                 return sum + (item.subtotal || 0) * ((pct / numLavadoresUpdate) / 100);
@@ -1060,7 +1066,7 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
             data: normalizedLavadorIds.map(lavadorIdValue => ({
               ordemId: id,
               lavadorId: lavadorIdValue,
-              ganho: calcGanhoUpdate(updateComissaoMap.get(lavadorIdValue) || 0)
+              ganho: calcGanhoUpdate(updateComissaoMap.get(lavadorIdValue) || 0, updateBaseComissaoMap.get(lavadorIdValue) || 'OS')
             }))
           });
         }

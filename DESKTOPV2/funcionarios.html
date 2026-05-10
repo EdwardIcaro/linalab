@@ -148,10 +148,35 @@
                 <label for="lavadorName" class="form-label">Nome</label>
                 <input type="text" id="lavadorName" class="form-input" required>
             </div>
+
             <div class="form-group">
-                <label for="lavadorComissao" class="form-label">Comissão (%)</label>
-                <input type="number" id="lavadorComissao" class="form-input" required min="0" max="100">
+                <label for="lavadorTipoRemuneracao" class="form-label">Tipo de Remuneração</label>
+                <select id="lavadorTipoRemuneracao" class="form-input" onchange="onTipoRemuneracaoChange()">
+                    <option value="COMISSAO">Comissão</option>
+                    <option value="SALARIO">Salário Fixo</option>
+                    <option value="SALARIO_COMISSAO">Salário + Comissão</option>
+                </select>
             </div>
+
+            <div class="form-group" id="grupoSalario" style="display:none">
+                <label for="lavadorSalario" class="form-label">Salário Fixo (R$)</label>
+                <input type="number" id="lavadorSalario" class="form-input" min="0" step="0.01" placeholder="Ex: 1800.00">
+            </div>
+
+            <div id="grupoComissao">
+                <div class="form-group">
+                    <label for="lavadorComissao" class="form-label">Comissão (%)</label>
+                    <input type="number" id="lavadorComissao" class="form-input" min="0" max="100" placeholder="Ex: 15">
+                </div>
+                <div class="form-group">
+                    <label for="lavadorBaseComissao" class="form-label">Base de Cálculo</label>
+                    <select id="lavadorBaseComissao" class="form-input">
+                        <option value="OS">OS completa (serviço + adicionais)</option>
+                        <option value="ADICIONAL">Apenas Adicionais</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="modal-actions">
                 <button type="button" onclick="closeLavadorModal()" class="btn btn-secondary">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar</button>
@@ -301,7 +326,11 @@
                     if (lavador) {
                         document.getElementById('lavadorId').value = lavador.id;
                         document.getElementById('lavadorName').value = lavador.nome;
-                        document.getElementById('lavadorComissao').value = lavador.comissao;
+                        document.getElementById('lavadorComissao').value = lavador.comissao ?? 0;
+                        document.getElementById('lavadorTipoRemuneracao').value = lavador.tipoRemuneracao || 'COMISSAO';
+                        document.getElementById('lavadorBaseComissao').value = lavador.baseComissao || 'OS';
+                        document.getElementById('lavadorSalario').value = lavador.salario ?? '';
+                        onTipoRemuneracaoChange();
                     }
                 } catch (error) { 
                     console.error(`Erro ao buscar funcionário ${id}:`, error);
@@ -318,12 +347,26 @@
             document.getElementById('lavadorModal').classList.remove('active');
         }
 
+        function onTipoRemuneracaoChange() {
+            const tipo = document.getElementById('lavadorTipoRemuneracao').value;
+            const grupoSalario   = document.getElementById('grupoSalario');
+            const grupoComissao  = document.getElementById('grupoComissao');
+            grupoSalario.style.display  = (tipo === 'SALARIO' || tipo === 'SALARIO_COMISSAO') ? 'block' : 'none';
+            grupoComissao.style.display = (tipo === 'COMISSAO' || tipo === 'SALARIO_COMISSAO') ? 'block' : 'none';
+        }
+
         async function saveLavador(event) {
             event.preventDefault();
-            const id = document.getElementById('lavadorId').value;
+            const id   = document.getElementById('lavadorId').value;
+            const tipo = document.getElementById('lavadorTipoRemuneracao').value;
             const data = {
-                nome: document.getElementById('lavadorName').value,
-                comissao: parseFloat(document.getElementById('lavadorComissao').value),
+                nome:             document.getElementById('lavadorName').value,
+                tipoRemuneracao:  tipo,
+                baseComissao:     document.getElementById('lavadorBaseComissao').value,
+                comissao:         parseFloat(document.getElementById('lavadorComissao').value) || 0,
+                salario:          (tipo === 'SALARIO' || tipo === 'SALARIO_COMISSAO')
+                                    ? (parseFloat(document.getElementById('lavadorSalario').value) || null)
+                                    : null,
             };
 
             try {
