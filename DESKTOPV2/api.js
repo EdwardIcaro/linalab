@@ -115,6 +115,9 @@ const api = {
     body: JSON.stringify({ empresaId }),
   }),
 
+  // ===== HUB =====
+  getHub: () => fetchApi('/hub'),
+
   // ===== EMPRESAS =====
   getEmpresasDoUsuario: () => fetchApi('/empresas'),
   createEmpresa: (data) => fetchApi('/empresas', {

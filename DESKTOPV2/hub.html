@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hub — Ecossistema Lina</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --p900: #3b0764;
+      --p800: #5b21b6;
+      --p700: #6d28d9;
+      --p600: #7c3aed;
+      --p500: #8b5cf6;
+      --p400: #a78bfa;
+      --p300: #c4b5fd;
+      --p200: #ddd6fe;
+      --p100: #ede9fe;
+      --p50:  #f5f3ff;
+      --teal700: #0f766e;
+      --teal500: #14b8a6;
+      --teal100: #ccfbf1;
+      --black:   #0a0a0f;
+      --gray900: #111827;
+      --gray700: #374151;
+      --gray500: #6b7280;
+      --gray400: #9ca3af;
+      --gray300: #d1d5db;
+      --gray100: #f3f4f6;
+      --white:   #ffffff;
+      --green:   #059669;
+      --green-bg:#d1fae5;
+      --amber:   #d97706;
+      --amber-bg:#fef3c7;
+      --red:     #dc2626;
+      --red-bg:  #fee2e2;
+    }
+
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(145deg, var(--p800) 0%, var(--p600) 45%, var(--p500) 80%, var(--p400) 100%);
+      color: var(--gray900);
+      overflow-x: hidden;
+      padding: 48px 24px 72px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 80% 10%, rgba(255,255,255,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 10% 90%, rgba(91,33,182,.35) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .box {
+      background: rgba(255,255,255,.97);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 28px;
+      padding: 40px 44px;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative; z-index: 1;
+      box-shadow:
+        0 0 0 1px rgba(139,92,246,.1),
+        0 32px 80px rgba(59,7,100,.35),
+        0 8px 24px rgba(0,0,0,.15);
+    }
+
+    /* ── HEADER ── */
+    .hub-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-logo {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(145deg, var(--p600), var(--p800));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; color: white;
+      box-shadow: 0 6px 20px rgba(109,40,217,.4), inset 0 1px 0 rgba(255,255,255,.2);
+    }
+    .brand-name {
+      font-size: 22px; font-weight: 800; line-height: 1.1;
+      background: linear-gradient(135deg, var(--p700), var(--p900));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .brand-tagline { font-size: 11px; color: var(--gray500); font-weight: 500; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .user-badge {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 14px 7px 8px;
+      background: var(--p50); border: 1px solid var(--p200);
+      border-radius: 22px; font-size: 14px; font-weight: 600; color: var(--p700);
+    }
+    .user-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(145deg, var(--p500), var(--p800));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: white;
+      box-shadow: 0 2px 8px rgba(109,40,217,.3);
+    }
+    .btn-logout {
+      background: var(--gray100); border: 1px solid var(--gray300);
+      color: var(--gray500); cursor: pointer;
+      padding: 8px 14px; border-radius: 10px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      display: flex; align-items: center; gap: 7px; transition: all .2s;
+    }
+    .btn-logout:hover { background: var(--red-bg); border-color: rgba(220,38,38,.25); color: var(--red); }
+
+    /* ── WELCOME BAR ── */
+    .welcome-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 22px 0 36px;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, var(--p50) 0%, rgba(245,243,255,.6) 100%);
+      border: 1px solid var(--p200); border-radius: 16px;
+    }
+    .wb-greeting { font-size: 18px; font-weight: 700; color: var(--gray900); }
+    .wb-sub { font-size: 12px; color: var(--gray500); margin-top: 2px; }
+    .wb-stats { display: flex; gap: 28px; }
+    .wb-stat { text-align: center; }
+    .wb-stat-val { font-size: 24px; font-weight: 900; color: var(--p600); line-height: 1; }
+    .wb-stat-lbl { font-size: 10px; color: var(--gray500); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; }
+    .wb-divider { width: 1px; background: var(--p200); align-self: stretch; }
+
+    /* ── SEÇÃO DE SISTEMA ── */
+    .sys-section { margin-bottom: 30px; }
+    .sys-section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .sys-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--p50); border: 1px solid var(--p200);
+      border-radius: 20px; padding: 6px 14px 6px 10px;
+      font-size: 13px; font-weight: 700; color: var(--p700);
+    }
+    .sys-pill.teal { background: var(--teal100); border-color: rgba(13,148,136,.3); color: var(--teal700); }
+    .plan-pill {
+      background: var(--gray100); border: 1px solid var(--gray300);
+      border-radius: 20px; padding: 5px 13px;
+      font-size: 12px; font-weight: 600; color: var(--gray500);
+    }
+
+    /* ── GRID DE EMPRESAS ── */
+    .co-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── CARD DE EMPRESA ── */
+    .co-card {
+      display: flex; flex-direction: column;
+      border: 1px solid var(--gray300); border-radius: 20px;
+      cursor: pointer; background: var(--white); overflow: hidden;
+      aspect-ratio: 3 / 4; transition: all .28s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    .co-card:hover {
+      border-color: var(--p400);
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 0 0 3px var(--p100), 0 0 0 4px var(--p300), 0 20px 48px rgba(109,40,217,.18);
+      z-index: 2;
+    }
+    .co-card:active { transform: translateY(-2px) scale(1.01); }
+
+    .co-cover {
+      width: 100%; height: 48%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px; position: relative;
+    }
+    .co-cover.wash { background: linear-gradient(160deg, var(--p800) 0%, var(--p600) 55%, var(--p500) 100%); }
+    .co-cover.dp   { background: linear-gradient(160deg, #064e3b 0%, var(--teal700) 55%, var(--teal500) 100%); }
+    .co-cover::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 35%;
+      background: linear-gradient(0deg, rgba(0,0,0,.18) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .co-cover-icon { font-size: 52px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.3)); position: relative; z-index: 1; }
+    .co-cover-sub  { font-size: 9px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1.8px; font-weight: 700; position: relative; z-index: 1; }
+
+    .co-body { flex: 1; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .co-name { font-size: 15px; font-weight: 700; color: var(--gray900); line-height: 1.3; }
+    .co-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+    .co-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 8px; font-size: 10px; font-weight: 700;
+    }
+    .co-badge.ativo  { background: var(--green-bg);  color: var(--green);   border: 1px solid rgba(5,150,105,.2); }
+    .co-badge.trial  { background: var(--amber-bg);  color: var(--amber);   border: 1px solid rgba(217,119,6,.2); }
+    .co-badge.expiro { background: var(--red-bg);    color: var(--red);     border: 1px solid rgba(220,38,38,.2); }
+    .co-badge.linked { background: var(--teal100);   color: var(--teal700); border: 1px solid rgba(13,148,136,.2); }
+    .co-badge i { font-size: 8px; }
+    .co-stat { font-size: 11px; color: var(--gray500); margin-top: auto; }
+
+    .co-footer {
+      padding: 11px 16px; background: var(--gray100); border-top: 1px solid var(--gray300);
+      font-size: 11px; font-weight: 700; color: var(--gray500);
+      text-transform: uppercase; letter-spacing: .8px;
+      display: flex; align-items: center; justify-content: space-between; transition: all .22s;
+    }
+    .co-footer i { font-size: 10px; transition: transform .22s; }
+    .co-card:hover .co-footer { background: var(--p600); color: white; border-top-color: var(--p600); }
+    .co-card:hover .co-footer i { transform: translateX(4px); }
+
+    /* Add card */
+    .add-card {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      border: 2px dashed var(--gray300); border-radius: 20px;
+      background: var(--gray100); cursor: pointer; aspect-ratio: 3 / 4;
+      transition: all .25s; color: var(--gray500); text-decoration: none;
+    }
+    .add-card:hover { border-color: var(--p400); background: var(--p50); color: var(--p600); transform: translateY(-4px); box-shadow: 0 8px 28px rgba(109,40,217,.12); }
+    .add-card.locked { opacity: .45; cursor: not-allowed; pointer-events: none; }
+    .add-icon { width: 52px; height: 52px; border-radius: 16px; border: 2px dashed currentColor; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .add-lbl { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.55; }
+
+    /* Divisor entre sistemas */
+    .sys-divider {
+      display: flex; align-items: center; gap: 14px;
+      color: var(--gray400); font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; margin: 30px 0;
+    }
+    .sys-divider::before, .sys-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--gray300); }
+
+    /* Botão explorar */
+    .btn-explore {
+      width: 100%; margin-top: 32px; padding: 17px;
+      background: linear-gradient(135deg, var(--p600), var(--p800));
+      border: none; border-radius: 16px;
+      font-size: 14px; font-weight: 800; color: white; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      text-transform: uppercase; letter-spacing: 1.2px; transition: all .25s;
+      box-shadow: 0 6px 28px rgba(109,40,217,.35);
+    }
+    .btn-explore:hover { background: linear-gradient(135deg, var(--p700), var(--p900)); transform: translateY(-2px); box-shadow: 0 10px 36px rgba(109,40,217,.45); }
+
+    /* ── MARKETPLACE ── */
+    .market-view { display: none; }
+    .market-view.ativa { display: block; }
+    .hub-view { display: block; }
+    .hub-view.oculto { display: none; }
+
+    .market-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .btn-back {
+      width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+      background: var(--p50); border: 1px solid var(--p200);
+      color: var(--p600); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all .18s; font-family: inherit;
+    }
+    .btn-back:hover { background: var(--p100); border-color: var(--p400); }
+    .market-title {
+      font-size: 26px; font-weight: 800;
+      background: linear-gradient(135deg, var(--p700), var(--p900));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .market-tag {
+      margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--p600);
+      background: var(--p50); border: 1px solid var(--p200); padding: 5px 11px; border-radius: 7px;
+    }
+    .market-intro {
+      font-size: 14px; color: var(--gray500); line-height: 1.7; margin: 18px 0 28px;
+      padding: 15px 20px; background: var(--p50); border: 1px solid var(--p200); border-radius: 12px;
+    }
+
+    .sys-mcard {
+      background: var(--white); border: 1px solid var(--gray300); border-radius: 20px;
+      overflow: hidden; margin-bottom: 12px; cursor: pointer; transition: border-color .2s, box-shadow .2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .sys-mcard:hover { border-color: var(--p400); }
+    .sys-mcard.open { border-color: var(--p500); box-shadow: 0 0 0 3px var(--p100), 0 8px 32px rgba(109,40,217,.1); }
+    .sys-mcard.coming { opacity: .45; cursor: default; }
+    .sys-mcard.coming:hover { border-color: var(--gray300); }
+
+    .sys-mcard-hdr { display: flex; align-items: center; gap: 18px; padding: 22px 26px; }
+    .sys-micon {
+      width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+    }
+    .sys-micon.wash { background: linear-gradient(145deg, var(--p700), var(--p500)); box-shadow: 0 4px 16px rgba(109,40,217,.25); }
+    .sys-micon.dp   { background: linear-gradient(145deg, #064e3b, var(--teal500)); box-shadow: 0 4px 16px rgba(13,148,136,.25); }
+    .sys-micon.future { background: var(--gray100); border: 1px solid var(--gray300); }
+    .sys-minfo { flex: 1; }
+    .sys-mtitle { font-size: 17px; font-weight: 800; color: var(--gray900); margin-bottom: 4px; }
+    .sys-mdesc  { font-size: 13px; color: var(--gray500); line-height: 1.5; }
+    .sys-mactive {
+      font-size: 11px; color: var(--green); font-weight: 700; margin-top: 7px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--green-bg); border: 1px solid rgba(5,150,105,.2); padding: 3px 10px; border-radius: 8px;
+    }
+    .sys-mchevron {
+      margin-left: 8px; color: var(--gray500); font-size: 12px;
+      transition: transform .25s, color .2s; flex-shrink: 0;
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      border-radius: 9px; border: 1px solid var(--gray300); background: var(--gray100);
+    }
+    .sys-mcard.open .sys-mchevron { transform: rotate(180deg); color: var(--p600); border-color: var(--p300); background: var(--p100); }
+    .coming-tag { margin-left: auto; background: var(--gray100); border: 1px solid var(--gray300); border-radius: 8px; padding: 5px 13px; font-size: 11px; font-weight: 700; color: var(--gray500); }
+
+    .plans-wrap { display: none; padding: 0 26px 26px; }
+    .sys-mcard.open .plans-wrap { display: block; }
+    .plans-divider { border: none; border-bottom: 1px solid var(--gray300); margin-bottom: 22px; }
+    .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+    .plan-card {
+      background: var(--white); border: 1px solid var(--gray300); border-radius: 18px; padding: 22px 18px;
+      display: flex; flex-direction: column; gap: 10px; position: relative; transition: all .22s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .plan-card:hover { border-color: var(--p400); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,40,217,.1); }
+    .plan-card.pop { border-color: var(--p500); background: linear-gradient(160deg, var(--p50) 0%, var(--white) 100%); box-shadow: 0 0 0 3px var(--p100), 0 8px 24px rgba(109,40,217,.12); }
+    .pop-tag {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--p600), var(--p800)); color: white;
+      box-shadow: 0 4px 14px rgba(109,40,217,.3); font-size: 9px; font-weight: 900;
+      padding: 4px 14px; border-radius: 12px; white-space: nowrap; letter-spacing: .5px;
+    }
+    .plan-name  { font-size: 11px; font-weight: 700; color: var(--gray500); text-transform: uppercase; letter-spacing: 1.2px; }
+    .plan-price { font-size: 30px; font-weight: 900; color: var(--gray900); line-height: 1; }
+    .plan-price small { font-size: 12px; font-weight: 500; color: var(--gray500); }
+    .plan-feats { list-style: none; display: flex; flex-direction: column; gap: 7px; flex: 1; margin: 4px 0; }
+    .plan-feats li { font-size: 12px; color: var(--gray700); display: flex; align-items: flex-start; gap: 8px; }
+    .plan-feats li::before { content: '✓'; color: var(--green); font-weight: 900; flex-shrink: 0; font-size: 11px; }
+    .plan-btn {
+      padding: 11px; border-radius: 11px; border: 1px solid var(--p300);
+      background: var(--p50); color: var(--p700); font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all .18s; margin-top: 4px;
+    }
+    .plan-card.pop .plan-btn { background: linear-gradient(135deg, var(--p600), var(--p800)); color: white; border-color: transparent; box-shadow: 0 4px 16px rgba(109,40,217,.3); }
+    .plan-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+    /* Loading state */
+    .loading-wrap {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 0; gap: 16px; color: var(--gray500);
+    }
+    .spinner {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 3px solid var(--p200); border-top-color: var(--p600);
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 60px 24px; color: var(--gray500);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--gray700); margin-bottom: 8px; }
+    .empty-desc  { font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; background: linear-gradient(135deg, var(--p600), var(--p800));
+      color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit; text-decoration: none; transition: all .2s;
+      box-shadow: 0 4px 16px rgba(109,40,217,.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,40,217,.4); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) { .co-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } .wb-stats { gap: 18px; } }
+    @media (max-width: 768px) {
+      body { padding: 16px 14px 44px; }
+      .box { padding: 24px 20px; border-radius: 22px; }
+      .hub-header { flex-wrap: wrap; gap: 12px; }
+      .brand-tagline { display: none; }
+      .header-right { width: 100%; justify-content: space-between; }
+      .welcome-bar { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .co-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .plans-grid { grid-template-columns: 1fr; gap: 10px; }
+      .sys-mcard-hdr { padding: 16px 18px; gap: 12px; }
+      .market-title { font-size: 21px; }
+      .plans-wrap { padding: 0 18px 18px; }
+    }
+    @media (max-width: 420px) { .co-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
+  </style>
+</head>
+<body>
+  <div class="box">
+
+    <!-- ── HUB VIEW ── -->
+    <div class="hub-view" id="hubView">
+
+      <div class="hub-header">
+        <div class="brand">
+          <div class="brand-logo">L</div>
+          <div class="brand-text">
+            <div class="brand-name">Lina</div>
+            <div class="brand-tagline">ecossistema de gestão</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="user-badge">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <span id="userName">...</span>
+          </div>
+          <button class="btn-logout" onclick="logout()"><i class="fa fa-sign-out-alt"></i> Sair</button>
+        </div>
+      </div>
+
+      <div class="welcome-bar">
+        <div class="wb-left">
+          <div class="wb-greeting" id="greeting">Olá 👋</div>
+          <div class="wb-sub">Selecione uma empresa para acessar o sistema</div>
+        </div>
+        <div class="wb-stats">
+          <div class="wb-stat">
+            <div class="wb-stat-val" id="statSistemas">—</div>
+            <div class="wb-stat-lbl" id="statSistemasLabel">sistema</div>
+          </div>
+          <div class="wb-divider"></div>
+          <div class="wb-stat">
+            <div class="wb-stat-val" id="statEmpresas">—</div>
+            <div class="wb-stat-lbl" id="statEmpresasLabel">empresa</div>
+          </div>
+          <div class="wb-divider"></div>
+          <div class="wb-stat">
+            <div class="wb-stat-val" id="statOrdens">—</div>
+            <div class="wb-stat-lbl">ordens hoje</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conteúdo dinâmico -->
+      <div id="sistemasWrap">
+        <div class="loading-wrap">
+          <div class="spinner"></div>
+          <span>Carregando seu painel...</span>
+        </div>
+      </div>
+
+      <button class="btn-explore" onclick="abrirMarketplace()">
+        <i class="fa fa-store"></i> Explorar sistemas disponíveis
+      </button>
+    </div>
+
+    <!-- ── MARKETPLACE VIEW ── -->
+    <div class="market-view" id="marketView">
+
+      <div class="market-header">
+        <button class="btn-back" onclick="fecharMarketplace()">
+          <i class="fa fa-arrow-left"></i>
+        </button>
+        <span class="market-title">Sistemas disponíveis</span>
+        <span class="market-tag">ECOSSISTEMA LINA</span>
+      </div>
+
+      <p class="market-intro">
+        <i class="fa fa-info-circle" style="color:var(--p500);margin-right:6px"></i>
+        Cada sistema tem assinatura independente e pode ser integrado com seus sistemas existentes.
+        Clique em um sistema para ver os planos disponíveis.
+      </p>
+
+      <!-- Lina Wash -->
+      <div class="sys-mcard" id="mcard-wash" onclick="toggleSys('mcard-wash')">
+        <div class="sys-mcard-hdr">
+          <div class="sys-micon wash">🚗</div>
+          <div class="sys-minfo">
+            <div class="sys-mtitle">Lina Wash</div>
+            <div class="sys-mdesc">Gestão completa de lava-jatos: ordens, clientes, comissões e financeiro.</div>
+            <div class="sys-mactive"><i class="fa fa-check-circle"></i> Já ativo na sua conta</div>
+          </div>
+          <i class="fa fa-chevron-down sys-mchevron"></i>
+        </div>
+        <div class="plans-wrap">
+          <div class="plans-divider"></div>
+          <div class="plans-grid">
+            <div class="plan-card">
+              <div class="plan-name">Basic</div>
+              <div class="plan-price">R$89<small>/mês</small></div>
+              <ul class="plan-feats">
+                <li>1 empresa</li>
+                <li>Ordens e clientes</li>
+                <li>Comissões</li>
+              </ul>
+              <button class="plan-btn" onclick="irParaPlanos(event)">Ver planos</button>
+            </div>
+            <div class="plan-card pop">
+              <div class="pop-tag">Popular</div>
+              <div class="plan-name">Pro</div>
+              <div class="plan-price">R$169<small>/mês</small></div>
+              <ul class="plan-feats">
+                <li>2 empresas</li>
+                <li>Vitrine pública</li>
+                <li>Relatórios</li>
+              </ul>
+              <button class="plan-btn" onclick="irParaPlanos(event)">Ver planos</button>
+            </div>
+            <div class="plan-card">
+              <div class="plan-name">Premium</div>
+              <div class="plan-price">R$279<small>/mês</small></div>
+              <ul class="plan-feats">
+                <li>5 empresas</li>
+                <li>WhatsApp bot</li>
+                <li>PIX integrado</li>
+              </ul>
+              <button class="plan-btn" onclick="irParaPlanos(event)">Ver planos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Point -->
+      <div class="sys-mcard" id="mcard-dp" onclick="toggleSys('mcard-dp')">
+        <div class="sys-mcard-hdr">
+          <div class="sys-micon dp">⏰</div>
+          <div class="sys-minfo">
+            <div class="sys-mtitle">Data Point</div>
+            <div class="sys-mdesc">Controle de ponto com GPS, QR code e integração com o Lina Wash.</div>
+          </div>
+          <i class="fa fa-chevron-down sys-mchevron"></i>
+        </div>
+        <div class="plans-wrap">
+          <div class="plans-divider"></div>
+          <div class="plans-grid">
+            <div class="plan-card">
+              <div class="plan-name">Basic</div>
+              <div class="plan-price" style="font-size:18px;color:var(--gray500)">Em breve</div>
+              <ul class="plan-feats">
+                <li>1 empresa</li>
+                <li>Até 10 funcionários</li>
+                <li>PWA + QR Code</li>
+              </ul>
+              <button class="plan-btn" disabled style="opacity:.5;cursor:default">Disponível em breve</button>
+            </div>
+            <div class="plan-card pop">
+              <div class="pop-tag">Popular</div>
+              <div class="plan-name">Pro</div>
+              <div class="plan-price" style="font-size:18px;color:var(--gray500)">Em breve</div>
+              <ul class="plan-feats">
+                <li>3 empresas</li>
+                <li>Até 30 funcionários</li>
+                <li>Relatórios PDF</li>
+              </ul>
+              <button class="plan-btn" disabled style="opacity:.5;cursor:default">Disponível em breve</button>
+            </div>
+            <div class="plan-card">
+              <div class="plan-name">Premium</div>
+              <div class="plan-price" style="font-size:18px;color:var(--gray500)">Em breve</div>
+              <ul class="plan-feats">
+                <li>Ilimitado</li>
+                <li>WhatsApp canal de ponto</li>
+                <li>API</li>
+              </ul>
+              <button class="plan-btn" disabled style="opacity:.5;cursor:default">Disponível em breve</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Em breve -->
+      <div class="sys-mcard coming">
+        <div class="sys-mcard-hdr">
+          <div class="sys-micon future">📦</div>
+          <div class="sys-minfo">
+            <div class="sys-mtitle" style="color:var(--gray500)">Novos sistemas</div>
+            <div class="sys-mdesc">Mais produtos chegando ao ecossistema Lina em breve.</div>
+          </div>
+          <span class="coming-tag">Em breve</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    const saudacoes = ['Bom dia', 'Boa tarde', 'Boa noite'];
+    function getSaudacao() {
+      const h = new Date().getHours();
+      if (h < 12) return saudacoes[0];
+      if (h < 18) return saudacoes[1];
+      return saudacoes[2];
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+
+    function abrirMarketplace() {
+      document.getElementById('hubView').classList.add('oculto');
+      document.getElementById('marketView').classList.add('ativa');
+    }
+
+    function fecharMarketplace() {
+      document.getElementById('marketView').classList.remove('ativa');
+      document.getElementById('hubView').classList.remove('oculto');
+    }
+
+    function toggleSys(id) {
+      const card = document.getElementById(id);
+      if (!card || card.classList.contains('coming')) return;
+      const wasOpen = card.classList.contains('open');
+      document.querySelectorAll('.sys-mcard').forEach(c => c.classList.remove('open'));
+      if (!wasOpen) card.classList.add('open');
+    }
+
+    function irParaPlanos(e) {
+      e.stopPropagation();
+      window.location.href = 'planos.html';
+    }
+
+    async function selecionarEmpresa(empresaId, sistema) {
+      try {
+        const data = await window.api.generateScopedToken(empresaId);
+        if (!data || !data.token) throw new Error('Token não recebido');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('empresaId', empresaId);
+        if (data.empresa?.nome) localStorage.setItem('empresaNome', data.empresa.nome);
+
+        if (sistema === 'lina-wash') {
+          window.location.href = 'index.html';
+        } else if (sistema === 'data-point') {
+          window.location.href = 'data-point/dashboard.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      } catch (err) {
+        console.error('Erro ao selecionar empresa:', err);
+        alert('Não foi possível acessar a empresa. Tente novamente.');
+      }
+    }
+
+    function renderBadge(statusTipo, statusLabel) {
+      const icon = statusTipo === 'ativo'
+        ? '<i class="fa fa-circle" style="font-size:7px"></i>'
+        : statusTipo === 'trial'
+          ? '<i class="fa fa-clock"></i>'
+          : '<i class="fa fa-times-circle"></i>';
+      return `<span class="co-badge ${statusTipo}">${icon} ${statusLabel}</span>`;
+    }
+
+    function renderCard(empresa, sistema) {
+      const corCover = sistema.cor === 'dp' ? 'dp' : 'wash';
+      const linkedBadge = empresa.integradoCom
+        ? `<span class="co-badge linked"><i class="fa fa-link"></i> Lina Wash</span>`
+        : '';
+      return `
+        <div class="co-card" onclick="selecionarEmpresa('${empresa.id}', '${sistema.chave}')">
+          <div class="co-cover ${corCover}">
+            <div class="co-cover-icon">${sistema.icone}</div>
+            <div class="co-cover-sub">${sistema.nome}</div>
+          </div>
+          <div class="co-body">
+            <p class="co-name">${empresa.nome}</p>
+            <div class="co-badges">
+              ${renderBadge(empresa.statusTipo, empresa.statusLabel)}
+              ${linkedBadge}
+            </div>
+            <div class="co-stat">${empresa.stat}</div>
+          </div>
+          <div class="co-footer">
+            <span>Acessar</span>
+            <i class="fa fa-arrow-right"></i>
+          </div>
+        </div>`;
+    }
+
+    function renderAddCard(sistema, bloqueado) {
+      const lockClass = bloqueado ? 'locked' : '';
+      const icon = bloqueado ? 'fa-lock' : 'fa-plus';
+      const label = bloqueado ? 'Limite do plano<br>atingido' : 'Nova empresa';
+      return `
+        <div class="add-card ${lockClass}" onclick="${bloqueado ? '' : "window.location.href='nova-empresa.html'"}">
+          <div class="add-icon"><i class="fa ${icon}"></i></div>
+          <div class="add-lbl">${label}</div>
+        </div>`;
+    }
+
+    function renderSistema(sistema, idx, total) {
+      const planoLabel = sistema.plano
+        ? `${sistema.plano.nome} · ${sistema.plano.maxEmpresas} empresa${sistema.plano.maxEmpresas !== 1 ? 's' : ''}`
+        : '';
+      const pillClass = sistema.cor === 'dp' ? 'sys-pill teal' : 'sys-pill';
+      const bloqueado = sistema.plano && sistema.empresas.length >= sistema.plano.maxEmpresas;
+
+      const cardsHtml = sistema.empresas.map(e => renderCard(e, sistema)).join('');
+      const addCardHtml = renderAddCard(sistema, bloqueado);
+
+      const divider = idx > 0
+        ? `<div class="sys-divider">${total} SISTEMAS ATIVOS</div>`
+        : '';
+
+      return `
+        ${divider}
+        <div class="sys-section">
+          <div class="sys-section-header">
+            <div class="${pillClass}">${sistema.icone} ${sistema.nome}</div>
+            ${planoLabel ? `<div class="plan-pill">${planoLabel}</div>` : ''}
+          </div>
+          <div class="co-grid">
+            ${cardsHtml}
+            ${addCardHtml}
+          </div>
+        </div>`;
+    }
+
+    async function carregarHub() {
+      // Garante que o token existe antes de chamar a API
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      try {
+        const data = await window.api.getHub();
+
+        // Header
+        const nomeUsuario = data.usuario.nome;
+        document.getElementById('userName').textContent = nomeUsuario;
+        document.getElementById('userAvatar').textContent = nomeUsuario.charAt(0).toUpperCase();
+        document.getElementById('greeting').textContent = `${getSaudacao()}, ${nomeUsuario} 👋`;
+
+        // Stats
+        const ts = data.stats.totalSistemas;
+        const te = data.stats.totalEmpresas;
+        document.getElementById('statSistemas').textContent = ts;
+        document.getElementById('statSistemasLabel').textContent = ts === 1 ? 'sistema' : 'sistemas';
+        document.getElementById('statEmpresas').textContent = te;
+        document.getElementById('statEmpresasLabel').textContent = te === 1 ? 'empresa' : 'empresas';
+        document.getElementById('statOrdens').textContent = data.stats.ordenasHoje;
+
+        // Sistemas
+        const wrap = document.getElementById('sistemasWrap');
+        if (!data.sistemas || data.sistemas.length === 0) {
+          wrap.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">🏢</div>
+              <div class="empty-title">Nenhuma empresa cadastrada</div>
+              <div class="empty-desc">Crie sua primeira empresa para começar a usar o sistema.</div>
+              <a href="nova-empresa.html" class="btn-primary"><i class="fa fa-plus"></i> Criar empresa</a>
+            </div>`;
+          return;
+        }
+
+        const total = data.sistemas.length;
+        wrap.innerHTML = data.sistemas.map((s, i) => renderSistema(s, i, total)).join('');
+
+      } catch (err) {
+        console.error('Erro ao carregar hub:', err);
+        document.getElementById('sistemasWrap').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Erro ao carregar painel</div>
+            <div class="empty-desc">Não foi possível carregar suas empresas. Verifique sua conexão.</div>
+            <button class="btn-primary" onclick="carregarHub()"><i class="fa fa-sync"></i> Tentar novamente</button>
+          </div>`;
+      }
+    }
+
+    carregarHub();
+  </script>
+</body>
+</html>
