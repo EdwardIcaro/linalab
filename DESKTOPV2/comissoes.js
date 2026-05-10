@@ -137,12 +137,17 @@ async function loadCommissionData() {
         if (dataInicio) apiParams.dataInicio = dataInicio;
         if (dataFim) apiParams.dataFim = dataFim;
 
-        const [{ comissoes, adiantamentos, debitosOS }, gorjetasRes] = await Promise.all([
+        const [comissaoResult, gorjetasResult] = await Promise.allSettled([
             window.api.getDadosComissao(apiParams),
             window.api.listGorjetas({ lavadorId: selectedLavadorId, ...(dataInicio && { inicio: dataInicio }), ...(dataFim && { fim: dataFim }) }),
         ]);
 
-        renderComissoes(comissoes, gorjetasRes?.gorjetas || []);
+        if (comissaoResult.status === 'rejected') throw comissaoResult.reason;
+
+        const { comissoes, adiantamentos, debitosOS } = comissaoResult.value;
+        const gorjetas = gorjetasResult.status === 'fulfilled' ? (gorjetasResult.value?.gorjetas || []) : [];
+
+        renderComissoes(comissoes, gorjetas);
         renderAdiantamentos(adiantamentos, debitosOS);
 
         calculateSummary();
