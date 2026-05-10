@@ -63,6 +63,7 @@ model Empresa {
   reports                    OrdemReport[]
   whatsappEmpresaSession     WhatsappEmpresaSession?
   mensagensTemplate          MensagemTemplate[]
+  gorjetas                   Gorjeta[]
 
   @@map("empresas")
 }
@@ -131,6 +132,7 @@ model Lavador {
   ordemLavadores      OrdemServicoLavador[]
   whatsappBotUsers    WhatsappBotUser[]
   reports             OrdemReport[]
+  gorjetas            Gorjeta[]
 
   @@unique([nome, empresaId])
   @@map("lavadores")
@@ -806,4 +808,18 @@ model OrdemReport {
   empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("ordem_reports")
+}
+
+model Gorjeta {
+  id         String   @id @default(cuid())
+  empresaId  String
+  lavadorId  String
+  valor      Float
+  observacao String?
+  lancadoPor String?
+  criadoEm   DateTime @default(now())
+  empresa    Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lavador    Lavador  @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+
+  @@map("gorjetas")
 }

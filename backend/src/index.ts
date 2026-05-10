@@ -32,6 +32,7 @@ import whatsappRoutes from './routes/whatsapp';
 import empresaWaRoutes from './routes/empresaWa';
 import ocrRoutes from './routes/ocr';
 import portalPublicoRoutes from './routes/portalPublico';
+import gorjetaRoutes from './routes/gorjeta';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
@@ -165,6 +166,7 @@ app.use('/api/pagamentos', authMiddleware, pagamentoRoutes); // Usa middleware d
 app.use('/api/tipos-veiculo', authMiddleware, tipoVeiculoRoutes); // Usa middleware de empresa
 app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middleware de empresa
 app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
+app.use('/api/gorjeta', authMiddleware, gorjetaRoutes); // Gorjetas de lavadores
 
 // Bot Lina — setup/disconnect apenas LINA_OWNER; status qualquer token válido
 import { setupWhatsapp, getWhatsappStatus, disconnectWhatsapp } from './controllers/whatsappController';

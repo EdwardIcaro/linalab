@@ -449,6 +449,11 @@ const api = {
   empresaWaEnviarTemplate: (ordemId, templateId) => fetchApi('/whatsapp-empresa/enviar', { method: 'POST', body: JSON.stringify({ ordemId, templateId }) }),
   empresaWaEnviarCliente:  (clienteId, templateId, texto) => fetchApi('/whatsapp-empresa/enviar-cliente', { method: 'POST', body: JSON.stringify({ clienteId, ...(templateId && { templateId }), ...(texto && { texto }) }) }),
 
+  // ── Gorjetas ──────────────────────────────────────────────────────────────
+  createGorjeta: (data)    => fetchApi('/gorjeta', { method: 'POST', body: JSON.stringify(data) }),
+  listGorjetas:  (params)  => fetchApi(`/gorjeta?${new URLSearchParams(params || {})}`),
+  deleteGorjeta: (id)      => fetchApi(`/gorjeta/${id}`, { method: 'DELETE' }),
+
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),
   logout: () => {

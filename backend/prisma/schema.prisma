@@ -65,6 +65,7 @@ model Empresa {
   mensagensTemplate          MensagemTemplate[]
   sistemasAtivos             EmpresaSistema[]
   dpFuncionarios             DpFuncionario[]
+  gorjetas                   Gorjeta[]
 
   @@map("empresas")
 }
@@ -140,6 +141,7 @@ model Lavador {
   ordemLavadores      OrdemServicoLavador[]
   whatsappBotUsers    WhatsappBotUser[]
   reports             OrdemReport[]
+  gorjetas            Gorjeta[]
 
   @@unique([nome, empresaId])
   @@map("lavadores")
@@ -878,4 +880,18 @@ model DpMarcacao {
   funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
 
   @@map("dp_marcacoes")
+}
+
+model Gorjeta {
+  id         String   @id @default(cuid())
+  empresaId  String
+  lavadorId  String
+  valor      Float
+  observacao String?
+  lancadoPor String?
+  criadoEm   DateTime @default(now())
+  empresa    Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lavador    Lavador  @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+
+  @@map("gorjetas")
 }

@@ -691,6 +691,37 @@
   </div>
 </div>
 
+<!-- ==================== SHEET: GORJETA ==================== -->
+<div class="sheet-overlay" id="gorjetaOverlay" onclick="closeGorjetaSheet()"></div>
+<div class="sheet" id="gorjetaSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Lançar Gorjeta</span>
+    <button class="sheet-close" onclick="closeGorjetaSheet()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>Lavador *</label>
+      <select id="gLavador" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;background:var(--white);">
+        <option value="">Selecione o lavador...</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Valor (R$) *</label>
+      <input type="number" id="gValor" step="0.01" min="0.01" placeholder="0,00">
+    </div>
+    <div class="field">
+      <label>Observação (opcional)</label>
+      <input type="text" id="gObs" placeholder="Ex: Gorjeta do cliente João">
+    </div>
+  </div>
+  <div class="sheet-footer">
+    <button class="btn-submit-sheet" id="gorjetaSubmitBtn" onclick="submitGorjeta()" style="background:#10b981">
+      <i class="fas fa-check"></i> Confirmar Gorjeta
+    </button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast">
   <i class="fas fa-check-circle" id="toastIco"></i>
@@ -868,6 +899,9 @@ async function loadCaixa() {
       </button>
       <button class="caixa-btn btn-red" onclick="openFechamentoModal()" style="grid-column:span 2">
         <i class="fas fa-door-closed"></i><span>Fechar Caixa</span>
+      </button>
+      <button class="caixa-btn" onclick="openGorjetaSheet()" style="grid-column:span 2;color:#10b981;border-color:#10b981">
+        <i class="fas fa-gift"></i><span>Lançar Gorjeta</span>
       </button>`;
   }
   html += '</div>';
@@ -1058,6 +1092,53 @@ async function submitSaida() {
     closeSaidaSheet(); await Promise.all([loadBalanceCards(), loadCaixa()]);
   } catch(e) { showToast(e?.message || 'Erro ao lançar saída', 'error'); }
   finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
+}
+
+// ===================== GORJETA =====================
+async function openGorjetaSheet() {
+  const select = document.getElementById('gLavador');
+  try {
+    const r = await window.api.getLavadoresSimple();
+    const lavs = r.lavadores || [];
+    select.innerHTML = '<option value="">Selecione o lavador...</option>' +
+      lavs.map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
+  } catch(e) {
+    select.innerHTML = '<option value="">Erro ao carregar lavadores</option>';
+  }
+  document.getElementById('gValor').value = '';
+  document.getElementById('gObs').value   = '';
+  const btn = document.getElementById('gorjetaSubmitBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Gorjeta';
+  document.getElementById('gorjetaOverlay').classList.add('active');
+  document.getElementById('gorjetaSheet').classList.add('active');
+}
+
+function closeGorjetaSheet() {
+  document.getElementById('gorjetaOverlay').classList.remove('active');
+  document.getElementById('gorjetaSheet').classList.remove('active');
+}
+
+async function submitGorjeta() {
+  const lavadorId = document.getElementById('gLavador').value;
+  const valor     = parseFloat(document.getElementById('gValor').value);
+  const obs       = document.getElementById('gObs').value.trim();
+
+  if (!lavadorId)           { showToast('Selecione o lavador', 'error'); return; }
+  if (!valor || valor <= 0) { showToast('Informe um valor válido', 'error'); return; }
+
+  const btn = document.getElementById('gorjetaSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Confirmando...';
+  try {
+    await window.api.createGorjeta({ lavadorId, valor, observacao: obs || undefined });
+    showToast('Gorjeta registrada!', 'success');
+    closeGorjetaSheet();
+  } catch(e) {
+    showToast(e?.error || e?.message || 'Erro ao registrar gorjeta', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Gorjeta';
+  }
 }
 
 // ===================== ABERTURA =====================

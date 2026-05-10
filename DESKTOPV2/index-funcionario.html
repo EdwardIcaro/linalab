@@ -878,6 +878,9 @@
 
   <!-- Drop-up controle de caixa -->
   <div class="fab-dropup" id="saidaDropup">
+    <button class="dropup-item" id="dropItemGorjeta" onclick="dropupAcao('gorjeta')">
+      <i class="fas fa-gift" style="color:#10b981"></i> Lançar Gorjeta
+    </button>
     <button class="dropup-item" id="dropItemSaida" onclick="dropupAcao('saida')">
       <i class="fas fa-receipt" style="color:#f97316"></i> Lançar Saída
     </button>
@@ -949,6 +952,37 @@
     <div class="sheet-footer">
       <button class="btn-submit-sheet" id="indexSaidaSubmitBtn" onclick="submitIndexSaida()">
         <i class="fas fa-check"></i> Confirmar Saída
+      </button>
+    </div>
+  </div>
+
+  <!-- SHEET: Gorjeta (via FAB dropup) -->
+  <div class="sheet-overlay" id="indexGorjetaOverlay" onclick="closeIndexGorjetaSheet()"></div>
+  <div class="sheet" id="indexGorjetaSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Lançar Gorjeta</span>
+      <button class="sheet-close" onclick="closeIndexGorjetaSheet()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sheet-body">
+      <div class="sfield">
+        <label>Lavador *</label>
+        <select id="indexGLavador" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-family:inherit;background:#fff;">
+          <option value="">Selecione o lavador...</option>
+        </select>
+      </div>
+      <div class="sfield" style="margin-top:14px">
+        <label>Valor (R$) *</label>
+        <input type="number" id="indexGValor" step="0.01" min="0.01" placeholder="0,00">
+      </div>
+      <div class="sfield">
+        <label>Observação (opcional)</label>
+        <input type="text" id="indexGObs" placeholder="Ex: Gorjeta do cliente João">
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn-submit-sheet" id="indexGorjetaSubmitBtn" onclick="submitIndexGorjeta()" style="background:#10b981">
+        <i class="fas fa-check"></i> Confirmar Gorjeta
       </button>
     </div>
   </div>
@@ -1479,10 +1513,58 @@
 
     function dropupAcao(acao) {
       closeSaidaDropup();
-      if (acao === 'saida')   { openIndexSaidaSheet('saida'); }
+      if (acao === 'gorjeta')      { openIndexGorjetaSheet(); }
+      else if (acao === 'saida')   { openIndexSaidaSheet('saida'); }
       else if (acao === 'sangria') { openIndexSaidaSheet('sangria'); }
       else if (acao === 'abrir')   { openAbrirCaixaModal(); }
       else if (acao === 'fechar')  { openFecharCaixaModal(); }
+    }
+
+    // ===== SHEET GORJETA =====
+    async function openIndexGorjetaSheet() {
+      const select = document.getElementById('indexGLavador');
+      try {
+        const r = await window.api.getLavadoresSimple();
+        const lavs = r.lavadores || [];
+        select.innerHTML = '<option value="">Selecione o lavador...</option>' +
+          lavs.map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
+      } catch(e) {
+        select.innerHTML = '<option value="">Erro ao carregar lavadores</option>';
+      }
+      document.getElementById('indexGValor').value = '';
+      document.getElementById('indexGObs').value   = '';
+      const btn = document.getElementById('indexGorjetaSubmitBtn');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Gorjeta';
+      document.getElementById('indexGorjetaOverlay').classList.add('active');
+      document.getElementById('indexGorjetaSheet').classList.add('active');
+    }
+
+    function closeIndexGorjetaSheet() {
+      document.getElementById('indexGorjetaOverlay').classList.remove('active');
+      document.getElementById('indexGorjetaSheet').classList.remove('active');
+    }
+
+    async function submitIndexGorjeta() {
+      const lavadorId = document.getElementById('indexGLavador').value;
+      const valor     = parseFloat(document.getElementById('indexGValor').value);
+      const obs       = document.getElementById('indexGObs').value.trim();
+
+      if (!lavadorId)          { showToastIndex('Selecione o lavador', 'error'); return; }
+      if (!valor || valor <= 0) { showToastIndex('Informe um valor válido', 'error'); return; }
+
+      const btn = document.getElementById('indexGorjetaSubmitBtn');
+      btn.disabled = true; btn.textContent = 'Confirmando...';
+      try {
+        await window.api.createGorjeta({ lavadorId, valor, observacao: obs || undefined });
+        showToastIndex('Gorjeta registrada!', 'success');
+        closeIndexGorjetaSheet();
+      } catch(e) {
+        showToastIndex(e?.error || e?.message || 'Erro ao registrar gorjeta', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Gorjeta';
+      }
     }
 
     // ===== SHEET SAÍDA/SANGRIA =====
