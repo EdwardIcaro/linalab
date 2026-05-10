@@ -134,18 +134,12 @@ async function loadCommissionData() {
         if (dataInicio) apiParams.dataInicio = dataInicio;
         if (dataFim) apiParams.dataFim = dataFim;
 
-        const { comissoes, adiantamentos, debitosOS } = await window.api.getDadosComissao(apiParams);
-        console.log('DEBUG loadCommissionData response', {
-            selectedLavadorId,
-            dataInicio,
-            dataFim,
-            activeFilter,
-            comissoes,
-            adiantamentos,
-            debitosOS,
-        });
-        
-        renderComissoes(comissoes);
+        const [{ comissoes, adiantamentos, debitosOS }, gorjetasRes] = await Promise.all([
+            window.api.getDadosComissao(apiParams),
+            window.api.listGorjetas({ lavadorId: selectedLavadorId, ...(dataInicio && { inicio: dataInicio }), ...(dataFim && { fim: dataFim }) }),
+        ]);
+
+        renderComissoes(comissoes, gorjetasRes?.gorjetas || []);
         renderAdiantamentos(adiantamentos, debitosOS);
 
         calculateSummary();
@@ -209,16 +203,14 @@ function getWasherShare(order, washerId) {
     return shareMap[washerId] || 0;
 }
 
-function renderComissoes(comissoes) {
+function renderComissoes(comissoes, gorjetas = []) {
     const creditosList = document.getElementById('creditos-list');
 
-    // ✅ NOVO: Ordenar por número de OS (crescente)
     const comissoesOrdenadas = [...(comissoes || [])].sort((a, b) => a.numeroOrdem - b.numeroOrdem);
 
     const creditItems = comissoesOrdenadas.map(c => {
-            const share = getWasherShare(c, selectedLavadorId);
-            console.log('DEBUG washer share', c.numeroOrdem, share, c.lavadores);
-            if (!share) return null;
+        const share = getWasherShare(c, selectedLavadorId);
+        if (!share) return null;
         return `
             <div class="commission-item" data-id="${c.id}" data-valor="${share}" data-type="credit" onclick="toggleItemSelection(this)">
                 <div class="item-checkbox"><i class="fas fa-check"></i></div>
@@ -226,21 +218,39 @@ function renderComissoes(comissoes) {
                     <div class="item-title">OS #${c.numeroOrdem} - ${c.veiculo?.modelo || 'S/ Modelo'}</div>
                     <div class="item-subtitle">Finalizada em: ${new Date(c.dataFim).toLocaleDateString('pt-BR')}</div>
                 </div>
-                <span class="item-value credit">${formatCurrency(share)}</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="item-value credit">${formatCurrency(share)}</span>
+                    <button class="btn-delete-item" title="Excluir OS" onclick="confirmarDeleteOS(event,'${c.id}','#${c.numeroOrdem}')"><i class="fas fa-trash-alt"></i></button>
+                </div>
             </div>
         `;
     }).filter(Boolean);
-    document.getElementById('creditsBadge').textContent = creditItems.length;
 
-    // ✅ NOVO: Resetar botão "Selecionar Todas"
+    const gorjetaItems = [...(gorjetas || [])].map(g => `
+        <div class="commission-item" data-id="${g.id}" data-valor="${g.valor}" data-type="credit" data-gorjeta="true" onclick="toggleItemSelection(this)">
+            <div class="item-checkbox"><i class="fas fa-check"></i></div>
+            <div class="item-details">
+                <div class="item-title"><span class="badge-gorjeta">🎁 Gorjeta</span>${g.observacao ? ' — ' + g.observacao : ''}</div>
+                <div class="item-subtitle">Data: ${new Date(g.criadoEm).toLocaleDateString('pt-BR')}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="item-value credit">${formatCurrency(g.valor)}</span>
+                <button class="btn-delete-item" title="Excluir gorjeta" onclick="confirmarDeleteGorjeta(event,'${g.id}')"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+    `);
+
+    const allCreditItems = [...creditItems, ...gorjetaItems];
+
+    document.getElementById('creditsBadge').textContent = allCreditItems.length;
     const btn = document.getElementById('selectAllCreditsBtn');
     if (btn) btn.innerHTML = '<i class="fas fa-check-double"></i> Todas';
 
-    if (!creditItems.length) {
+    if (!allCreditItems.length) {
         creditosList.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Nenhuma comissão pendente no período.</p></div>';
         return;
     }
-    creditosList.innerHTML = creditItems.join('');
+    creditosList.innerHTML = allCreditItems.join('');
 }
 
 function renderAdiantamentos(adiantamentos, debitosOS = []) {
@@ -253,7 +263,10 @@ function renderAdiantamentos(adiantamentos, debitosOS = []) {
                 <div class="item-title">${a.descricao || 'Adiantamento (Vale)'}</div>
                 <div class="item-subtitle">Data: ${a.data ? new Date(a.data).toLocaleDateString('pt-BR') : 'Sem data'}</div>
             </div>
-            <span class="item-value debit">${formatCurrency(a.valor)}</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="item-value debit">${formatCurrency(a.valor)}</span>
+                <button class="btn-delete-item" title="Excluir dívida" onclick="confirmarDeleteAdiantamento(event,'${a.id}')"><i class="fas fa-trash-alt"></i></button>
+            </div>
         </div>
     `).filter(Boolean);
 
@@ -273,7 +286,10 @@ function renderAdiantamentos(adiantamentos, debitosOS = []) {
                     <div class="item-title">${descricao}</div>
                     <div class="item-subtitle">Finalizada em: ${dataFinalizacao}</div>
                 </div>
-                <span class="item-value debit">${formatCurrency(share)}</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="item-value debit">${formatCurrency(share)}</span>
+                    <button class="btn-delete-item" title="Excluir OS" onclick="confirmarDeleteOS(event,'${d.id}','#${d.numeroOrdem}')"><i class="fas fa-trash-alt"></i></button>
+                </div>
             </div>
         `;
     }).filter(Boolean);
@@ -642,4 +658,57 @@ async function showFechamentoDetails(fechamentoId) {
         console.error('Erro ao buscar detalhes do fechamento:', error);
         showToast('Não foi possível carregar os detalhes.', 'error');
     }
+}
+
+// ── Funções de exclusão ────────────────────────────────────────────────────
+
+function confirmarDeleteOS(event, ordemId, label) {
+    event.stopPropagation();
+    showCustomConfirm({
+        title: 'Excluir Ordem de Serviço',
+        message: `Tem certeza que deseja excluir a OS ${label}? Esta ação não pode ser desfeita e sumirá também do portal do funcionário.`,
+        onConfirm: async () => {
+            try {
+                await window.api.deleteOrdem(ordemId);
+                showToast('OS excluída com sucesso.', 'success');
+                loadCommissionData();
+            } catch(e) {
+                showToast(e?.error || 'Erro ao excluir OS.', 'error');
+            }
+        }
+    });
+}
+
+function confirmarDeleteAdiantamento(event, adiantamentoId) {
+    event.stopPropagation();
+    showCustomConfirm({
+        title: 'Excluir Dívida',
+        message: 'Tem certeza que deseja excluir este adiantamento/dívida? O valor sumirá do portal do funcionário.',
+        onConfirm: async () => {
+            try {
+                await window.api.deleteAdiantamento(adiantamentoId);
+                showToast('Dívida excluída com sucesso.', 'success');
+                loadCommissionData();
+            } catch(e) {
+                showToast(e?.error || 'Erro ao excluir dívida.', 'error');
+            }
+        }
+    });
+}
+
+function confirmarDeleteGorjeta(event, gorjetaId) {
+    event.stopPropagation();
+    showCustomConfirm({
+        title: 'Excluir Gorjeta',
+        message: 'Tem certeza que deseja excluir esta gorjeta?',
+        onConfirm: async () => {
+            try {
+                await window.api.deleteGorjeta(gorjetaId);
+                showToast('Gorjeta excluída com sucesso.', 'success');
+                loadCommissionData();
+            } catch(e) {
+                showToast(e?.error || 'Erro ao excluir gorjeta.', 'error');
+            }
+        }
+    });
 }

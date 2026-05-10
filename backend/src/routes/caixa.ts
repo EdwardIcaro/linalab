@@ -16,6 +16,7 @@ import {
   getFechamentoComissaoById,
   updateCaixaRegistro,
   deleteCaixaRegistro,
+  deleteAdiantamento,
   migrarPagamentosComissaoAntigos,
 } from '../controllers/caixaController';
 
@@ -37,6 +38,7 @@ router.post('/sangria', createSangria);
 router.post('/comissoes/fechar', fecharComissao);
 router.put('/registros/:id', updateCaixaRegistro);
 router.delete('/registros/:id', deleteCaixaRegistro);
+router.delete('/adiantamento/:id', deleteAdiantamento);
 router.post('/comissoes/migrar-historico', migrarPagamentosComissaoAntigos); // Rota para a migração
 
 export default router;

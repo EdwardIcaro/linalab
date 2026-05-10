@@ -1067,6 +1067,32 @@ export const deleteCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
     }
 };
 
+export const deleteAdiantamento = async (req: EmpresaRequest, res: Response) => {
+    const empresaId = req.empresaId!;
+    const { id } = req.params;
+
+    try {
+        const adiantamento = await prisma.adiantamento.findFirst({
+            where: { id, empresaId, status: 'PENDENTE' },
+        });
+        if (!adiantamento) return res.status(404).json({ error: 'Adiantamento não encontrado ou já quitado.' });
+
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+            if (adiantamento.caixaRegistroId) {
+                await tx.adiantamento.deleteMany({ where: { caixaRegistroId: adiantamento.caixaRegistroId! } });
+                await tx.caixaRegistro.delete({ where: { id: adiantamento.caixaRegistroId! } });
+            } else {
+                await tx.adiantamento.delete({ where: { id } });
+            }
+        });
+
+        return res.json({ success: true });
+    } catch (e) {
+        console.error('[Comissao] deleteAdiantamento:', e);
+        return res.status(500).json({ error: 'Erro ao excluir adiantamento.' });
+    }
+};
+
 export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { lavadorId, dataInicio, dataFim } = req.query;

@@ -123,7 +123,13 @@ export const getLavadorPublicData = async (req: Request, res: Response) => {
             orderBy: { data: 'desc' }
         });
 
-        // 5. Buscar adiantamentos não quitados (dívida atual)
+        // 5. Buscar gorjetas dos últimos 30 dias
+        const gorjetas = await (prisma.gorjeta as any).findMany({
+            where: { lavadorId: lavador.id, criadoEm: { gte: trintaDiasAtras } },
+            orderBy: { criadoEm: 'desc' },
+        });
+
+        // 6. Buscar adiantamentos não quitados (dívida atual)
         const adiantamentosNaoQuitados = await prisma.adiantamento.findMany({
             where: {
                 lavadorId: lavador.id,
@@ -140,6 +146,7 @@ export const getLavadorPublicData = async (req: Request, res: Response) => {
             nome: lavador.nome,
             comissao: lavador.comissao,
             ordens: ordens,
+            gorjetas: gorjetas,
             fechamentos: fechamentosComissao,
             adiantamentosNaoQuitados: adiantamentosNaoQuitados,
             tokenExpiresAt: tokenData.expiresAt // null = permanente
