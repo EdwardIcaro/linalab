@@ -157,12 +157,16 @@ function createEmptyState(icon, title, message, actionText = null, actionFn = nu
 
 // ===== LOADING STATE =====
 function createLoading() {
-  return `
-    <div class="loading-container">
-      <div class="spinner"></div>
-      <p>Carregando dados...</p>
+  const rows = Array.from({ length: 5 }, () => `
+    <div class="sk-row">
+      <div class="sk-base sk-name"></div>
+      <div class="sk-base sk-mid"></div>
+      <div class="sk-base sk-mid"></div>
+      <div class="sk-base sk-mid"></div>
+      <div class="sk-base sk-badge"></div>
     </div>
-  `;
+  `).join('');
+  return `<div class="table-container"><div class="loading-skeleton">${rows}</div></div>`;
 }
 
 // ===== TOAST NOTIFICATION =====
@@ -386,6 +390,131 @@ function getDatePreset(preset) {
       };
   }
 }
+
+// ===== ESTILOS GLOBAIS (tap feedback + transição + skeleton) =====
+function injectGlobalStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Remove tap highlight padrão do browser */
+    .nav-item, .icon-btn, .btn-primary, .btn-confirm, .btn-cancel,
+    .btn-copy-link, .btn-link-copy, .logo-link {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Feedback de toque imediato */
+    .nav-item:active {
+      color: var(--primary, #0066cc) !important;
+      background: rgba(0, 102, 204, 0.1) !important;
+      transform: scale(0.91);
+      transition: transform 0.08s ease, background 0.08s ease;
+    }
+    .icon-btn:active {
+      background: rgba(0, 0, 0, 0.07) !important;
+      transform: scale(0.90);
+      transition: transform 0.08s ease;
+    }
+    .btn-primary:active, .btn-confirm:active {
+      transform: scale(0.95);
+      filter: brightness(0.87);
+      transition: transform 0.08s ease, filter 0.08s ease;
+    }
+    .btn-cancel:active {
+      transform: scale(0.95);
+      filter: brightness(0.93);
+      transition: transform 0.08s ease, filter 0.08s ease;
+    }
+    .btn-copy-link:active, .btn-link-copy:active {
+      transform: scale(0.93);
+      transition: transform 0.08s ease;
+    }
+
+    /* Overlay de transição entre páginas */
+    .page-transition {
+      position: fixed;
+      inset: 0;
+      background: #f8f9fa;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      opacity: 0;
+      transition: opacity 0.12s ease;
+      pointer-events: none;
+    }
+    .page-transition.active { opacity: 1; pointer-events: all; }
+    .pt-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(0, 102, 204, 0.15);
+      border-top-color: #0066cc;
+      border-radius: 50%;
+      animation: pt-spin 0.65s linear infinite;
+    }
+    .pt-label {
+      font-size: 13px;
+      color: #999;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    @keyframes pt-spin { to { transform: rotate(360deg); } }
+
+    /* Skeleton loader */
+    @keyframes sk-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .sk-base {
+      background: linear-gradient(90deg, #eeeeee 25%, #e2e2e2 50%, #eeeeee 75%);
+      background-size: 200% 100%;
+      animation: sk-shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    .loading-skeleton { padding: 8px 0; }
+    .sk-row {
+      display: flex;
+      gap: 12px;
+      padding: 16px 16px;
+      border-bottom: 1px solid #f2f2f2;
+      align-items: center;
+    }
+    .sk-row:last-child { border-bottom: none; }
+    .sk-name  { height: 13px; flex: 2; }
+    .sk-mid   { height: 13px; flex: 1; }
+    .sk-badge { height: 22px; width: 56px; border-radius: 20px; flex-shrink: 0; }
+  `;
+  document.head.appendChild(style);
+}
+
+// ===== NAVEGAÇÃO COM FEEDBACK VISUAL =====
+function navigateTo(url) {
+  if (window._navigating) return;
+  window._navigating = true;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'page-transition';
+  overlay.innerHTML = `
+    <div class="pt-spinner"></div>
+    <span class="pt-label">Carregando...</span>
+  `;
+  document.body.appendChild(overlay);
+
+  requestAnimationFrame(() => overlay.classList.add('active'));
+  setTimeout(() => { window.location.href = url; }, 200);
+}
+
+// Intercepta cliques nos itens de navegação para mostrar transição
+document.addEventListener('click', (e) => {
+  const navLink = e.target.closest('.nav-item[href], .logo-link[href]');
+  if (navLink && navLink.href && !navLink.href.includes('javascript')) {
+    e.preventDefault();
+    navigateTo(navLink.href);
+  }
+});
+
+// Injetar estilos imediatamente ao carregar o script
+injectGlobalStyles();
 
 // ===== EXPORT =====
 console.log('Utils Funcionário carregado');
