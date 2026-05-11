@@ -151,7 +151,21 @@
     .ob-purple{background:var(--p100);color:var(--p700)}
 
     /* ── JORNADA ── */
-    .schedule-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .schedule-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+    .jornada-calc{font-size:12px;color:var(--teal700);font-weight:600;margin-top:6px;min-height:18px}
+
+    /* ── JORNADA INDIVIDUAL (import) ── */
+    .import-item{display:flex;flex-direction:column}
+    .import-item > .import-row{border-radius:12px}
+    .import-item.open > .import-row{border-radius:12px 12px 0 0;border-bottom-color:var(--teal200)}
+    .ir-jornada-section{border:1px solid var(--teal200);border-top:none;border-radius:0 0 12px 12px;background:var(--teal50);padding:8px 14px 10px}
+    .ir-jornada-trigger{font-size:12px;font-weight:600;color:var(--teal700);cursor:pointer;display:flex;align-items:center;gap:6px;padding:2px 0}
+    .ir-jornada-trigger i.chev{margin-left:auto;font-size:10px;transition:transform .2s}
+    .ir-jornada-form{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    .ir-jornada-form.open{display:grid}
+    .ij-field label{font-size:11px;font-weight:600;color:var(--gray600);display:block;margin-bottom:4px}
+    .ij-field input{width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--gray300);font-size:13px;font-family:inherit;box-sizing:border-box}
+    .ij-hint{font-size:11px;color:var(--gray400);margin-top:6px}
 
     /* ── CANAL FIXO ── */
     .canal-box{background:var(--teal50);border:1px solid var(--teal200);border-radius:16px;padding:18px 20px;margin-bottom:24px;display:flex;gap:16px;align-items:flex-start}
@@ -468,18 +482,23 @@
       <div class="schedule-grid">
         <div class="field" style="margin-bottom:0">
           <label>Entrada</label>
-          <input type="time" id="jornadaEntrada" value="08:00">
+          <input type="time" id="jornadaEntrada" value="08:00" oninput="calcJornadaHoras()">
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Saída</label>
-          <input type="time" id="jornadaSaida" value="17:00">
+          <input type="time" id="jornadaSaida" value="17:00" oninput="calcJornadaHoras()">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Intervalo <span>(min)</span></label>
+          <input type="number" id="intervalo" value="60" min="0" max="180" oninput="calcJornadaHoras()">
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Tolerância <span>(min)</span></label>
           <input type="number" id="tolerancia" value="10" min="0" max="60">
         </div>
       </div>
-      <div class="field-hint" style="margin-top:8px">A tolerância define quantos minutos de atraso não geram desconto. Funcionários com jornada diferente podem ter horários individuais.</div>
+      <div id="jornadaCalc" class="jornada-calc">⏱ Carga horária efetiva: 8h/dia</div>
+      <div class="field-hint">A tolerância define quantos minutos de atraso não geram desconto. Cada funcionário pode ter horários individuais configurados no passo seguinte.</div>
 
       <hr class="divider">
 
@@ -596,6 +615,28 @@
 <script>
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
+
+// ─── Cálculo ao vivo da carga horária ────────────────────────────────────────
+function calcJornadaHoras() {
+  const ent = document.getElementById('jornadaEntrada').value;
+  const sai = document.getElementById('jornadaSaida').value;
+  const inv = parseInt(document.getElementById('intervalo').value) || 0;
+  const el  = document.getElementById('jornadaCalc');
+  if (!el) return;
+  if (!ent || !sai) { el.textContent = ''; return; }
+  const [eh, em] = ent.split(':').map(Number);
+  const [sh, sm] = sai.split(':').map(Number);
+  const totalMin = (sh * 60 + sm) - (eh * 60 + em) - inv;
+  if (totalMin <= 0) {
+    el.style.color = '#ef4444';
+    el.textContent = '⚠️ Jornada inválida — verifique os horários e o intervalo';
+    return;
+  }
+  el.style.color = 'var(--teal700)';
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  el.textContent = `⏱ Carga horária efetiva: ${h}h${m > 0 ? m + 'min' : ''}/dia`;
+}
 
 // ─── Mapbox ───────────────────────────────────────────────────────────────────
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZWR3YXJkaWNhcm8iLCJhIjoiY21wMG41eDYyMDBvNjJyb3A1YXNjMDIwYyJ9.4yAPg_a90_9v3MBuFU71qQ';
@@ -848,32 +889,57 @@ async function carregarImportaveis() {
   }
 }
 
+let jornadasMap = {}; // { [id]: { jornadaEntrada, cargaHorariaDia } }
+
+function buildImportRow(l, i, cor, tipo) {
+  const isSel = !!importadosSel.find(x => x.id === l.id);
+  const jm = jornadasMap[l.id] || {};
+  const isOpen = isSel;
+  const badge = tipo === 'lavador'
+    ? (l.jaImportado ? '<span class="ir-badge" style="background:var(--green-bg);color:var(--green)">Já importado</span>' : '<span class="ir-badge">Lavador</span>')
+    : '<span class="ir-badge" style="background:var(--p100);color:var(--p700)">Usuário</span>';
+  const role = tipo === 'lavador' ? (l.telefone || 'Lavador') : l.email;
+  const nome = l.nome.replace(/'/g, "\\'");
+  const contato = (tipo === 'lavador' ? l.telefone : l.email) || '';
+  return `
+    <div class="import-item${isOpen ? ' open' : ''}" id="ii-${l.id}">
+      <div class="import-row${isSel ? ' checked' : ''}${l.jaImportado ? ' disabled' : ''}"
+           onclick="toggleImport('${l.id}','${nome}','${contato}','${tipo}')">
+        <div class="ir-check"><i class="fa fa-check"></i></div>
+        <div class="ir-avatar" style="background:${cor}">${l.nome.charAt(0).toUpperCase()}</div>
+        <div class="ir-info">
+          <div class="ir-name">${l.nome}</div>
+          <div class="ir-role">${role}</div>
+        </div>
+        ${badge}
+      </div>
+      <div class="ir-jornada-section" id="ijs-${l.id}" ${isOpen ? '' : 'style="display:none"'}>
+        <div class="ir-jornada-trigger" onclick="toggleJornadaForm('${l.id}')">
+          <i class="fa fa-clock" style="font-size:11px"></i> Jornada individual <small style="color:var(--gray400);font-weight:400">(opcional)</small>
+          <i class="fa fa-chevron-down chev" id="ijchev-${l.id}"></i>
+        </div>
+        <div class="ir-jornada-form" id="ijform-${l.id}">
+          <div class="ij-field">
+            <label>Entrada</label>
+            <input type="time" value="${jm.jornadaEntrada || ''}" placeholder="Padrão empresa"
+                   oninput="atualizarJornada('${l.id}','jornadaEntrada',this.value)">
+          </div>
+          <div class="ij-field">
+            <label>Horas/dia</label>
+            <input type="number" min="1" max="24" step="0.5" value="${jm.cargaHorariaDia || ''}" placeholder="Padrão empresa"
+                   oninput="atualizarJornada('${l.id}','cargaHorariaDia',parseFloat(this.value)||null)">
+          </div>
+          <div class="ij-hint" style="grid-column:1/-1">Deixe em branco para usar o padrão da empresa.</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderImportList(lavadores, subaccounts) {
   const cores = ['#0d9488','#7c3aed','#4f46e5','#e11d48','#ea580c','#0891b2','#059669','#d97706'];
   const cor = i => cores[i % cores.length];
-  const rowsLav = lavadores.map((l, i) => `
-    <div class="import-row ${importadosSel.find(x => x.id === l.id) ? 'checked' : ''} ${l.jaImportado ? 'disabled' : ''}"
-         onclick="toggleImport('${l.id}','${l.nome.replace(/'/g,"\\'")}','${l.telefone||''}','lavador')">
-      <div class="ir-check"><i class="fa fa-check"></i></div>
-      <div class="ir-avatar" style="background:${cor(i)}">${l.nome.charAt(0).toUpperCase()}</div>
-      <div class="ir-info">
-        <div class="ir-name">${l.nome}</div>
-        <div class="ir-role">${l.telefone || 'Lavador'}</div>
-      </div>
-      ${l.jaImportado ? '<span class="ir-badge" style="background:var(--green-bg);color:var(--green)">Já importado</span>' : '<span class="ir-badge">Lavador</span>'}
-    </div>`).join('');
-
-  const rowsSub = subaccounts.map((s, i) => `
-    <div class="import-row ${importadosSel.find(x => x.id === s.id) ? 'checked' : ''}"
-         onclick="toggleImport('${s.id}','${s.nome.replace(/'/g,"\\'")}','${s.email||''}','subaccount')">
-      <div class="ir-check"><i class="fa fa-check"></i></div>
-      <div class="ir-avatar" style="background:${cor(i+lavadores.length)}">${s.nome.charAt(0).toUpperCase()}</div>
-      <div class="ir-info">
-        <div class="ir-name">${s.nome}</div>
-        <div class="ir-role">${s.email}</div>
-      </div>
-      <span class="ir-badge" style="background:var(--p100);color:var(--p700)">Usuário</span>
-    </div>`).join('');
+  const rowsLav = lavadores.map((l, i) => buildImportRow(l, i, cor(i), 'lavador')).join('');
+  const rowsSub = subaccounts.map((s, i) => buildImportRow(s, i + lavadores.length, cor(i + lavadores.length), 'subaccount')).join('');
 
   const total = lavadores.length + subaccounts.length;
   document.getElementById('importList').innerHTML = `
@@ -891,20 +957,49 @@ function renderImportList(lavadores, subaccounts) {
     <button class="btn-add-emp" onclick="mudarSource('manual')"><i class="fa fa-plus"></i> Adicionar funcionário não listado</button>`;
 }
 
+function atualizarJornada(id, campo, valor) {
+  if (!jornadasMap[id]) jornadasMap[id] = {};
+  jornadasMap[id][campo] = valor || null;
+}
+
+function toggleJornadaForm(id) {
+  const form = document.getElementById(`ijform-${id}`);
+  const chev = document.getElementById(`ijchev-${id}`);
+  if (!form) return;
+  const isOpen = form.classList.contains('open');
+  form.classList.toggle('open', !isOpen);
+  if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
 function toggleImport(id, nome, contato, tipo) {
   const idx = importadosSel.findIndex(x => x.id === id);
-  if (idx >= 0) importadosSel.splice(idx, 1);
-  else importadosSel.push({ id, nome, contato, tipo });
-  // Rerender mantendo lavadores em memória
-  const lavSub = { lavadores: lavadoresDisp, subaccounts: [] };
-  carregarImportaveis(); // já tem cache, rerender
+  const itemEl = document.getElementById(`ii-${id}`);
+  const rowEl = itemEl?.querySelector('.import-row');
+  const jornadaSection = document.getElementById(`ijs-${id}`);
+  if (idx >= 0) {
+    importadosSel.splice(idx, 1);
+    rowEl?.classList.remove('checked');
+    itemEl?.classList.remove('open');
+    if (jornadaSection) jornadaSection.style.display = 'none';
+  } else {
+    importadosSel.push({ id, nome, contato, tipo });
+    rowEl?.classList.add('checked');
+    itemEl?.classList.add('open');
+    if (jornadaSection) jornadaSection.style.display = '';
+  }
 }
 
 function marcarTodos(arr) {
   arr.forEach(l => {
-    if (!importadosSel.find(x => x.id === l.id)) importadosSel.push(l);
+    if (!importadosSel.find(x => x.id === l.id)) {
+      importadosSel.push({ id: l.id, nome: l.nome, contato: l.telefone || '', tipo: 'lavador' });
+      const itemEl = document.getElementById(`ii-${l.id}`);
+      itemEl?.querySelector('.import-row')?.classList.add('checked');
+      itemEl?.classList.add('open');
+      const js = document.getElementById(`ijs-${l.id}`);
+      if (js) js.style.display = '';
+    }
   });
-  carregarImportaveis();
 }
 
 function mudarSource(src) {
@@ -932,8 +1027,21 @@ function addManualForm() {
       <div class="field"><label>WhatsApp <span>(opcional)</span></label><input type="text" placeholder="(92) 9 0000-0000" class="mf-tel"></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Carga horária <span>(h/semana)</span></label><input type="number" value="44" min="1" max="60" class="mf-horas"></div>
       <div class="field"><label>Salário base <span>(opcional)</span></label><input type="text" placeholder="R$ 0,00" class="mf-salario"></div>
+    </div>
+    <div style="margin-top:4px">
+      <div class="ir-jornada-trigger" style="color:var(--teal700);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 0"
+           onclick="(function(btn){const f=btn.nextElementSibling;const open=f.style.display!=='none';f.style.display=open?'none':'';btn.querySelector('.mfjchev').style.transform=open?'':'rotate(180deg)'})(this)">
+        <i class="fa fa-clock" style="font-size:11px"></i> Jornada individual <small style="color:var(--gray400);font-weight:400">(opcional)</small>
+        <i class="fa fa-chevron-down mfjchev" style="margin-left:auto;font-size:10px;transition:transform .2s"></i>
+      </div>
+      <div style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
+          <div class="ij-field"><label>Entrada</label><input type="time" class="mf-jentrada" placeholder="Padrão empresa"></div>
+          <div class="ij-field"><label>Horas/dia</label><input type="number" min="1" max="24" step="0.5" class="mf-jhoras" placeholder="Padrão empresa"></div>
+        </div>
+        <div class="ij-hint">Deixe em branco para usar o padrão da empresa.</div>
+      </div>
     </div>`;
   document.getElementById('manualForms').appendChild(div);
 }
@@ -990,7 +1098,8 @@ function renderResumo() {
         <div class="sum-row"><span class="sum-key">Canal principal</span><span class="sum-val">🔗 Link pessoal</span></div>
         <div class="sum-row"><span class="sum-key">Verificações ativas</span><span class="sum-val">${getMetodos()}</span></div>
         <div class="sum-row"><span class="sum-key">Jornada padrão</span><span class="sum-val">${document.getElementById('jornadaEntrada').value} – ${document.getElementById('jornadaSaida').value}</span></div>
-        <div class="sum-row"><span class="sum-key">Tolerância</span><span class="sum-val">${document.getElementById('tolerancia').value} minutos</span></div>
+        <div class="sum-row"><span class="sum-key">Intervalo/almoço</span><span class="sum-val">${document.getElementById('intervalo').value} min</span></div>
+        <div class="sum-row"><span class="sum-key">Tolerância</span><span class="sum-val">${document.getElementById('tolerancia').value} min</span></div>
         <div class="sum-row"><span class="sum-key">Encerramento</span><span class="sum-val">${getEncerramento()}</span></div>
         <div class="sum-row"><span class="sum-key">Autenticação</span><span class="sum-val">${getAuth()}</span></div>
       </div>
@@ -1028,8 +1137,9 @@ async function ativar() {
         cpf: d.querySelector('.mf-cpf')?.value,
         cargo: d.querySelector('.mf-cargo')?.value,
         telefone: d.querySelector('.mf-tel')?.value,
-        cargaHoraria: d.querySelector('.mf-horas')?.value,
         salarioBase: d.querySelector('.mf-salario')?.value?.replace(/[^\d,.]/g, '').replace(',', '.'),
+        jornadaEntrada: d.querySelector('.mf-jentrada')?.value || null,
+        cargaHorariaDia: parseFloat(d.querySelector('.mf-jhoras')?.value) || null,
       }))
       .filter(f => f.nome);
 
@@ -1050,11 +1160,14 @@ async function ativar() {
       metodosVerificacao: metodosAtivos,
       jornadaEntrada: document.getElementById('jornadaEntrada').value,
       jornadaSaida: document.getElementById('jornadaSaida').value,
+      intervaloMin: parseInt(document.getElementById('intervalo').value) || 60,
       toleranciaMin: parseInt(document.getElementById('tolerancia').value),
       modoEncerramento: getEncerramento() === 'Automático' ? 'AUTOMATICO' : 'FUNCIONARIO',
       modoAutenticacao: getAuth().includes('PIN') ? 'PIN' : 'SEM_PIN',
       importados: importadosSel.filter(x => x.tipo === 'lavador').map(x => ({
-        lavadorId: x.id, nome: x.nome, telefone: x.contato
+        lavadorId: x.id, nome: x.nome, telefone: x.contato,
+        jornadaEntrada: jornadasMap[x.id]?.jornadaEntrada || null,
+        cargaHorariaDia: jornadasMap[x.id]?.cargaHorariaDia || null,
       })),
       novosFuncionarios,
     });

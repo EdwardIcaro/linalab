@@ -189,6 +189,7 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
     metodosVerificacao = ['GPS'],
     jornadaEntrada = '08:00',
     jornadaSaida = '17:00',
+    intervaloMin = 60,   // pausa/almoço em minutos
     toleranciaMin = 10,
     modoEncerramento = 'AUTOMATICO', // AUTOMATICO | FUNCIONARIO
     modoAutenticacao = 'PIN', // PIN | SEM_PIN
@@ -211,7 +212,7 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
             modoIntegracao, nomeEmpresa, cnpj, setor,
             endereco, lat, lng, raioGps, nivelGps,
             metodosVerificacao, jornadaEntrada, jornadaSaida,
-            toleranciaMin, modoEncerramento, modoAutenticacao,
+            intervaloMin, toleranciaMin, modoEncerramento, modoAutenticacao,
           }),
         },
         update: {
@@ -220,7 +221,7 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
             modoIntegracao, nomeEmpresa, cnpj, setor,
             endereco, lat, lng, raioGps, nivelGps,
             metodosVerificacao, jornadaEntrada, jornadaSaida,
-            toleranciaMin, modoEncerramento, modoAutenticacao,
+            intervaloMin, toleranciaMin, modoEncerramento, modoAutenticacao,
           }),
         },
       });
@@ -238,6 +239,8 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
               cargo: l.cargo ?? null,
               telefone: l.telefone ?? null,
               lavadorId: l.lavadorId,
+              jornadaEntrada: l.jornadaEntrada ?? null,
+              cargaHorariaDia: l.cargaHorariaDia ? parseFloat(l.cargaHorariaDia) : null,
               status: 'ATIVO',
               updatedAt: new Date(),
             },
@@ -254,8 +257,9 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
             cpf: f.cpf ?? null,
             cargo: f.cargo ?? null,
             salarioBase: f.salarioBase ? parseFloat(f.salarioBase) : null,
-            cargaHoraria: f.cargaHoraria ? parseInt(f.cargaHoraria) : null,
             telefone: f.telefone ?? null,
+            jornadaEntrada: f.jornadaEntrada ?? null,
+            cargaHorariaDia: f.cargaHorariaDia ? parseFloat(f.cargaHorariaDia) : null,
             status: 'ATIVO',
             updatedAt: new Date(),
           },
