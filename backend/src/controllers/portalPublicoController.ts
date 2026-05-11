@@ -362,6 +362,192 @@ export const getExtratoPortal = async (req: Request, res: Response) => {
   }
 };
 
+// ─── helpers ponto ───────────────────────────────────────────────────────────
+
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function horaFormatadaBRT(d: Date): string {
+  return new Date(d).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  });
+}
+
+function calcMinHoje(marcacoes: Array<{ tipo: string; timestamp: Date }>, now: Date): number {
+  let total = 0; let i = 0;
+  while (i < marcacoes.length) {
+    if (marcacoes[i].tipo === 'ENTRADA') {
+      let j = i + 1;
+      while (j < marcacoes.length && marcacoes[j].tipo !== 'SAIDA') j++;
+      if (j < marcacoes.length) {
+        total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i = j + 1;
+      } else {
+        total += Math.round((now.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i++;
+      }
+    } else { i++; }
+  }
+  return total;
+}
+
+// ─── GET /api/p/me/ponto/hoje ─────────────────────────────────────────────────
+export const getPontoHoje = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string;
+  const empresaId = (req as any).empresaId as string;
+
+  try {
+    const [funcionario, sistema] = await Promise.all([
+      prisma.dpFuncionario.findFirst({
+        where: { empresaId, lavadorId, status: 'ATIVO' },
+        select: { id: true, nome: true, cargo: true, cargaHorariaDia: true },
+      }),
+      prisma.empresaSistema.findFirst({
+        where: { empresaId, sistema: 'data-point', ativo: true },
+      }),
+    ]);
+
+    if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
+    if (!sistema) return res.status(404).json({ erro: 'Data Point não ativo' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const { start, end } = getTodayRangeBRT();
+    const now = new Date();
+
+    const marcacoes = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end } },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const cargaEsperadaMin = (funcionario.cargaHorariaDia ?? 8) * 60;
+    const jornadaSaida = cfg.jornadaSaida || '17:00';
+    const [jsH, jsM] = jornadaSaida.split(':').map(Number);
+    const jornadaSaidaMin = (jsH || 0) * 60 + (jsM || 0);
+    const nowBrtMin = Math.floor(((now.getTime() - 3 * 3600000) % 86400000) / 60000);
+    const minutosHoje = calcMinHoje(marcacoes, now);
+
+    let estado = 'AUSENTE';
+    if (marcacoes.length > 0) {
+      const ultima = marcacoes[marcacoes.length - 1];
+      if (ultima.tipo === 'ENTRADA') {
+        estado = 'DENTRO';
+      } else {
+        estado = (minutosHoje >= cargaEsperadaMin - 30 || nowBrtMin >= jornadaSaidaMin)
+          ? 'ENCERROU' : 'FORA_TEMP';
+      }
+    }
+
+    res.json({
+      funcionario: { id: funcionario.id, nome: funcionario.nome, cargo: funcionario.cargo },
+      config: {
+        jornadaEntrada: cfg.jornadaEntrada || '08:00',
+        jornadaSaida,
+        raioGps: cfg.raioGps || 80,
+        lat: cfg.lat ?? null,
+        lng: cfg.lng ?? null,
+      },
+      estado,
+      minutosHoje,
+      cargaEsperadaMin,
+      proximoTipo: (!marcacoes.length || marcacoes[marcacoes.length - 1].tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA',
+      marcacoes: marcacoes.map(m => ({
+        id: m.id,
+        tipo: m.tipo,
+        horaFormatada: horaFormatadaBRT(m.timestamp),
+        gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
+        gpsNegado: m.gpsNegado,
+      })),
+    });
+  } catch (error) {
+    console.error('[portal] pontoHoje:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/p/me/ponto ─────────────────────────────────────────────────────
+export const registrarPonto = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string;
+  const empresaId = (req as any).empresaId as string;
+  const { lat, lng, gpsPrecisao, gpsNegado = false } = req.body;
+
+  try {
+    const [funcionario, sistema] = await Promise.all([
+      prisma.dpFuncionario.findFirst({
+        where: { empresaId, lavadorId, status: 'ATIVO' },
+      }),
+      prisma.empresaSistema.findFirst({
+        where: { empresaId, sistema: 'data-point', ativo: true },
+      }),
+    ]);
+
+    if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point.' });
+    if (!sistema) return res.status(404).json({ erro: 'Data Point não ativo' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const { start, end } = getTodayRangeBRT();
+
+    const marcacoesHoje = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end } },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const lastMarcacao = marcacoesHoje[marcacoesHoje.length - 1];
+    const tipo = (!lastMarcacao || lastMarcacao.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
+
+    // Cooldown: 5 min entre marcações do mesmo tipo
+    if (lastMarcacao && lastMarcacao.tipo === tipo) {
+      const diffMin = (Date.now() - new Date(lastMarcacao.timestamp).getTime()) / 60000;
+      if (diffMin < 5) {
+        const wait = Math.ceil(5 - diffMin);
+        return res.status(429).json({ erro: `Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} para bater ponto novamente.` });
+      }
+    }
+
+    // GPS: flag se fora do raio ou precisão suspeita
+    let gpsPrecisaoSuspeita = false;
+    const empLat = parseFloat(cfg.lat);
+    const empLng = parseFloat(cfg.lng);
+    const raioGps: number = cfg.raioGps || 80;
+
+    if (!gpsNegado && lat != null && lng != null && !isNaN(empLat) && !isNaN(empLng)) {
+      const dist = haversine(empLat, empLng, parseFloat(lat), parseFloat(lng));
+      if (dist > raioGps * 3) gpsPrecisaoSuspeita = true;
+    }
+    if (gpsPrecisao != null && gpsPrecisao < 4) gpsPrecisaoSuspeita = true;
+
+    const marcacao = await prisma.dpMarcacao.create({
+      data: {
+        empresaId,
+        funcionarioId: funcionario.id,
+        tipo,
+        canal: 'PWA',
+        lat: lat != null ? parseFloat(lat) : null,
+        lng: lng != null ? parseFloat(lng) : null,
+        gpsPrecisao: gpsPrecisao != null ? parseFloat(gpsPrecisao) : null,
+        gpsPrecisaoSuspeita,
+        gpsNegado: Boolean(gpsNegado),
+        ip: req.ip || null,
+      },
+    });
+
+    res.json({
+      ok: true,
+      tipo,
+      horaFormatada: horaFormatadaBRT(marcacao.timestamp),
+      gpsPrecisaoSuspeita,
+    });
+  } catch (error) {
+    console.error('[portal] registrarPonto:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
 // ─── legado (/api/public/*) ───────────────────────────────────────────────────
 
 export const getOrdensByLavadorPublic = async (req: Request, res: Response) => {

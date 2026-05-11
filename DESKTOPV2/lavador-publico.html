@@ -532,6 +532,76 @@
 
     .hidden { display: none !important; }
 
+    /* ===== PONTO ===== */
+    --teal-d: #0f766e; --teal-l: #ccfbf1; --teal-bg: #f0fdfa;
+    .ico-ponto { background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff; }
+
+    .ponto-status-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 20px;
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 12px; box-shadow: var(--shadow-sm);
+    }
+    .ponto-status-ico {
+      width: 52px; height: 52px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .psi-dentro   { background: #ccfbf1; color: #0f766e; }
+    .psi-fora     { background: var(--amber-l); color: var(--amber); }
+    .psi-encerrou { background: var(--green-l); color: var(--green-d); }
+    .psi-ausente  { background: #f1f5f9; color: var(--muted); }
+    .ponto-status-info { flex: 1; }
+    .psi-label  { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 2px; }
+    .psi-estado { font-size: 18px; font-weight: 800; color: var(--text); }
+    .psi-horas  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    .ponto-timeline {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 16px;
+      margin-bottom: 12px; box-shadow: var(--shadow-sm);
+    }
+    .pt-titulo { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 12px; }
+    .pt-chips  { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .pt-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .pt-chip-inner {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 700;
+    }
+    .pt-chip-inner.entrada     { background: #ccfbf1; color: #0f766e; }
+    .pt-chip-inner.saida       { background: var(--amber-l); color: var(--amber); }
+    .pt-chip-inner.saida-final { background: var(--green-l); color: var(--green-d); }
+    .pt-chip-inner.pending     { background: #f1f5f9; color: var(--faint); border: 1px dashed var(--border); }
+    .pt-chip-label { font-size: 9px; font-weight: 700; color: var(--faint); text-transform: uppercase; }
+    .pt-arrow { color: var(--border); font-size: 10px; margin-bottom: 12px; }
+    .pt-vazia { font-size: 13px; color: var(--faint); text-align: center; padding: 8px 0; }
+
+    .ponto-gps-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; font-size: 13px;
+    }
+    .pgc-ok   { color: #0f766e; }
+    .pgc-warn { color: var(--amber); }
+    .pgc-off  { color: var(--faint); }
+    .pgc-text { flex: 1; color: var(--muted); }
+
+    .btn-ponto {
+      width: 100%; padding: 18px; border-radius: 16px; border: none;
+      font-size: 17px; font-weight: 800; font-family: inherit;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 10px; transition: all .2s; margin-bottom: 8px;
+    }
+    .btn-ponto:active { transform: scale(.97); }
+    .btn-ponto:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-ponto.entrada { background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff; box-shadow: 0 6px 20px rgba(13,148,136,.3); }
+    .btn-ponto.saida   { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 6px 20px rgba(245,158,11,.3); }
+    .btn-ponto-info    { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 16px; }
+
     @media (min-width: 600px) {
       .modal-overlay { align-items: center; }
       .modal-box { border-radius: 24px; max-height: 88vh; }
@@ -636,6 +706,10 @@
       <div class="nav-ico ico-periodo"><i class="fas fa-filter"></i></div>
       <span class="nav-label">Período</span>
     </button>
+    <button class="nav-btn hidden" id="navPontoBtn" onclick="setSecao('ponto')">
+      <div class="nav-ico ico-ponto"><i class="fas fa-fingerprint"></i></div>
+      <span class="nav-label">Ponto</span>
+    </button>
   </div>
 
   <!-- SEÇÃO HOJE -->
@@ -703,6 +777,31 @@
     </div>
 
     <div id="periodoResult"></div>
+  </div>
+
+  <!-- SEÇÃO PONTO -->
+  <div id="sec-ponto" class="section">
+    <div class="sec-title"><i class="fas fa-fingerprint" style="color:#0f766e"></i> Bater Ponto</div>
+    <div id="pontoStatusCard" class="ponto-status-card">
+      <div class="ponto-status-ico psi-ausente"><i class="fas fa-clock"></i></div>
+      <div class="ponto-status-info">
+        <div class="psi-label">Status de hoje</div>
+        <div class="psi-estado">Carregando...</div>
+        <div class="psi-horas"></div>
+      </div>
+    </div>
+    <div class="ponto-timeline" id="pontoTimeline">
+      <div class="pt-titulo">Batidas de hoje</div>
+      <div class="pt-chips" id="pontoChips"><span class="pt-vazia">Nenhuma batida registrada</span></div>
+    </div>
+    <div class="ponto-gps-card" id="pontoGpsCard">
+      <i class="fas fa-map-marker-alt pgc-off"></i>
+      <span class="pgc-text">Localização não verificada ainda</span>
+    </div>
+    <button class="btn-ponto entrada" id="pontoBtnAcao" onclick="iniciarRegistroPonto()">
+      <i class="fas fa-arrow-right"></i> Registrar Entrada
+    </button>
+    <div class="btn-ponto-info" id="pontoBtnInfo">Toque para registrar sua entrada</div>
   </div>
 
 </div><!-- /page -->
@@ -942,6 +1041,21 @@ function renderUI() {
   const trintaDias = toLocaleDateISOString(new Date(Date.now() - 29*24*3600*1000));
   document.getElementById('periodoFim').value = hoje;
   document.getElementById('periodoInicio').value = trintaDias;
+
+  // Ponto: mostra nav se Data Point ativo
+  if (lavadorData.dataPointAtivo) {
+    document.getElementById('navPontoBtn').classList.remove('hidden');
+  }
+
+  // Abre seção pelo query param ?section=ponto
+  const secParam = new URLSearchParams(window.location.search).get('section');
+  if (secParam === 'ponto' && lavadorData.dataPointAtivo) {
+    setTimeout(() => {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('navPontoBtn').classList.add('active');
+      setSecao('ponto');
+    }, 0);
+  }
 }
 
 function renderHeroStats() {
@@ -1074,6 +1188,7 @@ function setSecao(id) {
   if (id === 'stats') renderEstatisticas(statPeriodDays);
   if (id === 'pagamentos') renderPagamentos();
   if (id === 'adiantamentos') renderAdiantamentos();
+  if (id === 'ponto') loadPontoHoje();
 }
 
 // ===================== CALENDÁRIO =====================
@@ -1557,6 +1672,177 @@ function openPaymentModal(fechamento) {
 function closePaymentModal() {
   document.getElementById('paymentModal').classList.remove('active');
   document.body.style.overflow = '';
+}
+
+// ===================== PONTO =====================
+let pontoData = null;
+
+async function loadPontoHoje() {
+  const portalToken = sessionStorage.getItem('portal_session_token');
+  if (!portalToken) return;
+  try {
+    const r = await fetch('/api/p/me/ponto/hoje', {
+      headers: { Authorization: `Bearer ${portalToken}` },
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      document.getElementById('pontoStatusCard').innerHTML =
+        `<div style="padding:8px;font-size:13px;color:var(--red)">${err.erro || 'Erro ao carregar ponto'}</div>`;
+      document.getElementById('pontoBtnAcao').disabled = true;
+      return;
+    }
+    pontoData = await r.json();
+    renderPontoSection();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function renderPontoSection() {
+  if (!pontoData) return;
+  const { estado, minutosHoje, cargaEsperadaMin, marcacoes, proximoTipo, config } = pontoData;
+
+  // Status card
+  const estadoMap = {
+    DENTRO:    { ico: 'fa-user-check',  cls: 'psi-dentro',   label: 'Dentro do trabalho' },
+    FORA_TEMP: { ico: 'fa-pause-circle',cls: 'psi-fora',     label: 'Fora temporariamente' },
+    ENCERROU:  { ico: 'fa-check-circle',cls: 'psi-encerrou', label: 'Jornada encerrada' },
+    AUSENTE:   { ico: 'fa-clock',       cls: 'psi-ausente',  label: 'Ainda não bateu ponto' },
+  };
+  const e = estadoMap[estado] || estadoMap.AUSENTE;
+  const h = Math.floor(minutosHoje / 60), m = minutosHoje % 60;
+  const horasStr = minutosHoje > 0 ? `${h}h ${m}min trabalhadas` : 'Nenhuma hora registrada';
+  const cargaH = Math.floor(cargaEsperadaMin / 60);
+
+  document.getElementById('pontoStatusCard').innerHTML = `
+    <div class="ponto-status-ico ${e.cls}"><i class="fas ${e.ico}"></i></div>
+    <div class="ponto-status-info">
+      <div class="psi-label">Status de hoje</div>
+      <div class="psi-estado">${e.label}</div>
+      <div class="psi-horas">${horasStr} · meta ${cargaH}h</div>
+    </div>`;
+
+  // Timeline de batidas
+  const chips = document.getElementById('pontoChips');
+  if (!marcacoes.length) {
+    chips.innerHTML = '<span class="pt-vazia">Nenhuma batida registrada hoje</span>';
+  } else {
+    let html = '';
+    marcacoes.forEach((m, i) => {
+      const isEntrada = m.tipo === 'ENTRADA';
+      const isUltima = i === marcacoes.length - 1;
+      let cls = isEntrada ? 'entrada' : 'saida';
+      if (!isEntrada && isUltima && estado === 'ENCERROU') cls = 'saida-final';
+      if (i > 0) html += '<div class="pt-arrow"><i class="fa fa-chevron-right"></i></div>';
+      html += `<div class="pt-chip">
+        <div class="pt-chip-inner ${cls}">
+          <i class="fa ${isEntrada ? 'fa-arrow-right' : 'fa-arrow-left'}"></i> ${m.horaFormatada}
+        </div>
+        <span class="pt-chip-label">${isEntrada ? 'Entrada' : 'Saída'}</span>
+      </div>`;
+    });
+    // Chip pendente
+    if (estado === 'DENTRO' || estado === 'FORA_TEMP') {
+      const nextIsEntrada = proximoTipo === 'ENTRADA';
+      html += `<div class="pt-arrow"><i class="fa fa-chevron-right"></i></div>
+        <div class="pt-chip">
+          <div class="pt-chip-inner pending">
+            <i class="fa ${nextIsEntrada ? 'fa-arrow-right' : 'fa-arrow-left'}"></i> —
+          </div>
+          <span class="pt-chip-label">${nextIsEntrada ? 'Entrada' : 'Saída'}</span>
+        </div>`;
+    }
+    chips.innerHTML = html;
+  }
+
+  // Botão de ação
+  const btn = document.getElementById('pontoBtnAcao');
+  const info = document.getElementById('pontoBtnInfo');
+  if (estado === 'ENCERROU') {
+    btn.className = 'btn-ponto entrada';
+    btn.innerHTML = '<i class="fas fa-fingerprint"></i> Registrar nova entrada';
+    info.textContent = 'Jornada encerrada — registre entrada se retornar';
+  } else if (proximoTipo === 'ENTRADA') {
+    btn.className = 'btn-ponto entrada';
+    btn.innerHTML = '<i class="fas fa-arrow-right"></i> Registrar Entrada';
+    info.textContent = `Jornada inicia às ${config.jornadaEntrada} · Toque para registrar`;
+  } else {
+    btn.className = 'btn-ponto saida';
+    btn.innerHTML = '<i class="fas fa-arrow-left"></i> Registrar Saída';
+    info.textContent = 'Toque para registrar sua saída';
+  }
+  btn.disabled = false;
+}
+
+async function iniciarRegistroPonto() {
+  const btn = document.getElementById('pontoBtnAcao');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Obtendo localização...';
+
+  const portalToken = sessionStorage.getItem('portal_session_token');
+  if (!portalToken) return;
+
+  // Tenta obter GPS
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true, timeout: 8000, maximumAge: 0,
+      });
+    });
+    await enviarPonto(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, false, portalToken);
+  } catch (gpsErr) {
+    // GPS negado ou indisponível — registra sem localização
+    document.getElementById('pontoGpsCard').innerHTML = `
+      <i class="fas fa-map-marker-alt pgc-warn"></i>
+      <span class="pgc-text">Localização não disponível — ponto será registrado com flag</span>`;
+    await enviarPonto(null, null, null, true, portalToken);
+  }
+}
+
+async function enviarPonto(lat, lng, precisao, gpsNegado, token) {
+  const btn = document.getElementById('pontoBtnAcao');
+  try {
+    const r = await fetch('/api/p/me/ponto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ lat, lng, gpsPrecisao: precisao, gpsNegado }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      btn.disabled = false;
+      renderPontoSection();
+      alert(data.erro || 'Erro ao registrar ponto.');
+      return;
+    }
+
+    // Atualiza GPS card
+    const gpsCard = document.getElementById('pontoGpsCard');
+    if (gpsNegado) {
+      gpsCard.innerHTML = `<i class="fas fa-map-marker-alt pgc-warn"></i><span class="pgc-text">Registrado sem localização</span>`;
+    } else if (data.gpsPrecisaoSuspeita) {
+      gpsCard.innerHTML = `<i class="fas fa-map-marker-alt pgc-warn"></i><span class="pgc-text">Localização com precisão suspeita — registrada com flag</span>`;
+    } else {
+      gpsCard.innerHTML = `<i class="fas fa-map-marker-alt pgc-ok"></i><span class="pgc-text">Localização verificada</span>`;
+    }
+
+    // Feedback visual
+    const tipo = data.tipo === 'ENTRADA' ? 'Entrada' : 'Saída';
+    btn.innerHTML = `<i class="fas fa-check"></i> ${tipo} registrada às ${data.horaFormatada}`;
+    btn.style.background = 'var(--green-d)';
+    btn.style.boxShadow = '0 6px 20px rgba(5,150,105,.3)';
+
+    // Recarrega dados após 1.5s
+    setTimeout(async () => {
+      btn.style.background = '';
+      btn.style.boxShadow = '';
+      await loadPontoHoje();
+    }, 1500);
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    renderPontoSection();
+    alert('Erro de conexão ao registrar ponto.');
+  }
 }
 </script>
 </body>
