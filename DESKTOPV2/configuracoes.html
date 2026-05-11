@@ -826,15 +826,14 @@
                                         <strong x-text="token.lavador.nome"></strong>
                                     </td>
                                     <td>
-                                        <a
-                                            :href="`${window.location.origin}/lavador-publico.html?token=${token.token}`"
-                                            target="_blank"
-                                            class="link-like"
+                                        <button
+                                            @click="abrirLinkPortal(token.lavador.id)"
+                                            class="btn-sm btn-secondary"
                                             style="display: inline-flex; align-items: center; gap: 6px;"
                                         >
                                             <i class="fas fa-external-link-alt"></i>
                                             <span>Acessar Link</span>
-                                        </a>
+                                        </button>
                                     </td>
                                     <td>
                                         <select class="form-select form-select-sm" x-show="hasPermissionSafe('config_ver_tokens')"
@@ -848,7 +847,7 @@
                                     </td>
                                     <td class="actions-cell">
                                         <button
-                                            @click="copyTokenLink(token.token)"
+                                            @click="copyTokenLink(token.lavador.id)"
                                             class="btn-sm btn-secondary"
                                             title="Copiar Link"
                                         >
@@ -1829,14 +1828,24 @@
                     }
                 },
 
-                async copyTokenLink(token) {
+                async copyTokenLink(lavadorId) {
                     try {
-                        const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
+                        const response = await window.api.gerarLinkPermanente(lavadorId);
+                        const link = `${window.location.origin}/p/${response.token}`;
                         await navigator.clipboard.writeText(link);
-                        showToast('Link copiado para a área de transferência!', 'success');
+                        showToast('Link permanente copiado! (PIN protege o acesso)', 'success');
                     } catch (error) {
                         console.error('Erro ao copiar link:', error);
-                        showToast('Falha ao copiar o link.', 'error');
+                        showToast('Falha ao gerar o link.', 'error');
+                    }
+                },
+
+                async abrirLinkPortal(lavadorId) {
+                    try {
+                        const response = await window.api.gerarLinkPermanente(lavadorId);
+                        window.open(`${window.location.origin}/p/${response.token}`, '_blank');
+                    } catch (error) {
+                        showToast('Falha ao gerar o link.', 'error');
                     }
                 },
 
