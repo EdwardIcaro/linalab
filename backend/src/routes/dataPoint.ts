@@ -5,6 +5,7 @@ import {
   getImportaveis,
   salvarOnboarding,
   getStatusDp,
+  getDashboardDp,
 } from '../controllers/dataPointController';
 
 const router: Router = Router();
@@ -15,6 +16,7 @@ router.post('/contratar', contratarDp);
 
 // authMiddleware — rotas com empresa scoped
 router.get('/status',                  getStatusDp);
+router.get('/dashboard',               getDashboardDp);
 router.get('/onboarding/importaveis',  getImportaveis);
 router.post('/onboarding/salvar',      salvarOnboarding);
 

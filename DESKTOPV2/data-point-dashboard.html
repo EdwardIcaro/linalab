@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Point — Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="/api.js"></script>
+  <style>
+    :root {
+      --teal800: #064e3b; --teal700: #0f766e; --teal600: #0d9488;
+      --teal500: #14b8a6; --teal400: #2dd4bf; --teal200: #99f6e4;
+      --teal100: #ccfbf1; --teal50:  #f0fdfa;
+      --p800: #5b21b6; --p700: #6d28d9; --p600: #7c3aed;
+      --p500: #8b5cf6; --p100: #ede9fe; --p50: #f5f3ff;
+      --gray900: #111827; --gray800: #1f2937; --gray700: #374151;
+      --gray600: #4b5563; --gray500: #6b7280; --gray400: #9ca3af;
+      --gray300: #d1d5db; --gray200: #e5e7eb; --gray100: #f3f4f6;
+      --white: #ffffff;
+      --green: #059669; --green-bg: #d1fae5;
+      --amber: #d97706; --amber-bg: #fef3c7;
+      --red: #dc2626; --red-bg: #fee2e2;
+      --blue: #2563eb; --blue-bg: #dbeafe;
+    }
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(145deg, var(--teal800) 0%, var(--teal700) 30%, var(--p700) 70%, var(--p800) 100%);
+      color: var(--gray900); overflow-x: hidden; position: relative;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+      background-size: 48px 48px; pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(ellipse 60% 40% at 85% 5%, rgba(255,255,255,.1) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 35% at 5% 85%, rgba(91,33,182,.3) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,78,59,.92); backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      padding: 0 28px; display: flex; align-items: center; height: 58px;
+    }
+    .tb-brand { display: flex; align-items: center; gap: 10px; padding-right: 20px; border-right: 1px solid rgba(255,255,255,.14); }
+    .tb-logo {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(145deg, var(--p600), var(--p800));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 900; color: white;
+    }
+    .tb-lina { font-size: 15px; font-weight: 800; color: white; }
+    .tb-sys { display: flex; align-items: center; gap: 8px; margin-left: 20px; padding-right: 20px; border-right: 1px solid rgba(255,255,255,.14); }
+    .tb-sys-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(145deg, var(--teal600), var(--teal800));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; border: 1px solid rgba(255,255,255,.15);
+    }
+    .tb-sys-name { font-size: 14px; font-weight: 700; color: var(--teal200); }
+    .tb-company { margin-left: 20px; display: flex; align-items: center; gap: 7px; font-size: 13px; color: rgba(255,255,255,.65); }
+    .tb-company strong { color: rgba(255,255,255,.9); font-weight: 700; }
+    .tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .tb-date { font-size: 12px; color: rgba(255,255,255,.5); font-weight: 500; margin-right: 4px; }
+    .tb-icon-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.7); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; transition: all .18s; font-family: inherit;
+    }
+    .tb-icon-btn:hover { background: rgba(255,255,255,.15); color: white; }
+    .tb-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(145deg, var(--p500), var(--p800));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: white; cursor: pointer;
+    }
+
+    /* ── LOADER / ERROR ── */
+    .loader-wrap {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(6,78,59,.95);
+    }
+    .loader-spin {
+      width: 44px; height: 44px; border: 3px solid rgba(45,212,191,.3);
+      border-top-color: var(--teal400); border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { margin-top: 16px; font-size: 14px; color: var(--teal200); font-weight: 500; }
+    .hidden { display: none !important; }
+
+    /* ── LAYOUT ── */
+    .main {
+      padding: 28px 28px 60px; max-width: 1280px;
+      margin: 0 auto; position: relative; z-index: 1;
+    }
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+    .ph-title {
+      font-size: 26px; font-weight: 800;
+      background: linear-gradient(135deg, #ffffff, var(--teal200));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .ph-sub { font-size: 13px; color: rgba(255,255,255,.55); margin-top: 3px; }
+    .ph-actions { display: flex; gap: 10px; }
+    .btn-ghost {
+      padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08); color: rgba(255,255,255,.85);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 7px; transition: all .18s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.15); }
+
+    /* ── PAINEL DE PRESENÇA ── */
+    .presence-panel {
+      background: rgba(255,255,255,.97); border: 1px solid var(--gray200);
+      border-radius: 22px; margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1); overflow: hidden;
+    }
+    .presence-top { display: flex; align-items: center; padding: 20px 26px; gap: 28px; border-bottom: 1px solid var(--gray200); }
+    .pc-val { font-size: 52px; font-weight: 900; line-height: 1; color: var(--teal700); }
+    .pc-of  { font-size: 22px; font-weight: 500; color: var(--gray400); }
+    .pc-label { font-size: 12px; font-weight: 700; color: var(--gray500); text-transform: uppercase; letter-spacing: .8px; margin-top: 4px; }
+    .presence-bar-wrap { flex: 1; }
+    .pb-legend { display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .pb-leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--gray600); }
+    .pb-leg-dot { width: 9px; height: 9px; border-radius: 3px; }
+    .pb-bar { height: 12px; border-radius: 8px; background: var(--gray200); overflow: hidden; display: flex; }
+    .pb-seg { height: 100%; transition: width .4s; }
+    .pb-seg.inside  { background: var(--teal500); }
+    .pb-seg.outside { background: var(--amber); }
+    .pb-seg.done    { background: var(--green); }
+    .pb-seg.absent  { background: var(--gray300); }
+    .pb-time { font-size: 11px; color: var(--gray400); margin-top: 6px; text-align: right; }
+    .presence-groups { display: flex; }
+    .pg-group { flex: 1; padding: 16px 22px; border-right: 1px solid var(--gray200); }
+    .pg-group:last-child { border-right: none; }
+    .pg-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pg-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .pg-label.inside  { color: var(--teal700); } .pg-label.inside  .pg-dot { background: var(--teal500); }
+    .pg-label.outside { color: var(--amber); }   .pg-label.outside .pg-dot { background: var(--amber); }
+    .pg-label.done    { color: var(--green); }    .pg-label.done    .pg-dot { background: var(--green); }
+    .pg-label.absent  { color: var(--red); }      .pg-label.absent  .pg-dot { background: var(--red); }
+    .pg-avatars { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pg-avatar { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: transform .18s; }
+    .pg-avatar:hover { transform: translateY(-2px); }
+    .pg-av-circle {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+    .pg-av-name { font-size: 10px; font-weight: 600; color: var(--gray500); max-width: 46px; text-align: center; line-height: 1.2; }
+    .pg-av-sub  { font-size: 10px; font-weight: 700; color: var(--gray400); }
+    .pg-empty { font-size: 12px; color: var(--gray400); font-style: italic; }
+
+    /* ── GRID ── */
+    .content-grid { display: grid; grid-template-columns: 1fr 330px; gap: 20px; align-items: flex-start; }
+
+    /* ── CARD BASE ── */
+    .card {
+      background: rgba(255,255,255,.97); border: 1px solid var(--gray200);
+      border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.07); overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px 16px; border-bottom: 1px solid var(--gray200);
+    }
+    .card-title { font-size: 15px; font-weight: 800; color: var(--gray900); display: flex; align-items: center; gap: 8px; }
+    .ct-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .ct-teal   { background: var(--teal100); color: var(--teal700); }
+    .ct-amber  { background: var(--amber-bg); color: var(--amber); }
+    .ct-purple { background: var(--p100); color: var(--p700); }
+    .card-actions { display: flex; gap: 8px; align-items: center; }
+    .ca-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 8px; }
+    .ca-badge.teal { background: var(--teal100); color: var(--teal700); }
+    .ca-badge.red  { background: var(--red-bg);  color: var(--red); }
+    .ca-badge.gray { background: var(--gray100); color: var(--gray600); }
+    .ca-link { font-size: 12px; font-weight: 600; color: var(--teal600); cursor: pointer; }
+    .ca-link:hover { color: var(--teal800); }
+
+    /* Filtros */
+    .sf-filter {
+      display: flex; gap: 8px; padding: 14px 22px;
+      border-bottom: 1px solid var(--gray200); overflow-x: auto; scrollbar-width: none;
+    }
+    .sf-filter::-webkit-scrollbar { display: none; }
+    .sf-btn {
+      white-space: nowrap; padding: 5px 13px; border-radius: 8px;
+      border: 1px solid var(--gray300); background: var(--white);
+      color: var(--gray600); font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .sf-btn.on { background: var(--teal600); border-color: var(--teal600); color: white; }
+    .sf-btn:not(.on):hover { border-color: var(--teal400); color: var(--teal700); background: var(--teal50); }
+
+    /* ── LISTA DE FUNCIONÁRIOS ── */
+    .emp-row {
+      display: grid; grid-template-columns: 42px 1fr auto;
+      align-items: center; gap: 14px; padding: 14px 22px;
+      border-bottom: 1px solid var(--gray100);
+      transition: background .15s; cursor: pointer;
+    }
+    .emp-row:last-child { border-bottom: none; }
+    .emp-row:hover { background: var(--gray100); }
+    .emp-row.absent { opacity: .55; }
+    .emp-avatar {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12); flex-shrink: 0;
+    }
+    .emp-name { font-size: 14px; font-weight: 700; color: var(--gray900); }
+    .emp-role { font-size: 11px; color: var(--gray500); margin-top: 2px; }
+
+    /* Sequência de batidas */
+    .punch-timeline {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+      padding-bottom: 2px; margin-top: 8px;
+    }
+    .punch-timeline::-webkit-scrollbar { display: none; }
+    .punch-event { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+    .pe-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 8px;
+      font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .pe-chip.entrada     { background: var(--teal100); color: var(--teal700); }
+    .pe-chip.saida       { background: var(--amber-bg); color: var(--amber); }
+    .pe-chip.saida-final { background: var(--green-bg); color: var(--green); }
+    .pe-chip.pending     { background: var(--gray100); color: var(--gray400); border: 1px dashed var(--gray300); }
+    .pe-chip.alert       { background: var(--red-bg); color: var(--red); }
+    .pe-label { font-size: 9px; font-weight: 700; color: var(--gray400); text-transform: uppercase; letter-spacing: .5px; }
+    .pe-context { font-size: 9px; font-weight: 600; color: var(--gray400); white-space: nowrap; }
+    .pt-arrow { color: var(--gray300); font-size: 10px; flex-shrink: 0; margin-bottom: 12px; }
+
+    /* Coluna direita */
+    .emp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+    .et-val   { font-size: 14px; font-weight: 800; color: var(--gray800); text-align: right; }
+    .et-label { font-size: 10px; color: var(--gray400); font-weight: 600; }
+    .et-extra { font-size: 11px; font-weight: 700; color: var(--amber); }
+    .emp-status {
+      padding: 4px 10px; border-radius: 8px;
+      font-size: 11px; font-weight: 700; white-space: nowrap;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .es-inside  { background: var(--teal100);  color: var(--teal700); }
+    .es-outside { background: var(--amber-bg); color: var(--amber); }
+    .es-done    { background: var(--green-bg); color: var(--green); }
+    .es-absent  { background: var(--red-bg);   color: var(--red); }
+    .emp-gps { font-size: 11px; }
+    .emp-gps.ok   { color: var(--teal500); }
+    .emp-gps.warn { color: var(--amber); }
+    .emp-gps.off  { color: var(--gray300); }
+
+    /* ── NOTE CONCEITO ── */
+    .concept-note {
+      margin: 14px 22px 0; padding: 10px 14px;
+      background: var(--teal50); border: 1px solid var(--teal100); border-radius: 10px;
+      font-size: 12px; color: var(--teal700); line-height: 1.5;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .concept-note i { margin-top: 1px; flex-shrink: 0; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Alertas */
+    .alert-list { padding: 6px 0; }
+    .alert-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 13px 20px; border-bottom: 1px solid var(--gray100);
+      transition: background .15s; cursor: pointer;
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-item:hover { background: var(--gray100); }
+    .al-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .al-red   { background: var(--red-bg);   color: var(--red); }
+    .al-amber { background: var(--amber-bg); color: var(--amber); }
+    .al-title { font-size: 13px; font-weight: 700; color: var(--gray800); }
+    .al-desc  { font-size: 11px; color: var(--gray500); margin-top: 2px; line-height: 1.45; }
+    .al-time  { font-size: 10px; color: var(--gray400); margin-top: 4px; font-weight: 600; }
+    .no-alerts { padding: 28px 20px; text-align: center; font-size: 13px; color: var(--gray400); }
+
+    /* Módulos */
+    .modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px; }
+    .mod-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 12px;
+      border: 1px solid var(--gray200); border-radius: 14px; background: var(--gray100);
+      cursor: pointer; text-align: center; transition: all .2s; text-decoration: none; position: relative;
+    }
+    .mod-btn:hover { border-color: var(--teal400); background: var(--teal50); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(13,148,136,.1); }
+    .mod-btn.disabled { opacity: .45; pointer-events: none; }
+    .mod-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .mi-teal   { background: var(--teal100); color: var(--teal700); }
+    .mi-purple { background: var(--p100);    color: var(--p600); }
+    .mi-green  { background: var(--green-bg);color: var(--green); }
+    .mi-amber  { background: var(--amber-bg);color: var(--amber); }
+    .mod-label { font-size: 12px; font-weight: 700; color: var(--gray700); }
+    .mod-badge {
+      position: absolute; top: 8px; right: 8px;
+      font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px;
+      background: var(--red-bg); color: var(--red);
+    }
+    .mod-coming { font-size: 9px; font-weight: 700; color: var(--gray400); margin-top: -2px; }
+
+    /* Banco de horas */
+    .hours-list { padding: 6px 0; }
+    .hours-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; border-bottom: 1px solid var(--gray100);
+    }
+    .hours-row:last-child { border-bottom: none; }
+    .hr-name { font-size: 13px; font-weight: 600; color: var(--gray800); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hr-bar-wrap { width: 72px; height: 6px; background: var(--gray200); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+    .hr-bar { height: 100%; border-radius: 3px; }
+    .hr-bar.ok    { background: var(--teal500); }
+    .hr-bar.extra { background: var(--amber); }
+    .hr-val { font-size: 12px; font-weight: 700; color: var(--gray700); min-width: 32px; text-align: right; }
+    .hr-tag { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+    .hr-tag.extra { background: var(--amber-bg); color: var(--amber); }
+    .hr-tag.ok    { background: var(--teal100);  color: var(--teal700); }
+
+    /* ── EMPTY ── */
+    .empty { padding: 40px 20px; text-align: center; }
+    .empty i    { font-size: 36px; color: var(--gray300); margin-bottom: 12px; display: block; }
+    .empty p    { font-size: 13px; color: var(--gray400); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1100px) {
+      .content-grid { grid-template-columns: 1fr; }
+      .sidebar { display: grid; grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 900px) {
+      .presence-groups { flex-direction: column; }
+      .pg-group { border-right: none; border-bottom: 1px solid var(--gray200); }
+      .pg-group:last-child { border-bottom: none; }
+    }
+    @media (max-width: 768px) {
+      .topbar { padding: 0 16px; }
+      .tb-sys, .tb-company { display: none; }
+      .main { padding: 20px 14px 48px; }
+      .presence-top { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .sidebar { grid-template-columns: 1fr; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADER -->
+  <div id="loader" class="loader-wrap">
+    <div class="loader-spin"></div>
+    <div class="loader-text">Carregando painel...</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">L</div>
+      <span class="tb-lina">Lina</span>
+    </div>
+    <div class="tb-sys">
+      <div class="tb-sys-icon">⏰</div>
+      <span class="tb-sys-name">Data Point</span>
+    </div>
+    <div class="tb-company">
+      <i class="fa fa-building" style="font-size:11px;color:rgba(255,255,255,.35)"></i>
+      <strong id="tbEmpresaNome">—</strong>
+    </div>
+    <div class="tb-right">
+      <span class="tb-date" id="tbDate">—</span>
+      <button class="tb-icon-btn" onclick="location.href='hub.html'" title="Voltar ao hub"><i class="fa fa-arrow-left"></i></button>
+      <button class="tb-icon-btn" onclick="recarregar()" title="Atualizar"><i class="fa fa-sync-alt"></i></button>
+      <div class="tb-avatar" id="tbAvatar">?</div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO -->
+  <main id="mainContent" class="main hidden">
+
+    <div class="page-header">
+      <div>
+        <div class="ph-title">Ponto de Hoje</div>
+        <div class="ph-sub" id="phSub">—</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn-ghost" onclick="alert('Relatórios disponíveis em breve.')"><i class="fa fa-file-alt"></i> Relatório</button>
+      </div>
+    </div>
+
+    <!-- PAINEL DE PRESENÇA -->
+    <div class="presence-panel">
+      <div class="presence-top">
+        <div class="presence-count">
+          <div>
+            <span class="pc-val" id="pcPresentes">0</span><span class="pc-of" id="pcTotal">/0</span>
+          </div>
+          <div class="pc-label">presentes hoje</div>
+        </div>
+        <div class="presence-bar-wrap">
+          <div class="pb-legend" id="pbLegend"></div>
+          <div class="pb-bar" id="pbBar"></div>
+          <div class="pb-time" id="pbTime">—</div>
+        </div>
+      </div>
+      <div class="presence-groups" id="presenceGroups"></div>
+    </div>
+
+    <div class="content-grid">
+
+      <!-- Tabela de marcações -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="ct-icon ct-teal"><i class="fa fa-list"></i></div>
+            Sequência de Batidas
+          </div>
+          <div class="card-actions" id="punchBadges"></div>
+        </div>
+
+        <div class="concept-note">
+          <i class="fa fa-info-circle"></i>
+          <span>
+            Cada batida é <strong>Entrada</strong> ou <strong>Saída</strong> — o contexto é inferido pela sequência e horário.
+            A última saída antes do fim da jornada indica pausa; a última saída após a jornada indica encerramento.
+          </span>
+        </div>
+
+        <div class="sf-filter" id="filterBar"></div>
+        <div id="empList"></div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+
+        <!-- Alertas -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="ct-icon ct-amber"><i class="fa fa-bell"></i></div>
+              Alertas
+            </div>
+            <span class="ca-badge red hidden" id="alertBadge">0</span>
+          </div>
+          <div id="alertList"></div>
+        </div>
+
+        <!-- Módulos -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="ct-icon ct-purple"><i class="fa fa-th"></i></div>
+              Módulos
+            </div>
+          </div>
+          <div class="modules-grid">
+            <a class="mod-btn disabled" href="#">
+              <div class="mod-icon mi-teal"><i class="fa fa-users"></i></div>
+              <div class="mod-label">Funcionários</div>
+              <div class="mod-coming">Em breve</div>
+            </a>
+            <a class="mod-btn disabled" href="#">
+              <div class="mod-icon mi-purple"><i class="fa fa-calendar-alt"></i></div>
+              <div class="mod-label">Escalas</div>
+              <div class="mod-coming">Em breve</div>
+            </a>
+            <a class="mod-btn disabled" href="#">
+              <div class="mod-icon mi-green"><i class="fa fa-history"></i></div>
+              <div class="mod-label">Marcações</div>
+              <div class="mod-coming">Em breve</div>
+            </a>
+            <a class="mod-btn disabled" href="#">
+              <div class="mod-icon mi-amber"><i class="fa fa-edit"></i></div>
+              <div class="mod-label">Ajustes</div>
+              <div class="mod-coming">Em breve</div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Banco de horas semana -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="ct-icon ct-teal"><i class="fa fa-chart-bar"></i></div>
+              Horas esta semana
+            </div>
+          </div>
+          <div class="hours-list" id="hoursList"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+<script>
+// ── Constantes de estado ──────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  'linear-gradient(145deg,#0d9488,#064e3b)',
+  'linear-gradient(145deg,#7c3aed,#5b21b6)',
+  'linear-gradient(145deg,#4f46e5,#3730a3)',
+  'linear-gradient(145deg,#e11d48,#9f1239)',
+  'linear-gradient(145deg,#ea580c,#9a3412)',
+  'linear-gradient(145deg,#0891b2,#164e63)',
+  'linear-gradient(145deg,#16a34a,#14532d)',
+  'linear-gradient(145deg,#ca8a04,#92400e)',
+];
+
+let dashData = null;
+let filtroAtivo = 'TODOS';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Auth
+  const token = localStorage.getItem('token');
+  if (!token) return (location.href = 'login.html');
+
+  const nome = localStorage.getItem('usuarioNome') || '';
+  document.getElementById('tbAvatar').textContent = nome.charAt(0).toUpperCase() || '?';
+
+  await carregarDashboard();
+  setInterval(carregarDashboard, 60000); // atualiza a cada 1 min
+});
+
+async function carregarDashboard() {
+  try {
+    const data = await window.api.getDpDashboard();
+    dashData = data;
+    renderTudo();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('loader').innerHTML =
+      '<div style="color:#f87171;font-size:14px;padding:20px;text-align:center"><i class="fa fa-exclamation-circle" style="font-size:32px;display:block;margin-bottom:12px"></i>Erro ao carregar dashboard. Verifique se o Data Point está configurado para esta empresa.</div>';
+  }
+}
+
+async function recarregar() {
+  document.getElementById('loader').classList.remove('hidden');
+  document.getElementById('mainContent').classList.add('hidden');
+  await carregarDashboard();
+}
+
+// ── Render principal ──────────────────────────────────────────────────────────
+function renderTudo() {
+  const d = dashData;
+
+  // Topbar
+  document.getElementById('tbEmpresaNome').textContent = d.empresaNome || '—';
+  const dataFormatada = formatarData(d.dataHoje);
+  document.getElementById('tbDate').textContent = dataFormatada;
+  document.getElementById('phSub').textContent = `${dataFormatada} · Atualizado às ${horaAgora()}`;
+
+  renderPresencePanel(d);
+  renderEmpList(d.funcionarios, d.config);
+  renderAlertas(d.alertas);
+  renderHorasSemana(d.funcionarios);
+
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+}
+
+// ── Painel de presença ────────────────────────────────────────────────────────
+function renderPresencePanel(d) {
+  const { resumo, config, funcionarios } = d;
+
+  document.getElementById('pcPresentes').textContent = resumo.presentes;
+  document.getElementById('pcTotal').textContent = `/${resumo.total}`;
+  document.getElementById('pbTime').textContent =
+    `Jornada padrão: ${config.jornadaEntrada}–${config.jornadaSaida} · Pausa: ${config.intervaloMin}min`;
+
+  // Legenda
+  const leg = document.getElementById('pbLegend');
+  leg.innerHTML = `
+    <div class="pb-leg-item"><div class="pb-leg-dot" style="background:var(--teal500)"></div> Dentro (${resumo.dentro})</div>
+    <div class="pb-leg-item"><div class="pb-leg-dot" style="background:var(--amber)"></div> Fora temp. (${resumo.foratemp})</div>
+    <div class="pb-leg-item"><div class="pb-leg-dot" style="background:var(--green)"></div> Encerrou (${resumo.encerrou})</div>
+    <div class="pb-leg-item"><div class="pb-leg-dot" style="background:var(--gray300)"></div> Ausente (${resumo.ausente})</div>
+  `;
+
+  // Barra
+  const bar = document.getElementById('pbBar');
+  bar.innerHTML = '';
+  const total = resumo.total || 1;
+  const segs = [
+    { cls: 'inside',  pct: (resumo.dentro   / total) * 100 },
+    { cls: 'outside', pct: (resumo.foratemp  / total) * 100 },
+    { cls: 'done',    pct: (resumo.encerrou  / total) * 100 },
+    { cls: 'absent',  pct: (resumo.ausente   / total) * 100 },
+  ];
+  segs.forEach(s => {
+    if (s.pct <= 0) return;
+    const div = document.createElement('div');
+    div.className = `pb-seg ${s.cls}`;
+    div.style.width = s.pct + '%';
+    bar.appendChild(div);
+  });
+
+  // Grupos de avatares
+  const grupos = [
+    { key: 'DENTRO',    cls: 'inside',  label: 'Dentro',        subFn: f => `desde ${primeiraEntrada(f.marcacoesHoje)}` },
+    { key: 'FORA_TEMP', cls: 'outside', label: 'Fora temp.',    subFn: f => `saiu ${ultimaHora(f.marcacoesHoje)}` },
+    { key: 'ENCERROU',  cls: 'done',    label: 'Encerrou',      subFn: f => formatMinutos(f.minutosHoje) },
+    { key: 'AUSENTE',   cls: 'absent',  label: 'Ausente',       subFn: () => 'sem ponto' },
+  ];
+
+  const pg = document.getElementById('presenceGroups');
+  pg.innerHTML = '';
+  grupos.forEach(g => {
+    const funcsGrupo = funcionarios.filter(f => f.estado === g.key);
+    const div = document.createElement('div');
+    div.className = 'pg-group';
+    div.innerHTML = `<div class="pg-label ${g.cls}"><div class="pg-dot"></div> ${g.label}</div>`;
+    const avDiv = document.createElement('div');
+    avDiv.className = 'pg-avatars';
+    if (funcsGrupo.length === 0) {
+      avDiv.innerHTML = '<span class="pg-empty">Nenhum</span>';
+    } else {
+      funcsGrupo.forEach((f, i) => {
+        const initials = iniciaisNome(f.nome);
+        const cor = g.key === 'AUSENTE'
+          ? 'background:var(--gray300);color:var(--gray600)'
+          : `background:${AVATAR_COLORS[i % AVATAR_COLORS.length]}`;
+        avDiv.innerHTML += `
+          <div class="pg-avatar">
+            <div class="pg-av-circle" style="${cor}">${initials}</div>
+            <div class="pg-av-name">${primeiroNome(f.nome)}</div>
+            <div class="pg-av-sub">${g.subFn(f)}</div>
+          </div>`;
+      });
+    }
+    div.appendChild(avDiv);
+    pg.appendChild(div);
+  });
+}
+
+// ── Lista de funcionários ─────────────────────────────────────────────────────
+function renderEmpList(funcionarios, config) {
+  const badges = document.getElementById('punchBadges');
+  const comPonto = funcionarios.filter(f => f.estado !== 'AUSENTE').length;
+  const ausentes = funcionarios.filter(f => f.estado === 'AUSENTE').length;
+  badges.innerHTML = `
+    <span class="ca-badge teal">${comPonto} com ponto</span>
+    ${ausentes > 0 ? `<span class="ca-badge red">${ausentes} ausente${ausentes !== 1 ? 's' : ''}</span>` : ''}
+  `;
+
+  // Filtros
+  const filterBar = document.getElementById('filterBar');
+  const filtros = [
+    { key: 'TODOS',    label: `Todos (${funcionarios.length})` },
+    { key: 'DENTRO',   label: `Dentro (${funcionarios.filter(f=>f.estado==='DENTRO').length})` },
+    { key: 'FORA_TEMP',label: `Fora temp. (${funcionarios.filter(f=>f.estado==='FORA_TEMP').length})` },
+    { key: 'ENCERROU', label: `Encerrou (${funcionarios.filter(f=>f.estado==='ENCERROU').length})` },
+    { key: 'AUSENTE',  label: `Ausente (${funcionarios.filter(f=>f.estado==='AUSENTE').length})` },
+  ];
+  filterBar.innerHTML = filtros.map(f =>
+    `<button class="sf-btn${filtroAtivo === f.key ? ' on' : ''}" onclick="setFiltro('${f.key}')">${f.label}</button>`
+  ).join('');
+
+  renderLinhasFuncs(funcionarios, config);
+}
+
+function setFiltro(key) {
+  filtroAtivo = key;
+  renderEmpList(dashData.funcionarios, dashData.config);
+}
+
+function renderLinhasFuncs(funcionarios, config) {
+  const lista = document.getElementById('empList');
+  const filtrados = filtroAtivo === 'TODOS'
+    ? funcionarios
+    : funcionarios.filter(f => f.estado === filtroAtivo);
+
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div class="empty"><i class="fa fa-check-circle"></i><p>Nenhum funcionário neste estado</p></div>';
+    return;
+  }
+
+  lista.innerHTML = '';
+  filtrados.forEach((f, i) => {
+    lista.appendChild(buildEmpRow(f, i, config));
+  });
+}
+
+function buildEmpRow(f, idx, config) {
+  const row = document.createElement('div');
+  row.className = `emp-row${f.estado === 'AUSENTE' ? ' absent' : ''}`;
+
+  const cor = f.estado === 'AUSENTE'
+    ? 'background:var(--gray300);color:var(--gray600)'
+    : `background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`;
+
+  const statusHtml = estadoBadge(f.estado);
+  const horasHtml = f.estado !== 'AUSENTE'
+    ? `<div class="et-val">${formatMinutos(f.minutosHoje)}</div>
+       <div class="et-label">trabalhadas</div>
+       ${f.minutosExtra > 0 ? `<div class="et-extra">+${formatMinutos(f.minutosExtra)} extra</div>` : ''}`
+    : `<div class="et-val" style="color:var(--gray400)">—</div><div class="et-label">sem ponto</div>`;
+
+  const gpsHtml = f.gpsSuspeito
+    ? '<div class="emp-gps warn"><i class="fa fa-map-marker-alt"></i> Suspeito</div>'
+    : f.estado !== 'AUSENTE'
+    ? '<div class="emp-gps ok"><i class="fa fa-map-marker-alt"></i> GPS ok</div>'
+    : '<div class="emp-gps off"><i class="fa fa-map-marker-alt"></i></div>';
+
+  row.innerHTML = `
+    <div class="emp-avatar" style="${cor}">${iniciaisNome(f.nome)}</div>
+    <div>
+      <div class="emp-name">${f.nome}</div>
+      <div class="emp-role">${f.cargo || 'Funcionário'}</div>
+      ${buildPunchTimeline(f.marcacoesHoje, f.estado, config)}
+    </div>
+    <div class="emp-right">
+      <div>${horasHtml}</div>
+      ${statusHtml}
+      ${gpsHtml}
+    </div>
+  `;
+  return row;
+}
+
+function buildPunchTimeline(marcacoes, estado, config) {
+  if (marcacoes.length === 0) {
+    return `<div class="punch-timeline">
+      <div class="punch-event">
+        <div class="pe-chip pending"><i class="fa fa-arrow-right"></i> —</div>
+        <div class="pe-label">Entrada</div>
+      </div>
+    </div>`;
+  }
+
+  let html = '<div class="punch-timeline">';
+  const jornadaSaidaMin = horaParaMin(config.jornadaSaida);
+
+  marcacoes.forEach((m, i) => {
+    const isEntrada = m.tipo === 'ENTRADA';
+    const isUltima = i === marcacoes.length - 1;
+
+    // Determina classe do chip
+    let chipClass = isEntrada ? 'entrada' : 'saida';
+    if (m.gpsPrecisaoSuspeita) chipClass = 'alert';
+    else if (!isEntrada && isUltima && estado === 'ENCERROU') chipClass = 'saida-final';
+
+    // Contexto inferido
+    let contexto = '';
+    if (!isEntrada && i > 0 && i < marcacoes.length - 1) contexto = '↑ pausa?';
+    else if (isEntrada && i > 0) contexto = '↑ retorno';
+    else if (!isEntrada && isUltima && estado === 'ENCERROU') contexto = '↑ encerrou';
+    if (m.gpsPrecisaoSuspeita) contexto = 'GPS suspeito';
+
+    if (i > 0) html += '<div class="pt-arrow"><i class="fa fa-chevron-right"></i></div>';
+    html += `
+      <div class="punch-event">
+        <div class="pe-chip ${chipClass}">
+          <i class="fa ${isEntrada ? 'fa-arrow-right' : 'fa-arrow-left'}"></i> ${m.horaFormatada}
+        </div>
+        <div class="pe-label">${isEntrada ? 'Entrada' : 'Saída'}</div>
+        ${contexto ? `<div class="pe-context" ${m.gpsPrecisaoSuspeita ? 'style="color:var(--red)"' : ''}>${contexto}</div>` : ''}
+      </div>`;
+  });
+
+  // Chip pendente se ainda há ponto aberto
+  if (estado === 'DENTRO' || estado === 'FORA_TEMP') {
+    const proximoTipo = estado === 'DENTRO' ? 'Saída' : 'Entrada';
+    html += `
+      <div class="pt-arrow"><i class="fa fa-chevron-right"></i></div>
+      <div class="punch-event">
+        <div class="pe-chip pending"><i class="fa ${estado === 'DENTRO' ? 'fa-arrow-left' : 'fa-arrow-right'}"></i> —</div>
+        <div class="pe-label">${proximoTipo}</div>
+        <div class="pe-context">aguardando</div>
+      </div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// ── Alertas ───────────────────────────────────────────────────────────────────
+function renderAlertas(alertas) {
+  const list = document.getElementById('alertList');
+  const badge = document.getElementById('alertBadge');
+
+  if (alertas.length === 0) {
+    list.innerHTML = '<div class="no-alerts"><i class="fa fa-check-circle" style="color:var(--green);font-size:24px;display:block;margin-bottom:8px"></i>Nenhum alerta hoje</div>';
+    return;
+  }
+
+  badge.textContent = alertas.length;
+  badge.classList.remove('hidden');
+
+  list.innerHTML = '';
+  alertas.forEach(a => {
+    const isGps = a.tipo === 'GPS_SUSPEITO';
+    const div = document.createElement('div');
+    div.className = 'alert-item';
+    div.innerHTML = `
+      <div class="al-icon ${isGps ? 'al-red' : 'al-amber'}">
+        <i class="fa ${isGps ? 'fa-map-marker-alt' : 'fa-clock'}"></i>
+      </div>
+      <div>
+        <div class="al-title">${isGps ? 'GPS suspeito' : 'Hora extra'} — ${a.funcionarioNome}</div>
+        <div class="al-desc">${a.descricao}</div>
+        ${a.horaFormatada ? `<div class="al-time"><i class="fa fa-clock"></i> ${a.horaFormatada}</div>` : ''}
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── Banco de horas semana ─────────────────────────────────────────────────────
+function renderHorasSemana(funcionarios) {
+  const list = document.getElementById('hoursList');
+  const ativos = funcionarios.filter(f => f.estado !== 'AUSENTE' || f.minutosSemana > 0);
+
+  if (ativos.length === 0) {
+    list.innerHTML = '<div class="empty"><i class="fa fa-chart-bar"></i><p>Sem dados de semana</p></div>';
+    return;
+  }
+
+  const maxMin = Math.max(...ativos.map(f => f.minutosSemana), 1);
+  list.innerHTML = '';
+  ativos.slice(0, 8).forEach(f => {
+    const pct = Math.min((f.minutosSemana / maxMin) * 100, 100);
+    const isExtra = f.minutosSemana > f.cargaEsperadaMin * 5;
+    list.innerHTML += `
+      <div class="hours-row">
+        <div class="hr-name">${primeiroNome(f.nome)} ${sobrenomeAbrev(f.nome)}</div>
+        <div class="hr-bar-wrap"><div class="hr-bar ${isExtra ? 'extra' : 'ok'}" style="width:${pct}%"></div></div>
+        <div class="hr-val">${formatMinutos(f.minutosSemana)}</div>
+        <span class="hr-tag ${isExtra ? 'extra' : 'ok'}">${isExtra ? 'Extra' : 'Normal'}</span>
+      </div>`;
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function estadoBadge(estado) {
+  const map = {
+    DENTRO:    '<span class="emp-status es-inside"><i class="fa fa-circle" style="font-size:7px"></i> Dentro</span>',
+    FORA_TEMP: '<span class="emp-status es-outside"><i class="fa fa-clock" style="font-size:9px"></i> Fora agora</span>',
+    ENCERROU:  '<span class="emp-status es-done"><i class="fa fa-check" style="font-size:9px"></i> Encerrou</span>',
+    AUSENTE:   '<span class="emp-status es-absent"><i class="fa fa-times" style="font-size:9px"></i> Ausente</span>',
+  };
+  return map[estado] || '';
+}
+
+function iniciaisNome(nome) {
+  const parts = (nome || '').trim().split(' ');
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function primeiroNome(nome) {
+  return (nome || '').split(' ')[0];
+}
+
+function sobrenomeAbrev(nome) {
+  const parts = (nome || '').trim().split(' ');
+  if (parts.length <= 1) return '';
+  return parts[parts.length - 1][0].toUpperCase() + '.';
+}
+
+function primeiraEntrada(marcacoes) {
+  const e = marcacoes.find(m => m.tipo === 'ENTRADA');
+  return e ? e.horaFormatada : '—';
+}
+
+function ultimaHora(marcacoes) {
+  if (!marcacoes.length) return '—';
+  return marcacoes[marcacoes.length - 1].horaFormatada;
+}
+
+function formatMinutos(min) {
+  if (!min || min <= 0) return '0h';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
+
+function horaParaMin(horaStr) {
+  const [h, m] = (horaStr || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function formatarData(isoStr) {
+  if (!isoStr) return '—';
+  const dias = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const d = new Date(isoStr + 'T12:00:00');
+  return `${dias[d.getDay()]}, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function horaAgora() {
+  return new Date().toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  });
+}
+</script>
+</body>
+</html>

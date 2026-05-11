@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import { subscriptionService } from '../services/subscriptionService';
+import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -301,3 +302,207 @@ export const getStatusDp = async (req: EmpresaRequest, res: Response) => {
     res.status(500).json({ error: 'Erro interno' });
   }
 };
+
+// ─── Helpers internos ─────────────────────────────────────────────────────────
+function horaParaMin(horaStr: string): number {
+  const [h, m] = (horaStr || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function formatHoraBRT(d: Date): string {
+  return new Date(d).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  });
+}
+
+function calcMinutosTrabalhados(
+  marcacoes: Array<{ tipo: string; timestamp: Date }>,
+  now: Date,
+): number {
+  let total = 0;
+  let i = 0;
+  while (i < marcacoes.length) {
+    if (marcacoes[i].tipo === 'ENTRADA') {
+      let j = i + 1;
+      while (j < marcacoes.length && marcacoes[j].tipo !== 'SAIDA') j++;
+      if (j < marcacoes.length) {
+        total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i = j + 1;
+      } else {
+        total += Math.round((now.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i++;
+      }
+    } else {
+      i++;
+    }
+  }
+  return total;
+}
+
+// ─── GET /api/dp/dashboard ────────────────────────────────────────────────────
+export const getDashboardDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const [sistema, empresa] = await Promise.all([
+      prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true } }),
+      prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } }),
+    ]);
+    if (!sistema) return res.status(403).json({ error: 'Data Point não ativo para esta empresa' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const jornadaEntradaCfg: string = cfg.jornadaEntrada || '08:00';
+    const jornadaSaidaCfg: string  = cfg.jornadaSaida  || '17:00';
+    const intervaloMin: number     = cfg.intervaloMin  || 60;
+    const cargaHorariaDiaCfg       = 8; // padrão 8h quando não definido por funcionário
+
+    const now = new Date();
+    const { start: diaStart, end: diaEnd } = getTodayRangeBRT();
+
+    // Semana atual (últimos 7 dias em BRT)
+    const todayStr = getTodayStrBRT();
+    const semanaStart = new Date(diaStart.getTime() - 6 * 86400000);
+
+    // Funcionários ativos com marcações de hoje e da semana
+    const funcionarios = await prisma.dpFuncionario.findMany({
+      where: { empresaId, status: 'ATIVO' },
+      include: {
+        marcacoes: {
+          where: { timestamp: { gte: semanaStart, lte: diaEnd } },
+          orderBy: { timestamp: 'asc' },
+        },
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    // Nowtime em minutos BRT (para comparar com horários de jornada)
+    const nowBrtMs = now.getTime() - 3 * 3600000;
+    const nowBrtMin = Math.floor((nowBrtMs % 86400000) / 60000);
+    const jornadaSaidaMin = horaParaMin(jornadaSaidaCfg);
+
+    const funcProcessados = funcionarios.map(f => {
+      const marcacoesHoje = f.marcacoes.filter(
+        m => m.timestamp >= diaStart && m.timestamp <= diaEnd,
+      );
+      const marcacoesSemana = f.marcacoes;
+
+      // Carga horária efetiva (override individual ou padrão da empresa)
+      const cargaEsperadaMin = (f.cargaHorariaDia ?? cargaHorariaDiaCfg) * 60;
+
+      // Minutos trabalhados hoje
+      const minutosHoje = calcMinutosTrabalhados(marcacoesHoje, now);
+
+      // Minutos trabalhados na semana (agrupa por dia)
+      const diasSemana = new Set(marcacoesSemana.map(m => {
+        const d = new Date(m.timestamp.getTime() - 3 * 3600000);
+        return d.toISOString().split('T')[0];
+      }));
+      let minutosSemana = 0;
+      for (const dia of diasSemana) {
+        const { start, end } = getDateRangeBRT(dia);
+        const marcsDia = marcacoesSemana.filter(m => m.timestamp >= start && m.timestamp <= end);
+        const nowDia = dia === todayStr ? now : end;
+        minutosSemana += calcMinutosTrabalhados(marcsDia, nowDia);
+      }
+
+      // Estado
+      let estado: 'AUSENTE' | 'DENTRO' | 'FORA_TEMP' | 'ENCERROU' = 'AUSENTE';
+      if (marcacoesHoje.length > 0) {
+        const ultima = marcacoesHoje[marcacoesHoje.length - 1];
+        if (ultima.tipo === 'ENTRADA') {
+          estado = 'DENTRO';
+        } else {
+          // Última é SAIDA — encerrou ou pausa?
+          if (minutosHoje >= cargaEsperadaMin - 30 || nowBrtMin >= jornadaSaidaMin) {
+            estado = 'ENCERROU';
+          } else {
+            estado = 'FORA_TEMP';
+          }
+        }
+      }
+
+      const minutosExtra = Math.max(0, minutosHoje - cargaEsperadaMin);
+      const gpsSuspeito = marcacoesHoje.some(m => m.gpsPrecisaoSuspeita);
+
+      return {
+        id: f.id,
+        nome: f.nome,
+        cargo: f.cargo,
+        cargaEsperadaMin,
+        estado,
+        minutosHoje,
+        minutosExtra,
+        minutosSemana,
+        gpsSuspeito,
+        marcacoesHoje: marcacoesHoje.map(m => ({
+          id: m.id,
+          tipo: m.tipo,
+          timestamp: m.timestamp,
+          horaFormatada: formatHoraBRT(m.timestamp),
+          gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
+          gpsNegado: m.gpsNegado,
+          canal: m.canal,
+        })),
+      };
+    });
+
+    // Resumo
+    const resumo = {
+      total:    funcProcessados.length,
+      dentro:   funcProcessados.filter(f => f.estado === 'DENTRO').length,
+      foratemp: funcProcessados.filter(f => f.estado === 'FORA_TEMP').length,
+      encerrou: funcProcessados.filter(f => f.estado === 'ENCERROU').length,
+      ausente:  funcProcessados.filter(f => f.estado === 'AUSENTE').length,
+      presentes: funcProcessados.filter(f => f.estado !== 'AUSENTE').length,
+    };
+
+    // Alertas
+    const alertas: Array<{
+      tipo: string; funcionarioId: string; funcionarioNome: string;
+      descricao: string; horaFormatada: string | null;
+    }> = [];
+    for (const f of funcProcessados) {
+      const suspeita = f.marcacoesHoje.find(m => m.gpsPrecisaoSuspeita);
+      if (suspeita) {
+        alertas.push({
+          tipo: 'GPS_SUSPEITO',
+          funcionarioId: f.id,
+          funcionarioNome: f.nome,
+          descricao: `GPS com precisão suspeita às ${suspeita.horaFormatada}. Ponto salvo com flag.`,
+          horaFormatada: suspeita.horaFormatada,
+        });
+      }
+      if (f.minutosExtra > 0) {
+        const ultima = f.marcacoesHoje[f.marcacoesHoje.length - 1];
+        alertas.push({
+          tipo: 'HORA_EXTRA',
+          funcionarioId: f.id,
+          funcionarioNome: f.nome,
+          descricao: `${formatMinutos(f.minutosExtra)} além da jornada contratada.`,
+          horaFormatada: ultima?.horaFormatada ?? null,
+        });
+      }
+    }
+
+    res.json({
+      empresaNome: empresa?.nome ?? '',
+      dataHoje: todayStr,
+      config: { jornadaEntrada: jornadaEntradaCfg, jornadaSaida: jornadaSaidaCfg, intervaloMin },
+      resumo,
+      funcionarios: funcProcessados,
+      alertas,
+    });
+  } catch (error) {
+    console.error('[dp] dashboard:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+function formatMinutos(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
