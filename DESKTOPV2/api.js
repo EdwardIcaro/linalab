@@ -118,6 +118,13 @@ const api = {
   // ===== HUB =====
   getHub: () => fetchApi('/hub'),
 
+  // Data Point
+  getPlanosDp: () => fetchApi('/dp/planos'),
+  contratarDp: (planId) => fetchApi('/dp/contratar', { method: 'POST', body: JSON.stringify({ planId }) }),
+  getStatusDp: (empresaId) => fetchApi(`/dp/status?empresaId=${empresaId}`),
+  getImportaveisDp: (empresaId) => fetchApi(`/dp/onboarding/importaveis?empresaId=${empresaId}`),
+  salvarOnboardingDp: (data) => fetchApi('/dp/onboarding/salvar', { method: 'POST', body: JSON.stringify(data) }),
+
   // ===== EMPRESAS =====
   getEmpresasDoUsuario: () => fetchApi('/empresas'),
   createEmpresa: (data) => fetchApi('/empresas', {
