@@ -8,6 +8,8 @@ import {
   getExtratoPortal,
   getPontoHoje,
   registrarPonto,
+  gerarCodigoWpp,
+  desvincularWpp,
 } from '../controllers/portalPublicoController';
 
 const router: Router = Router();
@@ -19,8 +21,10 @@ router.get('/me/ponto/hoje',   portalSessionMiddleware, getPontoHoje);
 router.post('/me/ponto',       portalSessionMiddleware, registrarPonto);
 
 // Públicas (sem autenticação)
-router.get('/:token',             resolverTokenPublico);
-router.post('/:token/pin/setup',  setupPin);
-router.post('/:token/pin/verify', verifyPin);
+router.get('/:token',               resolverTokenPublico);
+router.post('/:token/pin/setup',    setupPin);
+router.post('/:token/pin/verify',   verifyPin);
+router.post('/:token/wpp/codigo',      gerarCodigoWpp);
+router.post('/:token/wpp/desvincular', desvincularWpp);
 
 export default router;

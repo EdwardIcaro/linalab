@@ -153,6 +153,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
       select: {
         id: true, nome: true, comissao: true,
         tipoRemuneracao: true, baseComissao: true, salario: true,
+        telefone: true,
         empresa: { select: { nome: true } },
       },
     });
@@ -217,6 +218,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
         baseComissao: lavador.baseComissao,
         comissao: lavador.comissao,
         salario: lavador.salario,
+        telefone: lavador.telefone ?? null,
       },
       dataPointAtivo: !!sistemaDP,
       hoje: {
@@ -358,6 +360,56 @@ export const getExtratoPortal = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[portal] extrato:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/p/:token/wpp/codigo ───────────────────────────────────────────
+export const gerarCodigoWpp = async (req: Request, res: Response) => {
+  const { token } = req.params as { token: string };
+
+  try {
+    const lavador = await buscarLavadorPorToken(token);
+    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
+
+    // Gera código de 6 chars alfanumérico (sem 0/O/I/1)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const codigo = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const expiraEm = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+    await prisma.lavador.update({
+      where: { id: lavador.id },
+      data: { codigoWpp: codigo, codigoWppExpiraEm: expiraEm },
+    });
+
+    // Número do bot (instância global, empresaId = null)
+    const botInst = await prisma.whatsappInstance.findFirst({
+      where: { empresaId: null },
+      select: { ownerPhone: true },
+    });
+    const botNumero = botInst?.ownerPhone?.replace(/\D/g, '') ?? null;
+
+    res.json({ codigo, expiraEm, botNumero });
+  } catch (error) {
+    console.error('[portal] gerarCodigoWpp:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/p/:token/wpp/desvincular ──────────────────────────────────────
+export const desvincularWpp = async (req: Request, res: Response) => {
+  const { token } = req.params as { token: string };
+  try {
+    const lavador = await buscarLavadorPorToken(token);
+    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
+
+    await prisma.lavador.update({
+      where: { id: lavador.id },
+      data: { telefone: null, codigoWpp: null, codigoWppExpiraEm: null },
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[portal] desvincularWpp:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };

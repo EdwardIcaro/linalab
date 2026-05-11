@@ -162,12 +162,54 @@ async function handleNotifMenuStep(jid: string, empresaId: string, choice: strin
 /*
  * Processa mensagem recebida do WhatsApp
  */
+// ─── Self-onboarding portal: "conectar CODIGO" ───────────────────────────────
+async function handleConectarPortal(from: string, message: string): Promise<string | null> {
+  const match = message.trim().match(/^conectar\s+([A-Z0-9]{6})$/i);
+  if (!match) return null;
+
+  const codigo = match[1].toUpperCase();
+  const agora  = new Date();
+
+  const lavador = await (prisma.lavador as any).findFirst({
+    where: {
+      codigoWpp: codigo,
+      codigoWppExpiraEm: { gte: agora },
+      ativo: true,
+    },
+    select: { id: true, nome: true },
+  }) as { id: string; nome: string } | null;
+
+  if (!lavador) {
+    return '❌ Código inválido ou expirado. Gere um novo código pelo portal e tente novamente.';
+  }
+
+  // Extrai número do JID (ex: "5511999999999@s.whatsapp.net" → "5511999999999")
+  const telefone = from.split('@')[0];
+
+  await (prisma.lavador as any).update({
+    where: { id: lavador.id },
+    data: {
+      telefone,
+      codigoWpp: null,
+      codigoWppExpiraEm: null,
+    },
+  });
+
+  return `✅ *WhatsApp vinculado com sucesso!*\n\nOlá, ${lavador.nome}! Seu número foi conectado ao portal Lina.\n\nAgora você pode receber notificações de comissões e usar este chat para consultar seu extrato. Digite *ajuda* para ver os comandos disponíveis.`;
+}
+
 export async function handleIncomingMessage(
   from: string,
   senderName: string,
   message: string,
 ): Promise<string> {
   try {
+    // ── SELF-ONBOARDING (antes da auth — número ainda não cadastrado) ─────────
+    if (/^conectar\s+[A-Z0-9]{6}$/i.test(message.trim())) {
+      const resp = await handleConectarPortal(from, message);
+      if (resp) return resp;
+    }
+
     // ── AUTENTICAÇÃO ─────────────────────────────────────────────────────────
     const user = await identifyWhatsAppUser(from);
 

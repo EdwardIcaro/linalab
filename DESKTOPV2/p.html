@@ -680,16 +680,16 @@ function renderHub() {
   `;
 
   // WhatsApp row
-  const telefone = lavador.codigoWpp ? null : null; // placeholder até ter endpoint
+  const telefone = lavador.telefone ?? null;
   const rows = document.getElementById('hub-rows');
   rows.innerHTML = `
     <div class="status-row" onclick="abrirModalWpp()">
-      <div class="status-ico ico-wpp-off"><i class="fab fa-whatsapp"></i></div>
+      <div class="status-ico ${telefone ? 'ico-wpp-on' : 'ico-wpp-off'}"><i class="fab fa-whatsapp"></i></div>
       <div class="status-info">
         <div class="status-title">WhatsApp</div>
-        <div class="status-sub">Conecte seu número para receber notificações</div>
+        <div class="status-sub">${telefone ? `Conectado · ${formatarTelefone(telefone)}` : 'Conecte seu número para receber notificações'}</div>
       </div>
-      <span class="status-badge sb-muted">Configurar</span>
+      <span class="status-badge ${telefone ? 'sb-green' : 'sb-muted'}">${telefone ? '<i class="fas fa-check" style="font-size:9px"></i> Conectado' : 'Configurar'}</span>
       <div class="status-arrow"><i class="fas fa-chevron-right"></i></div>
     </div>`;
 
@@ -956,29 +956,39 @@ async function registrarPonto() {
 }
 
 // ── Modal WhatsApp ────────────────────────────────────────────────────────────
+function formatarTelefone(digits) {
+  const d = String(digits).replace(/\D/g, '');
+  if (d.length === 13) return `+${d.slice(0,2)} (${d.slice(2,4)}) ${d.slice(4,9)}-${d.slice(9)}`;
+  if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+  return digits;
+}
+
 async function abrirModalWpp() {
-  // Gera código temporário de 6 chars
   const body = document.getElementById('wppModalBody');
   body.innerHTML = `<p style="text-align:center;color:var(--muted);font-size:13px">Carregando...</p>`;
   document.getElementById('wppModal').classList.add('open');
 
+  // Se já conectado, mostra estado conectado
+  const telefone = portalDados?.lavador?.telefone ?? null;
+  if (telefone) {
+    renderModalWpp({ conectado: true, numero: formatarTelefone(telefone) });
+    return;
+  }
+
+  // Gera código novo
   try {
-    const r = await fetch(`${API}/p/${linkToken}/wpp/codigo`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${sessionJwt}` },
-    });
+    const r = await fetch(`${API}/p/${linkToken}/wpp/codigo`, { method: 'POST' });
     if (!r.ok) throw new Error();
-    const { codigo, expiraEm } = await r.json();
-    renderModalWpp({ codigo, expiraEm, conectado: false, numero: null });
+    const { codigo, expiraEm, botNumero } = await r.json();
+    renderModalWpp({ codigo, expiraEm, botNumero, conectado: false, numero: null });
   } catch {
-    // Fallback: formulário para digitar número diretamente
     body.innerHTML = `
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Envie <strong>"conectar CÓDIGO"</strong> para o bot do Lina WhatsApp. Primeiro gere seu código:</p>
-      <button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()"><i class="fas fa-qrcode"></i> Gerar código</button>`;
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Não foi possível gerar o código. Tente novamente.</p>
+      <button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()"><i class="fas fa-rotate-right"></i> Tentar novamente</button>`;
   }
 }
 
-function renderModalWpp({ codigo, expiraEm, conectado, numero }) {
+function renderModalWpp({ codigo, expiraEm, botNumero, conectado, numero }) {
   const body = document.getElementById('wppModalBody');
   if (conectado) {
     body.innerHTML = `
@@ -987,25 +997,54 @@ function renderModalWpp({ codigo, expiraEm, conectado, numero }) {
         <div class="wpp-c-title">WhatsApp conectado!</div>
         <div class="wpp-c-num">${numero}</div>
       </div>
-      <button class="btn-desvincular">Desvincular número</button>`;
+      <p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;line-height:1.5">
+        Você receberá notificações de comissões e pode consultar seu extrato pelo WhatsApp.
+      </p>
+      <button class="btn-desvincular" onclick="desvincularWpp()">Desvincular número</button>`;
     return;
   }
 
   const expirado = expiraEm && new Date(expiraEm) < new Date();
-  const url = `https://wa.me/?text=${encodeURIComponent(`conectar ${codigo}`)}`;
+  const urlText  = encodeURIComponent(`conectar ${codigo}`);
+  const url      = botNumero ? `https://wa.me/55${botNumero}?text=${urlText}` : `https://wa.me/?text=${urlText}`;
+
   body.innerHTML = `
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Envie o código abaixo para o bot do Lina WhatsApp:</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+      Toque em <strong>"Abrir WhatsApp"</strong> — a mensagem já vem preenchida, só apertar enviar.
+    </p>
     <div class="wpp-code-box${expirado ? ' expired' : ''}">
       <div class="wpp-code${expirado ? ' expired' : ''}">${codigo}</div>
-      ${expiraEm && !expirado ? `<div class="wpp-timer" id="wppCountdown"><i class="fas fa-clock"></i> —</div>` : ''}
-      ${expirado ? `<span style="font-size:11px;font-weight:700;color:var(--red)">Expirado</span>` : ''}
+      ${expiraEm && !expirado
+        ? `<div class="wpp-timer" id="wppCountdown"><i class="fas fa-clock"></i> —</div>`
+        : expirado
+        ? `<span style="font-size:11px;font-weight:700;color:var(--red)">Expirado</span>`
+        : ''}
     </div>
     ${!expirado
-      ? `<button class="btn-wpp bwpp-conectar" onclick="window.open('${url}','_blank')"><i class="fab fa-whatsapp"></i> Abrir WhatsApp</button>`
-      : `<button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()"><i class="fas fa-arrows-rotate"></i> Gerar novo código</button>`}
-    <p class="wpp-instrucao">O bot vai confirmar automaticamente ao receber o código.</p>`;
+      ? `<button class="btn-wpp bwpp-conectar" onclick="window.open('${url}','_blank')">
+           <i class="fab fa-whatsapp"></i> Abrir WhatsApp
+         </button>`
+      : `<button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()">
+           <i class="fas fa-rotate-right"></i> Gerar novo código
+         </button>`}
+    <p class="wpp-instrucao">Código válido por 10 minutos. O bot confirma automaticamente.</p>`;
 
   if (expiraEm && !expirado) iniciarCountdown(new Date(expiraEm));
+}
+
+async function desvincularWpp() {
+  if (!confirm('Deseja desvincular seu número do WhatsApp?')) return;
+  try {
+    const r = await fetch(`${API}/p/${linkToken}/wpp/desvincular`, {
+      method: 'POST', headers: { Authorization: `Bearer ${sessionJwt}` },
+    });
+    if (!r.ok) throw new Error();
+    portalDados.lavador.telefone = null;
+    renderHub();
+    fecharModalWpp();
+  } catch {
+    alert('Erro ao desvincular. Tente novamente.');
+  }
 }
 
 function iniciarCountdown(expiraEm) {
