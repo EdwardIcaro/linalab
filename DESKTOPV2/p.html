@@ -7,8 +7,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="/api.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -713,10 +713,10 @@ function voltarDoHub() {
   mostrarTela('tela-hub');
 }
 
-// ── Mapa Leaflet ───────────────────────────────────────────────────────────────
+// ── Mapa Mapbox ────────────────────────────────────────────────────────────────
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZWR3YXJkaWNhcm8iLCJhIjoiY21wMG41eDYyMDBvNjJyb3A1YXNjMDIwYyJ9.4yAPg_a90_9v3MBuFU71qQ';
 let pontoMap = null;
 let pontoUserMarker = null;
-let pontoPrecisionCircle = null;
 let pontoRelogioInterval = null;
 let pontoGpsCoords = null; // { lat, lng, accuracy }
 let pontoGpsEstado = 'pending'; // 'pending' | 'ok' | 'warn' | 'denied'
@@ -737,17 +737,17 @@ function initPontoTela() {
 
   // Inicializa mapa
   if (!pontoMap) {
-    pontoMap = L.map('ponto-map', {
-      zoomControl:false, attributionControl:false,
-      dragging:false, scrollWheelZoom:false,
-      doubleClickZoom:false, touchZoom:false, keyboard:false
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    pontoMap = new mapboxgl.Map({
+      container: 'ponto-map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-46.6333, -23.5505],
+      zoom: 15,
+      interactive: false,
     });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      subdomains:'abcd', maxZoom:19
-    }).addTo(pontoMap);
-    pontoMap.setView([-23.5505, -46.6333], 16);
+  } else {
+    pontoMap.resize();
   }
-  setTimeout(() => pontoMap.invalidateSize(), 120);
 
   // Carrega dados e GPS em paralelo
   carregarPontoHoje();
@@ -763,30 +763,22 @@ function atualizarRelogioPonto() {
 
 // ── GPS ────────────────────────────────────────────────────────────────────────
 function pedirPermissaoGps() {
-  if (!navigator.geolocation) {
-    setPontoGpsEstado('denied');
-    return;
-  }
+  if (!navigator.geolocation) { setPontoGpsEstado('denied'); return; }
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude, accuracy } = pos.coords;
       pontoGpsCoords = { lat: latitude, lng: longitude, accuracy };
-      // Atualiza mapa
       if (pontoMap) {
-        if (pontoUserMarker)     { pontoUserMarker.remove();     pontoUserMarker = null; }
-        if (pontoPrecisionCircle){ pontoPrecisionCircle.remove(); pontoPrecisionCircle = null; }
-        pontoPrecisionCircle = L.circle([latitude, longitude], {
-          radius: accuracy, color:'#2563eb', fillColor:'#3b82f6', fillOpacity:.1, weight:1.5
-        }).addTo(pontoMap);
-        pontoUserMarker = L.circleMarker([latitude, longitude], {
-          radius:9, fillColor:'#2563eb', color:'#fff', weight:3, fillOpacity:1
-        }).addTo(pontoMap);
-        pontoMap.setView([latitude, longitude], 17);
+        if (pontoUserMarker) { pontoUserMarker.remove(); pontoUserMarker = null; }
+        pontoUserMarker = new mapboxgl.Marker({ color: '#2563eb' })
+          .setLngLat([longitude, latitude])
+          .addTo(pontoMap);
+        pontoMap.flyTo({ center: [longitude, latitude], zoom: 17, speed: 1.4 });
       }
       setPontoGpsEstado(accuracy > 100 ? 'warn' : 'ok');
     },
     () => setPontoGpsEstado('denied'),
-    { enableHighAccuracy:true, timeout:8000, maximumAge:0 }
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
   );
 }
 
