@@ -124,7 +124,7 @@ const api = {
   getStatusDp: (empresaId) => fetchApi(`/dp/status?empresaId=${empresaId}`),
   getImportaveisDp: (empresaId) => fetchApi(`/dp/onboarding/importaveis?empresaId=${empresaId}`),
   salvarOnboardingDp: (data) => fetchApi('/dp/onboarding/salvar', { method: 'POST', body: JSON.stringify(data) }),
-  getDpDashboard: () => fetchApi('/dp/dashboard'),
+  getDpDashboard: () => fetchApi(`/dp/dashboard?empresaId=${localStorage.getItem('empresaId') || ''}`),
 
   // ===== EMPRESAS =====
   getEmpresasDoUsuario: () => fetchApi('/empresas'),

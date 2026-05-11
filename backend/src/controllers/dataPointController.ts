@@ -341,7 +341,7 @@ function calcMinutosTrabalhados(
 
 // ─── GET /api/dp/dashboard ────────────────────────────────────────────────────
 export const getDashboardDp = async (req: EmpresaRequest, res: Response) => {
-  const empresaId = (req as any).empresaId as string;
+  const empresaId = ((req as any).empresaId || req.query.empresaId) as string;
   if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
 
   try {
