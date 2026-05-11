@@ -6,6 +6,9 @@
   <title>Data Point — Configuração Inicial</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
   <script src="api.js"></script>
   <style>
     :root{
@@ -115,16 +118,15 @@
     .info-box{display:flex;gap:10px;align-items:flex-start;background:var(--teal50);border:1px solid var(--teal100);border-radius:12px;padding:13px 16px;font-size:13px;color:var(--teal800);line-height:1.55}
     .info-box i{color:var(--teal600);margin-top:2px;flex-shrink:0}
 
-    /* ── MAPA MOCK ── */
-    .map-mock{width:100%;height:200px;border-radius:14px;background:#e8f4f0;border:1px solid var(--gray300);position:relative;overflow:hidden;margin-bottom:14px}
-    .map-bg{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(13,148,136,.06) 0px,rgba(13,148,136,.06) 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,rgba(13,148,136,.06) 0px,rgba(13,148,136,.06) 1px,transparent 1px,transparent 40px),linear-gradient(160deg,#d1fae5 0%,#ccfbf1 60%,#e0f2fe 100%)}
-    .map-road-h{position:absolute;left:0;right:0;height:10px;background:rgba(255,255,255,.7);border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.06)}
-    .map-road-v{position:absolute;top:0;bottom:0;width:10px;background:rgba(255,255,255,.7);border-left:1px solid rgba(0,0,0,.06);border-right:1px solid rgba(0,0,0,.06)}
-    .map-radius{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:110px;border-radius:50%;background:rgba(13,148,136,.12);border:2px solid rgba(13,148,136,.4);animation:pulse 3s ease-in-out infinite}
-    .map-radius-inner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;background:rgba(13,148,136,.18);border:2px solid rgba(13,148,136,.5)}
-    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(13,148,136,.2)}50%{box-shadow:0 0 0 12px rgba(13,148,136,0)}}
-    .map-pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:28px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.3));z-index:2}
-    .map-lbl{position:absolute;bottom:10px;right:12px;background:rgba(255,255,255,.92);border:1px solid var(--gray200);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--teal700)}
+    /* ── MAPA MAPBOX ── */
+    #mapContainer{width:100%;height:220px;border-radius:14px;overflow:hidden;margin-bottom:10px;border:1px solid var(--gray300)}
+    .map-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .btn-map{padding:8px 14px;border-radius:9px;border:1px solid var(--gray300);background:#fff;color:var(--gray700);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .18s}
+    .btn-map:hover{border-color:var(--teal400);color:var(--teal700)}
+    .btn-map.primary{background:var(--teal600);color:#fff;border-color:var(--teal600)}
+    .btn-map.primary:hover{background:var(--teal700)}
+    .map-status{font-size:11px;color:var(--gray400);margin-left:auto;display:flex;align-items:center;gap:5px}
+    .map-status.ok{color:var(--teal600)}
     .radius-row{display:flex;align-items:center;gap:14px;margin-top:8px}
     .radius-val{font-size:14px;font-weight:700;color:var(--teal700);min-width:50px}
     input[type=range]{flex:1;accent-color:var(--teal600);height:6px;border-radius:3px;cursor:pointer;border:none;padding:0;background:transparent;box-shadow:none}
@@ -358,17 +360,18 @@
         <div class="field-hint">Este endereço será o centro do raio de geofencing.</div>
       </div>
 
-      <!-- Mapa mock -->
-      <div class="map-mock">
-        <div class="map-bg"></div>
-        <div class="map-road-h" style="top:40%"></div>
-        <div class="map-road-h" style="top:65%"></div>
-        <div class="map-road-v" style="left:30%"></div>
-        <div class="map-road-v" style="left:70%"></div>
-        <div class="map-radius"></div>
-        <div class="map-radius-inner"></div>
-        <div class="map-pin">📍</div>
-        <div class="map-lbl" id="mapLbl">⭕ Raio: 80m</div>
+      <!-- Mapa Mapbox -->
+      <div id="mapContainer"></div>
+      <div class="map-actions">
+        <button class="btn-map primary" onclick="geocodificar()">
+          <i class="fa fa-search"></i> Localizar endereço
+        </button>
+        <button class="btn-map" onclick="usarMinhaLocalizacao()">
+          <i class="fa fa-crosshairs"></i> Usar minha localização
+        </button>
+        <span class="map-status" id="mapStatus">
+          <i class="fa fa-circle-info"></i> Digite o endereço e clique em localizar
+        </span>
       </div>
 
       <div class="field">
@@ -594,6 +597,123 @@
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
 
+// ─── Mapbox ───────────────────────────────────────────────────────────────────
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZWR3YXJkaWNhcm8iLCJhIjoiY21wMG41eDYyMDBvNjJyb3A1YXNjMDIwYyJ9.4yAPg_a90_9v3MBuFU71qQ';
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+let map = null;
+let mapMarker = null;
+let mapLng = -60.0261; // Manaus (default)
+let mapLat = -3.1019;
+let mapReady = false;
+
+function initMap() {
+  if (map) return;
+  map = new mapboxgl.Map({
+    container: 'mapContainer',
+    style: 'mapbox://styles/mapbox/streets-v12',
+    center: [mapLng, mapLat],
+    zoom: 15,
+    language: 'pt'
+  });
+
+  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+  map.on('load', () => {
+    mapReady = true;
+
+    // Source e layers do círculo de raio
+    map.addSource('raio-src', {
+      type: 'geojson',
+      data: criarCirculo(mapLng, mapLat, parseInt(document.getElementById('raioSlider').value))
+    });
+    map.addLayer({
+      id: 'raio-fill',
+      type: 'fill',
+      source: 'raio-src',
+      paint: { 'fill-color': '#14b8a6', 'fill-opacity': 0.15 }
+    });
+    map.addLayer({
+      id: 'raio-line',
+      type: 'line',
+      source: 'raio-src',
+      paint: { 'line-color': '#0d9488', 'line-width': 2, 'line-dasharray': [4, 3] }
+    });
+
+    // Marker central
+    mapMarker = new mapboxgl.Marker({ color: '#0d9488', draggable: true })
+      .setLngLat([mapLng, mapLat])
+      .addTo(map);
+
+    // Ao arrastar o pin, atualiza o círculo e as coordenadas
+    mapMarker.on('dragend', () => {
+      const pos = mapMarker.getLngLat();
+      mapLng = pos.lng;
+      mapLat = pos.lat;
+      atualizarCirculo();
+    });
+  });
+}
+
+function criarCirculo(lng, lat, raioMetros) {
+  return turf.circle([lng, lat], raioMetros / 1000, { units: 'kilometers', steps: 64 });
+}
+
+function moverMapa(lng, lat) {
+  mapLng = lng;
+  mapLat = lat;
+  map.flyTo({ center: [lng, lat], zoom: 16, speed: 1.4 });
+  mapMarker.setLngLat([lng, lat]);
+  atualizarCirculo();
+}
+
+function atualizarCirculo() {
+  if (!mapReady) return;
+  const raio = parseInt(document.getElementById('raioSlider').value);
+  map.getSource('raio-src').setData(criarCirculo(mapLng, mapLat, raio));
+}
+
+async function geocodificar() {
+  const end = document.getElementById('endereco').value.trim();
+  if (!end) return setMapStatus('warning', 'Digite um endereço primeiro.');
+
+  setMapStatus('loading', 'Buscando localização...');
+  try {
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(end)}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=BR&limit=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.features?.length) {
+      return setMapStatus('warning', 'Endereço não encontrado. Tente ser mais específico.');
+    }
+    const [lng, lat] = data.features[0].center;
+    const nomeLocal = data.features[0].place_name;
+    moverMapa(lng, lat);
+    setMapStatus('ok', `📍 ${nomeLocal}`);
+  } catch {
+    setMapStatus('warning', 'Erro ao buscar endereço. Verifique a conexão.');
+  }
+}
+
+function usarMinhaLocalizacao() {
+  if (!navigator.geolocation) return setMapStatus('warning', 'Geolocalização não suportada neste navegador.');
+  setMapStatus('loading', 'Obtendo localização...');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      moverMapa(pos.coords.longitude, pos.coords.latitude);
+      setMapStatus('ok', `📍 Localização obtida via GPS (precisão: ${Math.round(pos.coords.accuracy)}m)`);
+    },
+    () => setMapStatus('warning', 'Permissão de localização negada.')
+  );
+}
+
+function setMapStatus(tipo, txt) {
+  const el = document.getElementById('mapStatus');
+  const icons = { ok: 'fa-circle-check', warning: 'fa-triangle-exclamation', loading: 'fa-spinner fa-spin' };
+  el.className = `map-status${tipo === 'ok' ? ' ok' : ''}`;
+  el.innerHTML = `<i class="fa ${icons[tipo] || 'fa-circle-info'}"></i> ${txt}`;
+}
+
 // ─── Estado global ────────────────────────────────────────────────────────────
 let modoInteg = 'lina-wash';
 let empresaIdSel = null;
@@ -675,11 +795,12 @@ async function irPara(n) {
     return alert('Selecione a empresa para continuar.');
   }
   if (n === 1 && modoInteg === 'lina-wash' && empresaNomeSel) {
-    // Pré-preencher nome da empresa
     document.getElementById('nomeEmpresa').value = empresaNomeSel;
     document.getElementById('prefillBadge').style.display = '';
     document.getElementById('prefillEnd').style.display = '';
   }
+  // Inicia o mapa quando o passo 1 fica visível pela primeira vez
+  if (n === 1) setTimeout(() => { initMap(); map?.resize(); }, 50);
   if (n === 3 && !importaveisCarregados) await carregarImportaveis();
   if (n === 4) renderResumo();
 
@@ -704,7 +825,7 @@ function toggleMulti(el) {
 
 function atualizarRaio(v) {
   document.getElementById('raioVal').textContent = v + 'm';
-  document.getElementById('mapLbl').textContent = `⭕ Raio: ${v}m`;
+  atualizarCirculo();
 }
 
 // ─── PASSO 3: Equipe ──────────────────────────────────────────────────────────
@@ -922,6 +1043,8 @@ async function ativar() {
       cnpj: document.getElementById('cnpj').value,
       setor: document.getElementById('setor').value,
       endereco: document.getElementById('endereco').value,
+      lat: mapLat,
+      lng: mapLng,
       raioGps: parseInt(document.getElementById('raioSlider').value),
       nivelGps: getGpsLabel().split(' ')[1]?.toUpperCase() || 'BASICO',
       metodosVerificacao: metodosAtivos,
