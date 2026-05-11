@@ -174,12 +174,27 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
   if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
 
   const {
-    // Passo 1 — config
+    // Passo 0
+    modoIntegracao = 'lina-wash', // 'lina-wash' | 'standalone'
+    // Passo 1 — empresa & localização
+    nomeEmpresa,
+    cnpj,
+    setor,
+    endereco,
+    lat,
+    lng,
     raioGps = 80,
-    horarioAbertura,
-    // Passo 2 — funcionários
-    importados = [],   // [{ lavadorId, nome, cargo, telefone }]
-    novosFuncionarios = [], // [{ nome, cpf, cargo, salarioBase, cargaHoraria, telefone }]
+    nivelGps = 'BASICO', // BASICO | MEDIO | RIGIDO | MAXIMO
+    // Passo 2 — configurações de ponto
+    metodosVerificacao = ['GPS'],
+    jornadaEntrada = '08:00',
+    jornadaSaida = '17:00',
+    toleranciaMin = 10,
+    modoEncerramento = 'AUTOMATICO', // AUTOMATICO | FUNCIONARIO
+    modoAutenticacao = 'PIN', // PIN | SEM_PIN
+    // Passo 3 — funcionários
+    importados = [],
+    novosFuncionarios = [],
   } = req.body;
 
   try {
@@ -192,11 +207,21 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
           empresaId,
           sistema: 'data-point',
           ativo: true,
-          config: JSON.stringify({ raioGps, horarioAbertura }),
+          config: JSON.stringify({
+            modoIntegracao, nomeEmpresa, cnpj, setor,
+            endereco, lat, lng, raioGps, nivelGps,
+            metodosVerificacao, jornadaEntrada, jornadaSaida,
+            toleranciaMin, modoEncerramento, modoAutenticacao,
+          }),
         },
         update: {
           ativo: true,
-          config: JSON.stringify({ raioGps, horarioAbertura }),
+          config: JSON.stringify({
+            modoIntegracao, nomeEmpresa, cnpj, setor,
+            endereco, lat, lng, raioGps, nivelGps,
+            metodosVerificacao, jornadaEntrada, jornadaSaida,
+            toleranciaMin, modoEncerramento, modoAutenticacao,
+          }),
         },
       });
 
