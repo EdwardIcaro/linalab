@@ -411,8 +411,16 @@
             <!-- Filters -->
             <div class="filters-section">
                 <div class="filter-group">
+                    <label>Sistema:</label>
+                    <select id="filterSistema" onchange="applyFilters()">
+                        <option value="">Todos</option>
+                        <option value="lina-wash">🚗 Lina Wash</option>
+                        <option value="data-point">⏰ Data Point</option>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label>Status:</label>
-                    <select id="filterStatus" onchange="loadData()">
+                    <select id="filterStatus" onchange="applyFilters()">
                         <option value="">Todos</option>
                         <option value="ACTIVE">Ativa</option>
                         <option value="TRIAL">Trial</option>
@@ -423,7 +431,7 @@
                 </div>
                 <div class="filter-group">
                     <label>Plano:</label>
-                    <select id="filterPlan" onchange="loadData()">
+                    <select id="filterPlan" onchange="applyFilters()">
                         <option value="">Todos</option>
                     </select>
                 </div>
@@ -592,17 +600,14 @@
         }
 
         function applyFilters() {
-            const statusFilter = document.getElementById('filterStatus').value;
-            const planFilter = document.getElementById('filterPlan').value;
+            const sistemaFilter = document.getElementById('filterSistema').value;
+            const statusFilter  = document.getElementById('filterStatus').value;
+            const planFilter    = document.getElementById('filterPlan').value;
 
             let filtered = allSubscriptions;
-
-            if (statusFilter) {
-                filtered = filtered.filter(s => s.status === statusFilter);
-            }
-            if (planFilter) {
-                filtered = filtered.filter(s => s.planId === planFilter);
-            }
+            if (sistemaFilter) filtered = filtered.filter(s => s.plan?.sistema === sistemaFilter);
+            if (statusFilter)  filtered = filtered.filter(s => s.status === statusFilter);
+            if (planFilter)    filtered = filtered.filter(s => s.planId === planFilter);
 
             renderTable(filtered);
         }
@@ -626,6 +631,7 @@
                     <thead>
                         <tr>
                             <th>Usuário</th>
+                            <th>Sistema</th>
                             <th>Plano</th>
                             <th>Status</th>
                             <th>Preço</th>
@@ -644,12 +650,15 @@
                 const startDate = formatDate(sub.startDate);
                 const nextBillingDate = sub.nextBillingDate ? formatDate(sub.nextBillingDate) : '-';
 
+                const SISTEMA_LABEL = { 'lina-wash': '🚗 Lina Wash', 'data-point': '⏰ Data Point' };
+                const sistemaLabel = SISTEMA_LABEL[sub.plan?.sistema] || sub.plan?.sistema || '—';
                 html += `
                     <tr>
                         <td>
                             <strong>${sub.usuario.nome}</strong><br>
                             <small style="color: #999;">${sub.usuario.email}</small>
                         </td>
+                        <td><small style="font-weight:600">${sistemaLabel}</small></td>
                         <td>${sub.plan.nome}</td>
                         <td>
                             <span class="status-badge ${statusClass}">${statusText}</span>

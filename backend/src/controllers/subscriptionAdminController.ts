@@ -13,13 +13,11 @@ import prisma from '../db';
  */
 export const listAllSubscriptions = async (req: Request, res: Response) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, sistema } = req.query;
 
     const where: any = {};
-
-    if (status) {
-      where.status = status;
-    }
+    if (status) where.status = status;
+    if (sistema) where.plan = { sistema: sistema as string };
 
     const subscriptions = await prisma.subscription.findMany({
       where,
@@ -256,15 +254,12 @@ export const extendSubscription = async (req: Request, res: Response) => {
  */
 export const listPlans = async (req: Request, res: Response) => {
   try {
+    const { sistema } = req.query;
     const plans = await prisma.subscriptionPlan.findMany({
-      orderBy: { ordem: 'asc' },
-      include: {
-        _count: {
-          select: { subscriptions: true }
-        }
-      }
+      where: sistema ? { sistema: sistema as string } : undefined,
+      orderBy: [{ sistema: 'asc' }, { ordem: 'asc' }],
+      include: { _count: { select: { subscriptions: true } } }
     });
-
     res.json(plans);
   } catch (error) {
     console.error('Erro ao listar planos:', error);
@@ -283,6 +278,7 @@ export const createPlan = async (req: Request, res: Response) => {
       descricao,
       preco,
       intervalo,
+      sistema,
       maxEmpresas,
       maxUsuarios,
       features,
@@ -303,6 +299,7 @@ export const createPlan = async (req: Request, res: Response) => {
         descricao,
         preco,
         intervalo: intervalo || 'MONTHLY',
+        sistema: sistema || 'lina-wash',
         maxEmpresas,
         maxUsuarios,
         features: features || [],

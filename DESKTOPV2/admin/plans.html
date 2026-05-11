@@ -372,6 +372,13 @@
             </div>
         </div>
 
+        <!-- Tabs de sistema -->
+        <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid #e5e7eb;padding-bottom:0">
+            <button id="tab-all"        onclick="setTab('all')"        style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;border-bottom:3px solid #00BCD4;color:#00BCD4;margin-bottom:-2px">Todos</button>
+            <button id="tab-lina-wash"  onclick="setTab('lina-wash')"  style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:#666">🚗 Lina Wash</button>
+            <button id="tab-data-point" onclick="setTab('data-point')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:#666">⏰ Data Point</button>
+        </div>
+
         <div id="loadingState" class="loading">
             <i class="fas fa-spinner fa-spin"></i> Carregando planos...
         </div>
@@ -386,6 +393,14 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header" id="formModalTitle">Novo Plano</div>
             <form id="planForm" onsubmit="savePlan(event)">
+                <div class="form-group">
+                    <label class="form-label">Sistema</label>
+                    <select class="form-input" id="formSistema">
+                        <option value="lina-wash">🚗 Lina Wash</option>
+                        <option value="data-point">⏰ Data Point</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Nome</label>
                     <input type="text" class="form-input" id="formNome" required placeholder="Ex: Basic">
@@ -446,20 +461,21 @@
         let allPlans = [];
         let editingPlanId = null;
         let isProcessing = false;
+        let tabAtual = 'all';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-        });
+        const SISTEMA_LABEL = {
+            'lina-wash':  { icon: '🚗', label: 'Lina Wash',  cor: '#7c3aed' },
+            'data-point': { icon: '⏰', label: 'Data Point', cor: '#0f766e' },
+        };
+
+        document.addEventListener('DOMContentLoaded', () => { loadData(); });
 
         async function loadData() {
             try {
                 document.getElementById('loadingState').style.display = 'block';
                 document.getElementById('mainContent').style.display = 'none';
-
                 allPlans = await fetchApi('/admin/subscriptions/plans');
-
                 renderPlans();
-
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
             } catch (error) {
@@ -468,58 +484,60 @@
             }
         }
 
+        function setTab(tab) {
+            tabAtual = tab;
+            ['all','lina-wash','data-point'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (!el) return;
+                const ativo = t === tab;
+                el.style.borderBottom = ativo ? '3px solid #00BCD4' : '3px solid transparent';
+                el.style.color = ativo ? '#00BCD4' : '#666';
+            });
+            renderPlans();
+        }
+
         function renderPlans() {
             const container = document.getElementById('plansContainer');
+            const plans = tabAtual === 'all' ? allPlans : allPlans.filter(p => p.sistema === tabAtual);
 
-            if (allPlans.length === 0) {
+            if (plans.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state" style="grid-column: 1 / -1;">
                         <i class="fas fa-inbox"></i>
                         <h3>Nenhum Plano</h3>
-                        <p>Crie seu primeiro plano clicando em "Novo Plano"</p>
-                    </div>
-                `;
+                        <p>Crie o primeiro plano clicando em "Novo Plano"</p>
+                    </div>`;
                 return;
             }
 
-            container.innerHTML = allPlans.map(plan => `
-                <div class="plan-card">
+            container.innerHTML = plans.map(plan => {
+                const s = SISTEMA_LABEL[plan.sistema] || { icon: '📦', label: plan.sistema, cor: '#666' };
+                return `
+                <div class="plan-card" style="border-top-color:${s.cor}">
                     <div class="plan-header">
-                        <div class="plan-name">${plan.nome}</div>
+                        <div>
+                            <span style="font-size:11px;font-weight:600;color:${s.cor};background:${s.cor}18;padding:3px 8px;border-radius:6px;display:inline-block;margin-bottom:6px">${s.icon} ${s.label}</span>
+                            <div class="plan-name">${plan.nome}</div>
+                        </div>
                         <div class="plan-toggle">
-                            <span style="font-size: 0.85rem; color: #666;">${plan.ativo ? 'Ativo' : 'Inativo'}</span>
+                            <span style="font-size:0.85rem;color:#666">${plan.ativo ? 'Ativo' : 'Inativo'}</span>
                             <button class="toggle-switch ${plan.ativo ? 'active' : ''}" onclick="togglePlan('${plan.id}', ${!plan.ativo})"></button>
                         </div>
                     </div>
-
                     <div class="plan-info">
-                        <div class="info-row">
-                            <span class="info-label">Preço</span>
-                            <span class="info-value">R$ ${(plan.preco / 100).toFixed(2).replace('.', ',')}/mês</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Empresas</span>
-                            <span class="info-value">${plan.maxEmpresas}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Add-ons</span>
-                            <span class="info-value">${plan.maxAddons}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Ordem</span>
-                            <span class="info-value">${plan.ordem || '-'}</span>
-                        </div>
+                        <div class="info-row"><span class="info-label">Preço</span><span class="info-value">R$ ${plan.preco.toFixed(2).replace('.', ',')}/mês</span></div>
+                        <div class="info-row"><span class="info-label">Empresas</span><span class="info-value">${plan.maxEmpresas}</span></div>
+                        <div class="info-row"><span class="info-label">Add-ons</span><span class="info-value">${plan.maxAddons}</span></div>
+                        <div class="info-row"><span class="info-label">Assinantes</span><span class="info-value">${plan._count?.subscriptions ?? 0}</span></div>
+                        <div class="info-row"><span class="info-label">Ordem</span><span class="info-value">${plan.ordem ?? '-'}</span></div>
                     </div>
-
                     ${renderFeatures(plan)}
-
                     <div class="plan-actions">
                         <button class="btn-edit" onclick="openEditModal('${plan.id}')">
                             <i class="fas fa-edit"></i> Editar
                         </button>
                     </div>
-                </div>
-            `).join('');
+                </div>`; }).join('');
         }
 
         function renderFeatures(plan) {
@@ -559,6 +577,7 @@
             document.getElementById('formModalTitle').textContent = 'Novo Plano';
             document.getElementById('planForm').reset();
             document.getElementById('formAtivo').checked = true;
+            document.getElementById('formSistema').value = tabAtual !== 'all' ? tabAtual : 'lina-wash';
             document.getElementById('submitBtnText').textContent = 'Criar Plano';
             document.getElementById('submitBtn').disabled = false;
             document.getElementById('formModal').classList.add('show');
@@ -570,9 +589,10 @@
 
             editingPlanId = planId;
             document.getElementById('formModalTitle').textContent = 'Editar Plano';
+            document.getElementById('formSistema').value = plan.sistema || 'lina-wash';
             document.getElementById('formNome').value = plan.nome;
             document.getElementById('formDescricao').value = plan.descricao || '';
-            document.getElementById('formPreco').value = (plan.preco / 100).toFixed(2);
+            document.getElementById('formPreco').value = plan.preco.toFixed(2);
             document.getElementById('formOrdem').value = plan.ordem || 0;
             document.getElementById('formMaxEmpresas').value = plan.maxEmpresas;
             document.getElementById('formMaxAddons').value = plan.maxAddons;
@@ -605,12 +625,13 @@
                     .filter(f => f.length > 0);
 
                 const payload = {
+                    sistema: document.getElementById('formSistema').value,
                     nome: document.getElementById('formNome').value,
                     descricao: document.getElementById('formDescricao').value,
-                    preco: Math.round(parseFloat(document.getElementById('formPreco').value) * 100),
-                    ordem: parseInt(document.getElementById('formOrdem').value),
+                    preco: parseFloat(document.getElementById('formPreco').value),
+                    ordem: parseInt(document.getElementById('formOrdem').value) || 0,
                     maxEmpresas: parseInt(document.getElementById('formMaxEmpresas').value),
-                    maxAddons: parseInt(document.getElementById('formMaxAddons').value),
+                    maxAddons: parseInt(document.getElementById('formMaxAddons').value) || 0,
                     ativo: document.getElementById('formAtivo').checked,
                     features
                 };
