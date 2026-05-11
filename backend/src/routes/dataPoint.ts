@@ -7,17 +7,18 @@ import {
   getStatusDp,
   getDashboardDp,
 } from '../controllers/dataPointController';
+import authMiddleware from '../middlewares/authMiddleware';
 
 const router: Router = Router();
 
-// userAuthMiddleware — rotas de usuário (sem empresa scoped)
-router.get('/planos',    getPlanosDp);
+// userAuthMiddleware (global em index.ts) — sem empresa scoped
+router.get('/planos',     getPlanosDp);
 router.post('/contratar', contratarDp);
 
-// authMiddleware — rotas com empresa scoped
-router.get('/status',                  getStatusDp);
-router.get('/dashboard',               getDashboardDp);
-router.get('/onboarding/importaveis',  getImportaveis);
-router.post('/onboarding/salvar',      salvarOnboarding);
+// authMiddleware por rota — empresa scoped (extrai empresaId do JWT)
+router.get('/status',                  authMiddleware, getStatusDp);
+router.get('/dashboard',               authMiddleware, getDashboardDp);
+router.get('/onboarding/importaveis',  authMiddleware, getImportaveis);
+router.post('/onboarding/salvar',      authMiddleware, salvarOnboarding);
 
 export default router;
