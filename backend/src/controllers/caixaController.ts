@@ -1069,7 +1069,7 @@ export const deleteCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
 
 export const deleteAdiantamento = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     try {
         const adiantamento = await prisma.adiantamento.findFirst({
