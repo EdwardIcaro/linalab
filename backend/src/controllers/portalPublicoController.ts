@@ -248,6 +248,120 @@ export const getDadosPortal = async (req: Request, res: Response) => {
   }
 };
 
+// ─── GET /api/p/me/extrato ───────────────────────────────────────────────────
+// Retorna os dados no mesmo shape que getLavadorPublicData,
+// mas autenticado pelo session JWT do portal.
+export const getExtratoPortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string;
+
+  try {
+    const trintaDiasAtras = new Date();
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+    trintaDiasAtras.setHours(0, 0, 0, 0);
+
+    const lavador = await prisma.lavador.findUnique({
+      where: { id: lavadorId },
+      select: {
+        id: true, nome: true, comissao: true, tipoRemuneracao: true,
+        baseComissao: true, salario: true,
+        empresa: { select: { nome: true, horarioAbertura: true } },
+      },
+    });
+    if (!lavador) return res.status(404).json({ erro: 'Lavador não encontrado' });
+
+    const ordens = await prisma.ordemServico.findMany({
+      where: {
+        OR: [
+          { lavadorId },
+          { ordemLavadores: { some: { lavadorId } } },
+        ],
+        createdAt: { gte: trintaDiasAtras },
+        status: { in: ['EM_ANDAMENTO', 'FINALIZADO', 'PENDENTE', 'AGUARDANDO_PAGAMENTO'] },
+      },
+      include: {
+        veiculo: { select: { modelo: true, placa: true } },
+        items: {
+          include: {
+            servico: { select: { nome: true } },
+            adicional: { select: { nome: true } },
+          },
+        },
+        lavador: { select: { nome: true, comissao: true } },
+        ordemLavadores: {
+          include: {
+            lavador: { select: { id: true, nome: true, comissao: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    const fechamentos = await prisma.fechamentoComissao.findMany({
+      where: { lavadorId, data: { gte: trintaDiasAtras } },
+      include: {
+        ordensPagas: {
+          include: {
+            veiculo: { select: { placa: true, modelo: true } },
+            items: { include: { servico: { select: { nome: true } }, adicional: { select: { nome: true } } } },
+            lavador: { select: { nome: true, comissao: true } },
+            ordemLavadores: { include: { lavador: { select: { id: true, nome: true, comissao: true } } } },
+          },
+        },
+        ordemLavadoresPagos: {
+          include: {
+            lavador: { select: { id: true, nome: true, comissao: true } },
+            ordem: {
+              include: {
+                veiculo: { select: { placa: true, modelo: true } },
+                items: { include: { servico: { select: { nome: true } }, adicional: { select: { nome: true } } } },
+                lavador: { select: { nome: true, comissao: true } },
+                ordemLavadores: { include: { lavador: { select: { id: true, nome: true, comissao: true } } } },
+              },
+            },
+          },
+        },
+        adiantamentosQuitados: true,
+      },
+      orderBy: { data: 'desc' },
+    });
+
+    const gorjetas = await (prisma.gorjeta as any).findMany({
+      where: { lavadorId, criadoEm: { gte: trintaDiasAtras } },
+      orderBy: { criadoEm: 'desc' },
+    });
+
+    const adiantamentosNaoQuitados = await prisma.adiantamento.findMany({
+      where: { lavadorId, status: { not: 'QUITADO' } },
+      include: { caixaRegistro: { select: { descricao: true } } },
+      orderBy: { data: 'desc' },
+    });
+
+    const sistemaDP = await prisma.empresaSistema.findFirst({
+      where: { empresaId: (req as any).empresaId, sistema: 'data-point', ativo: true },
+    });
+
+    res.json({
+      lavadorId: lavador.id,
+      nome: lavador.nome,
+      comissao: lavador.comissao,
+      tipoRemuneracao: lavador.tipoRemuneracao,
+      baseComissao: lavador.baseComissao,
+      salario: lavador.salario,
+      empresa: lavador.empresa.nome,
+      dataPointAtivo: !!sistemaDP,
+      ordens,
+      gorjetas,
+      fechamentos,
+      adiantamentosNaoQuitados,
+      tokenExpiresAt: null, // portal não expira por tempo
+    });
+  } catch (error) {
+    console.error('[portal] extrato:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
 // ─── legado (/api/public/*) ───────────────────────────────────────────────────
 
 export const getOrdensByLavadorPublic = async (req: Request, res: Response) => {

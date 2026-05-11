@@ -864,9 +864,27 @@ let diaAtivo = null;     // ISO string do dia ativo
 let statPeriodDays = 7;
 
 // ===================== INIT =====================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Portal novo: session token injetado via sessionStorage pelo p.html
+  const portalToken = sessionStorage.getItem('portal_session_token');
+  if (portalToken) {
+    try {
+      const r = await fetch('/api/p/me/extrato', {
+        headers: { Authorization: `Bearer ${portalToken}` },
+      });
+      if (!r.ok) throw new Error('session_expired');
+      const data = await r.json();
+      lavadorData = data;
+      currentLavadorId = data.lavadorId;
+      renderUI();
+    } catch {
+      sessionStorage.removeItem('portal_session_token');
+      showError('Sessão expirada', 'Sua sessão expirou. Retorne ao portal e faça login novamente.', 'fa-clock-rotate-left');
+    }
+    return;
+  }
+
   // Links antigos (?token=...) não são mais suportados.
-  // O novo portal usa /p/TOKEN com autenticação por PIN.
   showError(
     'Link desatualizado',
     'Este link não é mais válido. Peça ao seu gestor para gerar um novo link de acesso pelo painel.',

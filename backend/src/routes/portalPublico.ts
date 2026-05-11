@@ -5,12 +5,14 @@ import {
   verifyPin,
   portalSessionMiddleware,
   getDadosPortal,
+  getExtratoPortal,
 } from '../controllers/portalPublicoController';
 
 const router: Router = Router();
 
 // Autenticadas — devem vir ANTES das rotas com :token para não colidir
-router.get('/me/dados', portalSessionMiddleware, getDadosPortal);
+router.get('/me/dados',   portalSessionMiddleware, getDadosPortal);
+router.get('/me/extrato', portalSessionMiddleware, getExtratoPortal);
 
 // Públicas (sem autenticação)
 router.get('/:token',             resolverTokenPublico);

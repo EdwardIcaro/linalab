@@ -3,363 +3,312 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Lina — Portal do Colaborador</title>
+  <title>Lina · Portal</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="api.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
     :root {
-      --bg:       #f1f5f9;
-      --white:    #ffffff;
-      --border:   #e2e8f0;
-      --text:     #1e293b;
-      --muted:    #64748b;
-      --faint:    #94a3b8;
-      --primary:  #7c3aed;
-      --primary-d:#5b21b6;
-      --primary-l:#ede9fe;
-      --green:    #059669;
-      --green-l:  #d1fae5;
-      --amber:    #d97706;
-      --amber-l:  #fef3c7;
-      --red:      #ef4444;
-      --red-l:    #fee2e2;
-      --teal:     #0f766e;
-      --teal-l:   #ccfbf1;
-      --shadow:   0 4px 16px rgba(0,0,0,.10);
+      --bg:    #f1f5f9;
+      --white: #ffffff;
+      --border:#e2e8f0;
+      --text:  #1e293b;
+      --muted: #64748b;
+      --faint: #94a3b8;
+      --green-d:#059669; --green-l:#d1fae5;
+      --amber:  #f59e0b; --amber-l:#fef3c7;
+      --red:    #ef4444; --red-l:  #fee2e2;
+      --blue-d: #2563eb; --blue-l: #eff6ff;
+      --shadow-sm: 0 1px 4px rgba(0,0,0,.07);
+      --shadow:    0 4px 16px rgba(0,0,0,.10);
     }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
+    body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
 
     /* ── TELAS ── */
-    .tela { display: none; min-height: 100vh; }
-    .tela.ativa { display: flex; flex-direction: column; }
+    .tela { display:none; }
+    .tela.ativa { display:block; }
 
-    /* ── LOADER ── */
-    #tela-loading {
-      align-items: center; justify-content: center;
-      background: var(--primary);
+    /* ══════════════════════════════════════
+       LOADING
+    ══════════════════════════════════════ */
+    #tela-loading.ativa {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      min-height:100vh;
+      background:linear-gradient(160deg,#06101f 0%,#0d2d50 55%,#0e4165 100%);
     }
-    .logo-loader { text-align: center; color: #fff; }
-    .logo-loader .logo-mark {
-      width: 64px; height: 64px; border-radius: 18px;
-      background: rgba(255,255,255,.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px; margin: 0 auto 16px;
-    }
-    .logo-loader h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .logo-loader p  { font-size: 14px; opacity: .7; }
-    .spinner {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 3px solid rgba(255,255,255,.3);
-      border-top-color: #fff;
-      animation: spin .8s linear infinite;
-      margin: 24px auto 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-logo { width:56px; height:56px; border-radius:18px; background:var(--blue-d); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; color:#fff; box-shadow:0 8px 28px rgba(37,99,235,.5); margin-bottom:24px; }
+    .loading-spinner { width:32px; height:32px; border:3px solid rgba(255,255,255,.15); border-top-color:rgba(255,255,255,.8); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* ── ERRO ── */
-    #tela-erro {
-      align-items: center; justify-content: center;
-      padding: 24px;
+    /* ══════════════════════════════════════
+       PIN SCREENS
+    ══════════════════════════════════════ */
+    #tela-pin.ativa {
+      display:flex; flex-direction:column; align-items:center;
+      min-height:100vh;
+      background:linear-gradient(160deg,#06101f 0%,#0d2d50 55%,#0e4165 100%);
+      padding:44px 28px 52px;
     }
-    .erro-card {
-      background: var(--white); border-radius: 20px;
-      padding: 36px 28px; text-align: center; max-width: 360px; width: 100%;
-      box-shadow: var(--shadow);
-    }
-    .erro-ico {
-      width: 72px; height: 72px; border-radius: 20px;
-      background: var(--red-l); color: var(--red);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 30px; margin: 0 auto 20px;
-    }
-    .erro-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
-    .erro-card p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .pin-logo { width:50px; height:50px; border-radius:16px; background:var(--blue-d); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:900; color:#fff; box-shadow:0 8px 28px rgba(37,99,235,.5); margin-bottom:10px; }
+    .pin-app  { font-size:10px; font-weight:700; color:rgba(255,255,255,.35); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:38px; }
+    .pin-av   { width:68px; height:68px; border-radius:50%; background:rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; color:#fff; margin-bottom:10px; }
+    .pin-nm   { font-size:21px; font-weight:800; color:#fff; margin-bottom:3px; }
+    .pin-emp  { font-size:12px; color:rgba(255,255,255,.38); margin-bottom:40px; }
+    .pin-ttl  { font-size:16px; font-weight:700; color:#fff; text-align:center; margin-bottom:6px; }
+    .pin-sub  { font-size:13px; color:rgba(255,255,255,.38); text-align:center; margin-bottom:30px; }
+    .pin-err  { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.28); border-radius:12px; padding:10px 16px; font-size:13px; color:#fca5a5; text-align:center; margin-bottom:20px; display:flex; align-items:center; gap:8px; justify-content:center; }
+    .pin-dots { display:flex; gap:18px; margin-bottom:40px; }
+    .pin-dot  { width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,.25); background:transparent; transition:all .15s; }
+    .pin-dot.on  { background:#fff; border-color:#fff; }
+    .pin-dot.err { background:#f87171; border-color:#f87171; }
+    .keypad { width:100%; max-width:264px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .key { aspect-ratio:1; border-radius:50%; border:none; background:rgba(255,255,255,.07); color:#fff; font-size:21px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .1s,transform .1s; user-select:none; -webkit-tap-highlight-color:transparent; }
+    .key:active { background:rgba(255,255,255,.2); transform:scale(.9); }
+    .key.mt  { background:transparent; pointer-events:none; }
+    .key.del { font-size:16px; color:rgba(255,255,255,.55); }
+    .key.del:active { background:rgba(239,68,68,.15); }
+    .pin-hint { margin-top:28px; font-size:11px; color:rgba(255,255,255,.25); text-align:center; }
 
-    /* ── PIN ── */
-    #tela-pin {
-      background: var(--primary);
-      align-items: center; justify-content: center;
-      padding: 24px;
-    }
-    .pin-card {
-      background: var(--white); border-radius: 24px;
-      padding: 32px 24px; max-width: 340px; width: 100%;
-      box-shadow: var(--shadow); text-align: center;
-    }
-    .pin-avatar {
-      width: 64px; height: 64px; border-radius: 50%;
-      background: var(--primary-l); color: var(--primary);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 26px; font-weight: 700; margin: 0 auto 16px;
-    }
-    .pin-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-    .pin-card .empresa-tag {
-      font-size: 12px; color: var(--muted); margin-bottom: 24px;
-      display: flex; align-items: center; justify-content: center; gap: 4px;
-    }
-    .pin-label { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    /* ══════════════════════════════════════
+       LINK INATIVO
+    ══════════════════════════════════════ */
+    #tela-erro.ativa { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:40px 28px; text-align:center; }
+    .dead-ico   { width:72px; height:72px; border-radius:24px; background:var(--red-l); color:var(--red); display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:20px; }
+    .dead-title { font-size:22px; font-weight:800; margin-bottom:8px; }
+    .dead-msg   { font-size:14px; color:var(--muted); line-height:1.6; max-width:280px; }
 
-    /* Dots do PIN */
-    .pin-dots {
-      display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;
-    }
-    .pin-dot {
-      width: 16px; height: 16px; border-radius: 50%;
-      border: 2px solid var(--border); transition: all .15s;
-    }
-    .pin-dot.filled { background: var(--primary); border-color: var(--primary); }
-    .pin-dot.error  { background: var(--red); border-color: var(--red); }
+    /* ══════════════════════════════════════
+       HUB
+    ══════════════════════════════════════ */
+    #tela-hub.ativa { display:block; min-height:100vh; }
+    .hub-page { max-width:480px; margin:0 auto; padding-bottom:32px; }
 
-    /* Teclado numérico */
-    .pin-keyboard {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-      margin-bottom: 16px;
+    .hub-head {
+      background:linear-gradient(148deg,#0f172a 0%,#163554 100%);
+      padding:22px 20px 32px;
+      border-radius:0 0 32px 32px;
+      box-shadow:0 10px 32px rgba(15,23,42,.28);
+      color:#fff;
     }
-    .pin-key {
-      height: 56px; border-radius: 14px; border: none;
-      background: var(--bg); font-size: 20px; font-weight: 600;
-      color: var(--text); cursor: pointer; transition: background .1s;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .pin-key:active { background: var(--primary-l); }
-    .pin-key.del { font-size: 16px; color: var(--muted); }
-    .pin-key.empty { visibility: hidden; }
+    .hub-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+    .hub-brand { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:rgba(255,255,255,.45); letter-spacing:.3px; }
+    .hub-brand i { color:#60a5fa; font-size:14px; }
+    .hub-brand b { color:rgba(255,255,255,.8); }
+    .hub-menu-btn { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.08); border:none; color:rgba(255,255,255,.7); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .hub-av { width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg,#3b82f6,#0d9488); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; border:2.5px solid rgba(255,255,255,.2); box-shadow:0 4px 16px rgba(0,0,0,.3); flex-shrink:0; }
+    .hub-profile { display:flex; align-items:center; gap:14px; }
+    .hub-name { font-size:23px; font-weight:900; line-height:1.15; }
+    .hub-role { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.1); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:600; color:rgba(255,255,255,.75); margin-top:6px; }
 
-    .pin-msg { font-size: 13px; min-height: 20px; color: var(--red); }
-    .pin-link {
-      font-size: 12px; color: var(--muted); margin-top: 16px;
-      cursor: pointer; text-decoration: underline;
+    /* Grid 2x2 de módulos */
+    .hub-grid { padding:20px 16px 0; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .mod-card {
+      border-radius:22px; padding:18px 16px 16px;
+      cursor:pointer; position:relative; overflow:hidden;
+      border:1.5px solid transparent;
+      transition:transform .18s, box-shadow .18s;
+      min-height:130px; display:flex; flex-direction:column; justify-content:space-between;
+      -webkit-tap-highlight-color:transparent;
     }
+    .mod-card:active { transform:scale(.96); }
+    .mod-blue   { background:linear-gradient(145deg,#1e40af,#2563eb,#3b82f6); box-shadow:0 8px 24px rgba(37,99,235,.35); }
+    .mod-teal   { background:linear-gradient(145deg,#0f4c75,#0d9488,#14b8a6); box-shadow:0 8px 24px rgba(13,148,136,.35); }
+    .mod-ghost  { background:var(--white); border-color:var(--border); box-shadow:var(--shadow-sm); cursor:default; }
+    .mod-ico { font-size:26px; margin-bottom:auto; }
+    .mod-blue .mod-ico, .mod-teal .mod-ico { color:rgba(255,255,255,.85); }
+    .mod-ghost .mod-ico { color:var(--faint); }
+    .mod-label { font-size:15px; font-weight:800; margin-bottom:2px; }
+    .mod-blue .mod-label, .mod-teal .mod-label { color:#fff; }
+    .mod-ghost .mod-label { color:var(--muted); font-size:14px; }
+    .mod-stat  { font-size:12px; font-weight:600; }
+    .mod-blue .mod-stat  { color:rgba(255,255,255,.7); }
+    .mod-teal .mod-stat  { color:rgba(255,255,255,.7); }
+    .mod-ghost .mod-stat { color:var(--faint); font-size:12px; }
+    .mod-badge {
+      position:absolute; top:12px; right:12px;
+      background:rgba(255,255,255,.22); border-radius:20px;
+      padding:3px 9px; font-size:10px; font-weight:800; color:#fff;
+    }
+    .mod-badge.pulse { animation:pulse-badge 1.8s infinite; }
+    @keyframes pulse-badge { 0%,100%{ box-shadow:none; } 50%{ box-shadow:0 0 0 4px rgba(255,255,255,.18); } }
 
-    /* ── DASHBOARD ── */
-    #tela-dashboard { background: var(--bg); }
+    /* Linha de status (WhatsApp) */
+    .hub-rows { padding:14px 16px 0; display:flex; flex-direction:column; gap:10px; }
+    .status-row { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; box-shadow:var(--shadow-sm); transition:transform .15s; -webkit-tap-highlight-color:transparent; }
+    .status-row:active { transform:scale(.985); }
+    .status-ico { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .ico-wpp-on  { background:#dcfce7; color:#16a34a; }
+    .ico-wpp-off { background:#f1f5f9; color:var(--muted); }
+    .status-info { flex:1; }
+    .status-title { font-size:14px; font-weight:700; }
+    .status-sub   { font-size:12px; color:var(--muted); margin-top:2px; }
+    .status-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; }
+    .sb-green { background:var(--green-l); color:#065f46; }
+    .sb-muted { background:#f1f5f9; color:var(--muted); }
+    .status-arrow { font-size:12px; color:var(--faint); }
 
-    .dash-header {
-      background: var(--primary);
-      padding: 20px 20px 40px;
-      color: #fff;
-    }
-    .dash-header-top {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .dash-header-top .logo { font-size: 15px; font-weight: 700; opacity: .9; }
-    .btn-sair {
-      background: rgba(255,255,255,.15); border: none; border-radius: 8px;
-      color: #fff; font-size: 12px; padding: 6px 12px; cursor: pointer;
-    }
-    .dash-nome { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
-    .dash-empresa { font-size: 13px; opacity: .75; }
+    /* ══════════════════════════════════════
+       MODAL WHATSAPP (bottom sheet)
+    ══════════════════════════════════════ */
+    .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .modal-bg.open { opacity:1; pointer-events:all; }
+    .modal-box { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-width:480px; padding:0 0 32px; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,0,.32,1.1); }
+    .modal-bg.open .modal-box { transform:translateY(0); }
+    .modal-handle { width:40px; height:4px; border-radius:2px; background:var(--border); margin:12px auto 0; }
+    .modal-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+    .modal-title { font-size:16px; font-weight:800; }
+    .modal-close { background:none; border:none; font-size:18px; color:var(--muted); cursor:pointer; padding:4px; }
+    .modal-body  { padding:20px; }
+    .wpp-code-box { background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:14px; padding:16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .wpp-code-box.expired { border-color:#fca5a5; background:#fff5f5; }
+    .wpp-code { font-size:28px; font-weight:900; letter-spacing:6px; font-family:monospace; }
+    .wpp-code.expired { color:var(--red); text-decoration:line-through; opacity:.5; }
+    .wpp-timer { font-size:12px; font-weight:700; color:var(--amber); display:flex; align-items:center; gap:4px; }
+    .btn-wpp { width:100%; padding:13px; border-radius:12px; border:none; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; }
+    .bwpp-conectar { background:#16a34a; color:#fff; }
+    .bwpp-gerar    { background:#1e293b; color:#fff; }
+    .wpp-connected-state { background:var(--green-l); border-radius:16px; padding:18px; text-align:center; margin-bottom:16px; }
+    .wpp-c-ico   { font-size:40px; color:#16a34a; margin-bottom:10px; }
+    .wpp-c-title { font-size:16px; font-weight:800; color:#065f46; margin-bottom:4px; }
+    .wpp-c-num   { font-size:14px; color:#047857; font-weight:600; }
+    .btn-desvincular { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:var(--white); font-family:inherit; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .wpp-instrucao { font-size:12px; color:var(--muted); text-align:center; line-height:1.5; }
 
-    /* Cards de stat */
-    .stat-cards {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 12px; padding: 0 16px;
-      margin-top: -28px; margin-bottom: 16px;
-    }
-    .stat-card {
-      background: var(--white); border-radius: 16px;
-      padding: 16px; box-shadow: var(--shadow);
-    }
-    .stat-card .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
-    .stat-card .valor { font-size: 20px; font-weight: 700; color: var(--text); }
-    .stat-card .sub   { font-size: 11px; color: var(--faint); margin-top: 2px; }
-    .stat-card.highlight .valor { color: var(--primary); }
-    .stat-card.salario-card { grid-column: span 2; }
-
-    /* Tag de remuneração */
-    .rem-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 600; border-radius: 8px;
-      padding: 4px 10px; margin: 0 16px 12px;
-    }
-    .rem-tag.comissao    { background: var(--primary-l); color: var(--primary-d); }
-    .rem-tag.salario     { background: var(--teal-l);    color: var(--teal); }
-    .rem-tag.misto       { background: var(--amber-l);   color: var(--amber); }
-
-    /* Seção */
-    .secao { padding: 0 16px 8px; }
-    .secao-titulo {
-      font-size: 13px; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 10px;
-    }
-
-    /* Lista de ordens */
-    .ordem-item {
-      background: var(--white); border-radius: 14px;
-      padding: 14px 16px; margin-bottom: 8px;
-      display: flex; align-items: center; gap: 12px;
-    }
-    .ordem-ico {
-      width: 40px; height: 40px; border-radius: 11px;
-      background: var(--primary-l); color: var(--primary);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; flex-shrink: 0;
-    }
-    .ordem-ico.aguardando { background: var(--amber-l); color: var(--amber); }
-    .ordem-info { flex: 1; min-width: 0; }
-    .ordem-placa { font-size: 13px; font-weight: 700; }
-    .ordem-cliente { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ordem-servico { font-size: 11px; color: var(--faint); margin-top: 1px; }
-    .ordem-ganho { text-align: right; flex-shrink: 0; }
-    .ordem-ganho .g  { font-size: 15px; font-weight: 700; color: var(--green); }
-    .ordem-ganho .vt { font-size: 11px; color: var(--faint); }
-
-    /* Empty state */
-    .empty {
-      text-align: center; padding: 32px 16px;
-      color: var(--muted); font-size: 14px;
-    }
-    .empty i { font-size: 32px; color: var(--border); display: block; margin-bottom: 10px; }
-
-    /* Nav inferior */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--white); border-top: 1px solid var(--border);
-      display: flex; justify-content: space-around;
-      padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-    }
-    .nav-item {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 3px; font-size: 10px; color: var(--faint);
-      cursor: pointer; padding: 4px 20px; border-radius: 8px;
-      transition: color .15s;
-    }
-    .nav-item i { font-size: 20px; }
-    .nav-item.ativo { color: var(--primary); }
-
-    .dash-body { padding-bottom: 80px; }
+    /* sair */
+    .btn-sair { width:100%; max-width:480px; margin:16px auto 0; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:none; border:1.5px solid var(--border); border-radius:14px; font-family:inherit; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; }
   </style>
 </head>
 <body>
 
-<!-- ── TELA: LOADING ── -->
+<!-- ══ LOADING ══ -->
 <div id="tela-loading" class="tela ativa">
-  <div class="logo-loader">
-    <div class="logo-mark">🚗</div>
-    <h1>Lina</h1>
-    <p>Portal do Colaborador</p>
-    <div class="spinner"></div>
-  </div>
+  <div class="loading-logo">L</div>
+  <div class="loading-spinner"></div>
 </div>
 
-<!-- ── TELA: ERRO ── -->
+<!-- ══ ERRO / LINK INATIVO ══ -->
 <div id="tela-erro" class="tela">
-  <div class="erro-card">
-    <div class="erro-ico"><i id="erro-ico" class="fas fa-ban"></i></div>
-    <h2 id="erro-titulo">Link inválido</h2>
-    <p id="erro-msg">Este link não é válido ou foi desativado. Solicite um novo link ao seu gestor.</p>
-  </div>
+  <div class="dead-ico"><i id="erro-ico" class="fas fa-ban"></i></div>
+  <div class="dead-title" id="erro-titulo">Link inválido</div>
+  <div class="dead-msg"   id="erro-msg">Este link não é válido ou foi desativado. Entre em contato com seu gestor.</div>
 </div>
 
-<!-- ── TELA: PIN ── -->
+<!-- ══ PIN ══ -->
 <div id="tela-pin" class="tela">
-  <div class="pin-card">
-    <div class="pin-avatar" id="pin-avatar">?</div>
-    <h2 id="pin-nome">Colaborador</h2>
-    <div class="empresa-tag"><i class="fas fa-building" style="font-size:11px"></i><span id="pin-empresa"></span></div>
+  <div class="pin-logo">L</div>
+  <div class="pin-app">Lina · Portal</div>
+  <div class="pin-av" id="pin-av">?</div>
+  <div class="pin-nm"  id="pin-nm">—</div>
+  <div class="pin-emp" id="pin-emp">—</div>
+  <div class="pin-err" id="pin-err" style="display:none">
+    <i class="fas fa-circle-exclamation"></i> <span id="pin-err-txt">PIN incorreto. Tente novamente.</span>
+  </div>
+  <div class="pin-ttl" id="pin-ttl">Digite seu PIN</div>
+  <div class="pin-sub" id="pin-sub">Insira seu PIN para entrar.</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="keypad">
+    <button class="key" onclick="tecla('1')">1</button>
+    <button class="key" onclick="tecla('2')">2</button>
+    <button class="key" onclick="tecla('3')">3</button>
+    <button class="key" onclick="tecla('4')">4</button>
+    <button class="key" onclick="tecla('5')">5</button>
+    <button class="key" onclick="tecla('6')">6</button>
+    <button class="key" onclick="tecla('7')">7</button>
+    <button class="key" onclick="tecla('8')">8</button>
+    <button class="key" onclick="tecla('9')">9</button>
+    <button class="key mt"></button>
+    <button class="key" onclick="tecla('0')">0</button>
+    <button class="key del" onclick="apagar()"><i class="fas fa-delete-left"></i></button>
+  </div>
+  <div class="pin-hint" id="pin-hint" style="display:none">PIN esquecido? Peça ao administrador para redefinir.</div>
+</div>
 
-    <p class="pin-label" id="pin-instrucao">Digite seu PIN de acesso</p>
+<!-- ══ HUB ══ -->
+<div id="tela-hub" class="tela">
+  <div class="hub-page">
 
-    <div class="pin-dots">
-      <div class="pin-dot" id="d0"></div>
-      <div class="pin-dot" id="d1"></div>
-      <div class="pin-dot" id="d2"></div>
-      <div class="pin-dot" id="d3"></div>
+    <div class="hub-head">
+      <div class="hub-top">
+        <div class="hub-brand"><i class="fas fa-droplet"></i> <b>Lina</b> Portal</div>
+        <button class="hub-menu-btn" onclick="sair()"><i class="fas fa-right-from-bracket"></i></button>
+      </div>
+      <div class="hub-profile">
+        <div class="hub-av" id="hub-av">?</div>
+        <div>
+          <div class="hub-name" id="hub-name">—</div>
+          <div class="hub-role"><i class="fas fa-building" style="font-size:9px"></i> <span id="hub-empresa">—</span></div>
+        </div>
+      </div>
     </div>
 
-    <div class="pin-keyboard">
-      <button class="pin-key" onclick="pinDigit('1')">1</button>
-      <button class="pin-key" onclick="pinDigit('2')">2</button>
-      <button class="pin-key" onclick="pinDigit('3')">3</button>
-      <button class="pin-key" onclick="pinDigit('4')">4</button>
-      <button class="pin-key" onclick="pinDigit('5')">5</button>
-      <button class="pin-key" onclick="pinDigit('6')">6</button>
-      <button class="pin-key" onclick="pinDigit('7')">7</button>
-      <button class="pin-key" onclick="pinDigit('8')">8</button>
-      <button class="pin-key" onclick="pinDigit('9')">9</button>
-      <button class="pin-key empty"></button>
-      <button class="pin-key" onclick="pinDigit('0')">0</button>
-      <button class="pin-key del" onclick="pinDel()"><i class="fas fa-delete-left"></i></button>
+    <div class="hub-grid" id="hub-grid">
+      <!-- preenchido via JS -->
     </div>
 
-    <div class="pin-msg" id="pin-msg"></div>
-    <div class="pin-link" id="pin-esqueci" onclick="esqueceuPin()" style="display:none">Esqueci meu PIN</div>
+    <div class="hub-rows" id="hub-rows">
+      <!-- WhatsApp row — preenchida via JS -->
+    </div>
+
+    <button class="btn-sair" onclick="sair()">
+      <i class="fas fa-right-from-bracket"></i> Sair do portal
+    </button>
+
   </div>
 </div>
 
-<!-- ── TELA: DASHBOARD ── -->
-<div id="tela-dashboard" class="tela">
-  <div class="dash-header">
-    <div class="dash-header-top">
-      <span class="logo">🚗 Lina</span>
-      <button class="btn-sair" onclick="sair()"><i class="fas fa-right-from-bracket"></i> Sair</button>
+<!-- ══ MODAL WHATSAPP ══ -->
+<div class="modal-bg" id="wppModal" onclick="fecharModalWpp(event)">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <span class="modal-title">WhatsApp</span>
+      <button class="modal-close" onclick="fecharModalWpp()"><i class="fas fa-times"></i></button>
     </div>
-    <div class="dash-nome" id="dash-nome">—</div>
-    <div class="dash-empresa" id="dash-empresa">—</div>
+    <div class="modal-body" id="wppModalBody">
+      <!-- preenchido via JS -->
+    </div>
   </div>
-
-  <div class="dash-body" id="dash-body">
-    <!-- preenchido via JS -->
-  </div>
-
-  <nav class="bottom-nav" id="bottom-nav">
-    <div class="nav-item ativo" onclick="navTo('inicio')">
-      <i class="fas fa-house"></i> Início
-    </div>
-    <div class="nav-item" onclick="navTo('historico')" id="nav-historico">
-      <i class="fas fa-clock-rotate-left"></i> Histórico
-    </div>
-    <!-- Ponto aparece só se Data Point ativo -->
-    <div class="nav-item" onclick="navTo('ponto')" id="nav-ponto" style="display:none">
-      <i class="fas fa-fingerprint"></i> Ponto
-    </div>
-  </nav>
 </div>
 
 <script>
-// ── estado ────────────────────────────────────────────────────────────────────
+// ── Estado ────────────────────────────────────────────────────────────────────
 const API = '/api';
-let linkToken = '';      // token do path /p/:token
-let sessionToken = '';   // JWT de sessão
-let lavadorInfo = null;  // { nome, empresa, pinDefinido }
-let portalDados = null;  // dados do GET /api/p/me/dados
-let pinBuffer = '';
-let pinModo = 'verify';  // 'setup' | 'verify' | 'setup-confirm'
+let linkToken   = '';
+let sessionJwt  = '';
+let lavadorInfo = null; // { nome, empresa, pinDefinido }
+let portalDados = null; // resposta de /me/dados
+let pinBuffer   = '';
+let pinModo     = 'verify'; // 'setup' | 'setup-confirm' | 'verify'
 let pinPrimeiro = '';
+let wppTimer    = null;
 
-// ── init ──────────────────────────────────────────────────────────────────────
+// ── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
-  // Extrai token do path: /p/TOKEN ou query ?t=TOKEN (fallback)
   const path = window.location.pathname;
   const match = path.match(/\/p\/([A-Z0-9]+)/i);
   linkToken = match ? match[1] : new URLSearchParams(window.location.search).get('t') || '';
 
-  if (!linkToken) { return mostrarErro('Link inválido', 'Nenhum token encontrado na URL.', 'fa-link-slash'); }
+  if (!linkToken) return mostrarErro('Link inválido', 'Nenhum token encontrado na URL.', 'fa-link-slash');
 
   // Sessão salva?
-  sessionToken = sessionStorage.getItem(`portal_session_${linkToken}`) || '';
-  if (sessionToken) {
+  sessionJwt = sessionStorage.getItem(`pjwt_${linkToken}`) || '';
+  if (sessionJwt) {
     const ok = await carregarDados();
     if (ok) return;
-    sessionToken = '';
-    sessionStorage.removeItem(`portal_session_${linkToken}`);
+    sessionJwt = '';
+    sessionStorage.removeItem(`pjwt_${linkToken}`);
   }
 
   // Resolve token público
   try {
     const r = await fetch(`${API}/p/${linkToken}`);
-    if (!r.ok) { return mostrarErro(); }
+    if (!r.ok) return mostrarErro();
     lavadorInfo = await r.json();
     mostrarPin();
   } catch {
@@ -367,64 +316,67 @@ let pinPrimeiro = '';
   }
 })();
 
-// ── telas ─────────────────────────────────────────────────────────────────────
+// ── Navegação de telas ────────────────────────────────────────────────────────
 function mostrarTela(id) {
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
   document.getElementById(id).classList.add('ativa');
 }
 
-function mostrarErro(titulo = 'Link inválido', msg = 'Este link não é válido ou foi desativado. Solicite um novo ao gestor.', ico = 'fa-ban') {
+function mostrarErro(titulo = 'Link inválido', msg = 'Este link foi desativado. Solicite um novo ao gestor.', ico = 'fa-ban') {
   document.getElementById('erro-titulo').textContent = titulo;
-  document.getElementById('erro-msg').textContent = msg;
-  document.getElementById('erro-ico').className = `fas ${ico}`;
+  document.getElementById('erro-msg').textContent    = msg;
+  document.getElementById('erro-ico').className      = `fas ${ico}`;
   mostrarTela('tela-erro');
 }
 
 function mostrarPin() {
   const ini = lavadorInfo.nome.charAt(0).toUpperCase();
-  document.getElementById('pin-avatar').textContent = ini;
-  document.getElementById('pin-nome').textContent = lavadorInfo.nome;
-  document.getElementById('pin-empresa').textContent = lavadorInfo.empresa.nome;
+  document.getElementById('pin-av').textContent  = ini;
+  document.getElementById('pin-nm').textContent  = lavadorInfo.nome;
+  document.getElementById('pin-emp').textContent = lavadorInfo.empresa?.nome || '';
 
   if (!lavadorInfo.pinDefinido) {
     pinModo = 'setup';
-    document.getElementById('pin-instrucao').textContent = 'Crie seu PIN de 4 dígitos';
+    document.getElementById('pin-ttl').textContent = 'Crie seu PIN de acesso';
+    document.getElementById('pin-sub').textContent = 'Escolha 4 dígitos para entrar no seu painel.';
+    document.getElementById('pin-hint').style.display = 'none';
   } else {
     pinModo = 'verify';
-    document.getElementById('pin-instrucao').textContent = 'Digite seu PIN';
-    document.getElementById('pin-esqueci').style.display = '';
+    document.getElementById('pin-ttl').textContent = 'Digite seu PIN';
+    document.getElementById('pin-sub').textContent = 'Insira seu PIN para entrar.';
+    document.getElementById('pin-hint').style.display = '';
   }
   mostrarTela('tela-pin');
 }
 
-// ── PIN ───────────────────────────────────────────────────────────────────────
-function pinDigit(d) {
+// ── Teclado PIN ───────────────────────────────────────────────────────────────
+function tecla(d) {
   if (pinBuffer.length >= 4) return;
   pinBuffer += d;
   atualizarDots();
-  if (pinBuffer.length === 4) setTimeout(confirmarPin, 150);
+  if (pinBuffer.length === 4) setTimeout(confirmarPin, 120);
 }
 
-function pinDel() {
+function apagar() {
   pinBuffer = pinBuffer.slice(0, -1);
   atualizarDots();
-  limparMsgPin();
+  esconderErroPin();
 }
 
 function atualizarDots(erro = false) {
   for (let i = 0; i < 4; i++) {
-    const d = document.getElementById(`d${i}`);
-    d.className = 'pin-dot' + (i < pinBuffer.length ? ' filled' : '') + (erro ? ' error' : '');
+    const d = document.getElementById(`pd${i}`);
+    d.className = 'pin-dot' + (i < pinBuffer.length ? ' on' : '') + (erro ? ' err' : '');
   }
 }
 
-function limparMsgPin() {
-  document.getElementById('pin-msg').textContent = '';
+function mostrarErroPin(msg) {
+  const el = document.getElementById('pin-err');
+  document.getElementById('pin-err-txt').textContent = msg;
+  el.style.display = 'flex';
 }
 
-function msgPin(txt) {
-  document.getElementById('pin-msg').textContent = txt;
-}
+function esconderErroPin() { document.getElementById('pin-err').style.display = 'none'; }
 
 async function confirmarPin() {
   const pin = pinBuffer;
@@ -434,18 +386,20 @@ async function confirmarPin() {
   if (pinModo === 'setup') {
     pinPrimeiro = pin;
     pinModo = 'setup-confirm';
-    document.getElementById('pin-instrucao').textContent = 'Confirme seu PIN';
+    document.getElementById('pin-ttl').textContent = 'Confirme seu PIN';
+    document.getElementById('pin-sub').textContent = 'Digite os mesmos 4 dígitos novamente.';
     return;
   }
 
   if (pinModo === 'setup-confirm') {
     if (pin !== pinPrimeiro) {
       atualizarDots(true);
-      msgPin('Os PINs não coincidem. Tente novamente.');
+      mostrarErroPin('Os PINs não coincidem. Tente novamente.');
       pinModo = 'setup';
       pinPrimeiro = '';
-      document.getElementById('pin-instrucao').textContent = 'Crie seu PIN de 4 dígitos';
-      setTimeout(() => { atualizarDots(); limparMsgPin(); }, 1500);
+      document.getElementById('pin-ttl').textContent = 'Crie seu PIN de acesso';
+      document.getElementById('pin-sub').textContent = 'Escolha 4 dígitos para entrar no seu painel.';
+      setTimeout(() => { atualizarDots(); esconderErroPin(); }, 1800);
       return;
     }
     await enviarPin('setup', pin);
@@ -457,8 +411,7 @@ async function confirmarPin() {
 
 async function enviarPin(modo, pin) {
   try {
-    const endpoint = `${API}/p/${linkToken}/pin/${modo}`;
-    const r = await fetch(endpoint, {
+    const r = await fetch(`${API}/p/${linkToken}/pin/${modo}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin }),
@@ -466,165 +419,195 @@ async function enviarPin(modo, pin) {
     const json = await r.json();
     if (!r.ok) {
       atualizarDots(true);
-      msgPin(json.erro || 'Erro ao verificar PIN.');
-      setTimeout(() => { atualizarDots(); limparMsgPin(); }, 1500);
+      mostrarErroPin(json.erro || 'Erro ao verificar PIN.');
+      setTimeout(() => { atualizarDots(); esconderErroPin(); }, 1800);
       return;
     }
-    sessionToken = json.token;
-    sessionStorage.setItem(`portal_session_${linkToken}`, sessionToken);
+    sessionJwt = json.token;
+    sessionStorage.setItem(`pjwt_${linkToken}`, sessionJwt);
     await carregarDados();
   } catch {
-    msgPin('Sem conexão. Tente novamente.');
+    mostrarErroPin('Sem conexão. Tente novamente.');
   }
 }
 
-function esqueceuPin() {
-  alert('Entre em contato com seu gestor para redefinir o PIN.');
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Carregar dados do hub ─────────────────────────────────────────────────────
 async function carregarDados() {
   try {
     const r = await fetch(`${API}/p/me/dados`, {
-      headers: { Authorization: `Bearer ${sessionToken}` },
+      headers: { Authorization: `Bearer ${sessionJwt}` },
     });
     if (r.status === 401) return false;
     if (!r.ok) return false;
     portalDados = await r.json();
-    renderDashboard();
+    renderHub();
     return true;
+  } catch { return false; }
+}
+
+// ── Hub ───────────────────────────────────────────────────────────────────────
+function renderHub() {
+  const { lavador, dataPointAtivo, hoje } = portalDados;
+
+  document.getElementById('hub-av').textContent       = lavador.nome.charAt(0).toUpperCase();
+  document.getElementById('hub-name').textContent     = lavador.nome;
+  document.getElementById('hub-empresa').textContent  = lavador.empresa;
+
+  // Cards
+  const ganhoHoje = (hoje.ganho || 0).toFixed(2).replace('.', ',');
+  const grid = document.getElementById('hub-grid');
+  grid.innerHTML = `
+    <div class="mod-card mod-blue" onclick="abrirComissoes()">
+      <div class="mod-ico"><i class="fas fa-coins"></i></div>
+      <div class="mod-badge pulse">${hoje.totalOrdens} hoje</div>
+      <div>
+        <div class="mod-label">Comissões</div>
+        <div class="mod-stat">R$ ${ganhoHoje} hoje</div>
+      </div>
+    </div>
+
+    ${dataPointAtivo ? `
+    <div class="mod-card mod-teal" onclick="abrirPonto()">
+      <div class="mod-ico"><i class="fas fa-fingerprint"></i></div>
+      <div class="mod-badge pulse">!</div>
+      <div>
+        <div class="mod-label">Ponto</div>
+        <div class="mod-stat">Registrar presença</div>
+      </div>
+    </div>` : `
+    <div class="mod-card mod-ghost" style="opacity:.5">
+      <div class="mod-ico"><i class="fas fa-fingerprint"></i></div>
+      <div>
+        <div class="mod-label">Ponto</div>
+        <div class="mod-stat">Não disponível</div>
+      </div>
+    </div>`}
+
+    <div class="mod-card mod-ghost" style="opacity:.45">
+      <div class="mod-ico"><i class="fas fa-plus"></i></div>
+      <div>
+        <div class="mod-label">Em breve</div>
+        <div class="mod-stat">Novos módulos</div>
+      </div>
+    </div>
+
+    <div class="mod-card mod-ghost" style="opacity:.45">
+      <div class="mod-ico"><i class="fas fa-plus"></i></div>
+      <div>
+        <div class="mod-label">Em breve</div>
+        <div class="mod-stat">Novos módulos</div>
+      </div>
+    </div>
+  `;
+
+  // WhatsApp row
+  const telefone = lavador.codigoWpp ? null : null; // placeholder até ter endpoint
+  const rows = document.getElementById('hub-rows');
+  rows.innerHTML = `
+    <div class="status-row" onclick="abrirModalWpp()">
+      <div class="status-ico ico-wpp-off"><i class="fab fa-whatsapp"></i></div>
+      <div class="status-info">
+        <div class="status-title">WhatsApp</div>
+        <div class="status-sub">Conecte seu número para receber notificações</div>
+      </div>
+      <span class="status-badge sb-muted">Configurar</span>
+      <div class="status-arrow"><i class="fas fa-chevron-right"></i></div>
+    </div>`;
+
+  mostrarTela('tela-hub');
+}
+
+// ── Navegar para comissões ────────────────────────────────────────────────────
+function abrirComissoes() {
+  sessionStorage.setItem('portal_session_token', sessionJwt);
+  window.location.href = 'lavador-publico.html';
+}
+
+// ── Ponto (Fase 4) ────────────────────────────────────────────────────────────
+function abrirPonto() {
+  alert('Bater Ponto — disponível em breve na Fase 4.');
+}
+
+// ── Modal WhatsApp ────────────────────────────────────────────────────────────
+async function abrirModalWpp() {
+  // Gera código temporário de 6 chars
+  const body = document.getElementById('wppModalBody');
+  body.innerHTML = `<p style="text-align:center;color:var(--muted);font-size:13px">Carregando...</p>`;
+  document.getElementById('wppModal').classList.add('open');
+
+  try {
+    const r = await fetch(`${API}/p/${linkToken}/wpp/codigo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${sessionJwt}` },
+    });
+    if (!r.ok) throw new Error();
+    const { codigo, expiraEm } = await r.json();
+    renderModalWpp({ codigo, expiraEm, conectado: false, numero: null });
   } catch {
-    return false;
+    // Fallback: formulário para digitar número diretamente
+    body.innerHTML = `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Envie <strong>"conectar CÓDIGO"</strong> para o bot do Lina WhatsApp. Primeiro gere seu código:</p>
+      <button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()"><i class="fas fa-qrcode"></i> Gerar código</button>`;
   }
 }
 
-function renderDashboard() {
-  const { lavador, hoje, mes, dataPointAtivo } = portalDados;
-  document.getElementById('dash-nome').textContent = lavador.nome;
-  document.getElementById('dash-empresa').textContent = lavador.empresa;
-
-  // Nav ponto
-  if (dataPointAtivo) document.getElementById('nav-ponto').style.display = '';
-
-  renderInicio(lavador, hoje, mes);
-  mostrarTela('tela-dashboard');
-}
-
-function renderInicio(lavador, hoje, mes) {
-  const tipo = lavador.tipoRemuneracao; // COMISSAO | SALARIO | SALARIO_COMISSAO
-  const fmt = v => 'R$ ' + (v ?? 0).toFixed(2).replace('.', ',');
-
-  let tagHtml = '';
-  if (tipo === 'COMISSAO')
-    tagHtml = `<span class="rem-tag comissao"><i class="fas fa-percent"></i> ${lavador.comissao}% de comissão</span>`;
-  else if (tipo === 'SALARIO')
-    tagHtml = `<span class="rem-tag salario"><i class="fas fa-wallet"></i> Salário fixo</span>`;
-  else
-    tagHtml = `<span class="rem-tag misto"><i class="fas fa-layer-group"></i> Salário + comissão</span>`;
-
-  // Cards de stat conforme tipo
-  let statsHtml = '';
-  if (tipo === 'SALARIO') {
-    statsHtml = `
-      <div class="stat-card salario-card">
-        <div class="label">Salário base</div>
-        <div class="valor">${fmt(lavador.salario)}</div>
-        <div class="sub">por mês</div>
-      </div>`;
-  } else if (tipo === 'COMISSAO') {
-    statsHtml = `
-      <div class="stat-card highlight">
-        <div class="label">Ganhos hoje</div>
-        <div class="valor">${fmt(hoje.ganho)}</div>
-        <div class="sub">${hoje.totalOrdens} ordem${hoje.totalOrdens !== 1 ? 's' : ''}</div>
+function renderModalWpp({ codigo, expiraEm, conectado, numero }) {
+  const body = document.getElementById('wppModalBody');
+  if (conectado) {
+    body.innerHTML = `
+      <div class="wpp-connected-state">
+        <div class="wpp-c-ico"><i class="fab fa-whatsapp"></i></div>
+        <div class="wpp-c-title">WhatsApp conectado!</div>
+        <div class="wpp-c-num">${numero}</div>
       </div>
-      <div class="stat-card">
-        <div class="label">No mês</div>
-        <div class="valor">${fmt(mes.ganho)}</div>
-        <div class="sub">${mes.totalOrdens} finalizadas</div>
-      </div>`;
-  } else { // SALARIO_COMISSAO
-    statsHtml = `
-      <div class="stat-card">
-        <div class="label">Salário base</div>
-        <div class="valor">${fmt(lavador.salario)}</div>
-        <div class="sub">fixo/mês</div>
-      </div>
-      <div class="stat-card highlight">
-        <div class="label">Comissão hoje</div>
-        <div class="valor">${fmt(hoje.ganho)}</div>
-        <div class="sub">${hoje.totalOrdens} ordem${hoje.totalOrdens !== 1 ? 's' : ''}</div>
-      </div>`;
+      <button class="btn-desvincular">Desvincular número</button>`;
+    return;
   }
 
-  // Lista de ordens (só para COMISSAO e SALARIO_COMISSAO)
-  let ordensHtml = '';
-  if (tipo !== 'SALARIO') {
-    const items = hoje.ordens.length
-      ? hoje.ordens.map(o => `
-        <div class="ordem-item">
-          <div class="ordem-ico ${o.status === 'AGUARDANDO_PAGAMENTO' ? 'aguardando' : ''}">
-            <i class="fas ${o.status === 'AGUARDANDO_PAGAMENTO' ? 'fa-clock' : 'fa-check'}"></i>
-          </div>
-          <div class="ordem-info">
-            <div class="ordem-placa">${o.placa}${o.modelo ? ' · ' + o.modelo : ''}</div>
-            <div class="ordem-cliente">${o.cliente}</div>
-            <div class="ordem-servico">${o.servicos || '—'}</div>
-          </div>
-          <div class="ordem-ganho">
-            <div class="g">${'R$ ' + (o.ganho).toFixed(2).replace('.', ',')}</div>
-            <div class="vt">${'R$ ' + (o.valorFinal).toFixed(2).replace('.', ',')}</div>
-          </div>
-        </div>`).join('')
-      : `<div class="empty"><i class="fas fa-car-side"></i>Nenhuma ordem finalizada hoje</div>`;
+  const expirado = expiraEm && new Date(expiraEm) < new Date();
+  const url = `https://wa.me/?text=${encodeURIComponent(`conectar ${codigo}`)}`;
+  body.innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Envie o código abaixo para o bot do Lina WhatsApp:</p>
+    <div class="wpp-code-box${expirado ? ' expired' : ''}">
+      <div class="wpp-code${expirado ? ' expired' : ''}">${codigo}</div>
+      ${expiraEm && !expirado ? `<div class="wpp-timer" id="wppCountdown"><i class="fas fa-clock"></i> —</div>` : ''}
+      ${expirado ? `<span style="font-size:11px;font-weight:700;color:var(--red)">Expirado</span>` : ''}
+    </div>
+    ${!expirado
+      ? `<button class="btn-wpp bwpp-conectar" onclick="window.open('${url}','_blank')"><i class="fab fa-whatsapp"></i> Abrir WhatsApp</button>`
+      : `<button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()"><i class="fas fa-arrows-rotate"></i> Gerar novo código</button>`}
+    <p class="wpp-instrucao">O bot vai confirmar automaticamente ao receber o código.</p>`;
 
-    ordensHtml = `
-      <div class="secao" style="margin-top:4px">
-        <div class="secao-titulo">Ordens de hoje</div>
-        ${items}
-      </div>`;
-  }
-
-  document.getElementById('dash-body').innerHTML = `
-    <div class="stat-cards">${statsHtml}</div>
-    ${tagHtml}
-    ${ordensHtml}`;
+  if (expiraEm && !expirado) iniciarCountdown(new Date(expiraEm));
 }
 
-function navTo(secao) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('ativo'));
-  event.currentTarget.classList.add('ativo');
-  if (secao === 'inicio') renderInicio(portalDados.lavador, portalDados.hoje, portalDados.mes);
-  else if (secao === 'historico') renderHistorico();
-  else if (secao === 'ponto') renderPonto();
+function iniciarCountdown(expiraEm) {
+  clearInterval(wppTimer);
+  wppTimer = setInterval(() => {
+    const el = document.getElementById('wppCountdown');
+    if (!el) { clearInterval(wppTimer); return; }
+    const diff = expiraEm - new Date();
+    if (diff <= 0) { clearInterval(wppTimer); abrirModalWpp(); return; }
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.innerHTML = `<i class="fas fa-clock"></i> ${m}:${String(s).padStart(2,'0')}`;
+  }, 1000);
 }
 
-function renderHistorico() {
-  document.getElementById('dash-body').innerHTML = `
-    <div class="secao" style="margin-top:16px">
-      <div class="secao-titulo">Histórico do mês</div>
-      <div class="stat-card" style="margin-bottom:12px">
-        <div class="label">Total do mês</div>
-        <div class="valor" style="color:var(--primary)">R$ ${(portalDados.mes.ganho).toFixed(2).replace('.', ',')}</div>
-        <div class="sub">${portalDados.mes.totalOrdens} ordens finalizadas</div>
-      </div>
-    </div>`;
+function fecharModalWpp(e) {
+  if (e && e.target !== document.getElementById('wppModal')) return;
+  document.getElementById('wppModal').classList.remove('open');
+  clearInterval(wppTimer);
 }
 
-function renderPonto() {
-  document.getElementById('dash-body').innerHTML = `
-    <div class="secao" style="margin-top:16px">
-      <div class="secao-titulo">Controle de ponto</div>
-      <div class="empty"><i class="fas fa-fingerprint"></i>Em breve — Data Point ativo</div>
-    </div>`;
-}
-
+// ── Sair ──────────────────────────────────────────────────────────────────────
 function sair() {
   if (!confirm('Deseja sair do portal?')) return;
-  sessionStorage.removeItem(`portal_session_${linkToken}`);
-  sessionToken = '';
-  pinBuffer = '';
-  mostrarPin();
+  sessionStorage.removeItem(`pjwt_${linkToken}`);
+  sessionStorage.removeItem('portal_session_token');
+  sessionJwt = '';
+  pinBuffer  = '';
+  lavadorInfo && mostrarPin();
 }
 </script>
 </body>
