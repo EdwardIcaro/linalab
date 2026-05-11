@@ -121,7 +121,7 @@
             // Apenas limpa o escopo atual para forçar re-seleção
             localStorage.removeItem('empresaId');
             localStorage.removeItem('empresaNome');
-            window.location.href = 'selecionar-empresa.html';
+            window.location.href = 'hub.html';
         });
 
         document.getElementById('__btnSair').addEventListener('click', () => {
