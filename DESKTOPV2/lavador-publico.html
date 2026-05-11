@@ -576,8 +576,12 @@
       </div>
     </div>
 
-    <div class="hero-balance-label">A RECEBER (finalizados)</div>
+    <div id="heroBalanceLabel" class="hero-balance-label">A RECEBER (finalizados)</div>
     <div id="heroSaldo" class="hero-balance">R$ 0,00</div>
+    <div id="heroSalarioRow" class="hero-debt-row hidden" style="color:var(--muted)">
+      <span>Salário fixo:</span>
+      <span id="heroSalarioVal">R$ 0,00</span>
+    </div>
     <div id="heroDividaRow" class="hero-debt-row hidden">
       <span>Adiantamentos:</span>
       <span id="heroDividaVal" class="badge-red">–R$ 0,00</span>
@@ -855,6 +859,11 @@ function isMultiWash(order) {
   return Array.isArray(order.ordemLavadores) && order.ordemLavadores.length > 1;
 }
 
+// ===================== HELPERS REMUNERAÇÃO =====================
+function getTipoRemun() { return lavadorData?.tipoRemuneracao || 'COMISSAO'; }
+function isSalarioFixo() { return getTipoRemun() === 'SALARIO'; }
+function temComissao()   { const t = getTipoRemun(); return t === 'COMISSAO' || t === 'SALARIO_COMISSAO'; }
+
 // ===================== STATE =====================
 let lavadorData = null;
 let currentLavadorId = null;
@@ -937,30 +946,68 @@ function renderHeroStats() {
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  let divida = 0;
+  (lavadorData.adiantamentosNaoQuitados || []).forEach(a => divida += parseFloat(a.valor) || 0);
+
+  if (isSalarioFixo()) {
+    // ── Salário fixo ─────────────────────────────────────────────────────────
+    document.getElementById('heroBalanceLabel').textContent = 'SALÁRIO MENSAL';
+    document.getElementById('heroSaldo').textContent = formatCurrency(lavadorData.salario || 0);
+    document.getElementById('heroSaldo').style.color = '';
+    document.getElementById('heroPendenteRow').classList.add('hidden');
+
+    // Pills: contagem de ordens em vez de valores monetários
+    let semanaOrdens = 0, mesOrdens = 0;
+    (lavadorData.ordens || []).forEach(o => {
+      if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
+      const d = new Date(o.dataFim || o.createdAt);
+      if (d >= weekStart) semanaOrdens++;
+      if (d >= monthStart) mesOrdens++;
+    });
+
+    document.getElementById('pillSemana').textContent = `${semanaOrdens} OS`;
+    document.getElementById('pillMes').textContent = `${mesOrdens} OS`;
+
+    if (divida > 0) {
+      document.getElementById('heroDividaRow').classList.remove('hidden');
+      document.getElementById('heroDividaVal').textContent = '-' + formatCurrency(divida);
+    }
+    document.getElementById('pillDivida').textContent = formatCurrencyShort(divida);
+    window._stats = { semana: semanaOrdens, mes: mesOrdens, divida, saldo: 0, pendentes: 0 };
+    return;
+  }
+
+  // ── Comissão ou Salário+Comissão ──────────────────────────────────────────
   let semana = 0, mes = 0, creditosFinalizados = 0, creditosPendentes = 0;
   (lavadorData.ordens || []).forEach(o => {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
     if (!isFinite(g) || g < 0) return;
 
-    // Verifica comissaoPaga para este lavador específico (multi-wash usa OrdemServicoLavador)
-    const relLavador = (o.ordemLavadores || []).find((rel) => rel.lavadorId === currentLavadorId);
+    const relLavador = (o.ordemLavadores || []).find(rel => rel.lavadorId === currentLavadorId);
     const comissaoJaFoiPaga = relLavador ? relLavador.comissaoPaga : o.comissaoPaga;
 
     if (o.status === 'FINALIZADO') {
       if (!comissaoJaFoiPaga) creditosFinalizados += g;
-      const d = new Date(o.dataFim || o.createdAt); // âncora: quando o serviço terminou
+      const d = new Date(o.dataFim || o.createdAt);
       if (d >= weekStart) semana += g;
       if (d >= monthStart) mes += g;
     } else {
-      // EM_ANDAMENTO ou AGUARDANDO_PAGAMENTO — só conta se comissão ainda não foi paga
       if (!comissaoJaFoiPaga) creditosPendentes += g;
     }
   });
 
-  let divida = 0;
-  (lavadorData.adiantamentosNaoQuitados || []).forEach(a => divida += parseFloat(a.valor) || 0);
   const saldo = creditosFinalizados - divida;
+
+  const labelEl = document.getElementById('heroBalanceLabel');
+  if (getTipoRemun() === 'SALARIO_COMISSAO') {
+    labelEl.textContent = 'COMISSÃO A RECEBER';
+    // Mostra salário fixo como linha secundária
+    document.getElementById('heroSalarioRow').classList.remove('hidden');
+    document.getElementById('heroSalarioVal').textContent = formatCurrency(lavadorData.salario || 0);
+  } else {
+    labelEl.textContent = 'A RECEBER (finalizados)';
+  }
 
   document.getElementById('heroSaldo').textContent = formatCurrency(saldo);
   if (saldo < 0) document.getElementById('heroSaldo').style.color = '#ef4444';
@@ -982,7 +1029,6 @@ function renderHeroStats() {
   document.getElementById('pillMes').textContent = formatCurrencyShort(mes);
   document.getElementById('pillDivida').textContent = formatCurrencyShort(divida);
 
-  // Para uso em outras seções
   window._stats = { semana, mes, divida, saldo, pendentes: creditosPendentes };
 }
 
@@ -1062,7 +1108,7 @@ function renderCalendario() {
   (lavadorData.ordens || []).forEach(o => {
     if (['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) {
       const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
-      if (g > 0) diasComOrdens.add(toLocaleDateISOString(o.dataFim || o.createdAt));
+      if (isSalarioFixo() || g > 0) diasComOrdens.add(toLocaleDateISOString(o.dataFim || o.createdAt));
     }
   });
 
@@ -1113,8 +1159,10 @@ function renderHoje() {
 function ordemsPorDia(iso) {
   return (lavadorData.ordens || []).filter(o => {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return false;
-    const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
-    if (g <= 0) return false;
+    if (!isSalarioFixo()) {
+      const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
+      if (g <= 0) return false;
+    }
     const ref = o.dataFim || o.createdAt;
     return toLocaleDateISOString(ref) === iso;
   });
@@ -1155,15 +1203,15 @@ function buildOrderCard(ordem, uid) {
           ${multi ? `<span class="badge badge-multi"><i class="fas fa-users"></i> ${washersCount}x</span>` : ''}
         </div>
       </div>
-      <div class="order-value ${isPending ? 'pending' : ''}">+${formatCurrency(ganho)}</div>
+      ${isSalarioFixo() ? '' : `<div class="order-value ${isPending ? 'pending' : ''}">+${formatCurrency(ganho)}</div>`}
     </div>
     <div id="detail-${uid}" class="order-detail">
       <div class="detail-row"><span class="detail-label">Horário</span><span class="detail-value">${horario}</span></div>
       <div class="detail-row"><span class="detail-label">Valor da ordem</span><span class="detail-value">${formatCurrency(parseFloat(ordem.valorTotal||0))}</span></div>
-      <div class="detail-row"><span class="detail-label">Sua comissão</span><span class="detail-value" style="color:var(--green-d)">+${formatCurrency(ganho)}</span></div>
+      ${isSalarioFixo() ? '' : `<div class="detail-row"><span class="detail-label">Sua comissão</span><span class="detail-value" style="color:var(--green-d)">+${formatCurrency(ganho)}</span></div>`}
       ${totalItems > 0 ? `<div class="detail-row"><span class="detail-label">Itens</span><span class="detail-value">${totalItems} item${totalItems!==1?'s':''}</span></div>` : ''}
       ${multi ? `<div class="detail-row"><span class="detail-label">Multi-wash</span><span class="detail-value">${washersCount} lavadores</span></div>` : ''}
-      ${ordem.comissaoPaga ? `<div class="detail-row"><span class="detail-label">Status pagamento</span><span class="badge badge-pago">Pago</span></div>` : ''}
+      ${(!isSalarioFixo() && ordem.comissaoPaga) ? `<div class="detail-row"><span class="detail-label">Status pagamento</span><span class="badge badge-pago">Pago</span></div>` : ''}
     </div>
   `;
   return card;
@@ -1183,7 +1231,7 @@ function renderHistorico() {
   (lavadorData.ordens || []).forEach(o => {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
-    if (!isFinite(g) || g <= 0) return;
+    if (!isSalarioFixo() && (!isFinite(g) || g <= 0)) return;
     const ref = o.dataFim || o.createdAt;
     const key = toLocaleDateISOString(ref);
     if (!grouped[key]) grouped[key] = [];
@@ -1206,7 +1254,10 @@ function renderHistorico() {
 
     const hdr = document.createElement('div');
     hdr.className = 'day-group-header';
-    hdr.innerHTML = `<span>${formatDate(key)}</span><span class="day-group-total">+${formatCurrency(totalDia)}</span>`;
+    const hdrRight = isSalarioFixo()
+      ? `${ordens.length} OS`
+      : `+${formatCurrency(totalDia)}`;
+    hdr.innerHTML = `<span>${formatDate(key)}</span><span class="day-group-total">${hdrRight}</span>`;
     const body = document.createElement('div');
     body.className = 'day-group-body';
     hdr.onclick = () => body.classList.toggle('collapsed');
@@ -1389,7 +1440,7 @@ function filtrarPeriodo() {
   (lavadorData.ordens || []).forEach(o => {
     if (!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = getWasherShare(o, currentLavadorId, lavadorData.comissao);
-    if (!isFinite(g) || g <= 0) return;
+    if (!isSalarioFixo() && (!isFinite(g) || g <= 0)) return;
     const ref = o.dataFim || o.createdAt;
     const key = toLocaleDateISOString(ref);
     if (key < inicio || key > fim) return;
@@ -1408,7 +1459,7 @@ function filtrarPeriodo() {
 
   result.innerHTML = `
     <div class="periodo-result-title">
-      ${totalOrdens} lavagem${totalOrdens!==1?'s':''} • Total: <strong style="color:var(--green-d)">${formatCurrency(totalGeral)}</strong>
+      ${totalOrdens} lavagem${totalOrdens!==1?'s':''} ${isSalarioFixo() ? '' : `• Total: <strong style="color:var(--green-d)">${formatCurrency(totalGeral)}</strong>`}
     </div>
   `;
 
@@ -1421,7 +1472,8 @@ function filtrarPeriodo() {
 
     const hdr = document.createElement('div');
     hdr.className = 'day-group-header';
-    hdr.innerHTML = `<span>${formatDate(key)}</span><span class="day-group-total">+${formatCurrency(totalDia)}</span>`;
+    const hdrRight2 = isSalarioFixo() ? `${ordens.length} OS` : `+${formatCurrency(totalDia)}`;
+    hdr.innerHTML = `<span>${formatDate(key)}</span><span class="day-group-total">${hdrRight2}</span>`;
     const body = document.createElement('div');
     body.className = 'day-group-body';
     hdr.onclick = () => body.classList.toggle('collapsed');
