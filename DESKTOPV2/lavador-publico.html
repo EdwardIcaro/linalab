@@ -864,18 +864,14 @@ let diaAtivo = null;     // ISO string do dia ativo
 let statPeriodDays = 7;
 
 // ===================== INIT =====================
-document.addEventListener('DOMContentLoaded', async () => {
-  const token = new URLSearchParams(window.location.search).get('token');
-  if (!token) { showError('Link Inválido', 'Use o link fornecido pelo administrador.', 'fa-link'); return; }
-  try {
-    const data = await window.api.getLavadorPublico(token);
-    if (data) { lavadorData = data; currentLavadorId = data.lavadorId; renderUI(); }
-    else showError();
-  } catch(e) {
-    if (e.error?.includes('inativo')) showError('Acesso Desativado', 'Seu link foi desativado. Entre em contato com o administrador.', 'fa-user-lock');
-    else if (e.error?.includes('expirado')) showError('Link Expirado', 'Seu link expirou. Solicite um novo link ao administrador.', 'fa-clock');
-    else showError('Acesso Inválido', 'O link é inválido. Solicite um novo link ao administrador.', 'fa-ban');
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  // Links antigos (?token=...) não são mais suportados.
+  // O novo portal usa /p/TOKEN com autenticação por PIN.
+  showError(
+    'Link desatualizado',
+    'Este link não é mais válido. Peça ao seu gestor para gerar um novo link de acesso pelo painel.',
+    'fa-link-slash'
+  );
 });
 
 // ===================== UI =====================

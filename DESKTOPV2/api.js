@@ -172,6 +172,7 @@ const api = {
     method: 'POST',
     body: JSON.stringify({ duration })
   }),
+  gerarLinkPermanente: (id) => fetchApi(`/lavadores/${id}/link-permanente`, { method: 'POST' }),
   getLavadorTokens: () => fetchApi('/lavadores/tokens'),
   toggleLavadorToken: (id) => fetchApi(`/lavadores/tokens/${id}/toggle`, { method: 'PATCH' }),
   updateLavadorTokenStatus: (id, data) => fetchApi(`/lavadores/tokens/${id}/status`, {

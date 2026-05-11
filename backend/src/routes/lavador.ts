@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { 
-    createLavador, 
-    getLavadores, 
-    updateLavador, 
-    deleteLavador, 
+import {
+    createLavador,
+    getLavadores,
+    updateLavador,
+    deleteLavador,
     gerarTokenPublico,
+    gerarLinkPermanente,
     getLavadoresSimple,
     getLavadorTokens,
     updateLavadorTokenStatus,
@@ -23,6 +24,7 @@ router.delete('/tokens/:id', deleteLavadorToken);
 router.post('/', createLavador);
 router.put('/:id', updateLavador);
 router.delete('/:id', deleteLavador);
-router.post('/:id/token', gerarTokenPublico); // MUDADO PARA POST
+router.post('/:id/token', gerarTokenPublico);
+router.post('/:id/link-permanente', gerarLinkPermanente);
 
 export default router;

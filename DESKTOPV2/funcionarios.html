@@ -426,40 +426,19 @@
             });
         }
 
-        function generateAndCopyToken(lavadorId, button) {
-            // Abrir modal para escolher duração
-            openModal('tokenDurationModal');
-
-            // Configurar botão de confirmação
-            const confirmBtn = document.getElementById('confirmGenerateToken');
-            confirmBtn.onclick = async () => {
-                const duration = document.getElementById('tokenDuration').value;
-                closeModal('tokenDurationModal');
-
-                setButtonLoadingState(button, true);
-                try {
-                    const response = await window.api.gerarTokenLavador(lavadorId, duration);
-                    const token = response.token;
-                    const link = `${window.location.origin}/lavador-publico.html?token=${token}`;
-
-                    await navigator.clipboard.writeText(link);
-
-                    // Mostrar informação sobre expiração
-                    let expiraMsg = '';
-                    if (duration === 'permanent') {
-                        expiraMsg = ' (Link permanente - nunca expira)';
-                    } else {
-                        expiraMsg = ` (Válido por ${duration}h)`;
-                    }
-
-                    showToast('Link de acesso copiado!' + expiraMsg, 'success');
-                } catch (error) {
-                    console.error('Erro ao gerar token:', error);
-                    showToast('Erro ao gerar o link de acesso.', 'error');
-                } finally {
-                    setButtonLoadingState(button, false);
-                }
-            };
+        async function generateAndCopyToken(lavadorId, button) {
+            setButtonLoadingState(button, true);
+            try {
+                const response = await window.api.gerarLinkPermanente(lavadorId);
+                const link = `${window.location.origin}/p/${response.token}`;
+                await navigator.clipboard.writeText(link);
+                showToast('Link de acesso copiado! (permanente — PIN protege o acesso)', 'success');
+            } catch (error) {
+                console.error('Erro ao gerar link:', error);
+                showToast('Erro ao gerar o link de acesso.', 'error');
+            } finally {
+                setButtonLoadingState(button, false);
+            }
         }
 
         function openModal(modalId) {

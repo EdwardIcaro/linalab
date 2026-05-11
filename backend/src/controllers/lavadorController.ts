@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import jwt from 'jsonwebtoken';
+import { gerarTokenCurto } from '../utils/tokenUtils';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -300,5 +301,34 @@ export const gerarTokenPublico = async (req: EmpresaRequest, res: Response) => {
         console.error('Erro ao gerar token público para lavador:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
+};
+
+// Gera (ou retorna) o linkTokenCurto permanente do lavador
+export const gerarLinkPermanente = async (req: EmpresaRequest, res: Response) => {
+  const id = req.params.id as string;
+  const empresaId = req.empresaId!;
+
+  try {
+    const lavador = await prisma.lavador.findFirst({
+      where: { id, empresaId },
+      select: { id: true, linkTokenCurto: true },
+    });
+    if (!lavador) return res.status(404).json({ error: 'Lavador não encontrado.' });
+
+    if (lavador.linkTokenCurto) return res.json({ token: lavador.linkTokenCurto });
+
+    let token: string;
+    let exists: boolean;
+    do {
+      token = gerarTokenCurto(8);
+      const check = await prisma.lavador.findUnique({ where: { linkTokenCurto: token }, select: { id: true } });
+      exists = !!check;
+    } while (exists);
+
+    await prisma.lavador.update({ where: { id }, data: { linkTokenCurto: token! } });
+    res.json({ token: token! });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao gerar link permanente.' });
+  }
 };
 
