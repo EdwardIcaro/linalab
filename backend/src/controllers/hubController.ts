@@ -32,7 +32,7 @@ export const getHub = async (req: Request, res: Response) => {
     const subscription = await prisma.subscription.findFirst({
       where: {
         usuarioId,
-        status: { in: ['ACTIVE', 'TRIAL'] }
+        status: { in: ['ACTIVE', 'TRIAL', 'LIFETIME'] }
       },
       include: { plan: { select: { nome: true, maxEmpresas: true } } },
       orderBy: { createdAt: 'desc' }
@@ -41,6 +41,7 @@ export const getHub = async (req: Request, res: Response) => {
     // Calcula status e dias restantes de trial
     const getStatusEmpresa = () => {
       if (!subscription) return { label: 'Expirado', tipo: 'expiro', trialDias: null };
+      if (subscription.status === 'LIFETIME') return { label: 'Vitalício', tipo: 'ativo', trialDias: null };
       if (subscription.isCurrentlyTrial && subscription.trialEndDate) {
         const dias = Math.max(0, Math.ceil((subscription.trialEndDate.getTime() - Date.now()) / 86400000));
         return { label: `Trial · ${dias} dias`, tipo: 'trial', trialDias: dias };
