@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { resolverTokenPublico } from '../controllers/portalPublicoController';
 
-const router = Router();
+const router: Router = Router();
 
 // Rota pública — sem autenticação — resolve token curto do lavador
 router.get('/:token', resolverTokenPublico);
