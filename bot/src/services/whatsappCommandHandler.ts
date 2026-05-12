@@ -22,6 +22,8 @@ import {
   handleReportsListSelection,
 } from './reportService';
 
+const PORTAL_URL = (process.env.PORTAL_URL ?? '').replace(/\/$/, '');
+
 /** Chamado pelo baileyService quando recebe uma imagem. */
 export async function handleIncomingImage(from: string, buffer: Buffer): Promise<string | null> {
   return handleIncomingImageForReport(from, buffer);
@@ -228,9 +230,9 @@ export async function handleIncomingMessage(
       if (pendingReports.has(from)) return handleReportStep(from, message);
 
       if (command === 'reportar') return handleReportarCommand(from, lavadorId, empresaId);
-      if (command === 'resumo')   return handleResumoLavador(lavadorId, empresaId);
       if (command === 'ajuda')    return handleAjudaLavador();
-      if (['status','meu-status','minhas-comissoes'].includes(command))
+      if (command === 'link')     return handleLinkLavador(lavadorId);
+      if (['status','meu-status','minhas-comissoes','resumo'].includes(command))
         return handleStatusLavador(lavadorId, empresaId);
       if (['comissoes','comissão','comissao'].includes(command))
         return handleComissoesLavador(lavadorId, empresaId);
@@ -1097,60 +1099,55 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
 // HANDLERS ESPECÍFICOS PARA LAVADOR
 // ==========================================
 
-/*
- * Resumo do dia apenas do lavador
- */
-function handleResumoLavador(lavadorId: string, empresaId: string): string {
-  // Por enquanto, retorna mensagem informativa
-  // Implementar busca do resumo do dia desse lavador
-  return `👤 Seu Resumo do Dia\n\nUse o comando */status* para ver suas comissões e faturamento de hoje.`;
-}
-
-/*
- * Status e comissões do lavador
- */
 async function handleStatusLavador(lavadorId: string, empresaId: string): Promise<string> {
+  const { start: diaStart, end: diaEnd } = getTodayFixedRangeBRT();
   const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const amanha = new Date(hoje);
-  amanha.setDate(amanha.getDate() + 1);
   const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+  const fimMes    = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
 
-  const lavador = await prisma.lavador.findUnique({
-    where: { id: lavadorId },
-  });
+  const lavador = await prisma.lavador.findUnique({ where: { id: lavadorId } });
+  if (!lavador) return '❌ Erro ao buscar seus dados.';
 
-  if (!lavador) return '❌ Erro ao buscar dados do lavador.';
-
-  const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
+  const [ordensDia, ordensMes] = await Promise.all([
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, dataFim: { gte: diaStart, lte: diaEnd } },
     }),
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } },
-    }),
-    prisma.adiantamento.findMany({
-      where: { lavadorId, status: 'PENDENTE' },
+      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, dataFim: { gte: inicioMes, lte: fimMes } },
     }),
   ]);
 
-  const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
-  const comDia = fatDia * (lavador.comissao / 100);
-  const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+  const fatDia      = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+  const comDia      = fatDia * (lavador.comissao / 100);
+  const fatMes      = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
   const comBrutaMes = fatMes * (lavador.comissao / 100);
-  const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
-  const comLiquidaMes = comBrutaMes - totalAdiant;
 
-  return `👤 *${lavador.nome.toUpperCase()}*\n\n` +
-    `📅 HOJE:\n` +
-    `  Ordens: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n` +
-    `  Comissão: *R$ ${comDia.toFixed(2)}*\n\n` +
-    `📆 MÊS ATUAL:\n` +
-    `  Ordens: *${ordensMes.length}* | Faturamento: *R$ ${fatMes.toFixed(2)}*\n` +
-    `  Comissão bruta (${lavador.comissao}%): *R$ ${comBrutaMes.toFixed(2)}*\n` +
-    `  Adiantamentos em aberto: *R$ ${totalAdiant.toFixed(2)}*\n` +
-    `  Comissão líquida a receber: *R$ ${comLiquidaMes.toFixed(2)}*`;
+  const portalLink = await getLinkPortal(lavadorId);
+
+  let msg = `Olá, *${lavador.nome}*! 👋\n\n`;
+  msg += `💰 Sua comissão bruta este mês: *R$ ${comBrutaMes.toFixed(2)}*\n`;
+  msg += `📅 Hoje: *${ordensDia.length} ${ordensDia.length === 1 ? 'ordem' : 'ordens'}* · comissão *R$ ${comDia.toFixed(2)}*\n\n`;
+  msg += portalLink
+    ? `Para ver o detalhamento completo, acesse seu portal:\n🔗 ${portalLink}`
+    : `Para mais informações, peça o seu link de acesso ao gerente.`;
+
+  return msg;
+}
+
+async function handleLinkLavador(lavadorId: string): Promise<string> {
+  const link = await getLinkPortal(lavadorId);
+  if (!link) return '❌ Seu portal não está disponível. Contate o gerente.';
+  return `🔗 *Seu portal pessoal:*\n\n${link}\n\n_Acesse aqui para ver suas ordens, extrato e histórico completo._`;
+}
+
+async function getLinkPortal(lavadorId: string): Promise<string | null> {
+  if (!PORTAL_URL) return null;
+  const rows = await prisma.$queryRaw<Array<{ linkTokenCurto: string | null }>>`
+    SELECT "linkTokenCurto" FROM "lavadores" WHERE "id" = ${lavadorId}
+  `;
+  const token = rows[0]?.linkTokenCurto;
+  if (!token) return null;
+  return `${PORTAL_URL}/p.html?token=${token}`;
 }
 
 /*
@@ -1202,19 +1199,15 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
     `Por mês:\n${porMesFmt}`;
 }
 
-/*
- * Menu reduzido para lavador
- */
 function handleAjudaLavador(): string {
-  return `📚 SEUS COMANDOS\n\n` +
-    `/status - Seu faturamento e comissão do dia e mês\n` +
-    `/comissoes - Comissões em aberto a receber\n` +
-    `ordens - Ver suas ordens ativas\n` +
-    `pix [nº] - Gerar QR Code PIX (ex: _pix 321_)\n` +
-    `reenviar pix [nº] - Reenviar QR já gerado\n` +
-    `/ajuda - Este menu\n\n` +
-    `Acesso limitado: você só pode ver seus dados.\n` +
-    `Para outras informações, contate o gerente.`;
+  return `📚 *O que posso fazer por você?*\n\n` +
+    `*status* — Sua comissão do mês e do dia\n` +
+    `*link* — Acessar seu portal pessoal\n` +
+    `*comissoes* — Ver comissões em aberto\n` +
+    `*reportar* — Reportar avaria em um veículo\n` +
+    `pix [nº] — Gerar QR Code PIX (ex: _pix 321_)\n` +
+    `reenviar pix [nº] — Reenviar QR já gerado\n` +
+    `*ajuda* — Este menu`;
 }
 
 // ==========================================
