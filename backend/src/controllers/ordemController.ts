@@ -7,58 +7,6 @@ import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
 
-// ✅ CACHE SIMPLES EM MEMÓRIA
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-  ttl: number;
-}
-
-const queryCache = new Map<string, CacheEntry>();
-
-function getCacheKey(empresaId: string, params: Record<string, any>): string {
-  // Cria chave de cache baseada em empresaId e parametros
-  const paramStr = JSON.stringify({
-    page: params.page,
-    limit: params.limit,
-    status: params.status,
-    clienteId: params.clienteId,
-    lavadorId: params.lavadorId,
-    dataInicio: params.dataInicio,
-    dataFim: params.dataFim
-  });
-  return `ordens:${empresaId}:${Buffer.from(paramStr).toString('base64')}`;
-}
-
-function getCachedData(key: string): any | null {
-  const entry = queryCache.get(key);
-  if (!entry) return null;
-
-  const now = Date.now();
-  if (now - entry.timestamp > entry.ttl) {
-    queryCache.delete(key);
-    return null;
-  }
-
-  return entry.data;
-}
-
-function setCachedData(key: string, data: any, ttlMs: number = 60000): void {
-  queryCache.set(key, {
-    data,
-    timestamp: Date.now(),
-    ttl: ttlMs
-  });
-}
-
-function invalidateCache(empresaId: string): void {
-  // Remove todas as entradas de cache dessa empresa
-  for (const [key] of queryCache) {
-    if (key.includes(`ordens:${empresaId}:`)) {
-      queryCache.delete(key);
-    }
-  }
-}
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -405,9 +353,6 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
     );
     const ordemFinal = formatOrderWithLavadores(ordem);
 
-    // ✅ CACHE: Invalida cache desta empresa quando ordem é criada
-    invalidateCache(empresaId);
-
     // ✅ Enviar resposta SEM BLOQUEAR
     res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem: ordemFinal });
 
@@ -491,28 +436,6 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
     const page = Number(pageQuery) || 1;
     const limit = Number(limitQuery) || 10;
     const skip = (page - 1) * limit;
-
-    // ✅ CACHE: Se não há search ou filtros complexos, tenta usar cache
-    // Cache é valido apenas para queries simples sem search/filtros dinâmicos
-    const shouldCache = !search && (!metodoPagamento || metodoPagamento === '');
-    let cacheKey = '';
-    if (shouldCache) {
-      cacheKey = getCacheKey(req.empresaId!, {
-        page,
-        limit,
-        status: status || '',
-        clienteId: clienteId || '',
-        lavadorId: lavadorId || '',
-        dataInicio: dataInicio || '',
-        dataFim: dataFim || ''
-      });
-
-      const cachedResult = getCachedData(cacheKey);
-      if (cachedResult) {
-        console.log(`[CACHE HIT] Ordens da empresa ${req.empresaId}`);
-        return res.json(cachedResult);
-      }
-    }
 
     const where: Prisma.OrdemServicoWhereInput = {
       empresaId: req.empresaId,
@@ -760,12 +683,6 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
         pages: Math.ceil(total / Number(limit))
       }
     };
-
-    // ✅ CACHE: Salva resultado em cache (60 segundos) se for uma query simples
-    if (shouldCache && cacheKey) {
-      setCachedData(cacheKey, result, 60000); // Cache por 60 segundos
-      console.log(`[CACHE SET] Ordens da empresa ${req.empresaId} (TTL: 60s)`);
-    }
 
     res.json(result);
   } catch (error) {
@@ -1094,9 +1011,6 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       link: `ordens.html?id=${ordemFinal.id}`,
       type: 'ordemEditada'
     });
-
-    // ✅ CACHE: Invalida cache desta empresa quando ordem é atualizada
-    invalidateCache(req.empresaId!);
 
     res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: ordemFinal });
   } catch (error: any) {
@@ -1730,9 +1644,6 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       link: `ordens.html?id=${ordem.id}`,
       type: 'ordemEditada'
     });
-
-    // ✅ CACHE: Invalida cache desta empresa quando ordem é finalizada
-    invalidateCache(empresaId);
 
     // WhatsApp: notificar ordem finalizada (fire-and-forget)
     const metodoPrincipal = pagamentos[0]?.metodo ?? 'OUTRO';
