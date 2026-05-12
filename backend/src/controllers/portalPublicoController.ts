@@ -571,7 +571,8 @@ export const registrarPonto = async (req: Request, res: Response) => {
       const dist = haversine(empLat, empLng, parseFloat(lat), parseFloat(lng));
       if (dist > raioGps * 3) gpsPrecisaoSuspeita = true;
     }
-    if (gpsPrecisao != null && gpsPrecisao < 4) gpsPrecisaoSuspeita = true;
+    // Precisão sub-metro é impossível em GPS real — indica mock GPS app
+    if (gpsPrecisao != null && gpsPrecisao < 1) gpsPrecisaoSuspeita = true;
 
     const marcacao = await prisma.dpMarcacao.create({
       data: {
