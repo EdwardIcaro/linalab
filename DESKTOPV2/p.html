@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Lina · Portal</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6b3fa1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="/api.js"></script>
@@ -298,6 +303,67 @@
     .btn-desvincular { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:var(--white); font-family:inherit; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; }
     .wpp-instrucao { font-size:12px; color:var(--muted); text-align:center; line-height:1.5; }
 
+    /* ── BALÃO PWA ─────────────────────────────────────────────────────────── */
+    .pwa-balao {
+      position: fixed; bottom: 24px; right: 20px; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      animation: balao-atencao 6s ease-in-out infinite;
+    }
+    .pwa-balao.hidden { display: none !important; }
+
+    @keyframes balao-atencao {
+      0%              { transform: translateY(0) rotate(0deg); }
+      /* pausa inicial */
+      70%             { transform: translateY(0) rotate(0deg); }
+      /* chacoalha para chamar atenção */
+      73%             { transform: translateY(-10px) rotate(-7deg); }
+      76%             { transform: translateY(-10px) rotate(7deg); }
+      79%             { transform: translateY(-10px) rotate(-5deg); }
+      82%             { transform: translateY(-5px) rotate(3deg); }
+      85%             { transform: translateY(0) rotate(0deg); }
+      /* flutua suavemente */
+      92%             { transform: translateY(-5px) rotate(0deg); }
+      100%            { transform: translateY(0) rotate(0deg); }
+    }
+
+    .pwa-btn {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(145deg, #7c3aed, #5b21b6);
+      border: none; color: white; font-size: 22px;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 18px rgba(92,33,182,.55), 0 0 0 0 rgba(139,92,246,.4);
+      animation: pwa-pulse 3s ease-out infinite;
+      transition: transform .15s;
+    }
+    .pwa-btn:active { transform: scale(.93); }
+
+    @keyframes pwa-pulse {
+      0%   { box-shadow: 0 4px 18px rgba(92,33,182,.55), 0 0 0 0 rgba(139,92,246,.45); }
+      70%  { box-shadow: 0 4px 18px rgba(92,33,182,.55), 0 0 0 14px rgba(139,92,246,0); }
+      100% { box-shadow: 0 4px 18px rgba(92,33,182,.55), 0 0 0 0 rgba(139,92,246,0); }
+    }
+
+    .pwa-tooltip {
+      background: #1e1b4b; color: white;
+      font-size: 11px; font-weight: 800; letter-spacing: .8px;
+      padding: 5px 11px; border-radius: 20px;
+      white-space: nowrap; pointer-events: none;
+      box-shadow: 0 3px 10px rgba(0,0,0,.3);
+      animation: tooltip-pop .25s cubic-bezier(.34,1.56,.64,1);
+      position: relative;
+    }
+    .pwa-tooltip::after {
+      content: '';
+      position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: #1e1b4b; border-bottom: none;
+    }
+    .pwa-tooltip.hidden { display: none !important; }
+    @keyframes tooltip-pop {
+      from { opacity:0; transform: scale(.7) translateY(4px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+
   </style>
 </head>
 <body>
@@ -449,6 +515,14 @@
   </div>
 </div>
 
+<!-- BALÃO PWA -->
+<div id="pwaBalao" class="pwa-balao hidden">
+  <div id="pwaTooltip" class="pwa-tooltip hidden">✨ NOVO APP</div>
+  <button class="pwa-btn" onclick="instalarPWA()" title="Instalar app Lina">
+    <i class="fas fa-mobile-screen-button"></i>
+  </button>
+</div>
+
 <script>
 // ── Estado ────────────────────────────────────────────────────────────────────
 const API = '/api';
@@ -460,6 +534,42 @@ let pinBuffer   = '';
 let pinModo     = 'verify'; // 'setup' | 'setup-confirm' | 'verify'
 let pinPrimeiro = '';
 let wppTimer    = null;
+
+// ── PWA Install ───────────────────────────────────────────────────────────────
+let pwaPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  pwaPrompt = e;
+  const balao = document.getElementById('pwaBalao');
+  balao.classList.remove('hidden');
+  // Tooltip apenas no primeiro acesso
+  if (!localStorage.getItem('pwa_tooltip_seen')) {
+    const tip = document.getElementById('pwaTooltip');
+    tip.classList.remove('hidden');
+    setTimeout(() => tip.classList.add('hidden'), 2000);
+    localStorage.setItem('pwa_tooltip_seen', '1');
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwaBalao').classList.add('hidden');
+  pwaPrompt = null;
+});
+
+async function instalarPWA() {
+  if (!pwaPrompt) return;
+  pwaPrompt.prompt();
+  const { outcome } = await pwaPrompt.userChoice;
+  pwaPrompt = null;
+  if (outcome === 'accepted') {
+    document.getElementById('pwaBalao').classList.add('hidden');
+  }
+}
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
