@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
+import { gerarTokenCurto } from '../utils/tokenUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -506,3 +507,170 @@ function formatMinutos(min: number): string {
   if (m === 0) return `${h}h`;
   return `${h}h ${m}min`;
 }
+
+// ─── GET /api/dp/funcionarios ─────────────────────────────────────────────────
+export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const { status } = req.query;
+    const where: any = { empresaId };
+    if (status && status !== 'TODOS') where.status = status as string;
+
+    const funcionarios = await prisma.dpFuncionario.findMany({
+      where,
+      select: {
+        id: true, nome: true, cpf: true, cargo: true,
+        salarioBase: true, cargaHoraria: true, telefone: true,
+        status: true, lavadorId: true, jornadaEntrada: true,
+        cargaHorariaDia: true, pinDefinido: true, linkToken: true,
+        createdAt: true,
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    // Busca linkTokenCurto dos lavadores vinculados
+    const lavadorIds = funcionarios
+      .map(f => f.lavadorId)
+      .filter((id): id is string => !!id);
+
+    const linksPorLavador = new Map<string, string | null>();
+    if (lavadorIds.length > 0) {
+      const lavadores = await prisma.lavador.findMany({
+        where: { id: { in: lavadorIds } },
+        select: { id: true, linkTokenCurto: true },
+      });
+      lavadores.forEach(l => linksPorLavador.set(l.id, l.linkTokenCurto));
+    }
+
+    const result = funcionarios.map(f => ({
+      ...f,
+      portalToken: f.lavadorId
+        ? (linksPorLavador.get(f.lavadorId) ?? null)
+        : f.linkToken,
+      portalSuportado: !!f.lavadorId,
+    }));
+
+    res.json({ funcionarios: result });
+  } catch (error) {
+    console.error('[dp] getFuncionarios:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/dp/funcionarios ────────────────────────────────────────────────
+export const criarDpFuncionario = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  const { nome, cpf, cargo, salarioBase, cargaHoraria, telefone, jornadaEntrada, cargaHorariaDia } = req.body;
+  if (!nome?.trim()) return res.status(400).json({ error: 'Nome é obrigatório' });
+
+  try {
+    const linkToken = gerarTokenCurto(8);
+
+    const funcionario = await prisma.dpFuncionario.create({
+      data: {
+        empresaId,
+        nome: nome.trim(),
+        cpf: cpf?.trim() || null,
+        cargo: cargo?.trim() || null,
+        salarioBase: salarioBase !== undefined && salarioBase !== '' ? parseFloat(salarioBase) : null,
+        cargaHoraria: cargaHoraria !== undefined && cargaHoraria !== '' ? parseInt(cargaHoraria) : null,
+        telefone: telefone?.trim() || null,
+        jornadaEntrada: jornadaEntrada?.trim() || null,
+        cargaHorariaDia: cargaHorariaDia !== undefined && cargaHorariaDia !== '' ? parseFloat(cargaHorariaDia) : null,
+        status: 'ATIVO',
+        linkToken,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json({ funcionario });
+  } catch (error) {
+    console.error('[dp] criarFuncionario:', error);
+    res.status(500).json({ error: 'Erro ao criar funcionário' });
+  }
+};
+
+// ─── PUT /api/dp/funcionarios/:id ─────────────────────────────────────────────
+export const atualizarDpFuncionario = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpFuncionario.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const { nome, cpf, cargo, salarioBase, cargaHoraria, telefone, jornadaEntrada, cargaHorariaDia, status } = req.body;
+
+    const statusValidos = ['ATIVO', 'AFASTADO', 'FERIAS', 'DESLIGADO'];
+    if (status !== undefined && !statusValidos.includes(status))
+      return res.status(400).json({ error: 'Status inválido' });
+
+    const funcionario = await prisma.dpFuncionario.update({
+      where: { id },
+      data: {
+        ...(nome !== undefined && { nome: nome.trim() }),
+        ...(cpf !== undefined && { cpf: cpf?.trim() || null }),
+        ...(cargo !== undefined && { cargo: cargo?.trim() || null }),
+        ...(salarioBase !== undefined && { salarioBase: salarioBase !== '' ? parseFloat(salarioBase) : null }),
+        ...(cargaHoraria !== undefined && { cargaHoraria: cargaHoraria !== '' ? parseInt(cargaHoraria) : null }),
+        ...(telefone !== undefined && { telefone: telefone?.trim() || null }),
+        ...(jornadaEntrada !== undefined && { jornadaEntrada: jornadaEntrada?.trim() || null }),
+        ...(cargaHorariaDia !== undefined && { cargaHorariaDia: cargaHorariaDia !== '' ? parseFloat(cargaHorariaDia) : null }),
+        ...(status !== undefined && { status }),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({ funcionario });
+  } catch (error) {
+    console.error('[dp] atualizarFuncionario:', error);
+    res.status(500).json({ error: 'Erro ao atualizar funcionário' });
+  }
+};
+
+// ─── POST /api/dp/funcionarios/:id/reset-pin ──────────────────────────────────
+export const resetarPinDpFuncionario = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpFuncionario.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    await prisma.dpFuncionario.update({
+      where: { id },
+      data: { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[dp] resetarPin:', error);
+    res.status(500).json({ error: 'Erro ao resetar PIN' });
+  }
+};
+
+// ─── POST /api/dp/funcionarios/:id/regenerar-link ─────────────────────────────
+export const regenerarLinkDpFuncionario = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpFuncionario.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const linkToken = gerarTokenCurto(8);
+    await prisma.dpFuncionario.update({
+      where: { id },
+      data: { linkToken, pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
+    });
+
+    res.json({ linkToken });
+  } catch (error) {
+    console.error('[dp] regenerarLink:', error);
+    res.status(500).json({ error: 'Erro ao regenerar link' });
+  }
+};

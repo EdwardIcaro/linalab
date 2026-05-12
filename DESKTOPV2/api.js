@@ -125,6 +125,11 @@ const api = {
   getImportaveisDp: (empresaId) => fetchApi(`/dp/onboarding/importaveis?empresaId=${empresaId}`),
   salvarOnboardingDp: (data) => fetchApi('/dp/onboarding/salvar', { method: 'POST', body: JSON.stringify(data) }),
   getDpDashboard: () => fetchApi(`/dp/dashboard?empresaId=${localStorage.getItem('empresaId') || ''}`),
+  getDpFuncionarios: (status) => fetchApi(`/dp/funcionarios${status && status !== 'TODOS' ? `?status=${status}` : ''}`),
+  criarDpFuncionario: (data) => fetchApi('/dp/funcionarios', { method: 'POST', body: JSON.stringify(data) }),
+  atualizarDpFuncionario: (id, data) => fetchApi(`/dp/funcionarios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  resetarPinDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/reset-pin`, { method: 'POST' }),
+  regenerarLinkDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/regenerar-link`, { method: 'POST' }),
 
   // ===== EMPRESAS =====
   getEmpresasDoUsuario: () => fetchApi('/empresas'),
