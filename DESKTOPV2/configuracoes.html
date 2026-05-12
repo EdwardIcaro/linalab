@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="configuracoes.css">
     <script src="utils.js"></script>
     <script src="api.js"></script>
-    <!-- theme.js removed - now opt-in only (enable via Aparência tab) -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -75,13 +75,6 @@
                 @click="activeTab = 'precos'"
             >
                 <i class="fas fa-tags mr-2"></i> Tabela de Preços
-            </button>
-            <button
-                class="tab-button"
-                :class="{ 'active': activeTab === 'aparencia' }"
-                @click="activeTab = 'aparencia'"
-            >
-                <i class="fas fa-palette mr-2"></i> Aparência
             </button>
             <button
                 class="tab-button"
@@ -292,155 +285,6 @@
             </div>
         </div>
 
-        <!-- Tab 3: Aparência -->
-        <div x-show="activeTab === 'aparencia'" x-transition class="tab-content">
-            <div class="card">
-                <h3 class="text-xl font-semibold mb-6">
-                    <i class="fas fa-palette mr-2" style="color: var(--primary-color);"></i>
-                    Personalização da Marca
-                </h3>
-                <p class="text-secondary mb-6">Customize as cores do sistema para refletir a identidade visual da sua empresa.</p>
-
-                <form @submit.prevent="saveTheme">
-                    <div class="grid grid-cols-2 gap-6 mb-6">
-                        <!-- Primary Color Picker -->
-                        <div class="form-group">
-                            <label for="corPrimaria" class="form-label">
-                                <i class="fas fa-circle mr-2" :style="{ color: theme.corPrimaria }"></i>
-                                Cor Primária
-                            </label>
-                            <div style="display: flex; gap: 12px; align-items: center;">
-                                <input
-                                    type="color"
-                                    id="corPrimaria"
-                                    x-model="theme.corPrimaria"
-                                    style="width: 80px; height: 50px; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer;"
-                                >
-                                <input
-                                    type="text"
-                                    x-model="theme.corPrimaria"
-                                    class="form-input"
-                                    placeholder="#FF5733"
-                                    pattern="^#[0-9A-Fa-f]{6}$"
-                                    maxlength="7"
-                                    @input="theme.corPrimaria = $event.target.value.toUpperCase()"
-                                    style="flex: 1;"
-                                >
-                            </div>
-                            <p class="text-sm text-secondary mt-2">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Usada em botões principais, destaques e elementos de ação
-                            </p>
-                        </div>
-
-                        <!-- Secondary Color Picker -->
-                        <div class="form-group">
-                            <label for="corSecundaria" class="form-label">
-                                <i class="fas fa-circle mr-2" :style="{ color: theme.corSecundaria }"></i>
-                                Cor Secundária
-                            </label>
-                            <div style="display: flex; gap: 12px; align-items: center;">
-                                <input
-                                    type="color"
-                                    id="corSecundaria"
-                                    x-model="theme.corSecundaria"
-                                    style="width: 80px; height: 50px; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer;"
-                                >
-                                <input
-                                    type="text"
-                                    x-model="theme.corSecundaria"
-                                    class="form-input"
-                                    placeholder="#1F2937"
-                                    pattern="^#[0-9A-Fa-f]{6}$"
-                                    maxlength="7"
-                                    @input="theme.corSecundaria = $event.target.value.toUpperCase()"
-                                    style="flex: 1;"
-                                >
-                            </div>
-                            <p class="text-sm text-secondary mt-2">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Usada em textos, bordas e elementos secundários
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Live Preview Card -->
-                    <div class="mb-6">
-                        <label class="form-label mb-3">
-                            <i class="fas fa-eye mr-2"></i>
-                            Pré-visualização
-                        </label>
-                        <div style="background: linear-gradient(135deg, rgba(243, 244, 246, 0.5) 0%, rgba(255, 255, 255, 1) 100%); padding: 32px; border-radius: 16px; border: 2px solid var(--border-color);">
-                            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-                                <!-- Preview Button Primary -->
-                                <button
-                                    type="button"
-                                    :style="{
-                                        background: `linear-gradient(135deg, ${theme.corPrimaria} 0%, ${adjustBrightness(theme.corPrimaria, -20)} 100%)`,
-                                        color: 'white',
-                                        padding: '12px 24px',
-                                        borderRadius: '10px',
-                                        border: 'none',
-                                        fontWeight: '600',
-                                        boxShadow: `0 4px 12px ${theme.corPrimaria}40`,
-                                        cursor: 'pointer'
-                                    }"
-                                >
-                                    <i class="fas fa-check mr-2"></i>
-                                    Botão Primário
-                                </button>
-
-                                <!-- Preview Badge -->
-                                <div
-                                    :style="{
-                                        background: `${theme.corPrimaria}20`,
-                                        color: theme.corPrimaria,
-                                        padding: '8px 16px',
-                                        borderRadius: '8px',
-                                        border: `1px solid ${theme.corPrimaria}30`,
-                                        fontWeight: '600',
-                                        fontSize: '14px'
-                                    }"
-                                >
-                                    <i class="fas fa-tag mr-2"></i>
-                                    Badge
-                                </div>
-
-                                <!-- Preview Text -->
-                                <div :style="{ color: theme.corSecundaria, fontWeight: '500' }">
-                                    <i class="fas fa-font mr-2"></i>
-                                    Texto Secundário
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Reset to Default Button -->
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-save mr-2"></i>
-                            Salvar Personalização
-                        </button>
-                        <button
-                            type="button"
-                            @click="resetTheme()"
-                            class="btn btn-secondary"
-                        >
-                            <i class="fas fa-undo mr-2"></i>
-                            Restaurar Padrão
-                        </button>
-                    </div>
-
-                    <div style="margin-top: 24px; padding: 16px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 1px solid #fbbf24;">
-                        <p class="text-sm" style="color: #92400e; margin: 0;">
-                            <i class="fas fa-lightbulb mr-2"></i>
-                            <strong>Dica:</strong> As cores serão aplicadas imediatamente após salvar. Você pode usar o botão "Restaurar Padrão" para voltar às cores originais.
-                        </p>
-                    </div>
-                </form>
-            </div>
-        </div>
-
         <!-- Tab 4: Preferências -->
         <div x-show="activeTab === 'preferencias' && canViewTab('preferencias')" x-transition class="tab-content">
             <div class="card">
@@ -458,21 +302,6 @@
                         </h4>
 
                         <div class="notification-preference-list">
-                            <div class="notification-preference-item">
-                                <div>
-                                    <label for="finalizacaoAutomatica" class="form-label" style="margin-bottom: 4px;">
-                                        Finalização Automática de Ordens
-                                    </label>
-                                    <p class="text-sm text-secondary">
-                                        Se habilitado, no "fim do dia de trabalho", o sistema irá alterar ordens "pendentes" ou "em andamento" de dias anteriores para "finalizado" com pagamento "PENDENTE".
-                                    </p>
-                                </div>
-                                <label class="switch">
-                                    <input type="checkbox" id="finalizacaoAutomatica" x-model="preferencias.finalizacaoAutomatica">
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-
                             <div class="notification-preference-item">
                                 <div>
                                     <label for="exigirLavadorParaFinalizar" class="form-label" style="margin-bottom: 4px;">
@@ -644,14 +473,7 @@
                                     <span class="slider round"></span>
                                 </label>
                             </div>
-                            <!-- Notificação: Finalização Automática -->
-                            <div class="notification-preference-item">
-                                <label for="notifFinalizacaoAutomatica" class="form-label">Aviso de Finalização Automática</label>
-                                <label class="switch">
-                                    <input type="checkbox" id="notifFinalizacaoAutomatica" x-model="preferencias.notifications.finalizacaoAutomatica">
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
+
                         </div>
                     </div>
 
@@ -1256,7 +1078,6 @@
                 },
 
                 preferencias: {
-                    finalizacaoAutomatica: false,
                     exigirLavadorParaFinalizar: false,
                     paginaInicialPadrao: 'index.html',
                     paymentMethods: {
@@ -1269,14 +1090,8 @@
                     notifications: {
                         ordemCriada: true,
                         ordemEditada: true,
-                        ordemDeletada: false,
-                        finalizacaoAutomatica: true
+                        ordemDeletada: false
                     }
-                },
-
-                theme: {
-                    corPrimaria: '#F59E0B',
-                    corSecundaria: '#1F2937'
                 },
 
                 serviceForm: {
@@ -1354,7 +1169,7 @@
                 },
 
                 getFirstVisibleTab() {
-                    const tabs = ['empresa', 'precos', 'aparencia', 'preferencias', 'usuarios', 'tokens'];
+                    const tabs = ['empresa', 'precos', 'preferencias', 'usuarios', 'tokens'];
                     return tabs.find(tab => this.canViewTab(tab)) || 'empresa';
                 },
 
@@ -1437,7 +1252,6 @@
                             this.loadServices(),
                             this.loadAdicionais(),
                             this.loadTiposVeiculo(),
-                            this.loadTheme(),
                             this.loadRolesAndUsers(),
                             this.loadTokens()
                         ]);
@@ -1478,7 +1292,6 @@
                         console.log('[Config] ✅ Preferencias data:', empresa);
 
                         // Load business logic settings
-                        this.preferencias.finalizacaoAutomatica = empresa.finalizacaoAutomatica || false;
                         this.preferencias.exigirLavadorParaFinalizar = empresa.exigirLavadorParaFinalizar || false;
                         this.preferencias.paginaInicialPadrao = empresa.paginaInicialPadrao || 'index.html';
 
@@ -1497,8 +1310,7 @@
                         this.preferencias.notifications = {
                             ordemCriada: notifPrefs.ordemCriada !== false,
                             ordemEditada: notifPrefs.ordemEditada !== false,
-                            ordemDeletada: notifPrefs.ordemDeletada === true,
-                            finalizacaoAutomatica: notifPrefs.finalizacaoAutomatica !== false
+                            ordemDeletada: notifPrefs.ordemDeletada === true
                         };
 
                         console.log('[Config] Preferencias loaded:', this.preferencias);
@@ -1546,20 +1358,6 @@
                     }
                 },
 
-                async loadTheme() {
-                    try {
-                        const themeData = await window.api.getThemeConfig();
-                        this.theme.corPrimaria = themeData.corPrimaria || '#F59E0B';
-                        this.theme.corSecundaria = themeData.corSecundaria || '#1F2937';
-
-                        // Apply theme to document immediately
-                        this.applyThemeToDocument();
-                    } catch (error) {
-                        console.error('Erro ao carregar tema:', error);
-                        // Silent fail - use default colors
-                    }
-                },
-
                 // Empresa actions
                 async saveEmpresa() {
                     try {
@@ -1580,7 +1378,6 @@
                         const empresaId = localStorage.getItem('empresaId');
 
                         const data = {
-                            finalizacaoAutomatica: this.preferencias.finalizacaoAutomatica,
                             exigirLavadorParaFinalizar: this.preferencias.exigirLavadorParaFinalizar,
                             paginaInicialPadrao: this.preferencias.paginaInicialPadrao,
                             paymentMethodsConfig: this.preferencias.paymentMethods,
@@ -2075,96 +1872,6 @@
                         }
                     };
                     this.modals.confirm = true;
-                },
-
-                // Theme actions
-                async saveTheme() {
-                    try {
-                        // Validate HEX format
-                        const hexRegex = /^#[0-9A-F]{6}$/i;
-                        if (!hexRegex.test(this.theme.corPrimaria)) {
-                            showToast('Cor primária inválida. Use formato HEX (ex: #FF5733)', 'error');
-                            return;
-                        }
-                        if (!hexRegex.test(this.theme.corSecundaria)) {
-                            showToast('Cor secundária inválida. Use formato HEX (ex: #1F2937)', 'error');
-                            return;
-                        }
-
-                        await window.api.updateThemeConfig({
-                            corPrimaria: this.theme.corPrimaria.toUpperCase(),
-                            corSecundaria: this.theme.corSecundaria.toUpperCase()
-                        });
-
-                        // CRITICAL: Enable custom theme system-wide
-                        if (typeof window.enableCustomTheme === 'function') {
-                            window.enableCustomTheme();
-                        } else {
-                            localStorage.setItem('customThemeEnabled', 'true');
-                        }
-
-                        // Apply immediately to document
-                        this.applyThemeToDocument();
-
-                        showToast('Tema personalizado salvo com sucesso! Recarregue as páginas para aplicar.', 'success');
-                    } catch (error) {
-                        console.error('Erro ao salvar tema:', error);
-                        showToast(error.error || 'Erro ao salvar personalização do tema.', 'error');
-                    }
-                },
-
-                resetTheme() {
-                    this.theme.corPrimaria = '#F59E0B';
-                    this.theme.corSecundaria = '#1F2937';
-
-                    // CRITICAL: Disable custom theme when resetting to default
-                    if (typeof window.disableCustomTheme === 'function') {
-                        window.disableCustomTheme();
-                    } else {
-                        localStorage.removeItem('customThemeEnabled');
-                    }
-
-                    // Apply default theme to document
-                    this.applyThemeToDocument();
-
-                    showToast('Tema padrão restaurado com sucesso!', 'success');
-                },
-
-                applyThemeToDocument() {
-                    // Apply primary color
-                    document.documentElement.style.setProperty('--primary-color', this.theme.corPrimaria);
-                    document.documentElement.style.setProperty('--primary-purple', this.theme.corPrimaria);
-
-                    // Apply secondary color
-                    document.documentElement.style.setProperty('--text-primary', this.theme.corSecundaria);
-                    document.documentElement.style.setProperty('--text-secondary', this.theme.corSecundaria);
-
-                    // Generate lighter version for backgrounds
-                    const primaryLight = this.theme.corPrimaria + '15'; // Add alpha for transparency
-                    document.documentElement.style.setProperty('--primary-color-light', primaryLight);
-                },
-
-                adjustBrightness(hex, percent) {
-                    // Remove # if present
-                    hex = hex.replace('#', '');
-
-                    // Convert to RGB
-                    const r = parseInt(hex.substring(0, 2), 16);
-                    const g = parseInt(hex.substring(2, 4), 16);
-                    const b = parseInt(hex.substring(4, 6), 16);
-
-                    // Adjust brightness
-                    const newR = Math.max(0, Math.min(255, r + (r * percent / 100)));
-                    const newG = Math.max(0, Math.min(255, g + (g * percent / 100)));
-                    const newB = Math.max(0, Math.min(255, b + (b * percent / 100)));
-
-                    // Convert back to hex
-                    const toHex = (n) => {
-                        const hex = Math.round(n).toString(16);
-                        return hex.length === 1 ? '0' + hex : hex;
-                    };
-
-                    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
                 },
 
                 // Utilities
