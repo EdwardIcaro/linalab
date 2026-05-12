@@ -633,18 +633,30 @@ export const atualizarDpFuncionario = async (req: EmpresaRequest, res: Response)
 };
 
 // ─── POST /api/dp/funcionarios/:id/reset-pin ──────────────────────────────────
+// Para funcionários vinculados ao Lina Wash (lavadorId preenchido), o portal
+// autentica pela tabela lavador — reset deve operar lá.
 export const resetarPinDpFuncionario = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;
   const { id } = req.params as { id: string };
 
   try {
-    const existente = await prisma.dpFuncionario.findFirst({ where: { id, empresaId } });
+    const existente = await prisma.dpFuncionario.findFirst({
+      where: { id, empresaId },
+      select: { id: true, lavadorId: true },
+    });
     if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
 
-    await prisma.dpFuncionario.update({
-      where: { id },
-      data: { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
-    });
+    if (existente.lavadorId) {
+      await prisma.lavador.update({
+        where: { id: existente.lavadorId },
+        data: { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
+      });
+    } else {
+      await prisma.dpFuncionario.update({
+        where: { id },
+        data: { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
+      });
+    }
 
     res.json({ ok: true });
   } catch (error) {
@@ -654,21 +666,44 @@ export const resetarPinDpFuncionario = async (req: EmpresaRequest, res: Response
 };
 
 // ─── POST /api/dp/funcionarios/:id/regenerar-link ─────────────────────────────
+// Para funcionários vinculados, o portal usa lavador.linkTokenCurto — regenerar
+// deve atualizar lá e invalidar a sessão ativa.
 export const regenerarLinkDpFuncionario = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;
   const { id } = req.params as { id: string };
 
   try {
-    const existente = await prisma.dpFuncionario.findFirst({ where: { id, empresaId } });
+    const existente = await prisma.dpFuncionario.findFirst({
+      where: { id, empresaId },
+      select: { id: true, lavadorId: true },
+    });
     if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
 
-    const linkToken = gerarTokenCurto(8);
-    await prisma.dpFuncionario.update({
-      where: { id },
-      data: { linkToken, pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
-    });
+    const novoToken = gerarTokenCurto(8);
 
-    res.json({ linkToken });
+    if (existente.lavadorId) {
+      await prisma.lavador.update({
+        where: { id: existente.lavadorId },
+        data: {
+          linkTokenCurto: novoToken,
+          pin: null,
+          pinDefinido: false,
+          sessionVersion: { increment: 1 },
+        },
+      });
+    } else {
+      await prisma.dpFuncionario.update({
+        where: { id },
+        data: {
+          linkToken: novoToken,
+          pin: null,
+          pinDefinido: false,
+          sessionVersion: { increment: 1 },
+        },
+      });
+    }
+
+    res.json({ linkToken: novoToken });
   } catch (error) {
     console.error('[dp] regenerarLink:', error);
     res.status(500).json({ error: 'Erro ao regenerar link' });
