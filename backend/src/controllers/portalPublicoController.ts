@@ -601,6 +601,140 @@ export const registrarPonto = async (req: Request, res: Response) => {
   }
 };
 
+// ─── GET /api/p/me/ponto/espelho ─────────────────────────────────────────────
+export const getEspelhoPortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string;
+  const empresaId = (req as any).empresaId as string;
+
+  const { mes } = req.query as { mes?: string }; // YYYY-MM
+  const agora = new Date();
+  const anoAtual  = agora.getFullYear();
+  const mesAtual  = agora.getMonth() + 1;
+  const [ano, m] = mes
+    ? mes.split('-').map(Number)
+    : [anoAtual, mesAtual];
+
+  try {
+    const [funcionario, sistema] = await Promise.all([
+      prisma.dpFuncionario.findFirst({
+        where: { empresaId, lavadorId, status: 'ATIVO' },
+        select: { id: true, nome: true, cargo: true, cargaHorariaDia: true },
+      }),
+      prisma.empresaSistema.findFirst({
+        where: { empresaId, sistema: 'data-point', ativo: true },
+      }),
+    ]);
+
+    if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
+    if (!sistema)     return res.status(404).json({ erro: 'Data Point não ativo' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const toleranciaMin: number = cfg.toleranciaMin ?? 10;
+    const cargaEsperadaMin = (funcionario.cargaHorariaDia ?? 8) * 60;
+
+    // Dias do mês
+    const diasNoMes = new Date(ano, m, 0).getDate();
+    const diasDoMes: string[] = [];
+    for (let d = 1; d <= diasNoMes; d++) {
+      diasDoMes.push(`${ano}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    }
+
+    // Busca marcações do mês inteiro de uma vez
+    const { start: mesStart } = getDateRangeBRT(diasDoMes[0]);
+    const { end: mesEnd }     = getDateRangeBRT(diasDoMes[diasDoMes.length - 1]);
+
+    const todasMarcacoes = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: funcionario.id, timestamp: { gte: mesStart, lte: mesEnd } },
+      select: { tipo: true, timestamp: true },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const hoje = getTodayStrBRT();
+    const now  = new Date();
+
+    let totalMinutos = 0;
+    let totalPresente = 0;
+    let totalFalta = 0;
+    let pendencias = 0; // incompletas + parciais
+
+    const dias = diasDoMes.map(dia => {
+      const diaSemana  = new Date(dia + 'T12:00:00').getDay(); // 0=dom
+      const isFds      = diaSemana === 0 || diaSemana === 6;
+      const isHoje     = dia === hoje;
+      const isFuturo   = dia > hoje;
+
+      const { start, end } = getDateRangeBRT(dia);
+      const marcacoesDia   = todasMarcacoes.filter(
+        mc => mc.timestamp >= start && mc.timestamp <= end,
+      );
+
+      if (isFuturo) {
+        return { dia, diaSemana, status: 'FUTURO', minutosTrabalhou: 0, marcacoes: [] };
+      }
+
+      if (isFds && marcacoesDia.length === 0) {
+        return { dia, diaSemana, status: 'FOLGA', minutosTrabalhou: 0, marcacoes: [] };
+      }
+
+      const fimCalculo     = isHoje ? now : end;
+      const minutosTrabalhou = calcMinHoje(
+        marcacoesDia.map(mc => ({ tipo: mc.tipo, timestamp: mc.timestamp })),
+        fimCalculo,
+      );
+
+      const ultima     = marcacoesDia[marcacoesDia.length - 1];
+      const incompleto = ultima?.tipo === 'ENTRADA' && !isHoje;
+
+      const horaEntrada = marcacoesDia.find(mc => mc.tipo === 'ENTRADA');
+      const ultimaSaida = [...marcacoesDia].reverse().find(mc => mc.tipo === 'SAIDA');
+
+      let status: string;
+      if (marcacoesDia.length === 0) {
+        status = 'FALTA';
+        totalFalta++;
+      } else if (isHoje) {
+        status = 'HOJE';
+        totalMinutos += minutosTrabalhou;
+      } else if (incompleto) {
+        status = 'INCOMPLETO';
+        pendencias++;
+        totalMinutos += minutosTrabalhou;
+      } else if (minutosTrabalhou >= cargaEsperadaMin - toleranciaMin) {
+        status = 'PRESENTE';
+        totalPresente++;
+        totalMinutos += minutosTrabalhou;
+      } else {
+        status = 'FALTA_PARCIAL';
+        pendencias++;
+        totalMinutos += minutosTrabalhou;
+      }
+
+      return {
+        dia,
+        diaSemana,
+        status,
+        minutosTrabalhou,
+        marcacoes: marcacoesDia.map(mc => ({
+          tipo: mc.tipo,
+          hora: horaFormatadaBRT(mc.timestamp),
+        })),
+        horaEntrada: horaEntrada ? horaFormatadaBRT(horaEntrada.timestamp) : null,
+        horaSaida:   ultimaSaida ? horaFormatadaBRT(ultimaSaida.timestamp) : null,
+      };
+    });
+
+    res.json({
+      mes: { ano, mes: m },
+      funcionario: { nome: funcionario.nome, cargo: funcionario.cargo, cargaEsperadaMin },
+      resumo: { totalMinutos, totalPresente, totalFalta, pendencias },
+      dias,
+    });
+  } catch (error) {
+    console.error('[portal] espelhoPortal:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
 // ─── legado (/api/public/*) ───────────────────────────────────────────────────
 
 export const getOrdensByLavadorPublic = async (req: Request, res: Response) => {

@@ -303,6 +303,144 @@
     .btn-desvincular { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:var(--white); font-family:inherit; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; }
     .wpp-instrucao { font-size:12px; color:var(--muted); text-align:center; line-height:1.5; }
 
+    /* ══════════════════════════════════════
+       ESPELHO DE PONTO
+    ══════════════════════════════════════ */
+    #tela-espelho.ativa { display:block; min-height:100vh; background:var(--bg); }
+
+    .ep-head {
+      background:linear-gradient(148deg,#0f172a 0%,#163554 100%);
+      padding:16px 20px 20px; position:sticky; top:0; z-index:10;
+    }
+    .ep-head-top {
+      display:flex; align-items:center; gap:12px; margin-bottom:16px;
+    }
+    .ep-back-btn {
+      display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.65);
+      font-size:13px; font-weight:600; cursor:pointer; background:none; border:none;
+      font-family:inherit; padding:0;
+    }
+    .ep-back-btn:active { color:white; }
+    .ep-titulo { font-size:16px; font-weight:800; color:white; flex:1; text-align:center; }
+    .ep-month-nav { display:flex; align-items:center; gap:6px; }
+    .ep-month-btn {
+      width:28px; height:28px; border-radius:8px;
+      background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15);
+      color:rgba(255,255,255,.75); cursor:pointer; font-family:inherit;
+      display:flex; align-items:center; justify-content:center; font-size:11px;
+    }
+    .ep-month-btn:active { background:rgba(255,255,255,.2); }
+    .ep-month-display { font-size:13px; font-weight:700; color:rgba(255,255,255,.9); white-space:nowrap; min-width:90px; text-align:center; }
+
+    .ep-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .ep-sum-card {
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1);
+      border-radius:12px; padding:12px 10px; text-align:center;
+    }
+    .ep-sum-ico { font-size:18px; margin-bottom:4px; }
+    .ep-sum-val { font-size:17px; font-weight:900; color:white; line-height:1; }
+    .ep-sum-val.pos { color:#34d399; }
+    .ep-sum-val.neg { color:#f87171; }
+    .ep-sum-val.alerta { color:#fbbf24; }
+    .ep-sum-lbl { font-size:10px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
+
+    .ep-list-hdr {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 20px 6px; font-size:12px; font-weight:700; color:var(--muted);
+    }
+    .ep-legenda-btn {
+      font-size:11px; font-weight:600; color:var(--blue); background:none; border:none;
+      cursor:pointer; font-family:inherit; padding:0;
+    }
+
+    .ep-list { padding:0 12px 24px; }
+
+    .ep-day-card {
+      display:flex; align-items:center; gap:0;
+      background:var(--white); border:1px solid var(--border);
+      border-radius:14px; margin-bottom:8px;
+      overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06);
+    }
+    .ep-day-card.ep-folga  { opacity:.55; }
+    .ep-day-card.ep-futuro { opacity:.35; }
+    .ep-day-card.ep-hoje   { border-color:#0ea5e9; box-shadow:0 0 0 2px rgba(14,165,233,.2); }
+    .ep-day-card.ep-warn   { border-color:#f59e0b; }
+    .ep-day-card.ep-falta  { border-color:#ef4444; }
+    .ep-day-card.ep-he     { border-color:#7c3aed; }
+
+    .ep-date-col {
+      min-width:52px; text-align:center; padding:12px 8px;
+      border-right:1px solid var(--border); flex-shrink:0;
+    }
+    .ep-day-num  { font-size:20px; font-weight:900; color:var(--text); line-height:1; }
+    .ep-day-name { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; }
+    .ep-hoje-pill {
+      font-size:8px; font-weight:800; letter-spacing:.5px;
+      background:#0ea5e9; color:white; border-radius:4px;
+      padding:1px 4px; margin-top:3px; display:inline-block;
+    }
+
+    .ep-vsep { width:1px; background:transparent; }
+
+    .ep-day-body { flex:1; padding:10px 12px; min-width:0; }
+    .ep-punches {
+      font-size:13px; font-weight:600; color:var(--text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .ep-punch-arr { color:var(--faint); margin:0 3px; font-size:11px; }
+    .ep-punch-miss { color:var(--muted); font-style:italic; font-size:12px; }
+    .ep-day-sub {
+      font-size:11px; color:var(--muted); margin-top:3px; font-weight:500;
+    }
+    .ep-day-sub.tag-warn  { color:#d97706; font-weight:700; }
+    .ep-day-sub.tag-falta { color:#dc2626; font-weight:700; }
+    .ep-day-sub.tag-hoje  { color:#0ea5e9; font-weight:700; }
+    .ep-day-sub.tag-he    { color:#7c3aed; font-weight:700; }
+
+    .ep-status-col {
+      min-width:48px; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:6px;
+      padding:8px 10px; flex-shrink:0;
+    }
+    .ep-total { font-size:11px; font-weight:800; color:var(--text); }
+    .ep-total.he { color:#7c3aed; }
+    .ep-badge {
+      width:28px; height:28px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px;
+    }
+    .ep-bk-ok    { background:#dcfce7; color:#15803d; }
+    .ep-bk-warn  { background:#fef3c7; color:#d97706; }
+    .ep-bk-falta { background:#fee2e2; color:#dc2626; }
+    .ep-bk-folga { background:#f1f5f9; color:#94a3b8; }
+    .ep-bk-hoje  { background:#e0f2fe; color:#0284c7; }
+    .ep-bk-he    { background:#ede9fe; color:#7c3aed; }
+
+    .ep-future-txt { text-align:center; padding:10px 0; font-size:12px; color:var(--faint); font-weight:600; }
+
+    .ep-legend {
+      margin:0 12px 20px; background:var(--white); border:1px solid var(--border);
+      border-radius:14px; padding:14px 16px;
+    }
+    .ep-legend-title { font-size:12px; font-weight:800; color:var(--text); margin-bottom:10px; }
+    .ep-leg-items { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .ep-leg-item { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:600; color:var(--muted); }
+    .ep-leg-dot  { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+
+    /* Link espelho no bottom sheet do ponto */
+    .bs-espelho-link {
+      margin:10px 16px 14px; display:flex; align-items:center; gap:12px;
+      padding:11px 14px; background:var(--white);
+      border:1px solid var(--border); border-radius:12px;
+      box-shadow:0 1px 4px rgba(0,0,0,.06); cursor:pointer;
+    }
+    .bs-espelho-link:active { background:#f8fafc; }
+    .bs-el-ico { width:34px; height:34px; border-radius:10px; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .bs-el-info { flex:1; }
+    .bs-el-title { font-size:13px; font-weight:700; color:var(--text); }
+    .bs-el-sub   { font-size:11px; color:var(--muted); margin-top:1px; }
+    .bs-el-arr   { font-size:11px; color:var(--faint); }
+
     /* ── BALÃO PWA ─────────────────────────────────────────────────────────── */
     .pwa-balao {
       position: fixed; bottom: 24px; right: 20px; z-index: 9999;
@@ -458,6 +596,14 @@
         <div class="ponto-registros-empty"><i class="fas fa-clock"></i><span>Carregando...</span></div>
       </div>
     </div>
+    <div class="bs-espelho-link" onclick="abrirEspelho()" id="linkEspelho" style="display:none">
+      <div class="bs-el-ico"><i class="fas fa-calendar-days"></i></div>
+      <div class="bs-el-info">
+        <div class="bs-el-title">Espelho de Ponto</div>
+        <div class="bs-el-sub" id="linkEspelhoSub">Ver histórico do mês</div>
+      </div>
+      <div class="bs-el-arr"><i class="fas fa-chevron-right"></i></div>
+    </div>
   </div>
 
   <div class="ponto-gps-denied-overlay" id="pontoGpsDenied" style="display:none">
@@ -513,6 +659,55 @@
       <!-- preenchido via JS -->
     </div>
   </div>
+</div>
+
+<!-- ══ ESPELHO DE PONTO ══ -->
+<div id="tela-espelho" class="tela">
+
+  <!-- Cabeçalho escuro -->
+  <div class="ep-head">
+    <div class="ep-head-top">
+      <button class="ep-back-btn" onclick="fecharEspelho()">
+        <i class="fas fa-arrow-left"></i> Portal
+      </button>
+      <div class="ep-titulo">Espelho de Ponto</div>
+      <div class="ep-month-nav">
+        <button class="ep-month-btn" onclick="navegarMes(-1)"><i class="fas fa-chevron-left"></i></button>
+        <div class="ep-month-display" id="epMesDisplay">—</div>
+        <button class="ep-month-btn" onclick="navegarMes(1)"><i class="fas fa-chevron-right"></i></button>
+      </div>
+    </div>
+    <div class="ep-summary" id="epSummary">
+      <div class="ep-sum-card"><div class="ep-sum-ico">⏱️</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Trabalhadas</div></div>
+      <div class="ep-sum-card"><div class="ep-sum-ico">✅</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Presenças</div></div>
+      <div class="ep-sum-card"><div class="ep-sum-ico">⚠️</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Pendências</div></div>
+    </div>
+  </div>
+
+  <!-- Lista de dias -->
+  <div class="ep-list-hdr">
+    <span id="epListHdr">Jornada do mês</span>
+    <button class="ep-legenda-btn" onclick="toggleLegendaEp()">Legenda</button>
+  </div>
+
+  <div id="epLegenda" class="ep-legend" style="display:none">
+    <div class="ep-legend-title">Símbolos</div>
+    <div class="ep-leg-items">
+      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#15803d"></div> Jornada completa</div>
+      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#d97706"></div> Incompleto</div>
+      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#dc2626"></div> Falta</div>
+      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#7c3aed"></div> Hora extra</div>
+      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#0284c7"></div> Hoje</div>
+      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#94a3b8"></div> Folga</div>
+    </div>
+  </div>
+
+  <div class="ep-list" id="epList">
+    <div class="ponto-registros-empty" style="padding:40px 0">
+      <i class="fas fa-spinner fa-spin"></i><span>Carregando...</span>
+    </div>
+  </div>
+
 </div>
 
 <!-- BALÃO PWA -->
@@ -817,6 +1012,180 @@ function voltarDoHub() {
   mostrarTela('tela-hub');
 }
 
+// ── Espelho de Ponto ───────────────────────────────────────────────────────────
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_PT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+let espelhoAno = 0;
+let espelhoMes = 0;
+
+function abrirEspelho() {
+  const agora = new Date();
+  espelhoAno = agora.getFullYear();
+  espelhoMes = agora.getMonth() + 1;
+  mostrarTela('tela-espelho');
+  carregarEspelho();
+}
+
+function fecharEspelho() {
+  mostrarTela('tela-hub');
+}
+
+function navegarMes(delta) {
+  espelhoMes += delta;
+  if (espelhoMes > 12) { espelhoMes = 1;  espelhoAno++; }
+  if (espelhoMes < 1)  { espelhoMes = 12; espelhoAno--; }
+  carregarEspelho();
+}
+
+function toggleLegendaEp() {
+  const el = document.getElementById('epLegenda');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function carregarEspelho() {
+  document.getElementById('epMesDisplay').textContent = `${MESES_PT[espelhoMes-1]} / ${espelhoAno}`;
+  document.getElementById('epList').innerHTML =
+    '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-spinner fa-spin"></i><span>Carregando...</span></div>';
+
+  try {
+    const mesStr = `${espelhoAno}-${String(espelhoMes).padStart(2,'0')}`;
+    const r = await fetch(`${API}/p/me/ponto/espelho?mes=${mesStr}`, {
+      headers: { Authorization: `Bearer ${sessionJwt}` },
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      document.getElementById('epList').innerHTML =
+        `<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-exclamation-circle"></i><span>${err.erro || 'Erro ao carregar'}</span></div>`;
+      return;
+    }
+    const data = await r.json();
+    renderEspelho(data);
+  } catch {
+    document.getElementById('epList').innerHTML =
+      '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-wifi" style="text-decoration:line-through"></i><span>Sem conexão</span></div>';
+  }
+}
+
+function renderEspelho(data) {
+  // Resumo
+  const r = data.resumo;
+  document.getElementById('epSummary').innerHTML = `
+    <div class="ep-sum-card">
+      <div class="ep-sum-ico">⏱️</div>
+      <div class="ep-sum-val">${formatMinEp(r.totalMinutos)}</div>
+      <div class="ep-sum-lbl">Trabalhadas</div>
+    </div>
+    <div class="ep-sum-card">
+      <div class="ep-sum-ico">✅</div>
+      <div class="ep-sum-val">${r.totalPresente}</div>
+      <div class="ep-sum-lbl">Presenças</div>
+    </div>
+    <div class="ep-sum-card">
+      <div class="ep-sum-ico">⚠️</div>
+      <div class="ep-sum-val ${r.pendencias > 0 ? 'alerta' : ''}">${r.pendencias + r.totalFalta}</div>
+      <div class="ep-sum-lbl">Pendências</div>
+    </div>`;
+
+  // Dias
+  const lista = document.getElementById('epList');
+  let html = '';
+  let hasFuturo = false;
+  const hoje = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+
+  data.dias.forEach(dia => {
+    if (dia.status === 'FUTURO') { hasFuturo = true; return; }
+
+    const dt      = new Date(dia.dia + 'T12:00:00');
+    const diaNum  = dt.getDate();
+    const diaNome = DIAS_PT[dt.getDay()];
+    const isHoje  = dia.dia === hoje;
+
+    let cardCls = 'ep-day-card';
+    if (dia.status === 'FOLGA')       cardCls += ' ep-folga';
+    else if (dia.status === 'HOJE')   cardCls += ' ep-hoje';
+    else if (dia.status === 'INCOMPLETO') cardCls += ' ep-warn';
+    else if (dia.status === 'FALTA' || dia.status === 'FALTA_PARCIAL') cardCls += ' ep-falta';
+
+    // Calcula se tem hora extra
+    const isHe = dia.minutosTrabalhou > data.funcionario.cargaEsperadaMin + 10;
+    if (isHe && dia.status === 'PRESENTE') cardCls += ' ep-he';
+
+    // Badge
+    let badgeCls = 'ep-badge ';
+    let badgeIco = '';
+    if (dia.status === 'FOLGA')       { badgeCls += 'ep-bk-folga'; badgeIco = 'fas fa-moon'; }
+    else if (dia.status === 'HOJE')   { badgeCls += 'ep-bk-hoje';  badgeIco = 'fas fa-clock'; }
+    else if (dia.status === 'INCOMPLETO') { badgeCls += 'ep-bk-warn'; badgeIco = 'fas fa-triangle-exclamation'; }
+    else if (dia.status === 'FALTA' || dia.status === 'FALTA_PARCIAL') { badgeCls += 'ep-bk-falta'; badgeIco = 'fas fa-xmark'; }
+    else if (isHe)                    { badgeCls += 'ep-bk-he';    badgeIco = 'fas fa-bolt'; }
+    else                              { badgeCls += 'ep-bk-ok';    badgeIco = 'fas fa-check'; }
+
+    // Linha de horas
+    let punchLine = '';
+    if (dia.status === 'FOLGA') {
+      punchLine = '<span style="color:var(--faint)">Folga</span>';
+    } else if (dia.marcacoes.length === 0) {
+      punchLine = '<span style="color:var(--red)">— Sem marcações —</span>';
+    } else {
+      punchLine = dia.marcacoes.map((mc, i) =>
+        `${mc.hora}${i < dia.marcacoes.length - 1 ? ' <span class="ep-punch-arr">→</span> ' : ''}`
+      ).join('');
+      if (dia.status === 'INCOMPLETO') {
+        punchLine += ' <span class="ep-punch-arr">→</span> <span class="ep-punch-miss">saída não registrada</span>';
+      } else if (dia.status === 'HOJE' && (dia.marcacoes.at(-1)?.tipo === 'ENTRADA')) {
+        punchLine += ' <span class="ep-punch-arr">→</span> <span class="ep-punch-miss">turno em andamento</span>';
+      }
+    }
+
+    // Sub-texto
+    let subTxt = '';
+    let subCls = 'ep-day-sub';
+    if (dia.status === 'INCOMPLETO') { subTxt = 'Marcação incompleta'; subCls += ' tag-warn'; }
+    else if (dia.status === 'FALTA' || dia.status === 'FALTA_PARCIAL') { subTxt = 'Falta'; subCls += ' tag-falta'; }
+    else if (dia.status === 'HOJE')  { subTxt = `Em curso · ${formatMinEp(dia.minutosTrabalhou)} até agora`; subCls += ' tag-hoje'; }
+    else if (isHe) {
+      const extra = dia.minutosTrabalhou - data.funcionario.cargaEsperadaMin;
+      subTxt = `+${formatMinEp(extra)} hora extra`; subCls += ' tag-he';
+    } else if (dia.minutosTrabalhou > 0) {
+      subTxt = `${formatMinEp(dia.minutosTrabalhou)} trabalhadas`;
+    }
+
+    const totalCol = dia.minutosTrabalhou > 0 && dia.status !== 'FOLGA'
+      ? `<div class="ep-total${isHe ? ' he' : ''}">${formatMinEp(dia.minutosTrabalhou)}</div>` : '';
+
+    html += `
+      <div class="${cardCls}">
+        <div class="ep-date-col">
+          <div class="ep-day-num">${diaNum}</div>
+          <div class="ep-day-name">${diaNome}</div>
+          ${isHoje ? '<div class="ep-hoje-pill">HOJE</div>' : ''}
+        </div>
+        <div class="ep-day-body">
+          <div class="ep-punches">${punchLine}</div>
+          ${subTxt ? `<div class="${subCls}">${subTxt}</div>` : ''}
+        </div>
+        <div class="ep-status-col">
+          ${totalCol}
+          <div class="${badgeCls}"><i class="${badgeIco}"></i></div>
+        </div>
+      </div>`;
+  });
+
+  if (hasFuturo) {
+    html += `<div class="ep-future-txt">— Dias restantes: aguardando registros —</div>`;
+  }
+
+  lista.innerHTML = html || '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-calendar"></i><span>Nenhum dado para este mês</span></div>';
+}
+
+function formatMinEp(min) {
+  if (!min || min <= 0) return '0h';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2,'0')}m`;
+}
+
 // ── Mapa Mapbox ────────────────────────────────────────────────────────────────
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZWR3YXJkaWNhcm8iLCJhIjoiY21wMG41eDYyMDBvNjJyb3A1YXNjMDIwYyJ9.4yAPg_a90_9v3MBuFU71qQ';
 let pontoMap = null;
@@ -943,6 +1312,14 @@ async function carregarPontoHoje() {
     atualizarSaldoCard(pontoHojeData.marcacoes, pontoHojeData.config, pontoHojeData.minutosHoje, pontoHojeData.cargaEsperadaMin);
     if (pontoGpsEstado !== 'denied') {
       atualizarBotaoPonto(pontoHojeData.proximoTipo);
+    }
+    // Mostra link do espelho
+    const mesAtual = new Date().toLocaleDateString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+    const linkEl = document.getElementById('linkEspelho');
+    if (linkEl) {
+      linkEl.style.display = 'flex';
+      const sub = document.getElementById('linkEspelhoSub');
+      if (sub) sub.textContent = `Ver histórico de ${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)}`;
     }
   } catch(e) {
     console.error(e);
