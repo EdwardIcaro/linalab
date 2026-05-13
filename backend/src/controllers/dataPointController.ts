@@ -150,18 +150,28 @@ export const getImportaveis = async (req: EmpresaRequest, res: Response) => {
     ]);
 
     // Lavadores que já têm dp_funcionario vinculado
-    const vinculados = await prisma.dpFuncionario.findMany({
-      where: { empresaId, lavadorId: { not: null } },
-      select: { lavadorId: true },
-    });
-    const idsVinculados = new Set(vinculados.map(v => v.lavadorId));
+    const [vinculadosLav, vinculadosSub] = await Promise.all([
+      prisma.dpFuncionario.findMany({
+        where: { empresaId, lavadorId: { not: null } },
+        select: { lavadorId: true },
+      }),
+      prisma.dpFuncionario.findMany({
+        where: { empresaId, usuarioId: { not: null } },
+        select: { usuarioId: true },
+      }),
+    ]);
+    const idsVinculadosLav = new Set(vinculadosLav.map(v => v.lavadorId));
+    const idsVinculadosSub = new Set(vinculadosSub.map(v => v.usuarioId));
 
     res.json({
       lavadores: lavadores.map(l => ({
         ...l,
-        jaImportado: idsVinculados.has(l.id),
+        jaImportado: idsVinculadosLav.has(l.id),
       })),
-      subaccounts,
+      subaccounts: subaccounts.map(s => ({
+        ...s,
+        jaImportado: idsVinculadosSub.has(s.id),
+      })),
     });
   } catch (error) {
     console.error('[dp] importaveis:', error);
@@ -228,25 +238,48 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
         },
       });
 
-      // Importa lavadores
+      // Importa lavadores e subaccounts (usuários do sistema)
       for (const l of importados) {
-        const jaExiste = await tx.dpFuncionario.findFirst({
-          where: { empresaId, lavadorId: l.lavadorId },
-        });
-        if (!jaExiste) {
-          await tx.dpFuncionario.create({
-            data: {
-              empresaId,
-              nome: l.nome,
-              cargo: l.cargo ?? null,
-              telefone: l.telefone ?? null,
-              lavadorId: l.lavadorId,
-              jornadaEntrada: l.jornadaEntrada ?? null,
-              cargaHorariaDia: l.cargaHorariaDia ? parseFloat(l.cargaHorariaDia) : null,
-              status: 'ATIVO',
-              updatedAt: new Date(),
-            },
+        if (l.lavadorId) {
+          const jaExiste = await tx.dpFuncionario.findFirst({
+            where: { empresaId, lavadorId: l.lavadorId },
           });
+          if (!jaExiste) {
+            await tx.dpFuncionario.create({
+              data: {
+                empresaId,
+                nome: l.nome,
+                cargo: l.cargo ?? null,
+                telefone: l.telefone ?? null,
+                lavadorId: l.lavadorId,
+                jornadaEntrada: l.jornadaEntrada ?? null,
+                cargaHorariaDia: l.cargaHorariaDia ? parseFloat(l.cargaHorariaDia) : null,
+                status: 'ATIVO',
+                updatedAt: new Date(),
+              },
+            });
+          }
+        } else if (l.usuarioId) {
+          const jaExiste = await tx.dpFuncionario.findFirst({
+            where: { empresaId, usuarioId: l.usuarioId },
+          });
+          if (!jaExiste) {
+            const linkToken = gerarTokenCurto(8);
+            await tx.dpFuncionario.create({
+              data: {
+                empresaId,
+                nome: l.nome,
+                cargo: l.cargo ?? null,
+                telefone: l.telefone ?? null,
+                usuarioId: l.usuarioId,
+                jornadaEntrada: l.jornadaEntrada ?? null,
+                cargaHorariaDia: l.cargaHorariaDia ? parseFloat(l.cargaHorariaDia) : null,
+                status: 'ATIVO',
+                linkToken,
+                updatedAt: new Date(),
+              },
+            });
+          }
         }
       }
 

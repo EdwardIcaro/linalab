@@ -1005,9 +1005,11 @@ function renderHub() {
   document.getElementById('hub-empresa').textContent  = lavador.empresa;
 
   // Cards
+  const temLinaWash = lavador.tipoRemuneracao !== null;
   const ganhoHoje = (hoje.ganho || 0).toFixed(2).replace('.', ',');
   const grid = document.getElementById('hub-grid');
   grid.innerHTML = `
+    ${temLinaWash ? `
     <div class="mod-card mod-blue" onclick="abrirComissoes()">
       <div class="mod-ico"><i class="fas fa-coins"></i></div>
       <div class="mod-badge pulse">${hoje.totalOrdens} hoje</div>
@@ -1015,7 +1017,7 @@ function renderHub() {
         <div class="mod-label">Comissões</div>
         <div class="mod-stat">R$ ${ganhoHoje} hoje</div>
       </div>
-    </div>
+    </div>` : ''}
 
     ${dataPointAtivo ? `
     <div class="mod-card mod-teal" onclick="abrirPonto()">
@@ -1042,19 +1044,20 @@ function renderHub() {
       </div>
     </div>
 
+    ${temLinaWash ? `
     <div class="mod-card mod-ghost" style="opacity:.45">
       <div class="mod-ico"><i class="fas fa-plus"></i></div>
       <div>
         <div class="mod-label">Em breve</div>
         <div class="mod-stat">Novos módulos</div>
       </div>
-    </div>
+    </div>` : ''}
   `;
 
-  // Linha de status (WhatsApp)
+  // Linha de status (WhatsApp — só para usuários Lina Wash com lavador vinculado)
   const telefone = lavador.telefone ?? null;
   const rows = document.getElementById('hub-rows');
-  rows.innerHTML = `
+  rows.innerHTML = temLinaWash ? `
     <div class="status-row" onclick="abrirModalWpp()">
       <div class="status-ico ${telefone ? 'ico-wpp-on' : 'ico-wpp-off'}"><i class="fab fa-whatsapp"></i></div>
       <div class="status-info">
@@ -1063,7 +1066,7 @@ function renderHub() {
       </div>
       <span class="status-badge ${telefone ? 'sb-green' : 'sb-muted'}">${telefone ? '<i class="fas fa-check" style="font-size:9px"></i> Conectado' : 'Configurar'}</span>
       <div class="status-arrow"><i class="fas fa-chevron-right"></i></div>
-    </div>`;
+    </div>` : '';
 
   mostrarTela('tela-hub');
 }

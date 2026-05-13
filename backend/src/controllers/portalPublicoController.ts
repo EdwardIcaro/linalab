@@ -17,6 +17,14 @@ function gerarSessionJwt(lavadorId: string, empresaId: string, sessionVersion: n
   );
 }
 
+function gerarSessionJwtDp(dpFuncionarioId: string, empresaId: string, sessionVersion: number): string {
+  return jwt.sign(
+    { dpFuncionarioId, empresaId, sessionVersion, tipo: 'portal_session_dp' },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
 async function buscarLavadorPorToken(token: string) {
   return prisma.lavador.findUnique({
     where: { linkTokenCurto: token },
@@ -29,6 +37,41 @@ async function buscarLavadorPorToken(token: string) {
   });
 }
 
+async function buscarDpFuncionarioPorToken(token: string) {
+  return prisma.dpFuncionario.findUnique({
+    where: { linkToken: token },
+    select: {
+      id: true, nome: true, pin: true, pinDefinido: true,
+      status: true, sessionVersion: true, empresaId: true,
+      empresa: { select: { id: true, nome: true, horarioAbertura: true } },
+    },
+  });
+}
+
+const DP_FUNC_SELECT = {
+  id: true, nome: true, cargo: true, cargaHorariaDia: true, jornadaEntrada: true,
+} as const;
+
+async function buscarDpFuncPorSessao(
+  lavadorId: string | undefined,
+  dpFuncionarioId: string | undefined,
+  empresaId: string,
+) {
+  if (lavadorId) {
+    return prisma.dpFuncionario.findFirst({
+      where: { empresaId, lavadorId, status: 'ATIVO' },
+      select: DP_FUNC_SELECT,
+    });
+  }
+  if (dpFuncionarioId) {
+    return prisma.dpFuncionario.findFirst({
+      where: { id: dpFuncionarioId, empresaId, status: 'ATIVO' },
+      select: DP_FUNC_SELECT,
+    });
+  }
+  return null;
+}
+
 // ─── público ─────────────────────────────────────────────────────────────────
 
 // GET /api/p/:token
@@ -36,17 +79,34 @@ export const resolverTokenPublico = async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
   try {
     const lavador = await buscarLavadorPorToken(token);
-    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
-    res.json({
-      lavadorId: lavador.id,
-      nome: lavador.nome,
-      pinDefinido: lavador.pinDefinido,
-      empresa: {
-        id: lavador.empresa.id,
-        nome: lavador.empresa.nome,
-        horarioAbertura: lavador.empresa.horarioAbertura,
-      },
-    });
+    if (lavador?.ativo) {
+      return res.json({
+        lavadorId: lavador.id,
+        nome: lavador.nome,
+        pinDefinido: lavador.pinDefinido,
+        empresa: {
+          id: lavador.empresa.id,
+          nome: lavador.empresa.nome,
+          horarioAbertura: lavador.empresa.horarioAbertura,
+        },
+      });
+    }
+
+    const dpFunc = await buscarDpFuncionarioPorToken(token);
+    if (dpFunc && dpFunc.status !== 'DESLIGADO') {
+      return res.json({
+        dpFuncionarioId: dpFunc.id,
+        nome: dpFunc.nome,
+        pinDefinido: dpFunc.pinDefinido,
+        empresa: {
+          id: dpFunc.empresa.id,
+          nome: dpFunc.empresa.nome,
+          horarioAbertura: dpFunc.empresa.horarioAbertura,
+        },
+      });
+    }
+
+    return res.status(404).json({ erro: 'link_invalido' });
   } catch (error) {
     console.error('[portal] resolverToken:', error);
     res.status(500).json({ erro: 'Erro interno' });
@@ -67,17 +127,30 @@ export const setupPin = async (req: Request, res: Response) => {
 
   try {
     const lavador = await buscarLavadorPorToken(token);
-    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
-    if (lavador.pinDefinido) return res.status(400).json({ erro: 'PIN já foi definido' });
+    if (lavador?.ativo) {
+      if (lavador.pinDefinido) return res.status(400).json({ erro: 'PIN já foi definido' });
+      const hash = await bcrypt.hash(String(pin), 10);
+      await prisma.lavador.update({
+        where: { id: lavador.id },
+        data: { pin: hash, pinDefinido: true },
+      });
+      resetarRateLimit(`pin-setup:${ip}`);
+      return res.json({ token: gerarSessionJwt(lavador.id, lavador.empresa.id, lavador.sessionVersion) });
+    }
 
-    const hash = await bcrypt.hash(String(pin), 10);
-    await prisma.lavador.update({
-      where: { id: lavador.id },
-      data: { pin: hash, pinDefinido: true },
-    });
+    const dpFunc = await buscarDpFuncionarioPorToken(token);
+    if (dpFunc && dpFunc.status !== 'DESLIGADO') {
+      if (dpFunc.pinDefinido) return res.status(400).json({ erro: 'PIN já foi definido' });
+      const hash = await bcrypt.hash(String(pin), 10);
+      await prisma.dpFuncionario.update({
+        where: { id: dpFunc.id },
+        data: { pin: hash, pinDefinido: true },
+      });
+      resetarRateLimit(`pin-setup:${ip}`);
+      return res.json({ token: gerarSessionJwtDp(dpFunc.id, dpFunc.empresaId, dpFunc.sessionVersion) });
+    }
 
-    resetarRateLimit(`pin-setup:${ip}`);
-    res.json({ token: gerarSessionJwt(lavador.id, lavador.empresa.id, lavador.sessionVersion) });
+    return res.status(404).json({ erro: 'link_invalido' });
   } catch (error) {
     console.error('[portal] setupPin:', error);
     res.status(500).json({ erro: 'Erro interno' });
@@ -98,15 +171,26 @@ export const verifyPin = async (req: Request, res: Response) => {
 
   try {
     const lavador = await buscarLavadorPorToken(token);
-    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
-    if (!lavador.pinDefinido || !lavador.pin)
-      return res.status(400).json({ erro: 'PIN não configurado' });
+    if (lavador?.ativo) {
+      if (!lavador.pinDefinido || !lavador.pin)
+        return res.status(400).json({ erro: 'PIN não configurado' });
+      const ok = await bcrypt.compare(String(pin), lavador.pin);
+      if (!ok) return res.status(401).json({ erro: 'PIN incorreto' });
+      resetarRateLimit(`pin-fail:${ip}`);
+      return res.json({ token: gerarSessionJwt(lavador.id, lavador.empresa.id, lavador.sessionVersion) });
+    }
 
-    const ok = await bcrypt.compare(String(pin), lavador.pin);
-    if (!ok) return res.status(401).json({ erro: 'PIN incorreto' });
+    const dpFunc = await buscarDpFuncionarioPorToken(token);
+    if (dpFunc && dpFunc.status !== 'DESLIGADO') {
+      if (!dpFunc.pinDefinido || !dpFunc.pin)
+        return res.status(400).json({ erro: 'PIN não configurado' });
+      const ok = await bcrypt.compare(String(pin), dpFunc.pin);
+      if (!ok) return res.status(401).json({ erro: 'PIN incorreto' });
+      resetarRateLimit(`pin-fail:${ip}`);
+      return res.json({ token: gerarSessionJwtDp(dpFunc.id, dpFunc.empresaId, dpFunc.sessionVersion) });
+    }
 
-    resetarRateLimit(`pin-fail:${ip}`);
-    res.json({ token: gerarSessionJwt(lavador.id, lavador.empresa.id, lavador.sessionVersion) });
+    return res.status(404).json({ erro: 'link_invalido' });
   } catch (error) {
     console.error('[portal] verifyPin:', error);
     res.status(500).json({ erro: 'Erro interno' });
@@ -122,19 +206,32 @@ export const portalSessionMiddleware = async (req: Request, res: Response, next:
 
   try {
     const payload = jwt.verify(auth.slice(7), JWT_SECRET) as any;
-    if (payload.tipo !== 'portal_session')
-      return res.status(401).json({ erro: 'Token inválido' });
 
-    const lavador = await prisma.lavador.findUnique({
-      where: { id: payload.lavadorId },
-      select: { sessionVersion: true, ativo: true },
-    });
-    if (!lavador || !lavador.ativo || lavador.sessionVersion !== payload.sessionVersion)
-      return res.status(401).json({ erro: 'Sessão expirada' });
+    if (payload.tipo === 'portal_session') {
+      const lavador = await prisma.lavador.findUnique({
+        where: { id: payload.lavadorId },
+        select: { sessionVersion: true, ativo: true },
+      });
+      if (!lavador || !lavador.ativo || lavador.sessionVersion !== payload.sessionVersion)
+        return res.status(401).json({ erro: 'Sessão expirada' });
+      (req as any).lavadorId = payload.lavadorId;
+      (req as any).empresaId = payload.empresaId;
+      return next();
+    }
 
-    (req as any).lavadorId = payload.lavadorId;
-    (req as any).empresaId = payload.empresaId;
-    next();
+    if (payload.tipo === 'portal_session_dp') {
+      const dpFunc = await prisma.dpFuncionario.findUnique({
+        where: { id: payload.dpFuncionarioId },
+        select: { sessionVersion: true, status: true },
+      });
+      if (!dpFunc || dpFunc.status === 'DESLIGADO' || dpFunc.sessionVersion !== payload.sessionVersion)
+        return res.status(401).json({ erro: 'Sessão expirada' });
+      (req as any).dpFuncionarioId = payload.dpFuncionarioId;
+      (req as any).empresaId = payload.empresaId;
+      return next();
+    }
+
+    return res.status(401).json({ erro: 'Token inválido' });
   } catch {
     res.status(401).json({ erro: 'Token inválido ou expirado' });
   }
@@ -144,12 +241,44 @@ export const portalSessionMiddleware = async (req: Request, res: Response, next:
 
 // GET /api/p/me/dados
 export const getDadosPortal = async (req: Request, res: Response) => {
-  const lavadorId = (req as any).lavadorId as string;
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
+
+  // Sessão dpFuncionario (usuário sistema, sem Lina Wash)
+  if (!lavadorId && dpFuncionarioId) {
+    try {
+      const dpFunc = await prisma.dpFuncionario.findUnique({
+        where: { id: dpFuncionarioId },
+        select: { nome: true, empresa: { select: { nome: true } } },
+      });
+      if (!dpFunc) return res.status(404).json({ erro: 'Funcionário não encontrado' });
+      const sistemaDP = await prisma.empresaSistema.findFirst({
+        where: { empresaId, sistema: 'data-point', ativo: true },
+      });
+      return res.json({
+        lavador: {
+          nome: dpFunc.nome,
+          empresa: dpFunc.empresa.nome,
+          tipoRemuneracao: null,
+          baseComissao: null,
+          comissao: null,
+          salario: null,
+          telefone: null,
+        },
+        dataPointAtivo: !!sistemaDP,
+        hoje: { ganho: 0, totalOrdens: 0, ordens: [] },
+        mes: { ganho: 0, totalOrdens: 0 },
+      });
+    } catch (error) {
+      console.error('[portal] getDadosPortal (dp):', error);
+      return res.status(500).json({ erro: 'Erro interno' });
+    }
+  }
 
   try {
     const lavador = await prisma.lavador.findUnique({
-      where: { id: lavadorId },
+      where: { id: lavadorId! },
       select: {
         id: true, nome: true, comissao: true,
         tipoRemuneracao: true, baseComissao: true, salario: true,
@@ -451,15 +580,13 @@ function calcMinHoje(marcacoes: Array<{ tipo: string; timestamp: Date }>, now: D
 
 // ─── GET /api/p/me/ponto/hoje ─────────────────────────────────────────────────
 export const getPontoHoje = async (req: Request, res: Response) => {
-  const lavadorId = (req as any).lavadorId as string;
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      prisma.dpFuncionario.findFirst({
-        where: { empresaId, lavadorId, status: 'ATIVO' },
-        select: { id: true, nome: true, cargo: true, cargaHorariaDia: true },
-      }),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
       prisma.empresaSistema.findFirst({
         where: { empresaId, sistema: 'data-point', ativo: true },
       }),
@@ -524,15 +651,14 @@ export const getPontoHoje = async (req: Request, res: Response) => {
 
 // ─── POST /api/p/me/ponto ─────────────────────────────────────────────────────
 export const registrarPonto = async (req: Request, res: Response) => {
-  const lavadorId = (req as any).lavadorId as string;
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
   const { lat, lng, gpsPrecisao, gpsNegado = false } = req.body;
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      prisma.dpFuncionario.findFirst({
-        where: { empresaId, lavadorId, status: 'ATIVO' },
-      }),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
       prisma.empresaSistema.findFirst({
         where: { empresaId, sistema: 'data-point', ativo: true },
       }),
@@ -622,7 +748,8 @@ export const registrarPonto = async (req: Request, res: Response) => {
 
 // ─── GET /api/p/me/ponto/espelho ─────────────────────────────────────────────
 export const getEspelhoPortal = async (req: Request, res: Response) => {
-  const lavadorId = (req as any).lavadorId as string;
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
 
   const { mes } = req.query as { mes?: string }; // YYYY-MM
@@ -635,10 +762,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      prisma.dpFuncionario.findFirst({
-        where: { empresaId, lavadorId, status: 'ATIVO' },
-        select: { id: true, nome: true, cargo: true, cargaHorariaDia: true },
-      }),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
       prisma.empresaSistema.findFirst({
         where: { empresaId, sistema: 'data-point', ativo: true },
       }),
@@ -756,7 +880,8 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
 // ─── POST /api/p/me/ajuste ───────────────────────────────────────────────────
 export const criarAjustePortal = async (req: Request, res: Response) => {
-  const lavadorId = (req as any).lavadorId as string;
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
   const { data, tipo, descricao } = req.body;
 
@@ -768,10 +893,7 @@ export const criarAjustePortal = async (req: Request, res: Response) => {
     return res.status(400).json({ erro: 'Tipo inválido' });
 
   try {
-    const funcionario = await prisma.dpFuncionario.findFirst({
-      where: { empresaId, lavadorId, status: 'ATIVO' },
-      select: { id: true },
-    });
+    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId);
     if (!funcionario)
       return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
 
@@ -801,14 +923,12 @@ export const criarAjustePortal = async (req: Request, res: Response) => {
 
 // ─── GET /api/p/me/ajustes ───────────────────────────────────────────────────
 export const getAjustesPortal = async (req: Request, res: Response) => {
-  const lavadorId = (req as any).lavadorId as string;
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
 
   try {
-    const funcionario = await prisma.dpFuncionario.findFirst({
-      where: { empresaId, lavadorId, status: 'ATIVO' },
-      select: { id: true },
-    });
+    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId);
     if (!funcionario) return res.status(404).json({ erro: 'Não cadastrado no Data Point.' });
 
     const ajustes = await prisma.dpAjuste.findMany({

@@ -1164,11 +1164,17 @@ async function ativar() {
       toleranciaMin: parseInt(document.getElementById('tolerancia').value),
       modoEncerramento: getEncerramento() === 'Automático' ? 'AUTOMATICO' : 'FUNCIONARIO',
       modoAutenticacao: getAuth().includes('PIN') ? 'PIN' : 'SEM_PIN',
-      importados: importadosSel.filter(x => x.tipo === 'lavador').map(x => ({
-        lavadorId: x.id, nome: x.nome, telefone: x.contato,
-        jornadaEntrada: jornadasMap[x.id]?.jornadaEntrada || null,
-        cargaHorariaDia: jornadasMap[x.id]?.cargaHorariaDia || null,
-      })),
+      importados: importadosSel.map(x => {
+        const jornada = {
+          jornadaEntrada: jornadasMap[x.id]?.jornadaEntrada || null,
+          cargaHorariaDia: jornadasMap[x.id]?.cargaHorariaDia || null,
+        };
+        if (x.tipo === 'lavador') {
+          return { lavadorId: x.id, nome: x.nome, telefone: x.contato, ...jornada };
+        } else {
+          return { usuarioId: x.id, nome: x.nome, email: x.contato, ...jornada };
+        }
+      }),
       novosFuncionarios,
     });
 
