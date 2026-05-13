@@ -152,13 +152,51 @@
       position:absolute; bottom:0; left:0; right:0; z-index:10;
       background:#fff; border-radius:24px 24px 0 0;
       box-shadow:0 -6px 36px rgba(0,0,0,.2);
-      max-height:42vh; overflow-y:auto; scrollbar-width:none;
+      max-height:60vh; overflow-y:auto; scrollbar-width:none;
+      transform:translateY(calc(100% - 52px));
+      transition:transform .35s cubic-bezier(.32,0,.32,1);
+      touch-action:none;
     }
+    .ponto-bottom-sheet.aberto { transform:translateY(0); }
     .ponto-bottom-sheet::-webkit-scrollbar { display:none; }
-    .ponto-bs-handle { width:40px; height:4px; background:#e2e8f0; border-radius:2px; margin:10px auto 0; }
-    .ponto-bs-gps    { padding:10px 16px 0; }
-    .ponto-bs-content{ padding:10px 16px 0; }
+
+    .ponto-bs-handle-area {
+      padding:10px 0 8px; cursor:pointer; user-select:none;
+      -webkit-tap-highlight-color:transparent;
+      display:flex; flex-direction:column; align-items:center; gap:5px;
+    }
+    .ponto-bs-handle { width:40px; height:4px; background:#e2e8f0; border-radius:2px; }
+    .ponto-bs-pull-hint {
+      font-size:11px; font-weight:700; color:var(--faint); letter-spacing:.3px;
+      transition:opacity .2s;
+    }
+    .ponto-bottom-sheet.aberto .ponto-bs-pull-hint { opacity:0; pointer-events:none; height:0; overflow:hidden; }
+
+    .ponto-bs-gps    { padding:0 16px; }
+    .ponto-bs-content{ padding:6px 16px 4px; }
     .ml-titulo  { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+
+    /* ── ESPELHO FLUTUANTE (independente, fora do sheet) ── */
+    .ponto-espelho-flutuante {
+      position:absolute; bottom:62px; left:16px; right:16px; z-index:9;
+      display:flex; align-items:center; gap:12px;
+      padding:12px 14px;
+      background:rgba(255,255,255,.92);
+      border:1.5px solid rgba(37,99,235,.2);
+      border-radius:16px;
+      box-shadow:0 4px 20px rgba(0,0,0,.12);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      cursor:pointer; -webkit-tap-highlight-color:transparent;
+      transition:transform .15s, opacity .3s;
+      opacity:0; pointer-events:none;
+    }
+    .ponto-espelho-flutuante.visivel { opacity:1; pointer-events:all; }
+    .ponto-espelho-flutuante:active { transform:scale(.98); }
+    .pef-ico { width:36px; height:36px; border-radius:11px; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; box-shadow:0 3px 10px rgba(37,99,235,.35); }
+    .pef-info { flex:1; }
+    .pef-title { font-size:13px; font-weight:800; color:#1e3a8a; }
+    .pef-sub   { font-size:11px; color:#3b82f6; margin-top:1px; font-weight:600; }
+    .pef-arr   { font-size:12px; color:#93c5fd; }
 
     .pri { display:flex; align-items:center; gap:12px; padding:11px 14px; background:var(--white); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; box-shadow:var(--shadow-sm); }
     .pri-ico { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
@@ -309,138 +347,122 @@
     ══════════════════════════════════════ */
     #tela-espelho.ativa { display:block; min-height:100vh; background:var(--bg); }
 
-    .ep-head {
-      background:linear-gradient(148deg,#0f172a 0%,#163554 100%);
-      padding:16px 20px 20px; position:sticky; top:0; z-index:10;
-    }
-    .ep-head-top {
-      display:flex; align-items:center; gap:12px; margin-bottom:16px;
-    }
+    /* Cabeçalho escuro */
+    .ep-head { background:linear-gradient(148deg,#0f172a 0%,#1e3a5f 100%); padding:20px 20px 22px; color:#fff; }
+    .ep-head-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
     .ep-back-btn {
       display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.65);
       font-size:13px; font-weight:600; cursor:pointer; background:none; border:none;
-      font-family:inherit; padding:0;
+      font-family:inherit; padding:0; -webkit-tap-highlight-color:transparent;
     }
     .ep-back-btn:active { color:white; }
-    .ep-titulo { font-size:16px; font-weight:800; color:white; flex:1; text-align:center; }
-    .ep-month-nav { display:flex; align-items:center; gap:6px; }
-    .ep-month-btn {
-      width:28px; height:28px; border-radius:8px;
-      background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15);
-      color:rgba(255,255,255,.75); cursor:pointer; font-family:inherit;
-      display:flex; align-items:center; justify-content:center; font-size:11px;
-    }
-    .ep-month-btn:active { background:rgba(255,255,255,.2); }
-    .ep-month-display { font-size:13px; font-weight:700; color:rgba(255,255,255,.9); white-space:nowrap; min-width:90px; text-align:center; }
+    .ep-titulo { font-size:18px; font-weight:800; color:white; }
 
-    .ep-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .ep-sum-card {
-      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1);
-      border-radius:12px; padding:12px 10px; text-align:center;
-    }
-    .ep-sum-ico { font-size:18px; margin-bottom:4px; }
-    .ep-sum-val { font-size:17px; font-weight:900; color:white; line-height:1; }
-    .ep-sum-val.pos { color:#34d399; }
-    .ep-sum-val.neg { color:#f87171; }
-    .ep-sum-val.alerta { color:#fbbf24; }
-    .ep-sum-lbl { font-size:10px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
-
-    .ep-list-hdr {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:14px 20px 6px; font-size:12px; font-weight:700; color:var(--muted);
-    }
-    .ep-legenda-btn {
-      font-size:11px; font-weight:600; color:var(--blue); background:none; border:none;
-      cursor:pointer; font-family:inherit; padding:0;
-    }
-
-    .ep-list { padding:0 12px 24px; }
-
-    .ep-day-card {
+    /* Navegação de mês — pill unificada */
+    .ep-month-nav {
       display:flex; align-items:center; gap:0;
-      background:var(--white); border:1px solid var(--border);
-      border-radius:14px; margin-bottom:8px;
-      overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06);
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+      border-radius:14px; overflow:hidden;
     }
-    .ep-day-card.ep-folga  { opacity:.55; }
-    .ep-day-card.ep-futuro { opacity:.35; }
-    .ep-day-card.ep-hoje   { border-color:#0ea5e9; box-shadow:0 0 0 2px rgba(14,165,233,.2); }
-    .ep-day-card.ep-warn   { border-color:#f59e0b; }
-    .ep-day-card.ep-falta  { border-color:#ef4444; }
-    .ep-day-card.ep-he     { border-color:#7c3aed; }
+    .ep-month-btn {
+      background:none; border:none; color:rgba(255,255,255,.7);
+      padding:9px 13px; cursor:pointer; font-size:12px; font-family:inherit;
+      transition:background .15s;
+    }
+    .ep-month-btn:active { background:rgba(255,255,255,.1); }
+    .ep-month-display { font-size:13px; font-weight:800; color:#fff; padding:0 4px; white-space:nowrap; min-width:90px; text-align:center; }
 
-    .ep-date-col {
-      min-width:52px; text-align:center; padding:12px 8px;
-      border-right:1px solid var(--border); flex-shrink:0;
+    /* Cards de resumo — brancos sobre o fundo escuro */
+    .ep-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:16px 16px 0; }
+    .ep-sum-card {
+      background:#fff; border:1px solid var(--border);
+      border-radius:16px; padding:13px 8px; text-align:center;
+      box-shadow:0 1px 4px rgba(0,0,0,.07);
     }
-    .ep-day-num  { font-size:20px; font-weight:900; color:var(--text); line-height:1; }
-    .ep-day-name { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; }
-    .ep-hoje-pill {
-      font-size:8px; font-weight:800; letter-spacing:.5px;
-      background:#0ea5e9; color:white; border-radius:4px;
-      padding:1px 4px; margin-top:3px; display:inline-block;
-    }
+    .ep-sum-ico  { font-size:18px; margin-bottom:5px; }
+    .ep-sum-val  { font-size:16px; font-weight:900; color:var(--text); line-height:1; }
+    .ep-sum-val.pos    { color:var(--green-d); }
+    .ep-sum-val.neg    { color:var(--red); }
+    .ep-sum-val.alerta { color:var(--amber); }
+    .ep-sum-lbl  { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
 
-    .ep-vsep { width:1px; background:transparent; }
+    /* Cabeçalho da lista */
+    .ep-list-hdr { display:flex; align-items:center; justify-content:space-between; padding:18px 16px 10px; }
+    .ep-list-title { font-size:11px; font-weight:800; color:var(--text); text-transform:uppercase; letter-spacing:.6px; }
+    .ep-legenda-btn { font-size:11px; font-weight:700; color:var(--blue-d); background:none; border:none; cursor:pointer; font-family:inherit; }
 
-    .ep-day-body { flex:1; padding:10px 12px; min-width:0; }
-    .ep-punches {
-      font-size:13px; font-weight:600; color:var(--text);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .ep-punch-arr { color:var(--faint); margin:0 3px; font-size:11px; }
-    .ep-punch-miss { color:var(--muted); font-style:italic; font-size:12px; }
-    .ep-day-sub {
-      font-size:11px; color:var(--muted); margin-top:3px; font-weight:500;
-    }
-    .ep-day-sub.tag-warn  { color:#d97706; font-weight:700; }
-    .ep-day-sub.tag-falta { color:#dc2626; font-weight:700; }
-    .ep-day-sub.tag-hoje  { color:#0ea5e9; font-weight:700; }
-    .ep-day-sub.tag-he    { color:#7c3aed; font-weight:700; }
+    /* Lista de dias */
+    .ep-list { padding:0 16px; display:flex; flex-direction:column; gap:8px; padding-bottom:24px; }
 
-    .ep-status-col {
-      min-width:48px; display:flex; flex-direction:column;
-      align-items:center; justify-content:center; gap:6px;
-      padding:8px 10px; flex-shrink:0;
+    /* Cards de dia */
+    .ep-day-card {
+      background:#fff; border:1.5px solid var(--border);
+      border-radius:16px; padding:12px 14px;
+      display:flex; align-items:center; gap:0;
+      box-shadow:0 1px 4px rgba(0,0,0,.06);
     }
-    .ep-total { font-size:11px; font-weight:800; color:var(--text); }
-    .ep-total.he { color:#7c3aed; }
-    .ep-badge {
-      width:28px; height:28px; border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-size:12px;
-    }
-    .ep-bk-ok    { background:#dcfce7; color:#15803d; }
-    .ep-bk-warn  { background:#fef3c7; color:#d97706; }
-    .ep-bk-falta { background:#fee2e2; color:#dc2626; }
-    .ep-bk-folga { background:#f1f5f9; color:#94a3b8; }
-    .ep-bk-hoje  { background:#e0f2fe; color:#0284c7; }
-    .ep-bk-he    { background:#ede9fe; color:#7c3aed; }
+    .ep-day-card.ep-warn     { border-color:#fde68a; background:#fffdf0; }
+    .ep-day-card.ep-falta    { border-color:#fca5a5; background:#fff5f5; }
+    .ep-day-card.ep-folga    { background:#f8fafc; opacity:.6; }
+    .ep-day-card.ep-hoje     { border-color:var(--blue-d); border-width:2px; }
+    .ep-day-card.ep-he       { border-color:#a5b4fc; }
+    .ep-day-card.ep-futuro   { opacity:.35; }
 
-    .ep-future-txt { text-align:center; padding:10px 0; font-size:12px; color:var(--faint); font-weight:600; }
+    /* Coluna de data */
+    .ep-date-col { display:flex; flex-direction:column; align-items:center; min-width:32px; flex-shrink:0; }
+    .ep-day-num  { font-size:20px; font-weight:900; line-height:1; }
+    .ep-day-name { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+    .ep-day-card.ep-folga .ep-day-num { color:var(--muted); }
+    .ep-hoje-pill { font-size:8px; font-weight:800; background:var(--blue-d); color:#fff; border-radius:6px; padding:1px 5px; margin-top:2px; letter-spacing:.3px; }
 
-    .ep-legend {
-      margin:0 12px 20px; background:var(--white); border:1px solid var(--border);
-      border-radius:14px; padding:14px 16px;
-    }
-    .ep-legend-title { font-size:12px; font-weight:800; color:var(--text); margin-bottom:10px; }
-    .ep-leg-items { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-    .ep-leg-item { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:600; color:var(--muted); }
-    .ep-leg-dot  { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+    /* Separador vertical */
+    .ep-vsep { width:1px; height:32px; background:var(--border); flex-shrink:0; margin:0 12px; }
 
-    /* Espelho no topo do bottom sheet do ponto */
-    .bs-espelho-link {
-      margin:10px 14px 4px; display:flex; align-items:center; gap:12px;
-      padding:12px 14px; background:linear-gradient(135deg,#eff6ff,#dbeafe);
-      border:1.5px solid #bfdbfe; border-radius:14px;
-      cursor:pointer; -webkit-tap-highlight-color:transparent;
+    /* Corpo do dia */
+    .ep-day-body { flex:1; min-width:0; }
+    .ep-punches  { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ep-punch-arr  { color:var(--faint); font-size:10px; margin:0 2px; }
+    .ep-punch-miss { color:var(--amber); font-weight:600; font-size:11px; font-style:italic; }
+    .ep-day-sub    { font-size:11px; color:var(--muted); font-weight:500; }
+    .ep-day-sub.he-tag    { color:#4f46e5; font-weight:700; }
+    .ep-day-sub.tag-warn  { color:var(--amber); font-weight:700; }
+    .ep-day-sub.tag-falta { color:var(--red); font-weight:700; }
+    .ep-day-sub.tag-hoje  { color:var(--blue-d); font-weight:700; }
+
+    /* Coluna de status */
+    .ep-status-col { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+    .ep-total    { font-size:13px; font-weight:800; color:var(--text); white-space:nowrap; }
+    .ep-total.he { color:#4f46e5; }
+    .ep-badge { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; }
+    .ep-bk-ok    { background:var(--green-l); color:var(--green-d); }
+    .ep-bk-warn  { background:var(--amber-l); color:var(--amber); }
+    .ep-bk-falta { background:var(--red-l);   color:var(--red); }
+    .ep-bk-folga { background:#f1f5f9;         color:var(--faint); }
+    .ep-bk-hoje  { background:var(--blue-l);   color:var(--blue-d); }
+    .ep-bk-he    { background:#ede9fe;          color:#7c3aed; }
+
+    .ep-future-txt { text-align:center; padding:10px 0; font-size:12px; color:var(--faint); font-weight:600; letter-spacing:.3px; }
+
+    /* Legenda */
+    .ep-legend { margin:14px 16px 0; background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:13px 16px; }
+    .ep-legend-title { font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:10px; }
+    .ep-leg-items { display:flex; flex-wrap:wrap; gap:8px 18px; }
+    .ep-leg-item  { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--text); }
+    .ep-leg-dot   { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+    /* Seção de assinatura */
+    .ep-sig-section { padding:20px 16px 44px; display:flex; flex-direction:column; gap:10px; }
+    .ep-sig-disclaimer { font-size:12px; color:var(--muted); line-height:1.6; text-align:center; padding:0 4px; }
+    .ep-sig-disclaimer strong { color:var(--text); }
+    .ep-sig-btn {
+      width:100%; padding:17px; border-radius:18px; border:none;
+      background:linear-gradient(135deg,#0f172a,#1e3a5f);
+      color:#fff; font-family:inherit; font-size:15px; font-weight:800;
+      cursor:pointer; box-shadow:0 6px 28px rgba(15,23,42,.3); transition:transform .15s;
+      display:flex; align-items:center; justify-content:center; gap:10px;
     }
-    .bs-espelho-link:active { opacity:.82; }
-    .bs-el-ico { width:38px; height:38px; border-radius:11px; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; box-shadow:0 3px 10px rgba(37,99,235,.35); }
-    .bs-el-info { flex:1; }
-    .bs-el-title { font-size:13px; font-weight:800; color:#1e40af; }
-    .bs-el-sub   { font-size:11px; color:#3b82f6; margin-top:2px; font-weight:600; }
-    .bs-el-arr   { font-size:13px; color:#93c5fd; }
+    .ep-sig-btn:active { transform:scale(.98); }
+
 
     /* ── BALÃO PWA ─────────────────────────────────────────────────────────── */
     .pwa-balao {
@@ -588,16 +610,20 @@
     <div class="btn-ponto-hint" id="btnPontoHint">Aguarde...</div>
   </div>
 
-  <div class="ponto-bottom-sheet">
-    <div class="ponto-bs-handle"></div>
-    <!-- Espelho: topo do sheet, sempre visível quando DP ativo -->
-    <div class="bs-espelho-link" onclick="abrirEspelho()" id="linkEspelho" style="display:none">
-      <div class="bs-el-ico"><i class="fas fa-calendar-days"></i></div>
-      <div class="bs-el-info">
-        <div class="bs-el-title">Espelho de Ponto</div>
-        <div class="bs-el-sub" id="linkEspelhoSub">Ver histórico do mês</div>
-      </div>
-      <div class="bs-el-arr"><i class="fas fa-chevron-right"></i></div>
+  <!-- Espelho de Ponto — flutuante, independente do sheet -->
+  <div class="ponto-espelho-flutuante" id="linkEspelho" onclick="abrirEspelho()">
+    <div class="pef-ico"><i class="fas fa-calendar-days"></i></div>
+    <div class="pef-info">
+      <div class="pef-title">Espelho de Ponto</div>
+      <div class="pef-sub" id="linkEspelhoSub">Ver histórico do mês</div>
+    </div>
+    <div class="pef-arr"><i class="fas fa-chevron-right"></i></div>
+  </div>
+
+  <div class="ponto-bottom-sheet" id="pontoBottomSheet">
+    <div class="ponto-bs-handle-area" onclick="toggleBottomSheet()">
+      <div class="ponto-bs-handle"></div>
+      <div class="ponto-bs-pull-hint">MARCAÇÕES DE HOJE</div>
     </div>
     <div class="ponto-bs-gps" id="pontoGpsRow"></div>
     <div class="ponto-bs-content">
@@ -665,51 +691,67 @@
 
 <!-- ══ ESPELHO DE PONTO ══ -->
 <div id="tela-espelho" class="tela">
+  <div class="page" style="max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:48px">
 
-  <!-- Cabeçalho escuro -->
-  <div class="ep-head">
-    <div class="ep-head-top">
-      <button class="ep-back-btn" onclick="fecharEspelho()">
-        <i class="fas fa-arrow-left"></i> Portal
-      </button>
-      <div class="ep-titulo">Espelho de Ponto</div>
-      <div class="ep-month-nav">
-        <button class="ep-month-btn" onclick="navegarMes(-1)"><i class="fas fa-chevron-left"></i></button>
-        <div class="ep-month-display" id="epMesDisplay">—</div>
-        <button class="ep-month-btn" onclick="navegarMes(1)"><i class="fas fa-chevron-right"></i></button>
+    <!-- Cabeçalho escuro -->
+    <div class="ep-head">
+      <div class="ep-head-top">
+        <button class="ep-back-btn" onclick="fecharEspelho()">
+          <i class="fas fa-arrow-left"></i> Portal
+        </button>
+        <div class="ep-titulo">Espelho de Ponto</div>
+        <div class="ep-month-nav">
+          <button class="ep-month-btn" onclick="navegarMes(-1)"><i class="fas fa-chevron-left"></i></button>
+          <div class="ep-month-display" id="epMesDisplay">—</div>
+          <button class="ep-month-btn" onclick="navegarMes(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <!-- Cards brancos dentro do cabeçalho escuro -->
+      <div class="ep-summary" id="epSummary">
+        <div class="ep-sum-card"><div class="ep-sum-ico">⏱️</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Trabalhadas</div></div>
+        <div class="ep-sum-card"><div class="ep-sum-ico">✅</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Presenças</div></div>
+        <div class="ep-sum-card"><div class="ep-sum-ico">⚠️</div><div class="ep-sum-val alerta">—</div><div class="ep-sum-lbl">Pendências</div></div>
       </div>
     </div>
-    <div class="ep-summary" id="epSummary">
-      <div class="ep-sum-card"><div class="ep-sum-ico">⏱️</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Trabalhadas</div></div>
-      <div class="ep-sum-card"><div class="ep-sum-ico">✅</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Presenças</div></div>
-      <div class="ep-sum-card"><div class="ep-sum-ico">⚠️</div><div class="ep-sum-val">—</div><div class="ep-sum-lbl">Pendências</div></div>
+
+    <!-- Cabeçalho da lista -->
+    <div class="ep-list-hdr">
+      <div class="ep-list-title">Jornada do mês</div>
+      <button class="ep-legenda-btn" onclick="toggleLegendaEp()">Ver legenda</button>
     </div>
-  </div>
 
-  <!-- Lista de dias -->
-  <div class="ep-list-hdr">
-    <span id="epListHdr">Jornada do mês</span>
-    <button class="ep-legenda-btn" onclick="toggleLegendaEp()">Legenda</button>
-  </div>
-
-  <div id="epLegenda" class="ep-legend" style="display:none">
-    <div class="ep-legend-title">Símbolos</div>
-    <div class="ep-leg-items">
-      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#15803d"></div> Jornada completa</div>
-      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#d97706"></div> Incompleto</div>
-      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#dc2626"></div> Falta</div>
-      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#7c3aed"></div> Hora extra</div>
-      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#0284c7"></div> Hoje</div>
-      <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#94a3b8"></div> Folga</div>
+    <!-- Legenda colapsável -->
+    <div id="epLegenda" class="ep-legend" style="display:none">
+      <div class="ep-legend-title">Legenda de símbolos</div>
+      <div class="ep-leg-items">
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--green-d)"></div> Jornada completa</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--amber)"></div> Marcação incompleta</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--red)"></div> Falta</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#7c3aed"></div> Horas extras</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--blue-d)"></div> Dia atual</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--faint)"></div> Folga / DSR</div>
+      </div>
     </div>
-  </div>
 
-  <div class="ep-list" id="epList">
-    <div class="ponto-registros-empty" style="padding:40px 0">
-      <i class="fas fa-spinner fa-spin"></i><span>Carregando...</span>
+    <!-- Lista de dias -->
+    <div class="ep-list" id="epList">
+      <div class="ponto-registros-empty" style="padding:40px 0">
+        <i class="fas fa-spinner fa-spin"></i><span>Carregando...</span>
+      </div>
     </div>
-  </div>
 
+    <!-- Seção de assinatura -->
+    <div class="ep-sig-section" id="epSigSection" style="display:none">
+      <p class="ep-sig-disclaimer">
+        Ao assinar, você declara que concorda com os registros do período e está ciente do seu saldo de horas.
+        <strong>Esta ação não pode ser desfeita.</strong>
+      </p>
+      <button class="ep-sig-btn" onclick="assinarEspelho()">
+        <i class="fas fa-pen-nib"></i> Assinar Espelho de Ponto
+      </button>
+    </div>
+
+  </div>
 </div>
 
 <!-- BALÃO PWA -->
@@ -1011,8 +1053,76 @@ function abrirPonto() {
 
 function voltarDoHub() {
   if (pontoRelogioInterval) clearInterval(pontoRelogioInterval);
+  fecharBottomSheet();
   mostrarTela('tela-hub');
 }
+
+// ── Bottom sheet pull-up ──────────────────────────────────────────────────────
+function toggleBottomSheet() {
+  const sheet = document.getElementById('pontoBottomSheet');
+  if (!sheet) return;
+  sheet.classList.toggle('aberto');
+}
+
+function fecharBottomSheet() {
+  const sheet = document.getElementById('pontoBottomSheet');
+  if (sheet) sheet.classList.remove('aberto');
+}
+
+// Drag para abrir/fechar o sheet
+(function initSheetDrag() {
+  let startY = 0, startOpen = false, dragging = false;
+
+  function getSheet() { return document.getElementById('pontoBottomSheet'); }
+
+  function onStart(e) {
+    const sheet = getSheet();
+    if (!sheet) return;
+    const target = e.target.closest('.ponto-bs-handle-area');
+    if (!target) return;
+    dragging = true;
+    startY = (e.touches ? e.touches[0].clientY : e.clientY);
+    startOpen = sheet.classList.contains('aberto');
+    sheet.style.transition = 'none';
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const sheet = getSheet();
+    if (!sheet) return;
+    const dy = (e.touches ? e.touches[0].clientY : e.clientY) - startY;
+    // Só permite arrastar para cima (fechar→abrir) ou para baixo (abrir→fechar)
+    const maxH = sheet.offsetHeight - 52;
+    if (!startOpen && dy < 0) {
+      const travel = Math.min(-dy, maxH);
+      sheet.style.transform = `translateY(calc(100% - 52px - ${travel}px))`;
+    } else if (startOpen && dy > 0) {
+      const travel = Math.min(dy, maxH);
+      sheet.style.transform = `translateY(${travel}px)`;
+    }
+  }
+
+  function onEnd(e) {
+    if (!dragging) return;
+    dragging = false;
+    const sheet = getSheet();
+    if (!sheet) return;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    const dy = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) - startY;
+    if (!startOpen && dy < -40) sheet.classList.add('aberto');
+    else if (startOpen && dy > 40) sheet.classList.remove('aberto');
+    else sheet.classList.toggle('aberto', startOpen); // snap back
+  }
+
+  document.addEventListener('touchstart',  onStart, { passive: true });
+  document.addEventListener('touchmove',   onMove,  { passive: false });
+  document.addEventListener('touchend',    onEnd);
+  document.addEventListener('mousedown',   onStart);
+  document.addEventListener('mousemove',   onMove);
+  document.addEventListener('mouseup',     onEnd);
+}());
 
 // ── Espelho de Ponto ───────────────────────────────────────────────────────────
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -1029,7 +1139,7 @@ function abrirEspelho() {
 }
 
 function fecharEspelho() {
-  mostrarTela('tela-hub');
+  mostrarTela('tela-ponto');
 }
 
 function navegarMes(delta) {
@@ -1315,11 +1425,11 @@ async function carregarPontoHoje() {
     if (pontoGpsEstado !== 'denied') {
       atualizarBotaoPonto(pontoHojeData.proximoTipo);
     }
-    // Mostra link do espelho
+    // Mostra espelho flutuante
     const mesAtual = new Date().toLocaleDateString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
     const linkEl = document.getElementById('linkEspelho');
     if (linkEl) {
-      linkEl.style.display = 'flex';
+      linkEl.classList.add('visivel');
       const sub = document.getElementById('linkEspelhoSub');
       if (sub) sub.textContent = `Ver histórico de ${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)}`;
     }
