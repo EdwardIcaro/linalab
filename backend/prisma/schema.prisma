@@ -874,8 +874,10 @@ model DpFuncionario {
   codigoWppExpiraEm DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-  empresa           Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa           Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   marcacoes         DpMarcacao[]
+  ajustes           DpAjuste[]
+  afastamentos      DpAfastamento[]
 
   @@map("dp_funcionarios")
 }
@@ -898,6 +900,39 @@ model DpMarcacao {
   funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
 
   @@map("dp_marcacoes")
+}
+
+model DpAjuste {
+  id               String        @id @default(cuid())
+  empresaId        String
+  funcionarioId    String
+  data             String        // YYYY-MM-DD — data a que o ajuste se refere
+  tipo             String        // JUSTIFICAR_FALTA | CORRIGIR_HORA | OUTRO
+  descricao        String        // motivo informado pelo funcionário
+  status           String        @default("PENDENTE") // PENDENTE | APROVADO | REJEITADO
+  obsGestor        String?       // resposta do gestor
+  aprovadoPor      String?       // nome do gestor
+  aprovadoEm       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  funcionario      DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@map("dp_ajustes")
+}
+
+model DpAfastamento {
+  id               String        @id @default(cuid())
+  empresaId        String
+  funcionarioId    String
+  tipo             String        // FERIAS | ATESTADO | LICENCA | FOLGA_COMP | OUTRO
+  dataInicio       String        // YYYY-MM-DD
+  dataFim          String        // YYYY-MM-DD
+  descricao        String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  funcionario      DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@map("dp_afastamentos")
 }
 
 model Gorjeta {

@@ -9,6 +9,8 @@ import {
   getPontoHoje,
   registrarPonto,
   getEspelhoPortal,
+  criarAjustePortal,
+  getAjustesPortal,
   gerarCodigoWpp,
   desvincularWpp,
 } from '../controllers/portalPublicoController';
@@ -21,6 +23,8 @@ router.get('/me/extrato',      portalSessionMiddleware, getExtratoPortal);
 router.get('/me/ponto/hoje',    portalSessionMiddleware, getPontoHoje);
 router.post('/me/ponto',        portalSessionMiddleware, registrarPonto);
 router.get('/me/ponto/espelho', portalSessionMiddleware, getEspelhoPortal);
+router.post('/me/ajuste',       portalSessionMiddleware, criarAjustePortal);
+router.get('/me/ajustes',       portalSessionMiddleware, getAjustesPortal);
 
 // Públicas (sem autenticação)
 router.get('/:token',               resolverTokenPublico);

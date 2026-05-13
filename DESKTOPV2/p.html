@@ -754,6 +754,35 @@
   </div>
 </div>
 
+<!-- ══ MODAL JUSTIFICAR ══ -->
+<div id="modalJustificar" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:0 0 36px">
+    <div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:12px auto 0"></div>
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:16px;font-weight:800;color:#1e293b">Solicitar Ajuste</div>
+      <button onclick="fecharModalJustificar()" style="width:30px;height:30px;border-radius:8px;background:#f1f5f9;border:none;cursor:pointer;font-size:13px;color:#64748b">✕</button>
+    </div>
+    <div style="padding:16px 20px">
+      <div id="mjDia" style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:14px"></div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Tipo de solicitação</label>
+        <select id="mjTipo" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:13px;font-family:inherit;outline:none">
+          <option value="JUSTIFICAR_FALTA">Justificar falta</option>
+          <option value="CORRIGIR_HORA">Corrigir horário</option>
+          <option value="OUTRO">Outro motivo</option>
+        </select>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Descreva o motivo <span style="color:#ef4444">*</span></label>
+        <textarea id="mjDesc" rows="3" placeholder="Ex: Estive no médico e esqueci de registrar a saída..." style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:13px;font-family:inherit;outline:none;resize:vertical"></textarea>
+      </div>
+      <button id="mjBtn" onclick="enviarJustificativa()" style="width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:white;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i class="fas fa-paper-plane"></i> Enviar solicitação
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- BALÃO PWA -->
 <div id="pwaBalao" class="pwa-balao hidden">
   <div id="pwaTooltip" class="pwa-tooltip hidden">✨ NOVO APP</div>
@@ -1129,6 +1158,7 @@ const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho',
 const DIAS_PT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 let espelhoAno = 0;
 let espelhoMes = 0;
+let espelhoAjustes = []; // ajustes do funcionário para detectar pendentes
 
 function abrirEspelho() {
   const agora = new Date();
@@ -1158,6 +1188,12 @@ async function carregarEspelho() {
   document.getElementById('epMesDisplay').textContent = `${MESES_PT[espelhoMes-1]} / ${espelhoAno}`;
   document.getElementById('epList').innerHTML =
     '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-spinner fa-spin"></i><span>Carregando...</span></div>';
+
+  // Carrega ajustes em paralelo para saber quais dias já têm solicitação pendente
+  try {
+    const ajData = await fetch(`${API}/p/me/ajustes`, { headers: { Authorization: `Bearer ${sessionJwt}` } });
+    if (ajData.ok) espelhoAjustes = (await ajData.json()).ajustes || [];
+  } catch { espelhoAjustes = []; }
 
   try {
     const mesStr = `${espelhoAno}-${String(espelhoMes).padStart(2,'0')}`;
@@ -1267,6 +1303,21 @@ function renderEspelho(data) {
     const totalCol = dia.minutosTrabalhou > 0 && dia.status !== 'FOLGA'
       ? `<div class="ep-total${isHe ? ' he' : ''}">${formatMinEp(dia.minutosTrabalhou)}</div>` : '';
 
+    // Verifica se já tem ajuste pendente neste dia
+    const temAjustePendente = espelhoAjustes.some(a => a.data === dia.dia && a.status === 'PENDENTE');
+    const temAjusteAprovado = espelhoAjustes.some(a => a.data === dia.dia && a.status === 'APROVADO');
+    const podeJustificar = (dia.status === 'FALTA' || dia.status === 'FALTA_PARCIAL' || dia.status === 'INCOMPLETO')
+                           && !isHoje && !temAjustePendente;
+
+    // Botão justificar
+    const btnJustificar = podeJustificar
+      ? `<button style="font-size:10px;font-weight:800;padding:4px 9px;border-radius:8px;border:1.5px solid var(--amber);background:var(--amber-l);color:#92400e;cursor:pointer;font-family:inherit;margin-top:5px" onclick="abrirModalJustificar('${dia.dia}')">Justificar</button>`
+      : temAjustePendente
+      ? `<span style="font-size:10px;color:var(--amber);font-weight:700;margin-top:4px;display:block">⏳ Aguardando aprovação</span>`
+      : temAjusteAprovado
+      ? `<span style="font-size:10px;color:var(--green-d);font-weight:700;margin-top:4px;display:block">✓ Justificado</span>`
+      : '';
+
     // Estrutura fiel ao protótipo: date | vsep | body | status
     html += `
       <div class="${cardCls}">
@@ -1279,6 +1330,7 @@ function renderEspelho(data) {
         <div class="ep-day-body">
           <div class="ep-punches">${punchLine}</div>
           ${subTxt ? `<div class="${subCls}">${subTxt}</div>` : ''}
+          ${btnJustificar}
         </div>
         <div class="ep-status-col">
           ${totalCol}
@@ -1310,6 +1362,51 @@ function assinarEspelho() {
     btn.innerHTML = '<i class="fas fa-check"></i> Espelho assinado';
     btn.disabled = true;
     btn.style.background = 'linear-gradient(135deg,#047857,#059669)';
+  }
+}
+
+// ── Modal Justificar ──────────────────────────────────────────────────────────
+let justificarDia = null;
+
+function abrirModalJustificar(dia) {
+  justificarDia = dia;
+  const [a, m, d] = dia.split('-');
+  const diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const dt = new Date(dia + 'T12:00:00');
+  document.getElementById('mjDia').textContent = `${diasSem[dt.getDay()]}, ${d}/${m}/${a}`;
+  document.getElementById('mjDesc').value = '';
+  document.getElementById('mjTipo').value = 'JUSTIFICAR_FALTA';
+  const modal = document.getElementById('modalJustificar');
+  modal.style.display = 'flex';
+}
+
+function fecharModalJustificar() {
+  document.getElementById('modalJustificar').style.display = 'none';
+  justificarDia = null;
+}
+
+async function enviarJustificativa() {
+  const desc = document.getElementById('mjDesc').value.trim();
+  if (!desc) { alert('Descreva o motivo da solicitação.'); return; }
+
+  const btn = document.getElementById('mjBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+  try {
+    const r = await fetch(`${API}/p/me/ajuste`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionJwt}` },
+      body: JSON.stringify({ data: justificarDia, tipo: document.getElementById('mjTipo').value, descricao: desc }),
+    });
+    const resp = await r.json();
+    if (!r.ok) { alert(resp.erro || 'Erro ao enviar.'); return; }
+    fecharModalJustificar();
+    await carregarEspelho(); // recarrega para mostrar "Aguardando aprovação"
+  } catch { alert('Erro de conexão.'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar solicitação';
   }
 }
 
