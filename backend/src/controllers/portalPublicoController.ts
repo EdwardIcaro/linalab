@@ -3,7 +3,7 @@ import prisma from '../db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
-import { getTodayRangeBRT } from '../utils/dateUtils';
+import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
 
