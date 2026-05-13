@@ -508,6 +508,172 @@ function formatMinutos(min: number): string {
   return `${h}h ${m}min`;
 }
 
+// ─── GET /api/dp/espelho ──────────────────────────────────────────────────────
+// Motor simples: horas trabalhadas vs. contratadas por funcionário por dia.
+// Status por dia: PRESENTE | FALTA_PARCIAL | FALTA | FOLGA (fim de semana)
+export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const sistema = await prisma.empresaSistema.findFirst({
+      where: { empresaId, sistema: 'data-point', ativo: true },
+    });
+    if (!sistema) return res.status(403).json({ error: 'Data Point não ativo' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const toleranciaMin: number = cfg.toleranciaMin ?? 10;
+    const cargaHorariaDiaCfg: number = 8;
+
+    // Período: padrão semana atual
+    const hoje = getTodayStrBRT();
+    const dataFim = (req.query.fim as string) || hoje;
+    let dataInicio = (req.query.inicio as string) || '';
+    if (!dataInicio) {
+      const d = new Date(dataFim + 'T12:00:00');
+      d.setDate(d.getDate() - 6);
+      dataInicio = d.toISOString().split('T')[0];
+    }
+
+    // Gera lista de datas
+    const dias: string[] = [];
+    const cursor = new Date(dataInicio + 'T12:00:00');
+    const fimDate = new Date(dataFim + 'T12:00:00');
+    while (cursor <= fimDate) {
+      dias.push(cursor.toISOString().split('T')[0]);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    if (dias.length > 31) return res.status(400).json({ error: 'Período máximo: 31 dias' });
+
+    const funcionarios = await prisma.dpFuncionario.findMany({
+      where: { empresaId, status: { not: 'DESLIGADO' } },
+      select: {
+        id: true, nome: true, cargo: true,
+        cargaHorariaDia: true, jornadaEntrada: true,
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    // Busca todas as marcações do período de uma vez
+    const { start: periodoStart } = getDateRangeBRT(dataInicio);
+    const { end: periodoEnd } = getDateRangeBRT(dataFim);
+
+    const todasMarcacoes = await prisma.dpMarcacao.findMany({
+      where: {
+        empresaId,
+        funcionarioId: { in: funcionarios.map(f => f.id) },
+        timestamp: { gte: periodoStart, lte: periodoEnd },
+      },
+      select: { funcionarioId: true, tipo: true, timestamp: true },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const now = new Date();
+
+    const resultado = funcionarios.map(f => {
+      const cargaEsperadaMin = (f.cargaHorariaDia ?? cargaHorariaDiaCfg) * 60;
+      const marcacoesFuncionario = todasMarcacoes.filter(m => m.funcionarioId === f.id);
+
+      let totalMinutosTrabalhou = 0;
+      let diasPresente = 0;
+      let diasFalta = 0;
+      let diasParcial = 0;
+      let diasFolga = 0;
+
+      const diasMap: Record<string, {
+        status: string;
+        minutosTrabalhou: number;
+        marcacoes: number;
+        horaEntrada: string | null;
+        horaSaida: string | null;
+      }> = {};
+
+      for (const dia of dias) {
+        const diaSemana = new Date(dia + 'T12:00:00').getDay(); // 0=dom, 6=sab
+        const isFimDeSemana = diaSemana === 0 || diaSemana === 6;
+
+        const { start, end } = getDateRangeBRT(dia);
+        const marcacoesDia = marcacoesFuncionario.filter(
+          m => m.timestamp >= start && m.timestamp <= end,
+        );
+
+        const fimCalculo = dia === hoje ? now : end;
+        const minutosTrabalhou = calcMinutosTrabalhados(
+          marcacoesDia.map(m => ({ tipo: m.tipo, timestamp: m.timestamp })),
+          fimCalculo,
+        );
+
+        const primeiraEntrada = marcacoesDia.find(m => m.tipo === 'ENTRADA');
+        const ultimaSaida = [...marcacoesDia].reverse().find(m => m.tipo === 'SAIDA');
+
+        if (isFimDeSemana && minutosTrabalhou === 0) {
+          diasMap[dia] = {
+            status: 'FOLGA',
+            minutosTrabalhou: 0,
+            marcacoes: 0,
+            horaEntrada: null,
+            horaSaida: null,
+          };
+          diasFolga++;
+          continue;
+        }
+
+        let status: string;
+        if (minutosTrabalhou === 0) {
+          status = 'FALTA';
+          diasFalta++;
+        } else if (minutosTrabalhou >= cargaEsperadaMin - toleranciaMin) {
+          status = 'PRESENTE';
+          diasPresente++;
+        } else {
+          status = 'FALTA_PARCIAL';
+          diasParcial++;
+        }
+
+        totalMinutosTrabalhou += minutosTrabalhou;
+
+        diasMap[dia] = {
+          status,
+          minutosTrabalhou,
+          marcacoes: marcacoesDia.length,
+          horaEntrada: primeiraEntrada ? formatHoraBRT(primeiraEntrada.timestamp) : null,
+          horaSaida: ultimaSaida ? formatHoraBRT(ultimaSaida.timestamp) : null,
+        };
+      }
+
+      const diasUteis = dias.length - diasFolga;
+      const minutosEsperadoTotal = cargaEsperadaMin * diasUteis;
+
+      return {
+        id: f.id,
+        nome: f.nome,
+        cargo: f.cargo,
+        cargaEsperadaMin,
+        dias: diasMap,
+        totais: {
+          diasPresente,
+          diasFalta,
+          diasParcial,
+          diasFolga,
+          minutosTotal: totalMinutosTrabalhou,
+          minutosEsperadoTotal,
+          saldoMin: totalMinutosTrabalhou - minutosEsperadoTotal,
+        },
+      };
+    });
+
+    res.json({
+      periodo: { inicio: dataInicio, fim: dataFim },
+      dias,
+      config: { toleranciaMin, cargaHorariaDia: cargaHorariaDiaCfg },
+      funcionarios: resultado,
+    });
+  } catch (error) {
+    console.error('[dp] espelho:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
 // ─── GET /api/dp/funcionarios ─────────────────────────────────────────────────
 export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;

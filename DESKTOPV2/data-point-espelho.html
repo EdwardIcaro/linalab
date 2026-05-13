@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Point — Espelho de Ponto</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="/api.js"></script>
+  <style>
+    :root {
+      --teal800:#064e3b;--teal700:#0f766e;--teal600:#0d9488;
+      --teal500:#14b8a6;--teal400:#2dd4bf;--teal200:#99f6e4;
+      --teal100:#ccfbf1;--teal50:#f0fdfa;
+      --p800:#5b21b6;--p700:#6d28d9;--p600:#7c3aed;
+      --p500:#8b5cf6;--p100:#ede9fe;
+      --gray900:#111827;--gray800:#1f2937;--gray700:#374151;
+      --gray600:#4b5563;--gray500:#6b7280;--gray400:#9ca3af;
+      --gray300:#d1d5db;--gray200:#e5e7eb;--gray100:#f3f4f6;--gray50:#f9fafb;
+      --white:#ffffff;
+      --green:#059669;--green-bg:#d1fae5;
+      --amber:#d97706;--amber-bg:#fef3c7;
+      --red:#dc2626;--red-bg:#fee2e2;
+    }
+    *{font-family:'Inter',sans-serif;box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;
+      background:linear-gradient(145deg,var(--teal800) 0%,var(--teal700) 30%,var(--p700) 70%,var(--p800) 100%);
+      color:var(--gray900);overflow-x:hidden;position:relative;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    body::after{
+      content:'';position:fixed;inset:0;
+      background:radial-gradient(ellipse 60% 40% at 85% 5%,rgba(255,255,255,.1) 0%,transparent 60%),
+        radial-gradient(ellipse 40% 35% at 5% 85%,rgba(91,33,182,.3) 0%,transparent 55%);
+      pointer-events:none;z-index:0;
+    }
+
+    /* TOPBAR */
+    .topbar{
+      position:sticky;top:0;z-index:100;
+      background:rgba(6,78,59,.92);backdrop-filter:blur(14px);
+      border-bottom:1px solid rgba(255,255,255,.12);
+      padding:0 28px;display:flex;align-items:center;height:58px;
+    }
+    .tb-brand{display:flex;align-items:center;gap:10px;padding-right:20px;border-right:1px solid rgba(255,255,255,.14)}
+    .tb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,var(--p600),var(--p800));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:white}
+    .tb-lina{font-size:15px;font-weight:800;color:white}
+    .tb-sys{display:flex;align-items:center;gap:8px;margin-left:20px;padding-right:20px;border-right:1px solid rgba(255,255,255,.14)}
+    .tb-sys-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(145deg,var(--teal600),var(--teal800));display:flex;align-items:center;justify-content:center;font-size:15px;border:1px solid rgba(255,255,255,.15)}
+    .tb-sys-name{font-size:14px;font-weight:700;color:var(--teal200)}
+    .tb-company{margin-left:20px;display:flex;align-items:center;gap:7px;font-size:13px;color:rgba(255,255,255,.65)}
+    .tb-company strong{color:rgba(255,255,255,.9);font-weight:700}
+    .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+    .tb-icon-btn{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .18s;font-family:inherit}
+    .tb-icon-btn:hover{background:rgba(255,255,255,.15);color:white}
+    .tb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,var(--p500),var(--p800));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white}
+
+    /* LOADER */
+    .loader-wrap{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,78,59,.95)}
+    .loader-spin{width:44px;height:44px;border:3px solid rgba(45,212,191,.3);border-top-color:var(--teal400);border-radius:50%;animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loader-text{margin-top:16px;font-size:14px;color:var(--teal200);font-weight:500}
+    .hidden{display:none!important}
+
+    /* LAYOUT */
+    .main{padding:28px 28px 60px;max-width:1400px;margin:0 auto;position:relative;z-index:1}
+    .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:14px}
+    .ph-title{font-size:26px;font-weight:800;background:linear-gradient(135deg,#ffffff,var(--teal200));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .ph-sub{font-size:13px;color:rgba(255,255,255,.55);margin-top:3px}
+
+    /* PERÍODO SELECTOR */
+    .periodo-bar{
+      display:flex;align-items:center;gap:10px;
+      background:rgba(255,255,255,.1);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.15);border-radius:14px;
+      padding:12px 18px;margin-bottom:20px;flex-wrap:wrap;
+    }
+    .periodo-presets{display:flex;gap:7px;flex-wrap:wrap}
+    .preset-btn{
+      padding:5px 13px;border-radius:8px;
+      border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
+      color:rgba(255,255,255,.8);font-size:12px;font-weight:600;
+      cursor:pointer;font-family:inherit;transition:all .15s;
+    }
+    .preset-btn:hover,.preset-btn.on{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:white}
+    .periodo-sep{color:rgba(255,255,255,.3);font-size:12px}
+    .periodo-inputs{display:flex;align-items:center;gap:8px}
+    .periodo-input{
+      padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);
+      background:rgba(255,255,255,.08);color:white;font-size:12px;font-family:inherit;
+      outline:none;
+    }
+    .periodo-input:focus{border-color:var(--teal400);background:rgba(255,255,255,.12)}
+    .periodo-input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
+    .btn-buscar{
+      padding:6px 16px;border-radius:9px;
+      background:linear-gradient(135deg,var(--teal500),var(--teal700));
+      border:none;color:white;font-size:12px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;
+    }
+
+    /* STATS */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+    .stat-card{
+      background:rgba(255,255,255,.12);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.15);border-radius:16px;
+      padding:18px 20px;display:flex;align-items:center;gap:14px;
+    }
+    .sc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .sc-val{font-size:24px;font-weight:900;color:white;line-height:1}
+    .sc-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.7px;margin-top:2px}
+
+    /* CARD */
+    .card{background:rgba(255,255,255,.97);border:1px solid var(--gray200);border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden}
+    .card-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 16px;border-bottom:1px solid var(--gray200)}
+    .card-title{font-size:15px;font-weight:800;color:var(--gray900);display:flex;align-items:center;gap:8px}
+    .ct-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+    .ct-teal{background:var(--teal100);color:var(--teal700)}
+
+    /* LEGENDA */
+    .legenda{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+    .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--gray600)}
+    .leg-dot{width:10px;height:10px;border-radius:3px}
+
+    /* TABELA ESPELHO */
+    .tabela-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .tabela-espelho{width:100%;border-collapse:collapse;min-width:600px}
+    .tabela-espelho th{
+      position:sticky;top:0;background:var(--gray50);
+      font-size:11px;font-weight:800;color:var(--gray600);
+      text-transform:uppercase;letter-spacing:.5px;
+      padding:10px 12px;text-align:center;border-bottom:2px solid var(--gray200);
+      white-space:nowrap;
+    }
+    .tabela-espelho th.col-nome{text-align:left;min-width:160px;position:sticky;left:0;z-index:2;background:var(--gray50)}
+    .tabela-espelho th.col-total{background:var(--teal50);color:var(--teal700);border-left:2px solid var(--teal200)}
+    .tabela-espelho td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--gray100);vertical-align:middle}
+    .tabela-espelho td.col-nome{
+      text-align:left;padding:12px 16px;
+      position:sticky;left:0;background:white;z-index:1;
+      border-right:1px solid var(--gray200);
+    }
+    .tabela-espelho tr:last-child td{border-bottom:none}
+    .tabela-espelho tr:hover td{background:var(--gray50)}
+    .tabela-espelho tr:hover td.col-nome{background:var(--gray50)}
+    .tabela-espelho td.col-total{background:var(--teal50);border-left:2px solid var(--teal200)}
+
+    /* Nome do funcionário na tabela */
+    .func-nome-cell{font-size:13px;font-weight:700;color:var(--gray900)}
+    .func-cargo-cell{font-size:11px;color:var(--gray500);margin-top:2px}
+    .func-carga-cell{font-size:10px;color:var(--gray400);margin-top:1px}
+
+    /* Chips de status */
+    .chip{
+      display:inline-flex;flex-direction:column;align-items:center;
+      padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700;
+      min-width:48px;gap:1px;cursor:default;
+    }
+    .chip-horas{font-size:10px;font-weight:600;margin-top:1px}
+    .chip-presente{background:var(--green-bg);color:var(--green)}
+    .chip-parcial{background:var(--amber-bg);color:var(--amber)}
+    .chip-falta{background:var(--red-bg);color:var(--red)}
+    .chip-folga{background:var(--gray100);color:var(--gray400)}
+    .chip-hoje{outline:2px solid var(--teal500);outline-offset:1px}
+
+    /* Totais col */
+    .total-min{font-size:13px;font-weight:800;color:var(--teal700)}
+    .total-saldo{font-size:10px;font-weight:700;margin-top:2px}
+    .saldo-pos{color:var(--green)}
+    .saldo-neg{color:var(--red)}
+    .saldo-zero{color:var(--gray400)}
+
+    /* Cabeçalho dia */
+    .th-dia-num{font-size:14px;font-weight:800}
+    .th-dia-sem{font-size:10px;font-weight:600;opacity:.7}
+    .th-hoje{color:var(--teal700)}
+
+    /* Empty */
+    .empty{padding:52px 20px;text-align:center}
+    .empty i{font-size:40px;color:var(--gray300);margin-bottom:14px;display:block}
+    .empty p{font-size:13px;color:var(--gray400)}
+
+    /* Tooltip */
+    [data-tip]{position:relative}
+    [data-tip]:hover::after{
+      content:attr(data-tip);
+      position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+      background:#1e1b4b;color:white;font-size:11px;font-weight:600;
+      padding:4px 9px;border-radius:8px;white-space:nowrap;z-index:10;pointer-events:none;
+    }
+
+    @media(max-width:768px){
+      .topbar{padding:0 16px}
+      .tb-sys,.tb-company{display:none}
+      .main{padding:16px 14px 48px}
+      .stats-row{grid-template-columns:1fr 1fr}
+      .page-header{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader" class="loader-wrap">
+    <div class="loader-spin"></div>
+    <div class="loader-text">Calculando espelho...</div>
+  </div>
+
+  <header class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">L</div>
+      <span class="tb-lina">Lina</span>
+    </div>
+    <div class="tb-sys">
+      <div class="tb-sys-icon">⏰</div>
+      <span class="tb-sys-name">Data Point</span>
+    </div>
+    <div class="tb-company">
+      <i class="fa fa-building" style="font-size:11px;color:rgba(255,255,255,.35)"></i>
+      <strong id="tbEmpresaNome">—</strong>
+    </div>
+    <div class="tb-right">
+      <button class="tb-icon-btn" onclick="location.href='data-point-dashboard.html'" title="Voltar ao dashboard"><i class="fa fa-arrow-left"></i></button>
+      <div class="tb-avatar" id="tbAvatar">?</div>
+    </div>
+  </header>
+
+  <main id="mainContent" class="main hidden">
+
+    <div class="page-header">
+      <div>
+        <div class="ph-title">Espelho de Ponto</div>
+        <div class="ph-sub" id="phSub">—</div>
+      </div>
+    </div>
+
+    <!-- Seletor de período -->
+    <div class="periodo-bar">
+      <div class="periodo-presets">
+        <button class="preset-btn" onclick="aplicarPreset('semana')">Esta semana</button>
+        <button class="preset-btn" onclick="aplicarPreset('semana-passada')">Semana passada</button>
+        <button class="preset-btn" onclick="aplicarPreset('mes')">Este mês</button>
+      </div>
+      <span class="periodo-sep">ou</span>
+      <div class="periodo-inputs">
+        <input class="periodo-input" type="date" id="inputInicio">
+        <span style="color:rgba(255,255,255,.5);font-size:12px">até</span>
+        <input class="periodo-input" type="date" id="inputFim">
+        <button class="btn-buscar" onclick="buscar()"><i class="fa fa-search"></i> Buscar</button>
+      </div>
+    </div>
+
+    <!-- Stats consolidadas -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- Tabela espelho -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="ct-icon ct-teal"><i class="fa fa-table"></i></div>
+          <span id="cardTitulo">Espelho de Ponto</span>
+        </div>
+        <div class="legenda">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div> Presente</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div> Parcial</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div> Falta</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--gray300)"></div> Folga</div>
+        </div>
+      </div>
+      <div class="tabela-wrap">
+        <div id="tabelaContainer"></div>
+      </div>
+    </div>
+
+  </main>
+
+<script>
+const DIAS_SEM = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+let dadosAtual = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return (location.href = 'login.html');
+
+  const nome = localStorage.getItem('usuarioNome') || '';
+  document.getElementById('tbAvatar').textContent = nome.charAt(0).toUpperCase() || '?';
+  document.getElementById('tbEmpresaNome').textContent = localStorage.getItem('empresaNome') || '—';
+
+  aplicarPreset('semana');
+  await buscar();
+});
+
+// ── Período ───────────────────────────────────────────────────────────────────
+function hoje() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+}
+
+function aplicarPreset(preset) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('on'));
+  event?.target?.classList?.add('on');
+
+  const h = new Date(hoje() + 'T12:00:00');
+  let ini, fim;
+
+  if (preset === 'semana') {
+    const diaSem = h.getDay(); // 0=dom
+    ini = new Date(h); ini.setDate(h.getDate() - (diaSem === 0 ? 6 : diaSem - 1));
+    fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+  } else if (preset === 'semana-passada') {
+    const diaSem = h.getDay();
+    const inicioEsta = new Date(h); inicioEsta.setDate(h.getDate() - (diaSem === 0 ? 6 : diaSem - 1));
+    ini = new Date(inicioEsta); ini.setDate(inicioEsta.getDate() - 7);
+    fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+  } else if (preset === 'mes') {
+    ini = new Date(h.getFullYear(), h.getMonth(), 1);
+    fim = new Date(h.getFullYear(), h.getMonth() + 1, 0);
+  }
+
+  document.getElementById('inputInicio').value = ini.toISOString().split('T')[0];
+  document.getElementById('inputFim').value    = fim.toISOString().split('T')[0];
+}
+
+async function buscar() {
+  const inicio = document.getElementById('inputInicio').value;
+  const fim    = document.getElementById('inputFim').value;
+  if (!inicio || !fim) return;
+
+  document.getElementById('loader').classList.remove('hidden');
+  document.getElementById('mainContent').classList.add('hidden');
+
+  try {
+    const data = await window.api.getDpEspelho(inicio, fim);
+    dadosAtual = data;
+    renderTudo();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('loader').innerHTML =
+      '<div style="color:#f87171;font-size:14px;padding:20px;text-align:center"><i class="fa fa-exclamation-circle" style="font-size:32px;display:block;margin-bottom:12px"></i>Erro ao carregar. Verifique se o Data Point está ativo.</div>';
+    return;
+  }
+
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderTudo() {
+  const d = dadosAtual;
+  const { inicio, fim } = d.periodo;
+
+  document.getElementById('phSub').textContent =
+    `${formatarData(inicio)} a ${formatarData(fim)} · ${d.dias.length} dias · ${d.funcionarios.length} funcionário${d.funcionarios.length !== 1 ? 's' : ''}`;
+
+  document.getElementById('cardTitulo').textContent =
+    `Espelho de Ponto — ${formatarData(inicio)} a ${formatarData(fim)}`;
+
+  renderStats(d);
+  renderTabela(d);
+}
+
+function renderStats(d) {
+  // Consolida totais de todos os funcionários
+  let totalPresente = 0, totalFalta = 0, totalParcial = 0, totalMin = 0;
+  d.funcionarios.forEach(f => {
+    totalPresente += f.totais.diasPresente;
+    totalFalta    += f.totais.diasFalta;
+    totalParcial  += f.totais.diasParcial;
+    totalMin      += f.totais.minutosTotal;
+  });
+
+  const stats = [
+    { label:'Horas trabalhadas', val: formatMin(totalMin),  icon:'fa-clock',      cor:'rgba(20,184,166,.3)',  iconCor:'#99f6e4' },
+    { label:'Presenças',         val: totalPresente,         icon:'fa-user-check', cor:'rgba(5,150,105,.3)',   iconCor:'#6ee7b7' },
+    { label:'Faltas parciais',   val: totalParcial,          icon:'fa-user-clock', cor:'rgba(217,119,6,.3)',   iconCor:'#fcd34d' },
+    { label:'Faltas',            val: totalFalta,            icon:'fa-user-times', cor:'rgba(220,38,38,.3)',   iconCor:'#fca5a5' },
+  ];
+
+  document.getElementById('statsRow').innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="sc-icon" style="background:${s.cor}">
+        <i class="fa ${s.icon}" style="color:${s.iconCor}"></i>
+      </div>
+      <div>
+        <div class="sc-val">${s.val}</div>
+        <div class="sc-label">${s.label}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderTabela(d) {
+  const container = document.getElementById('tabelaContainer');
+  const hojeStr = hoje();
+
+  if (d.funcionarios.length === 0) {
+    container.innerHTML = '<div class="empty"><i class="fa fa-users"></i><p>Nenhum funcionário ativo no período.</p></div>';
+    return;
+  }
+
+  let html = '<table class="tabela-espelho"><thead><tr>';
+  html += '<th class="col-nome">Funcionário</th>';
+
+  d.dias.forEach(dia => {
+    const dt = new Date(dia + 'T12:00:00');
+    const diaSem = DIAS_SEM[dt.getDay()];
+    const diaNum = dt.getDate();
+    const isHoje = dia === hojeStr;
+    const isFds  = dt.getDay() === 0 || dt.getDay() === 6;
+    html += `<th class="${isHoje ? 'th-hoje' : ''}" style="${isFds ? 'opacity:.55' : ''}">
+      <div class="th-dia-num">${diaNum}</div>
+      <div class="th-dia-sem">${diaSem}</div>
+    </th>`;
+  });
+
+  html += '<th class="col-total">Total</th></tr></thead><tbody>';
+
+  d.funcionarios.forEach(f => {
+    html += '<tr>';
+    html += `<td class="col-nome">
+      <div class="func-nome-cell">${f.nome}</div>
+      ${f.cargo ? `<div class="func-cargo-cell">${f.cargo}</div>` : ''}
+      <div class="func-carga-cell">${formatMin(f.cargaEsperadaMin)}/dia esperado</div>
+    </td>`;
+
+    d.dias.forEach(dia => {
+      const cell = f.dias[dia];
+      if (!cell) { html += '<td>—</td>'; return; }
+      const isHoje = dia === hojeStr;
+      html += `<td>${buildChip(cell, isHoje)}</td>`;
+    });
+
+    // Coluna total
+    const t = f.totais;
+    const saldoMin = t.saldoMin;
+    const saldoCls = saldoMin > 0 ? 'saldo-pos' : saldoMin < 0 ? 'saldo-neg' : 'saldo-zero';
+    const saldoStr = saldoMin >= 0 ? `+${formatMin(saldoMin)}` : `-${formatMin(Math.abs(saldoMin))}`;
+    html += `<td class="col-total">
+      <div class="total-min">${formatMin(t.minutosTotal)}</div>
+      <div class="total-saldo ${saldoCls}">${saldoStr}</div>
+    </td>`;
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function buildChip(cell, isHoje) {
+  const map = {
+    PRESENTE:    { cls:'chip-presente', ico:'✓',  label:'' },
+    FALTA_PARCIAL:{ cls:'chip-parcial', ico:'~',  label:'' },
+    FALTA:       { cls:'chip-falta',   ico:'✕',  label:'' },
+    FOLGA:       { cls:'chip-folga',   ico:'—',  label:'' },
+  };
+  const s = map[cell.status] || map.FOLGA;
+  const horas = cell.minutosTrabalhou > 0 ? `<span class="chip-horas">${formatMin(cell.minutosTrabalhou)}</span>` : '';
+  const tip = cell.status === 'FOLGA' ? 'Folga'
+    : cell.horaEntrada ? `${cell.horaEntrada}${cell.horaSaida ? ' → ' + cell.horaSaida : ' (aberto)'}` : '';
+  return `<div class="chip ${s.cls}${isHoje ? ' chip-hoje' : ''}" data-tip="${tip}">
+    <span>${s.ico}</span>${horas}
+  </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatMin(min) {
+  if (!min || min <= 0) return '0h';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m < 10 ? '0' : ''}${m}`;
+}
+
+function formatarData(isoStr) {
+  if (!isoStr) return '—';
+  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const d = new Date(isoStr + 'T12:00:00');
+  return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+}
+</script>
+</body>
+</html>

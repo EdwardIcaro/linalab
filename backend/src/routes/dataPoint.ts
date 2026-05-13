@@ -6,6 +6,7 @@ import {
   salvarOnboarding,
   getStatusDp,
   getDashboardDp,
+  getDpEspelho,
   getDpFuncionarios,
   criarDpFuncionario,
   atualizarDpFuncionario,
@@ -23,6 +24,7 @@ router.post('/contratar', contratarDp);
 // authMiddleware por rota — empresa scoped (extrai empresaId do JWT)
 router.get('/status',                  authMiddleware, getStatusDp);
 router.get('/dashboard',               authMiddleware, getDashboardDp);
+router.get('/espelho',                 authMiddleware, getDpEspelho);
 router.get('/onboarding/importaveis',  authMiddleware, getImportaveis);
 router.post('/onboarding/salvar',      authMiddleware, salvarOnboarding);
 
