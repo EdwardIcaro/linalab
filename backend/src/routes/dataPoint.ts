@@ -12,6 +12,13 @@ import {
   atualizarDpFuncionario,
   resetarPinDpFuncionario,
   regenerarLinkDpFuncionario,
+  atualizarConfigDp,
+  getDpAjustes,
+  responderAjuste,
+  getDpAfastamentos,
+  criarDpAfastamento,
+  atualizarDpAfastamento,
+  excluirDpAfastamento,
 } from '../controllers/dataPointController';
 import authMiddleware from '../middlewares/authMiddleware';
 
@@ -28,11 +35,24 @@ router.get('/espelho',                 authMiddleware, getDpEspelho);
 router.get('/onboarding/importaveis',  authMiddleware, getImportaveis);
 router.post('/onboarding/salvar',      authMiddleware, salvarOnboarding);
 
+// Config da empresa
+router.patch('/config', authMiddleware, atualizarConfigDp);
+
 // Funcionários CRUD
 router.get('/funcionarios',                         authMiddleware, getDpFuncionarios);
 router.post('/funcionarios',                        authMiddleware, criarDpFuncionario);
 router.put('/funcionarios/:id',                     authMiddleware, atualizarDpFuncionario);
 router.post('/funcionarios/:id/reset-pin',          authMiddleware, resetarPinDpFuncionario);
 router.post('/funcionarios/:id/regenerar-link',     authMiddleware, regenerarLinkDpFuncionario);
+
+// Ajustes
+router.get('/ajustes',         authMiddleware, getDpAjustes);
+router.put('/ajustes/:id',     authMiddleware, responderAjuste);
+
+// Afastamentos
+router.get('/afastamentos',         authMiddleware, getDpAfastamentos);
+router.post('/afastamentos',        authMiddleware, criarDpAfastamento);
+router.put('/afastamentos/:id',     authMiddleware, atualizarDpAfastamento);
+router.delete('/afastamentos/:id',  authMiddleware, excluirDpAfastamento);
 
 export default router;

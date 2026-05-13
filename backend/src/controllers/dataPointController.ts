@@ -875,3 +875,222 @@ export const regenerarLinkDpFuncionario = async (req: EmpresaRequest, res: Respo
     res.status(500).json({ error: 'Erro ao regenerar link' });
   }
 };
+
+// ─── PATCH /api/dp/config ────────────────────────────────────────────────────
+export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+
+  const {
+    nomeEmpresa, cnpj, setor, endereco,
+    lat, lng, raioGps, nivelGps,
+    jornadaEntrada, jornadaSaida, intervaloMin, toleranciaMin,
+    modoEncerramento, modoAutenticacao,
+  } = req.body;
+
+  try {
+    const sistema = await prisma.empresaSistema.findFirst({
+      where: { empresaId, sistema: 'data-point', ativo: true },
+    });
+    if (!sistema) return res.status(404).json({ error: 'Data Point não ativo para esta empresa' });
+
+    const cfgAtual = sistema.config ? JSON.parse(sistema.config as string) : {};
+
+    const cfgNovo = {
+      ...cfgAtual,
+      ...(nomeEmpresa    !== undefined && { nomeEmpresa }),
+      ...(cnpj           !== undefined && { cnpj }),
+      ...(setor          !== undefined && { setor }),
+      ...(endereco       !== undefined && { endereco }),
+      ...(lat            !== undefined && { lat: lat === '' ? null : parseFloat(lat) }),
+      ...(lng            !== undefined && { lng: lng === '' ? null : parseFloat(lng) }),
+      ...(raioGps        !== undefined && { raioGps: parseInt(raioGps) }),
+      ...(nivelGps       !== undefined && { nivelGps }),
+      ...(jornadaEntrada !== undefined && { jornadaEntrada }),
+      ...(jornadaSaida   !== undefined && { jornadaSaida }),
+      ...(intervaloMin   !== undefined && { intervaloMin: parseInt(intervaloMin) }),
+      ...(toleranciaMin  !== undefined && { toleranciaMin: parseInt(toleranciaMin) }),
+      ...(modoEncerramento !== undefined && { modoEncerramento }),
+      ...(modoAutenticacao !== undefined && { modoAutenticacao }),
+    };
+
+    await prisma.empresaSistema.update({
+      where: { id: sistema.id },
+      data: { config: JSON.stringify(cfgNovo) },
+    });
+
+    res.json({ ok: true, config: cfgNovo });
+  } catch (error) {
+    console.error('[dp] atualizarConfig:', error);
+    res.status(500).json({ error: 'Erro ao atualizar configuração' });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FASE 7 — AJUSTES E AFASTAMENTOS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /api/dp/ajustes ──────────────────────────────────────────────────────
+export const getDpAjustes = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const { status } = req.query;
+    const where: any = { empresaId };
+    if (status && status !== 'TODOS') where.status = status as string;
+
+    const ajustes = await prisma.dpAjuste.findMany({
+      where,
+      include: {
+        funcionario: { select: { id: true, nome: true, cargo: true } },
+      },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    res.json({ ajustes });
+  } catch (error) {
+    console.error('[dp] getAjustes:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── PUT /api/dp/ajustes/:id ──────────────────────────────────────────────────
+export const responderAjuste = async (req: EmpresaRequest, res: Response) => {
+  const empresaId  = (req as any).empresaId as string;
+  const usuarioNome = (req as any).usuarioNome as string;
+  const { id } = req.params as { id: string };
+  const { status, obsGestor } = req.body;
+
+  if (!['APROVADO', 'REJEITADO'].includes(status))
+    return res.status(400).json({ error: 'status deve ser APROVADO ou REJEITADO' });
+
+  try {
+    const ajuste = await prisma.dpAjuste.findFirst({ where: { id, empresaId } });
+    if (!ajuste) return res.status(404).json({ error: 'Ajuste não encontrado' });
+    if (ajuste.status !== 'PENDENTE')
+      return res.status(400).json({ error: 'Ajuste já respondido' });
+
+    const updated = await prisma.dpAjuste.update({
+      where: { id },
+      data: {
+        status,
+        obsGestor: obsGestor?.trim() || null,
+        aprovadoPor: usuarioNome || null,
+        aprovadoEm: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({ ajuste: updated });
+  } catch (error) {
+    console.error('[dp] responderAjuste:', error);
+    res.status(500).json({ error: 'Erro ao responder ajuste' });
+  }
+};
+
+// ─── GET /api/dp/afastamentos ─────────────────────────────────────────────────
+export const getDpAfastamentos = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const { funcionarioId } = req.query;
+    const where: any = { empresaId };
+    if (funcionarioId) where.funcionarioId = funcionarioId as string;
+
+    const afastamentos = await prisma.dpAfastamento.findMany({
+      where,
+      include: {
+        funcionario: { select: { id: true, nome: true, cargo: true } },
+      },
+      orderBy: { dataInicio: 'desc' },
+    });
+
+    res.json({ afastamentos });
+  } catch (error) {
+    console.error('[dp] getAfastamentos:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/dp/afastamentos ────────────────────────────────────────────────
+export const criarDpAfastamento = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  const { funcionarioId, tipo, dataInicio, dataFim, descricao } = req.body;
+  if (!funcionarioId || !tipo || !dataInicio || !dataFim)
+    return res.status(400).json({ error: 'funcionarioId, tipo, dataInicio e dataFim são obrigatórios' });
+
+  const tiposValidos = ['FERIAS', 'ATESTADO', 'LICENCA', 'FOLGA_COMP', 'OUTRO'];
+  if (!tiposValidos.includes(tipo))
+    return res.status(400).json({ error: 'Tipo inválido' });
+
+  try {
+    const func = await prisma.dpFuncionario.findFirst({ where: { id: funcionarioId, empresaId } });
+    if (!func) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const afastamento = await prisma.dpAfastamento.create({
+      data: {
+        empresaId,
+        funcionarioId,
+        tipo,
+        dataInicio,
+        dataFim,
+        descricao: descricao?.trim() || null,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json({ afastamento });
+  } catch (error) {
+    console.error('[dp] criarAfastamento:', error);
+    res.status(500).json({ error: 'Erro ao criar afastamento' });
+  }
+};
+
+// ─── PUT /api/dp/afastamentos/:id ─────────────────────────────────────────────
+export const atualizarDpAfastamento = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpAfastamento.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Afastamento não encontrado' });
+
+    const { tipo, dataInicio, dataFim, descricao } = req.body;
+
+    const afastamento = await prisma.dpAfastamento.update({
+      where: { id },
+      data: {
+        ...(tipo && { tipo }),
+        ...(dataInicio && { dataInicio }),
+        ...(dataFim && { dataFim }),
+        ...(descricao !== undefined && { descricao: descricao?.trim() || null }),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({ afastamento });
+  } catch (error) {
+    console.error('[dp] atualizarAfastamento:', error);
+    res.status(500).json({ error: 'Erro ao atualizar afastamento' });
+  }
+};
+
+// ─── DELETE /api/dp/afastamentos/:id ─────────────────────────────────────────
+export const excluirDpAfastamento = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpAfastamento.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Afastamento não encontrado' });
+
+    await prisma.dpAfastamento.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[dp] excluirAfastamento:', error);
+    res.status(500).json({ error: 'Erro ao excluir afastamento' });
+  }
+};

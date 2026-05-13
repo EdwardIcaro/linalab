@@ -561,18 +561,37 @@ export const registrarPonto = async (req: Request, res: Response) => {
       }
     }
 
-    // GPS: flag se fora do raio ou precisão suspeita
+    // GPS: validação baseada em nivelGps (BASICO | MEDIO | RIGIDO | MAXIMO)
     let gpsPrecisaoSuspeita = false;
+    let gpsForaRaio = false;
     const empLat = parseFloat(cfg.lat);
     const empLng = parseFloat(cfg.lng);
     const raioGps: number = cfg.raioGps || 80;
+    const nivelGps: string = cfg.nivelGps || 'BASICO';
+    const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
 
-    if (!gpsNegado && lat != null && lng != null && !isNaN(empLat) && !isNaN(empLng)) {
+    if (!gpsNegado && lat != null && lng != null && temLocEmpresa) {
       const dist = haversine(empLat, empLng, parseFloat(lat), parseFloat(lng));
-      if (dist > raioGps * 3) gpsPrecisaoSuspeita = true;
+      if (dist > raioGps)     gpsForaRaio = true;
+      if (dist > raioGps * 3) gpsPrecisaoSuspeita = true; // muito longe = suspeito
     }
     // Precisão sub-metro é impossível em GPS real — indica mock GPS app
     if (gpsPrecisao != null && gpsPrecisao < 1) gpsPrecisaoSuspeita = true;
+
+    // Aplicar bloqueio conforme nível de restrição
+    if (temLocEmpresa) {
+      if (nivelGps === 'RIGIDO' && !gpsNegado && gpsForaRaio) {
+        return res.status(403).json({ erro: 'Você está fora da área autorizada para registrar ponto.' });
+      }
+      if (nivelGps === 'MAXIMO') {
+        if (gpsNegado) {
+          return res.status(403).json({ erro: 'GPS obrigatório para registro de ponto. Ative a localização e tente novamente.' });
+        }
+        if (gpsForaRaio) {
+          return res.status(403).json({ erro: 'Você está fora da área autorizada para registrar ponto.' });
+        }
+      }
+    }
 
     const marcacao = await prisma.dpMarcacao.create({
       data: {
@@ -731,6 +750,76 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[portal] espelhoPortal:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/p/me/ajuste ───────────────────────────────────────────────────
+export const criarAjustePortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string;
+  const empresaId = (req as any).empresaId as string;
+  const { data, tipo, descricao } = req.body;
+
+  if (!data || !tipo || !descricao?.trim())
+    return res.status(400).json({ erro: 'data, tipo e descricao são obrigatórios' });
+
+  const tiposValidos = ['JUSTIFICAR_FALTA', 'CORRIGIR_HORA', 'OUTRO'];
+  if (!tiposValidos.includes(tipo))
+    return res.status(400).json({ erro: 'Tipo inválido' });
+
+  try {
+    const funcionario = await prisma.dpFuncionario.findFirst({
+      where: { empresaId, lavadorId, status: 'ATIVO' },
+      select: { id: true },
+    });
+    if (!funcionario)
+      return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
+
+    const existente = await prisma.dpAjuste.findFirst({
+      where: { funcionarioId: funcionario.id, data, status: 'PENDENTE' },
+    });
+    if (existente)
+      return res.status(400).json({ erro: 'Já existe um ajuste pendente para este dia.' });
+
+    const ajuste = await prisma.dpAjuste.create({
+      data: {
+        empresaId,
+        funcionarioId: funcionario.id,
+        data,
+        tipo,
+        descricao: descricao.trim(),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json({ ajuste });
+  } catch (error) {
+    console.error('[portal] criarAjuste:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── GET /api/p/me/ajustes ───────────────────────────────────────────────────
+export const getAjustesPortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string;
+  const empresaId = (req as any).empresaId as string;
+
+  try {
+    const funcionario = await prisma.dpFuncionario.findFirst({
+      where: { empresaId, lavadorId, status: 'ATIVO' },
+      select: { id: true },
+    });
+    if (!funcionario) return res.status(404).json({ erro: 'Não cadastrado no Data Point.' });
+
+    const ajustes = await prisma.dpAjuste.findMany({
+      where: { funcionarioId: funcionario.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    res.json({ ajustes });
+  } catch (error) {
+    console.error('[portal] getAjustes:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };

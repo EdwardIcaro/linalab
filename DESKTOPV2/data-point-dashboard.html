@@ -384,11 +384,107 @@
     </div>
     <div class="tb-right">
       <span class="tb-date" id="tbDate">—</span>
+      <button class="tb-icon-btn" onclick="abrirConfigEmpresa()" title="Configurações da empresa"><i class="fa fa-sliders-h"></i></button>
       <button class="tb-icon-btn" onclick="location.href='hub.html'" title="Voltar ao hub"><i class="fa fa-arrow-left"></i></button>
       <button class="tb-icon-btn" onclick="recarregar()" title="Atualizar"><i class="fa fa-sync-alt"></i></button>
       <div class="tb-avatar" id="tbAvatar">?</div>
     </div>
   </header>
+
+  <!-- ══ MODAL CONFIGURAÇÕES DA EMPRESA ══ -->
+  <div id="configModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;" onclick="fecharConfigEmpresa(event)">
+    <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;padding:0 0 32px;" onclick="event.stopPropagation()">
+      <div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:12px auto 0;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e5e7eb;">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#111827;">Configurações da Empresa</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">Data Point · Localização e Jornada</div>
+        </div>
+        <button onclick="fecharConfigEmpresa()" style="background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer;padding:4px;"><i class="fa fa-times"></i></button>
+      </div>
+      <div style="padding:20px 24px;">
+
+        <!-- Seção: Localização GPS -->
+        <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">
+          <i class="fa fa-map-marker-alt" style="color:#0d9488;margin-right:6px;"></i>Localização e GPS
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Latitude</label>
+            <input id="cfg-lat" type="number" step="any" placeholder="-23.5505"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Longitude</label>
+            <input id="cfg-lng" type="number" step="any" placeholder="-46.6333"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">
+          <i class="fa fa-info-circle" style="color:#3b82f6;margin-right:4px;"></i>
+          No Google Maps: clique com o botão direito no local da empresa → copie as coordenadas (lat, lng).
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Raio permitido (metros)</label>
+            <input id="cfg-raio" type="number" min="20" max="1000" step="10" placeholder="80"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Nível de restrição GPS</label>
+            <select id="cfg-nivel" style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+              <option value="BASICO">Básico — apenas alerta</option>
+              <option value="MEDIO">Médio — aviso no registro</option>
+              <option value="RIGIDO">Rígido — bloqueia se fora do raio</option>
+              <option value="MAXIMO">Máximo — bloqueia sem GPS</option>
+            </select>
+          </div>
+        </div>
+        <div id="cfg-nivel-desc" style="background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:11px 14px;font-size:12px;color:#0f766e;margin-bottom:20px;line-height:1.5;"></div>
+
+        <!-- Divisor -->
+        <div style="border-top:1px solid #e5e7eb;margin-bottom:20px;"></div>
+
+        <!-- Seção: Jornada -->
+        <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">
+          <i class="fa fa-clock" style="color:#0d9488;margin-right:6px;"></i>Jornada Padrão
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Entrada</label>
+            <input id="cfg-entrada" type="time"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Saída</label>
+            <input id="cfg-saida" type="time"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Intervalo (min)</label>
+            <input id="cfg-intervalo" type="number" min="0" max="120" placeholder="60"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Tolerância (min)</label>
+            <input id="cfg-tolerancia" type="number" min="0" max="60" placeholder="10"
+              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;" />
+          </div>
+        </div>
+
+        <!-- Botões -->
+        <div id="cfg-erro" style="display:none;background:#fee2e2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;font-size:13px;color:#dc2626;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="fecharConfigEmpresa()" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid #d1d5db;background:#fff;font-family:inherit;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer;">Cancelar</button>
+          <button id="cfg-salvar-btn" onclick="salvarConfigEmpresa()" style="flex:2;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i class="fa fa-check"></i> Salvar configurações
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- CONTEÚDO -->
   <main id="mainContent" class="main hidden">
@@ -905,6 +1001,116 @@ function horaAgora() {
   return new Date().toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
   });
+}
+
+// ── Configurações da empresa ──────────────────────────────────────────────────
+const NIVEL_DESC = {
+  BASICO:  'Registra o ponto de qualquer local. GPS fora do raio fica marcado como suspeito para o gestor revisar.',
+  MEDIO:   'Registra o ponto de qualquer local, mas exibe aviso ao funcionário quando fora do raio configurado.',
+  RIGIDO:  'Bloqueia o registro se o GPS indicar fora do raio. Se o funcionário negar o GPS, o ponto é registrado com flag de suspeita.',
+  MAXIMO:  'GPS obrigatório. Bloqueia o registro se GPS negado OU se estiver fora do raio. Máxima segurança.',
+};
+
+function abrirConfigEmpresa() {
+  const modal = document.getElementById('configModal');
+  const cfg = dashData?.config || {};
+
+  document.getElementById('cfg-lat').value       = cfg.lat ?? '';
+  document.getElementById('cfg-lng').value       = cfg.lng ?? '';
+  document.getElementById('cfg-raio').value      = cfg.raioGps ?? 80;
+  document.getElementById('cfg-nivel').value     = cfg.nivelGps || 'BASICO';
+  document.getElementById('cfg-entrada').value   = cfg.jornadaEntrada || '08:00';
+  document.getElementById('cfg-saida').value     = cfg.jornadaSaida || '17:00';
+  document.getElementById('cfg-intervalo').value = cfg.intervaloMin ?? 60;
+  document.getElementById('cfg-tolerancia').value= cfg.toleranciaMin ?? 10;
+  document.getElementById('cfg-erro').style.display = 'none';
+
+  atualizarDescNivel();
+  modal.style.cssText = 'display:flex;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;';
+}
+
+function fecharConfigEmpresa(e) {
+  if (e && e.target !== document.getElementById('configModal')) return;
+  document.getElementById('configModal').style.display = 'none';
+}
+
+function atualizarDescNivel() {
+  const nivel = document.getElementById('cfg-nivel').value;
+  const desc  = document.getElementById('cfg-nivel-desc');
+  const cores = {
+    BASICO:  { bg:'#f0fdfa', border:'#99f6e4', color:'#0f766e' },
+    MEDIO:   { bg:'#fffbeb', border:'#fde68a', color:'#92400e' },
+    RIGIDO:  { bg:'#fff7ed', border:'#fdba74', color:'#9a3412' },
+    MAXIMO:  { bg:'#fef2f2', border:'#fca5a5', color:'#991b1b' },
+  };
+  const c = cores[nivel] || cores.BASICO;
+  desc.style.background   = c.bg;
+  desc.style.borderColor  = c.border;
+  desc.style.color        = c.color;
+  desc.innerHTML = `<i class="fa fa-shield-alt" style="margin-right:6px;"></i>${NIVEL_DESC[nivel] || ''}`;
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'cfg-nivel') atualizarDescNivel();
+});
+
+async function salvarConfigEmpresa() {
+  const btn = document.getElementById('cfg-salvar-btn');
+  const erroEl = document.getElementById('cfg-erro');
+  erroEl.style.display = 'none';
+
+  const lat  = document.getElementById('cfg-lat').value.trim();
+  const lng  = document.getElementById('cfg-lng').value.trim();
+
+  // Validação básica de coordenadas (se preenchidas)
+  if ((lat && !lng) || (!lat && lng)) {
+    erroEl.textContent = 'Preencha lat e lng juntos, ou deixe ambos em branco.';
+    erroEl.style.display = 'block';
+    return;
+  }
+  if (lat && (parseFloat(lat) < -90 || parseFloat(lat) > 90)) {
+    erroEl.textContent = 'Latitude inválida (deve ser entre -90 e 90).';
+    erroEl.style.display = 'block';
+    return;
+  }
+  if (lng && (parseFloat(lng) < -180 || parseFloat(lng) > 180)) {
+    erroEl.textContent = 'Longitude inválida (deve ser entre -180 e 180).';
+    erroEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Salvando...';
+
+  try {
+    const payload = {
+      lat:          lat || null,
+      lng:          lng || null,
+      raioGps:      document.getElementById('cfg-raio').value,
+      nivelGps:     document.getElementById('cfg-nivel').value,
+      jornadaEntrada: document.getElementById('cfg-entrada').value,
+      jornadaSaida:   document.getElementById('cfg-saida').value,
+      intervaloMin:   document.getElementById('cfg-intervalo').value,
+      toleranciaMin:  document.getElementById('cfg-tolerancia').value,
+    };
+
+    const res = await window.api.dpAtualizarConfig(payload);
+    if (res.ok) {
+      // Atualiza dashData local para refletir imediatamente na UI
+      if (dashData && dashData.config) Object.assign(dashData.config, res.config);
+      document.getElementById('configModal').style.display = 'none';
+      renderPresencePanel(dashData);
+    } else {
+      erroEl.textContent = res.error || 'Erro ao salvar.';
+      erroEl.style.display = 'block';
+    }
+  } catch(e) {
+    erroEl.textContent = 'Erro de conexão. Tente novamente.';
+    erroEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-check"></i> Salvar configurações';
+  }
 }
 </script>
 </body>
