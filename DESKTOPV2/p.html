@@ -1179,8 +1179,10 @@ async function carregarEspelho() {
 }
 
 function renderEspelho(data) {
-  // Resumo
   const r = data.resumo;
+  const pendTotal = r.pendencias + r.totalFalta;
+
+  // Cards brancos dentro do header escuro
   document.getElementById('epSummary').innerHTML = `
     <div class="ep-sum-card">
       <div class="ep-sum-ico">⏱️</div>
@@ -1194,7 +1196,7 @@ function renderEspelho(data) {
     </div>
     <div class="ep-sum-card">
       <div class="ep-sum-ico">⚠️</div>
-      <div class="ep-sum-val ${r.pendencias > 0 ? 'alerta' : ''}">${r.pendencias + r.totalFalta}</div>
+      <div class="ep-sum-val${pendTotal > 0 ? ' alerta' : ''}">${pendTotal}</div>
       <div class="ep-sum-lbl">Pendências</div>
     </div>`;
 
@@ -1257,7 +1259,7 @@ function renderEspelho(data) {
     else if (dia.status === 'HOJE')  { subTxt = `Em curso · ${formatMinEp(dia.minutosTrabalhou)} até agora`; subCls += ' tag-hoje'; }
     else if (isHe) {
       const extra = dia.minutosTrabalhou - data.funcionario.cargaEsperadaMin;
-      subTxt = `+${formatMinEp(extra)} hora extra`; subCls += ' tag-he';
+      subTxt = `+${formatMinEp(extra)} horas extras`; subCls += ' he-tag';
     } else if (dia.minutosTrabalhou > 0) {
       subTxt = `${formatMinEp(dia.minutosTrabalhou)} trabalhadas`;
     }
@@ -1265,6 +1267,7 @@ function renderEspelho(data) {
     const totalCol = dia.minutosTrabalhou > 0 && dia.status !== 'FOLGA'
       ? `<div class="ep-total${isHe ? ' he' : ''}">${formatMinEp(dia.minutosTrabalhou)}</div>` : '';
 
+    // Estrutura fiel ao protótipo: date | vsep | body | status
     html += `
       <div class="${cardCls}">
         <div class="ep-date-col">
@@ -1272,6 +1275,7 @@ function renderEspelho(data) {
           <div class="ep-day-name">${diaNome}</div>
           ${isHoje ? '<div class="ep-hoje-pill">HOJE</div>' : ''}
         </div>
+        <div class="ep-vsep"></div>
         <div class="ep-day-body">
           <div class="ep-punches">${punchLine}</div>
           ${subTxt ? `<div class="${subCls}">${subTxt}</div>` : ''}
@@ -1284,10 +1288,29 @@ function renderEspelho(data) {
   });
 
   if (hasFuturo) {
-    html += `<div class="ep-future-txt">— Dias restantes: aguardando registros —</div>`;
+    const primFuturo = data.dias.find(d => d.status === 'FUTURO');
+    const ult = data.dias[data.dias.length - 1];
+    if (primFuturo && ult) {
+      html += `<div class="ep-future-txt">— Dias ${primFuturo.dia.slice(8)} a ${ult.dia.slice(8)}: aguardando registros —</div>`;
+    }
   }
 
   lista.innerHTML = html || '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-calendar"></i><span>Nenhum dado para este mês</span></div>';
+
+  // Seção de assinatura
+  const sigSection = document.getElementById('epSigSection');
+  if (sigSection) sigSection.style.display = data.dias.some(d => d.status !== 'FUTURO') ? 'flex' : 'none';
+}
+
+function assinarEspelho() {
+  const mes = `${MESES_PT[espelhoMes-1]} / ${espelhoAno}`;
+  if (!confirm(`Confirma a assinatura do espelho de ${mes}?\n\nAo confirmar, você declara estar ciente dos registros do período.`)) return;
+  const btn = document.querySelector('.ep-sig-btn');
+  if (btn) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Espelho assinado';
+    btn.disabled = true;
+    btn.style.background = 'linear-gradient(135deg,#047857,#059669)';
+  }
 }
 
 function formatMinEp(min) {
