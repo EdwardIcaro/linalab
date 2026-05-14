@@ -1003,16 +1003,19 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
       return ordemComLavadores!;
     });
 
-    // Enviar notificação após a transação ser bem-sucedida
     const ordemFinal = formatOrderWithLavadores(updatedOrdemResult);
-    await createNotification({
-      empresaId: req.empresaId!,
-      mensagem: `A ordem #${ordemFinal.numeroOrdem} (${ordemFinal.cliente.nome}) foi atualizada.`,
-      link: `ordens.html?id=${ordemFinal.id}`,
-      type: 'ordemEditada'
-    });
-
     res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: ordemFinal });
+
+    setImmediate(async () => {
+      try {
+        await createNotification({
+          empresaId: req.empresaId!,
+          mensagem: `A ordem #${ordemFinal.numeroOrdem} (${ordemFinal.cliente.nome}) foi atualizada.`,
+          link: `ordens.html?id=${ordemFinal.id}`,
+          type: 'ordemEditada'
+        });
+      } catch {}
+    });
   } catch (error: any) {
     console.error('Erro ao atualizar ordem de serviço:', error);
     res.status(error.message === 'Ordem de serviço não encontrada' ? 404 : 500).json({ error: error.message || 'Erro interno do servidor' });
@@ -1390,15 +1393,16 @@ export const deleteOrdem = async (req: EmpresaRequest, res: Response) => {
       }
     });
 
-    // Enviar notificação após a exclusão
-    await createNotification({
-      empresaId: req.empresaId!,
-      mensagem: `A ordem #${ordem.numeroOrdem} (${ordem.cliente.nome}) foi excluída.`,
-            type: 'ordemDeletada' // O link é opcional aqui
-    });
+    res.json({ message: 'Ordem de serviço deletada com sucesso' });
 
-    res.json({
-      message: 'Ordem de serviço deletada com sucesso'
+    setImmediate(async () => {
+      try {
+        await createNotification({
+          empresaId: req.empresaId!,
+          mensagem: `A ordem #${ordem.numeroOrdem} (${ordem.cliente.nome}) foi excluída.`,
+          type: 'ordemDeletada'
+        });
+      } catch {}
     });
   } catch (error) {
     console.error('Erro ao deletar ordem de serviço:', error);
@@ -1637,14 +1641,6 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       };
     });
 
-    // 4. Enviar notificação após a transação
-    await createNotification({
-      empresaId,
-      mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${valorFinal.toFixed(2)}${desconto > 0 ? ` (desconto: R$ ${desconto.toFixed(2)})` : ''}`,
-      link: `ordens.html?id=${ordem.id}`,
-      type: 'ordemEditada'
-    });
-
     // WhatsApp: notificar ordem finalizada (fire-and-forget)
     const metodoPrincipal = pagamentos[0]?.metodo ?? 'OUTRO';
     notifyOrdemFinalizada(empresaId, {
@@ -1654,6 +1650,17 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       valor: valorFinal,
       metodoPagamento: metodoPrincipal,
     }).catch(() => {});
+
+    setImmediate(async () => {
+      try {
+        await createNotification({
+          empresaId,
+          mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${valorFinal.toFixed(2)}${desconto > 0 ? ` (desconto: R$ ${desconto.toFixed(2)})` : ''}`,
+          link: `ordens.html?id=${ordem.id}`,
+          type: 'ordemEditada'
+        });
+      } catch {}
+    });
 
     // Resposta de sucesso
     res.status(200).json({

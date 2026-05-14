@@ -81,6 +81,8 @@ model Notificacao {
   createdAt DateTime @default(now())
   empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
+  @@index([empresaId])
+  @@index([empresaId, lida])
   @@map("notificacoes")
 }
 
@@ -316,6 +318,9 @@ model OrdemServico {
   reports              OrdemReport[]
 
   @@unique([empresaId, numeroOrdem])
+  @@index([empresaId, status])
+  @@index([empresaId, dataFim])
+  @@index([empresaId, createdAt])
   @@map("ordens_servico")
 }
 
@@ -348,6 +353,7 @@ model OrdemServicoItem {
   ordem       OrdemServico  @relation(fields: [ordemId], references: [id], onDelete: Cascade)
   servico     Servico?      @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
+  @@index([ordemId])
   @@map("ordens_servico_items")
 }
 
@@ -365,6 +371,8 @@ model Pagamento {
   empresa     Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   ordem       OrdemServico    @relation(fields: [ordemId], references: [id], onDelete: Cascade)
 
+  @@index([ordemId])
+  @@index([empresaId])
   @@map("pagamentos")
 }
 
