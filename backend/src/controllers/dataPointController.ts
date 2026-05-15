@@ -966,6 +966,39 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
 // MARCAÇÕES — CRUD ADMIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ─── GET /api/dp/marcacoes ───────────────────────────────────────────────────
+export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { funcionarioId, data } = req.query as { funcionarioId?: string; data?: string };
+
+  if (!funcionarioId || !data)
+    return res.status(400).json({ error: 'funcionarioId e data são obrigatórios' });
+
+  try {
+    const { start, end } = getDateRangeBRT(data);
+
+    const marcacoes = await prisma.dpMarcacao.findMany({
+      where: { empresaId, funcionarioId, timestamp: { gte: start, lte: end } },
+      select: { id: true, tipo: true, timestamp: true, canal: true, ajustado: true, gpsPrecisaoSuspeita: true },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    res.json({
+      marcacoes: marcacoes.map(m => ({
+        id: m.id,
+        tipo: m.tipo,
+        horaFormatada: formatHoraBRT(m.timestamp),
+        canal: m.canal,
+        ajustado: m.ajustado,
+        gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
+      })),
+    });
+  } catch (error) {
+    console.error('[dp] getMarcacoesDia:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
 // ─── POST /api/dp/marcacoes ───────────────────────────────────────────────────
 export const criarMarcacaoManual = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;

@@ -186,6 +186,10 @@
     .empty i{font-size:40px;color:var(--gray300);margin-bottom:14px;display:block}
     .empty p{font-size:13px;color:var(--gray400)}
 
+    /* Chip clicável */
+    .chip{cursor:pointer;transition:opacity .15s,transform .12s}
+    .chip:hover{opacity:.82;transform:scale(1.07)}
+
     /* Tooltip */
     [data-tip]{position:relative}
     [data-tip]:hover::after{
@@ -194,6 +198,50 @@
       background:#1e1b4b;color:white;font-size:11px;font-weight:600;
       padding:4px 9px;border-radius:8px;white-space:nowrap;z-index:10;pointer-events:none;
     }
+
+    /* Modal dia */
+    .dm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+    .dm-box{background:#fff;border-radius:22px;width:100%;max-width:420px;max-height:86vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column}
+    .dm-head{padding:18px 22px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .dm-titulo{font-size:15px;font-weight:800;color:#111827}
+    .dm-sub{font-size:12px;color:#6b7280;margin-top:2px}
+    .dm-close{width:30px;height:30px;border-radius:8px;background:#f3f4f6;border:none;cursor:pointer;font-size:13px;color:#6b7280;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:inherit}
+    .dm-close:hover{background:#e5e7eb}
+    .dm-body{padding:16px 22px;flex:1}
+    .dm-foot{padding:14px 22px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end}
+
+    /* Lista de batidas */
+    .batida-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;margin-bottom:7px;transition:background .15s}
+    .batida-row:hover{background:#f9fafb}
+    .batida-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+    .batida-ico.entrada{background:#f0fdfa;color:#0d9488}
+    .batida-ico.saida{background:#fef3c7;color:#d97706}
+    .batida-ico.manual{background:#ede9fe;color:#7c3aed}
+    .batida-tipo{font-size:12px;font-weight:700;color:#374151}
+    .batida-hora{font-size:15px;font-weight:800;color:#111827;flex:1}
+    .batida-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}
+    .tag-manual{background:#ede9fe;color:#7c3aed}
+    .tag-gps{background:#fee2e2;color:#dc2626}
+    .batida-acts{display:flex;gap:5px;flex-shrink:0}
+    .batida-act{width:28px;height:28px;border-radius:7px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:inherit;transition:all .15s}
+    .batida-act.edit{background:#eff6ff;color:#2563eb}
+    .batida-act.del{background:#fee2e2;color:#dc2626}
+    .batida-act:hover{opacity:.75}
+
+    /* Inline edit */
+    .batida-edit-form{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:7px}
+    .bef-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px}
+    .bef-field{flex:1}
+    .bef-label{font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px}
+    .bef-input,.bef-select{width:100%;padding:7px 10px;border-radius:8px;border:1.5px solid #d1d5db;font-size:13px;font-family:inherit;outline:none}
+    .bef-input:focus,.bef-select:focus{border-color:#0d9488}
+    .bef-acts{display:flex;gap:6px}
+    .bef-save{padding:7px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#14b8a6,#0f766e);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+    .bef-cancel{padding:7px 12px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+
+    /* Adicionar batida */
+    .btn-add-batida{width:100%;padding:9px;border-radius:10px;border:2px dashed #d1d5db;background:transparent;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;transition:all .15s}
+    .btn-add-batida:hover{border-color:#0d9488;color:#0d9488;background:#f0fdfa}
 
     @media(max-width:768px){
       .topbar{padding:0 16px}
@@ -278,6 +326,25 @@
     </div>
 
   </main>
+
+<!-- ══ MODAL DIA ══ -->
+<div id="modalDia" class="dm-overlay hidden">
+  <div class="dm-box" onclick="event.stopPropagation()">
+    <div class="dm-head">
+      <div>
+        <div class="dm-titulo" id="dmTitulo">—</div>
+        <div class="dm-sub" id="dmSub">—</div>
+      </div>
+      <button class="dm-close" onclick="fecharDia()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="dm-body">
+      <div id="dmConteudo"><div style="text-align:center;padding:24px;color:#9ca3af"><i class="fa fa-spinner fa-spin" style="font-size:22px"></i></div></div>
+    </div>
+    <div class="dm-foot">
+      <button onclick="fecharDia()" style="padding:9px 22px;border-radius:9px;border:1.5px solid #d1d5db;background:#fff;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const DIAS_SEM = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -431,7 +498,9 @@ function renderTabela(d) {
       const cell = f.dias[dia];
       if (!cell) { html += '<td>—</td>'; return; }
       const isHoje = dia === hojeStr;
-      html += `<td>${buildChip(cell, isHoje)}</td>`;
+      const nomeSafe = f.nome.replace(/'/g, "\\'");
+      const cargoSafe = (f.cargo || '').replace(/'/g, "\\'");
+      html += `<td style="padding:6px 4px;cursor:pointer" onclick="abrirDia('${f.id}','${nomeSafe}','${cargoSafe}','${dia}')">${buildChip(cell, isHoje)}</td>`;
     });
 
     // Coluna total
@@ -481,6 +550,187 @@ function formatarData(isoStr) {
   const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const d = new Date(isoStr + 'T12:00:00');
   return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// ── Modal dia ─────────────────────────────────────────────────────────────────
+let _diaFuncId = null, _diaFuncNome = '', _diaDia = '';
+let _marcacoesDia = [];
+let _editandoId = null;
+let _diaModificado = false;
+
+async function abrirDia(funcId, funcNome, funcCargo, dia) {
+  _diaFuncId = funcId; _diaFuncNome = funcNome; _diaDia = dia; _editandoId = null;
+
+  const dt = new Date(dia + 'T12:00:00');
+  const diaFmt = `${DIAS_SEM[dt.getDay()]}, ${dt.getDate().toString().padStart(2,'0')}/${(dt.getMonth()+1).toString().padStart(2,'0')}/${dt.getFullYear()}`;
+  document.getElementById('dmTitulo').textContent = funcNome;
+  document.getElementById('dmSub').textContent = diaFmt + (funcCargo ? ' · ' + funcCargo : '');
+  _diaModificado = false;
+  document.getElementById('modalDia').classList.remove('hidden');
+  document.getElementById('dmConteudo').innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af"><i class="fa fa-spinner fa-spin" style="font-size:22px"></i></div>';
+
+  await recarregarMarcacoesDia();
+}
+
+async function recarregarMarcacoesDia() {
+  try {
+    const data = await window.api.getDpMarcacoesDia(_diaFuncId, _diaDia);
+    _marcacoesDia = data.marcacoes || [];
+    renderMarcacoesDia();
+  } catch {
+    document.getElementById('dmConteudo').innerHTML = '<p style="color:#dc2626;font-size:13px;text-align:center;padding:20px">Erro ao carregar marcações.</p>';
+  }
+}
+
+function renderMarcacoesDia() {
+  const el = document.getElementById('dmConteudo');
+  _editandoId = null;
+
+  let html = '';
+  if (_marcacoesDia.length === 0) {
+    html += '<div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:13px"><i class="fa fa-clock" style="font-size:28px;display:block;margin-bottom:8px"></i>Nenhuma marcação neste dia.</div>';
+  } else {
+    _marcacoesDia.forEach(m => {
+      const isEntrada = m.tipo === 'ENTRADA';
+      const icoCls = m.canal === 'MANUAL' ? 'manual' : isEntrada ? 'entrada' : 'saida';
+      const ico = m.canal === 'MANUAL' ? 'fa-pencil-alt' : isEntrada ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket';
+      const tags = [
+        m.canal === 'MANUAL' ? '<span class="batida-tag tag-manual">Manual</span>' : '',
+        m.gpsPrecisaoSuspeita ? '<span class="batida-tag tag-gps">GPS suspeito</span>' : '',
+      ].filter(Boolean).join(' ');
+      html += `
+        <div class="batida-row" id="br-${m.id}">
+          <div class="batida-ico ${icoCls}"><i class="fa ${ico}"></i></div>
+          <div>
+            <div class="batida-tipo">${isEntrada ? 'Entrada' : 'Saída'}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+              <span class="batida-hora">${m.horaFormatada}</span>
+              ${tags}
+            </div>
+          </div>
+          <div class="batida-acts">
+            <button class="batida-act edit" title="Editar" onclick="editarBatida('${m.id}','${m.tipo}','${m.horaFormatada}')"><i class="fa fa-pencil-alt"></i></button>
+            <button class="batida-act del"  title="Excluir" onclick="excluirBatida('${m.id}')"><i class="fa fa-trash"></i></button>
+          </div>
+        </div>
+        <div class="batida-edit-form hidden" id="bef-${m.id}">
+          <div class="bef-row">
+            <div class="bef-field">
+              <label class="bef-label">Horário</label>
+              <input class="bef-input" type="time" id="bef-hora-${m.id}" value="${m.horaFormatada}">
+            </div>
+            <div class="bef-field">
+              <label class="bef-label">Tipo</label>
+              <select class="bef-select" id="bef-tipo-${m.id}">
+                <option value="ENTRADA" ${m.tipo === 'ENTRADA' ? 'selected' : ''}>Entrada</option>
+                <option value="SAIDA"   ${m.tipo === 'SAIDA'   ? 'selected' : ''}>Saída</option>
+              </select>
+            </div>
+          </div>
+          <div class="bef-acts">
+            <button class="bef-save" onclick="salvarEdicaoBatida('${m.id}')"><i class="fa fa-check"></i> Salvar</button>
+            <button class="bef-cancel" onclick="cancelarEdicaoBatida('${m.id}')">Cancelar</button>
+          </div>
+        </div>`;
+    });
+  }
+
+  html += `<button class="btn-add-batida" onclick="mostrarFormAdicionar()">
+    <i class="fa fa-plus"></i> Adicionar batida
+  </button>`;
+
+  html += `
+    <div class="batida-edit-form hidden" id="formAdicionar" style="margin-top:8px">
+      <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px">Nova batida manual</div>
+      <div class="bef-row">
+        <div class="bef-field">
+          <label class="bef-label">Horário</label>
+          <input class="bef-input" type="time" id="addHora">
+        </div>
+        <div class="bef-field">
+          <label class="bef-label">Tipo</label>
+          <select class="bef-select" id="addTipo">
+            <option value="ENTRADA">Entrada</option>
+            <option value="SAIDA">Saída</option>
+          </select>
+        </div>
+      </div>
+      <div class="bef-acts">
+        <button class="bef-save" onclick="confirmarAdicionar()"><i class="fa fa-check"></i> Adicionar</button>
+        <button class="bef-cancel" onclick="document.getElementById('formAdicionar').classList.add('hidden')">Cancelar</button>
+      </div>
+    </div>`;
+
+  el.innerHTML = html;
+}
+
+function fecharDia() {
+  document.getElementById('modalDia').classList.add('hidden');
+  const modificado = _diaModificado;
+  _diaFuncId = null; _marcacoesDia = []; _editandoId = null; _diaModificado = false;
+  if (modificado) buscar(); // recarrega o espelho só se houve mudanças
+}
+
+function editarBatida(id, tipo, hora) {
+  // Fecha qualquer outro form aberto
+  if (_editandoId && _editandoId !== id) cancelarEdicaoBatida(_editandoId);
+  _editandoId = id;
+  document.getElementById(`bef-${id}`).classList.remove('hidden');
+}
+
+function cancelarEdicaoBatida(id) {
+  document.getElementById(`bef-${id}`)?.classList.add('hidden');
+  if (_editandoId === id) _editandoId = null;
+}
+
+async function salvarEdicaoBatida(id) {
+  const hora = document.getElementById(`bef-hora-${id}`).value;
+  const tipo = document.getElementById(`bef-tipo-${id}`).value;
+  if (!hora) { alert('Informe o horário.'); return; }
+
+  try {
+    await window.api.editarDpMarcacao(id, { hora, data: _diaDia, tipo });
+    _diaModificado = true;
+    await recarregarMarcacoesDia();
+  } catch (e) {
+    alert(e.error || 'Erro ao salvar.');
+  }
+}
+
+async function excluirBatida(id) {
+  if (!confirm('Excluir esta marcação?')) return;
+  try {
+    await window.api.excluirDpMarcacao(id);
+    _diaModificado = true;
+    await recarregarMarcacoesDia();
+  } catch (e) {
+    alert(e.error || 'Erro ao excluir.');
+  }
+}
+
+function mostrarFormAdicionar() {
+  if (_editandoId) cancelarEdicaoBatida(_editandoId);
+  const form = document.getElementById('formAdicionar');
+  form.classList.remove('hidden');
+  // Sugestão de hora: agora em BRT ou horário de entrada/saída comum
+  const agora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+  document.getElementById('addHora').value = agora;
+  // Sugestão de tipo: inferir pelo número de marcações
+  document.getElementById('addTipo').value = _marcacoesDia.length % 2 === 0 ? 'ENTRADA' : 'SAIDA';
+}
+
+async function confirmarAdicionar() {
+  const hora = document.getElementById('addHora').value;
+  const tipo = document.getElementById('addTipo').value;
+  if (!hora) { alert('Informe o horário.'); return; }
+
+  try {
+    await window.api.criarDpMarcacaoManual({ funcionarioId: _diaFuncId, data: _diaDia, hora, tipo });
+    _diaModificado = true;
+    await recarregarMarcacoesDia();
+  } catch (e) {
+    alert(e.error || 'Erro ao adicionar batida.');
+  }
 }
 </script>
 </body>

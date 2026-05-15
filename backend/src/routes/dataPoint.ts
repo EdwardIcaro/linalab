@@ -13,6 +13,7 @@ import {
   resetarPinDpFuncionario,
   regenerarLinkDpFuncionario,
   atualizarConfigDp,
+  getMarcacoesDia,
   criarMarcacaoManual,
   editarMarcacao,
   excluirMarcacao,
@@ -49,6 +50,7 @@ router.post('/funcionarios/:id/reset-pin',          authMiddleware, resetarPinDp
 router.post('/funcionarios/:id/regenerar-link',     authMiddleware, regenerarLinkDpFuncionario);
 
 // Marcações (CRUD admin)
+router.get('/marcacoes',           authMiddleware, getMarcacoesDia);
 router.post('/marcacoes',          authMiddleware, criarMarcacaoManual);
 router.patch('/marcacoes/:id',     authMiddleware, editarMarcacao);
 router.delete('/marcacoes/:id',    authMiddleware, excluirMarcacao);

@@ -160,6 +160,7 @@ const api = {
   regenerarLinkDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/regenerar-link`, { method: 'POST' }),
 
   // Marcações admin
+  getDpMarcacoesDia: (funcionarioId, data) => fetchApi(`/dp/marcacoes?funcionarioId=${funcionarioId}&data=${data}`),
   criarDpMarcacaoManual: (data) => fetchApi('/dp/marcacoes', { method: 'POST', body: JSON.stringify(data) }),
   editarDpMarcacao: (id, data) => fetchApi(`/dp/marcacoes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   excluirDpMarcacao: (id) => fetchApi(`/dp/marcacoes/${id}`, { method: 'DELETE' }),
