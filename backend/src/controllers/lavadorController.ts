@@ -66,6 +66,8 @@ export const getLavadoresSimple = async (req: EmpresaRequest, res: Response) => 
       },
       orderBy: { nome: 'asc' },
     });
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Vary', 'Authorization');
     res.json({ lavadores });
   } catch (error) {
     console.error('Erro ao buscar lavadores (simples):', error);

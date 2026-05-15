@@ -1,14 +1,35 @@
 // Use relative URL so Vercel rewrites /api/* to the Railway backend
 const API_BASE_URL = '/api';
 
+// Endpoints marcados para buscar dado novo na próxima chamada (cache-bust após escrita)
+const _invalidatedEndpoints = new Set();
+
+function _invalidateCache(...endpoints) {
+  endpoints.forEach(ep => _invalidatedEndpoints.add(ep));
+}
+
+// Wrapper: executa fn() e invalida os endpoints informados após sucesso
+function _withCacheInvalidation(fn, ...endpoints) {
+  return async (...args) => {
+    const result = await fn(...args);
+    _invalidateCache(...endpoints);
+    return result;
+  };
+}
+
 // Função auxiliar para fazer requisições
 // SECURITY: empresaId is now embedded in the JWT token (not sent as header)
 // The token is obtained from generateScopedToken after selecting an empresa
 async function fetchApi(endpoint, options = {}) {
   const token = localStorage.getItem('token');
 
+  // Se o endpoint foi invalidado por uma escrita recente, força busca nova no servidor
+  const needsReload = _invalidatedEndpoints.has(endpoint);
+  if (needsReload) _invalidatedEndpoints.delete(endpoint);
+
   const config = {
     ...options,
+    ...(needsReload && { cache: 'reload' }),
     headers: {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -154,10 +175,11 @@ const api = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  updateEmpresa: (id, data) => fetchApi(`/empresas/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  updateEmpresa: async (id, data) => {
+    const result = await fetchApi(`/empresas/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    _invalidateCache(`/empresas/${id}`);
+    return result;
+  },
   getEmpresaById: (id) => fetchApi(`/empresas/${id}`),
 
   // ===== CLIENTES =====
@@ -181,23 +203,50 @@ const api = {
     return fetchApi(`/servicos?${params.toString()}`);
   },
   getServicosSimple: () => fetchApi('/servicos/simple'),
-  createServico: (data) => fetchApi('/servicos', { method: 'POST', body: JSON.stringify(data) }),
-  updateServico: (id, data) => fetchApi(`/servicos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteServico: (id) => fetchApi(`/servicos/${id}`, { method: 'DELETE' }),
-  
+  createServico: _withCacheInvalidation(
+    (data) => fetchApi('/servicos', { method: 'POST', body: JSON.stringify(data) }),
+    '/servicos/simple'
+  ),
+  updateServico: _withCacheInvalidation(
+    (id, data) => fetchApi(`/servicos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    '/servicos/simple'
+  ),
+  deleteServico: _withCacheInvalidation(
+    (id) => fetchApi(`/servicos/${id}`, { method: 'DELETE' }),
+    '/servicos/simple'
+  ),
+
   // ===== ADICIONAIS =====
   getAdicionais: () => fetchApi('/adicionais'),
   getAdicionaisSimple: () => fetchApi('/adicionais/simple'),
-  createAdicional: (data) => fetchApi('/adicionais', { method: 'POST', body: JSON.stringify(data) }),
-  updateAdicional: (id, data) => fetchApi(`/adicionais/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteAdicional: (id) => fetchApi(`/adicionais/${id}`, { method: 'DELETE' }),
+  createAdicional: _withCacheInvalidation(
+    (data) => fetchApi('/adicionais', { method: 'POST', body: JSON.stringify(data) }),
+    '/adicionais/simple'
+  ),
+  updateAdicional: _withCacheInvalidation(
+    (id, data) => fetchApi(`/adicionais/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    '/adicionais/simple'
+  ),
+  deleteAdicional: _withCacheInvalidation(
+    (id) => fetchApi(`/adicionais/${id}`, { method: 'DELETE' }),
+    '/adicionais/simple'
+  ),
 
   // ===== LAVADORES =====
   getLavadores: () => fetchApi('/lavadores'),
   getLavadoresSimple: () => fetchApi('/lavadores/simple'),
-  createLavador: (data) => fetchApi('/lavadores', { method: 'POST', body: JSON.stringify(data) }),
-  updateLavador: (id, data) => fetchApi(`/lavadores/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteLavador: (id) => fetchApi(`/lavadores/${id}`, { method: 'DELETE' }),
+  createLavador: _withCacheInvalidation(
+    (data) => fetchApi('/lavadores', { method: 'POST', body: JSON.stringify(data) }),
+    '/lavadores/simple'
+  ),
+  updateLavador: _withCacheInvalidation(
+    (id, data) => fetchApi(`/lavadores/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    '/lavadores/simple'
+  ),
+  deleteLavador: _withCacheInvalidation(
+    (id) => fetchApi(`/lavadores/${id}`, { method: 'DELETE' }),
+    '/lavadores/simple'
+  ),
   gerarTokenLavador: (id, duration = '24') => fetchApi(`/lavadores/${id}/token`, {
     method: 'POST',
     body: JSON.stringify({ duration })

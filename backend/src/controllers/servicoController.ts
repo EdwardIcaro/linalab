@@ -226,6 +226,8 @@ export const getServicosSimple = async (req: EmpresaRequest, res: Response) => {
       }
     });
 
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Vary', 'Authorization');
     res.json({ servicos });
   } catch (error) {
     console.error('Erro ao listar serviços:', error);
@@ -255,6 +257,8 @@ export const getAdicionaisSimple = async (req: EmpresaRequest, res: Response) =>
       }
     });
 
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Vary', 'Authorization');
     res.json({ adicionais });
   } catch (error) {
     console.error('Erro ao listar serviços adicionais (simples):', error);

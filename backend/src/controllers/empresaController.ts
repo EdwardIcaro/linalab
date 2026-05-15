@@ -214,6 +214,8 @@ export const getEmpresaById = async (req: EmpresaRequest, res: Response) => {
       return res.status(404).json({ error: 'Empresa não encontrada' });
     }
 
+    res.set('Cache-Control', 'private, max-age=120');
+    res.set('Vary', 'Authorization');
     res.json(parseEmpresaConfig(empresa));
   } catch (error) {
     console.error('Erro ao buscar empresa:', error);

@@ -14,6 +14,8 @@ export const getFornecedores = async (req: EmpresaRequest, res: Response) => {
       where: { empresaId: req.empresaId },
       orderBy: { nome: 'asc' },
     });
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Vary', 'Authorization');
     res.json(fornecedores);
   } catch (error) {
     console.error('Erro ao buscar fornecedores:', error);

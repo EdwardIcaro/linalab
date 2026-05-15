@@ -42,6 +42,8 @@ export const getAdicionaisSimple = async (req: EmpresaRequest, res: Response) =>
         select: { id: true, nome: true, preco: true },
         orderBy: { nome: 'asc' },
       });
+      res.set('Cache-Control', 'private, max-age=300');
+      res.set('Vary', 'Authorization');
       res.json({ adicionais });
     } catch (error) {
       res.status(500).json({ error: 'Erro ao buscar adicionais.' });
