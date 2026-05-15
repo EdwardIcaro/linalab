@@ -1,5 +1,22 @@
 import prisma from '../db';
 
+// Cache em memória das preferências de notificação por empresa (5 min TTL)
+const PREFS_CACHE_TTL = 5 * 60 * 1000;
+const prefsCache = new Map<string, { prefs: Record<string, boolean>; expiresAt: number }>();
+
+function getCachedPrefs(empresaId: string): Record<string, boolean> | null {
+  const entry = prefsCache.get(empresaId);
+  if (!entry || Date.now() > entry.expiresAt) {
+    prefsCache.delete(empresaId);
+    return null;
+  }
+  return entry.prefs;
+}
+
+function setCachedPrefs(empresaId: string, prefs: Record<string, boolean>): void {
+  prefsCache.set(empresaId, { prefs, expiresAt: Date.now() + PREFS_CACHE_TTL });
+}
+
 // Adicionando um tipo para as preferências de notificação
 export type NotificationPreference = 'ordemCriada' | 'ordemEditada' | 'ordemDeletada' | 'finalizacaoAutomatica';
 
@@ -16,20 +33,25 @@ interface NotificationData {
  */
 export const createNotification = async (data: NotificationData) => {
   try {
-    // 1. Buscar a empresa e suas preferências
-    const empresa = await prisma.empresa.findUnique({
-      where: { id: data.empresaId },
-      select: { notificationPreferences: true },
-    });
+    // 1. Buscar preferências da empresa (com cache de 5 min)
+    let prefs = getCachedPrefs(data.empresaId);
 
-    // Se não encontrar a empresa, não faz nada.
-    if (!empresa) {
-      console.log(`Empresa ${data.empresaId} não encontrada para checar preferências de notificação.`);
-      return;
+    if (!prefs) {
+      const empresa = await prisma.empresa.findUnique({
+        where: { id: data.empresaId },
+        select: { notificationPreferences: true },
+      });
+
+      if (!empresa) {
+        console.log(`Empresa ${data.empresaId} não encontrada para checar preferências de notificação.`);
+        return;
+      }
+
+      prefs = typeof empresa.notificationPreferences === 'object' && empresa.notificationPreferences !== null
+        ? (empresa.notificationPreferences as Record<string, boolean>)
+        : {};
+      setCachedPrefs(data.empresaId, prefs);
     }
-
-    // Garante que prefs seja um objeto, mesmo que notificationPreferences seja nulo ou não seja um objeto.
-    const prefs: Record<string, boolean> = typeof empresa.notificationPreferences === 'object' && empresa.notificationPreferences !== null ? (empresa.notificationPreferences as Record<string, boolean>) : {};
 
     // Por padrão, a notificação é ativa, a menos que seja explicitamente desativada.
     // A exceção é 'ordemDeletada', que é desativada por padrão.

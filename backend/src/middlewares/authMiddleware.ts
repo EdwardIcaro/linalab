@@ -2,6 +2,29 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../db';
 
+// Cache em memória para validação de autenticação (evita 1 query Neon por request)
+const AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+interface AuthCacheEntry {
+  data: any;
+  expiresAt: number;
+}
+
+const authCache = new Map<string, AuthCacheEntry>();
+
+function getCachedAuth(key: string): any | null {
+  const entry = authCache.get(key);
+  if (!entry || Date.now() > entry.expiresAt) {
+    authCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedAuth(key: string, data: any): void {
+  authCache.set(key, { data, expiresAt: Date.now() + AUTH_CACHE_TTL });
+}
+
 /**
  * JWT Token Payload Structure
  */
@@ -81,21 +104,18 @@ const authMiddleware = async (
 
     // 4b. Subaccount token validation
     if (decoded.subaccountId) {
-      const subaccount = await prisma.subaccount.findFirst({
-        where: {
-          id: decoded.subaccountId,
-          empresaId: decoded.empresaId
-        },
-        include: {
-          empresa: {
-            select: {
-              id: true,
-              nome: true,
-              ativo: true
-            }
+      const subCacheKey = `sub:${decoded.subaccountId}`;
+      let subaccount = getCachedAuth(subCacheKey);
+
+      if (!subaccount) {
+        subaccount = await prisma.subaccount.findFirst({
+          where: { id: decoded.subaccountId, empresaId: decoded.empresaId },
+          include: {
+            empresa: { select: { id: true, nome: true, ativo: true } }
           }
-        }
-      });
+        });
+        if (subaccount) setCachedAuth(subCacheKey, subaccount);
+      }
 
       if (!subaccount || !subaccount.empresa?.ativo) {
         return res.status(403).json({
@@ -116,28 +136,20 @@ const authMiddleware = async (
     }
 
     // 5. CRITICAL: TENANT ISOLATION - Verify user owns/belongs to this empresa
-    // This prevents VERTICAL PRIVILEGE ESCALATION attacks where:
-    // - User A tries to access Company B's data
-    // - User was removed from empresa after token was issued
-    // - Empresa was deleted/deactivated
-    // - Token was forged/tampered with (prevented by JWT signature)
-    //
-    // SECURITY NOTE: This query validates THREE critical conditions:
-    // 1. Empresa exists (id match)
-    // 2. User is the owner (usuarioId match)
-    // 3. Empresa is active (ativo = true)
-    const empresa = await prisma.empresa.findFirst({
-      where: {
-        id: decoded.empresaId,
-        usuarioId: decoded.id,  // CRITICAL: Must be owner of this empresa
-        ativo: true,            // CRITICAL: Must be active
-      },
-      select: {
-        id: true,
-        nome: true,
-        usuarioId: true, // Include for double-verification
-      }
-    });
+    const empCacheKey = `emp:${decoded.id}:${decoded.empresaId}`;
+    let empresa = getCachedAuth(empCacheKey);
+
+    if (!empresa) {
+      empresa = await prisma.empresa.findFirst({
+        where: {
+          id: decoded.empresaId,
+          usuarioId: decoded.id,
+          ativo: true,
+        },
+        select: { id: true, nome: true, usuarioId: true }
+      });
+      if (empresa) setCachedAuth(empCacheKey, empresa);
+    }
 
     if (!empresa) {
       console.warn(
@@ -151,8 +163,7 @@ const authMiddleware = async (
       });
     }
 
-    // 6. DOUBLE VERIFICATION: Ensure usuarioId from DB matches token
-    // This is paranoid checking but adds an extra security layer
+    // 6. DOUBLE VERIFICATION
     if (empresa.usuarioId !== decoded.id) {
       console.error(
         `[SECURITY CRITICAL] Database inconsistency detected: ` +
