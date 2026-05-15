@@ -159,6 +159,11 @@ const api = {
   resetarPinDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/reset-pin`, { method: 'POST' }),
   regenerarLinkDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/regenerar-link`, { method: 'POST' }),
 
+  // Marcações admin
+  criarDpMarcacaoManual: (data) => fetchApi('/dp/marcacoes', { method: 'POST', body: JSON.stringify(data) }),
+  editarDpMarcacao: (id, data) => fetchApi(`/dp/marcacoes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  excluirDpMarcacao: (id) => fetchApi(`/dp/marcacoes/${id}`, { method: 'DELETE' }),
+
   // Ajustes
   getDpAjustes: (status) => fetchApi(`/dp/ajustes${status && status !== 'TODOS' ? `?status=${status}` : ''}`),
   responderAjuste: (id, data) => fetchApi(`/dp/ajustes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

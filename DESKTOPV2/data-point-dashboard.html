@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="/api.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
   <style>
     :root {
       --teal800: #064e3b; --teal700: #0f766e; --teal600: #0d9488;
@@ -340,6 +342,51 @@
     .empty i    { font-size: 36px; color: var(--gray300); margin-bottom: 12px; display: block; }
     .empty p    { font-size: 13px; color: var(--gray400); }
 
+    /* ── PUNCH ACTIONS ── */
+    .punch-event { position: relative; }
+    .pe-actions { display: none; position: absolute; top: -5px; right: -5px; background: #fff; border: 1px solid var(--gray200); border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,.15); z-index: 20; flex-direction: row; gap: 2px; padding: 2px; }
+    .punch-event:hover .pe-actions { display: flex; }
+    .pe-act-btn { width: 22px; height: 22px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: inherit; }
+    .pe-act-edit { background: var(--blue-bg); color: var(--blue); }
+    .pe-act-del  { background: var(--red-bg);  color: var(--red); }
+    .pe-act-btn:hover { opacity: .75; }
+    .ca-btn-manual { padding: 6px 13px; border-radius: 8px; border: 1px solid var(--teal500); background: var(--teal50); color: var(--teal700); font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px; transition: all .15s; }
+    .ca-btn-manual:hover { background: var(--teal100); }
+
+    /* ── CONFIG MAP ── */
+    #cfgMapWrap { margin-bottom: 12px; }
+    #cfgSearchRow { display: flex; gap: 8px; margin-bottom: 8px; }
+    #cfgSearch { flex: 1; border: 1.5px solid #d1d5db; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; }
+    #cfgSearch:focus { border-color: #0d9488; }
+    #cfgSearchBtn { padding: 9px 14px; border-radius: 10px; border: 1.5px solid #0d9488; background: #f0fdfa; color: #0f766e; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    #cfgSearchBtn:hover { background: #ccfbf1; }
+    #cfgMapContainer { width: 100%; height: 180px; border-radius: 12px; overflow: hidden; border: 1.5px solid #d1d5db; margin-bottom: 6px; }
+    #cfgCoordDisplay { font-size: 11px; color: #6b7280; padding: 4px 2px; }
+
+    /* ── MODAL ── */
+    .modal-over { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal-box  { background: #fff; border-radius: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #e5e7eb; }
+    .modal-htitle { font-size: 16px; font-weight: 800; color: #111827; }
+    .modal-hclose { width: 30px; height: 30px; border-radius: 8px; background: #f3f4f6; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 13px; font-family: inherit; }
+    .modal-hclose:hover { background: #e5e7eb; }
+    .modal-body { padding: 20px 24px; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 24px; border-top: 1px solid #e5e7eb; }
+    .mf-group { margin-bottom: 14px; }
+    .mf-label { font-size: 12px; font-weight: 700; color: #374151; display: block; margin-bottom: 5px; }
+    .mf-input, .mf-select { width: 100%; padding: 9px 12px; border-radius: 9px; border: 1.5px solid #d1d5db; font-size: 13px; font-family: inherit; outline: none; color: #111827; }
+    .mf-input:focus, .mf-select:focus { border-color: #0d9488; }
+    .mf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mf-tipo-row { display: flex; gap: 8px; }
+    .mf-tipo-btn { flex: 1; padding: 9px; border-radius: 9px; border: 1.5px solid #d1d5db; background: #fff; color: #6b7280; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .mf-tipo-btn.on.entrada { background: #f0fdfa; border-color: #0d9488; color: #0f766e; }
+    .mf-tipo-btn.on.saida   { background: #fef3c7; border-color: #d97706; color: #92400e; }
+    .btn-cancel-sm { padding: 9px 18px; border-radius: 9px; border: 1.5px solid #d1d5db; background: #fff; color: #6b7280; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-save-sm { padding: 9px 22px; border-radius: 9px; background: linear-gradient(135deg,#14b8a6,#0f766e); border: none; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; min-width: 100px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-save-sm:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-del-sm { padding: 9px 18px; border-radius: 9px; background: #fee2e2; border: 1.5px solid #fca5a5; color: #dc2626; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-del-sm:hover { background: #fca5a5; }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 1100px) {
       .content-grid { grid-template-columns: 1fr; }
@@ -409,21 +456,13 @@
           <i class="fa fa-map-marker-alt" style="color:#0d9488;margin-right:6px;"></i>Localização e GPS
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Latitude</label>
-            <input id="cfg-lat" type="number" step="any" placeholder="-23.5505"
-              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" />
+        <div id="cfgMapWrap">
+          <div id="cfgSearchRow">
+            <input id="cfgSearch" type="text" placeholder="Buscar endereço da empresa...">
+            <button id="cfgSearchBtn" onclick="cfgGeocodificar()"><i class="fa fa-search"></i> Localizar</button>
           </div>
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Longitude</label>
-            <input id="cfg-lng" type="number" step="any" placeholder="-46.6333"
-              style="width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" />
-          </div>
-        </div>
-        <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">
-          <i class="fa fa-info-circle" style="color:#3b82f6;margin-right:4px;"></i>
-          No Google Maps: clique com o botão direito no local da empresa → copie as coordenadas (lat, lng).
+          <div id="cfgMapContainer"></div>
+          <div id="cfgCoordDisplay"><i class="fa fa-map-pin" style="color:#0d9488;margin-right:4px;"></i>Arraste o marcador para ajustar a posição exata.</div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
@@ -486,6 +525,82 @@
     </div>
   </div>
 
+  <!-- ══ MODAL PONTO MANUAL ══ -->
+  <div id="modalPontoManual" class="modal-over hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-htitle"><i class="fa fa-fingerprint" style="color:#0d9488;margin-right:8px"></i>Registrar Ponto Manual</div>
+        <button class="modal-hclose" onclick="fecharPontoManual()"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:10px 14px;font-size:12px;color:#0f766e;margin-bottom:16px;line-height:1.5">
+          <i class="fa fa-info-circle" style="margin-right:5px"></i>
+          Use para registrar ponto de funcionário que não conseguiu acessar o portal. A marcação fica identificada como <strong>MANUAL</strong>.
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Funcionário <span style="color:#dc2626">*</span></label>
+          <select class="mf-select" id="pmFuncId"></select>
+        </div>
+        <div class="mf-row">
+          <div class="mf-group">
+            <label class="mf-label">Data <span style="color:#dc2626">*</span></label>
+            <input class="mf-input" type="date" id="pmData">
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Horário <span style="color:#dc2626">*</span></label>
+            <input class="mf-input" type="time" id="pmHora">
+          </div>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Tipo <span style="color:#dc2626">*</span></label>
+          <div class="mf-tipo-row">
+            <button class="mf-tipo-btn on entrada" id="pmBtnEntrada" onclick="selecionarTipoPM('ENTRADA')"><i class="fa fa-arrow-right-to-bracket"></i> Entrada</button>
+            <button class="mf-tipo-btn saida" id="pmBtnSaida" onclick="selecionarTipoPM('SAIDA')"><i class="fa fa-arrow-right-from-bracket"></i> Saída</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-cancel-sm" onclick="fecharPontoManual()">Cancelar</button>
+        <button class="btn-save-sm" id="pmSalvarBtn" onclick="salvarPontoManual()"><i class="fa fa-check"></i> Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL EDITAR MARCAÇÃO ══ -->
+  <div id="modalEditarMarcacao" class="modal-over hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-htitle"><i class="fa fa-pencil-alt" style="color:#2563eb;margin-right:8px"></i>Editar Marcação</div>
+        <button class="modal-hclose" onclick="fecharEditarMarcacao()"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="emFuncInfo" style="background:#f3f4f6;border-radius:10px;padding:10px 14px;font-size:13px;color:#374151;margin-bottom:16px"></div>
+        <div class="mf-row">
+          <div class="mf-group">
+            <label class="mf-label">Data</label>
+            <input class="mf-input" type="date" id="emData">
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Novo horário <span style="color:#dc2626">*</span></label>
+            <input class="mf-input" type="time" id="emHora">
+          </div>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Tipo</label>
+          <div class="mf-tipo-row">
+            <button class="mf-tipo-btn on entrada" id="emBtnEntrada" onclick="selecionarTipoEM('ENTRADA')"><i class="fa fa-arrow-right-to-bracket"></i> Entrada</button>
+            <button class="mf-tipo-btn saida" id="emBtnSaida" onclick="selecionarTipoEM('SAIDA')"><i class="fa fa-arrow-right-from-bracket"></i> Saída</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-del-sm" onclick="excluirMarcacaoConfirm()"><i class="fa fa-trash"></i> Excluir</button>
+        <button class="btn-cancel-sm" onclick="fecharEditarMarcacao()">Cancelar</button>
+        <button class="btn-save-sm" id="emSalvarBtn" onclick="salvarEditarMarcacao()"><i class="fa fa-check"></i> Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CONTEÚDO -->
   <main id="mainContent" class="main hidden">
 
@@ -526,7 +641,10 @@
             <div class="ct-icon ct-teal"><i class="fa fa-list"></i></div>
             Sequência de Batidas
           </div>
-          <div class="card-actions" id="punchBadges"></div>
+          <div class="card-actions" style="display:flex;align-items:center;gap:10px">
+            <div id="punchBadges" style="display:flex;gap:8px;align-items:center"></div>
+            <button class="ca-btn-manual" onclick="abrirPontoManual()"><i class="fa fa-plus"></i> Ponto manual</button>
+          </div>
         </div>
 
         <div class="concept-note">
@@ -837,6 +955,7 @@ function buildPunchTimeline(marcacoes, estado, config) {
 
   let html = '<div class="punch-timeline">';
   const jornadaSaidaMin = horaParaMin(config.jornadaSaida);
+  const dataHoje = dashData?.dataHoje || '';
 
   marcacoes.forEach((m, i) => {
     const isEntrada = m.tipo === 'ENTRADA';
@@ -853,15 +972,24 @@ function buildPunchTimeline(marcacoes, estado, config) {
     else if (isEntrada && i > 0) contexto = '↑ retorno';
     else if (!isEntrada && isUltima && estado === 'ENCERROU') contexto = '↑ encerrou';
     if (m.gpsPrecisaoSuspeita) contexto = 'GPS suspeito';
+    if (m.canal === 'MANUAL') contexto = 'manual';
+
+    // Escapa para uso inline no onclick
+    const mid = m.id || '';
+    const hora = m.horaFormatada || '';
 
     if (i > 0) html += '<div class="pt-arrow"><i class="fa fa-chevron-right"></i></div>';
     html += `
       <div class="punch-event">
         <div class="pe-chip ${chipClass}">
-          <i class="fa ${isEntrada ? 'fa-arrow-right' : 'fa-arrow-left'}"></i> ${m.horaFormatada}
+          <i class="fa ${isEntrada ? 'fa-arrow-right' : 'fa-arrow-left'}"></i> ${hora}
         </div>
         <div class="pe-label">${isEntrada ? 'Entrada' : 'Saída'}</div>
         ${contexto ? `<div class="pe-context" ${m.gpsPrecisaoSuspeita ? 'style="color:var(--red)"' : ''}>${contexto}</div>` : ''}
+        ${mid ? `<div class="pe-actions">
+          <button class="pe-act-btn pe-act-edit" title="Editar" onclick="event.stopPropagation();abrirEditarMarcacao('${mid}','${m.tipo}','${hora}','${dataHoje}')"><i class="fa fa-pencil-alt"></i></button>
+          <button class="pe-act-btn pe-act-del"  title="Excluir" onclick="event.stopPropagation();_editandoMid='${mid}';excluirMarcacaoConfirm()"><i class="fa fa-times"></i></button>
+        </div>` : ''}
       </div>`;
   });
 
@@ -1002,6 +1130,132 @@ function horaAgora() {
   });
 }
 
+// ── Ponto Manual ──────────────────────────────────────────────────────────────
+let _pmTipo = 'ENTRADA';
+
+async function abrirPontoManual() {
+  // Popula lista de funcionários
+  const sel = document.getElementById('pmFuncId');
+  const funcs = dashData?.funcionarios || [];
+  sel.innerHTML = funcs.map(f => `<option value="${f.id}">${f.nome}${f.cargo ? ' · ' + f.cargo : ''}</option>`).join('');
+  if (!sel.innerHTML) sel.innerHTML = '<option value="">Nenhum funcionário</option>';
+
+  // Data e hora padrão: agora em BRT
+  const agora = new Date();
+  const dataBRT = agora.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const horaBRT = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  document.getElementById('pmData').value = dataBRT;
+  document.getElementById('pmHora').value = horaBRT;
+
+  _pmTipo = 'ENTRADA';
+  document.getElementById('pmBtnEntrada').className = 'mf-tipo-btn on entrada';
+  document.getElementById('pmBtnSaida').className   = 'mf-tipo-btn saida';
+
+  document.getElementById('modalPontoManual').classList.remove('hidden');
+}
+
+function fecharPontoManual() {
+  document.getElementById('modalPontoManual').classList.add('hidden');
+}
+
+function selecionarTipoPM(tipo) {
+  _pmTipo = tipo;
+  document.getElementById('pmBtnEntrada').className = `mf-tipo-btn${tipo === 'ENTRADA' ? ' on entrada' : ''}`;
+  document.getElementById('pmBtnSaida').className   = `mf-tipo-btn${tipo === 'SAIDA'   ? ' on saida'   : ''}`;
+}
+
+async function salvarPontoManual() {
+  const funcionarioId = document.getElementById('pmFuncId').value;
+  const data = document.getElementById('pmData').value;
+  const hora = document.getElementById('pmHora').value;
+  if (!funcionarioId || !data || !hora) { alert('Preencha todos os campos.'); return; }
+
+  const btn = document.getElementById('pmSalvarBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+
+  try {
+    await window.api.criarDpMarcacaoManual({ funcionarioId, data, hora, tipo: _pmTipo });
+    fecharPontoManual();
+    await carregarDashboard();
+  } catch (e) {
+    alert(e.error || 'Erro ao registrar ponto manual.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-check"></i> Registrar';
+  }
+}
+
+// ── Editar / Excluir Marcação ──────────────────────────────────────────────────
+let _editandoMid = null;
+let _emTipo = 'ENTRADA';
+
+function abrirEditarMarcacao(id, tipo, horaFormatada, data) {
+  _editandoMid = id;
+  _emTipo = tipo;
+
+  // Preenche info do funcionário a partir do dashData
+  const func = (dashData?.funcionarios || []).find(f =>
+    (f.marcacoesHoje || []).some(m => m.id === id)
+  );
+  document.getElementById('emFuncInfo').innerHTML = func
+    ? `<strong>${func.nome}</strong>${func.cargo ? ' · ' + func.cargo : ''} — marcação ${tipo === 'ENTRADA' ? 'de Entrada' : 'de Saída'} às <strong>${horaFormatada}</strong>`
+    : `Marcação ${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} às ${horaFormatada}`;
+
+  document.getElementById('emData').value = data || '';
+  document.getElementById('emHora').value = horaFormatada || '';
+
+  document.getElementById('emBtnEntrada').className = `mf-tipo-btn${tipo === 'ENTRADA' ? ' on entrada' : ''}`;
+  document.getElementById('emBtnSaida').className   = `mf-tipo-btn${tipo === 'SAIDA'   ? ' on saida'   : ''}`;
+
+  document.getElementById('modalEditarMarcacao').classList.remove('hidden');
+}
+
+function fecharEditarMarcacao() {
+  document.getElementById('modalEditarMarcacao').classList.add('hidden');
+  _editandoMid = null;
+}
+
+function selecionarTipoEM(tipo) {
+  _emTipo = tipo;
+  document.getElementById('emBtnEntrada').className = `mf-tipo-btn${tipo === 'ENTRADA' ? ' on entrada' : ''}`;
+  document.getElementById('emBtnSaida').className   = `mf-tipo-btn${tipo === 'SAIDA'   ? ' on saida'   : ''}`;
+}
+
+async function salvarEditarMarcacao() {
+  const hora = document.getElementById('emHora').value;
+  const data = document.getElementById('emData').value;
+  if (!hora) { alert('Informe o novo horário.'); return; }
+
+  const btn = document.getElementById('emSalvarBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+
+  try {
+    await window.api.editarDpMarcacao(_editandoMid, { hora, data: data || undefined, tipo: _emTipo });
+    fecharEditarMarcacao();
+    await carregarDashboard();
+  } catch (e) {
+    alert(e.error || 'Erro ao editar marcação.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-check"></i> Salvar';
+  }
+}
+
+async function excluirMarcacaoConfirm() {
+  if (!_editandoMid) return;
+  if (!confirm('Excluir esta marcação? Essa ação não pode ser desfeita.')) return;
+
+  try {
+    await window.api.excluirDpMarcacao(_editandoMid);
+    fecharEditarMarcacao();
+    await carregarDashboard();
+  } catch (e) {
+    alert(e.error || 'Erro ao excluir marcação.');
+  }
+}
+
 // ── Configurações da empresa ──────────────────────────────────────────────────
 const NIVEL_DESC = {
   BASICO:  'Registra o ponto de qualquer local. GPS fora do raio fica marcado como suspeito para o gestor revisar.',
@@ -1010,12 +1264,70 @@ const NIVEL_DESC = {
   MAXIMO:  'GPS obrigatório. Bloqueia o registro se GPS negado OU se estiver fora do raio. Máxima segurança.',
 };
 
+// ── Mapa config ───────────────────────────────────────────────────────────────
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZWR3YXJkaWNhcm8iLCJhIjoiY21wMG41eDYyMDBvNjJyb3A1YXNjMDIwYyJ9.4yAPg_a90_9v3MBuFU71qQ';
+let cfgMap = null, cfgMarker = null, cfgMapLat = null, cfgMapLng = null;
+
+function cfgIniciarMapa(lat, lng) {
+  const defaultLat = lat ?? -3.1019, defaultLng = lng ?? -60.0261;
+  cfgMapLat = defaultLat; cfgMapLng = defaultLng;
+
+  if (!cfgMap) {
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    cfgMap = new mapboxgl.Map({
+      container: 'cfgMapContainer',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [defaultLng, defaultLat], zoom: 15, language: 'pt',
+    });
+    cfgMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+    cfgMarker = new mapboxgl.Marker({ color: '#0d9488', draggable: true })
+      .setLngLat([defaultLng, defaultLat]).addTo(cfgMap);
+    cfgMarker.on('dragend', () => {
+      const pos = cfgMarker.getLngLat();
+      cfgMapLat = pos.lat; cfgMapLng = pos.lng;
+      cfgAtualizarCoordDisplay();
+    });
+  } else {
+    cfgMap.flyTo({ center: [defaultLng, defaultLat], zoom: 15 });
+    cfgMarker.setLngLat([defaultLng, defaultLat]);
+  }
+  cfgAtualizarCoordDisplay();
+  setTimeout(() => cfgMap.resize(), 60);
+}
+
+function cfgAtualizarCoordDisplay() {
+  const el = document.getElementById('cfgCoordDisplay');
+  if (!el) return;
+  if (cfgMapLat != null && cfgMapLng != null) {
+    el.innerHTML = `<i class="fa fa-map-pin" style="color:#0d9488;margin-right:4px;"></i><strong>${cfgMapLat.toFixed(6)}, ${cfgMapLng.toFixed(6)}</strong> &nbsp;·&nbsp; Arraste o marcador para ajustar`;
+  } else {
+    el.innerHTML = '<i class="fa fa-map-pin" style="color:#0d9488;margin-right:4px;"></i>Nenhuma localização definida';
+  }
+}
+
+async function cfgGeocodificar() {
+  const end = document.getElementById('cfgSearch').value.trim();
+  if (!end) return;
+  const btn = document.getElementById('cfgSearchBtn');
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+  try {
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(end)}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=BR&limit=1`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!data.features?.length) { alert('Endereço não encontrado.'); return; }
+    const [lng, lat] = data.features[0].center;
+    cfgMapLat = lat; cfgMapLng = lng;
+    cfgMap.flyTo({ center: [lng, lat], zoom: 17, speed: 1.4 });
+    cfgMarker.setLngLat([lng, lat]);
+    cfgAtualizarCoordDisplay();
+  } catch { alert('Erro ao buscar endereço.'); }
+  finally { btn.innerHTML = '<i class="fa fa-search"></i> Localizar'; }
+}
+
 function abrirConfigEmpresa() {
   const modal = document.getElementById('configModal');
   const cfg = dashData?.config || {};
 
-  document.getElementById('cfg-lat').value       = cfg.lat ?? '';
-  document.getElementById('cfg-lng').value       = cfg.lng ?? '';
   document.getElementById('cfg-raio').value      = cfg.raioGps ?? 80;
   document.getElementById('cfg-nivel').value     = cfg.nivelGps || 'BASICO';
   document.getElementById('cfg-entrada').value   = cfg.jornadaEntrada || '08:00';
@@ -1026,6 +1338,12 @@ function abrirConfigEmpresa() {
 
   atualizarDescNivel();
   modal.style.cssText = 'display:flex;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;';
+
+  // Inicializa mapa após o modal ficar visível
+  const lat = cfg.lat != null ? parseFloat(cfg.lat) : null;
+  const lng = cfg.lng != null ? parseFloat(cfg.lng) : null;
+  if (cfg.endereco) document.getElementById('cfgSearch').value = cfg.endereco;
+  setTimeout(() => cfgIniciarMapa(lat, lng), 80);
 }
 
 function fecharConfigEmpresa(e) {
@@ -1058,35 +1376,15 @@ async function salvarConfigEmpresa() {
   const erroEl = document.getElementById('cfg-erro');
   erroEl.style.display = 'none';
 
-  const lat  = document.getElementById('cfg-lat').value.trim();
-  const lng  = document.getElementById('cfg-lng').value.trim();
-
-  // Validação básica de coordenadas (se preenchidas)
-  if ((lat && !lng) || (!lat && lng)) {
-    erroEl.textContent = 'Preencha lat e lng juntos, ou deixe ambos em branco.';
-    erroEl.style.display = 'block';
-    return;
-  }
-  if (lat && (parseFloat(lat) < -90 || parseFloat(lat) > 90)) {
-    erroEl.textContent = 'Latitude inválida (deve ser entre -90 e 90).';
-    erroEl.style.display = 'block';
-    return;
-  }
-  if (lng && (parseFloat(lng) < -180 || parseFloat(lng) > 180)) {
-    erroEl.textContent = 'Longitude inválida (deve ser entre -180 e 180).';
-    erroEl.style.display = 'block';
-    return;
-  }
-
   btn.disabled = true;
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Salvando...';
 
   try {
     const payload = {
-      lat:          lat || null,
-      lng:          lng || null,
-      raioGps:      document.getElementById('cfg-raio').value,
-      nivelGps:     document.getElementById('cfg-nivel').value,
+      lat:            cfgMapLat != null ? cfgMapLat : null,
+      lng:            cfgMapLng != null ? cfgMapLng : null,
+      raioGps:        document.getElementById('cfg-raio').value,
+      nivelGps:       document.getElementById('cfg-nivel').value,
       jornadaEntrada: document.getElementById('cfg-entrada').value,
       jornadaSaida:   document.getElementById('cfg-saida').value,
       intervaloMin:   document.getElementById('cfg-intervalo').value,
@@ -1095,7 +1393,6 @@ async function salvarConfigEmpresa() {
 
     const res = await window.api.dpAtualizarConfig(payload);
     if (res.ok) {
-      // Atualiza dashData local para refletir imediatamente na UI
       if (dashData && dashData.config) Object.assign(dashData.config, res.config);
       document.getElementById('configModal').style.display = 'none';
       renderPresencePanel(dashData);

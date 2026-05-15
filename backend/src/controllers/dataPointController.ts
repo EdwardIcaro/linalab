@@ -962,6 +962,91 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
 // FASE 7 — AJUSTES E AFASTAMENTOS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARCAÇÕES — CRUD ADMIN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── POST /api/dp/marcacoes ───────────────────────────────────────────────────
+export const criarMarcacaoManual = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { funcionarioId, data, hora, tipo } = req.body;
+
+  if (!funcionarioId || !data || !hora || !tipo)
+    return res.status(400).json({ error: 'funcionarioId, data, hora e tipo são obrigatórios' });
+
+  if (!['ENTRADA', 'SAIDA'].includes(tipo))
+    return res.status(400).json({ error: 'tipo deve ser ENTRADA ou SAIDA' });
+
+  if (!/^\d{2}:\d{2}$/.test(hora) || !/^\d{4}-\d{2}-\d{2}$/.test(data))
+    return res.status(400).json({ error: 'Formato inválido. Use YYYY-MM-DD e HH:MM' });
+
+  try {
+    const func = await prisma.dpFuncionario.findFirst({ where: { id: funcionarioId, empresaId } });
+    if (!func) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const [h, m] = hora.split(':').map(Number);
+    const [y, mo, d] = data.split('-').map(Number);
+    const timestamp = new Date(Date.UTC(y, mo - 1, d, h + 3, m, 0)); // BRT = UTC-3
+
+    const marcacao = await prisma.dpMarcacao.create({
+      data: { empresaId, funcionarioId, tipo, canal: 'MANUAL', timestamp, ajustado: true },
+    });
+
+    res.status(201).json({ marcacao });
+  } catch (error) {
+    console.error('[dp] criarMarcacaoManual:', error);
+    res.status(500).json({ error: 'Erro ao criar marcação' });
+  }
+};
+
+// ─── PATCH /api/dp/marcacoes/:id ─────────────────────────────────────────────
+export const editarMarcacao = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+  const { data, hora, tipo } = req.body;
+
+  try {
+    const existente = await prisma.dpMarcacao.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Marcação não encontrada' });
+
+    const updateData: any = { ajustado: true };
+
+    if (hora) {
+      const dateStr = data || (() => {
+        const brt = new Date(existente.timestamp.getTime() - 3 * 3600000);
+        return brt.toISOString().split('T')[0];
+      })();
+      const [h, m] = hora.split(':').map(Number);
+      const [y, mo, d] = dateStr.split('-').map(Number);
+      updateData.timestamp = new Date(Date.UTC(y, mo - 1, d, h + 3, m, 0));
+    }
+    if (tipo) updateData.tipo = tipo;
+
+    const marcacao = await prisma.dpMarcacao.update({ where: { id }, data: updateData });
+    res.json({ marcacao });
+  } catch (error) {
+    console.error('[dp] editarMarcacao:', error);
+    res.status(500).json({ error: 'Erro ao editar marcação' });
+  }
+};
+
+// ─── DELETE /api/dp/marcacoes/:id ────────────────────────────────────────────
+export const excluirMarcacao = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpMarcacao.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Marcação não encontrada' });
+
+    await prisma.dpMarcacao.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[dp] excluirMarcacao:', error);
+    res.status(500).json({ error: 'Erro ao excluir marcação' });
+  }
+};
+
 // ─── GET /api/dp/ajustes ──────────────────────────────────────────────────────
 export const getDpAjustes = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;

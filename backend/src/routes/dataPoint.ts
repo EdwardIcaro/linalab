@@ -13,6 +13,9 @@ import {
   resetarPinDpFuncionario,
   regenerarLinkDpFuncionario,
   atualizarConfigDp,
+  criarMarcacaoManual,
+  editarMarcacao,
+  excluirMarcacao,
   getDpAjustes,
   responderAjuste,
   getDpAfastamentos,
@@ -44,6 +47,11 @@ router.post('/funcionarios',                        authMiddleware, criarDpFunci
 router.put('/funcionarios/:id',                     authMiddleware, atualizarDpFuncionario);
 router.post('/funcionarios/:id/reset-pin',          authMiddleware, resetarPinDpFuncionario);
 router.post('/funcionarios/:id/regenerar-link',     authMiddleware, regenerarLinkDpFuncionario);
+
+// Marcações (CRUD admin)
+router.post('/marcacoes',          authMiddleware, criarMarcacaoManual);
+router.patch('/marcacoes/:id',     authMiddleware, editarMarcacao);
+router.delete('/marcacoes/:id',    authMiddleware, excluirMarcacao);
 
 // Ajustes
 router.get('/ajustes',         authMiddleware, getDpAjustes);
