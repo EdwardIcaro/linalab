@@ -6,6 +6,7 @@ import {
   getRiskAlerts,
   getEngagement,
   toggleCompanyStatus,
+  clearCache,
 } from '../controllers/adminController';
 
 const router: Router = Router();
@@ -27,5 +28,10 @@ router.patch('/empresas/:id/toggle-status', toggleCompanyStatus);
 // Risk and engagement metrics
 router.get('/alerts', getRiskAlerts);
 router.get('/engagement', getEngagement);
+
+// Cache management
+// DELETE /api/admin/cache              → limpa todos os caches
+// DELETE /api/admin/cache?empresaId=xx → limpa só aquela empresa
+router.delete('/cache', clearCache);
 
 export default router;

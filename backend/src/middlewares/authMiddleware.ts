@@ -25,6 +25,23 @@ function setCachedAuth(key: string, data: any): void {
   authCache.set(key, { data, expiresAt: Date.now() + AUTH_CACHE_TTL });
 }
 
+// Remove entradas de cache de uma empresa específica, ou limpa tudo se empresaId omitido
+export function clearAuthCache(empresaId?: string): number {
+  if (!empresaId) {
+    const total = authCache.size;
+    authCache.clear();
+    return total;
+  }
+  let removed = 0;
+  for (const key of authCache.keys()) {
+    if (key.includes(`:${empresaId}`)) {
+      authCache.delete(key);
+      removed++;
+    }
+  }
+  return removed;
+}
+
 /**
  * JWT Token Payload Structure
  */

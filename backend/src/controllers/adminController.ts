@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
+import { clearAuthCache } from '../middlewares/authMiddleware';
+import { clearNotifPrefsCache } from '../services/notificationService';
 
 /**
  * ADMIN CONTROLLER
@@ -321,5 +323,30 @@ export const toggleCompanyStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error toggling company status:', error);
     res.status(500).json({ error: 'Erro ao alterar status da empresa' });
+  }
+};
+
+/**
+ * DELETE /api/admin/cache
+ * Limpa os caches em memória do servidor.
+ * ?empresaId=xxx → limpa só aquela empresa | sem query → limpa tudo
+ */
+export const clearCache = async (req: Request, res: Response) => {
+  try {
+    const { empresaId } = req.query as { empresaId?: string };
+
+    const authRemoved   = clearAuthCache(empresaId);
+    const prefsRemoved  = clearNotifPrefsCache(empresaId);
+
+    const scope = empresaId ? `empresa ${empresaId}` : 'todo o servidor';
+    console.log(`[ADMIN] Cache limpo para ${scope}: auth=${authRemoved}, prefs=${prefsRemoved}`);
+
+    res.json({
+      message: `Cache limpo para ${scope}`,
+      removed: { auth: authRemoved, notifPrefs: prefsRemoved },
+    });
+  } catch (error) {
+    console.error('Erro ao limpar cache:', error);
+    res.status(500).json({ error: 'Erro ao limpar cache' });
   }
 };

@@ -17,6 +17,15 @@ function setCachedPrefs(empresaId: string, prefs: Record<string, boolean>): void
   prefsCache.set(empresaId, { prefs, expiresAt: Date.now() + PREFS_CACHE_TTL });
 }
 
+export function clearNotifPrefsCache(empresaId?: string): number {
+  if (!empresaId) {
+    const total = prefsCache.size;
+    prefsCache.clear();
+    return total;
+  }
+  return prefsCache.delete(empresaId) ? 1 : 0;
+}
+
 // Adicionando um tipo para as preferências de notificação
 export type NotificationPreference = 'ordemCriada' | 'ordemEditada' | 'ordemDeletada' | 'finalizacaoAutomatica';
 
