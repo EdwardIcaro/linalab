@@ -45,14 +45,15 @@ async function notifyObservacaoLavadores(
 ): Promise<void> {
   if (!observacao.trim() || lavadorIds.length === 0) return;
   try {
-    const botUsers = await prisma.whatsappBotUser.findMany({
-      where: { empresaId, lavadorId: { in: lavadorIds }, jid: { not: null }, ativo: true },
-      select: { jid: true }
+    // Lavador.telefone é preenchido quando o lavador envia "conectar CODIGO" ao bot
+    const lavadores = await prisma.lavador.findMany({
+      where: { id: { in: lavadorIds }, empresaId, telefone: { not: null }, ativo: true },
+      select: { telefone: true }
     });
-    for (const user of botUsers) {
-      if (user.jid) {
+    for (const lav of lavadores) {
+      if (lav.telefone) {
         const msg = `📋 *Obs. — Ordem #${numeroOrdem}*${placa ? `\nPlaca: *${placa}*` : ''}\n${observacao.trim()}`;
-        await botSend(user.jid, msg).catch(() => {});
+        await botSend(lav.telefone, msg).catch(() => {});
       }
     }
   } catch { /* fire-and-forget */ }
