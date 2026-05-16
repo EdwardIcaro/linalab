@@ -273,7 +273,7 @@ export async function handleIncomingMessage(
     }
 
     // Detectar saudação simples — usada para evitar menu de empresa e contexto desnecessário
-    const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina|hey|opa|eae|boa)$/i.test(command);
+    const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina|hey|opa|eae|boa|sauda[çc][aã]o|sauda[çc][oõ]es|salve|oi\s*gente|oi\s*pessoal|boas|boa\s*noite|al[oô])$/i.test(command);
 
     if (isSaudacao) {
       return chatCompletion(message);
