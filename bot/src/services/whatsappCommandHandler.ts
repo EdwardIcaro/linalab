@@ -272,6 +272,13 @@ export async function handleIncomingMessage(
       return handleNotifMenuStep(from, pendingNotifMenu.get(from)!, command);
     }
 
+    // Detectar saudação simples — usada para evitar menu de empresa e contexto desnecessário
+    const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina|hey|opa|eae|boa)$/i.test(command);
+
+    if (isSaudacao) {
+      return chatCompletion(message);
+    }
+
     // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
     const empresas = user.empresas ?? [];
 
@@ -351,18 +358,8 @@ export async function handleIncomingMessage(
 
         return `✅ *${escolhida.nome}*\nDigite *ajuda* para ver o que posso fazer.`;
       } else {
-        // Saudação simples → menu sem salvar pending
-        const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina)$/i.test(command);
-        const header = isSaudacao
-          ? `Olá *${user.nome}*! 👋\nVocê gerencia *${empresas.length} empresas*. Para qual deseja o resumo?`
-          : `Qual empresa você quer consultar?`;
-
-        // Salva o comando original para executar após a seleção (só se não for saudação)
-        if (!isSaudacao) {
-          pendingCommands.set(from, message);
-        }
-
-        return buildEmpresaMenu(empresas, header + `\n\n_Dica: "resumo das duas" para ver todas juntas_`);
+        pendingCommands.set(from, message);
+        return buildEmpresaMenu(empresas, `Qual empresa você quer consultar?\n\n_Dica: "resumo das duas" para ver todas juntas_`);
       }
     }
 
@@ -472,7 +469,16 @@ export async function handleIncomingMessage(
     if (lavadorResponse) return lavadorResponse;
 
     // Só constrói o contexto pesado quando vai para a IA
-    const dailyContext = await buildDailyContext(empresaId);
+    let dailyContext = await buildDailyContext(empresaId);
+
+    // Se a mensagem menciona uma data passada específica, enriquecer o contexto com dados daquele dia
+    const dataReferenciada = parseDateFromMessage(message);
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    if (dataReferenciada && dataReferenciada < hoje) {
+      const ctxExtra = await buildContextForDate(empresaId, dataReferenciada);
+      dailyContext += ctxExtra;
+    }
+
     return chatCompletion(message, dailyContext);
 
   } catch (error) {
@@ -497,11 +503,35 @@ const DIAS_SEMANA = ['domingo','segunda','terça','quarta','quinta','sexta','sá
 function parseDateFromMessage(message: string): Date | null {
   const msg = message.toLowerCase();
 
+  if (/antes\s+de\s+ontem|anteontem/i.test(msg)) {
+    const d = new Date(); d.setDate(d.getDate() - 2); d.setHours(0,0,0,0); return d;
+  }
   if (/\bontem\b/.test(msg)) {
     const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(0,0,0,0); return d;
   }
   if (/\bhoje\b/.test(msg)) {
     const d = new Date(); d.setHours(0,0,0,0); return d;
+  }
+
+  // Dia da semana passado: "sábado passado", "última sexta", "segunda passada", etc.
+  const diasMap: Record<string, number> = {
+    'domingo': 0, 'segunda': 1, 'terca': 2, 'quarta': 3,
+    'quinta': 4, 'sexta': 5, 'sabado': 6,
+  };
+  const diaPassadoMatch = msg.match(
+    /\b(domingo|segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado)\b.{0,25}?\b(passad[oa]|[uú]ltim[oa])\b|\b([uú]ltim[oa])\b.{0,15}?\b(domingo|segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado)\b/i
+  );
+  if (diaPassadoMatch) {
+    const diaRaw = (diaPassadoMatch[1] || diaPassadoMatch[4] || '')
+      .toLowerCase().replace(/[áà]/g, 'a').replace(/ç/g, 'c').replace(/ã/g, 'a');
+    const targetDay = diasMap[diaRaw];
+    if (targetDay !== undefined) {
+      const currentDay = new Date().getDay();
+      let daysBack = currentDay - targetDay;
+      if (daysBack <= 0) daysBack += 7;
+      const d = new Date(); d.setDate(d.getDate() - daysBack); d.setHours(0,0,0,0);
+      return d;
+    }
   }
 
   // dd/mm ou dd/mm/yy ou dd/mm/yyyy
@@ -1234,6 +1264,44 @@ function handleAjudaLavador(): string {
 /*
  * Constrói contexto com dados do dia E do mês para a IA responder qualquer período
  */
+async function buildContextForDate(empresaId: string, date: Date): Promise<string> {
+  try {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const { start, end } = getDateRangeBRT(dateStr);
+
+    const [ordens, caixa, lavadores] = await Promise.all([
+      prisma.ordemServico.findMany({
+        where: { empresaId, status: { not: 'CANCELADO' as any }, dataFim: { gte: start, lte: end } },
+        include: { lavador: { select: { nome: true } } },
+      }),
+      prisma.caixaRegistro.findMany({ where: { empresaId, data: { gte: start, lte: end } } }),
+      prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
+    ]);
+
+    const dataLabel = date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fat = ordens.reduce((s, o) => s + o.valorTotal, 0);
+    const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
+    const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
+
+    let ctx = `\n=== ${dataLabel.toUpperCase()} ===\n`;
+    ctx += `Ordens: ${ordens.length} | Faturamento: R$ ${fat.toFixed(2)}\n`;
+    ctx += `Finalizadas: ${ordens.filter(o => o.status === 'FINALIZADO').length} | Em andamento: ${ordens.filter(o => o.status === 'EM_ANDAMENTO').length}\n`;
+    ctx += `Caixa: Entradas R$ ${entradas.toFixed(2)} | Saídas R$ ${saidas.toFixed(2)} | Saldo R$ ${(entradas - saidas).toFixed(2)}\n`;
+
+    for (const lav of lavadores) {
+      const ords = ordens.filter(o => o.lavadorId === lav.id);
+      if (ords.length > 0) {
+        const fatLav = ords.reduce((s, o) => s + o.valorTotal, 0);
+        ctx += `• ${lav.nome}: ${ords.length} ordem(ns), R$ ${fatLav.toFixed(2)}\n`;
+      }
+    }
+
+    return ctx;
+  } catch {
+    return '';
+  }
+}
+
 async function buildDailyContext(empresaId: string): Promise<string> {
   try {
     const hoje = new Date();
