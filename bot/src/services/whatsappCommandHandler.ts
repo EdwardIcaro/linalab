@@ -494,6 +494,15 @@ export async function handleIncomingMessage(
     const reenviarMatch = message.trim().match(/^reenviar\s+pix(?:\s+ordem)?\s+(\d+)$/i);
     if (reenviarMatch) return handlePixOrdem(parseInt(reenviarMatch[1]), empresaId, from, user, true);
 
+    // Consulta conversacional sobre lavador ("como tá o Felipe?", "como anda o João?")
+    // → passa dados pro Groq para resposta pessoal e descontraída
+    const isConversacionalLavador = /\b(como\s+(est[aá]|t[aá]|anda|vai|foi|est[aá]\s+indo|t[aá]\s+indo)|e\s+o\s+\w|e\s+a\s+\w|t[aá]\s+indo\s+bem)\b/i.test(message);
+
+    if (isConversacionalLavador) {
+      const ctxLavador = await buildContextLavadorConversacional(message, empresaId);
+      if (ctxLavador) return chatCompletion(message, ctxLavador);
+    }
+
     const lavadorResponse = await handleLavadorEspecifico(message, empresaId);
     if (lavadorResponse) return lavadorResponse;
 
@@ -1646,6 +1655,49 @@ function handleAjudaCommand(): string {
     `*Empresa:*\n` +
     `trocar empresa · trocar para [nome]\n\n` +
     `_Qualquer pergunta livre → respondo com IA_`;
+}
+
+/*
+ * Monta contexto de lavador para o Groq responder de forma conversacional e pessoal.
+ * Usado quando a pergunta é "como tá o Felipe?" e não "relatório do Felipe".
+ */
+async function buildContextLavadorConversacional(message: string, empresaId: string): Promise<string | null> {
+  try {
+    const lavadores = await prisma.lavador.findMany({ where: { empresaId, ativo: true } });
+    const msgLower  = message.toLowerCase();
+    const lavador   = lavadores.find(l =>
+      msgLower.includes(l.nome.toLowerCase()) ||
+      l.nome.toLowerCase().split(' ').some(p => p.length > 3 && msgLower.includes(p))
+    );
+    if (!lavador) return null;
+
+    const hoje       = new Date(); hoje.setHours(0, 0, 0, 0);
+    const amanha     = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+    const inicioMes  = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fimMes     = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+
+    const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
+      prisma.ordemServico.findMany({ where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } } }),
+      prisma.ordemServico.findMany({ where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } } }),
+      prisma.adiantamento.findMany({ where: { lavadorId: lavador.id, status: 'PENDENTE' } }),
+    ]);
+
+    const fatDia      = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+    const comDia      = fatDia * (lavador.comissao / 100);
+    const fatMes      = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+    const comBrutaMes = fatMes * (lavador.comissao / 100);
+    const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
+    const comLiqMes   = comBrutaMes - totalAdiant;
+
+    return `DADOS DO LAVADOR — responda de forma conversacional, pessoal e descontraída. ` +
+      `Dê uma avaliação humana do desempenho: se tá fraco, diga com leveza; se tá bem, parabenize. ` +
+      `Use os números, mas não liste friamente — comente sobre eles como quem conhece a pessoa.\n\n` +
+      `Lavador: ${lavador.nome} | Comissão: ${lavador.comissao}%\n` +
+      `HOJE: ${ordensDia.length} ordem(ns) | faturamento R$ ${fatDia.toFixed(2)} | comissão R$ ${comDia.toFixed(2)}\n` +
+      `MÊS: ${ordensMes.length} ordem(ns) | faturamento R$ ${fatMes.toFixed(2)} | comissão bruta R$ ${comBrutaMes.toFixed(2)} | líquida R$ ${comLiqMes.toFixed(2)}`;
+  } catch {
+    return null;
+  }
 }
 
 /*
