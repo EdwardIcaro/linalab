@@ -279,32 +279,32 @@ export async function handleIncomingMessage(
       const r = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
       if (/bom\s*dia/i.test(command)) return r([
-        'Bom dia! me fala, o que você precisa?',
-        'Oi, bom dia! pode mandar',
-        'Bom dia! o que você precisa?',
-        'Bom dia! tô aqui, pode falar',
+        'Olá, bom dia! 😊 tudo bem? como posso ajudar?',
+        'Bom dia! tudo certo? no que posso te ajudar hoje?',
+        'Olá, bom dia! que bom te ver por aqui. como posso ajudar?',
+        'Bom dia! tudo bem? pode falar, tô aqui pra ajudar.',
       ]);
 
       if (/boa\s*tarde/i.test(command)) return r([
-        'Boa tarde! o que você precisa?',
-        'Boa tarde! pode mandar',
-        'Boa tarde! me fala',
+        'Olá, boa tarde! 😊 como posso te ajudar?',
+        'Boa tarde! tudo bem? no que posso ajudar?',
+        'Olá, boa tarde! que bom te ver. como posso ajudar?',
       ]);
 
       if (/boa\s*noite/i.test(command)) return r([
-        'Boa noite! pode falar',
-        'Boa noite! o que você precisa?',
-        'Boa noite! tô aqui, me fala',
+        'Olá, boa noite! 😊 como posso te ajudar?',
+        'Boa noite! tudo bem? no que posso ajudar?',
+        'Olá, boa noite! pode falar, tô aqui.',
       ]);
 
       return r([
-        'Oi! me fala 😊',
-        'Oi! o que você precisa?',
-        'Oi! pode mandar',
-        'Ei! tô aqui, fala aí',
-        'Oi oi! o que rola?',
-        'Ei! pode falar',
-        'Oi! tô de olho, pode mandar',
+        'Olá! 😊 como posso te ajudar?',
+        'Olá, tudo bem? no que posso ajudar?',
+        'Oi! que bom te ver. como posso te ajudar hoje?',
+        'Olá! tô aqui, pode falar.',
+        'Oi! tudo certo? como posso ajudar?',
+        'Olá! no que posso te ajudar?',
+        'Oi, tudo bem? pode falar, tô à disposição.',
       ]);
     }
 
