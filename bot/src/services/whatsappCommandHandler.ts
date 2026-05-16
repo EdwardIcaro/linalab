@@ -247,6 +247,31 @@ export async function handleIncomingMessage(
       return getDeniedAccessMessage(user);
     }
 
+    // ── ADMIN: pendências com prioridade (não dependem de empresa ativa) ────────
+    // Devem ser verificadas ANTES da resolução de empresa para evitar que
+    // respostas numéricas (ex: "1") sejam capturadas pelo menu de seleção de empresa.
+
+    // Report de avaria — admin respondendo à notificação (1 = ver fotos / 2 = ignorar)
+    if (hasPendingAdminReportView(from) && (command === '1' || command === '2')) {
+      return handleAdminReportResponse(from, command);
+    }
+
+    // Report de avaria — admin navegando lista de reports
+    if (hasPendingReportsList(from)) {
+      const r = await handleReportsListSelection(from, command);
+      if (r !== '') return r;
+    }
+
+    // Fluxo de saída/despesa em andamento (empresaId está dentro do struct)
+    if (pendingSaidas.has(from)) {
+      return handlePendingSaidaStep(message, from, senderName);
+    }
+
+    // Menu de notificações individuais (empresaId está dentro do Map)
+    if (pendingNotifMenu.has(from)) {
+      return handleNotifMenuStep(from, pendingNotifMenu.get(from)!, command);
+    }
+
     // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
     const empresas = user.empresas ?? [];
 
@@ -390,32 +415,24 @@ export async function handleIncomingMessage(
     }
 
 
-    if (pendingSaidas.has(from)) {
-      return handlePendingSaidaStep(message, from, senderName);
-    }
-
-    // Menu de notificações individuais do admin
-    if (pendingNotifMenu.has(from)) {
-      return handleNotifMenuStep(from, pendingNotifMenu.get(from)!, command);
-    }
-
     if (/^notifica[çc]([aã]o|[oõ]es?)$|^notifs?$/.test(command)) {
       pendingNotifMenu.set(from, empresaId);
       return buildNotifMenuText(from, empresaId);
     }
 
-    // Report de avaria — admin navegando lista de reports
-    if (hasPendingReportsList(from)) {
-      const r = await handleReportsListSelection(from, command);
-      if (r !== '') return r;
-    }
-
-    // Report de avaria — admin respondendo à notificação (1 = ver fotos / 2 = ignorar)
-    if (hasPendingAdminReportView(from) && (command === '1' || command === '2')) {
-      return handleAdminReportResponse(from, command);
-    }
-
-    if (command === 'reports') return handleReportsCommand(from, empresaId);
+    const isReports = (
+      command === 'reports' ||
+      /\bavarias?\b/i.test(message) ||
+      /\breports?\b/i.test(message) ||
+      /\bver\s+(?:as\s+)?fotos?\b/i.test(message) ||
+      /\bfotos?\s+(?:de\s+)?avarias?\b/i.test(message) ||
+      /\breports?\s+(?:de\s+)?avarias?\b/i.test(message) ||
+      /\breport(?:es)?\s+pendentes?\b/i.test(message) ||
+      /\bver\s+(?:os\s+)?reports?\b/i.test(message) ||
+      /\btem\s+(?:algum\s+)?report\b/i.test(message) ||
+      /\bver\s+avarias?\b/i.test(message)
+    );
+    if (isReports) return handleReportsCommand(from, empresaId);
 
     // Detectar intenção de lançar despesa — padrões claros apenas
     // Evita falsos positivos como "saída do caixa de ontem" ou "ver saída"
@@ -1525,6 +1542,8 @@ function handleAjudaCommand(): string {
     `*Saídas:*\n` +
     `saídas · saídas hoje · saídas semana · saídas mês\n` +
     `saídas 01/04 · saídas de 01/04 a 07/04\n\n` +
+    `*Avarias:*\n` +
+    `reports · ver avarias · tem report · fotos de avaria\n\n` +
     `*PIX:*\n` +
     `ordens · pix [nº] · reenviar pix [nº]\n\n` +
     `*Empresa:*\n` +

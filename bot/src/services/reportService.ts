@@ -39,7 +39,7 @@ const pendingAdminReportView = new Map<string, string>(); // JID → reportId
 
 export function setPendingAdminReportView(jid: string, reportId: string) {
   pendingAdminReportView.set(jid, reportId);
-  setTimeout(() => pendingAdminReportView.delete(jid), 5 * 60 * 1000);
+  setTimeout(() => pendingAdminReportView.delete(jid), 30 * 60 * 1000);
 }
 
 export function hasPendingAdminReportView(jid: string): boolean {
@@ -334,7 +334,7 @@ async function sendReportFotos(jid: string, reportId: string): Promise<string> {
 
   let enviadas = 0;
   for (let i = 0; i < fotos.length; i++) {
-    const filePath = join(REPORTS_ROOT, '..', fotos[i].replace(/^reports\//, ''));
+    const filePath = join(REPORTS_ROOT, fotos[i].replace(/^reports\//, ''));
     if (existsSync(filePath)) {
       const buf = readFileSync(filePath);
       await botSendImage(jid, buf, `📷 ${i + 1}/${fotos.length}`);
