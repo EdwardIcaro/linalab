@@ -3,6 +3,7 @@ import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
 import { notifyNovaOrdem, notifyOrdemFinalizada, notifyOrdemCancelada, notifyClienteVip } from '../services/whatsappNotificationService';
+import { botSend } from '../services/botServiceClient';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
@@ -33,6 +34,28 @@ function formatOrderWithLavadores(order: any) {
   };
   delete formatted.ordemLavadores;
   return formatted;
+}
+
+async function notifyObservacaoLavadores(
+  empresaId: string,
+  numeroOrdem: number,
+  placa: string,
+  observacao: string,
+  lavadorIds: string[]
+): Promise<void> {
+  if (!observacao.trim() || lavadorIds.length === 0) return;
+  try {
+    const botUsers = await prisma.whatsappBotUser.findMany({
+      where: { empresaId, lavadorId: { in: lavadorIds }, jid: { not: null }, ativo: true },
+      select: { jid: true }
+    });
+    for (const user of botUsers) {
+      if (user.jid) {
+        const msg = `📋 *Obs. — Ordem #${numeroOrdem}*${placa ? `\nPlaca: *${placa}*` : ''}\n${observacao.trim()}`;
+        await botSend(user.jid, msg).catch(() => {});
+      }
+    }
+  } catch { /* fire-and-forget */ }
 }
 
 /**
@@ -379,6 +402,17 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         valor: ordemFinal.valorTotal,
         lavadorNome: ordemFinal.lavador?.nome ?? null,
       }).catch(() => {});
+
+      // WA: observação para lavadores atribuídos na criação
+      if (ordemFinal.observacoes && normalizedLavadorIds.length > 0) {
+        notifyObservacaoLavadores(
+          empresaId,
+          ordemFinal.numeroOrdem,
+          ordemFinal.veiculo?.placa ?? '',
+          ordemFinal.observacoes,
+          normalizedLavadorIds
+        ).catch(() => {});
+      }
 
       // WhatsApp: notificar cliente VIP (10ª visita em diante)
       try {
@@ -817,12 +851,13 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
   }
 
   try {
-    const updatedOrdemResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updatedOrdemResultRaw = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const { id } = req.params as { id: string };
       const { status, lavadorId, lavadorIds, observacoes, itens } = validation.sanitizedData!;
 
       const existingOrdem = await tx.ordemServico.findFirst({
         where: { id, empresaId: req.empresaId },
+        include: { ordemLavadores: { select: { lavadorId: true } } },
       });
 
       if (!existingOrdem) {
@@ -1000,9 +1035,15 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         }
       });
 
-      return ordemComLavadores!;
+      const oldLavadorIds = ((existingOrdem as any).ordemLavadores || []).map((r: any) => r.lavadorId as string);
+      const newlyAddedIds: string[] = lavadoresForamEspecificados
+        ? normalizedLavadorIds.filter((lid: string) => !oldLavadorIds.includes(lid))
+        : [];
+
+      return { ordem: ordemComLavadores!, newlyAddedIds };
     });
 
+    const { ordem: updatedOrdemResult, newlyAddedIds: newlyAddedLavadorIds } = updatedOrdemResultRaw;
     const ordemFinal = formatOrderWithLavadores(updatedOrdemResult);
     res.json({ message: 'Ordem de serviço atualizada com sucesso', ordem: ordemFinal });
 
@@ -1015,6 +1056,17 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
           type: 'ordemEditada'
         });
       } catch {}
+
+      // WA: observação para lavadores recém-atribuídos
+      if (ordemFinal.observacoes && newlyAddedLavadorIds.length > 0) {
+        notifyObservacaoLavadores(
+          req.empresaId!,
+          ordemFinal.numeroOrdem,
+          (ordemFinal as any).veiculo?.placa ?? '',
+          ordemFinal.observacoes,
+          newlyAddedLavadorIds
+        ).catch(() => {});
+      }
     });
   } catch (error: any) {
     console.error('Erro ao atualizar ordem de serviço:', error);

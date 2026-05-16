@@ -459,6 +459,25 @@
     .btn-criar:not(:disabled):active { transform: scale(.96); box-shadow: none; }
     .btn-criar:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
 
+    /* ── OBSERVAÇÃO ─────────────────────────── */
+    .obs-textarea {
+      width: 100%;
+      min-height: 72px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+      resize: none;
+      outline: none;
+      transition: border-color .18s;
+      line-height: 1.5;
+    }
+    .obs-textarea:focus { border-color: var(--blue); }
+    .obs-hint { font-size: 11px; color: #25d366; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+
     /* ── BOTTOM SHEET BASE ────────────────────── */
     .backdrop {
       position: fixed; inset: 0; z-index: 100;
@@ -960,6 +979,23 @@
       </div>
     </div>
 
+    <!-- Observação -->
+    <div class="sec" x-show="cliente" x-cloak>
+      <div class="sec-lbl">
+        Observação
+        <span style="font-size:11px;font-weight:400;color:var(--light);margin-left:4px">(opcional)</span>
+      </div>
+      <textarea class="obs-textarea"
+        x-model="obs"
+        placeholder="Ex: não colocar pretinho nos pneus, carro já está na doca..."
+        maxlength="500"
+        rows="3"></textarea>
+      <div class="obs-hint" x-show="obs.trim()" x-cloak>
+        <i class="fab fa-whatsapp"></i>
+        Será enviado ao lavador via WhatsApp
+      </div>
+    </div>
+
     <!-- Lavadores -->
     <div class="sec">
       <div class="sec-lbl">
@@ -1230,6 +1266,7 @@
         svc: null,
         adds: [],       // IDs de adicionais selecionados
         lavs: [],       // IDs de lavadores selecionados
+        obs: '',
         criando: false, sucesso: false, ordemNum: null,
 
         // ── Dados da API ───────────────────
@@ -1718,7 +1755,7 @@
             lavadorId:    this.lavs[0] || null,
             lavadorIds:   [...this.lavs],
             itens,
-            observacoes:  '',
+            observacoes:  this.obs.trim(),
             forcarCriacao: false,
           };
 
