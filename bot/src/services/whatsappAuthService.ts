@@ -94,7 +94,7 @@ export function hasPermission(user: WhatsAppUser, feature: string): boolean {
 }
 
 export function getDeniedAccessMessage(user: WhatsAppUser): string {
-  if (user.type === 'unknown')  return '🚫 Acesso não autorizado. Cadastre seu número com o administrador.';
-  if (user.type === 'lavador')  return '⚠️ Esta função está disponível apenas para administradores.';
-  return '❌ Acesso negado.';
+  if (user.type === 'unknown')  return 'Oi! Sou a Lina 👋\n\nSeu número ainda não tá cadastrado no sistema. Fala com o administrador do lava-jato pra te cadastrar, tá bom?';
+  if (user.type === 'lavador')  return 'Essa função é só pra administradores, viu? Se precisar de algo, me chama com *ajuda*!';
+  return 'Não consegui processar isso, não. Tenta de novo?';
 }

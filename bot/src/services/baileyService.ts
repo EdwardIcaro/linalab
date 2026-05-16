@@ -435,7 +435,7 @@ export async function initBaileys(): Promise<void> {
             console.log(`[Baileys] ✅ Admin ${nomeAdmin} vinculado em ${vinculadas} empresa(s)`);
             const empresasNomes = empresas.map(e => `• ${e.nome}`).join('\n');
             await sock.sendMessage(rawFrom, {
-              text: `✅ Olá *${nomeAdmin}*! Você foi vinculado como administrador em ${vinculadas} empresa(s):\n\n${empresasNomes}\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+              text: `Oi, *${nomeAdmin}*! 👋 Sou a Lina!\n\nTá tudo certo — você tá cadastrado como admin em ${vinculadas} empresa(s):\n\n${empresasNomes}\n\nQualquer coisa é só me chamar aqui. Manda um *ajuda* pra ver o que eu faço por você, viu?`,
             });
             return;
           }
@@ -458,7 +458,7 @@ export async function initBaileys(): Promise<void> {
 
             const roleLabel: Record<string, string> = { LAVADOR: 'Lavador', CAIXA: 'Caixa', FINANCEIRO: 'Financeiro' };
             await sock.sendMessage(rawFrom, {
-              text: `✅ Olá *${botClaimed.nome}*! Você foi registrado como *${roleLabel[botClaimed.role] ?? botClaimed.role}*.\n\nEnvie *ajuda* para ver o que posso fazer por você.`,
+              text: `Oi, *${botClaimed.nome}*! 👋 Sou a Lina!\n\nTá cadastrado aqui como *${roleLabel[botClaimed.role] ?? botClaimed.role}*. Qualquer coisa é só me chamar — manda *ajuda* pra ver o que eu consigo fazer por você, viu?`,
             });
             return;
           }
@@ -492,7 +492,7 @@ export async function initBaileys(): Promise<void> {
           });
 
           await sock.sendMessage(rawFrom, {
-            text: `✅ Olá *${nome || senderName}*! Você foi adicionado como administrador.\n\nEnvie *ajuda* para ver os comandos disponíveis.`,
+            text: `Oi, *${nome || senderName}*! 👋 Sou a Lina!\n\nVocê tá cadastrado como administrador agora. Qualquer coisa é só me chamar aqui — manda um *ajuda* pra ver o que eu consigo fazer por você, tá?`,
           });
           return;
         }

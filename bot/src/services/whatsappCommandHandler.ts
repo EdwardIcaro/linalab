@@ -197,7 +197,7 @@ async function handleConectarPortal(from: string, message: string): Promise<stri
     },
   });
 
-  return `✅ *WhatsApp vinculado com sucesso!*\n\nOlá, ${lavador.nome}! Seu número foi conectado ao portal Lina.\n\nAgora você pode receber notificações de comissões e usar este chat para consultar seu extrato. Digite *ajuda* para ver os comandos disponíveis.`;
+  return `Oi, ${lavador.nome}! 👋 Sou a Lina, tudo bem?\n\nSeu WhatsApp tá vinculado agora — a partir de agora você recebe suas notificações de comissão por aqui e pode me perguntar qualquer coisa sobre seus serviços. Manda um *ajuda* pra ver o que eu consigo fazer por você, viu?`;
 }
 
 export async function handleIncomingMessage(
@@ -1217,14 +1217,14 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
 }
 
 function handleAjudaLavador(): string {
-  return `📚 *O que posso fazer por você?*\n\n` +
-    `*status* — Sua comissão do mês e do dia\n` +
-    `*link* — Acessar seu portal pessoal\n` +
-    `*comissoes* — Ver comissões em aberto\n` +
-    `*reportar* — Reportar avaria em um veículo\n` +
-    `pix [nº] — Gerar QR Code PIX (ex: _pix 321_)\n` +
-    `reenviar pix [nº] — Reenviar QR já gerado\n` +
-    `*ajuda* — Este menu`;
+  return `Oi! Aqui vai o que eu consigo fazer por você 😊\n\n` +
+    `*status* — sua comissão do dia e do mês\n` +
+    `*comissoes* — comissões em aberto\n` +
+    `*link* — acessar seu portal pessoal\n` +
+    `*reportar* — avisar uma avaria no veículo\n` +
+    `*pix [nº]* — gerar QR Code PIX de uma ordem\n` +
+    `*reenviar pix [nº]* — reenviar um QR já gerado\n\n` +
+    `Qualquer dúvida é só me chamar aqui, tá?`;
 }
 
 // ==========================================
