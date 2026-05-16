@@ -276,18 +276,36 @@ export async function handleIncomingMessage(
     const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina|hey|opa|eae|boa|sauda[çc][aã]o|sauda[çc][oõ]es|salve|oi\s*gente|oi\s*pessoal|boas|al[oô])$/i.test(command);
 
     if (isSaudacao) {
-      // Resposta curta e variada — não vai pro Groq para evitar "que dia lindo" e similares
-      const respostas = [
-        'Oi! pode falar 😊',
-        'Oi! tô aqui, o que você precisa?',
-        'Oi! me fala',
-        'Ei! tô por aqui, pode mandar',
+      const r = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+      if (/bom\s*dia/i.test(command)) return r([
+        'Bom dia! me fala, o que você precisa?',
+        'Oi, bom dia! pode mandar',
+        'Bom dia! o que você precisa?',
+        'Bom dia! tô aqui, pode falar',
+      ]);
+
+      if (/boa\s*tarde/i.test(command)) return r([
+        'Boa tarde! o que você precisa?',
+        'Boa tarde! pode mandar',
+        'Boa tarde! me fala',
+      ]);
+
+      if (/boa\s*noite/i.test(command)) return r([
+        'Boa noite! pode falar',
+        'Boa noite! o que você precisa?',
+        'Boa noite! tô aqui, me fala',
+      ]);
+
+      return r([
+        'Oi! me fala 😊',
+        'Oi! o que você precisa?',
+        'Oi! pode mandar',
+        'Ei! tô aqui, fala aí',
         'Oi oi! o que rola?',
-        'Oi! fala aí',
-        'Ei, apareceu! o que posso fazer por você?',
-        'Oi! tô de olho aqui, pode mandar',
-      ];
-      return respostas[Math.floor(Math.random() * respostas.length)];
+        'Ei! pode falar',
+        'Oi! tô de olho, pode mandar',
+      ]);
     }
 
     // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
