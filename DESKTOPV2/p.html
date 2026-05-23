@@ -847,6 +847,9 @@ async function instalarPWA() {
 
   if (!linkToken) return mostrarErro('Link inválido', 'Nenhum token encontrado na URL.', 'fa-link-slash');
 
+  // Permite que o PWA (app-start.html) saiba para onde redirecionar ao abrir
+  localStorage.setItem('portal_link_token', linkToken);
+
   // Sessão salva?
   sessionJwt = sessionStorage.getItem(`pjwt_${linkToken}`) || '';
   if (sessionJwt) {
@@ -1796,6 +1799,7 @@ function sair() {
   if (!confirm('Deseja sair do portal?')) return;
   sessionStorage.removeItem(`pjwt_${linkToken}`);
   sessionStorage.removeItem('portal_session_token');
+  localStorage.removeItem('portal_link_token');
   sessionJwt = '';
   pinBuffer  = '';
   lavadorInfo && mostrarPin();
