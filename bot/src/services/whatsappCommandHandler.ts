@@ -56,6 +56,9 @@ const pendingCommands = new Map<string, string>();
 // Admin navegando menu de notificações individuais (JID → empresaId)
 const pendingNotifMenu = new Map<string, string>();
 
+// Lavador com menu numerado aberto (JID → { lavadorId, empresaId })
+const pendingLavadorMenu = new Map<string, { lavadorId: string; empresaId: string }>();
+
 // Limpa sessões expiradas a cada 5 minutos
 setInterval(() => {
   const now = Date.now();
@@ -229,8 +232,23 @@ export async function handleIncomingMessage(
       // Step pendente de report tem prioridade
       if (pendingReports.has(from)) return handleReportStep(from, message);
 
+      // Resposta numérica ao menu interativo
+      if (pendingLavadorMenu.has(from)) {
+        const ctx = pendingLavadorMenu.get(from)!;
+        pendingLavadorMenu.delete(from);
+        if (command === '1') return handleStatusLavador(ctx.lavadorId, ctx.empresaId);
+        if (command === '2') return handleComissoesLavador(ctx.lavadorId, ctx.empresaId);
+        if (command === '3') return handleLinkLavador(ctx.lavadorId);
+        if (command === '4') return handleReportarCommand(from, ctx.lavadorId, ctx.empresaId);
+        // não reconheceu o número — cai nos handlers normais abaixo
+      }
+
+      // Saudação → mini-status + menu numerado
+      const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo|hey|opa|eae|boa|salve|boas|al[oô])$/i.test(command);
+      if (isSaudacao || command === 'ajuda' || command === 'menu')
+        return handleSaudacaoLavador(from, lavadorId, empresaId);
+
       if (command === 'reportar') return handleReportarCommand(from, lavadorId, empresaId);
-      if (command === 'ajuda')    return handleAjudaLavador();
       if (command === 'link')     return handleLinkLavador(lavadorId);
       if (['status','meu-status','minhas-comissoes','resumo'].includes(command))
         return handleStatusLavador(lavadorId, empresaId);
@@ -244,7 +262,7 @@ export async function handleIncomingMessage(
       const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
       if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
 
-      return getDeniedAccessMessage(user);
+      return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
     }
 
     // ── ADMIN: pendências com prioridade (não dependem de empresa ativa) ────────
@@ -1184,6 +1202,52 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
 // HANDLERS ESPECÍFICOS PARA LAVADOR
 // ==========================================
 
+async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId: string): Promise<string> {
+  const lavador = await prisma.lavador.findUnique({ where: { id: lavadorId } });
+  if (!lavador) return buildMenuLavador();
+
+  const { start: diaStart, end: diaEnd } = getTodayFixedRangeBRT();
+  const ordens = await prisma.ordemServico.findMany({
+    where: {
+      empresaId,
+      status: 'FINALIZADO',
+      OR: [{ lavadorId }, { ordemLavadores: { some: { lavadorId } } }],
+      dataFim: { gte: diaStart, lte: diaEnd },
+    },
+    include: { ordemLavadores: { where: { lavadorId }, select: { ganho: true } } },
+  });
+
+  const comDia = ordens.reduce((s, o) => {
+    const entrada = o.ordemLavadores[0];
+    return s + (entrada ? entrada.ganho : o.valorTotal * (lavador.comissao / 100));
+  }, 0);
+
+  const hora = new Date().getHours();
+  const [saudacao, emoji] = hora < 12 ? ['Bom dia', '☀️'] : hora < 18 ? ['Boa tarde', '🌤️'] : ['Boa noite', '🌙'];
+  const primeiroNome = lavador.nome.split(' ')[0];
+
+  let msg = `${saudacao}, *${primeiroNome}*! ${emoji}\n\n`;
+  if (ordens.length > 0) {
+    msg += `📊 Hoje: *${ordens.length} ${ordens.length === 1 ? 'ordem' : 'ordens'}* · 💰 *R$ ${comDia.toFixed(2)}*\n\n`;
+  } else {
+    msg += `📊 Nenhuma ordem finalizada hoje ainda.\n\n`;
+  }
+  msg += buildMenuLavador();
+
+  pendingLavadorMenu.set(from, { lavadorId, empresaId });
+  return msg;
+}
+
+function buildMenuLavador(): string {
+  return `━━━━━━━━━━━━━━━\n` +
+    `1️⃣  Meu status hoje\n` +
+    `2️⃣  Comissões em aberto\n` +
+    `3️⃣  Meu portal (link)\n` +
+    `4️⃣  Reportar avaria\n` +
+    `━━━━━━━━━━━━━━━\n\n` +
+    `_Responda com o número ou o comando._`;
+}
+
 async function handleStatusLavador(lavadorId: string, empresaId: string): Promise<string> {
   const { start: diaStart, end: diaEnd } = getTodayFixedRangeBRT();
   const hoje = new Date();
@@ -1193,28 +1257,42 @@ async function handleStatusLavador(lavadorId: string, empresaId: string): Promis
   const lavador = await prisma.lavador.findUnique({ where: { id: lavadorId } });
   if (!lavador) return '❌ Erro ao buscar seus dados.';
 
+  const filtroLavador = { OR: [{ lavadorId }, { ordemLavadores: { some: { lavadorId } } }] };
+
   const [ordensDia, ordensMes] = await Promise.all([
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, dataFim: { gte: diaStart, lte: diaEnd } },
+      where: { empresaId, status: 'FINALIZADO', ...filtroLavador, dataFim: { gte: diaStart, lte: diaEnd } },
+      include: { ordemLavadores: { where: { lavadorId }, select: { ganho: true } } },
     }),
     prisma.ordemServico.findMany({
-      where: { empresaId, lavadorId, status: { not: 'CANCELADO' }, dataFim: { gte: inicioMes, lte: fimMes } },
+      where: { empresaId, status: 'FINALIZADO', ...filtroLavador, dataFim: { gte: inicioMes, lte: fimMes } },
+      include: { ordemLavadores: { where: { lavadorId }, select: { ganho: true } } },
     }),
   ]);
 
-  const fatDia      = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
-  const comDia      = fatDia * (lavador.comissao / 100);
-  const fatMes      = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
-  const comBrutaMes = fatMes * (lavador.comissao / 100);
+  const calcCom = (ordens: typeof ordensDia) => ordens.reduce((s, o) => {
+    const entrada = o.ordemLavadores[0];
+    return s + (entrada ? entrada.ganho : o.valorTotal * (lavador.comissao / 100));
+  }, 0);
+
+  const fatDia  = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+  const comDia  = calcCom(ordensDia);
+  const fatMes  = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+  const comMes  = calcCom(ordensMes);
 
   const portalLink = await getLinkPortal(lavadorId);
 
-  let msg = `Olá, *${lavador.nome}*! 👋\n\n`;
-  msg += `💰 Sua comissão bruta este mês: *R$ ${comBrutaMes.toFixed(2)}*\n`;
-  msg += `📅 Hoje: *${ordensDia.length} ${ordensDia.length === 1 ? 'ordem' : 'ordens'}* · comissão *R$ ${comDia.toFixed(2)}*\n\n`;
-  msg += portalLink
-    ? `Para ver o detalhamento completo, acesse seu portal:\n🔗 ${portalLink}`
-    : `Para mais informações, peça o seu link de acesso ao gerente.`;
+  let msg = `━━━━━━━━━━━━━━━\n📊 *STATUS — HOJE*\n━━━━━━━━━━━━━━━\n\n`;
+  msg += `🚗 *${ordensDia.length}* ${ordensDia.length === 1 ? 'ordem' : 'ordens'} finalizada(s)\n`;
+  msg += `💵 Faturamento: R$ ${fatDia.toFixed(2)}\n`;
+  msg += `👷 Sua comissão: *R$ ${comDia.toFixed(2)}*\n\n`;
+
+  msg += `━━━━━━━━━━━━━━━\n📅 *ESTE MÊS*\n━━━━━━━━━━━━━━━\n\n`;
+  msg += `🚗 *${ordensMes.length}* ${ordensMes.length === 1 ? 'ordem' : 'ordens'}\n`;
+  msg += `💵 Faturamento: R$ ${fatMes.toFixed(2)}\n`;
+  msg += `👷 Comissão bruta: *R$ ${comMes.toFixed(2)}*`;
+
+  if (portalLink) msg += `\n\n🔗 _Detalhes completos: ${portalLink}_`;
 
   return msg;
 }
@@ -1239,10 +1317,7 @@ async function getLinkPortal(lavadorId: string): Promise<string | null> {
  * Suas comissões em aberto (apenas do lavador)
  */
 async function handleComissoesLavador(lavadorId: string, empresaId: string): Promise<string> {
-  const lavador = await prisma.lavador.findUnique({
-    where: { id: lavadorId },
-  });
-
+  const lavador = await prisma.lavador.findUnique({ where: { id: lavadorId } });
   if (!lavador) return '❌ Erro ao buscar dados.';
 
   const ordens = await prisma.ordemServico.findMany({
@@ -1251,48 +1326,46 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
       status: 'FINALIZADO',
       OR: [
         { lavadorId, fechamentoComissaoId: null },
-        {
-          ordemLavadores: {
-            some: { lavadorId, fechamentoComissaoId: null },
-          },
-        },
+        { ordemLavadores: { some: { lavadorId, fechamentoComissaoId: null } } },
       ],
     },
+    include: { ordemLavadores: { where: { lavadorId }, select: { ganho: true } } },
   });
 
   if (ordens.length === 0) {
-    return `✅ *${lavador.nome}*, você não possui comissões em aberto.`;
+    return `✅ Tudo certo, *${lavador.nome.split(' ')[0]}*!\nVocê não tem comissões em aberto.`;
   }
 
-  const totalFat = ordens.reduce((s, o) => s + o.valorTotal, 0);
-  const totalCom = totalFat * (lavador.comissao / 100);
+  const totalCom = ordens.reduce((s, o) => {
+    const entrada = o.ordemLavadores[0];
+    return s + (entrada ? entrada.ganho : o.valorTotal * (lavador.comissao / 100));
+  }, 0);
 
-  // Agrupar por mês
+  // Agrupar por mês usando dataFim
   const porMes: Record<string, number> = {};
   for (const o of ordens) {
-    const mes = o.createdAt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-    porMes[mes] = (porMes[mes] ?? 0) + o.valorTotal * (lavador.comissao / 100);
+    const ref = o.dataFim ?? o.createdAt;
+    const mes = ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+    const ganho = o.ordemLavadores[0]?.ganho ?? o.valorTotal * (lavador.comissao / 100);
+    porMes[mes] = (porMes[mes] ?? 0) + ganho;
   }
+
   const porMesFmt = Object.entries(porMes)
-    .map(([m, v]) => `  *${m}*: *R$ ${v.toFixed(2)}*`)
+    .map(([m, v]) => `📅 *${m.charAt(0).toUpperCase() + m.slice(1)}*: R$ ${v.toFixed(2)}`)
     .join('\n');
 
-  return `💰 SUAS COMISSÕES EM ABERTO\n\n` +
-    `Ordens finalizadas: *${ordens.length}*\n` +
-    `Faturamento total: *R$ ${totalFat.toFixed(2)}*\n` +
-    `Comissão a receber (${lavador.comissao}%): *R$ ${totalCom.toFixed(2)}*\n\n` +
-    `Por mês:\n${porMesFmt}`;
+  return `━━━━━━━━━━━━━━━\n` +
+    `💰 *COMISSÕES EM ABERTO*\n` +
+    `━━━━━━━━━━━━━━━\n\n` +
+    `📋 *${ordens.length}* ${ordens.length === 1 ? 'ordem' : 'ordens'} a receber\n\n` +
+    `${porMesFmt}\n\n` +
+    `━━━━━━━━━━━━━━━\n` +
+    `💵 Total: *R$ ${totalCom.toFixed(2)}*\n` +
+    `━━━━━━━━━━━━━━━`;
 }
 
 function handleAjudaLavador(): string {
-  return `Oi! Aqui vai o que eu consigo fazer por você 😊\n\n` +
-    `*status* — sua comissão do dia e do mês\n` +
-    `*comissoes* — comissões em aberto\n` +
-    `*link* — acessar seu portal pessoal\n` +
-    `*reportar* — avisar uma avaria no veículo\n` +
-    `*pix [nº]* — gerar QR Code PIX de uma ordem\n` +
-    `*reenviar pix [nº]* — reenviar um QR já gerado\n\n` +
-    `Qualquer dúvida é só me chamar aqui, tá?`;
+  return buildMenuLavador();
 }
 
 // ==========================================
