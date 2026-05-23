@@ -213,10 +213,10 @@ cron.schedule('0 9 * * *', () => {
   timezone: "America/Sao_Paulo"
 });
 
-// WhatsApp: Resumo diário às 20h
-cron.schedule('0 20 * * *', () => {
-  cronResumoDiario();
-}, { timezone: "America/Sao_Paulo" });
+// WhatsApp: Resumo diário às 20h (+ retries às 20:30 e 22:00 caso bot esteja offline)
+cron.schedule('0 20 * * *',  () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
+cron.schedule('30 20 * * *', () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
+cron.schedule('0 22 * * *',  () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
 
 // WhatsApp: Alerta de caixa aberto às 21h
 cron.schedule('0 21 * * *', () => {

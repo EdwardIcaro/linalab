@@ -5,7 +5,11 @@
 
 import prisma from '../db';
 import { botSend, botGetStatus } from './botServiceClient';
-import { getTodayFixedRangeBRT, getTodayRangeBRT } from '../utils/dateUtils';
+import { getTodayFixedRangeBRT, getTodayRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
+
+// Evita reenvio do resumo se o bot estava offline e o cron de retry disparou
+const resumoEnviadoHoje = new Set<string>(); // key: `${empresaId}_${YYYY-MM-DD}`
+function resumoKey(empresaId: string) { return `${empresaId}_${getTodayStrBRT()}`; }
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -220,13 +224,14 @@ export async function cronResumoDiario(): Promise<void> {
 
   for (const empresa of empresas) {
     if (!prefs(empresa).resumoDiario) continue;
+    if (resumoEnviadoHoje.has(resumoKey(empresa.id))) continue;
     try {
       const { start: hoje, end: fimHoje } = getTodayFixedRangeBRT();
 
       const [finalizadas, caixa] = await Promise.all([
         prisma.ordemServico.findMany({
           where: { empresaId: empresa.id, status: 'FINALIZADO', dataFim: { gte: hoje, lte: fimHoje } },
-          include: { lavador: { select: { nome: true, comissao: true } } },
+          include: { ordemLavadores: { include: { lavador: { select: { nome: true } } } } },
         }),
         prisma.caixaRegistro.findMany({
           where: { empresaId: empresa.id, data: { gte: hoje, lte: fimHoje } },
@@ -235,13 +240,14 @@ export async function cronResumoDiario(): Promise<void> {
       const fat    = finalizadas.reduce((s, o) => s + o.valorTotal, 0);
       const saidas = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
-      // Top lavadores por faturamento
+      // Top lavadores por ganho real (OrdemServicoLavador.ganho já tem divisão multi-lavador aplicada)
       const comPorLav: Record<string, { nome: string; ordens: number; com: number }> = {};
       for (const o of finalizadas) {
-        if (!o.lavador || !o.lavadorId) continue;
-        if (!comPorLav[o.lavadorId]) comPorLav[o.lavadorId] = { nome: o.lavador.nome, ordens: 0, com: 0 };
-        comPorLav[o.lavadorId].ordens++;
-        comPorLav[o.lavadorId].com += o.valorTotal * (o.lavador.comissao / 100);
+        for (const ol of o.ordemLavadores) {
+          if (!comPorLav[ol.lavadorId]) comPorLav[ol.lavadorId] = { nome: ol.lavador.nome, ordens: 0, com: 0 };
+          comPorLav[ol.lavadorId].ordens++;
+          comPorLav[ol.lavadorId].com += ol.ganho;
+        }
       }
       const topLavs = Object.values(comPorLav).sort((a, b) => b.com - a.com).slice(0, 3);
 
@@ -261,6 +267,7 @@ export async function cronResumoDiario(): Promise<void> {
 
       msg += `\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
       await notifyAdmins(empresa.id, msg.trim(), 'resumoDiario');
+      resumoEnviadoHoje.add(resumoKey(empresa.id));
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
     }
