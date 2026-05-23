@@ -1232,7 +1232,7 @@ async function getLinkPortal(lavadorId: string): Promise<string | null> {
   `;
   const token = rows[0]?.linkTokenCurto;
   if (!token) return null;
-  return `${PORTAL_URL}/p.html?token=${token}`;
+  return `${PORTAL_URL}/p/${token}`;
 }
 
 /*
