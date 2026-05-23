@@ -234,7 +234,7 @@ export async function handleIncomingMessage(
       if (command === 'link')     return handleLinkLavador(lavadorId);
       if (['status','meu-status','minhas-comissoes','resumo'].includes(command))
         return handleStatusLavador(lavadorId, empresaId);
-      if (['comissoes','comissão','comissao'].includes(command))
+      if (['comissoes','comissões','comissão','comissao'].includes(command))
         return handleComissoesLavador(lavadorId, empresaId);
 
       const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
