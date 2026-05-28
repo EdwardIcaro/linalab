@@ -10,7 +10,7 @@ async function botFetch(path: string, opts?: { method?: string; body?: unknown }
   if (!BOT_URL) throw new Error('BOT_SERVICE_URL não configurado');
   const res = await fetch(`${BOT_URL}${path}`, {
     method:  opts?.method ?? 'GET',
-    headers: { 'Content-Type': 'application/json', 'X-Bot-Secret': BOT_SECRET },
+    headers: { 'Content-Type': 'application/json', 'X-Bot-Secret': BOT_SECRET, 'ngrok-skip-browser-warning': 'true' },
     body:    opts?.body ? JSON.stringify(opts.body) : undefined,
     signal:  AbortSignal.timeout(15000),
   });
