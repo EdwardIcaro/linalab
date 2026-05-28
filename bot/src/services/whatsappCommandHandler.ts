@@ -9,7 +9,7 @@ import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type Whats
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
-import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
+import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT } from '../utils/dateUtils';
 import {
   pendingReports,
   hasPendingAdminReportView,
@@ -740,23 +740,23 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     .map(([m, v]) => `${m}: *R$ ${v.toFixed(2)}*`)
     .join('\n');
 
-  // Comissões por lavador com breakdown
+  // Comissões por lavador — usa OrdemServicoLavador.ganho (já divide multi-lavador)
   const comissoesPorLavador: Record<string, { taxa: number; total: number; itens: string[] }> = {};
   for (const o of ordens) {
-    // Usar ordemLavadores se existir, senão o lavadorId principal
-    const lavs = o.ordemLavadores.length > 0
-      ? o.ordemLavadores.map(ol => ol.lavador)
-      : o.lavador ? [o.lavador] : [];
-
-    for (const lav of lavs) {
-      if (!comissoesPorLavador[lav.nome]) {
-        comissoesPorLavador[lav.nome] = { taxa: lav.comissao, total: 0, itens: [] };
+    const modelo = (o.veiculo.modelo ?? 'Veículo').toUpperCase();
+    if (o.ordemLavadores.length > 0) {
+      for (const ol of o.ordemLavadores) {
+        const nome = ol.lavador.nome;
+        if (!comissoesPorLavador[nome]) comissoesPorLavador[nome] = { taxa: ol.lavador.comissao, total: 0, itens: [] };
+        comissoesPorLavador[nome].total += ol.ganho;
+        comissoesPorLavador[nome].itens.push(`${modelo}: *${ol.ganho.toFixed(2)}*`);
       }
-      const comValor = o.valorTotal * (lav.comissao / 100);
-      comissoesPorLavador[lav.nome].total += comValor;
-      comissoesPorLavador[lav.nome].itens.push(
-        `${(o.veiculo.modelo ?? 'Veículo').toUpperCase()}: *${comValor.toFixed(2)}*`
-      );
+    } else if (o.lavador) {
+      const nome = o.lavador.nome;
+      const comValor = o.valorTotal * (o.lavador.comissao / 100);
+      if (!comissoesPorLavador[nome]) comissoesPorLavador[nome] = { taxa: o.lavador.comissao, total: 0, itens: [] };
+      comissoesPorLavador[nome].total += comValor;
+      comissoesPorLavador[nome].itens.push(`${modelo}: *${comValor.toFixed(2)}*`);
     }
   }
 
@@ -866,17 +866,19 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
   const lucro = totalFat - totalSaidas;
   r += `\n\n💰 LUCRO ESTIMADO: *R$ ${lucro.toFixed(2)}*`;
 
-  // Comissões totais por lavador no período
+  // Comissões totais por lavador — usa OrdemServicoLavador.ganho (já divide multi-lavador)
   const comissoesPorLavador: Record<string, { taxa: number; total: number }> = {};
   for (const o of ordens) {
-    const lavs = o.ordemLavadores.length > 0
-      ? o.ordemLavadores.map(ol => ol.lavador)
-      : o.lavador ? [o.lavador] : [];
-    for (const lav of lavs) {
-      if (!comissoesPorLavador[lav.nome]) {
-        comissoesPorLavador[lav.nome] = { taxa: lav.comissao, total: 0 };
+    if (o.ordemLavadores.length > 0) {
+      for (const ol of o.ordemLavadores) {
+        const nome = ol.lavador.nome;
+        if (!comissoesPorLavador[nome]) comissoesPorLavador[nome] = { taxa: ol.lavador.comissao, total: 0 };
+        comissoesPorLavador[nome].total += ol.ganho;
       }
-      comissoesPorLavador[lav.nome].total += o.valorTotal * (lav.comissao / 100);
+    } else if (o.lavador) {
+      const nome = o.lavador.nome;
+      if (!comissoesPorLavador[nome]) comissoesPorLavador[nome] = { taxa: o.lavador.comissao, total: 0 };
+      comissoesPorLavador[nome].total += o.valorTotal * (o.lavador.comissao / 100);
     }
   }
 
@@ -1415,31 +1417,29 @@ async function buildContextForDate(empresaId: string, date: Date): Promise<strin
 
 async function buildDailyContext(empresaId: string): Promise<string> {
   try {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const amanha = new Date(hoje);
-    amanha.setDate(amanha.getDate() + 1);
+    const agora = new Date();
+    const todayStr = getTodayStrBRT();
+    const { start: diaStart, end: diaEnd } = getTodayFixedRangeBRT();
 
-    // Mês atual
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+    // Mês atual em BRT
+    const [anoAtual, mesAtual] = todayStr.split('-').map(Number);
+    const { start: mesStart, end: mesEnd } = getMonthRangeBRT(anoAtual, mesAtual);
 
-    // Mês anterior
-    const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-    const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
+    // Mês anterior em BRT
+    const mesAnteriorNum = mesAtual === 1 ? 12 : mesAtual - 1;
+    const anoAnterior    = mesAtual === 1 ? anoAtual - 1 : anoAtual;
+    const { start: mesAntStart, end: mesAntEnd } = getMonthRangeBRT(anoAnterior, mesAnteriorNum);
 
     // 1. Empresa
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
     if (!empresa) return 'Empresa não encontrada.';
 
     // 2. Lavadores ativos
-    const lavadores = await prisma.lavador.findMany({
-      where: { empresaId, ativo: true }
-    });
+    const lavadores = await prisma.lavador.findMany({ where: { empresaId, ativo: true } });
 
-    // 3. Ordens do DIA
-    const ordensDia = await prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } },
+    // 3a. Pátio: ordens criadas hoje, todos os status (para contagem de status)
+    const ordensDiaPatio = await prisma.ordemServico.findMany({
+      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: diaStart, lte: diaEnd } },
       include: {
         cliente: { select: { nome: true } },
         veiculo: { select: { placa: true, modelo: true } },
@@ -1447,22 +1447,34 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       }
     });
 
-    // 4. Ordens do MÊS
+    // 3b. Faturamento: ordens FINALIZADAS hoje por dataFim (âncora correta para receita)
+    const ordensDia = await prisma.ordemServico.findMany({
+      where: { empresaId, status: 'FINALIZADO', dataFim: { gte: diaStart, lte: diaEnd } },
+      include: {
+        lavador: { select: { nome: true } },
+        ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+      }
+    });
+
+    // 4. Ordens FINALIZADAS do MÊS por dataFim
     const ordensMes = await prisma.ordemServico.findMany({
-      where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } },
-      include: { lavador: { select: { nome: true } } }
+      where: { empresaId, status: 'FINALIZADO', dataFim: { gte: mesStart, lte: mesEnd } },
+      include: {
+        lavador: { select: { nome: true } },
+        ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+      }
     });
 
     // 5. Caixa do dia
     const caixaDia = await prisma.caixaRegistro.findMany({
-      where: { empresaId, data: { gte: hoje, lt: amanha } }
+      where: { empresaId, data: { gte: diaStart, lte: diaEnd } }
     });
     const entradasDia = caixaDia.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasDia = caixaDia.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
     // 6. Caixa do mês
     const caixaMes = await prisma.caixaRegistro.findMany({
-      where: { empresaId, data: { gte: inicioMes, lte: fimMes } }
+      where: { empresaId, data: { gte: mesStart, lte: mesEnd } }
     });
     const entradasMes = caixaMes.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasMes = caixaMes.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
@@ -1470,11 +1482,14 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     // 6b. Ordens e caixa do mês anterior
     const [ordensMesAnterior, caixaMesAnterior] = await Promise.all([
       prisma.ordemServico.findMany({
-        where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
-        include: { lavador: { select: { nome: true } } }
+        where: { empresaId, status: 'FINALIZADO', dataFim: { gte: mesAntStart, lte: mesAntEnd } },
+        include: {
+          lavador: { select: { nome: true } },
+          ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+        }
       }),
       prisma.caixaRegistro.findMany({
-        where: { empresaId, data: { gte: inicioMesAnterior, lte: fimMesAnterior } }
+        where: { empresaId, data: { gte: mesAntStart, lte: mesAntEnd } }
       }),
     ]);
 
@@ -1488,67 +1503,75 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     let fechamentosMes: { lavadorId: string; valorPago: number; data: Date; lavador: { nome: string } }[] = [];
     try {
       fechamentosMes = await prisma.fechamentoComissao.findMany({
-        where: { empresaId, data: { gte: inicioMes, lte: fimMes } },
+        where: { empresaId, data: { gte: mesStart, lte: mesEnd } },
         include: { lavador: { select: { nome: true } } }
       });
     } catch { /* ignorar se não existir */ }
 
     // ---- MONTAR CONTEXTO ----
+    const mesNomeFmt = mesStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+    const mesAntNomeFmt = mesAntStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+
     let ctx = `CONTEXTO LINA X - ${empresa.nome}\n`;
-    ctx += `Data: ${hoje.toLocaleDateString('pt-BR')} | Mês: ${inicioMes.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}\n\n`;
+    ctx += `Data: ${agora.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} | Mês: ${mesNomeFmt}\n\n`;
+
+    // Helper: calcula ganho real de um lavador em uma lista de ordens (multi-lavador aware)
+    const calcGanhoLavador = (ords: typeof ordensDia, lavadorId: string, comissao: number) =>
+      ords.reduce((s, o) => {
+        const ol = o.ordemLavadores.find((x: any) => x.lavadorId === lavadorId);
+        return s + (ol ? ol.ganho : o.lavadorId === lavadorId ? o.valorTotal * (comissao / 100) : 0);
+      }, 0);
+    const contaOrdensLavador = (ords: typeof ordensDia, lavadorId: string) =>
+      ords.filter(o => o.lavadorId === lavadorId || o.ordemLavadores.some((x: any) => x.lavadorId === lavadorId)).length;
 
     // --- DIA ---
     ctx += `=== HOJE ===\n`;
     const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
-    ctx += `Ordens: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n`;
-    ctx += `Status: *${ordensDia.filter(o => o.status === 'FINALIZADO').length}* finalizadas, `;
-    ctx += `*${ordensDia.filter(o => o.status === 'EM_ANDAMENTO').length}* em andamento, `;
-    ctx += `*${ordensDia.filter(o => o.status === 'PENDENTE').length}* pendentes, `;
-    ctx += `*${ordensDia.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length}* aguardando pagamento\n`;
+    ctx += `Finalizadas: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n`;
+    ctx += `Pátio agora: *${ordensDiaPatio.filter(o => o.status === 'EM_ANDAMENTO').length}* em andamento, `;
+    ctx += `*${ordensDiaPatio.filter(o => o.status === 'PENDENTE').length}* pendentes, `;
+    ctx += `*${ordensDiaPatio.filter(o => o.status === 'AGUARDANDO_PAGAMENTO').length}* aguardando pagamento\n`;
     ctx += `Caixa: Entradas *R$ ${entradasDia.toFixed(2)}* | Saídas *R$ ${saidasDia.toFixed(2)}* | Saldo *R$ ${(entradasDia - saidasDia).toFixed(2)}*\n\n`;
 
-    // Lavadores hoje
     ctx += `Lavadores hoje:\n`;
     for (const lav of lavadores) {
-      const ords = ordensDia.filter(o => o.lavadorId === lav.id);
-      const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
-      const com = fat * (lav.comissao / 100);
-      ctx += `• *${lav.nome}*: *${ords.length}* ordem(ns), faturamento *R$ ${fat.toFixed(2)}*, comissão hoje *R$ ${com.toFixed(2)}*\n`;
+      const qtd = contaOrdensLavador(ordensDia, lav.id);
+      const fat = ordensDia.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)).reduce((s, o) => s + o.valorTotal, 0);
+      const com = calcGanhoLavador(ordensDia, lav.id, lav.comissao);
+      ctx += `• *${lav.nome}*: *${qtd}* ordem(ns), faturamento *R$ ${fat.toFixed(2)}*, comissão hoje *R$ ${com.toFixed(2)}*\n`;
     }
     ctx += '\n';
 
     // --- MÊS ---
-    ctx += `=== MÊS ATUAL ===\n`;
+    ctx += `=== MÊS ATUAL (${mesNomeFmt}) ===\n`;
     const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
-    ctx += `Ordens: *${ordensMes.length}* | Faturamento total: *R$ ${fatMes.toFixed(2)}*\n`;
+    ctx += `Finalizadas: *${ordensMes.length}* | Faturamento total: *R$ ${fatMes.toFixed(2)}*\n`;
     ctx += `Caixa mês: Entradas *R$ ${entradasMes.toFixed(2)}* | Saídas *R$ ${saidasMes.toFixed(2)}* | Saldo *R$ ${(entradasMes - saidasMes).toFixed(2)}*\n\n`;
 
-    // Comissões do mês por lavador
     ctx += `Comissões do mês por lavador:\n`;
     for (const lav of lavadores) {
-      const ordsMes = ordensMes.filter(o => o.lavadorId === lav.id);
-      const fatLav = ordsMes.reduce((s, o) => s + o.valorTotal, 0);
-      const comMes = fatLav * (lav.comissao / 100);
+      const qtdMes = contaOrdensLavador(ordensMes, lav.id);
+      const fatLav = ordensMes.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)).reduce((s, o) => s + o.valorTotal, 0);
+      const comMes = calcGanhoLavador(ordensMes, lav.id, lav.comissao);
       const adiant = adiantamentos.filter(a => a.lavadorId === lav.id).reduce((s, a) => s + a.valor, 0);
-      const comLiquida = comMes - adiant;
-      ctx += `• *${lav.nome}*: *${ordsMes.length}* ordem(ns), faturamento *R$ ${fatLav.toFixed(2)}*, comissão bruta *R$ ${comMes.toFixed(2)}*, adiantamentos em aberto *R$ ${adiant.toFixed(2)}*, comissão líquida *R$ ${comLiquida.toFixed(2)}*\n`;
+      ctx += `• *${lav.nome}*: *${qtdMes}* ordem(ns), fat. *R$ ${fatLav.toFixed(2)}*, comissão bruta *R$ ${comMes.toFixed(2)}*, adiant. *R$ ${adiant.toFixed(2)}*, líquido *R$ ${(comMes - adiant).toFixed(2)}*\n`;
     }
     ctx += '\n';
 
     // --- MÊS ANTERIOR ---
     const entradasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
-    const saidasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
+    const saidasMesAnt   = caixaMesAnterior.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
     const fatMesAnt = ordensMesAnterior.reduce((s, o) => s + o.valorTotal, 0);
-    ctx += `=== MÊS ANTERIOR (${inicioMesAnterior.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}) ===\n`;
-    ctx += `Ordens: *${ordensMesAnterior.length}* | Faturamento: *R$ ${fatMesAnt.toFixed(2)}*\n`;
+    ctx += `=== MÊS ANTERIOR (${mesAntNomeFmt}) ===\n`;
+    ctx += `Finalizadas: *${ordensMesAnterior.length}* | Faturamento: *R$ ${fatMesAnt.toFixed(2)}*\n`;
     ctx += `Caixa: Entradas *R$ ${entradasMesAnt.toFixed(2)}* | Saídas *R$ ${saidasMesAnt.toFixed(2)}* | Saldo *R$ ${(entradasMesAnt - saidasMesAnt).toFixed(2)}*\n`;
 
     ctx += `Comissões do mês anterior por lavador:\n`;
     for (const lav of lavadores) {
-      const ords = ordensMesAnterior.filter(o => o.lavadorId === lav.id);
-      const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
-      const com = fat * (lav.comissao / 100);
-      ctx += `• *${lav.nome}*: *${ords.length}* ordem(ns), faturamento *R$ ${fat.toFixed(2)}*, comissão *R$ ${com.toFixed(2)}*\n`;
+      const qtdAnt = contaOrdensLavador(ordensMesAnterior, lav.id);
+      const fatAnt = ordensMesAnterior.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)).reduce((s, o) => s + o.valorTotal, 0);
+      const comAnt = calcGanhoLavador(ordensMesAnterior, lav.id, lav.comissao);
+      ctx += `• *${lav.nome}*: *${qtdAnt}* ordem(ns), faturamento *R$ ${fatAnt.toFixed(2)}*, comissão *R$ ${comAnt.toFixed(2)}*\n`;
     }
     ctx += '\n';
 

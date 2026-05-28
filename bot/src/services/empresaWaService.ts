@@ -20,6 +20,7 @@ interface EmpresaState {
   reconnectCount: number;
   reconnectDelay: number;
   isInitializing: boolean;
+  connectedAt: number | null;
 }
 
 const BASE_DELAY    = 5000;
@@ -55,7 +56,7 @@ function getState(empresaId: string): EmpresaState {
   if (!sessions.has(empresaId)) {
     sessions.set(empresaId, {
       socket: null, status: 'DESCONECTADO', qrDataUrl: null,
-      reconnectCount: 0, reconnectDelay: BASE_DELAY, isInitializing: false,
+      reconnectCount: 0, reconnectDelay: BASE_DELAY, isInitializing: false, connectedAt: null,
     });
   }
   return sessions.get(empresaId)!;
@@ -184,6 +185,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         st.reconnectCount  = 0;
         st.reconnectDelay  = BASE_DELAY;
         st.isInitializing  = false;
+        st.connectedAt     = Date.now();
         const phone = sock.user?.id?.split(':')[0] ?? null;
         console.log(`[EmpresaWA:${empresaId}] ✅ Conectado: ${phone}`);
         try {
@@ -208,8 +210,12 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
 
         if (shouldRetry) {
           st.reconnectCount++;
+          // Conexão instável: se ficou conectado menos de 10s, aplica backoff progressivo
+          const wasUnstable = st.connectedAt !== null && (Date.now() - st.connectedAt) < 10000;
+          if (wasUnstable) st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
           const delay = isRestart ? 2000 : st.reconnectDelay;
-          st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
+          if (!isRestart) st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
+          st.connectedAt = null;
           console.log(`[EmpresaWA:${empresaId}] Reconectando em ${delay / 1000}s (${st.reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => connectEmpresa(empresaId).catch(console.error), delay);
         } else {
