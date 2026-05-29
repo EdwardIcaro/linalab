@@ -1,5 +1,5 @@
 /**
- * Cliente HTTP para o bot service (VPS Oracle).
+ * Cliente HTTP para o bot service (PC local via ngrok).
  * Centraliza todas as chamadas do backend ao serviço separado.
  */
 
