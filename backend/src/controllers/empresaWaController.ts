@@ -14,28 +14,26 @@ export async function getStatus(req: Request, res: Response) {
   try {
     const session = await prisma.whatsappEmpresaSession.findUnique({
       where: { empresaId },
-      select: { status: true, phoneNumber: true },
+      select: { status: true, phoneNumber: true, qrCode: true },
     });
-    // Se não tem registro no banco, está desconectado
     if (!session) return res.json({ status: 'DESCONECTADO', phoneNumber: null });
-
-    // Consulta status em tempo real no bot
-    try {
-      const live = await empresaWaStatus(empresaId);
-      return res.json({ status: live.status, phoneNumber: session.phoneNumber });
-    } catch {
-      return res.json({ status: session.status, phoneNumber: session.phoneNumber });
-    }
+    return res.json({
+      status:      session.status,
+      phoneNumber: session.phoneNumber,
+      ...(session.qrCode ? { qrDataUrl: session.qrCode } : {}),
+    });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
 }
 
-// ── Iniciar conexão — retorna QR ──────────────────────────────────────────────
+// ── Iniciar conexão — fire-and-forget, QR servido via banco ──────────────────
 export async function connect(req: Request, res: Response) {
   const empresaId = (req as any).empresaId as string;
   try {
-    const result = await empresaWaConnect(empresaId);
+    // Dispara conexão no bot sem esperar (bot retorna imediatamente e salva QR no banco)
+    let botOnline = true;
+    try { await empresaWaConnect(empresaId); } catch { botOnline = false; }
 
     // Na primeira conexão, criar templates padrão se não existirem
     const count = await prisma.mensagemTemplate.count({ where: { empresaId } });
@@ -45,7 +43,19 @@ export async function connect(req: Request, res: Response) {
       });
     }
 
-    return res.json(result);
+    const session = await prisma.whatsappEmpresaSession.findUnique({
+      where: { empresaId },
+      select: { status: true, qrCode: true },
+    });
+
+    if (!botOnline && !session) {
+      return res.status(503).json({ error: 'Bot offline. Verifique se o bot está rodando.' });
+    }
+
+    return res.json({
+      status: session?.status ?? 'CONECTANDO',
+      ...(session?.qrCode ? { qrDataUrl: session.qrCode } : {}),
+    });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

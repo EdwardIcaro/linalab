@@ -223,16 +223,10 @@ app.post('/empresa-wa/connect/:empresaId', async (req, res) => {
   try {
     const cur = getEmpresaStatus(empresaId);
     if (cur.status === 'CONECTADO') return res.json({ status: 'CONECTADO' });
+    // Fire-and-forget: inicia conexão e retorna imediatamente.
+    // O QR é salvo no banco pelo empresaWaService para o backend servir sem ngrok.
     connectEmpresa(empresaId).catch(console.error);
-    let tries = 0;
-    while (tries < 30) {
-      await new Promise(r => setTimeout(r, 1000));
-      const s = getEmpresaStatus(empresaId);
-      if (s.status === 'CONECTADO') return res.json({ status: 'CONECTADO' });
-      if (s.status === 'QR')        return res.json({ status: 'QR', qrDataUrl: s.qrDataUrl });
-      tries++;
-    }
-    return res.json(getEmpresaStatus(empresaId));
+    return res.json({ status: 'CONECTANDO' });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao conectar empresa', details: String(err) });
   }

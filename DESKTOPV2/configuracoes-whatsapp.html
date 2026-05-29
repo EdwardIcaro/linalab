@@ -2457,11 +2457,12 @@
                 if (data.qrDataUrl) {
                     document.getElementById('empresaWaQrContainer').innerHTML =
                         `<img src="${data.qrDataUrl}" style="width:220px;height:220px;border-radius:8px;">`;
-                    iniciarPollConexaoEmpresaWa();
                 }
+                // Polling sempre iniciado — QR chega via banco em até 5s
+                iniciarPollConexaoEmpresaWa();
             } catch (err) {
                 fecharModalEmpresaWaQr();
-                showAlert('Erro ao gerar QR Code. Bot offline?', 'error');
+                showAlert('Erro ao conectar. Verifique se o bot está online.', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '📱 Conectar WhatsApp da Empresa';
@@ -2477,6 +2478,9 @@
                         clearInterval(_empresaWaQrPollTimer);
                         fecharModalEmpresaWaQr();
                         await carregarStatusEmpresaWa();
+                    } else if (data.qrDataUrl) {
+                        document.getElementById('empresaWaQrContainer').innerHTML =
+                            `<img src="${data.qrDataUrl}" style="width:220px;height:220px;border-radius:8px;">`;
                     }
                 } catch {}
             }, 3000);

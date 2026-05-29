@@ -177,6 +177,15 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
       if (qr) {
         try { st.qrDataUrl = await _QRCode.toDataURL(qr); st.status = 'QR'; } catch {}
         console.log(`[EmpresaWA:${empresaId}] QR gerado`);
+        try {
+          await (prisma as any).whatsappEmpresaSession.upsert({
+            where:  { empresaId },
+            create: { empresaId, status: 'QR', qrCode: st.qrDataUrl },
+            update: { status: 'QR', qrCode: st.qrDataUrl },
+          });
+        } catch (e) {
+          console.error(`[EmpresaWA:${empresaId}] Erro ao salvar QR no banco:`, e);
+        }
       }
 
       if (connection === 'open') {
@@ -191,8 +200,8 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         try {
           await (prisma as any).whatsappEmpresaSession.upsert({
             where:  { empresaId },
-            create: { empresaId, status: 'CONECTADO', phoneNumber: phone, connectedAt: new Date() },
-            update: { status: 'CONECTADO', phoneNumber: phone, connectedAt: new Date() },
+            create: { empresaId, status: 'CONECTADO', phoneNumber: phone, connectedAt: new Date(), qrCode: null },
+            update: { status: 'CONECTADO', phoneNumber: phone, connectedAt: new Date(), qrCode: null },
           });
         } catch {}
       }
@@ -218,13 +227,19 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
           st.connectedAt = null;
           console.log(`[EmpresaWA:${empresaId}] Reconectando em ${delay / 1000}s (${st.reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => connectEmpresa(empresaId).catch(console.error), delay);
+          try {
+            await (prisma as any).whatsappEmpresaSession.updateMany({
+              where: { empresaId },
+              data:  { qrCode: null },
+            });
+          } catch {}
         } else {
           st.status    = 'DESCONECTADO';
           st.qrDataUrl = null;
           try {
             await (prisma as any).whatsappEmpresaSession.updateMany({
               where: { empresaId },
-              data:  { status: 'DESCONECTADO', ...(isLogout ? { authState: null } : {}) },
+              data:  { status: 'DESCONECTADO', qrCode: null, ...(isLogout ? { authState: null } : {}) },
             });
           } catch {}
           console.log(`[EmpresaWA:${empresaId}] ${isLogout ? 'Logout real — auth limpo' : 'Max tentativas atingido'}`);
