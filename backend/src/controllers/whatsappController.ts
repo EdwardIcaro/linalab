@@ -56,20 +56,27 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
 
 // ──────────────────────────────────────────────────────────────
 // GET /api/whatsapp/status
+// Lê status direto do banco — o bot mantém a tabela atualizada.
+// Evita dependência de rede com o ngrok para exibição de status.
 // ──────────────────────────────────────────────────────────────
 export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response) {
   try {
-    const bot = await botGetStatus();
+    const inst = await prisma.whatsappInstance.findFirst({ where: { instanceName: GLOBAL_INSTANCE_NAME } });
 
-    if (bot.status === 'connected') {
-      const inst = await prisma.whatsappInstance.findFirst({ where: { instanceName: GLOBAL_INSTANCE_NAME } });
-      return res.json({ status: 'connected', ownerPhone: inst?.ownerPhone, message: 'Bot Lina conectado' });
+    if (!inst) return res.json({ status: 'disconnected', message: 'Bot Lina não configurado' });
+
+    const status = inst.status as string;
+
+    if (status === 'connected') {
+      return res.json({ status: 'connected', ownerPhone: inst.ownerPhone, message: 'Bot Lina conectado' });
     }
-    if (bot.status === 'reconnecting') {
+    if (status === 'reconnecting') {
       return res.json({ status: 'reconnecting', message: 'Reconectando automaticamente...' });
     }
-    if (bot.status === 'qr_code') {
-      return res.json({ status: 'qr_code', qrCode: bot.qrCode, qrExpiresIn: bot.qrExpiresIn, message: 'Aguardando escaneamento do QR' });
+    if (status === 'qr_code') {
+      const updatedAt   = (inst as any).updatedAt as Date | null;
+      const qrExpiresIn = updatedAt ? Math.max(0, 60 - Math.floor((Date.now() - updatedAt.getTime()) / 1000)) : null;
+      return res.json({ status: 'qr_code', qrCode: inst.qrCode, qrExpiresIn, message: 'Aguardando escaneamento do QR' });
     }
 
     return res.json({ status: 'disconnected', message: 'Bot Lina desconectado' });
