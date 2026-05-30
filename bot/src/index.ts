@@ -46,6 +46,7 @@ import {
 
 import { botAuth } from './middleware/botAuth';
 import { scheduleCleanupReports } from './cron/cleanupReports';
+import prisma from './db';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -276,6 +277,22 @@ async function startBot() {
     await restoreActiveSessions();
     // Restaurar sessões WhatsApp das empresas
     await restoreAllEmpresaSessions();
+
+    // Polling: detecta PENDENTE_CONNECT no banco a cada 5s (sem depender de ngrok)
+    setInterval(async () => {
+      try {
+        const pendentes = await (prisma as any).whatsappEmpresaSession.findMany({
+          where:  { status: 'PENDENTE_CONNECT' },
+          select: { empresaId: true },
+        });
+        for (const { empresaId } of pendentes) {
+          const cur = getEmpresaStatus(empresaId);
+          if (cur.status === 'CONECTADO' || cur.status === 'QR') continue;
+          console.log(`[EmpresaWA:${empresaId}] Pedido de conexão detectado no banco, iniciando...`);
+          connectEmpresa(empresaId).catch(console.error);
+        }
+      } catch {}
+    }, 5000);
   } catch (err) {
     console.error('❌ Erro ao iniciar bot:', err);
     process.exit(1);

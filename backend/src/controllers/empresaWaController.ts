@@ -27,15 +27,21 @@ export async function getStatus(req: Request, res: Response) {
   }
 }
 
-// ── Iniciar conexão — fire-and-forget, QR servido via banco ──────────────────
+// ── Iniciar conexão — escreve PENDENTE_CONNECT no banco, bot detecta via polling ──
 export async function connect(req: Request, res: Response) {
   const empresaId = (req as any).empresaId as string;
   try {
-    // Dispara conexão no bot sem esperar (bot retorna imediatamente e salva QR no banco)
-    let botOnline = true;
-    try { await empresaWaConnect(empresaId); } catch { botOnline = false; }
+    // Grava pedido de conexão no banco — bot detecta a cada 5s sem depender de ngrok
+    await prisma.whatsappEmpresaSession.upsert({
+      where:  { empresaId },
+      create: { empresaId, status: 'PENDENTE_CONNECT' },
+      update: { status: 'PENDENTE_CONNECT', qrCode: null },
+    });
 
-    // Na primeira conexão, criar templates padrão se não existirem
+    // Tenta também disparar diretamente via ngrok (mais rápido se funcionar)
+    try { await empresaWaConnect(empresaId); } catch {}
+
+    // Na primeira conexão, criar templates padrão
     const count = await prisma.mensagemTemplate.count({ where: { empresaId } });
     if (count === 0) {
       await prisma.mensagemTemplate.createMany({
@@ -47,13 +53,8 @@ export async function connect(req: Request, res: Response) {
       where: { empresaId },
       select: { status: true, qrCode: true },
     });
-
-    if (!botOnline && !session) {
-      return res.status(503).json({ error: 'Bot offline. Verifique se o bot está rodando.' });
-    }
-
     return res.json({
-      status: session?.status ?? 'CONECTANDO',
+      status:  session?.status ?? 'PENDENTE_CONNECT',
       ...(session?.qrCode ? { qrDataUrl: session.qrCode } : {}),
     });
   } catch (err: any) {
