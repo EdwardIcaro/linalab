@@ -1,5 +1,6 @@
 /**
  * Cliente HTTP para endpoints de WhatsApp por empresa no bot service.
+ * QR code agora é servido via banco — connect é fire-and-forget.
  */
 
 const BOT_URL    = process.env.BOT_SERVICE_URL ?? '';
