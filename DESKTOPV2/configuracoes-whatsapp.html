@@ -2471,19 +2471,50 @@
 
         function iniciarPollConexaoEmpresaWa() {
             if (_empresaWaQrPollTimer) clearInterval(_empresaWaQrPollTimer);
+            let tentativas = 0;
+            const MAX_TENTATIVAS = 10; // 10 × 3s = 30s
             _empresaWaQrPollTimer = setInterval(async () => {
+                tentativas++;
                 try {
                     const data = await window.api.empresaWaStatus();
                     if (data.status === 'CONECTADO') {
                         clearInterval(_empresaWaQrPollTimer);
                         fecharModalEmpresaWaQr();
                         await carregarStatusEmpresaWa();
+                        return;
                     } else if (data.qrDataUrl) {
+                        tentativas = 0; // QR apareceu, resetar contador
                         document.getElementById('empresaWaQrContainer').innerHTML =
                             `<img src="${data.qrDataUrl}" style="width:220px;height:220px;border-radius:8px;">`;
+                        return;
                     }
                 } catch {}
+                if (tentativas >= MAX_TENTATIVAS) {
+                    clearInterval(_empresaWaQrPollTimer);
+                    _empresaWaQrPollTimer = null;
+                    document.getElementById('empresaWaQrContainer').innerHTML = `
+                        <div style="text-align:center;color:#c0392b;padding:1rem;">
+                            <div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div>
+                            <div style="font-weight:600;margin-bottom:0.5rem;">QR Code não gerado</div>
+                            <div style="font-size:0.85rem;color:#666;margin-bottom:1rem;">
+                                Pode haver uma sessão antiga bloqueando.<br>Limpe e tente novamente.
+                            </div>
+                            <button onclick="forcarReconexaoEmpresaWa()" style="padding:0.5rem 1.2rem;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">
+                                Limpar sessão e reconectar
+                            </button>
+                        </div>`;
+                }
             }, 3000);
+        }
+
+        async function forcarReconexaoEmpresaWa() {
+            document.getElementById('empresaWaQrContainer').innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
+                    <div class="spinner"></div> Limpando sessão...
+                </div>`;
+            try { await window.api.empresaWaDisconnect(); } catch {}
+            await new Promise(r => setTimeout(r, 1500));
+            await conectarEmpresaWa();
         }
 
         async function verificarConexaoEmpresaWa() {
