@@ -132,8 +132,10 @@ export async function restoreAllEmpresaSessions(): Promise<void> {
 export async function connectEmpresa(empresaId: string): Promise<void> {
   const st = getState(empresaId);
   if (st.socket || st.isInitializing) return;
-  st.isInitializing = true;
-  st.status = 'CONECTANDO';
+  st.isInitializing  = true;
+  st.status          = 'CONECTANDO';
+  st.reconnectCount  = 0;
+  st.reconnectDelay  = BASE_DELAY;
 
   try {
     await loadBaileys();
@@ -275,7 +277,14 @@ export async function sendEmpresaMessage(empresaId: string, telefone: string, te
 export async function disconnectEmpresa(empresaId: string): Promise<void> {
   const st = sessions.get(empresaId);
   if (st?.socket) { try { await st.socket.logout(); } catch {} st.socket = null; }
-  if (st) { st.status = 'DESCONECTADO'; st.qrDataUrl = null; }
+  if (st) {
+    st.status         = 'DESCONECTADO';
+    st.qrDataUrl      = null;
+    st.reconnectCount = 0;
+    st.reconnectDelay = BASE_DELAY;
+    st.connectedAt    = null;
+    st.isInitializing = false;
+  }
   try {
     await (prisma as any).whatsappEmpresaSession.updateMany({
       where: { empresaId },
