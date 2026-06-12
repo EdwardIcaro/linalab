@@ -317,6 +317,35 @@
     .toast.success i { color: #34d399; }
     .toast.error   i { color: #f87171; }
 
+    /* ===== WHATSAPP ===== */
+    .wpp-sub {
+      font-size: 13px; color: var(--muted);
+      margin-bottom: 16px; line-height: 1.5;
+    }
+    .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .modal-bg.open { opacity:1; pointer-events:all; }
+    .modal-box { background:var(--card); border-radius:24px 24px 0 0; width:100%; max-width:480px; padding:0 0 32px; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,0,.32,1.1); }
+    .modal-bg.open .modal-box { transform:translateY(0); }
+    .modal-handle { width:40px; height:4px; border-radius:2px; background:var(--border); margin:12px auto 0; }
+    .modal-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+    .modal-title { font-size:16px; font-weight:800; }
+    .modal-close { background:none; border:none; font-size:18px; color:var(--muted); cursor:pointer; padding:4px; }
+    .modal-body  { padding:20px; }
+    .wpp-code-box { background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:14px; padding:16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .wpp-code-box.expired { border-color:#fca5a5; background:#fff5f5; }
+    .wpp-code { font-size:28px; font-weight:900; letter-spacing:6px; font-family:monospace; }
+    .wpp-code.expired { color:#ef4444; text-decoration:line-through; opacity:.5; }
+    .wpp-timer { font-size:12px; font-weight:700; color:#f59e0b; display:flex; align-items:center; gap:4px; }
+    .btn-wpp { width:100%; padding:13px; border-radius:12px; border:none; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; }
+    .bwpp-conectar { background:#16a34a; color:#fff; }
+    .bwpp-gerar    { background:#1f2937; color:#fff; }
+    .wpp-connected-state { background:#d1fae5; border-radius:16px; padding:18px; text-align:center; margin-bottom:16px; }
+    .wpp-c-ico   { font-size:40px; color:#16a34a; margin-bottom:10px; }
+    .wpp-c-title { font-size:16px; font-weight:800; color:#065f46; margin-bottom:4px; }
+    .wpp-c-num   { font-size:14px; color:#047857; font-weight:600; }
+    .btn-desvincular { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:var(--card); font-family:inherit; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .wpp-instrucao { font-size:12px; color:var(--muted); text-align:center; line-height:1.5; }
+
     /* ===== DESKTOP ===== */
     @media (min-width: 501px) {
       .header { padding: 18px 20px 22px; }
@@ -360,6 +389,22 @@
       <div class="avatar-email" id="perfilEmail"></div>
 
       <div class="foto-hint">Toque na câmera para alterar a foto</div>
+    </div>
+
+    <!-- WHATSAPP -->
+    <div class="section-label">Integrações</div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:rgba(22,163,74,.1);color:#16a34a"><i class="fab fa-whatsapp"></i></div>
+        WhatsApp
+      </div>
+      <p class="wpp-sub">Conecte seu WhatsApp à Lina para receber notificações e fazer consultas direto pelo chat, de acordo com suas permissões.</p>
+      <div id="wppCardBody">
+        <button class="btn-wpp bwpp-conectar" onclick="abrirModalWpp()">
+          <i class="fab fa-whatsapp"></i> Conectar com a Lina no WhatsApp
+        </button>
+      </div>
     </div>
 
     <!-- TROCA DE SENHA -->
@@ -409,6 +454,20 @@
 
   </main>
 
+  <!-- ══ MODAL WHATSAPP ══ -->
+  <div class="modal-bg" id="wppModal" onclick="fecharModalWpp(event)">
+    <div class="modal-box">
+      <div class="modal-handle"></div>
+      <div class="modal-hdr">
+        <span class="modal-title">WhatsApp</span>
+        <button class="modal-close" onclick="fecharModalWpp()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="wppModalBody">
+        <!-- preenchido via JS -->
+      </div>
+    </div>
+  </div>
+
   <script src="api.js"></script>
   <script>
     // ===== INIT =====
@@ -421,6 +480,7 @@
 
       await carregarPerfil();
       configurarFoto();
+      checarStatusWpp();
     });
 
     // ===== CARREGAR PERFIL =====
@@ -524,6 +584,134 @@
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-shield-alt"></i> Alterar Senha';
       }
+    }
+
+    // ===== WHATSAPP =====
+    let wppTimer = null;
+
+    function formatTelefone(telefone) {
+      if (!telefone) return '-';
+      const d = telefone.replace(/\D/g, '');
+      if (d.length >= 12) return `+${d.slice(0,2)} (${d.slice(2,4)}) ${d.slice(4,9)}-${d.slice(9)}`;
+      if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+      return telefone;
+    }
+
+    async function checarStatusWpp() {
+      try {
+        const status = await fetchApi('/whatsapp/me/wpp/status');
+        if (status.conectado) renderWppCardConectado(status.telefone);
+      } catch {
+        // mantém botão de conectar
+      }
+    }
+
+    function renderWppCardConectado(telefone) {
+      document.getElementById('wppCardBody').innerHTML = `
+        <div class="wpp-connected-state" style="margin-bottom:0">
+          <div class="wpp-c-ico"><i class="fab fa-whatsapp"></i></div>
+          <div class="wpp-c-title">WhatsApp conectado!</div>
+          <div class="wpp-c-num">${formatTelefone(telefone)}</div>
+        </div>`;
+    }
+
+    async function abrirModalWpp() {
+      const body = document.getElementById('wppModalBody');
+      body.innerHTML = `<p style="text-align:center;color:var(--muted);font-size:13px">Carregando...</p>`;
+      document.getElementById('wppModal').classList.add('open');
+
+      try {
+        const status = await fetchApi('/whatsapp/me/wpp/status');
+        if (status.conectado) {
+          renderModalWpp({ conectado: true, numero: formatTelefone(status.telefone) });
+          return;
+        }
+
+        const { code, expiresInSeconds, botNumero } = await fetchApi('/whatsapp/me/wpp/pin', { method: 'POST' });
+        const expiraEm = Date.now() + expiresInSeconds * 1000;
+        renderModalWpp({ codigo: code, expiraEm, botNumero, conectado: false, numero: null });
+      } catch {
+        body.innerHTML = `
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Não foi possível gerar o código. Tente novamente.</p>
+          <button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()"><i class="fas fa-rotate-right"></i> Tentar novamente</button>`;
+      }
+    }
+
+    function renderModalWpp({ codigo, expiraEm, botNumero, conectado, numero }) {
+      const body = document.getElementById('wppModalBody');
+      if (conectado) {
+        body.innerHTML = `
+          <div class="wpp-connected-state">
+            <div class="wpp-c-ico"><i class="fab fa-whatsapp"></i></div>
+            <div class="wpp-c-title">WhatsApp conectado!</div>
+            <div class="wpp-c-num">${numero}</div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;line-height:1.5">
+            Você receberá notificações e pode fazer consultas pelo WhatsApp conforme suas permissões.
+          </p>
+          <button class="btn-desvincular" onclick="desvincularWpp()">Desvincular número</button>`;
+        return;
+      }
+
+      const expirado = expiraEm && expiraEm < Date.now();
+      const url = botNumero ? `https://wa.me/55${botNumero}?text=${codigo}` : `https://wa.me/?text=${codigo}`;
+
+      body.innerHTML = `
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+          Toque em <strong>"Abrir WhatsApp"</strong> — a mensagem já vem preenchida, só apertar enviar.
+        </p>
+        <div class="wpp-code-box${expirado ? ' expired' : ''}">
+          <div class="wpp-code${expirado ? ' expired' : ''}">${codigo}</div>
+          ${expiraEm && !expirado
+            ? `<div class="wpp-timer" id="wppCountdown"><i class="fas fa-clock"></i> —</div>`
+            : expirado
+            ? `<span style="font-size:11px;font-weight:700;color:#ef4444">Expirado</span>`
+            : ''}
+        </div>
+        ${!expirado
+          ? `<button class="btn-wpp bwpp-conectar" onclick="window.open('${url}','_blank')">
+               <i class="fab fa-whatsapp"></i> Abrir WhatsApp
+             </button>`
+          : `<button class="btn-wpp bwpp-gerar" onclick="abrirModalWpp()">
+               <i class="fas fa-rotate-right"></i> Gerar novo código
+             </button>`}
+        <p class="wpp-instrucao">Código válido por 5 minutos. O bot confirma automaticamente.</p>`;
+
+      if (expiraEm && !expirado) iniciarCountdown(expiraEm);
+    }
+
+    async function desvincularWpp() {
+      if (!confirm('Deseja desvincular seu número do WhatsApp?')) return;
+      try {
+        await fetchApi('/whatsapp/me/wpp/desvincular', { method: 'POST' });
+        fecharModalWpp();
+        document.getElementById('wppCardBody').innerHTML = `
+          <button class="btn-wpp bwpp-conectar" onclick="abrirModalWpp()">
+            <i class="fab fa-whatsapp"></i> Conectar com a Lina no WhatsApp
+          </button>`;
+        showToast('WhatsApp desvinculado', 'success');
+      } catch {
+        showToast('Erro ao desvincular. Tente novamente.', 'error');
+      }
+    }
+
+    function iniciarCountdown(expiraEm) {
+      clearInterval(wppTimer);
+      wppTimer = setInterval(() => {
+        const el = document.getElementById('wppCountdown');
+        if (!el) { clearInterval(wppTimer); return; }
+        const diff = expiraEm - Date.now();
+        if (diff <= 0) { clearInterval(wppTimer); abrirModalWpp(); return; }
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        el.innerHTML = `<i class="fas fa-clock"></i> ${m}:${String(s).padStart(2,'0')}`;
+      }, 1000);
+    }
+
+    function fecharModalWpp(e) {
+      if (e && e.target !== document.getElementById('wppModal')) return;
+      document.getElementById('wppModal').classList.remove('open');
+      clearInterval(wppTimer);
     }
 
     // ===== TOGGLE SENHA ====-
