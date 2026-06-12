@@ -1292,12 +1292,12 @@ async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId:
   return msg;
 }
 
-function buildMenuFuncionario(permissoes: string[]): string {
+function buildMenuFuncionario(botFeatures: string[]): string {
   const itens: string[] = [];
-  if (permissoes.includes('ver_financeiro'))        itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa');
-  if (permissoes.includes('gerenciar_ordens'))      itens.push('• *ordens* — ordens em andamento');
-  if (permissoes.includes('gerenciar_clientes'))    itens.push('• *clientes* — clientes atendidos hoje');
-  if (permissoes.includes('gerenciar_funcionarios')) itens.push('• *equipe* — produtividade dos lavadores hoje');
+  if (botFeatures.includes('ver_financeiro'))        itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa');
+  if (botFeatures.includes('gerenciar_ordens'))      itens.push('• *ordens* — ordens em andamento');
+  if (botFeatures.includes('gerenciar_clientes'))    itens.push('• *clientes* — clientes atendidos hoje');
+  if (botFeatures.includes('gerenciar_funcionarios')) itens.push('• *equipe* — produtividade dos lavadores hoje');
 
   itens.push('• *reportar* — relatar avaria em um veículo');
 
@@ -1313,7 +1313,7 @@ async function handleSaudacaoFuncionario(user: WhatsAppUser): Promise<string> {
   const [saudacao, emoji] = hora < 12 ? ['Bom dia', '☀️'] : hora < 18 ? ['Boa tarde', '🌤️'] : ['Boa noite', '🌙'];
   const primeiroNome = (user.nome ?? '').split(' ')[0] || 'tudo bem';
 
-  return `${saudacao}, *${primeiroNome}*! ${emoji}\n\n${buildMenuFuncionario(user.permissoes ?? [])}`;
+  return `${saudacao}, *${primeiroNome}*! ${emoji}\n\n${buildMenuFuncionario(user.botFeatures ?? user.permissoes ?? [])}`;
 }
 
 function buildMenuLavador(): string {

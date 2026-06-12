@@ -142,6 +142,43 @@ export const upsertRole = async (req: EmpresaRequest, res: Response) => {
 };
 
 /**
+ * Atualizar comandos do bot habilitados para um cargo
+ */
+export const updateRoleBotFeatures = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId;
+    const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não autenticada' });
+    }
+
+    const { botFeatures } = req.body;
+    if (!Array.isArray(botFeatures) || !botFeatures.every((f) => typeof f === 'string')) {
+      return res.status(400).json({ error: 'botFeatures deve ser uma lista de strings' });
+    }
+
+    const role = await prisma.role.findFirst({ where: { id, empresaId } });
+    if (!role) {
+      return res.status(404).json({ error: 'Função não encontrada' });
+    }
+
+    const updated = await prisma.role.update({
+      where: { id },
+      data: { botFeatures },
+      include: { permissoes: true, _count: { select: { usuarios: true } } }
+    });
+
+    res.json({ message: 'Comandos do bot atualizados com sucesso', role: updated });
+  } catch (error) {
+    console.error('Erro ao atualizar comandos do bot do cargo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * Excluir role
  */
 export const deleteRole = async (req: EmpresaRequest, res: Response) => {

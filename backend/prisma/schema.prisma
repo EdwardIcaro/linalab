@@ -377,14 +377,16 @@ model Pagamento {
 }
 
 model Role {
-  id         String       @id @default(cuid())
-  nome       String
-  empresaId  String
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  permissoes Permission[]
-  empresa    Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  usuarios   Subaccount[]
+  id          String       @id @default(cuid())
+  nome        String
+  empresaId   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  permissoes  Permission[]
+  // Comandos do bot habilitados para este cargo (null = espelha `permissoes`)
+  botFeatures Json?
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarios    Subaccount[]
 
   @@unique([empresaId, nome])
   @@map("roles")

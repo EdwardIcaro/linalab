@@ -13,7 +13,8 @@ export interface WhatsAppUser {
   empresaId?: string;   // lavador/funcionario: empresa única
   lavadorId?: string;
   subaccountId?: string; // funcionario: id do Subaccount vinculado
-  permissoes?: string[]; // funcionario: nomes das permissões do Role
+  permissoes?: string[]; // funcionario: nomes das permissões do Role (painel)
+  botFeatures?: string[]; // funcionario: comandos do bot habilitados para o Role
   nome?:     string;
   telefone?: string;
 }
@@ -101,20 +102,26 @@ export async function identifyWhatsAppUser(phoneNumber: string): Promise<WhatsAp
       subaccount: {
         select: {
           nome: true,
-          roleInt: { select: { permissoes: { select: { name: true } } } },
+          roleInt: { select: { permissoes: { select: { name: true } }, botFeatures: true } },
         },
       },
     },
   });
 
   if (botUser?.subaccount) {
+    const permissoes = botUser.subaccount.roleInt.permissoes.map((p: any) => p.name);
+    const botFeatures = Array.isArray(botUser.subaccount.roleInt.botFeatures)
+      ? botUser.subaccount.roleInt.botFeatures as string[]
+      : permissoes; // sem config explícita do bot ainda → espelha as permissões do painel
+
     return {
       type:         'funcionario',
       empresaId:    botUser.empresaId,
       subaccountId: botUser.subaccountId,
       nome:         botUser.subaccount.nome,
       telefone:     botUser.telefone ?? undefined,
-      permissoes:   botUser.subaccount.roleInt.permissoes.map((p: any) => p.name),
+      permissoes,
+      botFeatures,
     };
   }
 
@@ -127,7 +134,7 @@ export function hasPermission(user: WhatsAppUser, feature: string): boolean {
     return ['minhas_comissoes', 'meu_faturamento', 'meu_status'].includes(feature);
   }
   if (user.type === 'funcionario') {
-    return (user.permissoes ?? []).includes(feature);
+    return (user.botFeatures ?? user.permissoes ?? []).includes(feature);
   }
   return false;
 }

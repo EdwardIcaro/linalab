@@ -3,6 +3,7 @@ import {
   getRolesAndUsers,
   upsertRole,
   deleteRole,
+  updateRoleBotFeatures,
   createSubaccount,
   updateSubaccount,
   deleteSubaccount
@@ -13,6 +14,7 @@ const router: Router = Router();
 // Roles
 router.get('/', getRolesAndUsers);
 router.post('/', upsertRole);
+router.patch('/:id/bot-features', updateRoleBotFeatures);
 router.delete('/:id', deleteRole);
 
 // Subaccounts
