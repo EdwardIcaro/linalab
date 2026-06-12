@@ -46,6 +46,15 @@ function prefs(empresa: { notificationPreferences: any }): NotifPrefs {
   return { ...DEFAULTS, ...p };
 }
 
+// Config de "Capacidades do Bot" — quais notificações cada permissão de Cargo recebe.
+// Default = todas habilitadas (comportamento anterior, sem config).
+function permissionNotifEnabled(empresa: { notificationPreferences: any }, permission: string, notifKey: string): boolean {
+  const roles = (empresa.notificationPreferences as any)?.whatsappRoles ?? {};
+  const notifs = roles[permission]?.notifs;
+  if (!Array.isArray(notifs)) return true;
+  return notifs.includes(notifKey);
+}
+
 export function getDefaultPrefs(): NotifPrefs { return { ...DEFAULTS }; }
 
 // ─── Core: enviar para admins da empresa, respeitando prefs individuais ───────
@@ -300,7 +309,9 @@ export async function cronResumoDiario(): Promise<void> {
 
       msg += `\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
       await notifyAdmins(empresa.id, msg.trim(), 'resumoDiario');
-      await notifyByPermission(empresa.id, 'ver_financeiro', msg.trim());
+      if (permissionNotifEnabled(empresa, 'ver_financeiro', 'resumoDiario')) {
+        await notifyByPermission(empresa.id, 'ver_financeiro', msg.trim());
+      }
       resumoEnviadoHoje.add(resumoKey(empresa.id));
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
@@ -329,7 +340,9 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
       if (abertura && !fechamento) {
         const msg = `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`;
         await notifyAdmins(empresa.id, msg, 'alertaCaixaAberto');
-        await notifyByPermission(empresa.id, 'ver_financeiro', msg);
+        if (permissionNotifEnabled(empresa, 'ver_financeiro', 'alertaCaixaAberto')) {
+          await notifyByPermission(empresa.id, 'ver_financeiro', msg);
+        }
       }
     } catch (e) {
       console.error(`[Notif Caixa] empresa ${empresa.id}:`, e);
@@ -367,7 +380,9 @@ export async function cronOrdensParadas(): Promise<void> {
       }
 
       await notifyAdmins(empresa.id, msg.trim(), 'ordemParada');
-      await notifyByPermission(empresa.id, 'gerenciar_ordens', msg.trim());
+      if (permissionNotifEnabled(empresa, 'gerenciar_ordens', 'ordemParada')) {
+        await notifyByPermission(empresa.id, 'gerenciar_ordens', msg.trim());
+      }
     } catch (e) {
       console.error(`[Notif Paradas] empresa ${empresa.id}:`, e);
     }

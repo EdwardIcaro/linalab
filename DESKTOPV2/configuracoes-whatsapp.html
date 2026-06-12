@@ -735,9 +735,18 @@
             font-size: .75rem;
             font-weight: 700;
         }
-        .role-LAVADOR   { background: #dbeafe; color: #1e40af; }
-        .role-CAIXA     { background: #d1fae5; color: #065f46; }
-        .role-FINANCEIRO{ background: #fef3c7; color: #92400e; }
+        .role-lavador    { background: #dbeafe; color: #1e40af; }
+        .role-subaccount { background: #ede9fe; color: #5b21b6; }
+        .cargo-badge {
+            display: inline-block;
+            margin-left: .35rem;
+            padding: .15rem .5rem;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 600;
+            background: #f3f4f6;
+            color: #6b7280;
+        }
 
         .jid-badge {
             font-size: .75rem;
@@ -1144,26 +1153,26 @@
                 <div class="bot-users-toolbar">
                     <h2>👤 Usuários do Bot</h2>
                     <div class="toolbar-actions">
-                        <button class="btn-notif-open" onclick="openRolesModal()">⚙️ Configurar roles</button>
-                        <button class="btn-primary" onclick="openBotUserModal()">+ Adicionar usuário</button>
+                        <button class="btn-notif-open" onclick="openRolesModal()">⚙️ Capacidades do bot</button>
                     </div>
                 </div>
+                <p style="font-size:.85rem;color:#6b7280;margin:0 0 .75rem;">
+                    Lavadores ativos e funcionários cadastrados que podem se conectar à Lina pelo WhatsApp. Gere um PIN para conectar ou desvincule quem já está conectado.
+                </p>
                 <div id="botUsersWrap" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
                     <div id="botUsersLoading" class="loading" style="display:none;"><div class="spinner"></div> Carregando...</div>
                     <table class="bot-users-table" id="botUsersTable">
                         <thead>
                             <tr>
                                 <th>Nome</th>
-                                <th>Role</th>
-                                <th>Funcionário</th>
+                                <th>Tipo</th>
                                 <th>Status</th>
-                                <th>Registro</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="botUsersTbody"></tbody>
                     </table>
-                    <div id="botUsersEmpty" class="empty-state" style="display:none;">Nenhum usuário cadastrado. Clique em "+ Adicionar usuário" para começar.</div>
+                    <div id="botUsersEmpty" class="empty-state" style="display:none;">Nenhum lavador ativo ou funcionário cadastrado.</div>
                 </div>
             </div>
         </div>
@@ -1434,41 +1443,6 @@
         </div>
     </div>
 
-    <!-- ===== Modal: Adicionar/Editar Usuário do Bot ===== -->
-    <div id="botUserModal" class="modal-bot-user">
-        <div class="modal-bu-content">
-            <div class="modal-bu-header">
-                <h2 id="buModalTitle">Adicionar Usuário</h2>
-                <button class="close-modal" onclick="closeBotUserModal()">&times;</button>
-            </div>
-            <div class="modal-bu-body">
-                <div class="form-group-phone">
-                    <label for="buNome">Nome</label>
-                    <input type="text" id="buNome" placeholder="Ex: João Lavador">
-                </div>
-                <div class="form-group-phone">
-                    <label for="buRole">Role</label>
-                    <select id="buRole" style="width:100%;padding:.7rem .75rem;border:1px solid #ddd;border-radius:6px;font-size:.95rem;">
-                        <option value="LAVADOR">👷 Lavador</option>
-                        <option value="CAIXA">🧾 Caixa</option>
-                        <option value="FINANCEIRO">💰 Financeiro</option>
-                    </select>
-                </div>
-                <div class="form-group-phone">
-                    <label for="buLavador">Funcionário do sistema <span style="color:#9ca3af;font-weight:400">(opcional)</span></label>
-                    <select id="buLavador" style="width:100%;padding:.7rem .75rem;border:1px solid #ddd;border-radius:6px;font-size:.95rem;">
-                        <option value="">— Nenhum —</option>
-                    </select>
-                    <div class="helper-text">Vincula este usuário do bot a um lavador cadastrado no sistema.</div>
-                </div>
-            </div>
-            <div class="modal-bu-footer">
-                <button class="btn-modal btn-cancel" onclick="closeBotUserModal()">Cancelar</button>
-                <button class="btn-modal btn-save-phone" id="buSaveBtn" onclick="saveBotUser()">Salvar</button>
-            </div>
-        </div>
-    </div>
-
     <!-- ===== Modal: PIN do Usuário ===== -->
     <div id="pinModal" class="modal-bot-user">
         <div class="modal-bu-content">
@@ -1492,25 +1466,29 @@
         </div>
     </div>
 
-    <!-- ===== Modal: Configurar Roles ===== -->
+    <!-- ===== Modal: Capacidades do Bot ===== -->
     <div id="rolesModal" class="modal-roles">
         <div class="modal-roles-content">
             <div class="modal-roles-header">
-                <h2>⚙️ Permissões por Role</h2>
+                <h2>⚙️ Capacidades do Bot</h2>
                 <button class="close-modal" onclick="closeRolesModal()">&times;</button>
             </div>
             <div class="modal-roles-body">
-                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1rem;">Defina quais comandos e notificações cada role pode usar. Itens em cinza são fixos do sistema.</p>
-                <div class="role-tab-bar">
-                    <button class="role-tab active" onclick="setRoleTab('LAVADOR')">👷 Lavador</button>
-                    <button class="role-tab" onclick="setRoleTab('CAIXA')">🧾 Caixa</button>
-                    <button class="role-tab" onclick="setRoleTab('FINANCEIRO')">💰 Financeiro</button>
+                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1rem;">O que cada tipo de usuário pode fazer pelo WhatsApp. Comandos são fixos; notificações automáticas podem ser ativadas ou desativadas.</p>
+
+                <div class="perm-section-label" style="margin-top:0;">👷 Lavadores</div>
+                <div style="border:1px solid #e5e7eb;border-radius:8px;padding:.75rem;font-size:.85rem;color:#4b5563;background:#f9fafb;">
+                    Lavadores com WhatsApp vinculado podem consultar pelo bot: <strong>suas comissões</strong>, <strong>seu faturamento</strong> e <strong>o status das suas ordens</strong>. Esse acesso é fixo e não pode ser alterado aqui.
                 </div>
+
+                <div class="perm-section-label">🧑‍💼 Funcionários (por permissão do Cargo)</div>
+                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .75rem;">Quem ganha cada permissão é definido em Funcionários → Cargos. Aqui você controla apenas o que o bot faz com cada uma.</p>
+                <div class="role-tab-bar" id="rolePermTabBar"></div>
                 <div id="rolePermContent"></div>
             </div>
             <div class="modal-roles-footer">
                 <button class="btn-modal btn-cancel" onclick="closeRolesModal()">Cancelar</button>
-                <button class="btn-modal btn-save-phone" id="btnSalvarRoles" onclick="salvarRoles()">Salvar permissões</button>
+                <button class="btn-modal btn-save-phone" id="btnSalvarRoles" onclick="salvarRoles()">Salvar</button>
             </div>
         </div>
     </div>
@@ -2103,37 +2081,8 @@
 
         // ===== USUÁRIOS DO BOT =====
         let botUsers = [];
-        let editingBotUserId = null;
         let pinCountdownInterval = null;
         let pinExpiresAt = null;
-
-        const ROLE_LABELS = { LAVADOR: '👷 Lavador', CAIXA: '🧾 Caixa', FINANCEIRO: '💰 Financeiro' };
-
-        const ALL_COMMANDS = [
-            { key: 'resumo',       label: '📊 Resumo do dia' },
-            { key: 'caixa',        label: '💵 Relatório de caixa' },
-            { key: 'fechamento',   label: '🔒 Fechamento de caixa' },
-            { key: 'reportar',     label: '📸 Reportar avaria' },
-            { key: 'lavadores',    label: '👷 Lista de lavadores' },
-            { key: 'pendentes',    label: '⏳ Ordens pendentes' },
-            { key: 'minhas_ordens',label: '📋 Minhas ordens' },
-        ];
-
-        const ALL_NOTIFS = [
-            { key: 'novaOrdem',         label: '🆕 Nova ordem criada' },
-            { key: 'ordemFinalizada',   label: '✅ Ordem finalizada' },
-            { key: 'ordemParada',       label: '⚠️ Ordens paradas 1h+' },
-            { key: 'reportAvaria',      label: '📸 Report de avaria (lavador)' },
-            { key: 'clienteVip',        label: '🏆 Cliente VIP chegou' },
-            { key: 'resumoDiario',      label: '📊 Resumo diário 20h' },
-            { key: 'alertaCaixaAberto', label: '🕙 Alerta caixa aberto' },
-        ];
-
-        const ROLE_DEFAULTS = {
-            LAVADOR:    { commands: ['minhas_ordens', 'reportar'], notifs: [] },
-            CAIXA:      { commands: ['caixa', 'fechamento'], notifs: ['alertaCaixaAberto'] },
-            FINANCEIRO: { commands: ['resumo', 'caixa', 'fechamento'], notifs: ['resumoDiario'] },
-        };
 
         async function loadBotUsers() {
             document.getElementById('botUsersLoading').style.display = 'block';
@@ -2162,94 +2111,26 @@
             table.style.display = 'table';
             empty.style.display = 'none';
             tbody.innerHTML = botUsers.map(u => {
-                const roleClass = `role-${u.role}`;
-                const roleLabel = (ROLE_LABELS[u.role] || u.role);
-                const jid = u.jid
-                    ? `<span class="jid-badge jid-ok">✅ Registrado</span>`
-                    : `<span class="jid-badge jid-pend">Aguardando PIN</span>`;
-                const func = u.lavador ? u.lavador.nome : '<span style="color:#d1d5db">—</span>';
-                const statusToggle = `<label class="toggle-switch" style="width:44px;height:26px;" title="${u.ativo ? 'Ativo' : 'Inativo'}">
+                const tipo = u.origem === 'lavador'
+                    ? `<span class="role-badge role-lavador">👷 Lavador</span>`
+                    : `<span class="role-badge role-subaccount">🧑‍💼 Funcionário</span><span class="cargo-badge">${escHtml(u.roleLabel)}</span>`;
+                const status = u.jid
+                    ? `<span class="jid-badge jid-ok">✅ Conectado</span>`
+                    : `<span class="jid-badge jid-pend">Não conectado</span>`;
+                const ativoToggle = u.id ? `<label class="toggle-switch" style="width:44px;height:26px;" title="${u.ativo ? 'Ativo' : 'Inativo'}">
                     <input type="checkbox" ${u.ativo ? 'checked' : ''} onchange="toggleBotUserAtivo('${u.id}', this.checked)">
                     <span class="toggle-slider"></span>
-                </label>`;
+                </label>` : '';
+                const acao = u.jid
+                    ? `<button class="btn-icon btn-icon-danger" title="Desvincular" onclick="desvincularBotUser('${u.id}', '${escHtml(u.nome)}')">🔌 Desvincular</button>`
+                    : `<button class="btn-icon" title="Gerar PIN" onclick="gerarPinBotUser('${u.origem}', '${u.refId}', '${escHtml(u.nome)}')">🔑 Gerar PIN</button>`;
                 return `<tr>
-                    <td style="font-weight:600">${u.nome}</td>
-                    <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
-                    <td>${func}</td>
-                    <td>${statusToggle}</td>
-                    <td>${jid}</td>
-                    <td style="white-space:nowrap;display:flex;gap:.4rem;">
-                        <button class="btn-icon" title="Gerar PIN" onclick="openPinModal('${u.id}','${u.nome}')">🔑</button>
-                        <button class="btn-icon" title="Editar" onclick="openBotUserModal('${u.id}')">✏️</button>
-                        <button class="btn-icon btn-icon-danger" title="Remover" onclick="deleteBotUser('${u.id}','${u.nome}')">🗑️</button>
-                    </td>
+                    <td style="font-weight:600">${escHtml(u.nome)}</td>
+                    <td>${tipo}</td>
+                    <td style="display:flex;align-items:center;gap:.5rem;">${status}${ativoToggle}</td>
+                    <td style="white-space:nowrap;">${acao}</td>
                 </tr>`;
             }).join('');
-        }
-
-        async function openBotUserModal(id) {
-            editingBotUserId = id || null;
-            document.getElementById('buModalTitle').textContent = id ? 'Editar Usuário' : 'Adicionar Usuário';
-            document.getElementById('buNome').value = '';
-            document.getElementById('buRole').value = 'LAVADOR';
-            document.getElementById('buLavador').value = '';
-
-            // Carregar lavadores no select
-            try {
-                const res = await window.api.getLavadores();
-                const lavs = Array.isArray(res) ? res : (res.data || res.lavadores || []);
-                const sel = document.getElementById('buLavador');
-                sel.innerHTML = '<option value="">— Nenhum —</option>' +
-                    lavs.filter(l => l.ativo).map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
-            } catch {}
-
-            if (id) {
-                const u = botUsers.find(x => x.id === id);
-                if (u) {
-                    document.getElementById('buNome').value = u.nome;
-                    document.getElementById('buRole').value = u.role;
-                    document.getElementById('buLavador').value = u.lavadorId || '';
-                }
-            }
-            document.getElementById('botUserModal').classList.add('active');
-        }
-
-        function closeBotUserModal() {
-            document.getElementById('botUserModal').classList.remove('active');
-            editingBotUserId = null;
-        }
-
-        async function saveBotUser() {
-            const nome = document.getElementById('buNome').value.trim();
-            const role = document.getElementById('buRole').value;
-            const lavadorId = document.getElementById('buLavador').value || null;
-            if (!nome) { showAlert('Informe o nome do usuário', 'error'); return; }
-
-            const btn = document.getElementById('buSaveBtn');
-            btn.disabled = true; btn.textContent = 'Salvando...';
-            try {
-                if (editingBotUserId) {
-                    await window.api.call('PATCH', `/whatsapp/bot-users/${editingBotUserId}`, { nome, role, lavadorId });
-                } else {
-                    await window.api.call('POST', '/whatsapp/bot-users', { nome, role, lavadorId });
-                }
-                showAlert('✅ Usuário salvo com sucesso!', 'success');
-                closeBotUserModal();
-                await loadBotUsers();
-            } catch (e) {
-                showAlert('Erro ao salvar usuário', 'error');
-            } finally {
-                btn.disabled = false; btn.textContent = 'Salvar';
-            }
-        }
-
-        async function deleteBotUser(id, nome) {
-            if (!confirm(`Remover "${nome}" do bot?`)) return;
-            try {
-                await window.api.call('DELETE', `/whatsapp/bot-users/${id}`);
-                showAlert('Usuário removido', 'success');
-                await loadBotUsers();
-            } catch { showAlert('Erro ao remover', 'error'); }
         }
 
         async function toggleBotUserAtivo(id, ativo) {
@@ -2258,19 +2139,29 @@
             } catch { showAlert('Erro ao atualizar status', 'error'); await loadBotUsers(); }
         }
 
+        async function desvincularBotUser(id, nome) {
+            if (!confirm(`Desvincular "${nome}" do WhatsApp?`)) return;
+            try {
+                await window.api.call('POST', `/whatsapp/bot-users/${id}/desvincular`);
+                showAlert('Usuário desvinculado', 'success');
+                await loadBotUsers();
+            } catch { showAlert('Erro ao desvincular', 'error'); }
+        }
+
         // ─── Modal PIN ───────────────────────────────────────────────────────────
-        async function openPinModal(userId, nome) {
+        async function gerarPinBotUser(origem, refId, nome) {
             document.getElementById('pinUserNome').textContent = nome;
             document.getElementById('pinDigits').textContent = '——';
             document.getElementById('pinExpires').textContent = 'Gerando...';
             document.getElementById('pinModal').classList.add('active');
 
             try {
-                const res = await window.api.call('POST', `/whatsapp/bot-users/${userId}/pin`);
+                const res = await window.api.call('POST', '/whatsapp/bot-users/connect', { origem, refId });
                 const code = res.code || res.data?.code;
                 pinExpiresAt = Date.now() + (res.expiresInSeconds || 300) * 1000;
                 document.getElementById('pinDigits').textContent = code;
                 startPinCountdown();
+                await loadBotUsers();
             } catch (e) {
                 document.getElementById('pinExpires').textContent = 'Erro ao gerar PIN';
             }
@@ -2299,8 +2190,38 @@
             if (pinCountdownInterval) { clearInterval(pinCountdownInterval); pinCountdownInterval = null; }
         }
 
-        // ─── Modal Roles ─────────────────────────────────────────────────────────
-        let currentRoleTab = 'LAVADOR';
+        // ─── Modal Capacidades do Bot ───────────────────────────────────────────────
+        // Reflete o que o bot realmente faz: COMMAND_PERMISSION_MAP e
+        // notifyByPermission em whatsappCommandHandler.ts / whatsappNotificationService.ts
+        const PERMISSION_DEFS = [
+            {
+                key: 'ver_financeiro', label: '💰 Financeiro',
+                commands: ['resumo / resumo do dia', 'caixa / status caixa'],
+                notifs: [
+                    { key: 'resumoDiario',      label: '📊 Resumo diário (20h)' },
+                    { key: 'alertaCaixaAberto', label: '🕙 Alerta de caixa aberto' },
+                ],
+            },
+            {
+                key: 'gerenciar_ordens', label: '📋 Ordens',
+                commands: ['ordens / ordens paradas / ordens em andamento'],
+                notifs: [
+                    { key: 'ordemParada', label: '⚠️ Ordens paradas 2h+' },
+                ],
+            },
+            {
+                key: 'gerenciar_clientes', label: '👥 Clientes',
+                commands: ['clientes / clientes hoje'],
+                notifs: [],
+            },
+            {
+                key: 'gerenciar_funcionarios', label: '🧑‍🤝‍🧑 Equipe',
+                commands: ['equipe / funcionários / lavadores'],
+                notifs: [],
+            },
+        ];
+
+        let currentPermTab = PERMISSION_DEFS[0].key;
         let rolesConfig = {};
 
         async function openRolesModal() {
@@ -2308,8 +2229,12 @@
                 const empresaId = localStorage.getItem('empresaId');
                 const empresa = await window.api.getEmpresaById(empresaId);
                 rolesConfig = empresa.notificationPreferences?.whatsappRoles ?? {};
-            } catch {}
-            setRoleTab('LAVADOR');
+            } catch { rolesConfig = {}; }
+
+            document.getElementById('rolePermTabBar').innerHTML = PERMISSION_DEFS.map(p =>
+                `<button class="role-tab${p.key === currentPermTab ? ' active' : ''}" onclick="setPermTab('${p.key}')">${p.label}</button>`
+            ).join('');
+            renderPermContent(currentPermTab);
             document.getElementById('rolesModal').classList.add('active');
         }
 
@@ -2317,60 +2242,53 @@
             document.getElementById('rolesModal').classList.remove('active');
         }
 
-        function setRoleTab(role) {
-            currentRoleTab = role;
-            document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+        function setPermTab(key) {
+            collectPermNotifs(currentPermTab);
+            currentPermTab = key;
+            document.querySelectorAll('#rolePermTabBar .role-tab').forEach(t => t.classList.remove('active'));
             event?.target?.classList.add('active');
-            // re-render tabs (find by text)
-            document.querySelectorAll('.role-tab').forEach(t => {
-                if (t.textContent.includes(ROLE_LABELS[role]?.replace(/👷|🧾|💰/,'').trim())) t.classList.add('active');
-            });
-            renderRolePermContent(role);
+            renderPermContent(key);
         }
 
-        function renderRolePermContent(role) {
-            const saved = rolesConfig[role] ?? {};
-            const cmds   = saved.commands ?? ROLE_DEFAULTS[role].commands;
-            const notifs = saved.notifs   ?? ROLE_DEFAULTS[role].notifs;
+        function renderPermContent(key) {
+            const def = PERMISSION_DEFS.find(p => p.key === key);
+            const saved = rolesConfig[key]?.notifs;
+            const notifs = Array.isArray(saved) ? saved : def.notifs.map(n => n.key); // default = todas habilitadas
 
-            let html = `<div class="perm-section-label">Comandos</div><div class="perm-grid">`;
-            for (const c of ALL_COMMANDS) {
-                const checked = cmds.includes(c.key) ? 'checked' : '';
-                html += `<label class="perm-item">
-                    <input type="checkbox" data-type="cmd" data-key="${c.key}" ${checked}>
-                    ${c.label}
-                </label>`;
+            let html = `<div class="perm-section-label">Comandos liberados</div><div class="perm-grid">`;
+            for (const c of def.commands) {
+                html += `<label class="perm-item locked"><input type="checkbox" checked disabled> ${c}</label>`;
             }
-            html += `</div><div class="perm-section-label" style="margin-top:1rem;">Notificações recebidas</div><div class="perm-grid">`;
-            for (const n of ALL_NOTIFS) {
-                const checked = notifs.includes(n.key) ? 'checked' : '';
-                html += `<label class="perm-item">
-                    <input type="checkbox" data-type="notif" data-key="${n.key}" ${checked}>
-                    ${n.label}
-                </label>`;
+            html += `</div>`;
+
+            if (def.notifs.length > 0) {
+                html += `<div class="perm-section-label" style="margin-top:1rem;">Notificações automáticas</div><div class="perm-grid">`;
+                for (const n of def.notifs) {
+                    const checked = notifs.includes(n.key) ? 'checked' : '';
+                    html += `<label class="perm-item">
+                        <input type="checkbox" data-notif="${n.key}" ${checked}>
+                        ${n.label}
+                    </label>`;
+                }
+                html += `</div>`;
+            } else {
+                html += `<p style="font-size:.8rem;color:#9ca3af;margin-top:1rem;">Sem notificações automáticas para essa permissão.</p>`;
             }
-            html += `</div><span class="perm-reset-link" onclick="resetRoleDefaults('${role}')">↺ Redefinir para padrão</span>`;
             document.getElementById('rolePermContent').innerHTML = html;
         }
 
-        function resetRoleDefaults(role) {
-            delete rolesConfig[role];
-            renderRolePermContent(role);
-        }
-
-        function collectRolePerms(role) {
-            const cmds = [], notifs = [];
-            document.querySelectorAll('#rolePermContent [data-type=cmd]').forEach(el => {
-                if (el.checked) cmds.push(el.dataset.key);
+        function collectPermNotifs(key) {
+            const def = PERMISSION_DEFS.find(p => p.key === key);
+            if (!def || def.notifs.length === 0) return;
+            const notifs = [];
+            document.querySelectorAll('#rolePermContent [data-notif]').forEach(el => {
+                if (el.checked) notifs.push(el.dataset.notif);
             });
-            document.querySelectorAll('#rolePermContent [data-type=notif]').forEach(el => {
-                if (el.checked) notifs.push(el.dataset.key);
-            });
-            rolesConfig[role] = { commands: cmds, notifs };
+            rolesConfig[key] = { ...(rolesConfig[key] || {}), notifs };
         }
 
         async function salvarRoles() {
-            collectRolePerms(currentRoleTab); // salva aba atual antes de persistir
+            collectPermNotifs(currentPermTab); // salva aba atual antes de persistir
             const btn = document.getElementById('btnSalvarRoles');
             btn.disabled = true; btn.textContent = 'Salvando...';
             try {
@@ -2380,13 +2298,12 @@
                 await window.api.updateEmpresa(empresaId, {
                     notificationPreferences: { ...currentPrefs, whatsappRoles: rolesConfig }
                 });
-                showAlert('✅ Permissões salvas!', 'success');
+                showAlert('✅ Configurações salvas!', 'success');
                 closeRolesModal();
-            } catch { showAlert('Erro ao salvar permissões', 'error'); }
-            finally { btn.disabled = false; btn.textContent = 'Salvar permissões'; }
+            } catch { showAlert('Erro ao salvar', 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'Salvar'; }
         }
 
-        document.getElementById('botUserModal')?.addEventListener('click', e => { if (e.target.id === 'botUserModal') closeBotUserModal(); });
         document.getElementById('pinModal')?.addEventListener('click', e => { if (e.target.id === 'pinModal') closePinModal(); });
         document.getElementById('rolesModal')?.addEventListener('click', e => { if (e.target.id === 'rolesModal') closeRolesModal(); });
 

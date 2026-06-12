@@ -41,6 +41,8 @@ import {
   deleteBotUser,
   generatePin,
   getPinStatus,
+  connectBotUser,
+  desvincularBotUser,
   generateMyPin,
   getMyWppStatus,
   desvincularMyWpp,
@@ -88,13 +90,15 @@ router.delete('/admin-phones/pair-code', cancelarCodigoPareamento);
 router.delete('/admin-phones/:adminPhoneId', deleteAdminPhone);
 router.patch('/admin-phones/:adminPhoneId', updateAdminPhone);
 
-// Usuários do bot (LAVADOR / CAIXA / FINANCEIRO)
-router.get('/bot-users',             listBotUsers);
-router.post('/bot-users',            createBotUser);
-router.patch('/bot-users/:id',       updateBotUser);
-router.delete('/bot-users/:id',      deleteBotUser);
-router.post('/bot-users/:id/pin',    generatePin);
-router.get('/bot-users/:id/pin',     getPinStatus);
+// Usuários do bot — lista unificada (lavadores + funcionários, conectados ou não)
+router.get('/bot-users',                  listBotUsers);
+router.post('/bot-users',                 createBotUser);
+router.post('/bot-users/connect',         connectBotUser);
+router.patch('/bot-users/:id',            updateBotUser);
+router.delete('/bot-users/:id',           deleteBotUser);
+router.post('/bot-users/:id/pin',         generatePin);
+router.get('/bot-users/:id/pin',          getPinStatus);
+router.post('/bot-users/:id/desvincular', desvincularBotUser);
 
 // Self-service: funcionário (subaccount) conecta o próprio WhatsApp
 router.post('/me/wpp/pin',         generateMyPin);
