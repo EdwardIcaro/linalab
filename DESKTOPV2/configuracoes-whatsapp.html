@@ -863,24 +863,17 @@
             position: sticky; bottom: 0; background: #fff;
         }
 
-        .role-tab-bar {
-            display: flex;
-            gap: 4px;
-            border-bottom: 1px solid #e5e7eb;
+        .cargo-select {
+            width: 100%;
+            padding: .6rem .75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: .9rem;
+            font-weight: 600;
+            color: #374151;
+            background: #fff;
             margin-bottom: 1.25rem;
         }
-        .role-tab {
-            padding: 7px 16px;
-            border: none;
-            background: none;
-            font-size: .875rem;
-            font-weight: 600;
-            color: #888;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-        }
-        .role-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
 
         .perm-section-label {
             font-size: .72rem;
@@ -1481,9 +1474,9 @@
                     Lavadores com WhatsApp vinculado podem consultar pelo bot: <strong>suas comissões</strong>, <strong>seu faturamento</strong> e <strong>o status das suas ordens</strong>. Esse acesso é fixo e não pode ser alterado aqui.
                 </div>
 
-                <div class="perm-section-label">🧑‍💼 Funcionários (por permissão do Cargo)</div>
-                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .75rem;">Quem ganha cada permissão é definido em Funcionários → Cargos. Aqui você controla apenas o que o bot faz com cada uma.</p>
-                <div class="role-tab-bar" id="rolePermTabBar"></div>
+                <div class="perm-section-label">🧑‍💼 Funcionários (por Cargo)</div>
+                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .75rem;">Selecione um cargo para ver o que esses funcionários podem fazer pelo WhatsApp e ajustar as notificações automáticas. Permissões são definidas em Funcionários → Cargos.</p>
+                <select id="cargoSelect" class="cargo-select" onchange="onCargoChange(this.value)"></select>
                 <div id="rolePermContent"></div>
             </div>
             <div class="modal-roles-footer">
@@ -2221,20 +2214,35 @@
             },
         ];
 
-        let currentPermTab = PERMISSION_DEFS[0].key;
         let rolesConfig = {};
+        let cargos = [];
+        let currentCargoId = null;
 
         async function openRolesModal() {
             try {
                 const empresaId = localStorage.getItem('empresaId');
-                const empresa = await window.api.getEmpresaById(empresaId);
+                const [empresa, rolesRes] = await Promise.all([
+                    window.api.getEmpresaById(empresaId),
+                    window.api.call('GET', '/roles'),
+                ]);
                 rolesConfig = empresa.notificationPreferences?.whatsappRoles ?? {};
-            } catch { rolesConfig = {}; }
+                cargos = (rolesRes.roles || []).map(r => ({
+                    id: r.id,
+                    nome: r.nome,
+                    permissoes: (r.permissoes || []).map(p => p.name),
+                }));
+            } catch { rolesConfig = {}; cargos = []; }
 
-            document.getElementById('rolePermTabBar').innerHTML = PERMISSION_DEFS.map(p =>
-                `<button class="role-tab${p.key === currentPermTab ? ' active' : ''}" onclick="setPermTab('${p.key}')">${p.label}</button>`
-            ).join('');
-            renderPermContent(currentPermTab);
+            const select = document.getElementById('cargoSelect');
+            if (cargos.length === 0) {
+                select.innerHTML = '<option value="">Nenhum cargo cadastrado</option>';
+                document.getElementById('rolePermContent').innerHTML = '<p style="font-size:.85rem;color:#9ca3af;">Cadastre cargos em Funcionários → Cargos para configurar o que cada um pode fazer pelo bot.</p>';
+            } else {
+                select.innerHTML = cargos.map(c => `<option value="${c.id}">${escHtml(c.nome)}</option>`).join('');
+                currentCargoId = cargos[0].id;
+                select.value = currentCargoId;
+                renderCargoContent(currentCargoId);
+            }
             document.getElementById('rolesModal').classList.add('active');
         }
 
@@ -2242,53 +2250,65 @@
             document.getElementById('rolesModal').classList.remove('active');
         }
 
-        function setPermTab(key) {
-            collectPermNotifs(currentPermTab);
-            currentPermTab = key;
-            document.querySelectorAll('#rolePermTabBar .role-tab').forEach(t => t.classList.remove('active'));
-            event?.target?.classList.add('active');
-            renderPermContent(key);
+        function onCargoChange(cargoId) {
+            collectAllNotifs();
+            currentCargoId = cargoId;
+            renderCargoContent(cargoId);
         }
 
-        function renderPermContent(key) {
-            const def = PERMISSION_DEFS.find(p => p.key === key);
-            const saved = rolesConfig[key]?.notifs;
-            const notifs = Array.isArray(saved) ? saved : def.notifs.map(n => n.key); // default = todas habilitadas
+        function renderCargoContent(cargoId) {
+            const cargo = cargos.find(c => c.id === cargoId);
+            const content = document.getElementById('rolePermContent');
+            if (!cargo) { content.innerHTML = ''; return; }
 
-            let html = `<div class="perm-section-label">Comandos liberados</div><div class="perm-grid">`;
-            for (const c of def.commands) {
-                html += `<label class="perm-item locked"><input type="checkbox" checked disabled> ${c}</label>`;
+            let html = `<div class="perm-section-label" style="margin-top:0;">O que "${escHtml(cargo.nome)}" pode pelo WhatsApp</div><div class="perm-grid">`;
+            for (const def of PERMISSION_DEFS) {
+                const tem = cargo.permissoes.includes(def.key);
+                for (const c of def.commands) {
+                    html += `<label class="perm-item${tem ? ' locked' : ''}" style="${tem ? '' : 'opacity:.45;'}">
+                        <input type="checkbox" ${tem ? 'checked' : ''} disabled> ${c}${tem ? '' : ' (sem acesso)'}
+                    </label>`;
+                }
             }
             html += `</div>`;
 
-            if (def.notifs.length > 0) {
-                html += `<div class="perm-section-label" style="margin-top:1rem;">Notificações automáticas</div><div class="perm-grid">`;
-                for (const n of def.notifs) {
-                    const checked = notifs.includes(n.key) ? 'checked' : '';
-                    html += `<label class="perm-item">
-                        <input type="checkbox" data-notif="${n.key}" ${checked}>
-                        ${n.label}
-                    </label>`;
+            const permsComNotif = PERMISSION_DEFS.filter(def => cargo.permissoes.includes(def.key) && def.notifs.length > 0);
+            if (permsComNotif.length > 0) {
+                html += `<div class="perm-section-label" style="margin-top:1rem;">Notificações automáticas</div>`;
+                html += `<p style="font-size:.75rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Valem para todos os cargos com a permissão correspondente.</p>`;
+                html += `<div class="perm-grid">`;
+                for (const def of permsComNotif) {
+                    const saved = rolesConfig[def.key]?.notifs;
+                    const notifs = Array.isArray(saved) ? saved : def.notifs.map(n => n.key); // default = todas habilitadas
+                    for (const n of def.notifs) {
+                        const checked = notifs.includes(n.key) ? 'checked' : '';
+                        html += `<label class="perm-item">
+                            <input type="checkbox" data-perm="${def.key}" data-notif="${n.key}" ${checked}>
+                            ${n.label}
+                        </label>`;
+                    }
                 }
                 html += `</div>`;
             } else {
-                html += `<p style="font-size:.8rem;color:#9ca3af;margin-top:1rem;">Sem notificações automáticas para essa permissão.</p>`;
+                html += `<p style="font-size:.8rem;color:#9ca3af;margin-top:1rem;">Esse cargo não tem permissões com notificações automáticas configuráveis.</p>`;
             }
-            document.getElementById('rolePermContent').innerHTML = html;
+            content.innerHTML = html;
         }
 
-        function collectPermNotifs(key) {
-            const def = PERMISSION_DEFS.find(p => p.key === key);
-            if (!def || def.notifs.length === 0) return;
-            const notifs = [];
+        function collectAllNotifs() {
+            const porPermissao = {};
             document.querySelectorAll('#rolePermContent [data-notif]').forEach(el => {
-                if (el.checked) notifs.push(el.dataset.notif);
+                const perm = el.dataset.perm;
+                if (!porPermissao[perm]) porPermissao[perm] = [];
+                if (el.checked) porPermissao[perm].push(el.dataset.notif);
             });
-            rolesConfig[key] = { ...(rolesConfig[key] || {}), notifs };
+            for (const perm of Object.keys(porPermissao)) {
+                rolesConfig[perm] = { ...(rolesConfig[perm] || {}), notifs: porPermissao[perm] };
+            }
         }
 
         async function salvarRoles() {
-            collectPermNotifs(currentPermTab); // salva aba atual antes de persistir
+            collectAllNotifs(); // salva o cargo atual antes de persistir
             const btn = document.getElementById('btnSalvarRoles');
             btn.disabled = true; btn.textContent = 'Salvando...';
             try {
