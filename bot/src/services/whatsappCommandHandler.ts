@@ -15,6 +15,7 @@ import {
   hasPendingAdminReportView,
   hasPendingReportsList,
   handleReportarCommand,
+  handleReportarCommandFuncionario,
   handleReportStep,
   handleIncomingImageForReport,
   handleAdminReportResponse,
@@ -288,9 +289,16 @@ export async function handleIncomingMessage(
     if (user.type === 'funcionario') {
       const empresaId = user.empresaId!;
 
+      // Step pendente de report tem prioridade
+      if (pendingReports.has(from)) return handleReportStep(from, message);
+
       const isSaudacaoFunc = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo|hey|opa|eae|boa|salve|boas|al[oô])$/i.test(command);
       if (isSaudacaoFunc || command === 'ajuda' || command === 'menu')
         return handleSaudacaoFuncionario(user);
+
+      // Opção permanente, disponível para todos os funcionários
+      if (command === 'reportar')
+        return handleReportarCommandFuncionario(from, user.subaccountId!, empresaId, user.nome ?? 'Funcionário');
 
       const feature = COMMAND_PERMISSION_MAP[command];
       if (feature && !hasPermission(user, feature)) return getPermissionDeniedMessage();
@@ -1291,8 +1299,10 @@ function buildMenuFuncionario(permissoes: string[]): string {
   if (permissoes.includes('gerenciar_clientes'))    itens.push('• *clientes* — clientes atendidos hoje');
   if (permissoes.includes('gerenciar_funcionarios')) itens.push('• *equipe* — produtividade dos lavadores hoje');
 
-  if (itens.length === 0) {
-    return `_Você ainda não tem permissões configuradas pra consultas por aqui. Fala com o administrador, viu?_`;
+  itens.push('• *reportar* — relatar avaria em um veículo');
+
+  if (itens.length === 1) {
+    return `_Você ainda não tem permissões configuradas pra consultas por aqui. Fala com o administrador, viu?_\n\n${itens.join('\n')}\n\n_Manda o comando que quiser, tô aqui!_`;
   }
 
   return `━━━━━━━━━━━━━━━\n📋 *O QUE EU CONSIGO FAZER*\n━━━━━━━━━━━━━━━\n\n${itens.join('\n')}\n\n_Manda o comando que quiser, tô aqui!_`;

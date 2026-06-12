@@ -395,6 +395,7 @@ model Subaccount {
   roleInt     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   whatsappBotUsers WhatsappBotUser[]
+  reports          OrdemReport[]
 
   @@map("subaccounts")
 }
@@ -802,17 +803,19 @@ model BankIntegration {
 }
 
 model OrdemReport {
-  id          String       @id @default(cuid())
-  ordemId     String
-  lavadorId   String
-  empresaId   String
-  descricao   String
-  fotos       String       @default("[]")  // JSON array: ["reports/2026-04-28/ord42-1.jpg", ...]
-  visto       Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  ordem       OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
-  lavador     Lavador      @relation(fields: [lavadorId], references: [id])
-  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  ordemId      String
+  lavadorId    String?
+  subaccountId String?
+  empresaId    String
+  descricao    String
+  fotos        String       @default("[]")  // JSON array: ["reports/2026-04-28/ord42-1.jpg", ...]
+  visto        Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  ordem        OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  lavador      Lavador?     @relation(fields: [lavadorId], references: [id])
+  subaccount   Subaccount?  @relation(fields: [subaccountId], references: [id])
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("ordem_reports")
 }

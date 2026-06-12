@@ -22,7 +22,9 @@ interface PendingReport {
   ordemNumero: number | null;
   ordemModelo: string | null;
   ordemPlaca: string | null;
-  lavadorId: string;
+  lavadorId: string | null;
+  subaccountId: string | null;
+  reporterNome: string;
   empresaId: string;
   descricao: string | null;
   fotosTemp: string[];
@@ -98,7 +100,8 @@ export async function handleReportarCommand(jid: string, lavadorId: string, empr
   pendingReports.set(jid, {
     step: 'escolha_ordem',
     ordemId: null, ordemNumero: null, ordemModelo: null, ordemPlaca: null,
-    lavadorId, empresaId,
+    lavadorId, subaccountId: null, reporterNome: '',
+    empresaId,
     descricao: null,
     fotosTemp: [],
     ordensCache: ordens,
@@ -106,6 +109,47 @@ export async function handleReportarCommand(jid: string, lavadorId: string, empr
   });
 
   return `Suas ordens ativas:\n\n${lista}\n\n*0* · Cancelar\n\nDigite o número da ordem com avaria:`;
+}
+
+// ==========================================
+// FLUXO FUNCIONÁRIO (SUBCONTA) — INICIAR
+// ==========================================
+export async function handleReportarCommandFuncionario(
+  jid: string,
+  subaccountId: string,
+  empresaId: string,
+  reporterNome: string,
+): Promise<string> {
+  const ordens = await (prisma as any).ordemServico.findMany({
+    where: { empresaId, status: { in: ['PENDENTE', 'EM_ANDAMENTO'] } },
+    include: {
+      veiculo: { select: { modelo: true, placa: true } },
+      cliente: { select: { nome: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 9,
+  });
+
+  if (ordens.length === 0) {
+    return '❌ Não há ordens ativas no momento.';
+  }
+
+  const lista = ordens.map((o: any, i: number) =>
+    `*${i + 1}* · #${o.numeroOrdem} · ${o.veiculo?.modelo ?? 'Veículo'} (${o.veiculo?.placa ?? ''}) — ${o.cliente?.nome ?? 'sem cliente'}`
+  ).join('\n');
+
+  pendingReports.set(jid, {
+    step: 'escolha_ordem',
+    ordemId: null, ordemNumero: null, ordemModelo: null, ordemPlaca: null,
+    lavadorId: null, subaccountId, reporterNome,
+    empresaId,
+    descricao: null,
+    fotosTemp: [],
+    ordensCache: ordens,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  });
+
+  return `Ordens ativas:\n\n${lista}\n\n*0* · Cancelar\n\nDigite o número da ordem com avaria:`;
 }
 
 // ==========================================
@@ -175,25 +219,26 @@ export async function handleIncomingImageForReport(jid: string, buffer: Buffer):
 async function finalizeReport(jid: string, state: PendingReport): Promise<string> {
   const report = await (prisma as any).ordemReport.create({
     data: {
-      ordemId:   state.ordemId!,
-      lavadorId: state.lavadorId,
-      empresaId: state.empresaId,
-      descricao: state.descricao!,
-      fotos:     JSON.stringify(state.fotosTemp),
+      ordemId:      state.ordemId!,
+      lavadorId:    state.lavadorId,
+      subaccountId: state.subaccountId,
+      empresaId:    state.empresaId,
+      descricao:    state.descricao!,
+      fotos:        JSON.stringify(state.fotosTemp),
     },
-    include: { lavador: { select: { nome: true } } },
+    include: { lavador: { select: { nome: true } }, subaccount: { select: { nome: true } } },
   });
 
   pendingReports.delete(jid);
 
   notifyAdminsNewReport(state.empresaId, {
-    reportId:    report.id,
-    ordemNumero: state.ordemNumero!,
-    ordemModelo: state.ordemModelo!,
-    ordemPlaca:  state.ordemPlaca!,
-    lavadorNome: report.lavador.nome,
-    descricao:   state.descricao!,
-    fotosCount:  state.fotosTemp.length,
+    reportId:     report.id,
+    ordemNumero:  state.ordemNumero!,
+    ordemModelo:  state.ordemModelo!,
+    ordemPlaca:   state.ordemPlaca!,
+    reporterNome: report.lavador?.nome ?? report.subaccount?.nome ?? state.reporterNome,
+    descricao:    state.descricao!,
+    fotosCount:   state.fotosTemp.length,
   }).catch(e => console.error('[Report] Erro ao notificar admin:', e));
 
   return `✅ *Report salvo!*\nOrdem #${state.ordemNumero} · ${state.fotosTemp.length} foto(s)\nO admin foi notificado.`;
@@ -204,7 +249,7 @@ async function finalizeReport(jid: string, state: PendingReport): Promise<string
 // ==========================================
 async function notifyAdminsNewReport(empresaId: string, dados: {
   reportId: string; ordemNumero: number; ordemModelo: string; ordemPlaca: string;
-  lavadorNome: string; descricao: string; fotosCount: number;
+  reporterNome: string; descricao: string; fotosCount: number;
 }): Promise<void> {
   const empresa = await prisma.empresa.findUnique({
     where: { id: empresaId },
@@ -229,7 +274,7 @@ async function notifyAdminsNewReport(empresaId: string, dados: {
 
   const msg =
     `⚠️ *Report de Avaria — Ordem #${dados.ordemNumero}*\n` +
-    `Lavador: ${dados.lavadorNome} · ${dados.ordemModelo} (${dados.ordemPlaca})\n` +
+    `Relatado por: ${dados.reporterNome} · ${dados.ordemModelo} (${dados.ordemPlaca})\n` +
     `_${dados.descricao}_\n` +
     `📷 ${dados.fotosCount} foto(s) · ${agora}\n\n` +
     `*1* · Ver fotos\n*2* · Ignorar`;
@@ -270,8 +315,9 @@ export async function handleReportsCommand(jid: string, empresaId: string): Prom
   const reports = await (prisma as any).ordemReport.findMany({
     where: { empresaId, visto: false },
     include: {
-      ordem:   { select: { numeroOrdem: true } },
-      lavador: { select: { nome: true } },
+      ordem:      { select: { numeroOrdem: true } },
+      lavador:    { select: { nome: true } },
+      subaccount: { select: { nome: true } },
     },
     orderBy: { createdAt: 'desc' },
     take: 9,
@@ -288,7 +334,8 @@ export async function handleReportsCommand(jid: string, empresaId: string): Prom
       timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit',
     });
     const desc = r.descricao.length > 55 ? r.descricao.slice(0, 55) + '…' : r.descricao;
-    return `*${i + 1}* · #${r.ordem.numeroOrdem} · ${r.lavador.nome} · ${data}\n   _${desc}_ · 📷 ${fotos.length}`;
+    const nome = r.lavador?.nome ?? r.subaccount?.nome ?? 'Funcionário';
+    return `*${i + 1}* · #${r.ordem.numeroOrdem} · ${nome} · ${data}\n   _${desc}_ · 📷 ${fotos.length}`;
   }).join('\n\n');
 
   return `📋 *REPORTS PENDENTES*\n\n${lista}\n\nDigite o número para ver as fotos ou *0* para fechar.`;
