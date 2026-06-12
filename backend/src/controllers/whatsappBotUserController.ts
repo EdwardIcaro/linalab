@@ -4,6 +4,7 @@ import { botGeneratePin, botGetPin, botCancelPin } from '../services/botServiceC
 
 interface AuthReq extends Request {
   empresaId?: string;
+  subaccountId?: string;
 }
 
 const db = prisma as any;
@@ -113,4 +114,80 @@ export async function getPinStatus(req: AuthReq, res: Response) {
   const id = req.params['id'] as string;
   const entry = await botGetPin(id);
   return res.json(entry);
+}
+
+// POST /api/whatsapp/me/wpp/pin — self-service para Subaccounts (funcionários do painel)
+export async function generateMyPin(req: AuthReq, res: Response) {
+  if (!req.subaccountId) {
+    return res.status(403).json({ error: 'Apenas funcionários (subaccounts) podem usar este recurso' });
+  }
+
+  try {
+    const subaccount = await prisma.subaccount.findFirst({
+      where: { id: req.subaccountId, empresaId: req.empresaId },
+    });
+    if (!subaccount) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    let botUser = await db.whatsappBotUser.findFirst({
+      where: { empresaId: req.empresaId, subaccountId: req.subaccountId },
+    });
+
+    if (!botUser) {
+      botUser = await db.whatsappBotUser.create({
+        data: {
+          empresaId: req.empresaId!,
+          nome: subaccount.nome,
+          role: 'FUNCIONARIO',
+          subaccountId: req.subaccountId,
+          ativo: true,
+        },
+      });
+    }
+
+    const code = await botGeneratePin(botUser.id, req.empresaId!, 'FUNCIONARIO', subaccount.nome, null);
+
+    // Número do bot (instância global, empresaId = null) — usado para montar o link wa.me
+    const botInst = await prisma.whatsappInstance.findFirst({
+      where: { empresaId: null },
+      select: { ownerPhone: true },
+    });
+    const botNumero = botInst?.ownerPhone?.replace(/\D/g, '') ?? null;
+
+    return res.json({ code, expiresInSeconds: 300, botNumero });
+  } catch (e) {
+    return res.status(500).json({ error: 'Erro ao gerar PIN', details: String(e) });
+  }
+}
+
+// GET /api/whatsapp/me/wpp/status
+export async function getMyWppStatus(req: AuthReq, res: Response) {
+  if (!req.subaccountId) {
+    return res.status(403).json({ error: 'Apenas funcionários (subaccounts) podem usar este recurso' });
+  }
+
+  const botUser = await db.whatsappBotUser.findFirst({
+    where: { empresaId: req.empresaId, subaccountId: req.subaccountId },
+  });
+  if (!botUser) return res.json({ conectado: false });
+
+  return res.json({ conectado: !!botUser.jid, telefone: botUser.telefone });
+}
+
+// POST /api/whatsapp/me/wpp/desvincular
+export async function desvincularMyWpp(req: AuthReq, res: Response) {
+  if (!req.subaccountId) {
+    return res.status(403).json({ error: 'Apenas funcionários (subaccounts) podem usar este recurso' });
+  }
+
+  const botUser = await db.whatsappBotUser.findFirst({
+    where: { empresaId: req.empresaId, subaccountId: req.subaccountId },
+  });
+  if (!botUser) return res.status(404).json({ error: 'Não encontrado' });
+
+  await botCancelPin(botUser.id).catch(() => {});
+  await db.whatsappBotUser.update({
+    where: { id: botUser.id },
+    data: { jid: null, telefone: null, ativo: true },
+  });
+  return res.json({ ok: true });
 }

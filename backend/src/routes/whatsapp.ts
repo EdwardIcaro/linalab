@@ -41,6 +41,9 @@ import {
   deleteBotUser,
   generatePin,
   getPinStatus,
+  generateMyPin,
+  getMyWppStatus,
+  desvincularMyWpp,
 } from '../controllers/whatsappBotUserController';
 
 const router: Router = Router();
@@ -92,5 +95,10 @@ router.patch('/bot-users/:id',       updateBotUser);
 router.delete('/bot-users/:id',      deleteBotUser);
 router.post('/bot-users/:id/pin',    generatePin);
 router.get('/bot-users/:id/pin',     getPinStatus);
+
+// Self-service: funcionário (subaccount) conecta o próprio WhatsApp
+router.post('/me/wpp/pin',         generateMyPin);
+router.get('/me/wpp/status',       getMyWppStatus);
+router.post('/me/wpp/desvincular', desvincularMyWpp);
 
 export default router;

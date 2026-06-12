@@ -5,7 +5,7 @@
 
 import prisma from '../db';
 import { chatCompletion } from './groqService';
-import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, type WhatsAppUser } from './whatsappAuthService';
+import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
@@ -58,6 +58,19 @@ const pendingNotifMenu = new Map<string, string>();
 
 // Lavador com menu numerado aberto (JID → { lavadorId, empresaId })
 const pendingLavadorMenu = new Map<string, { lavadorId: string; empresaId: string }>();
+
+// Funcionário (subaccount): mapeia comando → permissão necessária do Role
+const COMMAND_PERMISSION_MAP: Record<string, string> = {
+  'resumo':          'ver_financeiro',
+  'resumo do dia':   'ver_financeiro',
+  'resumo diario':   'ver_financeiro',
+  'resumo diário':   'ver_financeiro',
+  'caixa':           'ver_financeiro',
+  'status caixa':    'ver_financeiro',
+  'ordens':          'gerenciar_ordens',
+  'ordens paradas':  'gerenciar_ordens',
+  'ordens em andamento': 'gerenciar_ordens',
+};
 
 // Limpa sessões expiradas a cada 5 minutos
 setInterval(() => {
@@ -261,6 +274,27 @@ export async function handleIncomingMessage(
 
       const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
       if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
+
+      return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
+    }
+
+    // ── FUNCIONÁRIO (subaccount): comandos limitados pela permissão do Role ────
+    if (user.type === 'funcionario') {
+      const empresaId = user.empresaId!;
+
+      const isSaudacaoFunc = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo|hey|opa|eae|boa|salve|boas|al[oô])$/i.test(command);
+      if (isSaudacaoFunc || command === 'ajuda' || command === 'menu')
+        return handleSaudacaoFuncionario(user);
+
+      const feature = COMMAND_PERMISSION_MAP[command];
+      if (feature && !hasPermission(user, feature)) return getPermissionDeniedMessage();
+
+      if (['resumo', 'resumo do dia', 'resumo diario', 'resumo diário'].includes(command))
+        return handleResumoCommand(empresaId);
+      if (['caixa', 'status caixa'].includes(command))
+        return handleCaixaCommand(empresaId);
+      if (['ordens', 'ordens paradas', 'ordens em andamento'].includes(command))
+        return handleOrdensAtivas(empresaId, user);
 
       return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
     }
@@ -1238,6 +1272,26 @@ async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId:
 
   pendingLavadorMenu.set(from, { lavadorId, empresaId });
   return msg;
+}
+
+function buildMenuFuncionario(permissoes: string[]): string {
+  const itens: string[] = [];
+  if (permissoes.includes('ver_financeiro'))   itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa');
+  if (permissoes.includes('gerenciar_ordens')) itens.push('• *ordens* — ordens em andamento');
+
+  if (itens.length === 0) {
+    return `_Você ainda não tem permissões configuradas pra consultas por aqui. Fala com o administrador, viu?_`;
+  }
+
+  return `━━━━━━━━━━━━━━━\n📋 *O QUE EU CONSIGO FAZER*\n━━━━━━━━━━━━━━━\n\n${itens.join('\n')}\n\n_Manda o comando que quiser, tô aqui!_`;
+}
+
+async function handleSaudacaoFuncionario(user: WhatsAppUser): Promise<string> {
+  const hora = new Date().getHours();
+  const [saudacao, emoji] = hora < 12 ? ['Bom dia', '☀️'] : hora < 18 ? ['Boa tarde', '🌤️'] : ['Boa noite', '🌙'];
+  const primeiroNome = (user.nome ?? '').split(' ')[0] || 'tudo bem';
+
+  return `${saudacao}, *${primeiroNome}*! ${emoji}\n\n${buildMenuFuncionario(user.permissoes ?? [])}`;
 }
 
 function buildMenuLavador(): string {

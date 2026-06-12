@@ -77,6 +77,39 @@ export async function notifyAdmins(empresaId: string, message: string, notifKey?
   }
 }
 
+// ─── Notificar funcionários (subaccounts) conforme permissão do Role ─────────
+
+export async function notifyByPermission(empresaId: string, permission: string, message: string): Promise<void> {
+  try {
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') return;
+  } catch {
+    return;
+  }
+
+  const botUsers = await (prisma.whatsappBotUser as any).findMany({
+    where: {
+      empresaId,
+      ativo: true,
+      jid: { not: null },
+      subaccountId: { not: null },
+      subaccount: {
+        roleInt: { permissoes: { some: { name: permission } } },
+      },
+    },
+    select: { jid: true },
+  }) as Array<{ jid: string | null }>;
+
+  for (const u of botUsers) {
+    if (!u.jid) continue;
+    try {
+      await botSend(u.jid, message);
+    } catch (e) {
+      console.error(`[Notif] Erro ao enviar para ${u.jid}:`, e);
+    }
+  }
+}
+
 // ─── Hooks (chamados pelos controllers) ──────────────────────────────────────
 
 export async function notifyNovaOrdem(empresaId: string, dados: {
@@ -267,6 +300,7 @@ export async function cronResumoDiario(): Promise<void> {
 
       msg += `\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
       await notifyAdmins(empresa.id, msg.trim(), 'resumoDiario');
+      await notifyByPermission(empresa.id, 'ver_financeiro', msg.trim());
       resumoEnviadoHoje.add(resumoKey(empresa.id));
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
@@ -293,7 +327,9 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
       ]);
 
       if (abertura && !fechamento) {
-        await notifyAdmins(empresa.id, `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`, 'alertaCaixaAberto');
+        const msg = `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`;
+        await notifyAdmins(empresa.id, msg, 'alertaCaixaAberto');
+        await notifyByPermission(empresa.id, 'ver_financeiro', msg);
       }
     } catch (e) {
       console.error(`[Notif Caixa] empresa ${empresa.id}:`, e);
@@ -331,6 +367,7 @@ export async function cronOrdensParadas(): Promise<void> {
       }
 
       await notifyAdmins(empresa.id, msg.trim(), 'ordemParada');
+      await notifyByPermission(empresa.id, 'gerenciar_ordens', msg.trim());
     } catch (e) {
       console.error(`[Notif Paradas] empresa ${empresa.id}:`, e);
     }

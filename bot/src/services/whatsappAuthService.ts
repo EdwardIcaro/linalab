@@ -5,13 +5,15 @@
 
 import prisma from '../db';
 
-export type WhatsAppUserType = 'admin' | 'lavador' | 'unknown';
+export type WhatsAppUserType = 'admin' | 'lavador' | 'funcionario' | 'unknown';
 
 export interface WhatsAppUser {
   type:      WhatsAppUserType;
   empresas?: Array<{ id: string; nome: string }>; // admin: todas as empresas vinculadas
-  empresaId?: string;   // lavador: empresa única
+  empresaId?: string;   // lavador/funcionario: empresa única
   lavadorId?: string;
+  subaccountId?: string; // funcionario: id do Subaccount vinculado
+  permissoes?: string[]; // funcionario: nomes das permissões do Role
   nome?:     string;
   telefone?: string;
 }
@@ -29,7 +31,7 @@ function getBrPhoneVariants(digits: string): string[] {
 
 /**
  * Identifica o remetente de uma mensagem no socket global.
- * Retorna: admin (com lista de empresas), lavador (empresa única), ou unknown.
+ * Retorna: admin (com lista de empresas), lavador (empresa única), funcionario (subaccount), ou unknown.
  */
 export async function identifyWhatsAppUser(phoneNumber: string): Promise<WhatsAppUser> {
   const rawPhone  = phoneNumber.replace(/\D/g, '');
@@ -82,6 +84,40 @@ export async function identifyWhatsAppUser(phoneNumber: string): Promise<WhatsAp
     };
   }
 
+  // 3. Verificar se é funcionário (subaccount) vinculado via WhatsappBotUser
+  const botUser = await (prisma.whatsappBotUser as any).findFirst({
+    where: {
+      ativo: true,
+      subaccountId: { not: null },
+      OR: [
+        { jid: phoneNumber },
+        ...variants.map(v => ({ telefone: { contains: v } })),
+      ],
+    },
+    select: {
+      subaccountId: true,
+      empresaId: true,
+      telefone: true,
+      subaccount: {
+        select: {
+          nome: true,
+          roleInt: { select: { permissoes: { select: { name: true } } } },
+        },
+      },
+    },
+  });
+
+  if (botUser?.subaccount) {
+    return {
+      type:         'funcionario',
+      empresaId:    botUser.empresaId,
+      subaccountId: botUser.subaccountId,
+      nome:         botUser.subaccount.nome,
+      telefone:     botUser.telefone ?? undefined,
+      permissoes:   botUser.subaccount.roleInt.permissoes.map((p: any) => p.name),
+    };
+  }
+
   return { type: 'unknown', telefone: phoneNumber };
 }
 
@@ -90,6 +126,9 @@ export function hasPermission(user: WhatsAppUser, feature: string): boolean {
   if (user.type === 'lavador') {
     return ['minhas_comissoes', 'meu_faturamento', 'meu_status'].includes(feature);
   }
+  if (user.type === 'funcionario') {
+    return (user.permissoes ?? []).includes(feature);
+  }
   return false;
 }
 
@@ -97,4 +136,8 @@ export function getDeniedAccessMessage(user: WhatsAppUser): string {
   if (user.type === 'unknown')  return 'Oi! Sou a Lina 👋\n\nSeu número ainda não tá cadastrado no sistema. Fala com o administrador do lava-jato pra te cadastrar, tá bom?';
   if (user.type === 'lavador')  return 'Essa função é só pra administradores, viu? Se precisar de algo, me chama com *ajuda*!';
   return 'Não consegui processar isso, não. Tenta de novo?';
+}
+
+export function getPermissionDeniedMessage(): string {
+  return 'Você não tem permissão pra acessar essa informação. Fala com o administrador se precisar, viu?';
 }
