@@ -2114,15 +2114,15 @@
                 const tipo = u.origem === 'lavador'
                     ? `<span class="role-badge role-lavador">👷 Lavador</span>`
                     : `<span class="role-badge role-subaccount">🧑‍💼 Funcionário</span><span class="cargo-badge">${escHtml(u.roleLabel)}</span>`;
-                const status = u.jid
+                const status = u.conectado
                     ? `<span class="jid-badge jid-ok">✅ Conectado</span>`
                     : `<span class="jid-badge jid-pend">Não conectado</span>`;
                 const ativoToggle = u.id ? `<label class="toggle-switch" style="width:44px;height:26px;" title="${u.ativo ? 'Ativo' : 'Inativo'}">
                     <input type="checkbox" ${u.ativo ? 'checked' : ''} onchange="toggleBotUserAtivo('${u.id}', this.checked)">
                     <span class="toggle-slider"></span>
                 </label>` : '';
-                const acao = u.jid
-                    ? `<button class="btn-icon btn-icon-danger" title="Desvincular" onclick="desvincularBotUser('${u.id}', '${escHtml(u.nome)}')">🔌 Desvincular</button>`
+                const acao = u.conectado
+                    ? `<button class="btn-icon btn-icon-danger" title="Desvincular" onclick="desvincularBotUser('${u.origem}', '${u.refId}', '${escHtml(u.nome)}')">🔌 Desvincular</button>`
                     : `<button class="btn-icon" title="Gerar PIN" onclick="gerarPinBotUser('${u.origem}', '${u.refId}', '${escHtml(u.nome)}')">🔑 Gerar PIN</button>`;
                 return `<tr>
                     <td style="font-weight:600">${escHtml(u.nome)}</td>
@@ -2139,10 +2139,10 @@
             } catch { showAlert('Erro ao atualizar status', 'error'); await loadBotUsers(); }
         }
 
-        async function desvincularBotUser(id, nome) {
+        async function desvincularBotUser(origem, refId, nome) {
             if (!confirm(`Desvincular "${nome}" do WhatsApp?`)) return;
             try {
-                await window.api.call('POST', `/whatsapp/bot-users/${id}/desvincular`);
+                await window.api.call('POST', '/whatsapp/bot-users/desvincular', { origem, refId });
                 showAlert('Usuário desvinculado', 'success');
                 await loadBotUsers();
             } catch { showAlert('Erro ao desvincular', 'error'); }

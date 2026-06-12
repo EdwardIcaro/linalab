@@ -27,7 +27,7 @@ export async function listBotUsers(req: AuthReq, res: Response) {
       }),
       prisma.lavador.findMany({
         where: { empresaId, ativo: true },
-        select: { id: true, nome: true },
+        select: { id: true, nome: true, telefone: true },
       }),
       prisma.subaccount.findMany({
         where: { empresaId },
@@ -50,8 +50,9 @@ export async function listBotUsers(req: AuthReq, res: Response) {
         refId: lav.id,
         nome: lav.nome,
         roleLabel: 'Lavador',
-        jid: bu?.jid ?? null,
-        telefone: bu?.telefone ?? null,
+        // O bot identifica lavadores pelo telefone cadastrado, não pelo jid do WhatsappBotUser.
+        conectado: !!lav.telefone || !!bu?.jid,
+        telefone: lav.telefone ?? bu?.telefone ?? null,
         ativo: bu?.ativo ?? true,
       });
     }
@@ -65,7 +66,7 @@ export async function listBotUsers(req: AuthReq, res: Response) {
         refId: sub.id,
         nome: sub.nome,
         roleLabel: sub.roleInt?.nome ?? 'Funcionário',
-        jid: bu?.jid ?? null,
+        conectado: !!bu?.jid,
         telefone: bu?.telefone ?? null,
         ativo: bu?.ativo ?? true,
       });
@@ -82,7 +83,7 @@ export async function listBotUsers(req: AuthReq, res: Response) {
         refId: bu.lavadorId ?? bu.subaccountId ?? bu.id,
         nome: bu.nome,
         roleLabel: bu.subaccount?.roleInt?.nome ?? (bu.lavador ? 'Lavador' : bu.role),
-        jid: bu.jid,
+        conectado: !!bu.jid,
         telefone: bu.telefone,
         ativo: bu.ativo,
       });
@@ -137,16 +138,37 @@ export async function connectBotUser(req: AuthReq, res: Response) {
   }
 }
 
-// POST /api/whatsapp/bot-users/:id/desvincular — admin desvincula um usuário já conectado
+// POST /api/whatsapp/bot-users/desvincular — admin desvincula um lavador/funcionário já conectado
 export async function desvincularBotUser(req: AuthReq, res: Response) {
-  const id = req.params['id'] as string;
-  try {
-    const existing = await db.whatsappBotUser.findFirst({ where: { id, empresaId: req.empresaId } });
-    if (!existing) return res.status(404).json({ error: 'Usuário não encontrado' });
+  const { origem, refId } = req.body as { origem?: 'lavador' | 'subaccount'; refId?: string };
+  if (!origem || !refId) return res.status(400).json({ error: 'Dados inválidos' });
 
-    await botCancelPin(id).catch(() => {});
-    await db.whatsappBotUser.update({ where: { id }, data: { jid: null, telefone: null } });
-    return res.json({ ok: true });
+  try {
+    if (origem === 'lavador') {
+      const lavador = await prisma.lavador.findFirst({ where: { id: refId, empresaId: req.empresaId } });
+      if (!lavador) return res.status(404).json({ error: 'Lavador não encontrado' });
+
+      // O bot identifica lavadores pelo telefone cadastrado — limpar é o que de fato desconecta.
+      await prisma.lavador.update({ where: { id: refId }, data: { telefone: null } });
+
+      const botUser = await db.whatsappBotUser.findFirst({ where: { empresaId: req.empresaId, lavadorId: refId } });
+      if (botUser) {
+        await botCancelPin(botUser.id).catch(() => {});
+        await db.whatsappBotUser.update({ where: { id: botUser.id }, data: { jid: null, telefone: null } });
+      }
+      return res.json({ ok: true });
+    }
+
+    if (origem === 'subaccount') {
+      const botUser = await db.whatsappBotUser.findFirst({ where: { empresaId: req.empresaId, subaccountId: refId } });
+      if (!botUser) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+      await botCancelPin(botUser.id).catch(() => {});
+      await db.whatsappBotUser.update({ where: { id: botUser.id }, data: { jid: null, telefone: null } });
+      return res.json({ ok: true });
+    }
+
+    return res.status(400).json({ error: 'Origem inválida' });
   } catch (e) {
     return res.status(500).json({ error: 'Erro ao desvincular', details: String(e) });
   }

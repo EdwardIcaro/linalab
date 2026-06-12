@@ -98,7 +98,7 @@ router.patch('/bot-users/:id',            updateBotUser);
 router.delete('/bot-users/:id',           deleteBotUser);
 router.post('/bot-users/:id/pin',         generatePin);
 router.get('/bot-users/:id/pin',          getPinStatus);
-router.post('/bot-users/:id/desvincular', desvincularBotUser);
+router.post('/bot-users/desvincular',     desvincularBotUser);
 
 // Self-service: funcionário (subaccount) conecta o próprio WhatsApp
 router.post('/me/wpp/pin',         generateMyPin);

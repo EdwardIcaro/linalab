@@ -456,6 +456,14 @@ export async function initBaileys(): Promise<void> {
               data: { jid: rawFrom, telefone: phoneToStore, ativo: true },
             });
 
+            // O bot identifica lavadores pelo telefone cadastrado (não pelo jid do WhatsappBotUser).
+            if (botClaimed.role === 'LAVADOR' && botClaimed.lavadorId) {
+              await prisma.lavador.update({
+                where: { id: botClaimed.lavadorId },
+                data: { telefone: phoneToStore },
+              }).catch(() => {});
+            }
+
             const roleLabel: Record<string, string> = { LAVADOR: 'Lavador', CAIXA: 'Caixa', FINANCEIRO: 'Financeiro' };
             await sock.sendMessage(rawFrom, {
               text: `Oi, *${botClaimed.nome}*! 👋 Sou a Lina!\n\nTá cadastrado aqui como *${roleLabel[botClaimed.role] ?? botClaimed.role}*. Qualquer coisa é só me chamar — manda *ajuda* pra ver o que eu consigo fazer por você, viu?`,
