@@ -70,6 +70,12 @@ const COMMAND_PERMISSION_MAP: Record<string, string> = {
   'ordens':          'gerenciar_ordens',
   'ordens paradas':  'gerenciar_ordens',
   'ordens em andamento': 'gerenciar_ordens',
+  'clientes':        'gerenciar_clientes',
+  'clientes hoje':   'gerenciar_clientes',
+  'funcionarios':    'gerenciar_funcionarios',
+  'funcionários':    'gerenciar_funcionarios',
+  'equipe':          'gerenciar_funcionarios',
+  'lavadores':       'gerenciar_funcionarios',
 };
 
 // Limpa sessões expiradas a cada 5 minutos
@@ -295,6 +301,10 @@ export async function handleIncomingMessage(
         return handleCaixaCommand(empresaId);
       if (['ordens', 'ordens paradas', 'ordens em andamento'].includes(command))
         return handleOrdensAtivas(empresaId, user);
+      if (['clientes', 'clientes hoje'].includes(command))
+        return handleClientesCommand(empresaId);
+      if (['funcionarios', 'funcionários', 'equipe', 'lavadores'].includes(command))
+        return handleLavadoresCommand(empresaId);
 
       return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
     }
@@ -1276,8 +1286,10 @@ async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId:
 
 function buildMenuFuncionario(permissoes: string[]): string {
   const itens: string[] = [];
-  if (permissoes.includes('ver_financeiro'))   itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa');
-  if (permissoes.includes('gerenciar_ordens')) itens.push('• *ordens* — ordens em andamento');
+  if (permissoes.includes('ver_financeiro'))        itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa');
+  if (permissoes.includes('gerenciar_ordens'))      itens.push('• *ordens* — ordens em andamento');
+  if (permissoes.includes('gerenciar_clientes'))    itens.push('• *clientes* — clientes atendidos hoje');
+  if (permissoes.includes('gerenciar_funcionarios')) itens.push('• *equipe* — produtividade dos lavadores hoje');
 
   if (itens.length === 0) {
     return `_Você ainda não tem permissões configuradas pra consultas por aqui. Fala com o administrador, viu?_`;
@@ -1707,6 +1719,45 @@ async function handleLavadoresCommand(empresaId: string): Promise<string> {
     const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
     const com = fat * (lav.comissao / 100);
     r += `• *${lav.nome}*: ${ords.length} ordem(ns) | Fat.: *R$ ${fat.toFixed(2)}* | Com.: *R$ ${com.toFixed(2)}*\n`;
+  }
+
+  return r.trim();
+}
+
+/*
+ * Handler: /clientes — clientes atendidos hoje (query direta ao banco)
+ */
+async function handleClientesCommand(empresaId: string): Promise<string> {
+  const { start, end } = getTodayFixedRangeBRT();
+
+  const [ordensHoje, novosClientes] = await Promise.all([
+    prisma.ordemServico.findMany({
+      where: { empresaId, createdAt: { gte: start, lte: end }, status: { not: 'CANCELADO' as any } },
+      include: { cliente: { select: { id: true, nome: true } }, veiculo: { select: { placa: true, modelo: true } } },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.cliente.count({ where: { empresaId, createdAt: { gte: start, lte: end } } }),
+  ]);
+
+  if (ordensHoje.length === 0) {
+    return `👥 *CLIENTES HOJE*\n\n✅ Nenhum cliente atendido ainda hoje.`;
+  }
+
+  const porCliente = new Map<string, { nome: string; veiculos: Set<string>; total: number }>();
+  for (const o of ordensHoje) {
+    const c = porCliente.get(o.cliente.id) ?? { nome: o.cliente.nome, veiculos: new Set<string>(), total: 0 };
+    if (o.veiculo?.placa) c.veiculos.add(o.veiculo.placa);
+    c.total += o.valorTotal;
+    porCliente.set(o.cliente.id, c);
+  }
+
+  let r = `👥 *CLIENTES HOJE*\n\n`;
+  r += `${porCliente.size} cliente(s) · ${ordensHoje.length} ordem(ns)`;
+  if (novosClientes > 0) r += ` · ${novosClientes} novo(s) cadastro(s)`;
+  r += `\n\n`;
+
+  for (const c of porCliente.values()) {
+    r += `• *${c.nome}* — ${[...c.veiculos].join(', ') || '—'} · *R$ ${c.total.toFixed(2)}*\n`;
   }
 
   return r.trim();
