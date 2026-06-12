@@ -79,12 +79,18 @@ export const getClientes = async (req: EmpresaRequest, res: Response) => {
     };
 
     if (search) {
-      where.OR = [
-        { nome: { contains: search as string, mode: 'insensitive' } },
-        { telefone: { contains: search as string } },
-        { email: { contains: search as string, mode: 'insensitive' } },
-        { veiculos: { some: { placa: { contains: (search as string).toUpperCase() } } } }
-      ];
+      // Busca multi-palavra: cada palavra precisa bater em algum campo (AND de ORs)
+      // Permite encontrar "João da Silva" buscando "joão silva", por exemplo.
+      const palavras = (search as string).trim().split(/\s+/).filter(Boolean);
+
+      where.AND = palavras.map((palavra) => ({
+        OR: [
+          { nome: { contains: palavra, mode: 'insensitive' } },
+          { telefone: { contains: palavra } },
+          { email: { contains: palavra, mode: 'insensitive' } },
+          { veiculos: { some: { placa: { contains: palavra.toUpperCase() } } } }
+        ]
+      }));
     }
 
     const [clientes, total] = await Promise.all([

@@ -1347,7 +1347,7 @@
 
           try {
             const cleanPlate = q.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const isPlateSearch = cleanPlate.length >= 5;
+            const isPlateSearch = /\d/.test(q);
 
             if (isPlateSearch) {
               try {
@@ -1413,12 +1413,12 @@
             };
             this.formErros = { nome:false, modelo:false, placa:false };
             this.showDrop = false;
-            this.q = '';
+            this.searchQuery = '';
             this.showForm = true;
             return;
           }
           this.cliente = { ...r };
-          this.q = '';
+          this.searchQuery = '';
           this.showDrop = false;
 
           // Auto-preenche tipo e categoria do veículo cadastrado
@@ -1433,9 +1433,12 @@
         abrirFormNovoCliente() {
           this._linkClienteId = null;
           this.formEdicao = false;
+          const q = this.searchQuery.trim();
+          const cleanPlate = q.toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const isPlate = /\d/.test(q);
           this.form = {
-            nome: this.q || '',
-            telefone: '', cpf: '', modelo: '', placa: '', cor: '', ano: ''
+            nome: isPlate ? '' : q,
+            telefone: '', cpf: '', modelo: '', placa: isPlate ? cleanPlate : '', cor: '', ano: ''
           };
           this.formErros = { nome:false, modelo:false, placa:false };
           this.showDrop = false;
@@ -1565,7 +1568,7 @@
             };
           }
 
-          this.q = '';
+          this.searchQuery = '';
           this.showForm = false;
         },
 

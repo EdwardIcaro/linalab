@@ -189,8 +189,8 @@ const api = {
   getEmpresaById: (id) => fetchApi(`/empresas/${id}`),
 
   // ===== CLIENTES =====
-  getClientes: (page = 1, limit = 10, search = '') => 
-    fetchApi(`/clientes?page=${page}&limit=${limit}&search=${search}`),
+  getClientes: (page = 1, limit = 10, search = '') =>
+    fetchApi(`/clientes?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`),
   getClienteById: (id) => fetchApi(`/clientes/${id}`),
   createCliente: (data) => fetchApi('/clientes', { method: 'POST', body: JSON.stringify(data) }),
   updateCliente: (id, data) => fetchApi(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
