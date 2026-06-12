@@ -53,10 +53,10 @@ export async function identifyWhatsAppUser(phoneNumber: string): Promise<WhatsAp
 
   if (adminRecords.length > 0) {
     const empresaIds = [...new Set(adminRecords.map(r => r.empresaId))];
-    const empresas   = await prisma.empresa.findMany({
+    const empresas   = (await prisma.empresa.findMany({
       where: { id: { in: empresaIds } },
       select: { id: true, nome: true },
-    });
+    })).sort((a, b) => a.nome.localeCompare(b.nome));
 
     return {
       type:     'admin',

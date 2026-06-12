@@ -254,6 +254,90 @@ export async function notifyComissaoFechada(empresaId: string, dados: {
   }
 }
 
+// ─── Envio agrupado para admins de múltiplas empresas ─────────────────────────
+// Um mesmo número de WhatsApp pode ser admin em mais de uma empresa
+// (uma linha em whatsapp_admin_phones por empresa, mesmo telefone/jid).
+// Quando isso acontece, cada mensagem recebe o nome da empresa no cabeçalho
+// e, se houver, um índice estável (`detalhes N`) baseado na lista completa
+// e ordenada (por nome) de empresas que esse admin gerencia.
+
+interface AdminBloco {
+  empresaId: string;
+  empresaNome: string;
+  notifKey: string;
+  corpo: string;
+  headerSingle: string;
+  headerMulti: (empresaNome: string) => string;
+  footerSingle?: string;
+  footerMulti?: (indice: number) => string;
+}
+
+async function sendAdminBlocks(blocos: AdminBloco[]): Promise<void> {
+  if (blocos.length === 0) return;
+
+  const empresaIds = blocos.map(b => b.empresaId);
+  const admins = await (prisma.whatsappAdminPhone as any).findMany({
+    where: { empresaId: { in: empresaIds }, ativo: true },
+    select: { telefone: true, jid: true, empresaId: true, notifPrefs: true },
+  }) as Array<{ telefone: string; jid: string | null; empresaId: string; notifPrefs: any }>;
+
+  const telefones = [...new Set(admins.map(a => a.telefone))];
+
+  // Lista completa (todas as empresas ativas, não só as com bloco hoje) de cada telefone,
+  // ordenada por nome — define a numeração estável usada em "detalhes N".
+  const todasEmpresasDoAdmin = await (prisma.whatsappAdminPhone as any).findMany({
+    where: { telefone: { in: telefones }, ativo: true },
+    select: { telefone: true, empresaId: true },
+  }) as Array<{ telefone: string; empresaId: string }>;
+
+  const empresaIdsTodas = [...new Set(todasEmpresasDoAdmin.map(a => a.empresaId))];
+  const empresasInfo = await prisma.empresa.findMany({
+    where: { id: { in: empresaIdsTodas } },
+    select: { id: true, nome: true },
+  });
+  const nomeById = new Map(empresasInfo.map(e => [e.id, e.nome]));
+
+  const ordemPorTelefone = new Map<string, string[]>(); // telefone → empresaIds ordenados por nome
+  for (const telefone of telefones) {
+    const ids = todasEmpresasDoAdmin.filter(a => a.telefone === telefone).map(a => a.empresaId);
+    ids.sort((a, b) => (nomeById.get(a) ?? '').localeCompare(nomeById.get(b) ?? ''));
+    ordemPorTelefone.set(telefone, ids);
+  }
+
+  const porTelefone = new Map<string, typeof admins>();
+  for (const a of admins) {
+    if (!porTelefone.has(a.telefone)) porTelefone.set(a.telefone, []);
+    porTelefone.get(a.telefone)!.push(a);
+  }
+
+  for (const [telefone, rows] of porTelefone) {
+    const ordemEmpresas = ordemPorTelefone.get(telefone) ?? [];
+    const minhas = rows
+      .map(a => {
+        const bloco = blocos.find(b => b.empresaId === a.empresaId);
+        if (!bloco) return null;
+        const prefsAdmin = (a.notifPrefs as any) ?? {};
+        if (prefsAdmin[bloco.notifKey] === false) return null;
+        return { ...bloco, jid: a.jid, telefone: a.telefone };
+      })
+      .filter((x): x is NonNullable<typeof x> => !!x);
+
+    const multi = ordemEmpresas.length > 1;
+
+    for (const b of minhas) {
+      const dest = b.jid ?? `${b.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
+      const indice = ordemEmpresas.indexOf(b.empresaId) + 1;
+      const header = multi ? b.headerMulti(b.empresaNome) : b.headerSingle;
+      const footer = multi ? (b.footerMulti?.(indice) ?? '') : (b.footerSingle ?? '');
+      try {
+        await botSend(dest, `${header}${b.corpo}${footer}`);
+      } catch (e) {
+        console.error(`[Notif] Erro ao enviar para ${dest}:`, e);
+      }
+    }
+  }
+}
+
 // ─── Cron Jobs ────────────────────────────────────────────────────────────────
 
 export async function cronResumoDiario(): Promise<void> {
@@ -261,8 +345,10 @@ export async function cronResumoDiario(): Promise<void> {
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
-    select: { id: true, notificationPreferences: true },
+    select: { id: true, nome: true, notificationPreferences: true },
   });
+
+  const adminBlocos: AdminBloco[] = [];
 
   for (const empresa of empresas) {
     if (!prefs(empresa).resumoDiario) continue;
@@ -293,30 +379,43 @@ export async function cronResumoDiario(): Promise<void> {
       }
       const topLavs = Object.values(comPorLav).sort((a, b) => b.com - a.com).slice(0, 3);
 
-      let msg = `📊 *Resumo do dia — ${hoje.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}*\n`;
-      msg += `━━━━━━━━━━━━━━━\n`;
-      msg += `🚗 *${finalizadas.length}* finalizada(s)`;
-      msg += `\n💰 Faturamento: *R$ ${fat.toFixed(2)}*`;
-      msg += `\n💸 Saídas: *R$ ${saidas.toFixed(2)}*`;
-      msg += `\n💵 Líquido: *R$ ${(fat - saidas).toFixed(2)}*`;
+      const dataStr = hoje.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+      let corpo = `🚗 *${finalizadas.length}* finalizada(s)`;
+      corpo += `\n💰 Faturamento: *R$ ${fat.toFixed(2)}*`;
+      corpo += `\n💸 Saídas: *R$ ${saidas.toFixed(2)}*`;
+      corpo += `\n💵 Líquido: *R$ ${(fat - saidas).toFixed(2)}*`;
 
       if (topLavs.length > 0) {
-        msg += `\n━━━━━━━━━━━━━━━\n👷 Lavadores:\n`;
+        corpo += `\n━━━━━━━━━━━━━━━\n👷 Lavadores:\n`;
         for (const l of topLavs) {
-          msg += `• *${l.nome}*: ${l.ordens} ord. · *R$ ${l.com.toFixed(2)}*\n`;
+          corpo += `• *${l.nome}*: ${l.ordens} ord. · *R$ ${l.com.toFixed(2)}*\n`;
         }
       }
+      corpo = corpo.trim();
 
-      msg += `\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
-      await notifyAdmins(empresa.id, msg.trim(), 'resumoDiario');
+      adminBlocos.push({
+        empresaId:    empresa.id,
+        empresaNome:  empresa.nome,
+        notifKey:     'resumoDiario',
+        corpo,
+        headerSingle: `📊 *Resumo do dia — ${dataStr}*\n━━━━━━━━━━━━━━━\n`,
+        headerMulti:  (nome) => `📊 *Resumo do dia — ${nome} — ${dataStr}*\n━━━━━━━━━━━━━━━\n`,
+        footerSingle: `\n\n💡 _Detalhes completos: responda *mais detalhes*_`,
+        footerMulti:  (n) => `\n\n💡 _Detalhes completos: responda *detalhes ${n}*_`,
+      });
+
       if (permissionNotifEnabled(empresa, 'ver_financeiro', 'resumoDiario')) {
-        await notifyByPermission(empresa.id, 'ver_financeiro', msg.trim());
+        const msgFuncionario = `📊 *Resumo do dia — ${dataStr}*\n━━━━━━━━━━━━━━━\n${corpo}\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
+        await notifyByPermission(empresa.id, 'ver_financeiro', msgFuncionario);
       }
       resumoEnviadoHoje.add(resumoKey(empresa.id));
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
     }
   }
+
+  await sendAdminBlocks(adminBlocos);
 }
 
 export async function cronAlertaCaixaAberto(): Promise<void> {
@@ -324,8 +423,10 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
-    select: { id: true, notificationPreferences: true },
+    select: { id: true, nome: true, notificationPreferences: true },
   });
+
+  const adminBlocos: AdminBloco[] = [];
 
   for (const empresa of empresas) {
     if (!prefs(empresa).alertaCaixaAberto) continue;
@@ -338,16 +439,26 @@ export async function cronAlertaCaixaAberto(): Promise<void> {
       ]);
 
       if (abertura && !fechamento) {
-        const msg = `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`;
-        await notifyAdmins(empresa.id, msg, 'alertaCaixaAberto');
+        const corpo = `🕙 O caixa ainda está aberto. Lembre-se de fechar pelo painel.`;
+        adminBlocos.push({
+          empresaId:    empresa.id,
+          empresaNome:  empresa.nome,
+          notifKey:     'alertaCaixaAberto',
+          corpo,
+          headerSingle: ``,
+          headerMulti:  (nome) => `🏢 *${nome}*\n`,
+          footerSingle: ``,
+        });
         if (permissionNotifEnabled(empresa, 'ver_financeiro', 'alertaCaixaAberto')) {
-          await notifyByPermission(empresa.id, 'ver_financeiro', msg);
+          await notifyByPermission(empresa.id, 'ver_financeiro', corpo);
         }
       }
     } catch (e) {
       console.error(`[Notif Caixa] empresa ${empresa.id}:`, e);
     }
   }
+
+  await sendAdminBlocks(adminBlocos);
 }
 
 export async function cronOrdensParadas(): Promise<void> {
@@ -355,8 +466,10 @@ export async function cronOrdensParadas(): Promise<void> {
 
   const empresas = await prisma.empresa.findMany({
     where: { ativo: true },
-    select: { id: true, notificationPreferences: true },
+    select: { id: true, nome: true, notificationPreferences: true },
   });
+
+  const adminBlocos: AdminBloco[] = [];
 
   for (const empresa of empresas) {
     const p = prefs(empresa);
@@ -373,18 +486,30 @@ export async function cronOrdensParadas(): Promise<void> {
 
       if (paradas.length === 0) continue;
 
-      let msg = `⚠️ *${paradas.length} ordem(ns) parada(s) há ${horas}h+:*\n`;
+      let corpo = `⚠️ *${paradas.length} ordem(ns) parada(s) há ${horas}h+:*\n`;
       for (const o of paradas) {
         const horasParada = Math.floor((Date.now() - o.updatedAt.getTime()) / 3600000);
-        msg += `• #${o.numeroOrdem} ${o.veiculo.modelo ?? 'Veículo'} ${o.veiculo.placa ?? ''} (${horasParada}h)\n`;
+        corpo += `• #${o.numeroOrdem} ${o.veiculo.modelo ?? 'Veículo'} ${o.veiculo.placa ?? ''} (${horasParada}h)\n`;
       }
+      corpo = corpo.trim();
 
-      await notifyAdmins(empresa.id, msg.trim(), 'ordemParada');
+      adminBlocos.push({
+        empresaId:    empresa.id,
+        empresaNome:  empresa.nome,
+        notifKey:     'ordemParada',
+        corpo,
+        headerSingle: ``,
+        headerMulti:  (nome) => `🏢 *${nome}*\n`,
+        footerSingle: ``,
+      });
+
       if (permissionNotifEnabled(empresa, 'gerenciar_ordens', 'ordemParada')) {
-        await notifyByPermission(empresa.id, 'gerenciar_ordens', msg.trim());
+        await notifyByPermission(empresa.id, 'gerenciar_ordens', corpo);
       }
     } catch (e) {
       console.error(`[Notif Paradas] empresa ${empresa.id}:`, e);
     }
   }
+
+  await sendAdminBlocks(adminBlocos);
 }

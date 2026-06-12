@@ -381,6 +381,15 @@ export async function handleIncomingMessage(
     // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
     const empresas = user.empresas ?? [];
 
+    // "detalhes N" — resposta ao resumo diário de admin com múltiplas empresas
+    // (o N corresponde à posição da empresa em `empresas`, ordenadas por nome — mesma ordem usada no cron)
+    const detalhesMatch = command.match(/^detalhes?\s*(\d+)$/);
+    if (detalhesMatch && empresas.length > 1) {
+      const idx = parseInt(detalhesMatch[1]) - 1;
+      if (idx >= 0 && idx < empresas.length) return handleRelatorioData(new Date(), empresas[idx].id);
+      return `❌ Empresa inválida. Digite *detalhes 1* a *detalhes ${empresas.length}*.`;
+    }
+
     // "trocar para [nome]" → troca direta sem mostrar menu
     const trocarParaMatch = message.match(/(?:trocar?|mudar|ir)\s+(?:para|pra|p\/|pro?)\s+(.+)/i);
     if (trocarParaMatch) {
