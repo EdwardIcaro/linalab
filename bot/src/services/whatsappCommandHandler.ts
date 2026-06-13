@@ -5,7 +5,7 @@
 
 import prisma from '../db';
 import { chatCompletion } from './groqService';
-import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, type WhatsAppUser } from './whatsappAuthService';
+import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
@@ -58,7 +58,7 @@ const pendingCommands = new Map<string, string>();
 const pendingNotifMenu = new Map<string, string>();
 
 // Lavador com menu numerado aberto (JID → { lavadorId, empresaId })
-const pendingLavadorMenu = new Map<string, { lavadorId: string; empresaId: string }>();
+const pendingLavadorMenu = new Map<string, { lavadorId: string; empresaId: string; actions: string[] }>();
 
 // Funcionário (subaccount): mapeia comando → permissão necessária do Role
 const COMMAND_PERMISSION_MAP: Record<string, string> = {
@@ -248,6 +248,9 @@ export async function handleIncomingMessage(
     if (user.type === 'lavador') {
       const empresaId = user.empresaId!;
       const lavadorId = user.lavadorId!;
+      const lavFeatures = user.botFeatures ?? DEFAULT_LAVADOR_FEATURES;
+      const podeStatus    = lavFeatures.includes('meu_status');
+      const podeComissoes = lavFeatures.includes('minhas_comissoes');
 
       // Step pendente de report tem prioridade
       if (pendingReports.has(from)) return handleReportStep(from, message);
@@ -256,28 +259,30 @@ export async function handleIncomingMessage(
       if (pendingLavadorMenu.has(from)) {
         const ctx = pendingLavadorMenu.get(from)!;
         pendingLavadorMenu.delete(from);
-        if (command === '1') return handleStatusLavador(ctx.lavadorId, ctx.empresaId);
-        if (command === '2') return handleComissoesLavador(ctx.lavadorId, ctx.empresaId);
-        if (command === '3') return handleLinkLavador(ctx.lavadorId);
-        if (command === '4') return handleReportarCommand(from, ctx.lavadorId, ctx.empresaId);
+        const idx = parseInt(command) - 1;
+        const acao = ctx.actions[idx];
+        if (acao === 'status')    return handleStatusLavador(ctx.lavadorId, ctx.empresaId);
+        if (acao === 'comissoes') return handleComissoesLavador(ctx.lavadorId, ctx.empresaId);
+        if (acao === 'link')      return handleLinkLavador(ctx.lavadorId);
+        if (acao === 'reportar')  return handleReportarCommand(from, ctx.lavadorId, ctx.empresaId);
         // não reconheceu o número — cai nos handlers normais abaixo
       }
 
       // Saudação → mini-status + menu numerado
       const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo|hey|opa|eae|boa|salve|boas|al[oô])$/i.test(command);
       if (isSaudacao || command === 'ajuda' || command === 'menu')
-        return handleSaudacaoLavador(from, lavadorId, empresaId);
+        return handleSaudacaoLavador(from, lavadorId, empresaId, lavFeatures);
 
       if (command === 'reportar') return handleReportarCommand(from, lavadorId, empresaId);
       if (command === 'link')     return handleLinkLavador(lavadorId);
       if (['status','meu-status','minhas-comissoes','resumo'].includes(command))
-        return handleStatusLavador(lavadorId, empresaId);
+        return podeStatus ? handleStatusLavador(lavadorId, empresaId) : getPermissionDeniedMessage();
       if (['comissoes','comissões','comissão','comissao'].includes(command))
-        return handleComissoesLavador(lavadorId, empresaId);
+        return podeComissoes ? handleComissoesLavador(lavadorId, empresaId) : getPermissionDeniedMessage();
 
       const isComissaoAberto = /comiss[aã][eo]s?\s*(em aberto|abertas?|pendentes?)/i.test(message) ||
         /(em aberto|abertas?|pendentes?)\s*(comiss[aã][eo]s?|comiss[oõ]es)/i.test(message);
-      if (isComissaoAberto) return handleComissoesLavador(lavadorId, empresaId);
+      if (isComissaoAberto) return podeComissoes ? handleComissoesLavador(lavadorId, empresaId) : getPermissionDeniedMessage();
 
       const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
       if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
@@ -1265,9 +1270,13 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
 // HANDLERS ESPECÍFICOS PARA LAVADOR
 // ==========================================
 
-async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId: string): Promise<string> {
+async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId: string, botFeatures: string[]): Promise<string> {
   const lavador = await prisma.lavador.findUnique({ where: { id: lavadorId } });
-  if (!lavador) return buildMenuLavador();
+  if (!lavador) {
+    const { text, actions } = buildMenuLavador(botFeatures);
+    pendingLavadorMenu.set(from, { lavadorId, empresaId, actions });
+    return text;
+  }
 
   const { start: diaStart, end: diaEnd } = getTodayFixedRangeBRT();
   const ordens = await prisma.ordemServico.findMany({
@@ -1295,9 +1304,10 @@ async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId:
   } else {
     msg += `📊 Nenhuma ordem finalizada hoje ainda.\n\n`;
   }
-  msg += buildMenuLavador();
+  const { text, actions } = buildMenuLavador(botFeatures);
+  msg += text;
 
-  pendingLavadorMenu.set(from, { lavadorId, empresaId });
+  pendingLavadorMenu.set(from, { lavadorId, empresaId, actions });
   return msg;
 }
 
@@ -1325,14 +1335,18 @@ async function handleSaudacaoFuncionario(user: WhatsAppUser): Promise<string> {
   return `${saudacao}, *${primeiroNome}*! ${emoji}\n\n${buildMenuFuncionario(user.botFeatures ?? user.permissoes ?? [])}`;
 }
 
-function buildMenuLavador(): string {
-  return `━━━━━━━━━━━━━━━\n` +
-    `1️⃣  Meu status hoje\n` +
-    `2️⃣  Comissões em aberto\n` +
-    `3️⃣  Meu portal (link)\n` +
-    `4️⃣  Reportar avaria\n` +
-    `━━━━━━━━━━━━━━━\n\n` +
-    `_Responda com o número ou o comando._`;
+const NUMEROS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
+
+function buildMenuLavador(botFeatures: string[]): { text: string; actions: string[] } {
+  const itens: Array<{ acao: string; label: string }> = [];
+  if (botFeatures.includes('meu_status'))    itens.push({ acao: 'status',    label: 'Meu status hoje' });
+  if (botFeatures.includes('minhas_comissoes')) itens.push({ acao: 'comissoes', label: 'Comissões em aberto' });
+  itens.push({ acao: 'link',     label: 'Meu portal (link)' });
+  itens.push({ acao: 'reportar', label: 'Reportar avaria' });
+
+  const linhas = itens.map((item, i) => `${NUMEROS[i]}  ${item.label}`);
+  const text = `━━━━━━━━━━━━━━━\n${linhas.join('\n')}\n━━━━━━━━━━━━━━━\n\n_Responda com o número ou o comando._`;
+  return { text, actions: itens.map(i => i.acao) };
 }
 
 async function handleStatusLavador(lavadorId: string, empresaId: string): Promise<string> {
@@ -1449,10 +1463,6 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
     `━━━━━━━━━━━━━━━\n` +
     `💵 Total: *R$ ${totalCom.toFixed(2)}*\n` +
     `━━━━━━━━━━━━━━━`;
-}
-
-function handleAjudaLavador(): string {
-  return buildMenuLavador();
 }
 
 // ==========================================

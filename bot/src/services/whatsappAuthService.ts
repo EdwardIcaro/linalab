@@ -19,6 +19,17 @@ export interface WhatsAppUser {
   telefone?: string;
 }
 
+export const DEFAULT_LAVADOR_FEATURES = ['minhas_comissoes', 'meu_faturamento', 'meu_status'];
+
+// Tolera dados antigos onde notificationPreferences foi salvo como string JSON.
+function getNotifPrefsObj(notificationPreferences: any): any {
+  let np = notificationPreferences;
+  if (typeof np === 'string') {
+    try { np = JSON.parse(np); } catch { np = {}; }
+  }
+  return np ?? {};
+}
+
 function getBrPhoneVariants(digits: string): string[] {
   const v = new Set<string>([digits]);
   if (digits.length === 13 && digits.startsWith('55') && digits[4] === '9')
@@ -76,12 +87,19 @@ export async function identifyWhatsAppUser(phoneNumber: string): Promise<WhatsAp
   });
 
   if (lavador) {
+    const empresaLav = await prisma.empresa.findUnique({
+      where: { id: lavador.empresaId },
+      select: { notificationPreferences: true },
+    });
+    const lavadorBotFeatures = getNotifPrefsObj(empresaLav?.notificationPreferences)?.whatsappRoles?.lavador?.botFeatures;
+
     return {
-      type:      'lavador',
-      empresaId: lavador.empresaId,
-      lavadorId: lavador.id,
-      nome:      lavador.nome,
-      telefone:  lavador.telefone ?? undefined,
+      type:        'lavador',
+      empresaId:   lavador.empresaId,
+      lavadorId:   lavador.id,
+      nome:        lavador.nome,
+      telefone:    lavador.telefone ?? undefined,
+      botFeatures: Array.isArray(lavadorBotFeatures) ? lavadorBotFeatures : DEFAULT_LAVADOR_FEATURES,
     };
   }
 
@@ -131,7 +149,7 @@ export async function identifyWhatsAppUser(phoneNumber: string): Promise<WhatsAp
 export function hasPermission(user: WhatsAppUser, feature: string): boolean {
   if (user.type === 'admin') return true;
   if (user.type === 'lavador') {
-    return ['minhas_comissoes', 'meu_faturamento', 'meu_status'].includes(feature);
+    return (user.botFeatures ?? DEFAULT_LAVADOR_FEATURES).includes(feature);
   }
   if (user.type === 'funcionario') {
     return (user.botFeatures ?? user.permissoes ?? []).includes(feature);

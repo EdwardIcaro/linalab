@@ -1467,12 +1467,11 @@
                 <button class="close-modal" onclick="closeRolesModal()">&times;</button>
             </div>
             <div class="modal-roles-body">
-                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1rem;">O que cada tipo de usuário pode fazer pelo WhatsApp. Comandos são fixos; notificações automáticas podem ser ativadas ou desativadas.</p>
+                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1rem;">O que cada tipo de usuário pode fazer pelo WhatsApp: marque ou desmarque os comandos liberados e as notificações automáticas recebidas.</p>
 
                 <div class="perm-section-label" style="margin-top:0;">👷 Lavadores</div>
-                <div style="border:1px solid #e5e7eb;border-radius:8px;padding:.75rem;font-size:.85rem;color:#4b5563;background:#f9fafb;">
-                    Lavadores com WhatsApp vinculado podem consultar pelo bot: <strong>suas comissões</strong>, <strong>seu faturamento</strong> e <strong>o status das suas ordens</strong>. Esse acesso é fixo e não pode ser alterado aqui.
-                </div>
+                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Marque ou desmarque o que os lavadores com WhatsApp vinculado podem consultar pelo bot. <strong>Reportar avaria</strong> e <strong>meu portal (link)</strong> estão sempre disponíveis.</p>
+                <div id="lavadorPermContent" class="perm-grid"></div>
 
                 <div class="perm-section-label">🧑‍💼 Funcionários (por Cargo)</div>
                 <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .75rem;">Selecione um cargo e marque o que esses funcionários podem fazer pelo bot e quais notificações automáticas recebem. Isso é independente das permissões do painel (Funcionários → Cargos).</p>
@@ -2214,6 +2213,13 @@
             },
         ];
 
+        // Comandos do bot disponíveis para lavadores (independente das permissões do painel)
+        const LAVADOR_COMMAND_DEFS = [
+            { key: 'meu_status',      label: '📊 Meu status hoje (ordens do dia)' },
+            { key: 'minhas_comissoes', label: '💰 Minhas comissões em aberto' },
+        ];
+        const DEFAULT_LAVADOR_FEATURES = LAVADOR_COMMAND_DEFS.map(d => d.key);
+
         let rolesConfig = {};
         let cargos = [];
         let currentCargoId = null;
@@ -2235,6 +2241,8 @@
                 }));
             } catch { rolesConfig = {}; cargos = []; }
 
+            renderLavadorContent();
+
             const select = document.getElementById('cargoSelect');
             if (cargos.length === 0) {
                 select.innerHTML = '<option value="">Nenhum cargo cadastrado</option>';
@@ -2246,6 +2254,28 @@
                 renderCargoContent(currentCargoId);
             }
             document.getElementById('rolesModal').classList.add('active');
+        }
+
+        function renderLavadorContent() {
+            const content = document.getElementById('lavadorPermContent');
+            if (!content) return;
+            const saved = rolesConfig.lavador?.botFeatures;
+            const enabled = new Set(Array.isArray(saved) ? saved : DEFAULT_LAVADOR_FEATURES);
+
+            content.innerHTML = LAVADOR_COMMAND_DEFS.map(def => `
+                <label class="perm-item">
+                    <input type="checkbox" data-lavador-feature="${def.key}" ${enabled.has(def.key) ? 'checked' : ''}>
+                    ${def.label}
+                </label>
+            `).join('');
+        }
+
+        function collectLavador() {
+            const features = [];
+            document.querySelectorAll('#lavadorPermContent [data-lavador-feature]').forEach(el => {
+                if (el.checked) features.push(el.dataset.lavadorFeature);
+            });
+            rolesConfig.lavador = { ...(rolesConfig.lavador || {}), botFeatures: features };
         }
 
         function closeRolesModal() {
@@ -2330,6 +2360,7 @@
 
         async function salvarRoles() {
             collectCurrentCargo(); // salva o cargo atual antes de persistir
+            collectLavador();      // salva os comandos liberados para lavadores
             const btn = document.getElementById('btnSalvarRoles');
             btn.disabled = true; btn.textContent = 'Salvando...';
             try {

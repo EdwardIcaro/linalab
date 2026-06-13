@@ -86,12 +86,12 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
           moeda: 'BRL',
           timezone: 'America/Sao_Paulo'
         }),
-        notificationPreferences: JSON.stringify({
+        notificationPreferences: {
             ordemCriada: true,
             ordemEditada: true,
             ordemDeletada: false,
             finalizacaoAutomatica: true
-        }),
+        },
         paymentMethodsConfig: JSON.stringify({
           DINHEIRO: true,
           PIX: true,
@@ -259,7 +259,7 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
     if (finalizacaoAutomatica !== undefined) updateData.finalizacaoAutomatica = finalizacaoAutomatica;
     if (exigirLavadorParaFinalizar !== undefined) updateData.exigirLavadorParaFinalizar = exigirLavadorParaFinalizar;
     if (paginaInicialPadrao) updateData.paginaInicialPadrao = paginaInicialPadrao;
-    if (notificationPreferences && typeof notificationPreferences === 'object') updateData.notificationPreferences = JSON.stringify(notificationPreferences);
+    if (notificationPreferences && typeof notificationPreferences === 'object') updateData.notificationPreferences = notificationPreferences;
     if (paymentMethodsConfig && typeof paymentMethodsConfig === 'object') updateData.paymentMethodsConfig = JSON.stringify(paymentMethodsConfig);
     
     let empresa = await prisma.empresa.update({

@@ -41,15 +41,25 @@ const DEFAULTS: NotifPrefs = {
   clienteVip:         true,
 };
 
+// Tolera dados antigos onde notificationPreferences foi salvo como string JSON
+// (bug corrigido em updateEmpresa, mas registros já gravados ainda podem estar assim).
+function getNotifPrefsObj(empresa: { notificationPreferences: any }): any {
+  let np = empresa.notificationPreferences;
+  if (typeof np === 'string') {
+    try { np = JSON.parse(np); } catch { np = {}; }
+  }
+  return np ?? {};
+}
+
 function prefs(empresa: { notificationPreferences: any }): NotifPrefs {
-  const p = (empresa.notificationPreferences as any)?.whatsapp ?? {};
+  const p = getNotifPrefsObj(empresa).whatsapp ?? {};
   return { ...DEFAULTS, ...p };
 }
 
 // Config de "Capacidades do Bot" — quais notificações cada permissão de Cargo recebe.
 // Default = todas habilitadas (comportamento anterior, sem config).
 function permissionNotifEnabled(empresa: { notificationPreferences: any }, permission: string, notifKey: string): boolean {
-  const roles = (empresa.notificationPreferences as any)?.whatsappRoles ?? {};
+  const roles = getNotifPrefsObj(empresa).whatsappRoles ?? {};
   const notifs = roles[permission]?.notifs;
   if (!Array.isArray(notifs)) return true;
   return notifs.includes(notifKey);

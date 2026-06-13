@@ -137,7 +137,11 @@ export async function getNotifPrefs(req: AuthenticatedRequest, res: Response) {
       select: { notificationPreferences: true },
     });
 
-    const raw = (empresa?.notificationPreferences as any)?.whatsapp ?? {};
+    let np = (empresa?.notificationPreferences as any) ?? {};
+    if (typeof np === 'string') {
+      try { np = JSON.parse(np); } catch { np = {}; }
+    }
+    const raw = np?.whatsapp ?? {};
     const merged = { ...getDefaultPrefs(), ...raw };
     return res.json({ data: merged });
   } catch (err) {
@@ -158,7 +162,10 @@ export async function updateNotifPrefs(req: AuthenticatedRequest, res: Response)
       select: { notificationPreferences: true },
     });
 
-    const current = (empresa?.notificationPreferences as any) ?? {};
+    let current = (empresa?.notificationPreferences as any) ?? {};
+    if (typeof current === 'string') {
+      try { current = JSON.parse(current); } catch { current = {}; }
+    }
     const updated = { ...current, whatsapp: { ...(current.whatsapp ?? {}), ...req.body } };
 
     await prisma.empresa.update({
