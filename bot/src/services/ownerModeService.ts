@@ -8,7 +8,12 @@
 import prisma from '../db';
 import { getTodayFixedRangeBRT } from '../utils/dateUtils';
 
-const OWNER_PIN = process.env.OWNER_MODE_PIN || 'm4ite1105';
+const OWNER_PIN = (process.env.OWNER_MODE_PIN || 'm4ite1105').toLowerCase();
+
+// Normaliza para tolerar autocapitalização/pontuação automática do teclado do WhatsApp
+function normalizePin(input: string): string {
+  return input.trim().toLowerCase().replace(/[.,!?]+$/, '');
+}
 
 const SESSION_TTL_MS = 15 * 60 * 1000; // sessão expira após 15min de inatividade
 const AUTH_TTL_MS    = 2  * 60 * 1000; // 2min para digitar o PIN após o gatilho
@@ -81,15 +86,16 @@ export async function handleOwnerModeMessage(from: string, message: string): Pro
   // Aguardando o PIN ser digitado
   const pendingExp = pendingAuth.get(from);
   if (pendingExp) {
-    pendingAuth.delete(from);
     if (pendingExp >= Date.now()) {
       // Bloqueado por excesso de tentativas erradas
       const lockMin = getLockMinutesRemaining(from);
       if (lockMin > 0) {
+        pendingAuth.delete(from);
         return `🔒 Muitas tentativas erradas. Tente novamente em ${lockMin}min.`;
       }
 
-      if (message.trim() === OWNER_PIN) {
+      if (normalizePin(message) === OWNER_PIN) {
+        pendingAuth.delete(from);
         clearAttempts(from);
         refreshSession(from);
         return `🔓 *Modo Owner ativado.*\n\n${ownerHelpText()}`;
@@ -98,11 +104,14 @@ export async function handleOwnerModeMessage(from: string, message: string): Pro
       registerFailedAttempt(from);
       const novoLockMin = getLockMinutesRemaining(from);
       if (novoLockMin > 0) {
+        pendingAuth.delete(from);
         return `❌ PIN incorreto. Muitas tentativas — bloqueado por ${novoLockMin}min.`;
       }
-      return '❌ PIN incorreto.';
+      // mantém pendingAuth — usuário pode tentar de novo até expirar
+      return '❌ PIN incorreto. Tente novamente:';
     }
-    // expirou — cai para checar se a própria mensagem é um novo gatilho
+    // expirou — descarta e cai para checar se a própria mensagem é um novo gatilho
+    pendingAuth.delete(from);
   }
 
   // Gatilho de ativação
