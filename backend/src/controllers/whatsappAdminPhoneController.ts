@@ -32,17 +32,8 @@ export async function listAdminPhones(req: AuthenticatedRequest, res: Response) 
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    // Buscar a instância WhatsApp da empresa
-    const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId },
-    });
-
-    if (!instance) {
-      return res.json({ data: [], message: 'Nenhuma instância de WhatsApp configurada' });
-    }
-
     const adminPhones = await prisma.whatsappAdminPhone.findMany({
-      where: { instanceId: instance.id },
+      where: { empresaId },
       select: {
         id: true,
         telefone: true,
@@ -160,19 +151,11 @@ export async function deleteAdminPhone(req: AuthenticatedRequest, res: Response)
     }
 
     // Verificar se pertence à empresa
-    const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId },
-    });
-
-    if (!instance) {
-      return res.status(404).json({ error: 'Instância não encontrada' });
-    }
-
     const adminPhone = await prisma.whatsappAdminPhone.findUnique({
       where: { id: adminPhoneId },
     });
 
-    if (!adminPhone || adminPhone.instanceId !== instance.id) {
+    if (!adminPhone || adminPhone.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Número de admin não encontrado' });
     }
 
@@ -204,19 +187,11 @@ export async function updateAdminPhone(req: AuthenticatedRequest, res: Response)
     }
 
     // Verificar se pertence à empresa
-    const instance = await prisma.whatsappInstance.findUnique({
-      where: { empresaId },
-    });
-
-    if (!instance) {
-      return res.status(404).json({ error: 'Instância não encontrada' });
-    }
-
     const adminPhone = await prisma.whatsappAdminPhone.findUnique({
       where: { id: adminPhoneId },
     });
 
-    if (!adminPhone || adminPhone.instanceId !== instance.id) {
+    if (!adminPhone || adminPhone.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Número de admin não encontrado' });
     }
 
