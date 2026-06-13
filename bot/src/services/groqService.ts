@@ -4,11 +4,24 @@
  * Documentação: https://console.groq.com/docs/speech-text
  */
 
-import Groq from 'groq-sdk';
+import Groq, { toFile } from 'groq-sdk';
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
+
+/**
+ * Transcreve um áudio (buffer ogg/opus do WhatsApp) usando Whisper via Groq.
+ */
+export async function transcribeAudio(buffer: Buffer): Promise<string> {
+  const transcription = await groq.audio.transcriptions.create({
+    file: await toFile(buffer, 'audio.ogg'),
+    model: 'whisper-large-v3-turbo',
+    language: 'pt',
+  });
+
+  return transcription.text.trim();
+}
 
 /**
  * Envia mensagem para Groq e obtém resposta de IA

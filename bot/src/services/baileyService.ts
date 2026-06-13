@@ -10,7 +10,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
-import { handleIncomingMessage, handleIncomingImage } from './whatsappCommandHandler';
+import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio } from './whatsappCommandHandler';
 import { validateAndClaimByCode } from './pairingCodeStore';
 import { validateAndClaimBotCode } from './botUserCodeStore';
 
@@ -359,6 +359,26 @@ export async function initBaileys(): Promise<void> {
             if (reply?.trim()) await sock.sendMessage(rawFrom, { text: reply });
           } catch (err) {
             console.error('[Baileys] Erro ao baixar imagem:', err);
+          }
+          return;
+        }
+
+        // Capturar áudios/mensagens de voz — transcreve via Groq e processa como texto
+        const hasAudio = !!message.message?.audioMessage;
+        if (hasAudio && _downloadMediaMessage) {
+          let from = rawFrom;
+          if (rawFrom.endsWith('@lid')) {
+            const lidNum = rawFrom.split('@')[0];
+            const resolved = lidToPhone.get(lidNum);
+            if (resolved) from = `${resolved}@s.whatsapp.net`;
+          }
+          try {
+            const buf = await _downloadMediaMessage(message, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+            const senderName = message.pushName || 'Usuário';
+            const reply = await handleIncomingAudio(from, senderName, buf as Buffer);
+            if (reply?.trim()) await sock.sendMessage(rawFrom, { text: reply });
+          } catch (err) {
+            console.error('[Baileys] Erro ao baixar áudio:', err);
           }
           return;
         }

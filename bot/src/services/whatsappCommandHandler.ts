@@ -4,7 +4,7 @@
  */
 
 import prisma from '../db';
-import { chatCompletion } from './groqService';
+import { chatCompletion, transcribeAudio } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { handleOwnerModeMessage } from './ownerModeService';
@@ -29,6 +29,24 @@ const PORTAL_URL = (process.env.PORTAL_URL ?? '').replace(/\/$/, '');
 /** Chamado pelo baileyService quando recebe uma imagem. */
 export async function handleIncomingImage(from: string, buffer: Buffer): Promise<string | null> {
   return handleIncomingImageForReport(from, buffer);
+}
+
+/** Chamado pelo baileyService quando recebe um áudio — transcreve e processa como texto. */
+export async function handleIncomingAudio(from: string, senderName: string, buffer: Buffer): Promise<string> {
+  let transcript: string;
+  try {
+    transcript = await transcribeAudio(buffer);
+  } catch (err) {
+    console.error('[WhatsApp] Erro ao transcrever áudio:', err);
+    return '❌ Não consegui entender o áudio. Pode tentar de novo ou mandar por texto?';
+  }
+
+  if (!transcript) {
+    return '❌ Não consegui entender o áudio. Pode tentar de novo ou mandar por texto?';
+  }
+
+  const resposta = await handleIncomingMessage(from, senderName, transcript);
+  return `🎙️ _Entendi: "${transcript}"_\n\n${resposta}`;
 }
 
 // ==========================================
