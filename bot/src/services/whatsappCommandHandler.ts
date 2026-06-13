@@ -7,6 +7,7 @@ import prisma from '../db';
 import { chatCompletion } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
+import { handleOwnerModeMessage } from './ownerModeService';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
 import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT } from '../utils/dateUtils';
@@ -234,6 +235,10 @@ export async function handleIncomingMessage(
       const resp = await handleConectarPortal(from, message);
       if (resp) return resp;
     }
+
+    // ── MODO OWNER (acesso global, qualquer número, mediante PIN) ─────────────
+    const ownerResp = await handleOwnerModeMessage(from, message);
+    if (ownerResp !== null) return ownerResp;
 
     // ── AUTENTICAÇÃO ─────────────────────────────────────────────────────────
     const user = await identifyWhatsAppUser(from);
