@@ -449,7 +449,9 @@ export async function initBaileys(): Promise<void> {
                   update: { jid: rawFrom, nome: nomeAdmin, ativo: true },
                 });
                 vinculadas++;
-              } catch { /* ignora */ }
+              } catch (err) {
+                console.error(`[Baileys] Erro ao vincular admin na empresa ${empresa.id}:`, err);
+              }
             }
 
             console.log(`[Baileys] ✅ Admin ${nomeAdmin} vinculado em ${vinculadas} empresa(s)`);
@@ -511,7 +513,9 @@ export async function initBaileys(): Promise<void> {
                 create: { instanceId: globalInst.id, empresaId: empId, telefone: phoneToStore, jid: rawFrom, nome: nome || senderName, ativo: true },
                 update: { jid: rawFrom, nome: nome || senderName, ativo: true },
               });
-            } catch { /* ignora */ }
+            } catch (err) {
+              console.error(`[Baileys] Erro ao vincular admin (pairingMode legado) na empresa ${empId}:`, err);
+            }
           }
 
           await prisma.whatsappInstance.updateMany({
