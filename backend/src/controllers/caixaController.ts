@@ -1224,9 +1224,9 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
         const formattedComissoes = comissoesPendentes.map(ordem => {
             // Buscar o ganho individual deste lavador nesta ordem
             const relLavador = (ordem.ordemLavadores || []).find((rel: any) => rel.lavadorId === lavadorId);
-            // Se encontrou na tabela OrdemServicoLavador usa o ganho salvo; senão fallback para comissao da ordem
+            // ganho=0 é válido para lavadors com baseComissao=ADICIONAL sem adicionais na OS
             const ganhoDoLavador = relLavador
-                ? (relLavador.ganho > 0 ? relLavador.ganho : ordem.comissao)
+                ? relLavador.ganho
                 : ordem.comissao;
             return {
                 id: ordem.id,

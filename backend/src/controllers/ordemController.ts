@@ -1506,7 +1506,7 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
           include: { servico: true }
         },
         ordemLavadores: {
-          include: { lavador: { select: { id: true, nome: true, comissao: true } } }
+          include: { lavador: { select: { id: true, nome: true, comissao: true, baseComissao: true } } }
         }
       }
     });
@@ -1582,7 +1582,9 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
     if (ordemLavadoresData.length > 0 && ordem.items && ordem.items.length > 0) {
       for (const rel of ordemLavadoresData) {
         const pctPadrao = rel.lavador.comissao;
+        const base = (rel.lavador as any).baseComissao || 'OS';
         const ganho = (ordem.items as any[]).reduce((sum: number, item: any) => {
+          if (base === 'ADICIONAL' && item.tipo !== 'ADICIONAL') return sum;
           let pct = pctPadrao;
           if (item.tipo === 'SERVICO' && item.servico?.comissaoPercentual != null) {
             pct = item.servico.comissaoPercentual;
@@ -1595,7 +1597,9 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
     } else if (ordem.lavador && ordem.items && ordem.items.length > 0) {
       // fallback: apenas lavador primário
       const pctPadrao = ordem.lavador.comissao;
+      const base = (ordem.lavador as any).baseComissao || 'OS';
       const ganho = (ordem.items as any[]).reduce((sum: number, item: any) => {
+        if (base === 'ADICIONAL' && item.tipo !== 'ADICIONAL') return sum;
         let pct = pctPadrao;
         if (item.tipo === 'SERVICO' && item.servico?.comissaoPercentual != null) {
           pct = item.servico.comissaoPercentual;
@@ -1604,7 +1608,8 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       }, 0);
       comissaoCalculada = ganho;
     } else if (ordem.lavador) {
-      comissaoCalculada = (valorFinal * ordem.lavador.comissao) / 100;
+      const base = (ordem.lavador as any).baseComissao || 'OS';
+      comissaoCalculada = base === 'ADICIONAL' ? 0 : (valorFinal * ordem.lavador.comissao) / 100;
     }
 
     // Executar tudo em uma transação atômica
