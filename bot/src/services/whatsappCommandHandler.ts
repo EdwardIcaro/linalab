@@ -842,7 +842,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
       }
     } else if (o.lavador) {
       const nome = o.lavador.nome;
-      const comValor = o.valorTotal * (o.lavador.comissao / 100);
+      const comValor = (o as any).comissao ?? 0;
       if (!comissoesPorLavador[nome]) comissoesPorLavador[nome] = { taxa: o.lavador.comissao, total: 0, itens: [] };
       comissoesPorLavador[nome].total += comValor;
       comissoesPorLavador[nome].itens.push(`${modelo}: *${comValor.toFixed(2)}*`);
@@ -967,7 +967,7 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
     } else if (o.lavador) {
       const nome = o.lavador.nome;
       if (!comissoesPorLavador[nome]) comissoesPorLavador[nome] = { taxa: o.lavador.comissao, total: 0 };
-      comissoesPorLavador[nome].total += o.valorTotal * (o.lavador.comissao / 100);
+      comissoesPorLavador[nome].total += (o as any).comissao ?? 0;
     }
   }
 
@@ -1102,6 +1102,7 @@ async function handleComissoesEmAberto(
       },
       include: {
         veiculo: { select: { modelo: true } },
+        ordemLavadores: { where: { lavadorId: lav.id }, select: { ganho: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -1111,8 +1112,11 @@ async function handleComissoesEmAberto(
       continue;
     }
 
-    const totalFat = ordens.reduce((s, o) => s + o.valorTotal, 0);
-    const totalCom = totalFat * (lav.comissao / 100);
+    const getGanho = (o: any) => {
+      const ol = o.ordemLavadores?.[0];
+      return ol ? ol.ganho : (o.comissao ?? 0);
+    };
+    const totalCom = ordens.reduce((s, o) => s + getGanho(o), 0);
 
     // Adiantamentos pendentes desse lavador
     const adiantamentos = await prisma.adiantamento.findMany({
@@ -1125,7 +1129,7 @@ async function handleComissoesEmAberto(
     const porMes: Record<string, number> = {};
     for (const o of ordens) {
       const mes = o.createdAt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      porMes[mes] = (porMes[mes] ?? 0) + o.valorTotal * (lav.comissao / 100);
+      porMes[mes] = (porMes[mes] ?? 0) + getGanho(o);
     }
     const porMesFmt = Object.entries(porMes)
       .map(([m, v]) => `  *${m}*: *R$ ${v.toFixed(2)}*`)
@@ -1138,16 +1142,20 @@ async function handleComissoesEmAberto(
       const inicioMesAtual  = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
       const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
       const fimMesAnterior    = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
+      const lavInclude = { ordemLavadores: { where: { lavadorId: lav.id }, select: { ganho: true } } };
       const [ordensAtual, ordensAnterior] = await Promise.all([
         prisma.ordemServico.findMany({
           where: { empresaId, status: 'FINALIZADO', OR: [{ lavadorId: lav.id }, { ordemLavadores: { some: { lavadorId: lav.id } } }], createdAt: { gte: inicioMesAtual } },
+          include: lavInclude,
         }),
         prisma.ordemServico.findMany({
           where: { empresaId, status: 'FINALIZADO', OR: [{ lavadorId: lav.id }, { ordemLavadores: { some: { lavadorId: lav.id } } }], createdAt: { gte: inicioMesAnterior, lte: fimMesAnterior } },
+          include: lavInclude,
         }),
       ]);
-      const fatAtual    = ordensAtual.reduce((s, o) => s + o.valorTotal, 0) * (lav.comissao / 100);
-      const fatAnterior = ordensAnterior.reduce((s, o) => s + o.valorTotal, 0) * (lav.comissao / 100);
+      const getG = (o: any) => { const ol = o.ordemLavadores?.[0]; return ol ? ol.ganho : (o.comissao ?? 0); };
+      const fatAtual    = ordensAtual.reduce((s, o) => s + getG(o), 0);
+      const fatAnterior = ordensAnterior.reduce((s, o) => s + getG(o), 0);
       if (fatAnterior > 0) {
         const diff = fatAtual - fatAnterior;
         const emoji = diff >= 0 ? '📈' : '📉';
@@ -1160,7 +1168,7 @@ async function handleComissoesEmAberto(
     const ordensDetalhe = ordens.slice(0, 10).map(o => {
       const modelo = (o.veiculo?.modelo ?? 'Veículo').toUpperCase();
       const data = o.createdAt.toLocaleDateString('pt-BR');
-      const com = o.valorTotal * (lav.comissao / 100);
+      const com = getGanho(o);
       return `  • ${data} · ${modelo}: *R$ ${com.toFixed(2)}*`;
     }).join('\n');
     const maisLabel = ordens.length > 10 ? `\n  _...e mais ${ordens.length - 10} ordens_` : '';
@@ -1929,16 +1937,19 @@ async function buildContextLavadorConversacional(message: string, empresaId: str
     const inicioMes  = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fimMes     = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
 
+    const lavOlInclude = { ordemLavadores: { where: { lavadorId: lavador.id }, select: { ganho: true } } };
+    const lavOlWhere = (extra: object) => ({ empresaId, status: { not: 'CANCELADO' as const }, OR: [{ lavadorId: lavador.id }, { ordemLavadores: { some: { lavadorId: lavador.id } } }], ...extra });
     const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
-      prisma.ordemServico.findMany({ where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } } }),
-      prisma.ordemServico.findMany({ where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } } }),
+      prisma.ordemServico.findMany({ where: lavOlWhere({ createdAt: { gte: hoje, lt: amanha } }), include: lavOlInclude }),
+      prisma.ordemServico.findMany({ where: lavOlWhere({ createdAt: { gte: inicioMes, lte: fimMes } }), include: lavOlInclude }),
       prisma.adiantamento.findMany({ where: { lavadorId: lavador.id, status: 'PENDENTE' } }),
     ]);
 
+    const getG = (o: any) => { const ol = o.ordemLavadores?.[0]; return ol ? ol.ganho : (o.comissao ?? 0); };
     const fatDia      = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
-    const comDia      = fatDia * (lavador.comissao / 100);
+    const comDia      = ordensDia.reduce((s, o) => s + getG(o), 0);
     const fatMes      = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
-    const comBrutaMes = fatMes * (lavador.comissao / 100);
+    const comBrutaMes = ordensMes.reduce((s, o) => s + getG(o), 0);
     const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
     const comLiqMes   = comBrutaMes - totalAdiant;
 
@@ -1980,22 +1991,21 @@ async function handleLavadorEspecifico(
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
 
+    const lavOlInclude = { ordemLavadores: { where: { lavadorId: lavador.id }, select: { ganho: true } } };
+    const lavOlWhere = (extra: object) => ({ empresaId, status: { not: 'CANCELADO' as const }, OR: [{ lavadorId: lavador.id }, { ordemLavadores: { some: { lavadorId: lavador.id } } }], ...extra });
     const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
-      prisma.ordemServico.findMany({
-        where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: hoje, lt: amanha } }
-      }),
-      prisma.ordemServico.findMany({
-        where: { empresaId, lavadorId: lavador.id, status: { not: 'CANCELADO' }, createdAt: { gte: inicioMes, lte: fimMes } }
-      }),
+      prisma.ordemServico.findMany({ where: lavOlWhere({ createdAt: { gte: hoje, lt: amanha } }), include: lavOlInclude }),
+      prisma.ordemServico.findMany({ where: lavOlWhere({ createdAt: { gte: inicioMes, lte: fimMes } }), include: lavOlInclude }),
       prisma.adiantamento.findMany({
         where: { lavadorId: lavador.id, status: 'PENDENTE' }
       }),
     ]);
 
+    const getG = (o: any) => { const ol = o.ordemLavadores?.[0]; return ol ? ol.ganho : (o.comissao ?? 0); };
     const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
-    const comDia = fatDia * (lavador.comissao / 100);
+    const comDia = ordensDia.reduce((s, o) => s + getG(o), 0);
     const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
-    const comBrutaMes = fatMes * (lavador.comissao / 100);
+    const comBrutaMes = ordensMes.reduce((s, o) => s + getG(o), 0);
     const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
     const comLiquidaMes = comBrutaMes - totalAdiant;
 

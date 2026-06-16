@@ -955,10 +955,10 @@ function renderHeroStats() {
   (lavadorData.adiantamentosNaoQuitados || []).forEach(a => divida += parseFloat(a.valor) || 0);
 
   if (isSalarioFixo()) {
-    // ── Salário fixo ─────────────────────────────────────────────────────────
-    document.getElementById('heroBalanceLabel').textContent = 'SALÁRIO MENSAL';
-    document.getElementById('heroSaldo').textContent = formatCurrency(lavadorData.salario || 0);
-    document.getElementById('heroSaldo').style.color = '';
+    // ── Salário fixo — mostra débitos/vales, não o salário ───────────────────
+    document.getElementById('heroBalanceLabel').textContent = 'VALES E DÉBITOS';
+    document.getElementById('heroSaldo').textContent = formatCurrency(divida);
+    document.getElementById('heroSaldo').style.color = divida > 0 ? '#ef4444' : '';
     document.getElementById('heroPendenteRow').classList.add('hidden');
 
     // Pills: contagem de ordens em vez de valores monetários
@@ -1007,9 +1007,6 @@ function renderHeroStats() {
   const labelEl = document.getElementById('heroBalanceLabel');
   if (getTipoRemun() === 'SALARIO_COMISSAO') {
     labelEl.textContent = 'COMISSÃO A RECEBER';
-    // Mostra salário fixo como linha secundária
-    document.getElementById('heroSalarioRow').classList.remove('hidden');
-    document.getElementById('heroSalarioVal').textContent = formatCurrency(lavadorData.salario || 0);
   } else {
     labelEl.textContent = 'A RECEBER (finalizados)';
   }

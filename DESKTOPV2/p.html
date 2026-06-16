@@ -1009,16 +1009,17 @@ function renderHub() {
 
   // Cards
   const temLinaWash = lavador.tipoRemuneracao !== null;
+  const isSalarioFixo = lavador.tipoRemuneracao === 'SALARIO';
   const ganhoHoje = (hoje.ganho || 0).toFixed(2).replace('.', ',');
   const grid = document.getElementById('hub-grid');
   grid.innerHTML = `
     ${temLinaWash ? `
     <div class="mod-card mod-blue" onclick="abrirComissoes()">
-      <div class="mod-ico"><i class="fas fa-coins"></i></div>
-      <div class="mod-badge pulse">${hoje.totalOrdens} hoje</div>
+      <div class="mod-ico"><i class="fas fa-${isSalarioFixo ? 'wallet' : 'coins'}"></i></div>
+      <div class="mod-badge pulse">${isSalarioFixo ? '!' : hoje.totalOrdens + ' hoje'}</div>
       <div>
-        <div class="mod-label">Comissões</div>
-        <div class="mod-stat">R$ ${ganhoHoje} hoje</div>
+        <div class="mod-label">${isSalarioFixo ? 'Extrato' : 'Comissões'}</div>
+        <div class="mod-stat">${isSalarioFixo ? 'Ver vales e débitos' : 'R$ ' + ganhoHoje + ' hoje'}</div>
       </div>
     </div>` : ''}
 
