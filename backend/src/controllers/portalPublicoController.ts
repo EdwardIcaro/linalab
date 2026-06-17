@@ -497,28 +497,42 @@ export const getExtratoPortal = async (req: Request, res: Response) => {
 export const gerarCodigoWpp = async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const gerarCodigo = () => Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const expiraEm = new Date(Date.now() + 10 * 60 * 1000);
+
   try {
+    // Tenta lavador primeiro
     const lavador = await buscarLavadorPorToken(token);
-    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
+    if (lavador && lavador.ativo) {
+      const codigo = gerarCodigo();
+      await prisma.lavador.update({
+        where: { id: lavador.id },
+        data: { codigoWpp: codigo, codigoWppExpiraEm: expiraEm },
+      });
+      const botInst = await prisma.whatsappInstance.findFirst({
+        where: { empresaId: null },
+        select: { ownerPhone: true },
+      });
+      return res.json({ codigo, expiraEm, botNumero: botInst?.ownerPhone?.replace(/\D/g, '') ?? null });
+    }
 
-    // Gera código de 6 chars alfanumérico (sem 0/O/I/1)
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const codigo = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const expiraEm = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    // Fallback: dpFuncionario standalone (sem lavadorId — usa linkToken próprio)
+    const dpFunc = await prisma.dpFuncionario.findFirst({
+      where: { linkToken: token, status: 'ATIVO', lavadorId: null },
+    });
+    if (!dpFunc) return res.status(404).json({ erro: 'link_invalido' });
 
-    await prisma.lavador.update({
-      where: { id: lavador.id },
+    const codigo = gerarCodigo();
+    await prisma.dpFuncionario.update({
+      where: { id: dpFunc.id },
       data: { codigoWpp: codigo, codigoWppExpiraEm: expiraEm },
     });
-
-    // Número do bot (instância global, empresaId = null)
     const botInst = await prisma.whatsappInstance.findFirst({
       where: { empresaId: null },
       select: { ownerPhone: true },
     });
-    const botNumero = botInst?.ownerPhone?.replace(/\D/g, '') ?? null;
-
-    res.json({ codigo, expiraEm, botNumero });
+    res.json({ codigo, expiraEm, botNumero: botInst?.ownerPhone?.replace(/\D/g, '') ?? null });
   } catch (error) {
     console.error('[portal] gerarCodigoWpp:', error);
     res.status(500).json({ erro: 'Erro interno' });
@@ -530,11 +544,23 @@ export const desvincularWpp = async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
   try {
     const lavador = await buscarLavadorPorToken(token);
-    if (!lavador || !lavador.ativo) return res.status(404).json({ erro: 'link_invalido' });
+    if (lavador && lavador.ativo) {
+      await prisma.lavador.update({
+        where: { id: lavador.id },
+        data: { telefone: null, codigoWpp: null, codigoWppExpiraEm: null },
+      });
+      return res.json({ ok: true });
+    }
 
-    await prisma.lavador.update({
-      where: { id: lavador.id },
-      data: { telefone: null, codigoWpp: null, codigoWppExpiraEm: null },
+    // Fallback: dpFuncionario standalone
+    const dpFunc = await prisma.dpFuncionario.findFirst({
+      where: { linkToken: token, status: 'ATIVO', lavadorId: null },
+    });
+    if (!dpFunc) return res.status(404).json({ erro: 'link_invalido' });
+
+    await prisma.dpFuncionario.update({
+      where: { id: dpFunc.id },
+      data: { wppJid: null, codigoWpp: null, codigoWppExpiraEm: null },
     });
     res.json({ ok: true });
   } catch (error) {

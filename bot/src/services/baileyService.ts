@@ -10,7 +10,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
-import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio } from './whatsappCommandHandler';
+import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio, handleDpPontoKeyword, handleDpLocation } from './whatsappCommandHandler';
 import { validateAndClaimByCode } from './pairingCodeStore';
 import { validateAndClaimBotCode } from './botUserCodeStore';
 
@@ -383,6 +383,26 @@ export async function initBaileys(): Promise<void> {
           return;
         }
 
+        // Localização → fluxo de ponto Data Point
+        const hasLocation = !!message.message?.locationMessage;
+        if (hasLocation) {
+          let from = rawFrom;
+          if (rawFrom.endsWith('@lid')) {
+            const lidNum = rawFrom.split('@')[0];
+            const resolved = lidToPhone.get(lidNum);
+            if (resolved) from = `${resolved}@s.whatsapp.net`;
+          }
+          const loc = message.message!.locationMessage!;
+          const reply = await handleDpLocation(
+            from,
+            loc.degreesLatitude ?? 0,
+            loc.degreesLongitude ?? 0,
+            loc.accuracyInMeters ?? null,
+          );
+          if (reply?.trim()) await sock.sendMessage(rawFrom, { text: reply });
+          return;
+        }
+
         if (!text.trim()) return;
 
         // Resolver @lid
@@ -526,6 +546,13 @@ export async function initBaileys(): Promise<void> {
           await sock.sendMessage(rawFrom, {
             text: `Oi, *${nome || senderName}*! 👋 Sou a Lina!\n\nVocê tá cadastrado como administrador agora. Qualquer coisa é só me chamar aqui — manda um *ajuda* pra ver o que eu consigo fazer por você, tá?`,
           });
+          return;
+        }
+
+        // ── Data Point: intercepta keywords de ponto antes do fluxo principal ──
+        const pontoReply = await handleDpPontoKeyword(from, trimmed);
+        if (pontoReply !== null) {
+          await sock.sendMessage(rawFrom, { text: pontoReply });
           return;
         }
 

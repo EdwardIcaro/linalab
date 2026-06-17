@@ -10,7 +10,7 @@ import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './ad
 import { handleOwnerModeMessage } from './ownerModeService';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
-import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT } from '../utils/dateUtils';
+import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT, getTodayRangeBRT } from '../utils/dateUtils';
 import {
   pendingReports,
   hasPendingAdminReportView,
@@ -223,23 +223,216 @@ async function handleConectarPortal(from: string, message: string): Promise<stri
     select: { id: true, nome: true },
   }) as { id: string; nome: string } | null;
 
-  if (!lavador) {
-    return '❌ Código inválido ou expirado. Gere um novo código pelo portal e tente novamente.';
-  }
-
-  // Extrai número do JID (ex: "5511999999999@s.whatsapp.net" → "5511999999999")
   const telefone = from.split('@')[0];
 
-  await (prisma.lavador as any).update({
-    where: { id: lavador.id },
+  if (lavador) {
+    await (prisma.lavador as any).update({
+      where: { id: lavador.id },
+      data: { telefone, codigoWpp: null, codigoWppExpiraEm: null },
+    });
+    return `Oi, ${lavador.nome}! 👋 Sou a Lina, tudo bem?\n\nSeu WhatsApp tá vinculado agora — a partir de agora você recebe suas notificações de comissão por aqui e pode me perguntar qualquer coisa sobre seus serviços. Manda um *ajuda* pra ver o que eu consigo fazer por você, viu?`;
+  }
+
+  // Fallback: dpFuncionario standalone (sem lavadorId)
+  const dpFuncConn = await (prisma as any).dpFuncionario.findFirst({
+    where: { codigoWpp: codigo, codigoWppExpiraEm: { gte: agora }, status: 'ATIVO' },
+    select: { id: true, nome: true },
+  }) as { id: string; nome: string } | null;
+
+  if (!dpFuncConn) return '❌ Código inválido ou expirado. Gere um novo código pelo portal e tente novamente.';
+
+  await (prisma as any).dpFuncionario.update({
+    where: { id: dpFuncConn.id },
+    data: { wppJid: from, codigoWpp: null, codigoWppExpiraEm: null },
+  });
+
+  return `Oi, ${dpFuncConn.nome}! 👋 Sou a Lina!\n\nSeu WhatsApp tá vinculado ao ponto agora — manda *ponto* aqui quando quiser registrar sua presença. 🎯`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA POINT — PONTO VIA WHATSAPP
+// ═══════════════════════════════════════════════════════════════════════════
+
+const pendingPontoRequest = new Map<string, number>(); // JID → expiresAt ms
+const PONTO_TTL_MS = 5 * 60 * 1000;
+const PONTO_KEYWORDS = /\b(ponto|bater\s+ponto|registrar\s+ponto|entrada|sa[ií]da|cheguei|fui\s+embora|saindo|t[aá]\s+saindo)\b/i;
+
+function haversineDP(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function horaFormatadaBRTDp(d: Date): string {
+  return new Date(d).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  });
+}
+
+async function resolveWppDpFuncionario(
+  jid: string,
+): Promise<{ id: string; nome: string; empresaId: string } | null> {
+  // 1. Por wppJid direto
+  const porJid = await (prisma as any).dpFuncionario.findFirst({
+    where: { wppJid: jid, status: 'ATIVO' },
+    select: { id: true, nome: true, empresaId: true },
+  }) as { id: string; nome: string; empresaId: string } | null;
+  if (porJid) return porJid;
+
+  // 2. Lavador com telefone = phone extraído do JID → dpFuncionario.lavadorId
+  const phone = jid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+  if (!phone) return null;
+
+  const lavador = await (prisma.lavador as any).findFirst({
+    where: { telefone: phone },
+    select: { id: true },
+  }) as { id: string } | null;
+  if (lavador) {
+    const porLavador = await (prisma as any).dpFuncionario.findFirst({
+      where: { lavadorId: lavador.id, status: 'ATIVO' },
+      select: { id: true, nome: true, empresaId: true },
+    }) as { id: string; nome: string; empresaId: string } | null;
+    if (porLavador) return porLavador;
+  }
+
+  // 3. dpFuncionario standalone com telefone = phone
+  const porTelefone = await (prisma as any).dpFuncionario.findFirst({
+    where: { telefone: phone, status: 'ATIVO', lavadorId: null },
+    select: { id: true, nome: true, empresaId: true },
+  }) as { id: string; nome: string; empresaId: string } | null;
+  return porTelefone ?? null;
+}
+
+/** Intercepta mensagens com intenção de bater ponto. Retorna null se não for mensagem de ponto. */
+export async function handleDpPontoKeyword(from: string, text: string): Promise<string | null> {
+  if (!PONTO_KEYWORDS.test(text)) return null;
+
+  const func = await resolveWppDpFuncionario(from);
+  if (!func) return null; // não é usuário DP — deixa fluxo normal tratar
+
+  const sistema = await (prisma as any).empresaSistema.findFirst({
+    where: { empresaId: func.empresaId, sistema: 'data-point', ativo: true },
+  });
+  if (!sistema) return null;
+
+  const { start, end } = getTodayRangeBRT();
+  const marcacoes = await (prisma as any).dpMarcacao.findMany({
+    where: { funcionarioId: func.id, timestamp: { gte: start, lte: end } },
+    orderBy: { timestamp: 'asc' },
+  }) as Array<{ tipo: string; timestamp: Date }>;
+
+  const ultima = marcacoes[marcacoes.length - 1];
+  const proximoTipo = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
+
+  if (ultima && ultima.tipo === proximoTipo) {
+    const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
+    if (diffMin < 5) {
+      const wait = Math.ceil(5 - diffMin);
+      return `⏳ Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} antes de registrar novamente.`;
+    }
+  }
+
+  pendingPontoRequest.set(from, Date.now() + PONTO_TTL_MS);
+
+  const emoji = proximoTipo === 'ENTRADA' ? '🟢' : '🔴';
+  return `${emoji} *REGISTRAR PONTO*\nPróxima marcação: *${proximoTipo}*\n\nAgora compartilhe sua localização para confirmar. ⏱ Você tem 5 minutos.\n\n📎 _Clipe de anexo → Localização → Enviar localização atual_`;
+}
+
+/** Chamado pelo baileyService quando recebe mensagem de localização. */
+export async function handleDpLocation(
+  from: string,
+  lat: number,
+  lng: number,
+  accuracy: number | null,
+): Promise<string | null> {
+  // Limpar expirados
+  const agora = Date.now();
+  for (const [jid, exp] of pendingPontoRequest.entries()) {
+    if (exp < agora) pendingPontoRequest.delete(jid);
+  }
+
+  if (!pendingPontoRequest.has(from)) {
+    return 'Para registrar seu ponto, mande *ponto* primeiro e depois compartilhe a localização. 📍';
+  }
+  pendingPontoRequest.delete(from);
+
+  const func = await resolveWppDpFuncionario(from);
+  if (!func) {
+    return '❌ Seu WhatsApp não está vinculado ao ponto desta empresa.\n\nAcesse o portal pelo link que seu gestor enviou → "Conectar meu WhatsApp".';
+  }
+
+  const sistema = await (prisma as any).empresaSistema.findFirst({
+    where: { empresaId: func.empresaId, sistema: 'data-point', ativo: true },
+  });
+  if (!sistema) return '❌ Data Point não está ativo para sua empresa.';
+
+  const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+  const { start, end } = getTodayRangeBRT();
+
+  const marcacoes = await (prisma as any).dpMarcacao.findMany({
+    where: { funcionarioId: func.id, timestamp: { gte: start, lte: end } },
+    orderBy: { timestamp: 'asc' },
+  }) as Array<{ tipo: string; timestamp: Date }>;
+
+  const ultima = marcacoes[marcacoes.length - 1];
+  const tipo: 'ENTRADA' | 'SAIDA' = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
+
+  if (ultima && ultima.tipo === tipo) {
+    const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
+    if (diffMin < 5) {
+      const wait = Math.ceil(5 - diffMin);
+      return `⏳ Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} antes de registrar novamente.`;
+    }
+  }
+
+  // Validação GPS
+  const empLat = parseFloat(cfg.lat);
+  const empLng = parseFloat(cfg.lng);
+  const raioGps: number = cfg.raioGps || 80;
+  const nivelGps: string = cfg.nivelGps || 'BASICO';
+  const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
+
+  let distanciaMetros: number | null = null;
+  let dentroRaio = true;
+  let gpsPrecisaoSuspeita = false;
+
+  if (temLocEmpresa) {
+    distanciaMetros = Math.round(haversineDP(empLat, empLng, lat, lng));
+    dentroRaio = distanciaMetros <= raioGps;
+    if (distanciaMetros > raioGps * 3) gpsPrecisaoSuspeita = true;
+  }
+  if (accuracy != null && accuracy < 1) gpsPrecisaoSuspeita = true;
+
+  if (temLocEmpresa && !dentroRaio && (nivelGps === 'RIGIDO' || nivelGps === 'MAXIMO')) {
+    return `🚫 Você está fora da área autorizada (${distanciaMetros}m da empresa, raio: ${raioGps}m).\nO ponto *não* foi registrado.`;
+  }
+
+  const marcacao = await (prisma as any).dpMarcacao.create({
     data: {
-      telefone,
-      codigoWpp: null,
-      codigoWppExpiraEm: null,
+      empresaId: func.empresaId,
+      funcionarioId: func.id,
+      tipo,
+      canal: 'WHATSAPP',
+      lat,
+      lng,
+      gpsPrecisao: accuracy,
+      gpsPrecisaoSuspeita,
+      gpsNegado: false,
     },
   });
 
-  return `Oi, ${lavador.nome}! 👋 Sou a Lina, tudo bem?\n\nSeu WhatsApp tá vinculado agora — a partir de agora você recebe suas notificações de comissão por aqui e pode me perguntar qualquer coisa sobre seus serviços. Manda um *ajuda* pra ver o que eu consigo fazer por você, viu?`;
+  const hora = horaFormatadaBRTDp(marcacao.timestamp);
+
+  if (!dentroRaio && temLocEmpresa) {
+    return `⚠️ *${tipo}* registrada às ${hora}!\n\n📍 Você está a ${distanciaMetros}m da empresa (raio: ${raioGps}m).\nPonto salvo, mas o gestor será notificado.`;
+  }
+
+  const distStr = distanciaMetros != null ? `📍 A ${distanciaMetros}m da empresa.\n` : '';
+  const saudacao = tipo === 'ENTRADA' ? 'Bom trabalho! 💪' : 'Até logo! 👋';
+  return `✅ *${tipo}* registrada às ${hora}!\n\n${distStr}${saudacao}`;
 }
 
 export async function handleIncomingMessage(

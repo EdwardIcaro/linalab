@@ -835,3 +835,52 @@ model Gorjeta {
 
   @@map("gorjetas")
 }
+
+// ─── DATA POINT ──────────────────────────────────────────────────────────────
+
+model EmpresaSistema {
+  id        String  @id @default(cuid())
+  empresaId String
+  sistema   String
+  ativo     Boolean @default(true)
+  config    String?
+
+  @@unique([empresaId, sistema])
+  @@map("empresa_sistemas")
+}
+
+model DpFuncionario {
+  id                String    @id @default(cuid())
+  empresaId         String
+  nome              String
+  telefone          String?
+  status            String    @default("ATIVO")
+  lavadorId         String?
+  wppJid            String?   @unique
+  codigoWpp         String?
+  codigoWppExpiraEm DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  marcacoes         DpMarcacao[]
+
+  @@map("dp_funcionarios")
+}
+
+model DpMarcacao {
+  id                  String        @id @default(cuid())
+  empresaId           String
+  funcionarioId       String
+  tipo                String
+  canal               String
+  timestamp           DateTime      @default(now())
+  lat                 Float?
+  lng                 Float?
+  gpsPrecisao         Float?
+  gpsPrecisaoSuspeita Boolean       @default(false)
+  gpsNegado           Boolean       @default(false)
+  ajustado            Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@map("dp_marcacoes")
+}
