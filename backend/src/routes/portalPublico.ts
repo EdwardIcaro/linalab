@@ -13,6 +13,8 @@ import {
   getAjustesPortal,
   gerarCodigoWpp,
   desvincularWpp,
+  validarTokenPonto,
+  confirmarPonto,
 } from '../controllers/portalPublicoController';
 
 const router: Router = Router();
@@ -25,6 +27,10 @@ router.post('/me/ponto',        portalSessionMiddleware, registrarPonto);
 router.get('/me/ponto/espelho', portalSessionMiddleware, getEspelhoPortal);
 router.post('/me/ajuste',       portalSessionMiddleware, criarAjustePortal);
 router.get('/me/ajustes',       portalSessionMiddleware, getAjustesPortal);
+
+// Ponto via WhatsApp — token único gerado pelo bot (sem autenticação de sessão)
+router.get('/ponto/validar',    validarTokenPonto);
+router.post('/ponto/confirmar', confirmarPonto);
 
 // Públicas (sem autenticação)
 router.get('/:token',               resolverTokenPublico);

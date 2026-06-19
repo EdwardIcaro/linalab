@@ -3,6 +3,7 @@
  * Identifica comandos específicos e passa para Groq quando não encontra match
  */
 
+import { randomBytes } from 'crypto';
 import prisma from '../db';
 import { chatCompletion, transcribeAudio } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
@@ -396,7 +397,7 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
     return `👋 *SAÍDA* registrada às ${hora}!\n\n⏱ Trabalhado hoje: *${fmtMinDP(minutosHoje)}*`;
   }
 
-  // ── ENTRADA / genérico → pede localização ────────────────────────────────
+  // ── ENTRADA / genérico → gera token e envia link ─────────────────────────
   // Cooldown informativo
   if (ultima && ultima.tipo === proximoTipo) {
     const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
@@ -406,7 +407,19 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
     }
   }
 
-  return `🟢 *ENTRADA*\n\nCompartilhe sua localização para registrar. 📍\n\n📎 _Clipe de anexo → Localização → Enviar localização atual_`;
+  const token = randomBytes(16).toString('hex');
+  await (prisma as any).dpFuncionario.update({
+    where: { id: func.id },
+    data: {
+      pontoToken: token,
+      pontoTokenExpiraEm: new Date(Date.now() + 5 * 60 * 1000),
+      pontoTokenUsadoEm: null,
+    },
+  });
+
+  const tipoLabel = proximoTipo === 'ENTRADA' ? '🟢 ENTRADA' : '🔴 SAÍDA';
+  const url = `${PORTAL_URL}/ponto.html?t=${token}`;
+  return `${tipoLabel}\n\nOlá, ${func.nome}! Acesse o link para confirmar seu ponto:\n\n📎 ${url}\n\n_Link válido por 5 minutos. Não compartilhe este link._`;
 }
 
 /**

@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
+import { botSend } from '../services/botServiceClient';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
 
@@ -987,6 +988,166 @@ export const getOrdensByLavadorPublic = async (req: Request, res: Response) => {
     });
     res.json({ ordens });
   } catch {
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── GET /api/p/ponto/validar?t=TOKEN ────────────────────────────────────────
+export const validarTokenPonto = async (req: Request, res: Response) => {
+  const { t } = req.query as { t?: string };
+  if (!t) return res.status(400).json({ erro: 'Token obrigatório' });
+
+  try {
+    const func = await prisma.dpFuncionario.findUnique({
+      where: { pontoToken: t },
+      select: {
+        id: true, nome: true, empresaId: true,
+        pontoTokenExpiraEm: true, pontoTokenUsadoEm: true,
+        empresa: { select: { nome: true } },
+      },
+    });
+
+    if (!func) return res.status(404).json({ erro: 'Link inválido ou expirado' });
+    if (func.pontoTokenUsadoEm) return res.status(410).json({ erro: 'Este link já foi utilizado' });
+    if (!func.pontoTokenExpiraEm || new Date() > func.pontoTokenExpiraEm)
+      return res.status(410).json({ erro: 'Link expirado. Solicite um novo digitando "ponto" no WhatsApp' });
+
+    const { start, end } = getTodayRangeBRT();
+    const marcacoes = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end } },
+      orderBy: { timestamp: 'asc' },
+      select: { tipo: true },
+    });
+    const ultima = marcacoes[marcacoes.length - 1];
+    const proximoTipo = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
+
+    res.json({ nome: func.nome, empresaNome: func.empresa.nome, proximoTipo });
+  } catch (error) {
+    console.error('[portal] validarTokenPonto:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/p/ponto/confirmar ─────────────────────────────────────────────
+export const confirmarPonto = async (req: Request, res: Response) => {
+  const { token, lat, lng, accuracy } = req.body as {
+    token: string; lat?: number; lng?: number; accuracy?: number;
+  };
+  if (!token) return res.status(400).json({ erro: 'Token obrigatório' });
+
+  try {
+    const func = await prisma.dpFuncionario.findUnique({
+      where: { pontoToken: token },
+      select: {
+        id: true, nome: true, empresaId: true, wppJid: true,
+        pontoTokenExpiraEm: true, pontoTokenUsadoEm: true,
+        lavadorId: true, usuarioId: true,
+      },
+    });
+
+    if (!func) return res.status(404).json({ erro: 'Link inválido' });
+    if (func.pontoTokenUsadoEm) return res.status(410).json({ erro: 'Link já utilizado' });
+    if (!func.pontoTokenExpiraEm || new Date() > func.pontoTokenExpiraEm)
+      return res.status(410).json({ erro: 'Link expirado' });
+
+    const sistema = await prisma.empresaSistema.findFirst({
+      where: { empresaId: func.empresaId, sistema: 'data-point', ativo: true },
+    });
+    if (!sistema) return res.status(404).json({ erro: 'Data Point não ativo' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const { start, end } = getTodayRangeBRT();
+
+    const marcacoesHoje = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end } },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const ultima = marcacoesHoje[marcacoesHoje.length - 1];
+    const tipo: 'ENTRADA' | 'SAIDA' = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
+
+    // Cooldown 5 min
+    if (ultima && ultima.tipo === tipo) {
+      const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
+      if (diffMin < 5) {
+        const wait = Math.ceil(5 - diffMin);
+        return res.status(429).json({ erro: `Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} para bater ponto novamente.` });
+      }
+    }
+
+    // GPS — só valida ENTRADA
+    let gpsPrecisaoSuspeita = false;
+    let gpsForaRaio = false;
+    const gpsNegado = tipo === 'ENTRADA' && (lat == null || lng == null);
+    const empLat = parseFloat(cfg.lat);
+    const empLng = parseFloat(cfg.lng);
+    const raioGps: number = cfg.raioGps || 80;
+    const nivelGps: string = cfg.nivelGps || 'BASICO';
+    const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
+
+    if (tipo === 'ENTRADA' && !gpsNegado && temLocEmpresa) {
+      const dist = haversine(empLat, empLng, lat!, lng!);
+      if (dist > raioGps)     gpsForaRaio = true;
+      if (dist > raioGps * 3) gpsPrecisaoSuspeita = true;
+    }
+    if (accuracy != null && accuracy < 1) gpsPrecisaoSuspeita = true;
+
+    if (tipo === 'ENTRADA' && temLocEmpresa) {
+      if (nivelGps === 'RIGIDO' && !gpsNegado && gpsForaRaio)
+        return res.status(403).json({ erro: 'Você está fora da área autorizada.' });
+      if (nivelGps === 'MAXIMO') {
+        if (gpsNegado) return res.status(403).json({ erro: 'GPS obrigatório. Ative a localização e tente novamente.' });
+        if (gpsForaRaio) return res.status(403).json({ erro: 'Você está fora da área autorizada.' });
+      }
+    }
+
+    // Registra marcação e invalida token atomicamente
+    const [marcacao] = await prisma.$transaction([
+      prisma.dpMarcacao.create({
+        data: {
+          empresaId: func.empresaId,
+          funcionarioId: func.id,
+          tipo,
+          canal: 'PORTAL_WPP',
+          lat: lat ?? null,
+          lng: lng ?? null,
+          gpsPrecisao: accuracy ?? null,
+          gpsPrecisaoSuspeita,
+          gpsNegado,
+          ip: req.ip || null,
+        },
+      }),
+      prisma.dpFuncionario.update({
+        where: { id: func.id },
+        data: { pontoTokenUsadoEm: new Date() },
+      }),
+    ]);
+
+    const horaFormatada = horaFormatadaBRT(marcacao.timestamp);
+
+    // Notifica funcionário no WhatsApp (fire-and-forget)
+    if (func.wppJid) {
+      const emoji = tipo === 'ENTRADA' ? '✅' : '👋';
+      const alerta = tipo === 'ENTRADA' && gpsForaRaio ? '\n\n⚠️ Localização fora do raio da empresa.' : '';
+      const msg = `${emoji} *${tipo}* registrada às ${horaFormatada}!${alerta}`;
+      botSend(func.wppJid, msg).catch(() => {});
+    }
+
+    // redirectUrl baseado no tipo de vínculo
+    let redirectUrl: string | null = null;
+    if (func.lavadorId) {
+      const lavador = await prisma.lavador.findUnique({
+        where: { id: func.lavadorId },
+        select: { linkTokenCurto: true },
+      });
+      if (lavador?.linkTokenCurto) redirectUrl = `/p/${lavador.linkTokenCurto}`;
+    } else if (func.usuarioId) {
+      redirectUrl = '/';
+    }
+
+    res.json({ ok: true, tipo, horaFormatada, gpsPrecisaoSuspeita, redirectUrl });
+  } catch (error) {
+    console.error('[portal] confirmarPonto:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };
