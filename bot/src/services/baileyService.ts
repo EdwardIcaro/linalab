@@ -10,7 +10,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
-import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio, handleDpPontoKeyword, handleDpLocation } from './whatsappCommandHandler';
+import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio, handleDpPontoKeyword, handleDpLocation, handleDpEspelho } from './whatsappCommandHandler';
 import { validateAndClaimByCode } from './pairingCodeStore';
 import { validateAndClaimBotCode } from './botUserCodeStore';
 
@@ -553,10 +553,16 @@ export async function initBaileys(): Promise<void> {
           return;
         }
 
-        // ── Data Point: intercepta keywords de ponto antes do fluxo principal ──
+        // ── Data Point: intercepta keywords de ponto e espelho antes do fluxo principal ──
         const pontoReply = await handleDpPontoKeyword(from, trimmed);
         if (pontoReply !== null) {
           await sock.sendMessage(rawFrom, { text: pontoReply });
+          return;
+        }
+
+        const espelhoReply = await handleDpEspelho(from, trimmed);
+        if (espelhoReply !== null) {
+          await sock.sendMessage(rawFrom, { text: espelhoReply });
           return;
         }
 

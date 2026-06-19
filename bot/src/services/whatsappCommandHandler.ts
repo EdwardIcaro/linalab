@@ -253,9 +253,10 @@ async function handleConectarPortal(from: string, message: string): Promise<stri
 // DATA POINT — PONTO VIA WHATSAPP
 // ═══════════════════════════════════════════════════════════════════════════
 
-const pendingPontoRequest = new Map<string, number>(); // JID → expiresAt ms
-const PONTO_TTL_MS = 5 * 60 * 1000;
-const PONTO_KEYWORDS = /\b(ponto|bater\s+ponto|registrar\s+ponto|entrada|sa[ií]da|cheguei|fui\s+embora|saindo|t[aá]\s+saindo)\b/i;
+const PONTO_KEYWORDS  = /\b(ponto|bater\s+ponto|registrar\s+ponto|cheguei|fui\s+embora|saindo|t[aá]\s+saindo)\b/i;
+const ESPELHO_KEYWORDS = /\b(espelho|meu\s+ponto|banco\s+de\s+horas?|horas?\s+trabalhadas?|resumo\s+ponto|ver\s+ponto|ponto\s+de\s+hoje)\b/i;
+
+// ── helpers ──────────────────────────────────────────────────────────────────
 
 function haversineDP(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -272,14 +273,44 @@ function horaFormatadaBRTDp(d: Date): string {
   });
 }
 
-async function resolveWppDpFuncionario(
-  jid: string,
-): Promise<{ id: string; nome: string; empresaId: string } | null> {
+function fmtMinDP(min: number): string {
+  const abs = Math.abs(min);
+  const h   = Math.floor(abs / 60);
+  const m   = abs % 60;
+  const str = h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}min`;
+  return min < 0 ? `-${str}` : str;
+}
+
+function calcMinutosDP(
+  marcacoes: Array<{ tipo: string; timestamp: Date }>,
+  agora: Date,
+): number {
+  let total = 0; let i = 0;
+  while (i < marcacoes.length) {
+    if (marcacoes[i].tipo === 'ENTRADA') {
+      let j = i + 1;
+      while (j < marcacoes.length && marcacoes[j].tipo !== 'SAIDA') j++;
+      if (j < marcacoes.length) {
+        total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i = j + 1;
+      } else {
+        total += Math.round((agora.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i++;
+      }
+    } else { i++; }
+  }
+  return total;
+}
+
+type DpFunc = { id: string; nome: string; empresaId: string; cargaHorariaDia: number | null };
+
+async function resolveWppDpFuncionario(jid: string): Promise<DpFunc | null> {
+  const sel = { id: true, nome: true, empresaId: true, cargaHorariaDia: true };
+
   // 1. Por wppJid direto
   const porJid = await (prisma as any).dpFuncionario.findFirst({
-    where: { wppJid: jid, status: 'ATIVO' },
-    select: { id: true, nome: true, empresaId: true },
-  }) as { id: string; nome: string; empresaId: string } | null;
+    where: { wppJid: jid, status: 'ATIVO' }, select: sel,
+  }) as DpFunc | null;
   if (porJid) return porJid;
 
   // 2. Lavador com telefone = phone extraído do JID → dpFuncionario.lavadorId
@@ -287,31 +318,33 @@ async function resolveWppDpFuncionario(
   if (!phone) return null;
 
   const lavador = await (prisma.lavador as any).findFirst({
-    where: { telefone: phone },
-    select: { id: true },
+    where: { telefone: phone }, select: { id: true },
   }) as { id: string } | null;
   if (lavador) {
     const porLavador = await (prisma as any).dpFuncionario.findFirst({
-      where: { lavadorId: lavador.id, status: 'ATIVO' },
-      select: { id: true, nome: true, empresaId: true },
-    }) as { id: string; nome: string; empresaId: string } | null;
+      where: { lavadorId: lavador.id, status: 'ATIVO' }, select: sel,
+    }) as DpFunc | null;
     if (porLavador) return porLavador;
   }
 
   // 3. dpFuncionario standalone com telefone = phone
-  const porTelefone = await (prisma as any).dpFuncionario.findFirst({
-    where: { telefone: phone, status: 'ATIVO', lavadorId: null },
-    select: { id: true, nome: true, empresaId: true },
-  }) as { id: string; nome: string; empresaId: string } | null;
-  return porTelefone ?? null;
+  return await (prisma as any).dpFuncionario.findFirst({
+    where: { telefone: phone, status: 'ATIVO', lavadorId: null }, select: sel,
+  }) as DpFunc | null;
 }
 
-/** Intercepta mensagens com intenção de bater ponto. Retorna null se não for mensagem de ponto. */
+// ── exports ──────────────────────────────────────────────────────────────────
+
+/**
+ * Informa o funcionário sobre qual marcação virá a seguir.
+ * Não exige mais que o funcionário mande a localização em seguida —
+ * a localização pode ser enviada diretamente a qualquer momento.
+ */
 export async function handleDpPontoKeyword(from: string, text: string): Promise<string | null> {
   if (!PONTO_KEYWORDS.test(text)) return null;
 
   const func = await resolveWppDpFuncionario(from);
-  if (!func) return null; // não é usuário DP — deixa fluxo normal tratar
+  if (!func) return null;
 
   const sistema = await (prisma as any).empresaSistema.findFirst({
     where: { empresaId: func.empresaId, sistema: 'data-point', ativo: true },
@@ -327,6 +360,7 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
   const ultima = marcacoes[marcacoes.length - 1];
   const proximoTipo = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
 
+  // Cooldown informativo
   if (ultima && ultima.tipo === proximoTipo) {
     const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
     if (diffMin < 5) {
@@ -335,13 +369,15 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
     }
   }
 
-  pendingPontoRequest.set(from, Date.now() + PONTO_TTL_MS);
-
   const emoji = proximoTipo === 'ENTRADA' ? '🟢' : '🔴';
-  return `${emoji} *REGISTRAR PONTO*\nPróxima marcação: *${proximoTipo}*\n\nAgora compartilhe sua localização para confirmar. ⏱ Você tem 5 minutos.\n\n📎 _Clipe de anexo → Localização → Enviar localização atual_`;
+  return `${emoji} *${proximoTipo}*\n\nCompartilhe sua localização para registrar. 📍\n\n📎 _Clipe de anexo → Localização → Enviar localização atual_`;
 }
 
-/** Chamado pelo baileyService quando recebe mensagem de localização. */
+/**
+ * Chamado pelo baileyService quando recebe mensagem de localização.
+ * Registra o ponto diretamente — sem necessidade de digitar "ponto" antes.
+ * ENTRADA: valida GPS. SAIDA: apenas registra (sem validação de raio).
+ */
 export async function handleDpLocation(
   from: string,
   lat: number,
@@ -350,28 +386,18 @@ export async function handleDpLocation(
   isForwarded: boolean = false,
   msgTimestampMs: number = 0,
 ): Promise<string | null> {
-  // Limpar expirados
   const agora = Date.now();
-  for (const [jid, exp] of pendingPontoRequest.entries()) {
-    if (exp < agora) pendingPontoRequest.delete(jid);
-  }
 
-  if (!pendingPontoRequest.has(from)) {
-    return 'Para registrar seu ponto, mande *ponto* primeiro e depois compartilhe a localização. 📍';
-  }
-  pendingPontoRequest.delete(from);
+  // Identifica usuário DP primeiro — se não for, ignora silenciosamente
+  const func = await resolveWppDpFuncionario(from);
+  if (!func) return null;
 
   // ── Anti-fraude ────────────────────────────────────────────────────────────
   if (isForwarded) {
-    return '⚠️ Localização encaminhada não é aceita para registro de ponto.\n\nCompartilhe sua *localização atual* diretamente (clipe → Localização → Enviar localização atual).';
+    return '⚠️ Localização encaminhada não é aceita.\n\nCompartilhe sua *localização atual* diretamente (clipe → Localização → Enviar localização atual).';
   }
   if (msgTimestampMs > 0 && agora - msgTimestampMs > 2 * 60 * 1000) {
     return '⚠️ Essa localização parece ser antiga. Compartilhe sua *localização atual* para registrar o ponto.';
-  }
-
-  const func = await resolveWppDpFuncionario(from);
-  if (!func) {
-    return '❌ Seu WhatsApp não está vinculado ao ponto desta empresa.\n\nAcesse o portal pelo link que seu gestor enviou → "Conectar meu WhatsApp".';
   }
 
   const sistema = await (prisma as any).empresaSistema.findFirst({
@@ -390,34 +416,36 @@ export async function handleDpLocation(
   const ultima = marcacoes[marcacoes.length - 1];
   const tipo: 'ENTRADA' | 'SAIDA' = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
 
+  // Cooldown 5 min entre marcações do mesmo tipo
   if (ultima && ultima.tipo === tipo) {
-    const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
+    const diffMin = (agora - new Date(ultima.timestamp).getTime()) / 60000;
     if (diffMin < 5) {
       const wait = Math.ceil(5 - diffMin);
       return `⏳ Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} antes de registrar novamente.`;
     }
   }
 
-  // Validação GPS
-  const empLat = parseFloat(cfg.lat);
-  const empLng = parseFloat(cfg.lng);
-  const raioGps: number = cfg.raioGps || 80;
-  const nivelGps: string = cfg.nivelGps || 'BASICO';
-  const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
+  // ── Validação GPS — apenas para ENTRADA ────────────────────────────────────
+  const empLat     = parseFloat(cfg.lat);
+  const empLng     = parseFloat(cfg.lng);
+  const raioGps: number   = cfg.raioGps || 80;
+  const nivelGps: string  = cfg.nivelGps || 'BASICO';
+  const temLocEmpresa     = !isNaN(empLat) && !isNaN(empLng);
 
   let distanciaMetros: number | null = null;
   let dentroRaio = true;
   let gpsPrecisaoSuspeita = false;
 
-  if (temLocEmpresa) {
+  if (tipo === 'ENTRADA' && temLocEmpresa) {
     distanciaMetros = Math.round(haversineDP(empLat, empLng, lat, lng));
     dentroRaio = distanciaMetros <= raioGps;
     if (distanciaMetros > raioGps * 3) gpsPrecisaoSuspeita = true;
   }
   if (accuracy != null && accuracy < 1) gpsPrecisaoSuspeita = true;
 
-  if (temLocEmpresa && !dentroRaio && (nivelGps === 'RIGIDO' || nivelGps === 'MAXIMO')) {
-    return `🚫 Você está fora da área autorizada (${distanciaMetros}m da empresa, raio: ${raioGps}m).\nO ponto *não* foi registrado.`;
+  // Bloqueia ENTRADA fora do raio para RIGIDO/MAXIMO
+  if (tipo === 'ENTRADA' && temLocEmpresa && !dentroRaio && (nivelGps === 'RIGIDO' || nivelGps === 'MAXIMO')) {
+    return `🚫 Você está fora da área autorizada (${distanciaMetros}m da empresa, raio: ${raioGps}m).\nENTRADA *não* foi registrada.`;
   }
 
   const marcacao = await (prisma as any).dpMarcacao.create({
@@ -436,13 +464,121 @@ export async function handleDpLocation(
 
   const hora = horaFormatadaBRTDp(marcacao.timestamp);
 
-  if (!dentroRaio && temLocEmpresa) {
-    return `⚠️ *${tipo}* registrada às ${hora}!\n\n📍 Você está a ${distanciaMetros}m da empresa (raio: ${raioGps}m).\nPonto salvo, mas o gestor será notificado.`;
+  if (tipo === 'ENTRADA' && !dentroRaio && temLocEmpresa) {
+    return `⚠️ *ENTRADA* registrada às ${hora}!\n\n📍 Você está a ${distanciaMetros}m da empresa (raio: ${raioGps}m).\nPonto salvo com alerta para o gestor.`;
   }
 
-  const distStr = distanciaMetros != null ? `📍 A ${distanciaMetros}m da empresa.\n` : '';
-  const saudacao = tipo === 'ENTRADA' ? 'Bom trabalho! 💪' : 'Até logo! 👋';
-  return `✅ *${tipo}* registrada às ${hora}!\n\n${distStr}${saudacao}`;
+  if (tipo === 'ENTRADA') {
+    const distStr = distanciaMetros != null ? `📍 A ${distanciaMetros}m da empresa.\n` : '';
+    return `✅ *ENTRADA* registrada às ${hora}!\n\n${distStr}Bom trabalho! 💪`;
+  }
+
+  // SAIDA — sem validação de raio
+  const minutosHoje = calcMinutosDP(
+    [...marcacoes, { tipo: 'SAIDA', timestamp: marcacao.timestamp }],
+    marcacao.timestamp,
+  );
+  return `👋 *SAÍDA* registrada às ${hora}!\n\n⏱ Trabalhado hoje: *${fmtMinDP(minutosHoje)}*`;
+}
+
+/** Exibe espelho da semana + banco de horas para o funcionário DP. */
+export async function handleDpEspelho(from: string, text: string): Promise<string | null> {
+  if (!ESPELHO_KEYWORDS.test(text)) return null;
+
+  const func = await resolveWppDpFuncionario(from);
+  if (!func) return null;
+
+  const sistema = await (prisma as any).empresaSistema.findFirst({
+    where: { empresaId: func.empresaId, sistema: 'data-point', ativo: true },
+  });
+  if (!sistema) return null;
+
+  const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+  const cargaHorariaDia = (func.cargaHorariaDia ?? 8) * 60; // minutos
+
+  const now   = new Date();
+  const { start: hojStart, end: hojEnd } = getTodayRangeBRT();
+  const todayStr = getTodayStrBRT();
+
+  // Início da semana — segunda-feira BRT
+  const brtNow     = new Date(now.getTime() - 3 * 3600000);
+  const diaSemana  = brtNow.getDay(); // 0=dom,1=seg,...
+  const diasAteSegBRT = diaSemana === 0 ? 6 : diaSemana - 1;
+  const segStart   = new Date(hojStart.getTime() - diasAteSegBRT * 86400000);
+
+  const todasMarcacoes = await (prisma as any).dpMarcacao.findMany({
+    where: {
+      funcionarioId: func.id,
+      timestamp: { gte: segStart, lte: hojEnd },
+    },
+    orderBy: { timestamp: 'asc' },
+  }) as Array<{ tipo: string; timestamp: Date }>;
+
+  // Gera lista de datas da semana (seg → hoje)
+  const dias: string[] = [];
+  const cur = new Date(segStart);
+  while (cur <= hojStart) {
+    const y = cur.getUTCFullYear();
+    const mo = String(cur.getUTCMonth() + 1).padStart(2, '0');
+    const d  = String(cur.getUTCDate()).padStart(2, '0');
+    dias.push(`${y}-${mo}-${d}`);
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
+  const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  let totalTrabalhadoMin = 0;
+  let totalEsperadoMin   = 0;
+  const linhasDias: string[] = [];
+
+  for (const diaStr of dias) {
+    const { start: dStart, end: dEnd } = getDateRangeBRT(diaStr);
+    const marcsDia = todasMarcacoes.filter(m => m.timestamp >= dStart && m.timestamp <= dEnd);
+    const ehHoje = diaStr === todayStr;
+    const fimCalc = ehHoje ? now : dEnd;
+    const minutos = calcMinutosDP(marcsDia, fimCalc);
+
+    // Data label
+    const [, , dd] = diaStr.split('-');
+    const [, mm]   = diaStr.split('-');
+    const nomeDia  = DIAS_PT[new Date(diaStr + 'T12:00:00').getDay()];
+    const label    = `${nomeDia} ${dd}/${mm}`;
+
+    // Primeira entrada e última saída do dia
+    const entrada = marcsDia.find(m => m.tipo === 'ENTRADA');
+    const saida   = [...marcsDia].reverse().find(m => m.tipo === 'SAIDA');
+
+    if (marcsDia.length === 0) {
+      const emoji = ehHoje ? '⏳' : '❌';
+      linhasDias.push(`${emoji} ${label}: —`);
+    } else if (ehHoje && !saida) {
+      linhasDias.push(`🔄 ${label}: ${horaFormatadaBRTDp(entrada!.timestamp)} → em andamento (${fmtMinDP(minutos)})`);
+    } else {
+      const hE = entrada ? horaFormatadaBRTDp(entrada.timestamp) : '?';
+      const hS = saida   ? horaFormatadaBRTDp(saida.timestamp)   : '?';
+      linhasDias.push(`✅ ${label}: ${hE}–${hS} (${fmtMinDP(minutos)})`);
+    }
+
+    // Dias úteis (seg–sex) contam para banco de horas
+    const dow = new Date(diaStr + 'T12:00:00').getDay();
+    if (dow !== 0 && dow !== 6) {
+      totalTrabalhadoMin += minutos;
+      if (!ehHoje) totalEsperadoMin += cargaHorariaDia; // dias passados contam totais
+      else totalEsperadoMin += Math.min(minutos, cargaHorariaDia); // hoje: até o que foi trabalhado
+    }
+  }
+
+  const saldo = totalTrabalhadoMin - totalEsperadoMin;
+  const saldoStr = saldo >= 0
+    ? `✅ *+${fmtMinDP(saldo)}*`
+    : `⚠️ *${fmtMinDP(saldo)}*`;
+
+  return (
+    `📋 *ESPELHO DE PONTO — ${func.nome.split(' ')[0]}*\n\n` +
+    linhasDias.join('\n') +
+    `\n\n📊 *Banco da semana*\n` +
+    `Trabalhado: *${fmtMinDP(totalTrabalhadoMin)}* | Esperado: *${fmtMinDP(totalEsperadoMin)}* | Saldo: ${saldoStr}`
+  );
 }
 
 export async function handleIncomingMessage(
