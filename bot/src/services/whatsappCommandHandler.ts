@@ -253,7 +253,8 @@ async function handleConectarPortal(from: string, message: string): Promise<stri
 // DATA POINT — PONTO VIA WHATSAPP
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PONTO_KEYWORDS  = /\b(ponto|bater\s+ponto|registrar\s+ponto|cheguei|fui\s+embora|saindo|t[aá]\s+saindo)\b/i;
+const PONTO_KEYWORDS  = /\b(ponto|bater\s+ponto|registrar\s+ponto|cheguei|fui\s+embora|saindo|t[aá]\s+saindo|sa[íi]da|vou\s+embora|indo\s+embora)\b/i;
+const SAIDA_KEYWORDS  = /\b(sa[íi]da|saindo|fui\s+embora|t[aá]\s+saindo|vou\s+embora|indo\s+embora)\b/i;
 const ESPELHO_KEYWORDS = /\b(espelho|meu\s+ponto|banco\s+de\s+horas?|horas?\s+trabalhadas?|resumo\s+ponto|ver\s+ponto|ponto\s+de\s+hoje)\b/i;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -367,6 +368,11 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
       const wait = Math.ceil(5 - diffMin);
       return `⏳ Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} antes de registrar novamente.`;
     }
+  }
+
+  // Se intenção é SAIDA mas não há ENTRADA aberta → bloqueia
+  if (SAIDA_KEYWORDS.test(text) && proximoTipo === 'ENTRADA') {
+    return `⏰ Você ainda não registrou sua *entrada* hoje, ${func.nome}!\n\nBata a *entrada* primeiro antes de registrar a saída. 😊`;
   }
 
   const emoji = proximoTipo === 'ENTRADA' ? '🟢' : '🔴';
