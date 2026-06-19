@@ -393,21 +393,19 @@ export async function initBaileys(): Promise<void> {
             if (resolved) from = `${resolved}@s.whatsapp.net`;
           }
           const loc = message.message!.locationMessage!;
-          // contextInfo em mensagens de localização fica dentro de locationMessage, não no nível raiz
+          // contextInfo de localização encaminhada fica dentro de locationMessage no Baileys
           const forwardScore = Math.max(
             (message.message?.contextInfo?.forwardingScore ?? 0),
-            (loc?.contextInfo?.forwardingScore ?? 0),
+            ((loc as any)?.contextInfo?.forwardingScore ?? 0),
           );
           const isForwarded = forwardScore > 0;
-          // Localização sem precisão = pin fixo no mapa (não GPS real)
-          const isFakeGps = loc.accuracyInMeters === 0 || loc.accuracyInMeters == null;
           const msgTimestampMs = ((message.messageTimestamp as number) ?? 0) * 1000;
           const reply = await handleDpLocation(
             from,
             loc.degreesLatitude ?? 0,
             loc.degreesLongitude ?? 0,
             loc.accuracyInMeters ?? null,
-            isForwarded || isFakeGps,
+            isForwarded,
             msgTimestampMs,
           );
           if (reply?.trim()) await sock.sendMessage(rawFrom, { text: reply });

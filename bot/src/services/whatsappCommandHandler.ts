@@ -337,9 +337,9 @@ async function resolveWppDpFuncionario(jid: string): Promise<DpFunc | null> {
 // ── exports ──────────────────────────────────────────────────────────────────
 
 /**
- * Informa o funcionário sobre qual marcação virá a seguir.
- * Não exige mais que o funcionário mande a localização em seguida —
- * a localização pode ser enviada diretamente a qualquer momento.
+ * Intercepta keywords de ponto.
+ * - SAIDA keywords: registra saída diretamente (sem GPS, pois SAIDA não valida raio)
+ * - ENTRADA/genérico: pede para compartilhar localização
  */
 export async function handleDpPontoKeyword(from: string, text: string): Promise<string | null> {
   if (!PONTO_KEYWORDS.test(text)) return null;
@@ -361,6 +361,42 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
   const ultima = marcacoes[marcacoes.length - 1];
   const proximoTipo = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
 
+  // ── Intenção de SAIDA ─────────────────────────────────────────────────────
+  if (SAIDA_KEYWORDS.test(text)) {
+    if (proximoTipo === 'ENTRADA') {
+      return `⏰ Você ainda não registrou sua *entrada* hoje, ${func.nome}!\n\nBata a *entrada* primeiro antes de registrar a saída. 😊`;
+    }
+
+    // Cooldown
+    if (ultima && ultima.tipo === 'SAIDA') {
+      const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
+      if (diffMin < 5) {
+        const wait = Math.ceil(5 - diffMin);
+        return `⏳ Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} antes de registrar novamente.`;
+      }
+    }
+
+    // Registra SAIDA diretamente (sem GPS)
+    const marcacao = await (prisma as any).dpMarcacao.create({
+      data: {
+        empresaId: func.empresaId,
+        funcionarioId: func.id,
+        tipo: 'SAIDA',
+        canal: 'WHATSAPP',
+        gpsNegado: true,
+        gpsPrecisaoSuspeita: false,
+      },
+    }) as { timestamp: Date };
+
+    const hora = horaFormatadaBRTDp(marcacao.timestamp);
+    const minutosHoje = calcMinutosDP(
+      [...marcacoes, { tipo: 'SAIDA', timestamp: marcacao.timestamp }],
+      marcacao.timestamp,
+    );
+    return `👋 *SAÍDA* registrada às ${hora}!\n\n⏱ Trabalhado hoje: *${fmtMinDP(minutosHoje)}*`;
+  }
+
+  // ── ENTRADA / genérico → pede localização ────────────────────────────────
   // Cooldown informativo
   if (ultima && ultima.tipo === proximoTipo) {
     const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
@@ -370,13 +406,7 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
     }
   }
 
-  // Se intenção é SAIDA mas não há ENTRADA aberta → bloqueia
-  if (SAIDA_KEYWORDS.test(text) && proximoTipo === 'ENTRADA') {
-    return `⏰ Você ainda não registrou sua *entrada* hoje, ${func.nome}!\n\nBata a *entrada* primeiro antes de registrar a saída. 😊`;
-  }
-
-  const emoji = proximoTipo === 'ENTRADA' ? '🟢' : '🔴';
-  return `${emoji} *${proximoTipo}*\n\nCompartilhe sua localização para registrar. 📍\n\n📎 _Clipe de anexo → Localização → Enviar localização atual_`;
+  return `🟢 *ENTRADA*\n\nCompartilhe sua localização para registrar. 📍\n\n📎 _Clipe de anexo → Localização → Enviar localização atual_`;
 }
 
 /**
