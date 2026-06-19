@@ -393,11 +393,15 @@ export async function initBaileys(): Promise<void> {
             if (resolved) from = `${resolved}@s.whatsapp.net`;
           }
           const loc = message.message!.locationMessage!;
+          const isForwarded = (message.message?.contextInfo?.forwardingScore ?? 0) > 0;
+          const msgTimestampMs = ((message.messageTimestamp as number) ?? 0) * 1000;
           const reply = await handleDpLocation(
             from,
             loc.degreesLatitude ?? 0,
             loc.degreesLongitude ?? 0,
             loc.accuracyInMeters ?? null,
+            isForwarded,
+            msgTimestampMs,
           );
           if (reply?.trim()) await sock.sendMessage(rawFrom, { text: reply });
           return;

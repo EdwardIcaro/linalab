@@ -347,6 +347,8 @@ export async function handleDpLocation(
   lat: number,
   lng: number,
   accuracy: number | null,
+  isForwarded: boolean = false,
+  msgTimestampMs: number = 0,
 ): Promise<string | null> {
   // Limpar expirados
   const agora = Date.now();
@@ -358,6 +360,14 @@ export async function handleDpLocation(
     return 'Para registrar seu ponto, mande *ponto* primeiro e depois compartilhe a localização. 📍';
   }
   pendingPontoRequest.delete(from);
+
+  // ── Anti-fraude ────────────────────────────────────────────────────────────
+  if (isForwarded) {
+    return '⚠️ Localização encaminhada não é aceita para registro de ponto.\n\nCompartilhe sua *localização atual* diretamente (clipe → Localização → Enviar localização atual).';
+  }
+  if (msgTimestampMs > 0 && agora - msgTimestampMs > 2 * 60 * 1000) {
+    return '⚠️ Essa localização parece ser antiga. Compartilhe sua *localização atual* para registrar o ponto.';
+  }
 
   const func = await resolveWppDpFuncionario(from);
   if (!func) {
