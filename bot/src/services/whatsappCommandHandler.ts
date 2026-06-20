@@ -5,6 +5,7 @@
 
 import { randomBytes } from 'crypto';
 import prisma from '../db';
+import { registrarPontoPoller } from './dpPontoPoller';
 import { chatCompletion, transcribeAudio } from './groqService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
@@ -342,7 +343,11 @@ async function resolveWppDpFuncionario(jid: string): Promise<DpFunc | null> {
  * - SAIDA keywords: registra saída diretamente (sem GPS, pois SAIDA não valida raio)
  * - ENTRADA/genérico: pede para compartilhar localização
  */
-export async function handleDpPontoKeyword(from: string, text: string): Promise<string | null> {
+export async function handleDpPontoKeyword(
+  from: string,
+  text: string,
+  sendFn: (jid: string, msg: string) => Promise<void>,
+): Promise<string | null> {
   if (!PONTO_KEYWORDS.test(text)) return null;
 
   const func = await resolveWppDpFuncionario(from);
@@ -421,6 +426,9 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
     console.error(`[DP-PONTO] ERRO ao salvar token:`, err);
     throw err;
   }
+
+  // Polling local: bot confirma no WA assim que o link for usado (sem depender de ngrok)
+  registrarPontoPoller(func.id, from, token, sendFn);
 
   const tipoLabel = proximoTipo === 'ENTRADA' ? '🟢 ENTRADA' : '🔴 SAÍDA';
   const url = `${PORTAL_URL}/ponto.html?t=${token}`;

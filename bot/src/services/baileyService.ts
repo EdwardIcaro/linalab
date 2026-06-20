@@ -559,7 +559,8 @@ export async function initBaileys(): Promise<void> {
         }
 
         // ── Data Point: intercepta keywords de ponto e espelho antes do fluxo principal ──
-        const pontoReply = await handleDpPontoKeyword(from, trimmed);
+        const wppSend = async (jid: string, msg: string) => { await sock.sendMessage(jid, { text: msg }); };
+        const pontoReply = await handleDpPontoKeyword(from, trimmed, wppSend);
         if (pontoReply !== null) {
           await sock.sendMessage(rawFrom, { text: pontoReply });
           return;
