@@ -212,7 +212,8 @@
     if (!token) return showErro('Link inválido.', 'Solicite um novo link digitando "ponto" no WhatsApp.');
     try {
       const res = await fetch(`${API}/p/ponto/validar?t=${encodeURIComponent(token)}`);
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
       if (!res.ok) return showErro(data.erro || 'Link inválido ou expirado.', 'Solicite um novo link digitando "ponto" no WhatsApp.');
 
       proximoTipo = data.proximoTipo;
@@ -237,7 +238,7 @@
 
       show('tela-ready');
     } catch {
-      showErro('Erro de conexão.', 'Verifique sua internet e tente novamente.');
+      showErro('Serviço indisponível.', 'O sistema pode estar em manutenção. Tente novamente em alguns minutos.');
     }
   }
 
@@ -248,7 +249,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, lat, lng, accuracy }),
       });
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
       if (!res.ok) return showErro(data.erro || 'Erro ao registrar.', 'Tente novamente.');
 
       const icon  = data.tipo === 'ENTRADA' ? '✅' : '👋';
@@ -267,7 +269,7 @@
         show('tela-success');
       }
     } catch {
-      showErro('Erro de conexão.', 'Verifique sua internet e tente novamente.');
+      showErro('Serviço indisponível.', 'O sistema pode estar em manutenção. Tente novamente em alguns minutos.');
     }
   }
 
