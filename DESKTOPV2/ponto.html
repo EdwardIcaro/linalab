@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Lina · Registrar Ponto</title>
+  <title>Lina · Ponto</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#6b3fa1">
   <meta name="mobile-web-app-capable" content="yes">
@@ -21,8 +21,6 @@
       --green-l:#d1fae5;
       --red:    #dc2626;
       --red-l:  #fee2e2;
-      --amber:  #d97706;
-      --amber-l:#fef3c7;
       --purple: #7c3aed;
     }
     body {
@@ -42,7 +40,7 @@
       border-radius: 20px;
       padding: 36px 28px;
       width: 100%;
-      max-width: 380px;
+      max-width: 360px;
       box-shadow: 0 8px 32px rgba(0,0,0,.10);
       text-align: center;
     }
@@ -53,92 +51,47 @@
       background: linear-gradient(135deg, #7c3aed, #5b21b6);
       display: flex; align-items: center; justify-content: center;
       font-size: 24px; font-weight: 900; color: #fff;
-      margin: 0 auto 20px;
+      margin: 0 auto 24px;
       box-shadow: 0 6px 20px rgba(124,58,237,.35);
     }
 
-    /* ── telas ── */
     .tela { display: none; }
     .tela.ativa { display: block; }
 
-    /* loading */
-    #tela-loading .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border);
+    /* spinner genérico */
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
       border-top-color: var(--purple);
       border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 16px;
+      animation: spin .9s linear infinite;
+      margin: 0 auto 20px;
     }
+    .spinner.green { border-top-color: var(--green); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ready */
-    .tipo-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 18px; border-radius: 999px;
-      font-size: 13px; font-weight: 700; letter-spacing: .5px;
-      text-transform: uppercase; margin-bottom: 20px;
+    .tela-titulo {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      margin-bottom: 6px;
     }
-    .tipo-badge.entrada { background: var(--green-l); color: var(--green); }
-    .tipo-badge.saida   { background: var(--red-l);   color: var(--red); }
-
-    .nome { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-    .empresa { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
-
-    .btn {
-      width: 100%; padding: 16px;
-      border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: opacity .15s, transform .1s;
-    }
-    .btn:active { transform: scale(.98); opacity: .9; }
-    .btn-primary { background: var(--purple); color: #fff; }
-    .btn-green   { background: var(--green);  color: #fff; }
-    .btn-red     { background: var(--red);    color: #fff; }
-
-    .gps-hint {
-      font-size: 12px; color: var(--muted);
-      margin-top: 14px; line-height: 1.5;
+    .tela-sub {
+      font-size: 13px; color: var(--muted); line-height: 1.5;
     }
 
-    /* success */
-    .success-icon {
-      font-size: 56px; margin-bottom: 16px;
-    }
-    .success-hora {
-      font-size: 32px; font-weight: 800; margin-bottom: 6px;
-    }
-    .success-label {
-      font-size: 14px; color: var(--muted); margin-bottom: 24px;
-    }
-    .redirect-hint {
-      font-size: 12px; color: var(--muted);
-    }
-    .progress-bar {
-      height: 3px; background: var(--border);
-      border-radius: 99px; margin-top: 16px; overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%; background: var(--purple);
-      animation: progress 2.5s linear forwards;
-    }
+    /* sucesso */
+    .success-icon  { font-size: 56px; margin-bottom: 16px; }
+    .success-hora  { font-size: 32px; font-weight: 800; margin-bottom: 6px; }
+    .success-label { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+    .success-wpp   { font-size: 13px; color: var(--green); font-weight: 600; margin-bottom: 20px; }
+    .redirect-hint { font-size: 12px; color: var(--muted); }
+    .progress-bar  { height: 3px; background: var(--border); border-radius: 99px; margin-top: 16px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--purple); animation: progress 2.5s linear forwards; }
     @keyframes progress { from { width: 0 } to { width: 100% } }
 
-    /* error */
+    /* erro */
     .error-icon { font-size: 48px; margin-bottom: 16px; }
     .error-msg  { font-size: 15px; color: var(--red); font-weight: 600; margin-bottom: 8px; }
     .error-sub  { font-size: 13px; color: var(--muted); }
-
-    /* gps-loading */
-    #tela-gps .gps-spinner {
-      width: 52px; height: 52px;
-      border: 4px solid var(--border);
-      border-top-color: var(--green);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-    #tela-gps p { font-size: 14px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -146,35 +99,33 @@
 <div class="card">
   <div class="logo">L</div>
 
-  <!-- Loading inicial -->
+  <!-- Verificando link -->
   <div id="tela-loading" class="tela ativa">
     <div class="spinner"></div>
-    <p style="color:var(--muted);font-size:14px">Verificando link...</p>
-  </div>
-
-  <!-- Pronto para registrar -->
-  <div id="tela-ready" class="tela">
-    <div id="tipo-badge" class="tipo-badge"></div>
-    <div id="nome-func" class="nome"></div>
-    <div id="empresa-func" class="empresa"></div>
-    <button id="btn-registrar" class="btn btn-primary">📍 Registrar Ponto</button>
-    <p id="gps-hint" class="gps-hint"></p>
+    <div class="tela-titulo">Verificando link...</div>
   </div>
 
   <!-- Capturando GPS -->
   <div id="tela-gps" class="tela">
-    <div class="gps-spinner"></div>
-    <p>Capturando sua localização...</p>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px">Permita o acesso ao GPS quando solicitado</p>
+    <div class="spinner green"></div>
+    <div class="tela-titulo">Obtendo localização</div>
+    <div class="tela-sub">Permita o acesso à localização quando o navegador solicitar.</div>
+  </div>
+
+  <!-- Registrando -->
+  <div id="tela-registrando" class="tela">
+    <div class="spinner"></div>
+    <div class="tela-titulo">Registrando ponto...</div>
   </div>
 
   <!-- Sucesso -->
   <div id="tela-success" class="tela">
-    <div id="success-icon" class="success-icon"></div>
-    <div id="success-hora" class="success-hora"></div>
+    <div id="success-icon"  class="success-icon"></div>
+    <div id="success-hora"  class="success-hora"></div>
     <div id="success-label" class="success-label"></div>
+    <div id="success-wpp"   class="success-wpp"></div>
     <div id="redirect-hint" class="redirect-hint"></div>
-    <div id="progress-bar" class="progress-bar" style="display:none">
+    <div id="progress-bar"  class="progress-bar" style="display:none">
       <div class="progress-fill"></div>
     </div>
   </div>
@@ -192,57 +143,21 @@
     ? 'http://localhost:3001/api'
     : '/api';
 
-  const params = new URLSearchParams(window.location.search);
-  const token  = params.get('t');
-
-  let proximoTipo = 'ENTRADA';
+  const token = new URLSearchParams(window.location.search).get('t');
 
   function show(id) {
     document.querySelectorAll('.tela').forEach(el => el.classList.remove('ativa'));
     document.getElementById(id).classList.add('ativa');
   }
 
-  function showErro(msg, sub = '') {
+  function showErro(msg, sub) {
     document.getElementById('error-msg').textContent = msg;
-    document.getElementById('error-sub').textContent = sub;
+    document.getElementById('error-sub').textContent = sub || '';
     show('tela-erro');
   }
 
-  async function validar() {
-    if (!token) return showErro('Link inválido.', 'Solicite um novo link digitando "ponto" no WhatsApp.');
-    try {
-      const res = await fetch(`${API}/p/ponto/validar?t=${encodeURIComponent(token)}`);
-      let data;
-      try { data = await res.json(); } catch { data = {}; }
-      if (!res.ok) return showErro(data.erro || 'Link inválido ou expirado.', 'Solicite um novo link digitando "ponto" no WhatsApp.');
-
-      proximoTipo = data.proximoTipo;
-
-      const badge = document.getElementById('tipo-badge');
-      badge.textContent = proximoTipo === 'ENTRADA' ? '🟢 Entrada' : '🔴 Saída';
-      badge.className   = `tipo-badge ${proximoTipo === 'ENTRADA' ? 'entrada' : 'saida'}`;
-
-      document.getElementById('nome-func').textContent    = data.nome;
-      document.getElementById('empresa-func').textContent = data.empresaNome;
-
-      const btn = document.getElementById('btn-registrar');
-      if (proximoTipo === 'ENTRADA') {
-        btn.className   = 'btn btn-green';
-        btn.textContent = '📍 Registrar Entrada';
-        document.getElementById('gps-hint').textContent = 'Será solicitado acesso à sua localização para validar a entrada.';
-      } else {
-        btn.className   = 'btn btn-red';
-        btn.textContent = '🏁 Registrar Saída';
-        document.getElementById('gps-hint').textContent = 'A saída não requer validação de localização.';
-      }
-
-      show('tela-ready');
-    } catch {
-      showErro('Serviço indisponível.', 'O sistema pode estar em manutenção. Tente novamente em alguns minutos.');
-    }
-  }
-
   async function registrar(lat, lng, accuracy) {
+    show('tela-registrando');
     try {
       const res = await fetch(`${API}/p/ponto/confirmar`, {
         method: 'POST',
@@ -251,13 +166,17 @@
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
-      if (!res.ok) return showErro(data.erro || 'Erro ao registrar.', 'Tente novamente.');
+
+      if (!res.ok) {
+        return showErro(data.erro || 'Erro ao registrar.', 'Tente solicitar um novo link pelo WhatsApp.');
+      }
 
       const icon  = data.tipo === 'ENTRADA' ? '✅' : '👋';
-      const label = data.tipo === 'ENTRADA' ? 'Entrada registrada!' : 'Saída registrada!';
-      document.getElementById('success-icon').textContent = icon;
-      document.getElementById('success-hora').textContent = data.horaFormatada;
+      const label = data.tipo === 'ENTRADA' ? 'Entrada registrada com sucesso!' : 'Saída registrada com sucesso!';
+      document.getElementById('success-icon').textContent  = icon;
+      document.getElementById('success-hora').textContent  = data.horaFormatada;
       document.getElementById('success-label').textContent = label;
+      document.getElementById('success-wpp').textContent   = '📱 Confirmação enviada no WhatsApp';
 
       if (data.redirectUrl) {
         document.getElementById('redirect-hint').textContent = 'Redirecionando para o seu painel...';
@@ -269,33 +188,42 @@
         show('tela-success');
       }
     } catch {
-      showErro('Serviço indisponível.', 'O sistema pode estar em manutenção. Tente novamente em alguns minutos.');
+      showErro('Serviço indisponível.', 'Tente novamente em alguns minutos.');
     }
   }
 
-  document.getElementById('btn-registrar').addEventListener('click', () => {
-    if (proximoTipo === 'SAIDA') {
-      show('tela-gps');
-      registrar(null, null, null);
-      return;
-    }
+  async function validar() {
+    if (!token) return showErro('Link inválido.', 'Solicite um novo link digitando "ponto" no WhatsApp.');
+    try {
+      const res = await fetch(`${API}/p/ponto/validar?t=${encodeURIComponent(token)}`);
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok) return showErro(data.erro || 'Link inválido ou expirado.', 'Solicite um novo link digitando "ponto" no WhatsApp.');
 
-    if (!navigator.geolocation) {
-      return registrar(null, null, null);
-    }
+      const proximoTipo = data.proximoTipo;
 
-    show('tela-gps');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        registrar(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-      },
-      () => {
-        // GPS negado → registra mesmo assim (gpsNegado = true no backend)
+      // SAÍDA via link (fallback) — registra sem GPS
+      if (proximoTipo === 'SAIDA') {
         registrar(null, null, null);
-      },
-      { timeout: 12000, maximumAge: 0, enableHighAccuracy: true }
-    );
-  });
+        return;
+      }
+
+      // ENTRADA — captura GPS automaticamente
+      if (!navigator.geolocation) {
+        registrar(null, null, null);
+        return;
+      }
+
+      show('tela-gps');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => registrar(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+        ()    => registrar(null, null, null),
+        { timeout: 15000, maximumAge: 0, enableHighAccuracy: true }
+      );
+    } catch {
+      showErro('Serviço indisponível.', 'O sistema pode estar em manutenção. Tente novamente em alguns minutos.');
+    }
+  }
 
   validar();
 </script>
