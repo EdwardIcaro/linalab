@@ -1087,6 +1087,7 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     // GPS — só valida ENTRADA
     let gpsPrecisaoSuspeita = false;
     let gpsForaRaio = false;
+    let distanciaM = 0;
     const gpsNegado = tipo === 'ENTRADA' && (lat == null || lng == null);
     const empLat = parseFloat(cfg.lat);
     const empLng = parseFloat(cfg.lng);
@@ -1095,18 +1096,25 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
 
     if (tipo === 'ENTRADA' && !gpsNegado && temLocEmpresa) {
-      const dist = haversine(empLat, empLng, lat!, lng!);
-      if (dist > raioGps)     gpsForaRaio = true;
-      if (dist > raioGps * 3) gpsPrecisaoSuspeita = true;
+      distanciaM = Math.round(haversine(empLat, empLng, lat!, lng!));
+      if (distanciaM > raioGps)     gpsForaRaio = true;
+      if (distanciaM > raioGps * 3) gpsPrecisaoSuspeita = true;
     }
     if (accuracy != null && accuracy < 1) gpsPrecisaoSuspeita = true;
 
     if (tipo === 'ENTRADA' && temLocEmpresa) {
-      if (nivelGps === 'RIGIDO' && !gpsNegado && gpsForaRaio)
-        return res.status(403).json({ erro: 'Você está fora da área autorizada.' });
-      if (nivelGps === 'MAXIMO') {
-        if (gpsNegado) return res.status(403).json({ erro: 'GPS obrigatório. Ative a localização e tente novamente.' });
-        if (gpsForaRaio) return res.status(403).json({ erro: 'Você está fora da área autorizada.' });
+      // GPS negado só bloqueia no nível MAXIMO
+      if (nivelGps === 'MAXIMO' && gpsNegado)
+        return res.status(403).json({ erro: 'GPS obrigatório. Ative a localização e tente novamente.' });
+
+      // Fora do raio sempre bloqueia (independente do nível) — notifica no WA com distância
+      if (!gpsNegado && gpsForaRaio) {
+        if (func.wppJid) {
+          botSend(func.wppJid,
+            `📍 *Ponto não registrado*\n\nVocê está a *${distanciaM}m* da empresa (raio permitido: ${raioGps}m).\n\nAproxime-se e tente novamente pelo link.`
+          ).catch(() => {});
+        }
+        return res.status(403).json({ erro: 'Fora da área autorizada', distancia: distanciaM, raio: raioGps });
       }
     }
 
