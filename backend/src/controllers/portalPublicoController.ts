@@ -998,6 +998,14 @@ export const validarTokenPonto = async (req: Request, res: Response) => {
   if (!t) return res.status(400).json({ erro: 'Token obrigatório' });
 
   try {
+    console.log(`[portal] validarTokenPonto token="${t}" len=${t.length}`);
+
+    // Diagnóstico: raw SQL para confirmar se o dado existe no banco
+    const rawResult = await prisma.$queryRaw<{ id: string; pontoToken: string | null }[]>`
+      SELECT id, "pontoToken" FROM dp_funcionarios WHERE "pontoToken" = ${t} LIMIT 1
+    `;
+    console.log(`[portal] rawSQL: ${JSON.stringify(rawResult)}`);
+
     const func = await prisma.dpFuncionario.findUnique({
       where: { pontoToken: t },
       select: {
@@ -1006,6 +1014,7 @@ export const validarTokenPonto = async (req: Request, res: Response) => {
         empresa: { select: { nome: true } },
       },
     });
+    console.log(`[portal] findUnique: ${func ? `ok id=${func.id}` : 'null'}`);
 
     if (!func) return res.status(404).json({ erro: 'Link inválido ou expirado' });
     if (func.pontoTokenUsadoEm) return res.status(410).json({ erro: 'Este link já foi utilizado' });
