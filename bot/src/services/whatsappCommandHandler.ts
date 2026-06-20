@@ -408,14 +408,19 @@ export async function handleDpPontoKeyword(from: string, text: string): Promise<
   }
 
   const token = randomBytes(16).toString('hex');
-  await (prisma as any).dpFuncionario.update({
-    where: { id: func.id },
-    data: {
-      pontoToken: token,
-      pontoTokenExpiraEm: new Date(Date.now() + 5 * 60 * 1000),
-      pontoTokenUsadoEm: null,
-    },
-  });
+  try {
+    await (prisma as any).dpFuncionario.update({
+      where: { id: func.id },
+      data: {
+        pontoToken: token,
+        pontoTokenExpiraEm: new Date(Date.now() + 5 * 60 * 1000),
+        pontoTokenUsadoEm: null,
+      },
+    });
+  } catch (err) {
+    console.error(`[DP-PONTO] ERRO ao salvar token:`, err);
+    throw err;
+  }
 
   const tipoLabel = proximoTipo === 'ENTRADA' ? '🟢 ENTRADA' : '🔴 SAÍDA';
   const url = `${PORTAL_URL}/ponto.html?t=${token}`;
