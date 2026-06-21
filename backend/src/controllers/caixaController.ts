@@ -1222,12 +1222,30 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
         };
 
         const formattedComissoes = comissoesPendentes.map(ordem => {
-            // Buscar o ganho individual deste lavador nesta ordem
             const relLavador = (ordem.ordemLavadores || []).find((rel: any) => rel.lavadorId === lavadorId);
-            // ganho=0 é válido para lavadors com baseComissao=ADICIONAL sem adicionais na OS
-            const ganhoDoLavador = relLavador
-                ? relLavador.ganho
-                : ordem.comissao;
+            // Determinar baseComissao do lavador — via ordemLavadores (multi) ou lavador primário (único)
+            const lavadorInfo = (relLavador as any)?.lavador ?? (ordem as any).lavador;
+            const base: string = (lavadorInfo as any)?.baseComissao ?? 'OS';
+            const pctLavador: number = (lavadorInfo as any)?.comissao ?? 0;
+            const numLavadores = relLavador
+                ? Math.max(((ordem as any).ordemLavadores || []).length, 1)
+                : 1;
+
+            let ganhoDoLavador: number;
+            if (base === 'ADICIONAL') {
+                // Recalcular em tempo real: apenas sobre itens ADICIONAL (ignora ganho armazenado)
+                const itens: any[] = (ordem as any).items ?? [];
+                const totalAdicionais = itens
+                    .filter((i: any) => i.tipo === 'ADICIONAL')
+                    .reduce((s: number, i: any) => s + (i.subtotal ?? 0), 0);
+                const valorTotal: number = (ordem as any).valorTotal ?? 0;
+                const desconto: number = (ordem as any).desconto ?? 0;
+                const descontoFator = valorTotal > 0 ? (valorTotal - desconto) / valorTotal : 1;
+                ganhoDoLavador = totalAdicionais * descontoFator * ((pctLavador / numLavadores) / 100);
+            } else {
+                ganhoDoLavador = relLavador ? relLavador.ganho : (ordem as any).comissao ?? 0;
+            }
+
             return {
                 id: ordem.id,
                 numeroOrdem: ordem.numeroOrdem,
@@ -1238,13 +1256,13 @@ export const getDadosComissao = async (req: EmpresaRequest, res: Response) => {
                 comissao: ganhoDoLavador,
                 veiculo: ordem.veiculo,
                 cliente: ordem.cliente,
-                servico: ordem.items?.[0]?.servico ?? null,
+                servico: (ordem as any).items?.[0]?.servico ?? null,
                 lavadorId: ordem.lavadorId,
                 lavador: ordem.lavador,
                 ordemLavadores: ordem.ordemLavadores,
                 lavadores: normalizeOrderWashers(ordem)
             };
-        });
+        }).filter(o => o.comissao > 0); // Ordens sem comissão (ex: baseComissao=ADICIONAL sem adicionais) não aparecem
 
         const formattedDebitos = debitosPendentes.map(ordem => ({
             id: ordem.id,
