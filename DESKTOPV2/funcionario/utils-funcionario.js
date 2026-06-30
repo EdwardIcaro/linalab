@@ -268,7 +268,7 @@ function logout() {
     () => {
       showToast('Até logo!', 'success');
       setTimeout(() => {
-        localStorage.clear();
+        if (typeof clearSession === 'function') { clearSession(); } else { localStorage.clear(); }
         window.location.href = '../login.html';
       }, 500);
     }

@@ -1,6 +1,21 @@
 // Use relative URL so Vercel rewrites /api/* to the Railway backend
 const API_BASE_URL = '/api';
 
+// Limpa a sessão preservando dados que devem sobreviver ao logout
+// (ex: 'lx_saved_accounts' — cards de acesso rápido na tela de login).
+// Use SEMPRE esta função em vez de localStorage.clear() ao deslogar.
+const PERSIST_ON_LOGOUT = ['lx_saved_accounts'];
+function clearSession() {
+  const preserved = {};
+  PERSIST_ON_LOGOUT.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) preserved[k] = v;
+  });
+  localStorage.clear();
+  Object.entries(preserved).forEach(([k, v]) => localStorage.setItem(k, v));
+}
+window.clearSession = clearSession;
+
 // Endpoints marcados para buscar dado novo na próxima chamada (cache-bust após escrita)
 const _invalidatedEndpoints = new Set();
 
@@ -42,7 +57,7 @@ async function fetchApi(endpoint, options = {}) {
 
   if (!response.ok) {
     if (response.status === 401) {
-      localStorage.clear();
+      clearSession();
       window.location.href = 'login.html';
     }
     const errorBody = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
@@ -547,7 +562,7 @@ const api = {
   // ===== UTILS =====
   isAuthenticated: () => !!localStorage.getItem('token'),
   logout: () => {
-    localStorage.clear();
+    clearSession();
     window.location.href = 'login.html';
   },
 };
