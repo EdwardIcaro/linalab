@@ -1017,7 +1017,7 @@
             <div class="auth-form-wrapper">
 
                 <!-- VIEW: CARDS (contas salvas) -->
-                <div x-show="viewMode === 'cards'" x-transition.opacity>
+                <div x-show="viewMode === 'cards'" x-transition>
                     <div class="form-header" style="margin-bottom: 28px;">
                         <h2>Bem-vindo de volta</h2>
                         <p>Selecione sua conta</p>
@@ -1043,7 +1043,7 @@
                 </div>
 
                 <!-- VIEW: FORM (login normal ou via card selecionado) -->
-                <div x-show="viewMode === 'form'" x-transition.opacity>
+                <div x-show="viewMode === 'form'" x-transition>
                     <button x-show="savedAccounts.length > 0" @click="backToCards()" class="form-back-btn">
                         <i class="fas fa-arrow-left"></i> Selecionar conta
                     </button>
@@ -1171,7 +1171,7 @@
                 init() {
                     try {
                         this.savedAccounts = JSON.parse(localStorage.getItem(SAVED_ACCOUNTS_KEY) || '[]');
-                    } catch {
+                    } catch (e) {
                         this.savedAccounts = [];
                     }
                     this.viewMode = this.savedAccounts.length > 0 ? 'cards' : 'form';
