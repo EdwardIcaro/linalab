@@ -126,7 +126,10 @@
 
         document.getElementById('__btnSair').addEventListener('click', () => {
             overlay.remove();
+            // Limpeza seletiva — preserva 'lx_saved_accounts' (cards de acesso rápido no login)
+            const savedAccounts = localStorage.getItem('lx_saved_accounts');
             localStorage.clear();
+            if (savedAccounts) localStorage.setItem('lx_saved_accounts', savedAccounts);
             window.location.href = 'login.html';
         });
     }
