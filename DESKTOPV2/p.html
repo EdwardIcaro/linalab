@@ -66,10 +66,19 @@
     .pin-sub  { font-size:13px; color:rgba(255,255,255,.38); text-align:center; margin-bottom:30px; }
     .pin-err  { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.28); border-radius:12px; padding:10px 16px; font-size:13px; color:#fca5a5; text-align:center; margin-bottom:20px; display:flex; align-items:center; gap:8px; justify-content:center; }
     .pin-dots { display:flex; gap:18px; margin-bottom:40px; }
+    .pin-dots.shake { animation:pin-shake .4s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes pin-shake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-8px)} 40%,60%{transform:translateX(8px)} }
     .pin-dot  { width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,.25); background:transparent; transition:all .15s; }
     .pin-dot.on  { background:#fff; border-color:#fff; }
     .pin-dot.err { background:#f87171; border-color:#f87171; }
+    .pin-dot.ok  { background:#34d399; border-color:#34d399; }
+    .pin-dot.loading { background:#fff; border-color:#fff; animation:pin-pulse .8s ease-in-out infinite; }
+    .pin-dot.loading:nth-child(2){ animation-delay:.15s; }
+    .pin-dot.loading:nth-child(3){ animation-delay:.3s; }
+    .pin-dot.loading:nth-child(4){ animation-delay:.45s; }
+    @keyframes pin-pulse { 0%,100%{opacity:.35;transform:scale(.85)} 50%{opacity:1;transform:scale(1.1)} }
     .keypad { width:100%; max-width:264px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .keypad.disabled { opacity:.5; pointer-events:none; }
     .key { aspect-ratio:1; border-radius:50%; border:none; background:rgba(255,255,255,.07); color:#fff; font-size:21px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .1s,transform .1s; user-select:none; -webkit-tap-highlight-color:transparent; }
     .key:active { background:rgba(255,255,255,.2); transform:scale(.9); }
     .key.mt  { background:transparent; pointer-events:none; }
@@ -643,13 +652,13 @@
   </div>
   <div class="pin-ttl" id="pin-ttl">Digite seu PIN</div>
   <div class="pin-sub" id="pin-sub">Insira seu PIN para entrar.</div>
-  <div class="pin-dots">
+  <div class="pin-dots" id="pinDots">
     <div class="pin-dot" id="pd0"></div>
     <div class="pin-dot" id="pd1"></div>
     <div class="pin-dot" id="pd2"></div>
     <div class="pin-dot" id="pd3"></div>
   </div>
-  <div class="keypad">
+  <div class="keypad" id="pinKeypad">
     <button class="key" onclick="tecla('1')">1</button>
     <button class="key" onclick="tecla('2')">2</button>
     <button class="key" onclick="tecla('3')">3</button>
@@ -1015,14 +1024,19 @@ function mostrarPin() {
 }
 
 // ── Teclado PIN ───────────────────────────────────────────────────────────────
+let pinVerificando = false;
+
 function tecla(d) {
+  if (pinVerificando) return;
   if (pinBuffer.length >= 4) return;
+  esconderErroPin();
   pinBuffer += d;
   atualizarDots();
   if (pinBuffer.length === 4) setTimeout(confirmarPin, 120);
 }
 
 function apagar() {
+  if (pinVerificando) return;
   pinBuffer = pinBuffer.slice(0, -1);
   atualizarDots();
   esconderErroPin();
@@ -1035,6 +1049,24 @@ function atualizarDots(erro = false) {
   }
 }
 
+// Aplica uma classe de estado (loading/ok/err) aos 4 dots de uma vez
+function pinDotsClasse(cls) {
+  for (let i = 0; i < 4; i++) document.getElementById(`pd${i}`).className = 'pin-dot ' + cls;
+}
+
+// Liga/desliga o estado "verificando" (dots pulsando + teclado travado)
+function pinSetLoading(on) {
+  pinVerificando = on;
+  document.getElementById('pinKeypad').classList.toggle('disabled', on);
+  if (on) pinDotsClasse('loading');
+}
+
+// Dispara a animação de shake (reinicia a animação a cada chamada)
+function pinShake() {
+  const el = document.getElementById('pinDots');
+  el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+}
+
 function mostrarErroPin(msg) {
   const el = document.getElementById('pin-err');
   document.getElementById('pin-err-txt').textContent = msg;
@@ -1045,10 +1077,10 @@ function esconderErroPin() { document.getElementById('pin-err').style.display = 
 
 async function confirmarPin() {
   const pin = pinBuffer;
-  pinBuffer = '';
-  atualizarDots();
 
   if (pinModo === 'setup') {
+    pinBuffer = '';
+    atualizarDots();
     pinPrimeiro = pin;
     pinModo = 'setup-confirm';
     document.getElementById('pin-ttl').textContent = 'Confirme seu PIN';
@@ -1058,7 +1090,9 @@ async function confirmarPin() {
 
   if (pinModo === 'setup-confirm') {
     if (pin !== pinPrimeiro) {
-      atualizarDots(true);
+      pinBuffer = '';
+      pinDotsClasse('err');
+      pinShake();
       mostrarErroPin('Os PINs não coincidem. Tente novamente.');
       pinModo = 'setup';
       pinPrimeiro = '';
@@ -1075,6 +1109,8 @@ async function confirmarPin() {
 }
 
 async function enviarPin(modo, pin) {
+  esconderErroPin();
+  pinSetLoading(true);        // dots pulsando + teclado travado durante a verificação
   try {
     const r = await fetch(`${API}/p/${linkToken}/pin/${modo}`, {
       method: 'POST',
@@ -1083,16 +1119,29 @@ async function enviarPin(modo, pin) {
     });
     const json = await r.json();
     if (!r.ok) {
-      atualizarDots(true);
-      mostrarErroPin(json.erro || 'Erro ao verificar PIN.');
-      setTimeout(() => { atualizarDots(); esconderErroPin(); }, 1800);
+      pinBuffer = '';
+      pinDotsClasse('err');   // dots vermelhos
+      pinShake();             // + animação de shake
+      mostrarErroPin(json.erro || 'PIN incorreto. Tente novamente.');
+      setTimeout(() => { pinSetLoading(false); atualizarDots(); esconderErroPin(); }, 1500);
       return;
     }
+    // sucesso — dots verdes antes de entrar
+    pinDotsClasse('ok');
     sessionJwt = json.token;
     sessionStorage.setItem(`pjwt_${linkToken}`, sessionJwt);
-    await carregarDados();
+    setTimeout(async () => {
+      pinSetLoading(false);
+      pinBuffer = '';
+      const ok = await carregarDados();
+      if (!ok) { atualizarDots(); mostrarErroPin('Não foi possível carregar seus dados. Tente novamente.'); }
+    }, 350);
   } catch {
+    pinBuffer = '';
+    pinDotsClasse('err');
+    pinShake();
     mostrarErroPin('Sem conexão. Tente novamente.');
+    setTimeout(() => { pinSetLoading(false); atualizarDots(); esconderErroPin(); }, 1500);
   }
 }
 
