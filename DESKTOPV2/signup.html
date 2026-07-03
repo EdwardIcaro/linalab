@@ -11,18 +11,21 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <style>
         :root {
-            --primary: #00BCD4;
-            --primary-dark: #0097A7;
-            --primary-light: #4DD0E1;
-            --secondary: #5DADE2;
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+            --primary-light: #a78bfa;
+            --secondary: #3b82f6;
+            --secondary-light: #60a5fa;
             --success: #10b981;
             --error: #ef4444;
-            --bg-main: #1a8fb8;
-            --bg-card: rgba(255, 255, 255, 0.12);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.85);
-            --border: rgba(255, 255, 255, 0.3);
-            --glow: rgba(0, 188, 212, 0.6);
+            --warning: #f59e0b;
+            --bg-main: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: #334155;
+            --glow: rgba(139, 92, 246, 0.3);
         }
 
         * {
@@ -46,73 +49,59 @@
             inset: 0;
             z-index: 0;
             overflow: hidden;
-            background: linear-gradient(180deg, #5DADE2 0%, #00BCD4 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #2d3748 100%);
         }
 
         .animated-bg::before {
             content: '';
             position: absolute;
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
-            top: -400px;
-            right: -400px;
-            animation: float 20s ease-in-out infinite;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            animation: float-slow 25s ease-in-out infinite;
         }
 
         .animated-bg::after {
             content: '';
             position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(93, 173, 226, 0.3) 0%, transparent 70%);
-            bottom: -300px;
-            left: -300px;
-            animation: float 15s ease-in-out infinite reverse;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            bottom: -150px;
+            left: -150px;
+            animation: float-slow 30s ease-in-out infinite reverse;
+        }
+
+
+        @keyframes float-slow {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, -30px); }
         }
 
         .star-decoration {
             position: absolute;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 40px;
-            animation: starTwinkle 3s ease-in-out infinite;
+            color: rgba(139, 92, 246, 0.3);
+            font-size: 32px;
+            opacity: 0;
         }
 
         .star-decoration:nth-child(1) {
-            bottom: 8%;
-            right: 10%;
-            animation-delay: 0s;
+            bottom: 10%;
+            right: 8%;
         }
 
         .star-decoration:nth-child(2) {
-            top: 15%;
-            left: 12%;
-            font-size: 30px;
-            animation-delay: 1s;
+            top: 12%;
+            left: 10%;
+            font-size: 28px;
         }
 
         .star-decoration:nth-child(3) {
-            top: 60%;
-            right: 15%;
-            font-size: 25px;
-            animation-delay: 2s;
-        }
-
-        @keyframes starTwinkle {
-            0%, 100% {
-                opacity: 0.3;
-                transform: scale(1) rotate(0deg);
-            }
-            50% {
-                opacity: 0.8;
-                transform: scale(1.2) rotate(180deg);
-            }
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            33% { transform: translate(50px, -50px) rotate(120deg); }
-            66% { transform: translate(-50px, 50px) rotate(240deg); }
+            top: 55%;
+            right: 12%;
+            font-size: 24px;
         }
 
         .particles {
@@ -122,11 +111,11 @@
 
         .particle {
             position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.7);
+            width: 2px;
+            height: 2px;
+            background: rgba(139, 92, 246, 0.4);
             border-radius: 50%;
-            opacity: 0.5;
+            opacity: 0.3;
             animation: particle-float linear infinite;
         }
 
@@ -136,10 +125,10 @@
                 opacity: 0;
             }
             10% {
-                opacity: 0.6;
+                opacity: 0.3;
             }
             90% {
-                opacity: 0.6;
+                opacity: 0.3;
             }
             100% {
                 transform: translateY(-100vh) scale(1);
@@ -167,71 +156,39 @@
         .logo-container {
             position: relative;
             margin-bottom: 48px;
-            animation: logoEntrance 1s ease-out;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 240px;
+            min-height: 180px;
         }
 
-        /* Círculos pontilhados concêntricos */
         .logo-rings {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            display: none;
         }
 
         .logo-ring {
+            display: none;
+        }
+
+        .logo-particles-effect {
+            display: none;
+        }
+
+        .logo-particle {
+            display: none;
+        }
+
+        .logo-glow-bg {
             position: absolute;
+            width: 300px;
+            height: 300px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: ringPulse 6s ease-in-out infinite;
-        }
-
-        .logo-ring:nth-child(1) {
-            width: 180px;
-            height: 180px;
-            animation-delay: 0s;
-        }
-
-        .logo-ring:nth-child(2) {
-            width: 220px;
-            height: 220px;
-            animation-delay: 0.5s;
-            opacity: 0.7;
-        }
-
-        .logo-ring:nth-child(3) {
-            width: 260px;
-            height: 260px;
-            animation-delay: 1s;
+            background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+            filter: blur(50px);
             opacity: 0.5;
-        }
-
-        @keyframes ringPulse {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0.3;
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.05);
-                opacity: 0.6;
-            }
-        }
-
-        @keyframes logoEntrance {
-            from {
-                opacity: 0;
-                transform: scale(0.8) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+            z-index: 0;
         }
 
         .logo-main {
@@ -239,156 +196,33 @@
             z-index: 2;
             display: flex;
             align-items: baseline;
-            gap: 6px;
-            animation: logoFloat 6s ease-in-out infinite;
-        }
-
-        @keyframes logoFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-12px); }
+            gap: 8px;
         }
 
         .logo-lina {
             font-family: 'Inter', sans-serif;
-            font-size: 72px;
-            font-weight: 200;
-            letter-spacing: 2px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(77, 208, 225, 0.8) 50%, rgba(93, 173, 226, 0.7) 100%);
+            font-size: 56px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
-            animation: linaAnimation 6s ease-in-out infinite;
             position: relative;
             z-index: 2;
         }
 
         .logo-forge {
             font-family: 'Inter', sans-serif;
-            font-size: 72px;
+            font-size: 56px;
             font-weight: 700;
-            letter-spacing: 2px;
-            color: #ffffff;
-            text-shadow: 0 4px 20px rgba(255, 255, 255, 0.5);
-            animation: forgeAnimation 6s ease-in-out infinite;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             position: relative;
             z-index: 3;
-        }
-
-        /* Lina Animation: appear, move left, come back */
-        @keyframes linaAnimation {
-            0% {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            20% {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            50% {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            60% {
-                opacity: 0;
-                transform: translateX(-80px);
-            }
-            70% {
-                opacity: 0;
-                transform: translateX(80px);
-            }
-            80% {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            100% {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        /* Forge Animation: stay while Lina leaves and comes back */
-        @keyframes forgeAnimation {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            55% {
-                opacity: 0.8;
-                transform: scale(0.95);
-            }
-            60% {
-                opacity: 0.8;
-                transform: scale(0.95);
-            }
-            70% {
-                opacity: 0.8;
-                transform: scale(0.95);
-            }
-            80% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .logo-particles-effect {
-            position: absolute;
-            inset: -60px;
-            z-index: 1;
-        }
-
-        .logo-particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            opacity: 0;
-            animation: particleOrbit 8s ease-in-out infinite;
-        }
-
-        .logo-particle:nth-child(1) { animation-delay: 0s; top: 0%; left: 50%; }
-        .logo-particle:nth-child(2) { animation-delay: 1s; top: 25%; left: 90%; }
-        .logo-particle:nth-child(3) { animation-delay: 2s; top: 75%; left: 90%; }
-        .logo-particle:nth-child(4) { animation-delay: 3s; top: 100%; left: 50%; }
-        .logo-particle:nth-child(5) { animation-delay: 4s; top: 75%; left: 10%; }
-        .logo-particle:nth-child(6) { animation-delay: 5s; top: 25%; left: 10%; }
-
-        @keyframes particleOrbit {
-            0%, 100% {
-                opacity: 0;
-                transform: scale(0);
-            }
-            10%, 90% {
-                opacity: 0.8;
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1.5);
-            }
-        }
-
-        .logo-glow-bg {
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
-            filter: blur(60px);
-            opacity: 0.4;
-            animation: pulseGlow 4s ease-in-out infinite;
-            z-index: 0;
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.2); }
         }
 
         .branding-content {
@@ -397,10 +231,10 @@
         }
 
         .branding-title {
-            font-size: 38px;
+            font-size: 40px;
             font-weight: 800;
             margin-bottom: 16px;
-            background: linear-gradient(135deg, #fff 0%, var(--primary-light) 100%);
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-light) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -408,7 +242,7 @@
         }
 
         .branding-subtitle {
-            font-size: 18px;
+            font-size: 17px;
             color: var(--text-secondary);
             line-height: 1.6;
             margin-bottom: 48px;
@@ -425,44 +259,43 @@
             align-items: flex-start;
             gap: 16px;
             padding: 20px;
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(10px);
-            border: 2px dashed rgba(255,255,255,0.3);
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
             border-radius: 12px;
             transition: all 0.3s ease;
             text-align: left;
         }
 
         .feature-item:hover {
-            background: rgba(255,255,255,0.15);
+            background: rgba(30, 41, 59, 0.95);
             transform: translateX(4px);
-            border-color: rgba(255,255,255,0.5);
+            border-color: var(--primary);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.1);
         }
 
         .feature-icon-circle {
             width: 48px;
             height: 48px;
             min-width: 48px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 20px;
             color: #ffffff;
-            border: 2px dashed rgba(255, 255, 255, 0.5);
         }
 
         .feature-text h4 {
             font-size: 16px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text-primary);
             margin: 0 0 6px 0;
         }
 
         .feature-text p {
             font-size: 13px;
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--text-secondary);
             margin: 0;
             line-height: 1.4;
         }
@@ -479,11 +312,11 @@
             width: 100%;
             max-width: 440px;
             padding: 48px;
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(30, 41, 59, 0.95);
             backdrop-filter: blur(20px);
-            border: 3px dashed rgba(255,255,255,0.4);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
         .form-header {
@@ -494,6 +327,7 @@
             font-size: 32px;
             font-weight: 800;
             margin-bottom: 8px;
+            color: var(--text-primary);
         }
 
         .form-header p {
@@ -521,8 +355,8 @@
             width: 100%;
             padding: 14px 16px 14px 48px;
             background: rgba(255, 255, 255, 0.15);
-            border: 2px dashed rgba(255, 255, 255, 0.6);
-            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 10px;
             font-size: 15px;
             font-family: 'Inter', sans-serif;
             color: var(--text-primary);
@@ -531,10 +365,22 @@
 
         .form-input:focus {
             outline: none;
-            border-style: dashed;
-            border-color: rgba(255, 255, 255, 0.9);
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 16px rgba(77, 208, 225, 0.3);
+        }
+
+        .form-input.error {
+            border-color: rgba(239, 68, 68, 0.6);
+        }
+
+        .form-input.success {
+            border-color: rgba(16, 185, 129, 0.6);
+        }
+
+        .form-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .form-input::placeholder {
@@ -546,37 +392,187 @@
             left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.7);
             transition: color 0.3s ease;
+            pointer-events: none;
         }
 
         .form-input:focus ~ .input-icon {
-            color: #ffffff;
+            color: rgba(77, 208, 225, 1);
+        }
+
+        .input-feedback {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        .input-feedback.success {
+            color: #10b981;
+        }
+
+        .input-feedback.error {
+            color: #ef4444;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 16px;
+            transition: color 0.3s ease;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-toggle:hover {
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .input-wrapper.has-password-toggle .form-input {
+            padding-right: 48px;
+        }
+
+        .input-wrapper.has-feedback .form-input {
+            padding-right: 48px;
         }
 
         .password-strength {
             margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .password-strength-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .password-strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease, background-color 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .password-strength-fill.weak {
+            width: 25%;
+            background-color: #ef4444;
+        }
+
+        .password-strength-fill.fair {
+            width: 50%;
+            background-color: #f59e0b;
+        }
+
+        .password-strength-fill.good {
+            width: 75%;
+            background-color: #3b82f6;
+        }
+
+        .password-strength-fill.strong {
+            width: 100%;
+            background-color: #10b981;
+        }
+
+        .password-strength-text {
             font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
             display: flex;
             align-items: center;
             gap: 6px;
-            color: rgba(255, 255, 255, 0.8);
             transition: color 0.3s ease;
         }
 
-        .password-strength.valid {
+        .password-strength-text.weak { color: #ef4444; }
+        .password-strength-text.fair { color: #f59e0b; }
+        .password-strength-text.good { color: #3b82f6; }
+        .password-strength-text.strong { color: #10b981; }
+
+        .form-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .form-checkbox input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            position: relative;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 2px;
+        }
+
+        .form-checkbox input[type="checkbox"]:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .form-checkbox input[type="checkbox"]:checked {
+            background: rgba(77, 208, 225, 0.3);
+            border-color: rgba(77, 208, 225, 0.8);
+        }
+
+        .form-checkbox input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(77, 208, 225, 1);
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .form-checkbox label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.4;
+            cursor: pointer;
+        }
+
+        .form-checkbox a {
+            color: rgba(77, 208, 225, 0.9);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .form-checkbox a:hover {
             color: #ffffff;
+            text-decoration: underline;
         }
 
         .btn-primary {
             width: 100%;
-            padding: 16px;
-            background: #ffffff;
-            color: #00BCD4;
-            border: 3px solid #ffffff;
-            border-radius: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
             font-size: 15px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -584,16 +580,15 @@
             justify-content: center;
             gap: 10px;
             font-family: 'Inter', sans-serif;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 0.5px;
             margin-top: 12px;
         }
 
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
-            background: #f8f8f8;
+            box-shadow: 0 12px 28px rgba(139, 92, 246, 0.4);
         }
 
         .btn-primary:active:not(:disabled) {
@@ -601,7 +596,7 @@
         }
 
         .btn-primary:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
@@ -619,11 +614,11 @@
         }
 
         .error-message {
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px dashed rgba(255, 100, 100, 0.6);
+            padding: 12px 16px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.4);
             border-radius: 8px;
-            color: #ffffff;
+            color: #fca5a5;
             font-size: 14px;
             margin-bottom: 20px;
             display: flex;
@@ -671,23 +666,156 @@
             z-index: 9999;
         }
 
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalIn 0.3s ease;
+        }
+
+        .modal-content.modal-large {
+            max-width: 600px;
+            max-height: 80vh;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-scroll-content {
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 12px;
+        }
+
+        .modal-scroll-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-scroll-content::-webkit-scrollbar-track {
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 3px;
+        }
+
+        .modal-scroll-content::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .modal-scroll-content::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-light);
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .btn-secondary {
+            padding: 12px 24px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--primary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         @media (max-width: 1024px) {
             .auth-branding {
                 display: none;
             }
         }
 
-        @media (max-width: 480px) {
-            .auth-form-container {
-                padding: 24px;
-            }
-
+        @media (max-width: 768px) {
             .auth-form-wrapper {
-                padding: 32px 24px;
+                padding: 40px 24px;
+                max-width: 100%;
             }
 
             .form-header h2 {
-                font-size: 26px;
+                font-size: 28px;
+            }
+
+            .features-list {
+                gap: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-form-container {
+                padding: 16px;
+            }
+
+            .auth-form-wrapper {
+                padding: 28px 20px;
+                border-radius: 16px;
+            }
+
+            .form-header h2 {
+                font-size: 24px;
+            }
+
+            .form-header p {
+                font-size: 14px;
+            }
+
+            .form-group {
+                margin-bottom: 18px;
+            }
+
+            .btn-primary {
+                font-size: 14px;
+                padding: 14px;
+            }
+
+            .form-checkbox {
+                margin: 16px 0;
+            }
+
+            .form-checkbox label {
+                font-size: 12px;
+            }
+
+            .password-strength-text {
+                font-size: 11px;
             }
         }
     </style>
@@ -697,6 +825,92 @@
 <body x-data="signupApp()" x-cloak>
 
     <div id="toast-container"></div>
+
+    <!-- Modal Termos de Serviço -->
+    <div x-show="showTermsModal" x-transition class="modal-overlay" @click.self="showTermsModal = false">
+        <div class="modal-content modal-large">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                <h3 class="modal-title" style="margin: 0;">Termos de Serviço</h3>
+                <button @click="showTermsModal = false" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 0;">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-scroll-content">
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">1. Aceitação dos Termos</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Ao usar a plataforma Lina Forge, você concorda com estes termos de serviço. Se não concordar com qualquer parte, por favor, não use nossos serviços.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">2. Uso da Plataforma</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Você é responsável por manter a confidencialidade de sua conta e senha. Você concorda em aceitar responsabilidade por todas as atividades que ocorrem em sua conta.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">3. Limitação de Responsabilidade</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    A plataforma é fornecida "como está". Não garantimos que o serviço será ininterrupto ou livre de erros.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">4. Modificações dos Termos</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Reservamos o direito de modificar estes termos a qualquer momento. Atualizações serão notificadas por e-mail.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">5. Contato</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+                    Para dúvidas sobre estes termos, entre em contato através de support@linax.com.br
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <button @click="showTermsModal = false" class="btn-primary" style="flex: 1;">
+                    Entendi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Política de Privacidade -->
+    <div x-show="showPrivacyModal" x-transition class="modal-overlay" @click.self="showPrivacyModal = false">
+        <div class="modal-content modal-large">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                <h3 class="modal-title" style="margin: 0;">Política de Privacidade</h3>
+                <button @click="showPrivacyModal = false" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 0;">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-scroll-content">
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">1. Informações que Coletamos</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Coletamos informações que você fornece diretamente, como nome, e-mail e dados da sua empresa. Também coletamos informações automaticamente sobre como você usa a plataforma.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">2. Como Usamos Suas Informações</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Usamos suas informações para fornecer, melhorar e personalizar nossos serviços, processar pagamentos e comunicar com você.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">3. Proteção de Dados</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Seus dados são protegidos por criptografia de ponta. Implementamos medidas técnicas e organizacionais para proteger sua privacidade.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">4. Compartilhamento de Dados</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                    Não compartilhamos seus dados com terceiros sem seu consentimento, exceto quando exigido por lei.
+                </p>
+
+                <h4 style="color: var(--text-primary); font-size: 16px; font-weight: 700; margin: 20px 0 10px 0;">5. Seus Direitos</h4>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+                    Você tem o direito de acessar, corrigir ou deletar suas informações. Entre em contato conosco para exercer estes direitos.
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <button @click="showPrivacyModal = false" class="btn-primary" style="flex: 1;">
+                    Entendi
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="animated-bg">
         <div class="particles" id="particles"></div>
@@ -793,7 +1007,7 @@
                 <form @submit.prevent="handleSignup">
                     <div class="form-group">
                         <label class="form-label">Nome de Usuário</label>
-                        <div class="input-wrapper">
+                        <div class="input-wrapper has-feedback">
                             <input
                                 type="text"
                                 class="form-input"
@@ -802,46 +1016,90 @@
                                 :disabled="isLoading"
                                 required
                                 autocomplete="username"
+                                aria-label="Nome de usuário"
                             >
                             <i class="input-icon fas fa-user"></i>
+                            <div x-show="nome.length > 0" class="input-feedback success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">E-mail</label>
-                        <div class="input-wrapper">
+                        <div class="input-wrapper has-feedback">
                             <input
                                 type="email"
                                 class="form-input"
                                 placeholder="seu@email.com"
                                 x-model="email"
+                                @blur="validateEmail()"
+                                :class="{ 'error': emailError, 'success': emailValid && email.length > 0 }"
                                 :disabled="isLoading"
                                 required
                                 autocomplete="email"
+                                aria-label="E-mail"
                             >
                             <i class="input-icon fas fa-envelope"></i>
+                            <div x-show="emailValid && email.length > 0" class="input-feedback success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div x-show="emailError" class="input-feedback error">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                        </div>
+                        <div x-show="emailError" class="error-message" style="margin-top: 8px; margin-bottom: 0;">
+                            <span x-text="emailError"></span>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Senha</label>
-                        <div class="input-wrapper">
+                        <div class="input-wrapper has-password-toggle">
                             <input
                                 type="password"
                                 class="form-input"
-                                placeholder="Mínimo 6 caracteres"
+                                placeholder="Mínimo 8 caracteres"
                                 x-model="senha"
+                                @input="updatePasswordStrength()"
                                 :disabled="isLoading"
                                 required
-                                minlength="6"
+                                minlength="8"
                                 autocomplete="new-password"
+                                x-ref="senhaInput"
+                                aria-label="Senha"
                             >
                             <i class="input-icon fas fa-lock"></i>
+                            <button
+                                type="button"
+                                class="password-toggle"
+                                @click="togglePasswordVisibility()"
+                                :title="showPassword ? 'Esconder senha' : 'Mostrar senha'"
+                                aria-label="Toggle visibilidade da senha"
+                            >
+                                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                            </button>
                         </div>
-                        <div class="password-strength" :class="{ 'valid': senha.length >= 6 }">
-                            <i :class="senha.length >= 6 ? 'fas fa-check-circle' : 'fas fa-info-circle'"></i>
-                            <span x-text="senha.length >= 6 ? 'Senha forte!' : 'Mínimo 6 caracteres'"></span>
+                        <div class="password-strength">
+                            <div class="password-strength-bar">
+                                <div class="password-strength-fill" :class="passwordStrengthClass"></div>
+                            </div>
+                            <div class="password-strength-text" :class="passwordStrengthClass" x-text="passwordStrengthText"></div>
                         </div>
+                    </div>
+
+                    <div class="form-checkbox">
+                        <input
+                            type="checkbox"
+                            id="terms"
+                            x-model="aceitaTermos"
+                            :disabled="isLoading"
+                            required
+                        >
+                        <label for="terms">
+                            Concordo com os <a href="#" @click.prevent="openTerms()">Termos de Serviço</a> e
+                            <a href="#" @click.prevent="openPrivacy()">Política de Privacidade</a>
+                        </label>
                     </div>
 
                     <button type="submit" class="btn-primary" :disabled="isLoading || !isFormValid">
@@ -886,9 +1144,87 @@
                 senha: '',
                 isLoading: false,
                 errorMessage: '',
+                showPassword: false,
+                emailError: '',
+                emailValid: false,
+                aceitaTermos: false,
+                passwordStrengthScore: 0,
+                showTermsModal: false,
+                showPrivacyModal: false,
+
+                get passwordStrengthClass() {
+                    if (this.senha.length === 0) return '';
+                    if (this.passwordStrengthScore >= 80) return 'strong';
+                    if (this.passwordStrengthScore >= 60) return 'good';
+                    if (this.passwordStrengthScore >= 40) return 'fair';
+                    return 'weak';
+                },
+
+                get passwordStrengthText() {
+                    if (this.senha.length === 0) return 'Crie uma senha segura';
+                    if (this.passwordStrengthScore >= 80) return '✓ Senha muito forte';
+                    if (this.passwordStrengthScore >= 60) return '✓ Senha boa';
+                    if (this.passwordStrengthScore >= 40) return '⚠ Senha razoável';
+                    return '✗ Senha fraca';
+                },
 
                 get isFormValid() {
-                    return this.nome.trim() && this.email.trim() && this.senha.length >= 6;
+                    return this.nome.trim()
+                        && this.emailValid
+                        && this.senha.length >= 8
+                        && this.passwordStrengthScore >= 40
+                        && this.aceitaTermos;
+                },
+
+                updatePasswordStrength() {
+                    const pwd = this.senha;
+                    let score = 0;
+
+                    if (pwd.length >= 8) score += 20;
+                    if (pwd.length >= 12) score += 10;
+                    if (/[a-z]/.test(pwd)) score += 15;
+                    if (/[A-Z]/.test(pwd)) score += 15;
+                    if (/[0-9]/.test(pwd)) score += 15;
+                    if (/[^a-zA-Z0-9]/.test(pwd)) score += 25;
+
+                    this.passwordStrengthScore = Math.min(score, 100);
+                },
+
+                validateEmail() {
+                    const email = this.email.trim();
+                    this.emailError = '';
+                    this.emailValid = false;
+
+                    if (!email) {
+                        this.emailError = 'E-mail é obrigatório';
+                        return;
+                    }
+
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        this.emailError = 'E-mail inválido';
+                        return;
+                    }
+
+                    this.emailValid = true;
+                },
+
+                togglePasswordVisibility() {
+                    this.showPassword = !this.showPassword;
+                    this.$nextTick(() => {
+                        const input = this.$refs.senhaInput;
+                        if (input) {
+                            input.type = this.showPassword ? 'text' : 'password';
+                        }
+                    });
+                },
+
+                openTerms() {
+                    this.showTermsModal = true;
+                },
+
+                openPrivacy() {
+                    this.showPrivacyModal = true;
                 },
 
                 async handleSignup() {

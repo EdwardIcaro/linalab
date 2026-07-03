@@ -8,6 +8,14 @@ import {
   toggleCompanyStatus,
   clearCache,
 } from '../controllers/adminController';
+import {
+  salvarTelefoneAdmin,
+  confirmarTelefoneAdmin,
+  obterConfigWhatsapp,
+  removerTelefoneAdmin,
+  aprovarReset,
+  rejeitarReset,
+} from '../controllers/recuperacaoSenhaController';
 
 const router: Router = Router();
 
@@ -30,8 +38,18 @@ router.get('/alerts', getRiskAlerts);
 router.get('/engagement', getEngagement);
 
 // Cache management
-// DELETE /api/admin/cache              → limpa todos os caches
-// DELETE /api/admin/cache?empresaId=xx → limpa só aquela empresa
 router.delete('/cache', clearCache);
+
+// ========== NOTIFICAÇÕES E RECUPERAÇÃO DE SENHA ==========
+
+// WhatsApp do admin
+router.post('/whatsapp-telefone', salvarTelefoneAdmin);
+router.get('/confirmar-whatsapp-telefone', confirmarTelefoneAdmin);
+router.get('/config/whatsapp', obterConfigWhatsapp);
+router.delete('/whatsapp-telefone', removerTelefoneAdmin);
+
+// Aprovação/rejeição de reset de senha
+router.post('/resetar-senha/aprovar', aprovarReset);
+router.post('/resetar-senha/rejeitar', rejeitarReset);
 
 export default router;

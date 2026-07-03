@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createUsuario, authenticateUsuario, generateScopedToken, getMeuPerfil, changePassword } from '../controllers/usuarioController';
+import { recuperarSenha, resetarSenha, validarTokenReset } from '../controllers/recuperacaoSenhaController';
 import userAuthMiddleware from '../middlewares/userAuthMiddleware';
 
 const router: Router = Router();
@@ -18,5 +19,14 @@ router.get('/me', userAuthMiddleware, getMeuPerfil);
 
 // Alterar senha
 router.post('/change-password', userAuthMiddleware, changePassword);
+
+// Recuperação de senha - user solicita
+router.post('/recuperar-senha', recuperarSenha);
+
+// Validar token de reset (frontend)
+router.get('/validar-token-reset', validarTokenReset);
+
+// Resetar senha - user confirma com token
+router.post('/resetar-senha', resetarSenha);
 
 export default router;

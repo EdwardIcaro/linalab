@@ -9,15 +9,18 @@ datasource db {
 }
 
 model Usuario {
-  id            String         @id @default(cuid())
-  nome          String         @unique
-  email         String         @unique
-  senha         String
-  role          UserRole       @default(USER)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  empresas      Empresa[]
-  subscriptions Subscription[]
+  id                    String                 @id @default(cuid())
+  nome                  String                 @unique
+  email                 String                 @unique
+  senha                 String
+  role                  UserRole               @default(USER)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  empresas              Empresa[]
+  subscriptions         Subscription[]
+  adminConfig           AdminConfig?
+  tentativasResetSenha  TentativaResetSenha[]
+  recuperacoesSenha     RecuperacaoSenha[]
 
   @@map("usuarios")
 }
@@ -969,4 +972,57 @@ model Gorjeta {
   lavador    Lavador  @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
 
   @@map("gorjetas")
+}
+
+model AdminConfig {
+  id                          String    @id @default(cuid())
+  liniaOwnerId                String    @unique
+  liniaOwner                  Usuario   @relation(fields: [liniaOwnerId], references: [id], onDelete: Cascade)
+
+  whatsappNotificationPhone   String?   // "(11) 99999-8888" - formato brasileiro
+  phoneConfirmed              Boolean   @default(false)
+  phoneConfirmationToken      String?   @unique
+  phoneConfirmationExpiresAt  DateTime?
+
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@index([liniaOwnerId])
+  @@map("admin_configs")
+}
+
+model TentativaResetSenha {
+  id          String   @id @default(cuid())
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  status      String   @default("pending_approval") // pending_approval | approved | rejected
+  ip          String?
+  userAgent   String?
+
+  approvedBy  String?  // adminId que aprovou
+  rejectedBy  String?  // adminId que rejeitou
+  motivo      String?  // motivo da rejeição
+
+  createdAt   DateTime @default(now())
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  expiresAt   DateTime @default(dbgenerated("now() + interval '1 hour'"))
+
+  @@index([usuarioId])
+  @@index([status])
+  @@map("tentativas_reset_senha")
+}
+
+model RecuperacaoSenha {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([token])
+  @@map("recuperacoes_senha")
 }
