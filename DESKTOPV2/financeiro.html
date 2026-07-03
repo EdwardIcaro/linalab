@@ -2521,6 +2521,11 @@
                     <span style="color: var(--finance-text); margin-left: 8px;">Esta ação não pode ser desfeita.</span>
                 </div>
 
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">Observação (opcional)</label>
+                    <textarea class="form-input" x-model="fechamentoModal.observacao" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="resize: vertical; min-height: 80px;"></textarea>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" @click="closeFechamentoModal()">Cancelar</button>
                     <button class="btn btn-danger" @click="confirmarFechamento()" :disabled="fechamentoModal.isClosing">
@@ -2916,7 +2921,8 @@
                     isOpen: false,
                     isLoading: false,
                     isClosing: false,
-                    valores: { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' }
+                    valores: { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' },
+                    observacao: ''
                 },
 
                 // Relatorio Modal
@@ -3681,6 +3687,7 @@
 
                 openFechamentoModal() {
                     this.fechamentoModal.valores = { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' };
+                    this.fechamentoModal.observacao = '';
                     this.fechamentoModal.isOpen = true;
                 },
 
@@ -3697,7 +3704,8 @@
                                 PIX:      parseFloat(this.fechamentoModal.valores.PIX)      || 0,
                                 CARTAO:   parseFloat(this.fechamentoModal.valores.CARTAO)   || 0,
                                 NFE:      parseFloat(this.fechamentoModal.valores.NFE)      || 0,
-                            }
+                            },
+                            observacao: this.fechamentoModal.observacao.trim() || undefined
                         });
                         this.isRegisterOpen = false;
                         this.closeFechamentoModal();

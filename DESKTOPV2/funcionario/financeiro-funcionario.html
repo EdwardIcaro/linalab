@@ -643,6 +643,10 @@
     <div style="padding:10px 14px;background:#fef3c7;border-radius:8px;text-align:center;color:#92400e;font-size:13px;margin-bottom:12px;">
       <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
     </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Observação (opcional)</label>
+      <textarea id="fechObs" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;background:var(--white);resize:vertical;min-height:80px;"></textarea>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeFechamentoModal()">Cancelar</button>
       <button class="btn-confirm btn-confirm-danger" id="btnFechConfirm" onclick="confirmarFechamento()">
@@ -1177,6 +1181,7 @@ async function openFechamentoModal() {
       <div class="flabel">${m.label}</div>
       <input type="number" id="fech_${m.key}" step="0.01" min="0" placeholder="0,00">
     </div>`).join('');
+  document.getElementById('fechObs').value = '';
   document.getElementById('fechamentoModal').classList.add('active');
 }
 function closeFechamentoModal() { document.getElementById('fechamentoModal').classList.remove('active'); }
@@ -1190,9 +1195,10 @@ async function confirmarFechamento() {
     CARTAO:   cfg.CARTAO!==false   ? (parseFloat(document.getElementById('fech_CARTAO')?.value)||0)   : 0,
     NFE:                             (parseFloat(document.getElementById('fech_NFE')?.value)||0),
   };
+  const obs = document.getElementById('fechObs')?.value.trim() || undefined;
   btn.disabled = true; btn.textContent = 'Fechando...';
   try {
-    const r = await window.api.createFechamento({ valoresDigitados: vals });
+    const r = await window.api.createFechamento({ valoresDigitados: vals, observacao: obs });
     caixaStatus.isOpen = false; closeFechamentoModal();
     showToast('Caixa fechado!', 'success');
     await Promise.all([loadBalanceCards(), loadCaixa()]);
