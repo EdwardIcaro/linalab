@@ -241,6 +241,10 @@ export async function notifySaidaRegistrada(empresaId: string, dados: {
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true, notificationPreferences: true } });
     if (!empresa || !prefs(empresa).saidaRegistrada) return;
 
+    // Vales/adiantamentos vêm com a descrição prefixada por "[Adiantamento]".
+    const isVale = /^\[Adiantamento\]/i.test(dados.descricao);
+    const titulo = isVale ? `🧾 *Vale registrado*` : `💸 *Saída registrada*`;
+
     let corpo = `\n📝 ${dados.descricao}\n` +
       `💰 *R$ ${dados.valor.toFixed(2)}* · ${dados.formaPagamento}`;
     if (dados.lancadoPor) corpo += `\n👤 ${dados.lancadoPor}`;
@@ -252,8 +256,8 @@ export async function notifySaidaRegistrada(empresaId: string, dados: {
       empresaNome:  empresa.nome,
       notifKey:     'saidaRegistrada',
       corpo,
-      headerSingle: `💸 *Saída registrada*`,
-      headerMulti:  (nome) => `🏢 *${nome}*\n💸 *Saída registrada*`,
+      headerSingle: titulo,
+      headerMulti:  (nome) => `🏢 *${nome}*\n${titulo}`,
     }]);
   } catch (e) {
     console.error('[Notif] notifySaidaRegistrada:', e);

@@ -461,15 +461,15 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
             });
         }
 
-        // Notificar saída (exceto adiantamentos — esses têm fluxo próprio)
-        if (tipo !== 'Adiantamento') {
-            notifySaidaRegistrada(empresaId, {
-                descricao: registro.descricao,
-                valor: registro.valor,
-                formaPagamento: registro.formaPagamento,
-                lancadoPor: registro.lancadoPor ?? undefined,
-            });
-        }
+        // Notificar admins — tanto despesas quanto vales/adiantamentos.
+        // notifySaidaRegistrada detecta o tipo pela descrição ([Adiantamento]) e
+        // ajusta o título da mensagem.
+        notifySaidaRegistrada(empresaId, {
+            descricao: registro.descricao,
+            valor: registro.valor,
+            formaPagamento: registro.formaPagamento,
+            lancadoPor: registro.lancadoPor ?? undefined,
+        });
 
         res.status(201).json(registro);
     } catch (error) {
