@@ -856,9 +856,12 @@
             <template x-for="r in results" :key="r.clienteId + '-' + (r.veiculoId || 'novo')">
               <div class="dr" @mousedown.prevent="pick(r)">
                 <div class="dr-av" x-text="r.nome[0]?.toUpperCase()"></div>
-                <div>
+                <div style="flex:1;min-width:0">
                   <div class="dr-name" x-text="r.nome"></div>
                   <div class="dr-sub" x-text="(r.modelo && r.modelo !== '—' ? r.modelo + ' · ' : '') + (r.placa && r.placa !== '—' ? r.placa : '')"></div>
+                  <div x-show="r.ultimaOrdem" x-cloak style="font-size:11px;color:#10b981;margin-top:3px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                    📋 Última: <strong x-text="r.ultimaOrdem?.servicos"></strong>
+                  </div>
                 </div>
               </div>
             </template>
@@ -1334,6 +1337,24 @@
           this._buscarTimer = setTimeout(() => this._buscarNow(), 320);
         },
 
+        async _buscarUltimaOrdem(clienteId) {
+          try {
+            const data = await window.api.getOrdens(1, 1, '', 'FINALIZADO', '', clienteId);
+            const ordens = data.ordens || [];
+            if (ordens.length > 0) {
+              const o = ordens[0];
+              return {
+                numero: o.numeroOrdem,
+                servicos: o.items?.map(i => i.nomeServico).join(', ') || 'Serviço'
+              };
+            }
+            return null;
+          } catch (e) {
+            console.error('Erro ao buscar última ordem:', e);
+            return null;
+          }
+        },
+
         async _buscarNow() {
           const q = this.searchQuery.trim();
           if (q.length < 2) {
@@ -1353,6 +1374,7 @@
               try {
                 const r = await window.api.getVeiculoByPlaca(cleanPlate);
                 if (r?.veiculo && r?.cliente) {
+                  const ultimaOrdem = await this._buscarUltimaOrdem(r.cliente.id);
                   this.results = [{
                     clienteId:      r.cliente.id,
                     veiculoId:      r.veiculo.id,
@@ -1363,6 +1385,7 @@
                     cor:            r.veiculo.cor || '',
                     tipoVeiculo:    r.veiculo.tipoVeiculo || null,
                     subtipoVeiculo: r.veiculo.subtipoVeiculo || null,
+                    ultimaOrdem:    ultimaOrdem,
                   }];
                 } else {
                   this.results = [];
@@ -1372,6 +1395,7 @@
               const data = await window.api.getClientes(1, 5, q);
               this.results = [];
               for (const c of (data.clientes || [])) {
+                const ultimaOrdem = await this._buscarUltimaOrdem(c.id);
                 if (c.veiculos?.length > 0) {
                   for (const v of c.veiculos) {
                     this.results.push({
@@ -1382,6 +1406,7 @@
                       placa:     v.placa  || '',
                       telefone:  c.telefone || '',
                       cor:       v.cor || '',
+                      ultimaOrdem: ultimaOrdem,
                     });
                   }
                 } else {
@@ -1393,6 +1418,7 @@
                     placa:     '',
                     telefone:  c.telefone || '',
                     cor:       '',
+                    ultimaOrdem: ultimaOrdem,
                   });
                 }
               }
