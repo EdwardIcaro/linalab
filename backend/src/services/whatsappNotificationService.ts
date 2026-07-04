@@ -233,15 +233,28 @@ export async function notifySaidaRegistrada(empresaId: string, dados: {
   lancadoPor?: string;
 }): Promise<void> {
   try {
-    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { notificationPreferences: true } });
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') return;
+  } catch { return; }
+
+  try {
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true, notificationPreferences: true } });
     if (!empresa || !prefs(empresa).saidaRegistrada) return;
 
-    let msg = `💸 *Saída registrada*\n` +
-      `📝 ${dados.descricao}\n` +
+    let corpo = `\n📝 ${dados.descricao}\n` +
       `💰 *R$ ${dados.valor.toFixed(2)}* · ${dados.formaPagamento}`;
-    if (dados.lancadoPor) msg += `\n👤 ${dados.lancadoPor}`;
+    if (dados.lancadoPor) corpo += `\n👤 ${dados.lancadoPor}`;
 
-    await notifyAdmins(empresaId, msg, 'saidaRegistrada');
+    // sendAdminBlocks adiciona o nome da empresa no cabeçalho automaticamente
+    // quando o admin gerencia mais de uma empresa (headerMulti).
+    await sendAdminBlocks([{
+      empresaId,
+      empresaNome:  empresa.nome,
+      notifKey:     'saidaRegistrada',
+      corpo,
+      headerSingle: `💸 *Saída registrada*`,
+      headerMulti:  (nome) => `🏢 *${nome}*\n💸 *Saída registrada*`,
+    }]);
   } catch (e) {
     console.error('[Notif] notifySaidaRegistrada:', e);
   }
@@ -266,16 +279,30 @@ export async function notifyComissaoFechada(empresaId: string, dados: {
   }
 }
 
-export async function notifyFechamentoCaixa(empresaId: string, fechamentoId: string): Promise<void> {
+export async function notifyFechamentoCaixa(empresaId: string, _fechamentoId?: string): Promise<void> {
   try {
-    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { notificationPreferences: true } });
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') return;
+  } catch { return; }
+
+  try {
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true, notificationPreferences: true } });
     if (!empresa || !prefs(empresa).fechamentoCaixa) return;
 
-    const msg = `💼 *Fechamento de Caixa Disponível*\n\n` +
-      `🔍 Digite: *fc ${fechamentoId}* para ver detalhes\n` +
+    // Comando simples "fechamento do caixa" (já tratado pelo bot) — sem código/ID.
+    const corpo = `\n\n🔍 Digite *fechamento do caixa* para ver os detalhes\n` +
       `(valores digitados, computados e observações)`;
 
-    await notifyAdmins(empresaId, msg, 'fechamentoCaixa');
+    // sendAdminBlocks adiciona o nome da empresa no cabeçalho automaticamente
+    // quando o admin gerencia mais de uma empresa (headerMulti).
+    await sendAdminBlocks([{
+      empresaId,
+      empresaNome:  empresa.nome,
+      notifKey:     'fechamentoCaixa',
+      corpo,
+      headerSingle: `💼 *Fechamento de Caixa Disponível*`,
+      headerMulti:  (nome) => `🏢 *${nome}*\n💼 *Fechamento de Caixa Disponível*`,
+    }]);
   } catch (e) {
     console.error('[Notif] notifyFechamentoCaixa:', e);
   }
