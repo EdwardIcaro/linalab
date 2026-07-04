@@ -223,6 +223,22 @@
       margin-bottom: 8px;
     }
     .sec-lbl b { color: var(--blue); font-weight: 700; }
+    .sec-lbl-row { display: flex; align-items: center; justify-content: space-between; }
+    .sec-lbl-todos {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 11px;
+      border: 1.5px solid var(--blue-m);
+      border-radius: var(--rpill);
+      background: var(--blue-l);
+      color: var(--blue-d);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .2px; text-transform: none;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .sec-lbl-todos:hover { border-color: var(--blue); background: #dbeafe; }
+    .sec-lbl-todos:active { transform: scale(.95); }
+    .sec-lbl-todos i { font-size: 10px; }
 
     /* Tipo */
     .tipo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -358,9 +374,6 @@
       flex-shrink: 0;
     }
     .add-price { font-size: 10px; opacity: .6; font-weight: 500; }
-    /* Botão "Todos os adicionais" */
-    .add-chip-todos { border-style: dashed; color: var(--blue-d); border-color: var(--blue-m); background: var(--blue-l); }
-    .add-chip-todos:hover { border-color: var(--blue); }
 
     /* Lista de adicionais no sheet */
     .add-list { display: flex; flex-direction: column; gap: 8px; }
@@ -852,6 +865,7 @@
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .toast.success i { color: #34d399; }
     .toast.error   i { color: #f87171; }
+    .toast.info    i { color: #fbbf24; }
   </style>
 </head>
 <body x-data="app()" x-init="init()">
@@ -1011,9 +1025,16 @@
 
     <!-- Adicionais -->
     <div class="sec" x-show="adicionais.length > 0" x-cloak>
-      <div class="sec-lbl">
-        Adicionais
-        <b x-show="adds.length > 0" x-text="'· ' + adds.length" x-cloak></b>
+      <div class="sec-lbl sec-lbl-row">
+        <span>
+          Adicionais
+          <b x-show="adds.length > 0" x-text="'· ' + adds.length" x-cloak></b>
+        </span>
+        <!-- Botão: ver todos (ao lado do título) -->
+        <button class="sec-lbl-todos" x-show="adicionais.length > TOP_ADD_COUNT" @click="showAllAdds=true">
+          <i class="fas fa-layer-group"></i>
+          <span x-text="'Todos (' + adicionais.length + ')'"></span>
+        </button>
       </div>
       <div class="chips">
         <!-- Top usados (frequência) -->
@@ -1024,11 +1045,6 @@
             <span class="add-price" x-text="'+ R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span>
           </button>
         </template>
-        <!-- Botão: ver todos -->
-        <button class="add-chip add-chip-todos" x-show="adicionais.length > TOP_ADD_COUNT" @click="showAllAdds=true">
-          <i class="fas fa-plus" style="font-size:10px"></i>
-          <span x-text="'Todos (' + adicionais.length + ')'"></span>
-        </button>
       </div>
     </div>
 
@@ -1541,9 +1557,8 @@
         },
 
         destravarCategoria() {
-          if (confirm('Este veículo está cadastrado nesta categoria. Deseja trocar a categoria do veículo para esta ordem?')) {
-            this.catLocked = false;
-          }
+          this.catLocked = false;
+          showToast('Categoria liberada — selecione a nova', 'info');
         },
 
         async _buscarUltimoServicoId(clienteId) {
@@ -2063,7 +2078,8 @@
       const t = document.createElement('div');
       t.id = '_toast';
       t.className = `toast ${type}`;
-      const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+      const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-unlock' };
+      const icon = icons[type] || icons.success;
       t.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
       document.body.appendChild(t);
       setTimeout(() => t.classList.add('show'), 10);
