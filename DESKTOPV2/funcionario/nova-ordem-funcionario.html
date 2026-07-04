@@ -358,6 +358,34 @@
       flex-shrink: 0;
     }
     .add-price { font-size: 10px; opacity: .6; font-weight: 500; }
+    /* Botão "Todos os adicionais" */
+    .add-chip-todos { border-style: dashed; color: var(--blue-d); border-color: var(--blue-m); background: var(--blue-l); }
+    .add-chip-todos:hover { border-color: var(--blue); }
+
+    /* Lista de adicionais no sheet */
+    .add-list { display: flex; flex-direction: column; gap: 8px; }
+    .add-row {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: var(--white);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .15s;
+    }
+    .add-row.on { border-color: var(--blue); background: var(--blue-l); }
+    .add-row-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: 10px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .add-row-name { flex: 1; text-align: left; font-size: 14px; font-weight: 600; color: var(--text); }
+    .add-row.on .add-row-name { color: var(--blue-d); }
+    .add-row-price { font-size: 13px; font-weight: 700; color: var(--green-d); }
 
     /* Lavadores */
     .lav-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; }
@@ -988,13 +1016,19 @@
         <b x-show="adds.length > 0" x-text="'· ' + adds.length" x-cloak></b>
       </div>
       <div class="chips">
-        <template x-for="a in adicionais" :key="a.id">
+        <!-- Top usados (frequência) -->
+        <template x-for="a in adicionaisTop()" :key="a.id">
           <button class="add-chip" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)">
             <div class="add-tick" x-show="adds.includes(a.id)" x-cloak>✓</div>
             <span x-text="a.nome"></span>
             <span class="add-price" x-text="'+ R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span>
           </button>
         </template>
+        <!-- Botão: ver todos -->
+        <button class="add-chip add-chip-todos" x-show="adicionais.length > TOP_ADD_COUNT" @click="showAllAdds=true">
+          <i class="fas fa-plus" style="font-size:10px"></i>
+          <span x-text="'Todos (' + adicionais.length + ')'"></span>
+        </button>
       </div>
     </div>
 
@@ -1228,6 +1262,44 @@
     </div>
   </div>
 
+  <!-- ══ BOTTOM SHEET: TODOS OS ADICIONAIS ═════ -->
+  <div class="backdrop" x-show="showAllAdds" x-cloak @click.self="showAllAdds=false">
+    <div class="sheet" @click.stop>
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">Adicionais</div>
+          <div class="sheet-sub">Toque para adicionar ou remover</div>
+        </div>
+        <button class="sheet-close" @click="showAllAdds=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div style="position:relative;margin-bottom:14px">
+          <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--light);font-size:13px"></i>
+          <input type="text" x-model="addSearch" placeholder="Buscar adicional..."
+            style="width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none">
+        </div>
+        <div class="add-list">
+          <template x-for="a in adicionaisFiltrados()" :key="a.id">
+            <button class="add-row" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)">
+              <div class="add-row-check" x-show="adds.includes(a.id)" x-cloak>✓</div>
+              <span class="add-row-name" x-text="a.nome"></span>
+              <span class="add-row-price" x-text="'+ R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span>
+            </button>
+          </template>
+          <div x-show="adicionaisFiltrados().length === 0" x-cloak style="text-align:center;color:var(--light);padding:24px 0;font-size:13px">
+            Nenhum adicional encontrado
+          </div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-confirm" @click="showAllAdds=false" style="flex:1">
+          Concluído<span x-show="adds.length > 0" x-text="' · ' + adds.length + ' selecionado(s)'" x-cloak></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ BOTTOM SHEET: SUCESSO ═════════════════ -->
   <div class="backdrop" x-show="sucesso" x-cloak>
     <div class="sheet-success" @click.stop>
@@ -1288,6 +1360,9 @@
         adds: [],       // IDs de adicionais selecionados
         lavs: [],       // IDs de lavadores selecionados
         obs: '',
+        showAllAdds: false, // sheet "todos os adicionais"
+        addSearch: '',      // busca dentro do sheet
+        TOP_ADD_COUNT: 6,   // quantos adicionais "mais usados" mostrar inline
         criando: false, sucesso: false, ordemNum: null,
 
         // ── Dados da API ───────────────────
@@ -1664,8 +1739,32 @@
         async loadAdicionais() {
           try {
             const data = await window.api.getAdicionaisSimple();
-            this.adicionais = data.adicionais || [];
+            const lista = data.adicionais || [];
+            // Ordena por frequência de uso (mais usados primeiro), depois por nome
+            lista.sort((a, b) => {
+              const diff = (b.usoCount || 0) - (a.usoCount || 0);
+              if (diff !== 0) return diff;
+              return a.nome.localeCompare(b.nome, 'pt-BR');
+            });
+            this.adicionais = lista;
           } catch { this.adicionais = []; }
+        },
+
+        // Top N adicionais mais usados + quaisquer selecionados fora do top
+        // (para que o que foi escolhido no sheet continue visível inline)
+        adicionaisTop() {
+          const top = this.adicionais.slice(0, this.TOP_ADD_COUNT);
+          const extras = this.adicionais.filter(a =>
+            this.adds.includes(a.id) && !top.some(t => t.id === a.id)
+          );
+          return [...top, ...extras];
+        },
+
+        // Todos os adicionais filtrados pela busca do sheet
+        adicionaisFiltrados() {
+          const q = this.addSearch.trim().toLowerCase();
+          if (!q) return this.adicionais;
+          return this.adicionais.filter(a => a.nome.toLowerCase().includes(q));
         },
 
         async loadLavadores() {
@@ -1888,6 +1987,7 @@
             formClienteSuggestions: [], formClienteSelecionado: null,
             tipo: null, cat: null, catLocked: false,
             svc: null, adds: [], lavs: [],
+            showAllAdds: false, addSearch: '',
             criando: false, sucesso: false, ordemNum: null,
             ocr: { isOpen: false, stream: null, isProcessing: false, error: null },
             servicos: [],

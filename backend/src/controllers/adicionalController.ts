@@ -39,12 +39,24 @@ export const getAdicionaisSimple = async (req: EmpresaRequest, res: Response) =>
     try {
       const adicionais = await prisma.adicional.findMany({
         where: { empresaId: req.empresaId },
-        select: { id: true, nome: true, preco: true },
+        select: {
+          id: true,
+          nome: true,
+          preco: true,
+          _count: { select: { ordemItems: true } }, // frequência de uso
+        },
         orderBy: { nome: 'asc' },
       });
+      // Expõe usoCount para o frontend ordenar por "mais usados"
+      const resultado = adicionais.map(a => ({
+        id: a.id,
+        nome: a.nome,
+        preco: a.preco,
+        usoCount: a._count.ordemItems,
+      }));
       res.set('Cache-Control', 'private, max-age=300');
       res.set('Vary', 'Authorization');
-      res.json({ adicionais });
+      res.json({ adicionais: resultado });
     } catch (error) {
       res.status(500).json({ error: 'Erro ao buscar adicionais.' });
     }
