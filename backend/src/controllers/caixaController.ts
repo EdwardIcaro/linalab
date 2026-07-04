@@ -47,6 +47,25 @@ type HistoricoItem = {
 
 // getWorkdayRangeBRT importado de dateUtils — timezone correto (BRT/UTC-3)
 
+/**
+ * Retorna a abertura de caixa atualmente EM ABERTO (última abertura sem fechamento
+ * posterior), independente de janela de turno.
+ *
+ * Corrige o bug em que o caixa aberto ANTES do horarioAbertura configurado — ou fechado
+ * APÓS a virada do turno — perdia a referência da abertura e dos pagamentos no cálculo
+ * do fechamento (gerando diferença = tudo o que foi digitado).
+ */
+async function getAberturaAtiva(empresaId: string) {
+    const [ultimaAbertura, ultimoFechamento] = await Promise.all([
+        prisma.aberturaCaixa.findFirst({ where: { empresaId }, orderBy: { data: 'desc' } }),
+        prisma.fechamentoCaixa.findFirst({ where: { empresaId }, orderBy: { data: 'desc' } }),
+    ]);
+    if (!ultimaAbertura) return null;
+    // Já foi fechado depois (ou junto) da última abertura → não há caixa aberto
+    if (ultimoFechamento && ultimoFechamento.data >= ultimaAbertura.data) return null;
+    return ultimaAbertura;
+}
+
 export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     try {
@@ -54,7 +73,11 @@ export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
         const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
-        const [abertura, fechamento] = await Promise.all([
+        // isOpen é determinado pela abertura EM ABERTO (robusto a viradas de turno).
+        // aberturaHoje/fechamentoHoje (janela do dia) só servem para a UI distinguir
+        // "iniciar o dia" (nunca abriu hoje) de "reabrir o caixa" (abriu e fechou).
+        const [aberturaAtiva, aberturaHoje, fechamentoHoje] = await Promise.all([
+            getAberturaAtiva(empresaId),
             prisma.aberturaCaixa.findFirst({
                 where: { empresaId, data: { gte: start, lte: end } },
                 orderBy: { data: 'desc' },
@@ -65,8 +88,10 @@ export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
             }),
         ]);
 
-        const isOpen = !!abertura && !fechamento;
-        const notOpened = !abertura;
+        const abertura = aberturaAtiva;
+        const fechamento = fechamentoHoje;
+        const isOpen = !!aberturaAtiva;
+        const notOpened = !isOpen && !aberturaHoje;
 
         // Parse paymentMethodsConfig
         let paymentMethodsConfig: Record<string, boolean> = { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false };
@@ -80,15 +105,18 @@ export const getStatusCaixa = async (req: EmpresaRequest, res: Response) => {
         }
 
         // Saldo físico em dinheiro (útil para o modal de sangria)
+        // Ancorado no período real da sessão aberta: [abertura → agora]
         let saldoDinheiro = 0;
-        if (isOpen && abertura) {
+        if (abertura) {
+            const sessaoStart = abertura.data;
+            const now = new Date();
             const [pagsDinheiro, saidasDinheiro] = await Promise.all([
                 prisma.pagamento.aggregate({
-                    where: { empresaId, status: 'PAGO', metodo: 'DINHEIRO', pagoEm: { gte: start, lte: end } },
+                    where: { empresaId, status: 'PAGO', metodo: 'DINHEIRO', pagoEm: { gte: sessaoStart, lte: now } },
                     _sum: { valor: true },
                 }),
                 prisma.caixaRegistro.aggregate({
-                    where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, formaPagamento: 'DINHEIRO', data: { gte: start, lte: end } },
+                    where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, formaPagamento: 'DINHEIRO', data: { gte: sessaoStart, lte: now } },
                     _sum: { valor: true },
                 }),
             ]);
@@ -118,16 +146,10 @@ export const abrirCaixa = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { valorInicial = 0, abertoPor } = req.body;
     try {
-        const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
-        const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
-
-        // Validar: caixa já aberto hoje?
-        const aberturaExistente = await prisma.aberturaCaixa.findFirst({
-            where: { empresaId, data: { gte: start, lte: end } },
-        });
-        if (aberturaExistente) {
-            return res.status(400).json({ error: 'O caixa já foi aberto hoje.' });
+        // Validar: já existe caixa EM ABERTO? (permite reabrir após fechamento)
+        const aberturaAtiva = await getAberturaAtiva(empresaId);
+        if (aberturaAtiva) {
+            return res.status(400).json({ error: 'O caixa já está aberto.' });
         }
 
         const responsavel = abertoPor || req.usuarioNome || 'Administrador';
@@ -223,19 +245,18 @@ export const getValoresEsperados = async (req: EmpresaRequest, res: Response) =>
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
-        // Buscar pagamentos e abertura do dia
-        const [pagamentos, abertura] = await Promise.all([
-            prisma.pagamento.findMany({
-                where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
-                select: { valor: true, metodo: true },
-            }),
-            prisma.aberturaCaixa.findFirst({
-                where: { empresaId, data: { gte: start, lte: end } },
-                select: { valorInicial: true },
-            }),
-        ]);
+        // Ancora no período real da sessão aberta: [abertura → agora].
+        // Fallback (sem caixa aberto): janela do turno.
+        const abertura = await getAberturaAtiva(empresaId);
+        const { start, end } = abertura
+            ? { start: abertura.data, end: new Date() }
+            : getWorkdayRangeBRT(new Date(), horarioAbertura);
+
+        const pagamentos = await prisma.pagamento.findMany({
+            where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
+            select: { valor: true, metodo: true },
+        });
 
         // Valores esperados por método
         const esperado: Record<string, number> = {
@@ -264,10 +285,18 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
 
-        // Buscar pagamentos, saídas e abertura do dia
-        const [pagamentos, saidas, abertura] = await Promise.all([
+        // Ancora o cálculo no período REAL da sessão aberta: [abertura → agora].
+        // É isso que corrige o bug de diferença: quando o caixa é aberto antes do
+        // horarioAbertura (ou fechado após virar o turno), a janela de turno perdia a
+        // abertura e os pagamentos. Fallback (sem abertura ativa): janela do turno.
+        const abertura = await getAberturaAtiva(empresaId);
+        const { start, end } = abertura
+            ? { start: abertura.data, end: new Date() }
+            : getWorkdayRangeBRT(new Date(), horarioAbertura);
+
+        // Buscar pagamentos e saídas da sessão
+        const [pagamentos, saidas] = await Promise.all([
             prisma.pagamento.findMany({
                 where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
                 select: { valor: true, metodo: true },
@@ -275,10 +304,6 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
             prisma.caixaRegistro.findMany({
                 where: { empresaId, tipo: { in: ['SAIDA', 'SANGRIA'] }, data: { gte: start, lte: end } },
                 select: { valor: true, formaPagamento: true },
-            }),
-            prisma.aberturaCaixa.findFirst({
-                where: { empresaId, data: { gte: start, lte: end } },
-                select: { valorInicial: true },
             }),
         ]);
 
@@ -464,14 +489,15 @@ export const createSangria = async (req: EmpresaRequest, res: Response) => {
     try {
         const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
         const horarioAbertura = empresa?.horarioAbertura || '07:00';
-        const { start, end } = getWorkdayRangeBRT(new Date(), horarioAbertura);
+
+        // Ancora no período real da sessão aberta: [abertura → agora].
+        const abertura = await getAberturaAtiva(empresaId);
+        const { start, end } = abertura
+            ? { start: abertura.data, end: new Date() }
+            : getWorkdayRangeBRT(new Date(), horarioAbertura);
 
         // Calcular saldo físico disponível em dinheiro
-        const [abertura, pagamentosDinheiro, saidasDinheiro] = await Promise.all([
-            prisma.aberturaCaixa.findFirst({
-                where: { empresaId, data: { gte: start, lte: end } },
-                select: { valorInicial: true },
-            }),
+        const [pagamentosDinheiro, saidasDinheiro] = await Promise.all([
             prisma.pagamento.aggregate({
                 where: { empresaId, status: 'PAGO', metodo: 'DINHEIRO', pagoEm: { gte: start, lte: end } },
                 _sum: { valor: true },
