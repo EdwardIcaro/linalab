@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <style>
     :root {
       --navy:   #0f172a;
@@ -270,6 +271,57 @@
     @media (min-width: 640px) {
       .drawer { left: auto; right: 0; width: 440px; border-radius: 20px 0 0 20px; max-height: 100vh; }
     }
+
+    /* ── CATEGORIAS (drag + toggle) ── */
+    .cat-config { padding: 16px; }
+    .cat-config-hint {
+      font-size: 13px; color: var(--mid); background: #eff6ff;
+      border: 1px solid #bfdbfe; border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 16px; line-height: 1.5;
+    }
+    .cat-config-hint i { color: var(--blue-d); margin-right: 6px; }
+    .cat-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 10px;
+      transition: border-color .15s, opacity .15s;
+    }
+    .cat-item.inativo { opacity: .55; }
+    .cat-item.sortable-ghost { opacity: .3; border-style: dashed; border-color: var(--blue); }
+    .cat-item.sortable-chosen { border-color: var(--blue); box-shadow: 0 4px 12px rgba(59,130,246,.15); }
+    .cat-drag {
+      color: var(--light); font-size: 16px; cursor: grab;
+      touch-action: none; flex-shrink: 0; padding: 4px;
+    }
+    .cat-drag:active { cursor: grabbing; }
+    .cat-name { flex: 1; font-size: 15px; font-weight: 600; color: var(--text); }
+    .cat-name small { display: block; font-size: 11px; font-weight: 400; color: var(--light); margin-top: 1px; }
+    /* Toggle switch */
+    .cat-toggle {
+      position: relative; width: 44px; height: 26px;
+      border-radius: 13px; background: #cbd5e1; cursor: pointer;
+      transition: background .2s; flex-shrink: 0; border: none;
+    }
+    .cat-toggle.on { background: var(--green); }
+    .cat-toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #fff; transition: transform .2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .cat-toggle.on::after { transform: translateX(18px); }
+    .cat-save-bar {
+      position: sticky; bottom: 0; background: var(--white);
+      border-top: 1px solid var(--border); padding: 14px 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .cat-save-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: var(--blue-d); color: #fff; font-size: 15px; font-weight: 700;
+      font-family: inherit; cursor: pointer; transition: background .15s;
+    }
+    .cat-save-btn:hover { background: var(--blue); }
+    .cat-save-btn:disabled { background: var(--light); cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -297,6 +349,9 @@
     <button class="tab-btn" id="tabAdicionais" onclick="setTab('adicionais')">
       <i class="fas fa-star"></i> Adicionais
       <span class="tab-count" id="countAdicionais">—</span>
+    </button>
+    <button class="tab-btn" id="tabCategorias" onclick="setTab('categorias')">
+      <i class="fas fa-layer-group"></i> Categorias
     </button>
   </div>
 
@@ -334,6 +389,8 @@
     let tabAtiva   = 'servicos';
     let servicos   = [];
     let adicionais = [];
+    let categorias = [];       // subtipos de CARRO (TipoVeiculo com categoria)
+    let catSortable = null;    // instância do SortableJS
     let editandoId = null;
 
     const CATS_CARRO = ['HATCH','SEDAN','SUV','PICKUP','CAMINHONETE','VAN','MICROONIBUS','CAMINHAO'];
@@ -359,12 +416,15 @@
     async function carregar() {
       setLoading();
       try {
-        const [rs, ra] = await Promise.all([
+        const [rs, ra, rt] = await Promise.all([
           window.api.getServicos(),
-          window.api.getAdicionais()
+          window.api.getAdicionais(),
+          window.api.getTiposVeiculo()
         ]);
         servicos   = rs.servicos   || [];
         adicionais = ra.adicionais || [];
+        // Só categorias de carro (TipoVeiculo com campo categoria preenchido)
+        categorias = (rt || []).filter(t => t.categoria);
         document.getElementById('countServicos').textContent   = servicos.length;
         document.getElementById('countAdicionais').textContent = adicionais.length;
         atualizarCount();
@@ -385,6 +445,11 @@
     }
 
     function atualizarCount() {
+      if (tabAtiva === 'categorias') {
+        const total = categorias.length;
+        document.getElementById('hd-count').textContent = `${total} categoria${total !== 1 ? 's' : ''}`;
+        return;
+      }
       const total = tabAtiva === 'servicos' ? servicos.length : adicionais.length;
       const nome  = tabAtiva === 'servicos' ? 'serviço' : 'adicional';
       document.getElementById('hd-count').textContent = `${total} ${nome}${total !== 1 ? 's' : ''}`;
@@ -395,13 +460,108 @@
       tabAtiva = tab;
       document.getElementById('tabServicos').classList.toggle('active', tab === 'servicos');
       document.getElementById('tabAdicionais').classList.toggle('active', tab === 'adicionais');
+      document.getElementById('tabCategorias').classList.toggle('active', tab === 'categorias');
+      // Botão "Novo" não faz sentido na aba de categorias
+      document.getElementById('btnNovo').style.display = tab === 'categorias' ? 'none' : '';
       atualizarCount();
       renderTab();
     }
 
     function renderTab() {
       if (tabAtiva === 'servicos') renderServicos();
-      else renderAdicionais();
+      else if (tabAtiva === 'adicionais') renderAdicionais();
+      else renderCategorias();
+    }
+
+    // ── RENDER CATEGORIAS (drag + toggle) ─────────
+    const LABELS_CATEGORIA = {
+      HATCH:'Hatch', SEDAN:'Sedan', SUV:'SUV', PICKUP:'Pickup', VAN:'Van',
+      UTILI:'Utilitário', MONOVOLUME:'Monovolume', COUPE:'Cupê',
+      CONVERSIVEL:'Conversível', MINIVAN:'Minivan', IMPORTADO:'Importado', ESPECIAL:'Especial'
+    };
+
+    function renderCategorias() {
+      const body = document.getElementById('listBody');
+      if (!categorias.length) {
+        body.innerHTML = `
+          <div class="state-box">
+            <i class="fas fa-layer-group state-icon"></i>
+            <div class="state-title">Nenhuma categoria</div>
+            <div class="state-sub">As categorias de carro aparecem aqui conforme os serviços são cadastrados.</div>
+          </div>`;
+        return;
+      }
+
+      const rows = categorias.map(c => {
+        const label = LABELS_CATEGORIA[c.categoria] || c.categoria;
+        const ativo = c.ativo !== false;
+        return `
+          <div class="cat-item ${ativo ? '' : 'inativo'}" data-id="${c.id}">
+            <i class="fas fa-grip-vertical cat-drag" data-drag-handle></i>
+            <div class="cat-name">${label}<small>${c.nome}</small></div>
+            <button class="cat-toggle ${ativo ? 'on' : ''}" onclick="toggleCatAtivo('${c.id}', this)" title="${ativo ? 'Ativo' : 'Oculto'}"></button>
+          </div>`;
+      }).join('');
+
+      body.innerHTML = `
+        <div class="cat-config">
+          <div class="cat-config-hint">
+            <i class="fas fa-info-circle"></i>Arraste para reordenar como as categorias aparecem na Nova Ordem. Use o interruptor para ocultar categorias que não usa.
+          </div>
+          <div id="catList">${rows}</div>
+        </div>
+        <div class="cat-save-bar">
+          <button class="cat-save-btn" id="catSaveBtn" onclick="salvarCategorias()">
+            <i class="fas fa-check"></i> Salvar ordem e visibilidade
+          </button>
+        </div>`;
+
+      // Inicializa drag-and-drop
+      if (catSortable) { catSortable.destroy(); catSortable = null; }
+      const listEl = document.getElementById('catList');
+      catSortable = Sortable.create(listEl, {
+        handle: '[data-drag-handle]',
+        animation: 160,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+      });
+    }
+
+    function toggleCatAtivo(id, btn) {
+      const cat = categorias.find(c => c.id === id);
+      if (!cat) return;
+      cat.ativo = !(cat.ativo !== false);
+      btn.classList.toggle('on', cat.ativo);
+      btn.closest('.cat-item').classList.toggle('inativo', !cat.ativo);
+      btn.title = cat.ativo ? 'Ativo' : 'Oculto';
+    }
+
+    async function salvarCategorias() {
+      const btn = document.getElementById('catSaveBtn');
+      const listEl = document.getElementById('catList');
+      // Lê a ordem atual do DOM
+      const ids = [...listEl.querySelectorAll('.cat-item')].map(el => el.dataset.id);
+      const itens = ids.map((id, idx) => {
+        const cat = categorias.find(c => c.id === id);
+        return { id, ordem: idx, ativo: cat ? (cat.ativo !== false) : true };
+      });
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spin" style="width:16px;height:16px;border-width:2px;display:inline-block"></div> Salvando...';
+      try {
+        await window.api.reordenarTiposVeiculo(itens);
+        // Atualiza estado local com a nova ordem
+        itens.forEach(it => {
+          const c = categorias.find(x => x.id === it.id);
+          if (c) { c.ordem = it.ordem; c.ativo = it.ativo; }
+        });
+        categorias.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999));
+        showToast('Categorias atualizadas!', 'success');
+      } catch (e) {
+        showToast(e?.error || e?.message || 'Erro ao salvar categorias', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Salvar ordem e visibilidade';
+      }
     }
 
     // ── RENDER SERVIÇOS ───────────────────────────

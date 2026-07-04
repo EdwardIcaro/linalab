@@ -434,6 +434,7 @@ const api = {
 
   // ===== TIPOS DE VEÍCULO =====
   getTiposVeiculo: () => fetchApi('/tipos-veiculo'),
+  reordenarTiposVeiculo: (itens) => fetchApi('/tipos-veiculo/reordenar', { method: 'PUT', body: JSON.stringify({ itens }) }),
 
   // ===== NOTIFICAÇÕES =====
   getNotificacoes: () => fetchApi('/notificacoes'),

@@ -1796,26 +1796,17 @@
             return;
           }
 
-          // Filtrar tipos de veículo pelo tipo selecionado e extrair categorias
-          const tiposFiltrados = this.tiposVeiculo.filter(tv => tv.nome === this.tipo);
+          // Filtrar tipos do tipo selecionado, apenas ATIVOS.
+          // this.tiposVeiculo já vem ordenado por 'ordem' (backend) → preservamos a ordem.
+          const tiposFiltrados = this.tiposVeiculo.filter(tv =>
+            tv.nome === this.tipo && tv.ativo !== false && tv.categoria
+          );
 
-          // Extrair categorias únicas (campo 'categoria')
-          const categoriasSet = new Set();
-          for (const tipo of tiposFiltrados) {
-            if (tipo.categoria) {
-              categoriasSet.add(tipo.categoria);
-            }
-          }
-
-          // Se não há categorias, mostra todas do tipo (sem filtro de categoria)
-          if (categoriasSet.size === 0) {
-            console.log(`[Nova Ordem] Tipo "${this.tipo}" tem ${tiposFiltrados.length} tipo(s) sem categoria específica`);
+          if (tiposFiltrados.length === 0) {
             this.cats = [];
             return;
           }
 
-          // Converter Set para array de objetos { k, l }
-          // Tenta usar labels mais amigáveis
           const labelMap = {
             'HATCH': 'Hatch',
             'SEDAN': 'Sedan',
@@ -1831,14 +1822,14 @@
             'ESPECIAL': 'Especial',
           };
 
-          this.cats = Array.from(categoriasSet)
-            .map(cat => ({
-              k: cat,
-              l: labelMap[cat] || cat
-            }))
-            .sort((a, b) => a.l.localeCompare(b.l, 'pt-BR'));
-
-          console.log(`[Nova Ordem] Categorias para "${this.tipo}":`, this.cats);
+          // Coleta categorias únicas preservando a ordem definida pela empresa
+          const vistas = new Set();
+          this.cats = [];
+          for (const tv of tiposFiltrados) {
+            if (vistas.has(tv.categoria)) continue;
+            vistas.add(tv.categoria);
+            this.cats.push({ k: tv.categoria, l: labelMap[tv.categoria] || tv.categoria });
+          }
         },
 
         // ── Seleção ────────────────────────

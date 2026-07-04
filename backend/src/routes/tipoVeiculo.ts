@@ -5,7 +5,8 @@ import {
   getTipoVeiculoById,
   updateTipoVeiculo,
   deleteTipoVeiculo,
-  getSubtiposByTipo
+  getSubtiposByTipo,
+  reordenarTiposVeiculo
 } from '../controllers/tipoVeiculoController';
 
 const router: Router = Router();
@@ -13,6 +14,7 @@ const router: Router = Router();
 // Rotas de tipos de veículo (ex: /api/tipos-veiculo)
 router.post('/', createTipoVeiculo);
 router.get('/', getTiposVeiculo);
+router.put('/reordenar', reordenarTiposVeiculo); // antes de /:id para não colidir
 router.get('/:id', getTipoVeiculoById);
 router.put('/:id', updateTipoVeiculo);
 router.delete('/:id', deleteTipoVeiculo);

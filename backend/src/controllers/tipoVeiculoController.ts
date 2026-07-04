@@ -47,6 +47,7 @@ export const getTiposVeiculo = async (req: EmpresaRequest, res: Response) => {
         empresaId: req.empresaId,
       },
       orderBy: [
+        { ordem: { sort: 'asc', nulls: 'last' } }, // respeita ordem definida; sem ordem vai ao fim
         { nome: 'asc' },
         { categoria: 'asc' },
       ],
@@ -54,6 +55,38 @@ export const getTiposVeiculo = async (req: EmpresaRequest, res: Response) => {
     res.json(tiposVeiculo);
   } catch (error) {
     console.error('Erro ao listar tipos de veículo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * Reordenar e ativar/desativar categorias em lote.
+ * Body: { itens: [{ id, ordem, ativo }] }
+ */
+export const reordenarTiposVeiculo = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId;
+    const { itens } = req.body as { itens: Array<{ id: string; ordem: number; ativo?: boolean }> };
+
+    if (!Array.isArray(itens)) {
+      return res.status(400).json({ error: 'Formato inválido: itens deve ser um array.' });
+    }
+
+    await prisma.$transaction(
+      itens.map((item) =>
+        prisma.tipoVeiculo.updateMany({
+          where: { id: item.id, empresaId },
+          data: {
+            ordem: item.ordem,
+            ...(typeof item.ativo === 'boolean' ? { ativo: item.ativo } : {}),
+          },
+        })
+      )
+    );
+
+    res.json({ message: 'Categorias reordenadas com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao reordenar tipos de veículo:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
