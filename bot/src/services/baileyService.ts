@@ -616,7 +616,17 @@ export function getQrGeneratedAt(): number | null { return qrGeneratedAt; }
 
 export async function sendMessage(to: string, text: string): Promise<void> {
   if (!globalSocket) throw new Error('Bot Lina não está conectado');
-  const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+  let jid: string;
+  if (to.includes('@')) {
+    jid = to;
+  } else {
+    // Sanitiza (remove '+', espaços, parênteses) e resolve o JID real via onWhatsApp.
+    // Evita JID inválido (com '+') e a variação do 9º dígito no Brasil — se não
+    // resolver, cai no fallback de JID direto (dígitos limpos).
+    const cleanPhone = to.replace(/\D/g, '');
+    const resolved = await resolvePhoneToJid(cleanPhone);
+    jid = resolved || `${cleanPhone}@s.whatsapp.net`;
+  }
   await globalSocket.sendMessage(jid, { text });
 }
 

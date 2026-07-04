@@ -11,9 +11,11 @@ const validarTelefone = (telefone: string): boolean => {
   return regex.test(telefone);
 };
 
-// Função auxiliar: remover formatação telefone
+// Função auxiliar: remover formatação telefone → apenas dígitos com DDI 55.
+// ⚠️ NÃO incluir '+': o JID do WhatsApp é `55DDDNUMERO@s.whatsapp.net` (sem '+').
+// Com '+' o Baileys envia para um JID inválido e a mensagem cai no vácuo.
 const removerFormatacaoTelefone = (telefone: string): string => {
-  return '+55' + telefone.replace(/\D/g, '');
+  return '55' + telefone.replace(/\D/g, '');
 };
 
 // Função auxiliar: gerar token aleatório
