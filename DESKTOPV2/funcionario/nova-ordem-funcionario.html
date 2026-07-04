@@ -284,6 +284,8 @@
     }
     .chip:hover { border-color: var(--blue-m); }
     .chip.on { border-color: var(--blue); background: var(--blue-l); color: var(--blue-d); }
+    .chip-trocar { border-style: dashed; color: var(--mid); border-color: var(--border); display: inline-flex; align-items: center; gap: 4px; }
+    .chip-trocar:hover { border-color: var(--amber); color: var(--amber); }
 
     /* Serviços */
     .svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -895,7 +897,7 @@
       <button class="ct-edit" @click="abrirFormEdicao()" title="Editar">
         <i class="fas fa-pencil-alt"></i>
       </button>
-      <button class="ct-x" @click="cliente=null; ultimoServicoId=null; searchQuery=''">✕</button>
+      <button class="ct-x" @click="cliente=null; ultimoServicoId=null; catLocked=false; searchQuery=''">✕</button>
     </div>
   </div>
 
@@ -931,7 +933,15 @@
     <!-- Categoria (só CARRO) -->
     <div class="sec" x-show="tipo==='CARRO'" x-cloak>
       <div class="sec-lbl">Categoria</div>
-      <div class="chips">
+      <!-- Trancada: veículo cadastrado com categoria → mostra só ela + botão trocar -->
+      <div class="chips" x-show="catLocked" x-cloak>
+        <button class="chip on" x-text="(cats.find(c => c.k === cat)?.l) || cat"></button>
+        <button class="chip chip-trocar" @click="destravarCategoria()">
+          <i class="fas fa-pencil-alt" style="font-size:10px"></i> trocar
+        </button>
+      </div>
+      <!-- Livre: todas as categorias -->
+      <div class="chips" x-show="!catLocked">
         <template x-for="c in cats" :key="c.k">
           <button class="chip" :class="{on: cat===c.k}" @click="cat=c.k" x-text="c.l"></button>
         </template>
@@ -1273,6 +1283,7 @@
 
         // ── Ordem ──────────────────────────
         tipo: null, cat: null,
+        catLocked: false, // categoria travada na do veículo cadastrado
         svc: null,
         adds: [],       // IDs de adicionais selecionados
         lavs: [],       // IDs de lavadores selecionados
@@ -1435,6 +1446,7 @@
           this.searchQuery = '';
           this.showDrop = false;
           this.svc = null;
+          this.catLocked = false;
 
           // Busca o último serviço ANTES de carregar serviços, para que
           // loadServicos() consiga auto-selecionar o card correto.
@@ -1448,7 +1460,14 @@
             this.atualizarCategorias();
             if (r.subtipoVeiculo && this.cats.some(c => c.k === r.subtipoVeiculo)) {
               this.cat = r.subtipoVeiculo;
+              this.catLocked = true; // trava na categoria cadastrada do veículo
             }
+          }
+        },
+
+        destravarCategoria() {
+          if (confirm('Este veículo está cadastrado nesta categoria. Deseja trocar a categoria do veículo para esta ordem?')) {
+            this.catLocked = false;
           }
         },
 
@@ -1867,7 +1886,7 @@
             cliente: null, _linkClienteId: null, ultimoServicoId: null,
             showForm: false, formEdicao: false,
             formClienteSuggestions: [], formClienteSelecionado: null,
-            tipo: null, cat: null,
+            tipo: null, cat: null, catLocked: false,
             svc: null, adds: [], lavs: [],
             criando: false, sucesso: false, ordemNum: null,
             ocr: { isOpen: false, stream: null, isProcessing: false, error: null },
