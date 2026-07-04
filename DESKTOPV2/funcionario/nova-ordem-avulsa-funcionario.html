@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Entrada Avulsa — Lina X</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --navy:#0f172a; --purple:#7c3aed; --purple-d:#6d28d9; --purple-l:#f5f3ff; --purple-m:#ddd6fe;
+      --text:#0f172a; --mid:#64748b; --light:#94a3b8; --border:#e2e8f0; --bg:#f8fafc; --white:#fff;
+      --green:#10b981; --green-d:#059669; --red:#ef4444; --r:10px; --rpill:999px;
+    }
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Inter',-apple-system,sans-serif; height:100dvh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; overflow:hidden; }
+    [x-cloak] { display:none !important; }
+    button { font-family:inherit; }
+
+    /* Header */
+    .hd { flex-shrink:0; background:var(--navy); padding:14px 16px; z-index:40; }
+    .hd-row { display:flex; align-items:center; justify-content:space-between; }
+    .hd-left { display:flex; align-items:center; gap:10px; }
+    .btn-back { width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.1); border:1.5px solid rgba(255,255,255,.15); color:rgba(255,255,255,.8); display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; text-decoration:none; }
+    .hd-title { font-size:18px; font-weight:800; color:#fff; letter-spacing:-.3px; }
+    .hd-sub { font-size:11px; color:rgba(255,255,255,.4); margin-top:1px; }
+    .hd-badge { background:rgba(124,58,237,.25); border:1px solid rgba(124,58,237,.4); border-radius:var(--rpill); padding:4px 12px; font-size:11px; font-weight:700; color:#c4b5fd; }
+
+    /* Body */
+    .body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:90px; }
+    .sec { background:var(--white); border-bottom:1px solid var(--border); padding:14px 16px; }
+    .sec-lbl { font-size:10px; font-weight:700; color:var(--light); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+    .sec-lbl b { color:var(--purple); }
+    .sec-empty { text-align:center; color:var(--light); font-size:13px; padding:14px 0; }
+
+    /* Chips (itens) */
+    .chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip { flex-shrink:0; padding:9px 15px; border:2px solid var(--border); border-radius:var(--rpill); background:var(--bg); cursor:pointer; font-size:13px; font-weight:600; color:var(--mid); white-space:nowrap; transition:all .15s; }
+    .chip:hover { border-color:var(--purple-m); }
+    .chip.on { border-color:var(--purple); background:var(--purple-l); color:var(--purple-d); }
+
+    /* Serviços */
+    .svc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .svc-card { position:relative; overflow:hidden; padding:11px 12px 11px 16px; border:2px solid var(--border); border-radius:var(--r); background:var(--bg); cursor:pointer; transition:all .15s; }
+    .svc-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--border); }
+    .svc-card.on { border-color:var(--purple); background:var(--purple-l); }
+    .svc-card.on::before { background:var(--purple); }
+    .svc-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:1px; }
+    .svc-card.on .svc-name { color:var(--purple-d); }
+    .svc-price { font-size:18px; font-weight:800; color:var(--text); }
+    .svc-card.on .svc-price { color:var(--purple-d); }
+    .svc-check { position:absolute; top:8px; right:8px; width:18px; height:18px; border-radius:50%; background:var(--purple); color:#fff; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0); transition:all .2s; }
+    .svc-card.on .svc-check { opacity:1; transform:scale(1); }
+
+    /* Valor na hora */
+    .valor-hora-btn { display:flex; align-items:center; gap:8px; width:100%; padding:12px 14px; border:2px dashed var(--purple-m); border-radius:var(--r); background:var(--purple-l); color:var(--purple-d); font-size:13px; font-weight:700; cursor:pointer; margin-top:8px; }
+    .valor-hora-btn.on { border-style:solid; background:var(--purple); color:#fff; }
+    .valor-hora-box { margin-top:10px; display:grid; gap:8px; }
+    .inp { width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:var(--r); font-size:14px; font-family:inherit; outline:none; background:var(--white); transition:border-color .15s; }
+    .inp:focus { border-color:var(--purple); }
+    .qtd-row { display:flex; align-items:center; gap:12px; margin-top:10px; }
+    .qtd-lbl { font-size:13px; font-weight:600; color:var(--mid); }
+    .qtd-ctl { display:flex; align-items:center; gap:0; border:1.5px solid var(--border); border-radius:var(--r); overflow:hidden; }
+    .qtd-btn { width:38px; height:38px; border:none; background:var(--bg); color:var(--purple-d); font-size:18px; font-weight:700; cursor:pointer; }
+    .qtd-val { width:44px; text-align:center; font-size:15px; font-weight:700; }
+
+    /* Cliente */
+    .cli-search { position:relative; }
+    .cli-input { width:100%; padding:11px 14px 11px 40px; border:1.5px solid var(--border); border-radius:var(--r); font-size:14px; font-family:inherit; outline:none; background:var(--white); }
+    .cli-input:focus { border-color:var(--purple); }
+    .cli-search .fa-search { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--light); font-size:13px; }
+    .dropdown { margin-top:8px; border:1.5px solid var(--border); border-radius:var(--r); overflow:hidden; max-height:240px; overflow-y:auto; }
+    .dr { display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer; border-bottom:1px solid var(--border); }
+    .dr:last-child { border-bottom:none; }
+    .dr:active { background:var(--purple-l); }
+    .dr-av { width:34px; height:34px; border-radius:50%; background:var(--purple-l); color:var(--purple-d); font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .dr-av.new { background:var(--purple); color:#fff; }
+    .dr-name { font-size:14px; font-weight:600; color:var(--text); }
+    .dr-sub { font-size:12px; color:var(--light); }
+    .cli-tag { display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid var(--purple); background:var(--purple-l); border-radius:var(--r); }
+    .ct-av { width:38px; height:38px; border-radius:50%; background:var(--purple); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .ct-name { font-size:14px; font-weight:700; color:var(--text); }
+    .ct-info { font-size:12px; color:var(--mid); }
+    .ct-x { width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.06); border:none; color:var(--mid); cursor:pointer; font-size:13px; flex-shrink:0; }
+
+    /* Lavadores */
+    .lav-row { display:flex; flex-wrap:wrap; gap:10px; }
+    .lav { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
+    .lav-av { width:44px; height:44px; border-radius:50%; border:2.5px solid var(--border); background:var(--bg); color:var(--mid); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; transition:all .15s; }
+    .lav.on .lav-av { border-color:var(--purple); background:var(--purple-l); color:var(--purple-d); }
+    .lav-nm { font-size:11px; font-weight:600; color:var(--mid); max-width:56px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lav.on .lav-nm { color:var(--purple-d); }
+
+    textarea.inp { resize:vertical; min-height:70px; }
+
+    /* Footer */
+    .footer { position:fixed; bottom:0; left:0; right:0; padding:12px 16px; padding-bottom:max(14px,env(safe-area-inset-bottom)); background:var(--white); border-top:1px solid var(--border); z-index:40; }
+    .btn-criar { width:100%; padding:15px; border:none; border-radius:12px; background:var(--purple); color:#fff; font-size:15px; font-weight:800; cursor:pointer; transition:opacity .15s; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-criar:disabled { background:var(--light); cursor:not-allowed; }
+
+    /* Backdrop / sheet */
+    .backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); backdrop-filter:blur(4px); display:flex; align-items:flex-end; z-index:90; }
+    .sheet { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-height:90dvh; display:flex; flex-direction:column; animation:slideUp .3s cubic-bezier(.34,1.4,.64,1); }
+    @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:14px auto 0; }
+    .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:1px solid var(--border); }
+    .sheet-title { font-size:16px; font-weight:800; }
+    .sheet-close { width:30px; height:30px; border-radius:50%; background:var(--bg); border:none; color:var(--mid); font-size:14px; cursor:pointer; }
+    .sheet-body { padding:16px 20px; overflow-y:auto; }
+    .sheet-footer { display:flex; gap:8px; padding:12px 20px; padding-bottom:max(16px,env(safe-area-inset-bottom)); border-top:1px solid var(--border); }
+    .fld { margin-bottom:12px; }
+    .fld label { display:block; font-size:12px; font-weight:600; color:var(--mid); margin-bottom:5px; }
+    .fld label span { color:var(--red); }
+    .btn-cancel { flex:1; padding:13px; border:1.5px solid var(--border); border-radius:12px; background:var(--white); color:var(--mid); font-size:14px; font-weight:700; cursor:pointer; }
+    .btn-confirm { flex:2; padding:13px; border:none; border-radius:12px; background:var(--purple); color:#fff; font-size:14px; font-weight:800; cursor:pointer; }
+
+    /* Sucesso */
+    .sheet-success { background:var(--white); border-radius:24px 24px 0 0; width:100%; padding:0 24px 32px; text-align:center; animation:slideUp .3s cubic-bezier(.34,1.4,.64,1); }
+    .s-ring { width:72px; height:72px; border-radius:50%; background:var(--purple-l); color:var(--purple-d); display:flex; align-items:center; justify-content:center; font-size:34px; margin:8px auto 16px; }
+    .s-title { font-size:20px; font-weight:800; }
+    .s-sub { font-size:13px; color:var(--light); margin-top:4px; }
+    .s-num { font-size:14px; font-weight:700; color:var(--purple-d); margin:14px 0; }
+    .btn-nova { width:100%; padding:14px; border:none; border-radius:12px; background:var(--purple); color:#fff; font-size:15px; font-weight:800; cursor:pointer; margin-bottom:10px; }
+    .btn-dash { display:block; padding:12px; color:var(--mid); font-size:14px; font-weight:600; text-decoration:none; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(16px); background:#1f2937; color:#fff; padding:11px 18px; border-radius:12px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(0,0,0,.22); opacity:0; transition:opacity .25s,transform .25s; z-index:999; pointer-events:none; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.success i { color:#34d399; } .toast.error i { color:#f87171; }
+    .spin { width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; }
+    @keyframes sp { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body x-data="avulsa()" x-init="init()">
+
+  <!-- HEADER -->
+  <div class="hd">
+    <div class="hd-row">
+      <div class="hd-left">
+        <a href="../index-funcionario.html" class="btn-back"><i class="fas fa-arrow-left"></i></a>
+        <div>
+          <div class="hd-title">Entrada Avulsa</div>
+          <div class="hd-sub">Tapete, banco, sofá e afins</div>
+        </div>
+      </div>
+      <div class="hd-badge">🧺 Avulso</div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+    <!-- ITEM -->
+    <div class="sec">
+      <div class="sec-lbl">O que está lavando?</div>
+      <div class="sec-empty" x-show="loadingItens" x-cloak>Carregando itens...</div>
+      <div class="chips" x-show="!loadingItens">
+        <template x-for="it in itens" :key="it.key">
+          <button class="chip" :class="{on: item===it.key}" @click="selecionarItem(it.key)" x-text="it.label"></button>
+        </template>
+        <button class="chip" :class="{on: item==='OUTROS'}" @click="selecionarItem('OUTROS')">Outros</button>
+      </div>
+    </div>
+
+    <!-- SERVIÇO -->
+    <div class="sec" x-show="item" x-cloak>
+      <div class="sec-lbl">Serviço</div>
+
+      <!-- Serviços cadastrados (não aparece em Outros) -->
+      <div class="sec-empty" x-show="item!=='OUTROS' && loadingServicos" x-cloak>Carregando serviços...</div>
+      <div class="svc-grid" x-show="item!=='OUTROS' && !loadingServicos && servicos.length > 0">
+        <template x-for="s in servicos" :key="s.id">
+          <div class="svc-card" :class="{on: svc?.id===s.id}" @click="pickServico(s)">
+            <div class="svc-check">✓</div>
+            <div class="svc-name" x-text="s.nome"></div>
+            <div class="svc-price" x-text="'R$ ' + Number(s.preco||0).toFixed(2).replace('.',',')"></div>
+          </div>
+        </template>
+      </div>
+      <div class="sec-empty" x-show="item!=='OUTROS' && !loadingServicos && servicos.length===0" x-cloak>
+        Nenhum serviço cadastrado para este item. Use "valor na hora".
+      </div>
+
+      <!-- Valor na hora -->
+      <button class="valor-hora-btn" :class="{on: modoValorHora}" @click="toggleValorHora()">
+        <i class="fas fa-pen"></i>
+        <span x-text="modoValorHora ? 'Valor na hora (ativo)' : 'Colocar valor na hora'"></span>
+      </button>
+      <div class="valor-hora-box" x-show="modoValorHora" x-cloak>
+        <input type="text" class="inp" x-model="vhNome" placeholder="Nome do serviço (ex: Higienização)">
+        <input type="number" class="inp" x-model="vhPreco" step="0.01" min="0.01" placeholder="Valor R$ 0,00">
+      </div>
+
+      <!-- Quantidade -->
+      <div class="qtd-row">
+        <span class="qtd-lbl">Quantidade</span>
+        <div class="qtd-ctl">
+          <button class="qtd-btn" @click="qtd = Math.max(1, qtd-1)">−</button>
+          <span class="qtd-val" x-text="qtd"></span>
+          <button class="qtd-btn" @click="qtd = qtd+1">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTE (obrigatório) -->
+    <div class="sec" x-show="item" x-cloak>
+      <div class="sec-lbl">Cliente <b>*</b></div>
+      <template x-if="!cliente">
+        <div>
+          <div class="cli-search">
+            <i class="fas fa-search"></i>
+            <input type="text" class="cli-input" x-model="searchQuery" @input="buscar()" placeholder="Buscar cliente por nome ou telefone...">
+          </div>
+          <div class="dropdown" x-show="showDrop" x-cloak>
+            <div class="dr" x-show="buscando"><span class="dr-sub">Buscando...</span></div>
+            <template x-for="r in results" :key="r.id">
+              <div class="dr" @click="pickCliente(r)">
+                <div class="dr-av" x-text="r.nome[0]?.toUpperCase()"></div>
+                <div>
+                  <div class="dr-name" x-text="r.nome"></div>
+                  <div class="dr-sub" x-text="r.telefone || 'sem telefone'"></div>
+                </div>
+              </div>
+            </template>
+            <div class="dr" @click="abrirFormRapido()">
+              <div class="dr-av new">+</div>
+              <div>
+                <div class="dr-name" style="color:var(--purple-d)">Cadastrar cliente rápido</div>
+                <div class="dr-sub">Só nome e telefone</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div class="cli-tag" x-show="cliente" x-cloak>
+        <div class="ct-av" x-text="cliente?.nome?.[0]?.toUpperCase() || '?'"></div>
+        <div style="flex:1;min-width:0">
+          <div class="ct-name" x-text="cliente?.nome"></div>
+          <div class="ct-info" x-text="cliente?.telefone || 'sem telefone'"></div>
+        </div>
+        <button class="ct-x" @click="cliente=null; searchQuery=''">✕</button>
+      </div>
+    </div>
+
+    <!-- LAVADOR -->
+    <div class="sec" x-show="item" x-cloak>
+      <div class="sec-lbl">Funcionário <span style="font-weight:400;text-transform:none;color:var(--light)">(opcional)</span></div>
+      <div class="sec-empty" x-show="loadingLavadores" x-cloak>Carregando...</div>
+      <div class="lav-row" x-show="!loadingLavadores">
+        <template x-for="l in lavadores" :key="l.id">
+          <div class="lav" :class="{on: lavs.includes(l.id)}" @click="toggleLav(l)">
+            <div class="lav-av" x-text="l.nome[0]?.toUpperCase()"></div>
+            <div class="lav-nm" x-text="l.nome"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- DESCRIÇÃO -->
+    <div class="sec" x-show="item" x-cloak>
+      <div class="sec-lbl">Descrição do serviço <span style="font-weight:400;text-transform:none;color:var(--light)">(opcional)</span></div>
+      <textarea class="inp" x-model="obs" placeholder="Ex: Tapete grande da sala, mancha de café no canto..."></textarea>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <button class="btn-criar" :disabled="!podeCriar() || criando" @click="criar()">
+      <span class="spin" x-show="criando" x-cloak></span>
+      <span x-text="criando ? 'Criando...' : ('Criar ordem · R$ ' + valorTotal().toFixed(2).replace('.',','))"></span>
+    </button>
+  </div>
+
+  <!-- SHEET: CADASTRO RÁPIDO -->
+  <div class="backdrop" x-show="showForm" x-cloak @click.self="showForm=false">
+    <div class="sheet" @click.stop>
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title">Cliente rápido</div>
+        <button class="sheet-close" @click="showForm=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="fld">
+          <label>Nome <span>*</span></label>
+          <input type="text" class="inp" x-model="form.nome" placeholder="Nome do cliente">
+        </div>
+        <div class="fld">
+          <label>Telefone</label>
+          <input type="tel" class="inp" x-model="form.telefone" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showForm=false">Cancelar</button>
+        <button class="btn-confirm" @click="confirmarClienteRapido()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHEET: SUCESSO -->
+  <div class="backdrop" x-show="sucesso" x-cloak>
+    <div class="sheet-success" @click.stop>
+      <div class="sheet-handle"></div>
+      <div style="height:20px"></div>
+      <div class="s-ring">✓</div>
+      <div class="s-title">Ordem Criada!</div>
+      <div class="s-sub">Entrada avulsa registrada</div>
+      <div class="s-num" x-text="'Ordem # ' + ordemNum"></div>
+      <button class="btn-nova" @click="reset()">+ Nova Entrada</button>
+      <a class="btn-dash" href="ordens-funcionario.html">Ver Ordens</a>
+    </div>
+  </div>
+
+  <script src="../api.js"></script>
+  <script>
+    function avulsa() {
+      return {
+        // Itens
+        itens: [], loadingItens: true,
+        item: null,            // key do item ou 'OUTROS'
+        // Serviço
+        servicos: [], loadingServicos: false,
+        svc: null,
+        modoValorHora: false, vhNome: '', vhPreco: '',
+        qtd: 1,
+        // Cliente
+        searchQuery: '', showDrop: false, results: [], buscando: false, _t: null,
+        cliente: null,
+        showForm: false, form: { nome: '', telefone: '' },
+        // Lavador
+        lavadores: [], loadingLavadores: true, lavs: [],
+        obs: '',
+        criando: false, sucesso: false, ordemNum: null,
+
+        async init() {
+          if (!window.api.isAuthenticated()) { window.location.href = '../login.html'; return; }
+          await Promise.all([this.loadItens(), this.loadLavadores()]);
+        },
+
+        async loadItens() {
+          this.loadingItens = true;
+          try {
+            const tipos = await window.api.getTiposVeiculo();
+            const avulsos = (tipos || []).filter(t => t.nome === 'AVULSO' && t.categoria && t.ativo !== false);
+            const vistos = new Set();
+            this.itens = [];
+            for (const t of avulsos) {
+              if (vistos.has(t.categoria)) continue;
+              vistos.add(t.categoria);
+              this.itens.push({ key: t.categoria, label: this.labelItem(t.categoria) });
+            }
+          } catch { this.itens = []; }
+          finally { this.loadingItens = false; }
+        },
+
+        labelItem(k) {
+          const map = { TAPETE:'Tapete', CARPETE:'Carpete', BANCO:'Banco', SOFA:'Sofá', ESTOFADO:'Estofado', CADEIRA:'Cadeira' };
+          return map[k] || (k.charAt(0) + k.slice(1).toLowerCase());
+        },
+
+        async loadLavadores() {
+          this.loadingLavadores = true;
+          try {
+            const data = await window.api.getLavadoresSimple();
+            this.lavadores = data.lavadores || [];
+          } catch { this.lavadores = []; }
+          finally { this.loadingLavadores = false; }
+        },
+
+        async selecionarItem(key) {
+          this.item = key;
+          this.svc = null;
+          this.modoValorHora = false; this.vhNome = ''; this.vhPreco = '';
+          if (key === 'OUTROS') {
+            this.servicos = [];
+            this.modoValorHora = true; // Outros = sempre valor na hora
+            return;
+          }
+          this.loadingServicos = true;
+          try {
+            const data = await window.api.getServicos({ tipoVeiculo: 'AVULSO', subtipoVeiculo: key });
+            this.servicos = data.servicos || [];
+          } catch { this.servicos = []; }
+          finally { this.loadingServicos = false; }
+        },
+
+        pickServico(s) {
+          this.svc = this.svc?.id === s.id ? null : s;
+          if (this.svc) this.modoValorHora = false; // serviço e valor na hora são exclusivos
+        },
+
+        toggleValorHora() {
+          this.modoValorHora = !this.modoValorHora;
+          if (this.modoValorHora) this.svc = null;
+        },
+
+        // ── Cliente ──
+        buscar() {
+          clearTimeout(this._t);
+          this._t = setTimeout(() => this._buscarNow(), 320);
+        },
+        async _buscarNow() {
+          const q = this.searchQuery.trim();
+          if (q.length < 2) { this.results = []; this.showDrop = q.length > 0; return; }
+          this.buscando = true; this.showDrop = true;
+          try {
+            const data = await window.api.getClientes(1, 6, q);
+            this.results = (data.clientes || []).map(c => ({ id: c.id, nome: c.nome, telefone: c.telefone || '' }));
+          } catch { this.results = []; }
+          finally { this.buscando = false; }
+        },
+        pickCliente(r) {
+          this.cliente = { clienteId: r.id, nome: r.nome, telefone: r.telefone };
+          this.searchQuery = ''; this.showDrop = false;
+        },
+        abrirFormRapido() {
+          const q = this.searchQuery.trim();
+          this.form = { nome: /\d/.test(q) ? '' : q, telefone: /\d/.test(q) ? q.replace(/\D/g,'') : '' };
+          this.showDrop = false;
+          this.showForm = true;
+        },
+        confirmarClienteRapido() {
+          const nome = this.form.nome.trim();
+          if (!nome) { showToast('Informe o nome do cliente', 'error'); return; }
+          // novoCliente marca que o cliente será criado no backend
+          this.cliente = { novoCliente: { nome, telefone: this.form.telefone.trim() || null }, nome, telefone: this.form.telefone.trim() };
+          this.showForm = false;
+          this.searchQuery = '';
+        },
+
+        toggleLav(l) {
+          const i = this.lavs.indexOf(l.id);
+          if (i >= 0) this.lavs.splice(i, 1);
+          else this.lavs.push(l.id);
+        },
+
+        // ── Cálculo / validação ──
+        valorTotal() {
+          const unit = this.modoValorHora ? (parseFloat(this.vhPreco) || 0) : (this.svc ? Number(this.svc.preco) : 0);
+          return unit * this.qtd;
+        },
+        temServico() {
+          if (this.modoValorHora) return this.vhNome.trim() && (parseFloat(this.vhPreco) > 0);
+          return !!this.svc;
+        },
+        podeCriar() {
+          return !!this.item && this.temServico() && !!this.cliente;
+        },
+
+        async criar() {
+          if (!this.podeCriar()) return;
+          this.criando = true;
+          try {
+            // Monta o item da ordem
+            let itemOrdem;
+            if (this.modoValorHora) {
+              itemOrdem = { tipo: 'SERVICO', nomeCustom: this.vhNome.trim(), precoManual: parseFloat(this.vhPreco), quantidade: this.qtd };
+            } else {
+              itemOrdem = { tipo: 'SERVICO', itemId: this.svc.id, quantidade: this.qtd };
+            }
+            const payload = {
+              tipoOrdem: 'AVULSO',
+              itemAvulso: this.item === 'OUTROS' ? (this.vhNome.trim() || 'Outros') : this.labelItem(this.item),
+              itens: [itemOrdem],
+              lavadorId: this.lavs[0] || undefined,
+              lavadorIds: this.lavs,
+              observacoes: this.obs.trim() || undefined,
+            };
+            if (this.cliente.clienteId) payload.clienteId = this.cliente.clienteId;
+            else payload.novoCliente = this.cliente.novoCliente;
+
+            const resp = await window.api.createOrdem(payload);
+            this.ordemNum = resp.ordem?.numeroOrdem || resp.numeroOrdem || '?';
+            this.sucesso = true;
+          } catch (e) {
+            showToast(e?.details || e?.error || e?.message || 'Erro ao criar ordem', 'error');
+          } finally {
+            this.criando = false;
+          }
+        },
+
+        reset() {
+          Object.assign(this, {
+            item: null, servicos: [], svc: null,
+            modoValorHora: false, vhNome: '', vhPreco: '', qtd: 1,
+            searchQuery: '', showDrop: false, results: [], cliente: null,
+            showForm: false, form: { nome: '', telefone: '' },
+            lavs: [], obs: '', criando: false, sucesso: false, ordemNum: null,
+          });
+        },
+      };
+    }
+
+    function showToast(message, type = 'success') {
+      const old = document.getElementById('_toast'); if (old) old.remove();
+      const t = document.createElement('div');
+      t.id = '_toast'; t.className = `toast ${type}`;
+      const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+      t.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+      document.body.appendChild(t);
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+    }
+  </script>
+</body>
+</html>
