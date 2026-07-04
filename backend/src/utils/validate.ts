@@ -192,9 +192,18 @@ export function validateCreateOrder(data: any): ValidationResult {
       );
       if (typeError) errors.push(typeError);
 
-      // Validate itemId
-      const itemIdError = validators.isValidCuid(item.itemId, `itens[${index}].itemId`);
-      if (itemIdError) errors.push(itemIdError);
+      // Item avulso "na hora": sem itemId, mas com nomeCustom + precoManual.
+      const isCustom = !item.itemId && (item.nomeCustom != null || item.precoManual != null);
+      if (isCustom) {
+        if (!String(item.nomeCustom || '').trim()) {
+          errors.push(`itens[${index}].nomeCustom é obrigatório para item avulso`);
+        }
+        const precoError = validators.isPositiveNumber(item.precoManual, `itens[${index}].precoManual`);
+        if (precoError) errors.push(precoError);
+      } else {
+        const itemIdError = validators.isValidCuid(item.itemId, `itens[${index}].itemId`);
+        if (itemIdError) errors.push(itemIdError);
+      }
 
       // Validate quantidade
       const qtyError = validators.isPositiveNumber(item.quantidade, `itens[${index}].quantidade`);

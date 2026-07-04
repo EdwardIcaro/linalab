@@ -516,7 +516,7 @@ export async function cronOrdensParadas(): Promise<void> {
       let corpo = `⚠️ *${paradas.length} ordem(ns) parada(s) há ${horas}h+:*\n`;
       for (const o of paradas) {
         const horasParada = Math.floor((Date.now() - o.updatedAt.getTime()) / 3600000);
-        corpo += `• #${o.numeroOrdem} ${o.veiculo.modelo ?? 'Veículo'} ${o.veiculo.placa ?? ''} (${horasParada}h)\n`;
+        corpo += `• #${o.numeroOrdem} ${o.veiculo?.modelo ?? o.itemAvulso ?? 'Veículo'} ${o.veiculo?.placa ?? ''} (${horasParada}h)\n`;
       }
       corpo = corpo.trim();
 

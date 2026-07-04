@@ -290,8 +290,10 @@ model OrdemServico {
   numeroOrdem          Int
   empresaId            String
   clienteId            String
-  veiculoId            String
+  veiculoId            String?
   lavadorId            String?
+  tipoOrdem            TipoOrdem             @default(VEICULO)  // VEICULO (com placa) ou AVULSO (tapete, banco...)
+  itemAvulso           String?               // descrição do item avulso (ex: "Tapete", "Banco", "Outros")
   status               OrdemStatus           @default(PENDENTE)
   valorTotal           Float
   observacoes          String?
@@ -315,7 +317,7 @@ model OrdemServico {
   empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
   lavador              Lavador?              @relation(fields: [lavadorId], references: [id])
-  veiculo              Veiculo               @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  veiculo              Veiculo?              @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
   items                OrdemServicoItem[]
   ordemLavadores       OrdemServicoLavador[]
   pagamentos           Pagamento[]
@@ -349,6 +351,7 @@ model OrdemServicoItem {
   tipo        OrdemItemType
   servicoId   String?
   adicionalId String?
+  nomeCustom  String?       // nome do serviço avulso digitado na hora (quando não há servicoId)
   quantidade  Int           @default(1)
   precoUnit   Float
   subtotal    Float
@@ -727,6 +730,11 @@ enum OrdemStatus {
 enum OrdemItemType {
   SERVICO
   ADICIONAL
+}
+
+enum TipoOrdem {
+  VEICULO
+  AVULSO
 }
 
 enum TipoRemuneracao {

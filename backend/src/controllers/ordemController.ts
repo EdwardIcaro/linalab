@@ -82,8 +82,11 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
   // Use sanitized data instead of raw req.body
   const {
     clienteId, novoCliente, veiculoId, novoVeiculo,
-    lavadorId, lavadorIds, itens, forcarCriacao, observacoes
+    lavadorId, lavadorIds, itens, forcarCriacao, observacoes,
+    tipoOrdem, itemAvulso
   } = validation.sanitizedData!;
+
+  const isAvulso = tipoOrdem === 'AVULSO';
 
     const extraLavadores = Array.from(new Set(
       (lavadorIds || []).filter((id: string | null | undefined): id is string => !!id && id !== lavadorId)
@@ -156,7 +159,8 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       }
 
       // 3. Verifica se já existe uma ordem ativa para o veículo
-      if (!forcarCriacao) {
+      // (não se aplica a ordens avulsas, que não têm veículo)
+      if (!forcarCriacao && !isAvulso && finalVeiculoId) {
         const ordemAtiva = await tx.ordemServico.findFirst({
           where: {
             veiculoId: finalVeiculoId,
@@ -175,13 +179,13 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       // Busca todos os serviços e adicionais em uma única query ao invés de uma por item
       let calculatedValorTotal = 0;
 
-      // Separar IDs de serviços e adicionais
+      // Separar IDs de serviços e adicionais (ignora itens avulsos sem itemId)
       const servicoIds = itens
-        .filter((item: OrdemItemInput) => item.tipo === 'SERVICO')
-        .map((item: OrdemItemInput) => item.itemId);
+        .filter((item: any) => item.tipo === 'SERVICO' && item.itemId)
+        .map((item: any) => item.itemId);
       const adicionalIds = itens
-        .filter((item: OrdemItemInput) => item.tipo === 'ADICIONAL')
-        .map((item: OrdemItemInput) => item.itemId);
+        .filter((item: any) => item.tipo === 'ADICIONAL' && item.itemId)
+        .map((item: any) => item.itemId);
 
       // Buscar todos de uma vez (paralelo)
       const [servicos, adicionais] = await Promise.all([
@@ -198,9 +202,25 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       const adicionalMap = new Map(adicionais.map(a => [a.id, a]));
 
       // Preparar items com lookup do mapa
-      const ordemItemsData = itens.map((item: OrdemItemInput) => {
+      const ordemItemsData = itens.map((item: any) => {
         let precoUnit = 0;
         let itemData;
+
+        // Item avulso "na hora": sem itemId, preço e nome informados manualmente
+        const isCustom = !item.itemId && (item.nomeCustom != null || item.precoManual != null);
+        if (isCustom) {
+          precoUnit = Number(item.precoManual) || 0;
+          const subtotal = precoUnit * item.quantidade;
+          calculatedValorTotal += subtotal;
+          return {
+            tipo: 'SERVICO',
+            quantidade: item.quantidade,
+            precoUnit,
+            subtotal,
+            servicoId: null,
+            nomeCustom: String(item.nomeCustom || '').trim() || 'Serviço avulso',
+          };
+        }
 
         if (item.tipo === 'SERVICO') {
           const servico = servicoMap.get(item.itemId);
@@ -240,8 +260,12 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       });
 
       // Add a final validation check before creating the order
-      if (!finalClienteId || !finalVeiculoId) {
-        throw new Error("ID do cliente ou do veículo não pôde ser determinado.");
+      // Ordem avulsa exige apenas cliente; ordem de veículo exige cliente + veículo.
+      if (!finalClienteId) {
+        throw new Error("ID do cliente não pôde ser determinado.");
+      }
+      if (!isAvulso && !finalVeiculoId) {
+        throw new Error("ID do veículo não pôde ser determinado.");
       }
 
       // ✅ OTIMIZAÇÃO: Paralelizar lookups dos lavadores e número da ordem
@@ -294,8 +318,10 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           numeroOrdem: proximoNumeroOrdem,
           empresaId,
           clienteId: finalClienteId,
-          veiculoId: finalVeiculoId,
+          veiculoId: isAvulso ? null : finalVeiculoId,
           lavadorId: primaryLavadorId,
+          tipoOrdem: (isAvulso ? 'AVULSO' : 'VEICULO') as any,
+          itemAvulso: isAvulso ? (itemAvulso || null) : null,
           valorTotal: calculatedValorTotal,
           comissao: comissaoCalculada, // A comissão é calculada, mas só é "devida" ao finalizar
           status: primaryLavadorId ? 'EM_ANDAMENTO' : 'PENDENTE' as any,
@@ -620,6 +646,8 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
           id: true,
           numeroOrdem: true,
           status: true,
+          tipoOrdem: true,
+          itemAvulso: true,
           createdAt: true,
           updatedAt: true,
           dataFim: true,
@@ -657,6 +685,7 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
               id: true,
               quantidade: true,
               precoUnit: true,
+              nomeCustom: true,
               servico: {
                 select: {
                   id: true,
@@ -743,6 +772,8 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
         id: true,
         numeroOrdem: true,
         status: true,
+        tipoOrdem: true,
+        itemAvulso: true,
         createdAt: true,
         updatedAt: true,
         dataFim: true,
@@ -785,6 +816,7 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
             quantidade: true,
             precoUnit: true,
             subtotal: true,
+            nomeCustom: true,
             servico: {
               select: {
                 id: true,
@@ -1713,7 +1745,7 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       try {
         await createNotification({
           empresaId,
-          mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo.placa}) foi finalizada. Valor: R$ ${valorFinal.toFixed(2)}${desconto > 0 ? ` (desconto: R$ ${desconto.toFixed(2)})` : ''}`,
+          mensagem: `Ordem #${ordem.numeroOrdem} (${ordem.cliente.nome} - ${ordem.veiculo?.placa ?? ordem.itemAvulso ?? 'Avulso'}) foi finalizada. Valor: R$ ${valorFinal.toFixed(2)}${desconto > 0 ? ` (desconto: R$ ${desconto.toFixed(2)})` : ''}`,
           link: `ordens.html?id=${ordem.id}`,
           type: 'ordemEditada'
         });
