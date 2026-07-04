@@ -1481,7 +1481,7 @@ function comAdicionaisDaOrdem(o){
   return (Array.isArray(o.items)?o.items:[]).map(i=>i?.adicional?.nome).filter(Boolean);
 }
 function comServicosDaOrdem(o){
-  return (Array.isArray(o.items)?o.items:[]).map(i=>i?.servico?.nome||i?.adicional?.nome).filter(Boolean).join(', ') || 'Sem itens';
+  return (Array.isArray(o.items)?o.items:[]).map(i=>i?.servico?.nome||i?.adicional?.nome||i?.nomeCustom).filter(Boolean).join(', ') || 'Sem itens';
 }
 
 let comWeekOffset = 0;
@@ -1513,14 +1513,14 @@ function renderComGanhos(){
         const adds = comAdicionaisDaOrdem(o);
         lista += `<div class="com-card">
           <div class="com-ico add"><i class="fas fa-plus"></i></div>
-          <div class="com-cinfo"><div class="com-cveic">${adds.join(', ')||'Adicionais'}</div><div class="com-cserv">${o.veiculo?.modelo||'Veículo'}</div></div>
+          <div class="com-cinfo"><div class="com-cveic">${adds.join(', ')||'Adicionais'}</div><div class="com-cserv">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div></div>
           <div class="com-cright"><div class="com-cval${blur}">${comBRL(ganho)}</div>${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
         </div>`;
       } else {
         const multi = comIsMulti(o);
         lista += `<div class="com-card">
           <div class="com-ico"><i class="fas fa-car"></i></div>
-          <div class="com-cinfo"><div class="com-cveic">${o.veiculo?.modelo||'Veículo'}</div><div class="com-cserv">${comServicosDaOrdem(o)}</div></div>
+          <div class="com-cinfo"><div class="com-cveic">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div><div class="com-cserv">${comServicosDaOrdem(o)}</div></div>
           <div class="com-cright"><div class="com-cval${blur}">${comBRL(ganho)}</div>${multi?'<span class="com-cbadge"><i class="fas fa-users"></i> dividida</span>':''}${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
         </div>`;
       }
@@ -1601,12 +1601,12 @@ function openComPagModal(idx){
       ? comWasherShare(ordem, comLavadorId, comData.comissao)
       : parseFloat(ordem.valorTotal||0)*(parseFloat(comData.comissao||0)/100);
     if(!isFinite(c)||c<0) c=0;
-    ordensHtml += `<div class="com-pg"><div class="com-pg-info"><div class="com-pg-title">${ordem.veiculo?.modelo||'Veículo'}</div><div class="com-pg-sub">${comServicosDaOrdem(ordem)}</div></div><div class="com-pg-val pos">${comBRL(c)}</div></div>`;
+    ordensHtml += `<div class="com-pg"><div class="com-pg-info"><div class="com-pg-title">${ordem.veiculo?.modelo||ordem.itemAvulso||'Veículo'}</div><div class="com-pg-sub">${comServicosDaOrdem(ordem)}</div></div><div class="com-pg-val pos">${comBRL(c)}</div></div>`;
   });
   (f.ordemLavadoresPagos||[]).forEach(ol=>{
     const ordem = ol.ordem; let c = comWasherShare(ordem, comLavadorId, comData.comissao);
     if(!isFinite(c)||c<0) c=0;
-    ordensHtml += `<div class="com-pg"><div class="com-pg-info"><div class="com-pg-title">${ordem.veiculo?.modelo||'Veículo'}</div><div class="com-pg-sub">${comServicosDaOrdem(ordem)}</div></div><div class="com-pg-val pos">${comBRL(c)}</div></div>`;
+    ordensHtml += `<div class="com-pg"><div class="com-pg-info"><div class="com-pg-title">${ordem.veiculo?.modelo||ordem.itemAvulso||'Veículo'}</div><div class="com-pg-sub">${comServicosDaOrdem(ordem)}</div></div><div class="com-pg-val pos">${comBRL(c)}</div></div>`;
   });
 
   document.getElementById('comPagModalBody').innerHTML = `

@@ -312,11 +312,12 @@ export const getDadosPortal = async (req: Request, res: Response) => {
         ordem: {
           select: {
             id: true, valorTotal: true, desconto: true, status: true, dataFim: true,
+            tipoOrdem: true, itemAvulso: true,
             cliente: { select: { nome: true } },
             veiculo: { select: { placa: true, modelo: true } },
             items: {
               where: { tipo: 'SERVICO' },
-              select: { servico: { select: { nome: true } } },
+              select: { servico: { select: { nome: true } }, nomeCustom: true },
             },
           },
         },
@@ -358,9 +359,10 @@ export const getDadosPortal = async (req: Request, res: Response) => {
           id: o.ordem.id,
           cliente: o.ordem.cliente?.nome ?? '—',
           placa: o.ordem.veiculo?.placa ?? '—',
-          modelo: o.ordem.veiculo?.modelo ?? '',
+          modelo: o.ordem.veiculo?.modelo ?? ((o.ordem as any).tipoOrdem === 'AVULSO' ? ((o.ordem as any).itemAvulso ?? 'Avulso') : ''),
+          itemAvulso: (o.ordem as any).itemAvulso ?? null,
           servicos: o.ordem.items
-            .map((i: any) => i.servico?.nome)
+            .map((i: any) => i.servico?.nome ?? i.nomeCustom)
             .filter(Boolean)
             .join(', '),
           valorTotal: o.ordem.valorTotal,

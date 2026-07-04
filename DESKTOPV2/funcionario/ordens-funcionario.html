@@ -209,6 +209,14 @@
       padding: 2px 8px; border-radius: 5px;
       letter-spacing: .5px;
     }
+    .card-avulso {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #f5f3ff;
+      color: #6d28d9;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 9px; border-radius: 5px;
+      border: 1px solid #ddd6fe;
+    }
     .card-svc {
       font-size: 12px; color: var(--mid); font-weight: 500;
     }
@@ -1084,7 +1092,15 @@
         } else {
           listHTML += `<div class="orders-list">`;
           ordens.forEach(ordem => {
-            const svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ') || '—';
+            const isAvulso = ordem.tipoOrdem === 'AVULSO';
+            // Nomes dos serviços: usa ordem.servicos ou deriva dos items (inclui nomeCustom de itens avulsos)
+            let svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ');
+            if (!svcNomes) {
+              svcNomes = (ordem.items || [])
+                .map(i => i.servico?.nome || i.nomeCustom)
+                .filter(Boolean).join(', ');
+            }
+            svcNomes = svcNomes || '—';
             const status = ordem.status || 'PENDENTE';
             const accClass = `acc-${status}`;
             const badgeClass = `sbadge-${status}`;
@@ -1113,8 +1129,10 @@
                   </div>
                   <div class="card-client">${ordem.cliente?.nome || '—'}</div>
                   <div class="card-meta">
-                    ${ordem.veiculo?.modelo ? `<span class="card-model">${ordem.veiculo.modelo}</span>` : ''}
-                    ${ordem.veiculo?.placa ? `<span class="card-plate">${ordem.veiculo.placa}</span>` : ''}
+                    ${isAvulso
+                      ? `<span class="card-avulso"><i class="fas fa-couch"></i> ${ordem.itemAvulso || 'Avulso'}</span>`
+                      : `${ordem.veiculo?.modelo ? `<span class="card-model">${ordem.veiculo.modelo}</span>` : ''}
+                         ${ordem.veiculo?.placa ? `<span class="card-plate">${ordem.veiculo.placa}</span>` : ''}`}
                     <span class="card-svc">${svcNomes}</span>
                   </div>
                   <div class="card-divider"></div>
@@ -1181,12 +1199,19 @@
         const lavNomes = (currentOrdem.lavadores || [])
           .map(l => l.nome || l).join(', ') || '—';
 
+        // Lista de serviços: usa currentOrdem.servicos ou deriva dos items (inclui nomeCustom avulso)
+        let svcList = (currentOrdem.servicos || []).map(s => ({ nome: s.nome, preco: s.preco }));
+        if (svcList.length === 0) {
+          svcList = (currentOrdem.items || [])
+            .filter(i => i.tipo !== 'ADICIONAL')
+            .map(i => ({ nome: i.servico?.nome || i.nomeCustom || 'Serviço', preco: i.subtotal ?? i.precoUnit }));
+        }
         let svcHtml = '';
-        if ((currentOrdem.servicos || []).length > 0) {
+        if (svcList.length > 0) {
           svcHtml = `
             <div class="detail-card">
               <div class="detail-card-title"><i class="fas fa-broom" style="margin-right:6px"></i>Serviços</div>
-              ${currentOrdem.servicos.map(s => `
+              ${svcList.map(s => `
                 <div class="svc-row">
                   <span class="svc-name">${s.nome}</span>
                   <span class="svc-price">${formatCurrency(s.preco)}</span>
@@ -1286,11 +1311,13 @@
                   <div class="info-value">${currentOrdem.cliente?.nome || '—'}</div>
                 </div>
                 <div class="info-item">
-                  <div class="info-label">Placa</div>
+                  <div class="info-label">${currentOrdem.tipoOrdem === 'AVULSO' ? 'Item' : 'Placa'}</div>
                   <div class="info-value">
-                    ${currentOrdem.veiculo?.placa
-                      ? `<span class="info-value-plate">${currentOrdem.veiculo.placa}</span>`
-                      : '—'}
+                    ${currentOrdem.tipoOrdem === 'AVULSO'
+                      ? `<span class="card-avulso"><i class="fas fa-couch"></i> ${currentOrdem.itemAvulso || 'Avulso'}</span>`
+                      : (currentOrdem.veiculo?.placa
+                          ? `<span class="info-value-plate">${currentOrdem.veiculo.placa}</span>`
+                          : '—')}
                   </div>
                 </div>
                 <div class="info-item">
