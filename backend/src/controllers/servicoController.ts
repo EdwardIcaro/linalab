@@ -36,14 +36,15 @@ export const createServico = async (req: EmpresaRequest, res: Response) => {
       return tipo;
     };
 
-    if (tipoVeiculoNome === 'CARRO') {
+    // CARRO e AVULSO usam subtipos (categorias de carro / itens avulsos)
+    if (tipoVeiculoNome === 'CARRO' || tipoVeiculoNome === 'AVULSO') {
       if (subtiposVeiculo && subtiposVeiculo.length > 0) {
         for (const categoria of subtiposVeiculo) {
-          const tipo = await findOrCreateTipo('CARRO', categoria);
+          const tipo = await findOrCreateTipo(tipoVeiculoNome, categoria);
           tiposVeiculoParaConectar.push({ id: tipo.id });
         }
       } else {
-        const tipo = await findOrCreateTipo('CARRO', null);
+        const tipo = await findOrCreateTipo(tipoVeiculoNome, null);
         tiposVeiculoParaConectar.push({ id: tipo.id });
       }
     } else {
@@ -455,14 +456,15 @@ export const updateServico = async (req: EmpresaRequest, res: Response) => {
       return tipo;
     };
 
-    if (tipoVeiculoNome === 'CARRO') {
+    // CARRO e AVULSO usam subtipos (categorias de carro / itens avulsos)
+    if (tipoVeiculoNome === 'CARRO' || tipoVeiculoNome === 'AVULSO') {
       if (subtiposVeiculo && subtiposVeiculo.length > 0) {
         for (const categoria of subtiposVeiculo) {
-          const tipo = await findOrCreateTipoUpdate('CARRO', categoria);
+          const tipo = await findOrCreateTipoUpdate(tipoVeiculoNome, categoria);
           tiposVeiculoParaConectar.push({ id: tipo.id });
         }
       } else {
-        const tipo = await findOrCreateTipoUpdate('CARRO', null);
+        const tipo = await findOrCreateTipoUpdate(tipoVeiculoNome, null);
         tiposVeiculoParaConectar.push({ id: tipo.id });
       }
     } else {

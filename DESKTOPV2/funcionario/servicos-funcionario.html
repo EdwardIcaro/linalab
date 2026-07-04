@@ -399,6 +399,14 @@
       CAMINHONETE:'Caminhonete', VAN:'Van', MICROONIBUS:'Micro-ônibus', CAMINHAO:'Caminhão'
     };
 
+    // Itens avulsos: lista sugerida pelo sistema (o dono pode adicionar novos)
+    const ITENS_AVULSOS_SUGERIDOS = ['TAPETE','CARPETE','BANCO','SOFA','ESTOFADO','CADEIRA'];
+    const LABEL_ITEM_AVULSO = (k) => ({
+      TAPETE:'Tapete', CARPETE:'Carpete', BANCO:'Banco', SOFA:'Sofá',
+      ESTOFADO:'Estofado', CADEIRA:'Cadeira'
+    }[k] || (k.charAt(0) + k.slice(1).toLowerCase()));
+    let itensAvulsos = []; // itens já cadastrados no banco (categorias de AVULSO)
+
     // ── INIT ─────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
@@ -423,8 +431,10 @@
         ]);
         servicos   = rs.servicos   || [];
         adicionais = ra.adicionais || [];
-        // Só categorias de carro (TipoVeiculo com campo categoria preenchido)
-        categorias = (rt || []).filter(t => t.categoria);
+        // Categorias de carro (TipoVeiculo nome=CARRO com categoria)
+        categorias = (rt || []).filter(t => t.nome === 'CARRO' && t.categoria);
+        // Itens avulsos já cadastrados (TipoVeiculo nome=AVULSO com categoria)
+        itensAvulsos = [...new Set((rt || []).filter(t => t.nome === 'AVULSO' && t.categoria).map(t => t.categoria))];
         document.getElementById('countServicos').textContent   = servicos.length;
         document.getElementById('countAdicionais').textContent = adicionais.length;
         atualizarCount();
@@ -665,6 +675,8 @@
       const tipo     = s?.tipoVeiculo || '';
       const catsSel  = (s?.subtiposVeiculo || []).map(x => x.categoria || x);
       const comissao = s?.comissaoPercentual != null ? s.comissaoPercentual : '';
+      // Itens avulsos disponíveis = sugeridos + já cadastrados (sem duplicar)
+      const itensDisponiveis = [...new Set([...ITENS_AVULSOS_SUGERIDOS, ...itensAvulsos])];
 
       document.getElementById('drawerBody').innerHTML = `
         <div class="form-group">
@@ -689,6 +701,7 @@
             <option value="">Selecione...</option>
             <option value="CARRO" ${tipo==='CARRO'?'selected':''}>Carro</option>
             <option value="MOTO"  ${tipo==='MOTO' ?'selected':''}>Moto</option>
+            <option value="AVULSO"${tipo==='AVULSO'?'selected':''}>Avulso (tapete, banco...)</option>
             <option value="OUTROS"${tipo==='OUTROS'?'selected':''}>Outros</option>
           </select>
         </div>
@@ -704,6 +717,23 @@
             }).join('')}
           </div>
           <div class="form-hint" style="margin-top:8px">Nenhuma selecionada = todos os tipos de carro</div>
+        </div>
+        <div class="form-group" id="fItemGroup" style="display:${tipo==='AVULSO'?'block':'none'}">
+          <label class="form-label">Itens avulsos deste serviço</label>
+          <div class="cat-grid" id="fItemGrid">
+            ${itensDisponiveis.map(it => {
+              const sel = catsSel.includes(it);
+              return `<label class="cat-chip ${sel?'checked':''}" onclick="toggleCat(this)">
+                <input type="checkbox" value="${it}" ${sel?'checked':''}/>
+                ${LABEL_ITEM_AVULSO(it)}
+              </label>`;
+            }).join('')}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input type="text" class="form-input" id="fNovoItem" placeholder="Adicionar item (ex: Cadeira gamer)" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarItemAvulso();}">
+            <button type="button" class="btn-f btn-f-save" style="white-space:nowrap;flex:0 0 auto" onclick="adicionarItemAvulso()"><i class="fas fa-plus"></i></button>
+          </div>
+          <div class="form-hint" style="margin-top:8px">Marque em quais itens este serviço/preço se aplica</div>
         </div>
       `;
 
@@ -721,12 +751,39 @@
     function onTipoChange() {
       const tipo = document.getElementById('fTipo').value;
       document.getElementById('fCatGroup').style.display = tipo === 'CARRO' ? 'block' : 'none';
+      const itemGroup = document.getElementById('fItemGroup');
+      if (itemGroup) itemGroup.style.display = tipo === 'AVULSO' ? 'block' : 'none';
     }
 
     function toggleCat(chip) {
       const cb = chip.querySelector('input[type="checkbox"]');
       cb.checked = !cb.checked;
       chip.classList.toggle('checked', cb.checked);
+    }
+
+    // Adiciona um novo item avulso ao grid (marcado), a partir do input de texto
+    function adicionarItemAvulso() {
+      const input = document.getElementById('fNovoItem');
+      const raw = input.value.trim();
+      if (!raw) return;
+      // Chave normalizada (maiúsculas, sem acento/espaço) — igual ao padrão das categorias
+      const key = raw.toUpperCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^A-Z0-9]/g, '');
+      if (!key) return;
+      const grid = document.getElementById('fItemGrid');
+      // Se já existe, apenas marca
+      const existente = [...grid.querySelectorAll('input[type="checkbox"]')].find(cb => cb.value === key);
+      if (existente) {
+        if (!existente.checked) existente.closest('.cat-chip').click();
+      } else {
+        const label = document.createElement('label');
+        label.className = 'cat-chip checked';
+        label.setAttribute('onclick', 'toggleCat(this)');
+        label.innerHTML = `<input type="checkbox" value="${key}" checked/> ${escHtml(raw.charAt(0).toUpperCase() + raw.slice(1))}`;
+        grid.appendChild(label);
+      }
+      input.value = '';
     }
 
     async function salvarServico() {
@@ -740,7 +797,14 @@
         showToast('Preencha nome, preço e tipo de veículo', 'error'); return;
       }
 
-      const cats = Array.from(document.querySelectorAll('#fCatGrid input:checked')).map(c => c.value);
+      // Carro → categorias; Avulso → itens; demais → nenhum subtipo
+      let cats = [];
+      if (tipo === 'CARRO') {
+        cats = Array.from(document.querySelectorAll('#fCatGrid input:checked')).map(c => c.value);
+      } else if (tipo === 'AVULSO') {
+        cats = Array.from(document.querySelectorAll('#fItemGrid input:checked')).map(c => c.value);
+        if (cats.length === 0) { showToast('Selecione ao menos um item avulso', 'error'); return; }
+      }
 
       const payload = {
         nome, preco, tipoVeiculo: tipo,
