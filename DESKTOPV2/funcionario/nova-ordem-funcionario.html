@@ -859,9 +859,6 @@
                 <div style="flex:1;min-width:0">
                   <div class="dr-name" x-text="r.nome"></div>
                   <div class="dr-sub" x-text="(r.modelo && r.modelo !== '—' ? r.modelo + ' · ' : '') + (r.placa && r.placa !== '—' ? r.placa : '')"></div>
-                  <div x-show="r.ultimaOrdem" x-cloak style="font-size:11px;color:#10b981;margin-top:3px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                    📋 Última: <strong x-text="r.ultimaOrdem?.servicos"></strong>
-                  </div>
                 </div>
               </div>
             </template>
@@ -957,7 +954,7 @@
         <template x-for="s in servicos" :key="s.id">
           <div class="svc-card" :class="{on: svc?.id===s.id}" @click="svc = svc?.id===s.id ? null : s">
             <div class="svc-check">✓</div>
-            <div x-show="ultimoServicoId === s.id" style="position:absolute;top:8px;left:8px;background:#10b981;color:#fff;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:.3px">(Última)</div>
+            <div x-show="ultimoServicoId === s.id" x-cloak style="position:absolute;top:0;left:4px;background:#10b981;color:#fff;font-size:9px;padding:3px 8px;border-radius:0 0 8px 0;font-weight:700;letter-spacing:.3px;z-index:2">ÚLTIMA</div>
             <div class="svc-name" x-text="s.nome"></div>
             <div class="svc-desc" x-text="s.descricao || ''"></div>
             <div class="svc-price" x-text="'R$ ' + Number(s.preco || 0).toFixed(2).replace('.',',')"></div>
@@ -1339,24 +1336,6 @@
           this._buscarTimer = setTimeout(() => this._buscarNow(), 320);
         },
 
-        async _buscarUltimaOrdem(clienteId) {
-          try {
-            const data = await window.api.getOrdens(1, 1, '', 'FINALIZADO', '', clienteId);
-            const ordens = data.ordens || [];
-            if (ordens.length > 0) {
-              const o = ordens[0];
-              return {
-                numero: o.numeroOrdem,
-                servicos: o.items?.map(i => i.nomeServico).join(', ') || 'Serviço'
-              };
-            }
-            return null;
-          } catch (e) {
-            console.error('Erro ao buscar última ordem:', e);
-            return null;
-          }
-        },
-
         async _buscarNow() {
           const q = this.searchQuery.trim();
           if (q.length < 2) {
@@ -1376,7 +1355,6 @@
               try {
                 const r = await window.api.getVeiculoByPlaca(cleanPlate);
                 if (r?.veiculo && r?.cliente) {
-                  const ultimaOrdem = await this._buscarUltimaOrdem(r.cliente.id);
                   this.results = [{
                     clienteId:      r.cliente.id,
                     veiculoId:      r.veiculo.id,
@@ -1387,7 +1365,6 @@
                     cor:            r.veiculo.cor || '',
                     tipoVeiculo:    r.veiculo.tipoVeiculo || null,
                     subtipoVeiculo: r.veiculo.subtipoVeiculo || null,
-                    ultimaOrdem:    ultimaOrdem,
                   }];
                 } else {
                   this.results = [];
@@ -1397,7 +1374,6 @@
               const data = await window.api.getClientes(1, 5, q);
               this.results = [];
               for (const c of (data.clientes || [])) {
-                const ultimaOrdem = await this._buscarUltimaOrdem(c.id);
                 if (c.veiculos?.length > 0) {
                   for (const v of c.veiculos) {
                     this.results.push({
@@ -1408,7 +1384,8 @@
                       placa:     v.placa  || '',
                       telefone:  c.telefone || '',
                       cor:       v.cor || '',
-                      ultimaOrdem: ultimaOrdem,
+                      tipoVeiculo:    v.tipoVeiculo || null,
+                      subtipoVeiculo: v.subtipoVeiculo || null,
                     });
                   }
                 } else {
@@ -1420,7 +1397,8 @@
                     placa:     '',
                     telefone:  c.telefone || '',
                     cor:       '',
-                    ultimaOrdem: ultimaOrdem,
+                    tipoVeiculo:    null,
+                    subtipoVeiculo: null,
                   });
                 }
               }
@@ -1455,21 +1433,27 @@
           // Auto-preenche tipo e categoria do veículo cadastrado
           if (r.tipoVeiculo) {
             this.tipo = r.tipoVeiculo;
-            this.$nextTick(() => {
-              if (r.subtipoVeiculo) this.cat = r.subtipoVeiculo;
-            });
+            // O watch de 'tipo' já dispara atualizarCategorias(); garantimos a chamada
+            // explícita para que this.cats esteja populado antes de aplicar a categoria.
+            this.atualizarCategorias();
+            if (r.subtipoVeiculo && this.cats.some(c => c.k === r.subtipoVeiculo)) {
+              this.cat = r.subtipoVeiculo;
+            }
           }
         },
 
         async _buscarUltimoServicoId(clienteId) {
+          this.ultimoServicoId = null;
           try {
             const data = await window.api.getOrdens(1, 1, '', 'FINALIZADO', '', clienteId);
             const ordens = data.ordens || [];
             if (ordens.length > 0) {
               const o = ordens[0];
               const items = o.items || [];
-              if (items.length > 0) {
-                this.ultimoServicoId = items[0].servicoId;
+              // Pega o primeiro item que é serviço (tem s.servico), não adicional
+              const itemServico = items.find(i => i.servico?.id);
+              if (itemServico) {
+                this.ultimoServicoId = itemServico.servico.id;
               }
             }
           } catch (e) {

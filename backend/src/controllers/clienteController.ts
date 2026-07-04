@@ -102,7 +102,9 @@ export const getClientes = async (req: EmpresaRequest, res: Response) => {
               id: true,
               placa: true,
               modelo: true,
-              cor: true
+              cor: true,
+              tipoVeiculo: true,
+              subtipoVeiculo: true
             }
           },
           ordens: {
