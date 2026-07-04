@@ -989,6 +989,10 @@ export async function handleIncomingMessage(
     if (command === 'ajuda')     return handleAjudaCommand();
     if (command === 'empresa')   return `📍 *${empresaNome}*\n_Envie "trocar empresa" para mudar._`;
 
+    // Detalhes de Fechamento de Caixa (comando: fc <id>)
+    const fcMatch = message.trim().match(/^fc\s+([a-z0-9]+)$/i);
+    if (fcMatch) return handleFechamentoDetalhes(empresaId, fcMatch[1]);
+
     // Fechamento de caixa
     const isFechamento = /\bfechamento\b|\bfechament[oa]\b|\babertura\b/i.test(message);
     if (isFechamento) {
@@ -1652,6 +1656,60 @@ async function handleFechamentoCaixa(empresaId: string, data: Date): Promise<str
   }
 
   return r.trim();
+}
+
+// Detalhes do Fechamento (comando: fc <id>)
+async function handleFechamentoDetalhes(empresaId: string, fechamentoId: string): Promise<string> {
+  try {
+    const fechamento = await prisma.fechamentoCaixa.findFirst({
+      where: { id: fechamentoId, empresaId },
+    });
+
+    if (!fechamento) {
+      return `❌ Fechamento não encontrado.`;
+    }
+
+    const relatorio = fechamento.relatorio ? JSON.parse(fechamento.relatorio) : {};
+
+    let msg = `💼 *Detalhes do Fechamento*\n`;
+    msg += `📅 ${fechamento.data.toLocaleDateString('pt-BR')}\n`;
+    msg += `👤 Fechado por: ${fechamento.fechadoPor || 'N/A'}\n\n`;
+
+    msg += `📊 *Valores Digitados:*\n`;
+    msg += `💵 Dinheiro: *R$ ${fechamento.dinheiro.toFixed(2)}*\n`;
+    msg += `📱 PIX: *R$ ${fechamento.pix.toFixed(2)}*\n`;
+    msg += `💳 Cartão: *R$ ${fechamento.cartao.toFixed(2)}*\n`;
+    if (fechamento.nfe) msg += `🧾 NFe: *R$ ${fechamento.nfe.toFixed(2)}*\n`;
+
+    msg += `\n📊 *Valores Computados (Sistema):*\n`;
+    if (relatorio.DINHEIRO) msg += `💵 Dinheiro: *R$ ${relatorio.DINHEIRO.computado.toFixed(2)}*\n`;
+    if (relatorio.PIX) msg += `📱 PIX: *R$ ${relatorio.PIX.computado.toFixed(2)}*\n`;
+    if (relatorio.CARTAO) msg += `💳 Cartão: *R$ ${relatorio.CARTAO.computado.toFixed(2)}*\n`;
+    if (relatorio.NFE) msg += `🧾 NFe: *R$ ${relatorio.NFE.computado.toFixed(2)}*\n`;
+
+    msg += `\n⚖️ *Diferenças:*\n`;
+    let temDiferenca = false;
+    for (const [metodo, dados] of Object.entries(relatorio)) {
+      const diff = (dados as any).diferenca;
+      if (Math.abs(diff) > 0.01) {
+        temDiferenca = true;
+        const sinal = diff > 0 ? '📈' : '📉';
+        msg += `${sinal} ${metodo}: *R$ ${diff.toFixed(2)}*\n`;
+      }
+    }
+    if (!temDiferenca) msg += `✅ Sem divergências\n`;
+
+    msg += `\nStatus: *${fechamento.status}*`;
+
+    if (fechamento.observacao) {
+      msg += `\n\n📝 *Observação:*\n_${fechamento.observacao}_`;
+    }
+
+    return msg.trim();
+  } catch (e) {
+    console.error('[Bot] Erro ao buscar detalhes do fechamento:', e);
+    return `❌ Erro ao buscar detalhes do fechamento.`;
+  }
 }
 
 // ==========================================

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import { Prisma, CaixaRegistro, FechamentoCaixa, Adiantamento, Fornecedor, Lavador, OrdemServico, Veiculo, Pagamento } from '@prisma/client';
-import { notifySaidaRegistrada, notifyComissaoFechada } from '../services/whatsappNotificationService';
+import { notifySaidaRegistrada, notifyComissaoFechada, notifyFechamentoCaixa } from '../services/whatsappNotificationService';
 import { getWorkdayRangeBRT } from '../utils/dateUtils';
 
 interface EmpresaRequest extends Request {
@@ -348,6 +348,9 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
                 },
             }),
         ]);
+
+        // Notificar admins (fire-and-forget)
+        notifyFechamentoCaixa(empresaId, fechamento.id).catch(e => console.error('[Notif] Erro ao notificar fechamento:', e));
 
         return res.status(201).json({
             message: 'Fechamento de caixa registrado com sucesso.',

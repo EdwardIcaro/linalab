@@ -22,7 +22,8 @@ type NotifKey =
   | 'ordemParada'
   | 'saidaRegistrada'
   | 'comissaoFechada'
-  | 'clienteVip';
+  | 'clienteVip'
+  | 'fechamentoCaixa';
 
 interface NotifPrefs extends Record<NotifKey, boolean> {
   ordemParadaHoras: number;
@@ -39,6 +40,7 @@ const DEFAULTS: NotifPrefs = {
   saidaRegistrada:    false,
   comissaoFechada:    false,
   clienteVip:         true,
+  fechamentoCaixa:    true,
 };
 
 // Tolera dados antigos onde notificationPreferences foi salvo como string JSON
@@ -261,6 +263,21 @@ export async function notifyComissaoFechada(empresaId: string, dados: {
     await notifyAdmins(empresaId, msg, 'comissaoFechada');
   } catch (e) {
     console.error('[Notif] notifyComissaoFechada:', e);
+  }
+}
+
+export async function notifyFechamentoCaixa(empresaId: string, fechamentoId: string): Promise<void> {
+  try {
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { notificationPreferences: true } });
+    if (!empresa || !prefs(empresa).fechamentoCaixa) return;
+
+    const msg = `💼 *Fechamento de Caixa Disponível*\n\n` +
+      `🔍 Digite: *fc ${fechamentoId}* para ver detalhes\n` +
+      `(valores digitados, computados e observações)`;
+
+    await notifyAdmins(empresaId, msg, 'fechamentoCaixa');
+  } catch (e) {
+    console.error('[Notif] notifyFechamentoCaixa:', e);
   }
 }
 
