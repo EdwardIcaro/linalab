@@ -890,7 +890,7 @@
       <button class="ct-edit" @click="abrirFormEdicao()" title="Editar">
         <i class="fas fa-pencil-alt"></i>
       </button>
-      <button class="ct-x" @click="cliente=null; searchQuery=''">✕</button>
+      <button class="ct-x" @click="cliente=null; ultimoServicoId=null; searchQuery=''">✕</button>
     </div>
   </div>
 
@@ -957,6 +957,7 @@
         <template x-for="s in servicos" :key="s.id">
           <div class="svc-card" :class="{on: svc?.id===s.id}" @click="svc = svc?.id===s.id ? null : s">
             <div class="svc-check">✓</div>
+            <div x-show="ultimoServicoId === s.id" style="position:absolute;top:8px;left:8px;background:#10b981;color:#fff;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:.3px">(Última)</div>
             <div class="svc-name" x-text="s.nome"></div>
             <div class="svc-desc" x-text="s.descricao || ''"></div>
             <div class="svc-price" x-text="'R$ ' + Number(s.preco || 0).toFixed(2).replace('.',',')"></div>
@@ -1252,6 +1253,7 @@
         // ── Cliente selecionado ─────────────
         // { clienteId, veiculoId, nome, modelo, placa, telefone, cor?, isNew?, novoVeiculo? }
         cliente: null,
+        ultimoServicoId: null, // ID do último serviço que o cliente fez
         _linkClienteId: null, // quando cliente existe mas veículo não
 
         // ── Form novo/editar ────────────────
@@ -1447,12 +1449,32 @@
           this.searchQuery = '';
           this.showDrop = false;
 
+          // Busca o último serviço do cliente
+          this._buscarUltimoServicoId(r.clienteId);
+
           // Auto-preenche tipo e categoria do veículo cadastrado
           if (r.tipoVeiculo) {
             this.tipo = r.tipoVeiculo;
             this.$nextTick(() => {
               if (r.subtipoVeiculo) this.cat = r.subtipoVeiculo;
             });
+          }
+        },
+
+        async _buscarUltimoServicoId(clienteId) {
+          try {
+            const data = await window.api.getOrdens(1, 1, '', 'FINALIZADO', '', clienteId);
+            const ordens = data.ordens || [];
+            if (ordens.length > 0) {
+              const o = ordens[0];
+              const items = o.items || [];
+              if (items.length > 0) {
+                this.ultimoServicoId = items[0].servicoId;
+              }
+            }
+          } catch (e) {
+            console.error('Erro ao buscar último serviço:', e);
+            this.ultimoServicoId = null;
           }
         },
 
