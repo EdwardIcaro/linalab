@@ -307,6 +307,14 @@
     .svc-card:hover { border-color: var(--blue-m); }
     .svc-card.on { border-color: var(--blue); background: var(--blue-l); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
     .svc-card.on::before { background: var(--blue); }
+    /* Último serviço realizado — destaque verde */
+    .svc-card.is-last { border-color: var(--green); }
+    .svc-card.is-last::before { background: var(--green); }
+    .svc-card.is-last.on { border-color: var(--green); background: #ecfdf5; box-shadow: 0 0 0 3px rgba(16,185,129,.12); }
+    .svc-card.is-last.on::before { background: var(--green); }
+    .svc-card.is-last.on .svc-name,
+    .svc-card.is-last.on .svc-price { color: var(--green-d); }
+    .svc-card.is-last .svc-check { background: var(--green); }
     .svc-check {
       position: absolute; top: 8px; right: 8px;
       width: 18px; height: 18px;
@@ -952,7 +960,7 @@
       <!-- Grid de serviços -->
       <div class="svc-grid" x-show="tipo && !loadingServicos && servicos.length > 0" x-cloak>
         <template x-for="s in servicos" :key="s.id">
-          <div class="svc-card" :class="{on: svc?.id===s.id}" @click="svc = svc?.id===s.id ? null : s">
+          <div class="svc-card" :class="{on: svc?.id===s.id, 'is-last': ultimoServicoId===s.id}" @click="svc = svc?.id===s.id ? null : s">
             <div class="svc-check">✓</div>
             <div x-show="ultimoServicoId === s.id" x-cloak style="position:absolute;top:0;left:4px;background:#10b981;color:#fff;font-size:9px;padding:3px 8px;border-radius:0 0 8px 0;font-weight:700;letter-spacing:.3px;z-index:2">ÚLTIMA</div>
             <div class="svc-name" x-text="s.nome"></div>
@@ -1407,7 +1415,7 @@
           finally { this.buscando = false; }
         },
 
-        pick(r) {
+        async pick(r) {
           if (!r.veiculoId) {
             // Cliente existe mas sem veículo → abrir form pré-preenchido
             this._linkClienteId = r.clienteId;
@@ -1426,9 +1434,11 @@
           this.cliente = { ...r };
           this.searchQuery = '';
           this.showDrop = false;
+          this.svc = null;
 
-          // Busca o último serviço do cliente
-          this._buscarUltimoServicoId(r.clienteId);
+          // Busca o último serviço ANTES de carregar serviços, para que
+          // loadServicos() consiga auto-selecionar o card correto.
+          await this._buscarUltimoServicoId(r.clienteId);
 
           // Auto-preenche tipo e categoria do veículo cadastrado
           if (r.tipoVeiculo) {
@@ -1623,6 +1633,11 @@
               subtipoVeiculo: this.cat || undefined,
             });
             this.servicos = data.servicos || [];
+            // Auto-seleciona o último serviço realizado, se estiver disponível nesta lista
+            if (this.ultimoServicoId && !this.svc) {
+              const ultimo = this.servicos.find(s => s.id === this.ultimoServicoId);
+              if (ultimo) this.svc = ultimo;
+            }
           } catch { this.servicos = []; }
           finally { this.loadingServicos = false; }
         },
@@ -1849,7 +1864,7 @@
           this.closeCameraModal();
           Object.assign(this, {
             q: '', showDrop: false, results: [], buscando: false,
-            cliente: null, _linkClienteId: null,
+            cliente: null, _linkClienteId: null, ultimoServicoId: null,
             showForm: false, formEdicao: false,
             formClienteSuggestions: [], formClienteSelecionado: null,
             tipo: null, cat: null,
