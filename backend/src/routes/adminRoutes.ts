@@ -10,7 +10,6 @@ import {
 } from '../controllers/adminController';
 import {
   salvarTelefoneAdmin,
-  confirmarTelefoneAdmin,
   obterConfigWhatsapp,
   removerTelefoneAdmin,
   aprovarReset,
@@ -44,7 +43,8 @@ router.delete('/cache', clearCache);
 
 // WhatsApp do admin
 router.post('/whatsapp-telefone', salvarTelefoneAdmin);
-router.get('/confirmar-whatsapp-telefone', confirmarTelefoneAdmin);
+// GET /confirmar-whatsapp-telefone é registrado PÚBLICO em index.ts (link do celular
+// não tem JWT); não pode ficar aqui sob adminMiddleware.
 router.get('/config/whatsapp', obterConfigWhatsapp);
 router.delete('/whatsapp-telefone', removerTelefoneAdmin);
 

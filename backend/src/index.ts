@@ -21,6 +21,7 @@ import pagamentoRoutes from './routes/pagamento';
 import tipoVeiculoRoutes from './routes/tipoVeiculo';
 import notificacaoRoutes from './routes/notificacao';
 import adminRoutes from './routes/adminRoutes';
+import { confirmarTelefoneAdmin } from './controllers/recuperacaoSenhaController';
 import adminSetupRoutes from './routes/admin';
 import themeRoutes from './routes/themeRoutes';
 import roleRoutes from './routes/roles';
@@ -146,6 +147,11 @@ app.get('/api/promotions/active', async (_req, _res) => {
 
 // Admin setup routes (para inicialização do banco de dados - sem proteção por enquanto)
 app.use('/api/admin-setup', adminSetupRoutes); // Setup routes (database initialization)
+
+// Confirmação de WhatsApp do admin — PÚBLICA: o admin clica no link recebido no
+// celular (sem JWT); o token na query string é a própria credencial. Registrada
+// ANTES do adminMiddleware para não exigir autenticação.
+app.get('/api/admin/confirmar-whatsapp-telefone', confirmarTelefoneAdmin);
 
 // Middleware de autenticação para rotas protegidas
 app.use('/api/admin', adminMiddleware, adminRoutes); // Admin routes (LINA_OWNER only)

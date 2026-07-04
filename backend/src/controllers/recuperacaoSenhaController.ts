@@ -78,7 +78,9 @@ export const salvarTelefoneAdmin = async (req: Request, res: Response) => {
 
     // Enviar confirmação via WhatsApp
     const telefoneSemFormatacao = removerFormatacaoTelefone(telefone);
-    const linkConfirmacao = `${process.env.FRONTEND_URL || 'http://localhost'}/admin/confirmar-whatsapp?token=${confirmToken}`;
+    // ⚠️ FRONTEND_URL deve apontar para o domínio do FRONT (Vercel), não do backend
+    // (Railway não serve arquivos estáticos). A página confirma o token via /api/*.
+    const linkConfirmacao = `${process.env.FRONTEND_URL || 'http://localhost'}/admin/confirmar-whatsapp.html?token=${confirmToken}`;
 
     try {
       await botSend(telefoneSemFormatacao, `🔐 Olá! Clique no link abaixo para confirmar este número:\n\n${linkConfirmacao}\n\nEste link expira em 10 minutos.`);

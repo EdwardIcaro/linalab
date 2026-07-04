@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar WhatsApp - LINA OWNER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .icon-wrap {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2.5rem;
+        }
+
+        .icon-wrap.loading { background: #EFF6FF; color: #3B82F6; }
+        .icon-wrap.success { background: #D1FAE5; color: #10B981; }
+        .icon-wrap.error   { background: #FEE2E2; color: #EF4444; }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            color: #64748B;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .whatsapp-note {
+            margin-top: 1.75rem;
+            padding: 1rem;
+            background: #F0FDF4;
+            border-radius: 12px;
+            color: #166534;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .whatsapp-note i { color: #25D366; font-size: 1.1rem; }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <!-- Carregando -->
+        <div id="stateLoading">
+            <div class="icon-wrap loading">
+                <i class="fas fa-circle-notch spinner"></i>
+            </div>
+            <h1>Confirmando...</h1>
+            <p>Estamos validando seu número de WhatsApp. Aguarde um instante.</p>
+        </div>
+
+        <!-- Sucesso -->
+        <div id="stateSuccess" class="hidden">
+            <div class="icon-wrap success">
+                <i class="fas fa-check"></i>
+            </div>
+            <h1>Número confirmado!</h1>
+            <p id="successText">Seu WhatsApp foi vinculado com sucesso. Você já receberá os alertas de segurança neste número.</p>
+            <div class="whatsapp-note">
+                <i class="fab fa-whatsapp"></i>
+                Pode fechar esta página.
+            </div>
+        </div>
+
+        <!-- Erro -->
+        <div id="stateError" class="hidden">
+            <div class="icon-wrap error">
+                <i class="fas fa-times"></i>
+            </div>
+            <h1>Não foi possível confirmar</h1>
+            <p id="errorText">O link é inválido ou expirou. Gere um novo pelo painel de configurações.</p>
+        </div>
+    </div>
+
+    <script>
+        function show(state) {
+            ['Loading', 'Success', 'Error'].forEach(s => {
+                document.getElementById('state' + s).classList.toggle('hidden', s !== state);
+            });
+        }
+
+        async function confirmar() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+
+            if (!token) {
+                document.getElementById('errorText').textContent = 'Token não encontrado no link.';
+                show('Error');
+                return;
+            }
+
+            try {
+                // Mesmo domínio (Vercel) → /api/* é reescrito para o backend (Railway).
+                // Endpoint público: o token é a credencial (sem JWT).
+                const res = await fetch(`/api/admin/confirmar-whatsapp-telefone?token=${encodeURIComponent(token)}`);
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && data.confirmed) {
+                    if (data.message) document.getElementById('successText').textContent =
+                        'Seu WhatsApp foi vinculado com sucesso. Você já receberá os alertas de segurança neste número.';
+                    show('Success');
+                } else {
+                    document.getElementById('errorText').textContent =
+                        data.error || 'O link é inválido ou expirou. Gere um novo pelo painel de configurações.';
+                    show('Error');
+                }
+            } catch (err) {
+                document.getElementById('errorText').textContent =
+                    'Erro de conexão. Verifique sua internet e tente novamente.';
+                show('Error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', confirmar);
+    </script>
+</body>
+</html>
