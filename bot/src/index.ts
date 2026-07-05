@@ -22,7 +22,10 @@ import {
   sendImageBuffer,
   resolvePhoneToJid,
   sendMessageAndCaptureJid,
+  listGroups,
 } from './services/baileyService';
+
+import { startEmailPoller } from './services/emailPoller';
 
 import {
   connectEmpresa,
@@ -68,6 +71,16 @@ app.get('/status', (_req, res) => {
   const generatedAt  = getQrGeneratedAt();
   const qrExpiresIn  = generatedAt ? Math.max(0, 60 - Math.floor((Date.now() - generatedAt) / 1000)) : null;
   res.json({ status, ...(qrCode && { qrCode, qrExpiresIn }) });
+});
+
+// ── Grupos de WhatsApp do bot ────────────────────────────────────────────────
+app.get('/grupos', async (_req, res) => {
+  try {
+    const grupos = await listGroups();
+    res.json({ grupos });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar grupos', details: String(err) });
+  }
 });
 
 // ── Inicializar socket ───────────────────────────────────────────────────────
@@ -293,6 +306,9 @@ async function startBot() {
         }
       } catch {}
     }, 5000);
+
+    // Poller de leitura de email → WhatsApp (regras cadastradas na config)
+    startEmailPoller();
   } catch (err) {
     console.error('❌ Erro ao iniciar bot:', err);
     process.exit(1);

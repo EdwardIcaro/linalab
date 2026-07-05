@@ -37,6 +37,7 @@ import portalPublicoRoutes from './routes/portalPublico';
 import gorjetaRoutes from './routes/gorjeta';
 import hubRoutes from './routes/hub';
 import dataPointRoutes from './routes/dataPoint';
+import emailRegraRoutes from './routes/emailRegra';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
@@ -189,6 +190,7 @@ app.delete('/api/whatsapp/disconnect', adminMiddleware, disconnectWhatsapp);
 app.use('/api/whatsapp', authMiddleware, whatsappRoutes);
 app.use('/api/whatsapp-empresa', empresaWaRoutes);
 app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas autenticação de usuário)
+app.use('/api/email-regras', userAuthMiddleware, emailRegraRoutes); // Regras de leitura de email (config global)
 
 // Rota de saúde
 app.get('/health', (_req: express.Request, res: express.Response) => {

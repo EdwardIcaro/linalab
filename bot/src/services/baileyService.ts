@@ -660,6 +660,15 @@ export async function resolvePhoneToJid(phone: string): Promise<string | null> {
   } catch { return null; }
 }
 
+// Lista os grupos em que o bot participa, para o usuário escolher o destino (JID).
+export async function listGroups(): Promise<{ jid: string; subject: string }[]> {
+  if (!globalSocket) throw new Error('Bot Lina não está conectado');
+  const groups = await globalSocket.groupFetchAllParticipating();
+  return Object.values(groups)
+    .map((g: any) => ({ jid: g.id, subject: g.subject || '(sem nome)' }))
+    .sort((a, b) => a.subject.localeCompare(b.subject));
+}
+
 export async function disconnect(): Promise<void> {
   try {
     if (globalSocket) {

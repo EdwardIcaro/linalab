@@ -1055,3 +1055,22 @@ model RecuperacaoSenha {
   @@index([token])
   @@map("recuperacoes_senha")
 }
+
+// Regras de leitura de email → WhatsApp (motor genérico, config global do sistema).
+// O bot lê as regras ativas, detecta emails que casam com remetente/assunto,
+// extrai um valor via regex e envia o template no destino (grupo ou números).
+model EmailRegra {
+  id              String   @id @default(cuid())
+  nome            String
+  ativo           Boolean  @default(true)
+  remetenteContem String   // filtro por remetente (ex: "localiza")
+  assuntoContem   String?  // filtro por assunto (opcional)
+  regexExtracao   String   // ex: "\\d{6}" — o match vira {{valor}} no template
+  template        String   // ex: "🔑 Código Localiza: {{valor}}"
+  destinoTipo     String   // "GRUPO" | "NUMEROS"
+  destinoValor    String   // JID do grupo (...@g.us) ou telefones separados por vírgula
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("email_regras")
+}

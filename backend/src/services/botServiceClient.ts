@@ -36,6 +36,10 @@ export async function botGetStatus(): Promise<{ status: string; qrCode?: string;
   return botFetch('/status');
 }
 
+export async function botGetGrupos(): Promise<{ grupos: { jid: string; subject: string }[] }> {
+  return botFetch('/grupos');
+}
+
 export async function botInitialize(): Promise<{ status: string; qrCode?: string }> {
   return botFetch('/initialize', { method: 'POST' });
 }

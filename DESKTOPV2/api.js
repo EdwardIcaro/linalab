@@ -573,6 +573,15 @@ const api = {
   empresaWaEnviarTemplate: (ordemId, templateId) => fetchApi('/whatsapp-empresa/enviar', { method: 'POST', body: JSON.stringify({ ordemId, templateId }) }),
   empresaWaEnviarCliente:  (clienteId, templateId, texto) => fetchApi('/whatsapp-empresa/enviar-cliente', { method: 'POST', body: JSON.stringify({ clienteId, ...(templateId && { templateId }), ...(texto && { texto }) }) }),
 
+  // ── Regras de Leitura de Email (config global) ─────────────────────────────
+  emailRegras: {
+    list:   ()         => fetchApi('/email-regras'),
+    create: (data)     => fetchApi('/email-regras', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => fetchApi(`/email-regras/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id)       => fetchApi(`/email-regras/${id}`, { method: 'DELETE' }),
+  },
+  botGrupos: () => fetchApi('/email-regras/grupos'),
+
   // ── Gorjetas ──────────────────────────────────────────────────────────────
   createGorjeta: (data)    => fetchApi('/gorjeta', { method: 'POST', body: JSON.stringify(data) }),
   listGorjetas:  (params)  => fetchApi(`/gorjeta?${new URLSearchParams(params || {})}`),

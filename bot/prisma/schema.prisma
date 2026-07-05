@@ -889,3 +889,21 @@ model DpMarcacao {
 
   @@map("dp_marcacoes")
 }
+
+// Regras de leitura de email → WhatsApp (espelho do backend). O poller do bot
+// lê as regras ativas e envia o valor extraído no destino configurado.
+model EmailRegra {
+  id              String   @id @default(cuid())
+  nome            String
+  ativo           Boolean  @default(true)
+  remetenteContem String
+  assuntoContem   String?
+  regexExtracao   String
+  template        String
+  destinoTipo     String
+  destinoValor    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("email_regras")
+}
