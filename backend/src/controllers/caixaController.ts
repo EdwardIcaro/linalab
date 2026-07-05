@@ -374,8 +374,8 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
             }),
         ]);
 
-        // Notificar admins (fire-and-forget)
-        notifyFechamentoCaixa(empresaId, fechamento.id).catch(e => console.error('[Notif] Erro ao notificar fechamento:', e));
+        // Notificar admins (fire-and-forget) — a observação segue junto na mensagem
+        notifyFechamentoCaixa(empresaId, observacao).catch(e => console.error('[Notif] Erro ao notificar fechamento:', e));
 
         return res.status(201).json({
             message: 'Fechamento de caixa registrado com sucesso.',

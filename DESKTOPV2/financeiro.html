@@ -2489,50 +2489,77 @@
                     <button type="button" class="modal-close" @click="closeFechamentoModal()"><i class="fas fa-times"></i></button>
                 </div>
 
-                <p style="color: var(--finance-text-secondary); margin-bottom: 20px; font-size: 14px;">
-                    Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
-                </p>
+                <!-- Indicador de etapa -->
+                <div style="display:flex; gap:8px; margin-bottom:20px;">
+                    <div style="flex:1; height:4px; border-radius:2px; background: var(--finance-orange);"></div>
+                    <div style="flex:1; height:4px; border-radius:2px;"
+                         :style="fechamentoModal.step === 2 ? 'background: var(--finance-orange)' : 'background: var(--finance-border, #e2e8f0)'"></div>
+                </div>
 
-                <div class="fechamento-grid">
-                    <div class="fechamento-item" x-show="paymentMethodsConfig.DINHEIRO !== false">
-                        <div class="label">💵 Dinheiro</div>
-                        <input type="number" step="0.01" min="0" placeholder="0,00"
-                               x-model="fechamentoModal.valores.DINHEIRO" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+                <!-- ETAPA 1: valores por forma de pagamento -->
+                <div x-show="fechamentoModal.step === 1">
+                    <p style="color: var(--finance-text-secondary); margin-bottom: 20px; font-size: 14px;">
+                        <strong>Passo 1 de 2.</strong> Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
+                    </p>
+
+                    <div class="fechamento-grid">
+                        <div class="fechamento-item" x-show="paymentMethodsConfig.DINHEIRO !== false">
+                            <div class="label">💵 Dinheiro</div>
+                            <input type="number" step="0.01" min="0" placeholder="0,00"
+                                   x-model="fechamentoModal.valores.DINHEIRO" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+                        </div>
+                        <div class="fechamento-item" x-show="paymentMethodsConfig.PIX !== false">
+                            <div class="label">📱 PIX</div>
+                            <input type="number" step="0.01" min="0" placeholder="0,00"
+                                   x-model="fechamentoModal.valores.PIX" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+                        </div>
+                        <div class="fechamento-item" x-show="paymentMethodsConfig.CARTAO !== false">
+                            <div class="label">💳 Cartão</div>
+                            <input type="number" step="0.01" min="0" placeholder="0,00"
+                                   x-model="fechamentoModal.valores.CARTAO" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+                        </div>
+                        <div class="fechamento-item" x-show="paymentMethodsConfig.NFE === true">
+                            <div class="label">🧾 NFe</div>
+                            <input type="number" step="0.01" min="0" placeholder="0,00"
+                                   x-model="fechamentoModal.valores.NFE" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+                        </div>
                     </div>
-                    <div class="fechamento-item" x-show="paymentMethodsConfig.PIX !== false">
-                        <div class="label">📱 PIX</div>
-                        <input type="number" step="0.01" min="0" placeholder="0,00"
-                               x-model="fechamentoModal.valores.PIX" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
-                    </div>
-                    <div class="fechamento-item" x-show="paymentMethodsConfig.CARTAO !== false">
-                        <div class="label">💳 Cartão</div>
-                        <input type="number" step="0.01" min="0" placeholder="0,00"
-                               x-model="fechamentoModal.valores.CARTAO" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
-                    </div>
-                    <div class="fechamento-item" x-show="paymentMethodsConfig.NFE === true">
-                        <div class="label">🧾 NFe</div>
-                        <input type="number" step="0.01" min="0" placeholder="0,00"
-                               x-model="fechamentoModal.valores.NFE" class="form-input" style="text-align:center; font-size:16px; font-weight:600; margin-top:8px;">
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" @click="closeFechamentoModal()">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @click="avancarFechamento()">
+                            <span>Continuar</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div style="margin-top: 16px; padding: 16px; background: var(--finance-orange-light); border-radius: var(--radius-md); text-align: center;">
-                    <i class="fas fa-exclamation-triangle" style="color: var(--finance-orange);"></i>
-                    <span style="color: var(--finance-text); margin-left: 8px;">Esta ação não pode ser desfeita.</span>
-                </div>
+                <!-- ETAPA 2: observação e confirmação -->
+                <div x-show="fechamentoModal.step === 2">
+                    <div class="form-group">
+                        <label class="form-label">Observação (opcional)</label>
+                        <p style="color: var(--finance-text-secondary); margin: 4px 0 8px; font-size: 13px;">
+                            <strong>Passo 2 de 2.</strong> Relate aqui qualquer divergência (ex: "passou R$ 10 em dinheiro que esqueci de lançar na nota"). Esta observação é enviada ao admin junto com a notificação de fechamento no WhatsApp.
+                        </p>
+                        <textarea class="form-input" x-model="fechamentoModal.observacao" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="resize: vertical; min-height: 90px;"></textarea>
+                    </div>
 
-                <div class="form-group" style="margin-top: 16px;">
-                    <label class="form-label">Observação (opcional)</label>
-                    <textarea class="form-input" x-model="fechamentoModal.observacao" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="resize: vertical; min-height: 80px;"></textarea>
-                </div>
+                    <div style="margin-top: 16px; padding: 16px; background: var(--finance-orange-light); border-radius: var(--radius-md); text-align: center;">
+                        <i class="fas fa-exclamation-triangle" style="color: var(--finance-orange);"></i>
+                        <span style="color: var(--finance-text); margin-left: 8px;">Esta ação não pode ser desfeita.</span>
+                    </div>
 
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" @click="closeFechamentoModal()">Cancelar</button>
-                    <button class="btn btn-danger" @click="confirmarFechamento()" :disabled="fechamentoModal.isClosing">
-                        <i class="fas fa-spinner spinner" x-show="fechamentoModal.isClosing"></i>
-                        <i class="fas fa-lock" x-show="!fechamentoModal.isClosing"></i>
-                        <span x-text="fechamentoModal.isClosing ? 'Fechando...' : 'Confirmar Fechamento'"></span>
-                    </button>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" @click="fechamentoModal.step = 1" :disabled="fechamentoModal.isClosing">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Voltar</span>
+                        </button>
+                        <button class="btn btn-danger" @click="confirmarFechamento()" :disabled="fechamentoModal.isClosing">
+                            <i class="fas fa-spinner spinner" x-show="fechamentoModal.isClosing"></i>
+                            <i class="fas fa-lock" x-show="!fechamentoModal.isClosing"></i>
+                            <span x-text="fechamentoModal.isClosing ? 'Fechando...' : 'Confirmar Fechamento'"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2921,6 +2948,7 @@
                     isOpen: false,
                     isLoading: false,
                     isClosing: false,
+                    step: 1,
                     valores: { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' },
                     observacao: ''
                 },
@@ -3688,7 +3716,14 @@
                 openFechamentoModal() {
                     this.fechamentoModal.valores = { DINHEIRO: '', PIX: '', CARTAO: '', NFE: '' };
                     this.fechamentoModal.observacao = '';
+                    this.fechamentoModal.step = 1;
                     this.fechamentoModal.isOpen = true;
+                },
+
+                // Avança da etapa de valores para a etapa de observação.
+                // Valores em branco contam como R$ 0,00, então não há campo obrigatório.
+                avancarFechamento() {
+                    this.fechamentoModal.step = 2;
                 },
 
                 closeFechamentoModal() {

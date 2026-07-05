@@ -283,7 +283,7 @@ export async function notifyComissaoFechada(empresaId: string, dados: {
   }
 }
 
-export async function notifyFechamentoCaixa(empresaId: string, _fechamentoId?: string): Promise<void> {
+export async function notifyFechamentoCaixa(empresaId: string, observacao?: string): Promise<void> {
   try {
     const bot = await botGetStatus();
     if (bot.status !== 'connected') return;
@@ -293,8 +293,12 @@ export async function notifyFechamentoCaixa(empresaId: string, _fechamentoId?: s
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true, notificationPreferences: true } });
     if (!empresa || !prefs(empresa).fechamentoCaixa) return;
 
+    // A observação (divergências relatadas no fechamento) segue junto na notificação.
+    const obsLimpa = observacao?.trim();
+    const blocoObs = obsLimpa ? `\n\n📝 *Observação:* ${obsLimpa}` : '';
+
     // Comando simples "fechamento do caixa" (já tratado pelo bot) — sem código/ID.
-    const corpo = `\n\n🔍 Digite *fechamento do caixa* para ver os detalhes\n` +
+    const corpo = `${blocoObs}\n\n🔍 Digite *fechamento do caixa* para ver os detalhes\n` +
       `(valores digitados, computados e observações)`;
 
     // sendAdminBlocks adiciona o nome da empresa no cabeçalho automaticamente
