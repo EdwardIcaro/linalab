@@ -418,6 +418,7 @@
             <div class="user-avatar" id="userAvatar">?</div>
             <span id="userName">...</span>
           </div>
+          <button class="btn-logout" onclick="abrirConfigConta()" title="Configurações da conta"><i class="fa fa-cog"></i></button>
           <button class="btn-logout" onclick="logout()"><i class="fa fa-sign-out-alt"></i> Sair</button>
         </div>
       </div>
@@ -559,6 +560,72 @@
 
     </div>
 
+  </div>
+
+  <!-- ══ Configurações da conta (acesso multi-empresa de funcionários) ══ -->
+  <style>
+    .cfg-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); opacity: 0; visibility: hidden; transition: opacity .2s; z-index: 900; }
+    .cfg-overlay.open { opacity: 1; visibility: visible; }
+    .cfg-drawer { position: fixed; top: 0; right: 0; height: 100%; width: 440px; max-width: 92vw; background: #fff; box-shadow: -8px 0 40px rgba(0,0,0,.2);
+      transform: translateX(100%); transition: transform .25s ease; z-index: 901; display: flex; flex-direction: column; }
+    .cfg-drawer.open { transform: translateX(0); }
+    .cfg-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 22px; border-bottom: 1px solid #e6e8ee; }
+    .cfg-head h2 { margin: 0; font-size: 18px; color: #1e293b; }
+    .cfg-close { background: #f1f3f8; border: none; width: 34px; height: 34px; border-radius: 9px; cursor: pointer; color: #64748b; font-size: 15px; }
+    .cfg-body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+    .cfg-section-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+    .cfg-hint { font-size: 13px; color: #64748b; margin: 0 0 18px; line-height: 1.5; }
+    .cfg-sub { padding: 14px 0; border-bottom: 1px solid #eef0f5; }
+    .cfg-sub-name { font-weight: 600; color: #1e293b; margin-bottom: 8px; }
+    .cfg-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cfg-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; border: 1.5px solid transparent; cursor: pointer; transition: all .15s; }
+    .cfg-badge.primary { background: #eef2ff; color: #4338ca; cursor: default; border-color: #e0e7ff; }
+    .cfg-badge.active { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .cfg-badge.active:hover { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .cfg-badge.add { background: #fff; color: #64748b; border-color: #cbd5e1; border-style: dashed; }
+    .cfg-badge.add:hover { color: #4338ca; border-color: #a5b4fc; background: #f5f3ff; }
+    .cfg-empty { text-align: center; color: #94a3b8; padding: 30px 10px; font-size: 14px; }
+
+    .cfg-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 950; padding: 20px; }
+    .cfg-modal-overlay.open { display: flex; }
+    .cfg-modal { background: #fff; border-radius: 16px; padding: 24px; width: 400px; max-width: 100%; }
+    .cfg-modal h3 { margin: 0 0 4px; font-size: 17px; color: #1e293b; }
+    .cfg-modal .cfg-msub { color: #64748b; font-size: 13.5px; margin: 0 0 18px; }
+    .cfg-field label { display: block; font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+    .cfg-field select { width: 100%; padding: 11px 12px; border: 1.5px solid #d5dae5; border-radius: 10px; font-size: 14px; font-family: inherit; }
+    .cfg-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+    .btn-cfg-secondary { padding: 10px 16px; border-radius: 10px; border: none; background: #eef0f5; color: #475569; font-weight: 600; cursor: pointer; }
+    .btn-cfg-primary { padding: 10px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; font-weight: 600; cursor: pointer; }
+    .btn-cfg-primary:disabled { opacity: .5; cursor: not-allowed; }
+    @media (max-width: 520px) { .cfg-drawer { width: 100vw; } }
+  </style>
+
+  <div class="cfg-overlay" id="cfgOverlay" onclick="fecharConfigConta()"></div>
+  <aside class="cfg-drawer" id="cfgDrawer">
+    <div class="cfg-head">
+      <h2><i class="fa fa-cog" style="color:#8b5cf6;margin-right:8px"></i>Configurações da conta</h2>
+      <button class="cfg-close" onclick="fecharConfigConta()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="cfg-body">
+      <div class="cfg-section-title">Funcionários com acesso ao painel</div>
+      <p class="cfg-hint">Conceda a um funcionário acesso a mais de uma das suas empresas. Ele alterna entre elas pelo próprio painel, sem novo login. A empresa principal (★) não pode ser removida.</p>
+      <div id="cfgSubaccounts"></div>
+    </div>
+  </aside>
+
+  <div class="cfg-modal-overlay" id="roleModalOverlay">
+    <div class="cfg-modal">
+      <h3 id="roleModalTitle">Conceder acesso</h3>
+      <p class="cfg-msub" id="roleModalSub"></p>
+      <div class="cfg-field">
+        <label>Qual função nessa empresa?</label>
+        <select id="roleModalSelect"><option>Carregando...</option></select>
+      </div>
+      <div class="cfg-modal-actions">
+        <button class="btn-cfg-secondary" onclick="fecharRoleModal()">Cancelar</button>
+        <button class="btn-cfg-primary" id="roleModalConfirm" onclick="confirmarConcederAcesso()">Conceder acesso</button>
+      </div>
+    </div>
   </div>
 
   <script src="api.js"></script>
@@ -757,6 +824,118 @@
     }
 
     carregarHub();
+
+    // ══ Configurações da conta — acesso multi-empresa de subaccounts ══
+    const cfgState = { empresas: [], subaccounts: [] };
+    let rolePending = null;
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function abrirConfigConta() {
+      document.getElementById('cfgOverlay').classList.add('open');
+      document.getElementById('cfgDrawer').classList.add('open');
+      carregarSubaccounts();
+    }
+    function fecharConfigConta() {
+      document.getElementById('cfgOverlay').classList.remove('open');
+      document.getElementById('cfgDrawer').classList.remove('open');
+    }
+
+    async function carregarSubaccounts() {
+      const box = document.getElementById('cfgSubaccounts');
+      box.innerHTML = '<div class="cfg-empty">Carregando...</div>';
+      try {
+        const data = await window.api.getSubaccountsComAcessos();
+        cfgState.empresas = data.empresas || [];
+        cfgState.subaccounts = data.subaccounts || [];
+        renderSubaccounts();
+      } catch (e) {
+        console.error('Erro ao carregar funcionários:', e);
+        box.innerHTML = '<div class="cfg-empty">Erro ao carregar funcionários.</div>';
+      }
+    }
+
+    function renderSubaccounts() {
+      const box = document.getElementById('cfgSubaccounts');
+      if (!cfgState.subaccounts.length) {
+        box.innerHTML = '<div class="cfg-empty">Nenhum funcionário com acesso ao painel ainda.</div>';
+        return;
+      }
+      box.innerHTML = cfgState.subaccounts.map(sub => {
+        const acessoMap = new Map(sub.acessos.map(a => [a.empresaId, a]));
+        const badges = cfgState.empresas.map(emp => {
+          const ac = acessoMap.get(emp.id);
+          if (ac && ac.isPrimary) {
+            return `<span class="cfg-badge primary" title="Empresa principal">${escapeHtml(emp.nome)} ★</span>`;
+          }
+          if (ac) {
+            return `<span class="cfg-badge active" title="${escapeHtml(ac.roleNome || '')} — clique para remover"
+              data-action="revogar" data-sub="${sub.id}" data-emp="${emp.id}" data-empnome="${escapeHtml(emp.nome)}">${escapeHtml(emp.nome)} ✓</span>`;
+          }
+          return `<span class="cfg-badge add" title="Conceder acesso"
+            data-action="conceder" data-sub="${sub.id}" data-emp="${emp.id}" data-empnome="${escapeHtml(emp.nome)}" data-subnome="${escapeHtml(sub.nome)}">${escapeHtml(emp.nome)} +</span>`;
+        }).join('');
+        return `<div class="cfg-sub"><div class="cfg-sub-name">${escapeHtml(sub.nome)}</div><div class="cfg-badges">${badges}</div></div>`;
+      }).join('');
+    }
+
+    // Delegação de clique nos badges
+    document.getElementById('cfgSubaccounts').addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const { action, sub, emp, empnome, subnome } = el.dataset;
+      if (action === 'conceder') abrirRoleModal(sub, emp, empnome, subnome);
+      else if (action === 'revogar') revogarAcesso(sub, emp, empnome);
+    });
+
+    async function abrirRoleModal(subId, empId, empNome, subNome) {
+      rolePending = { subId, empId };
+      document.getElementById('roleModalTitle').textContent = `Conceder acesso — ${subNome}`;
+      document.getElementById('roleModalSub').textContent = `Empresa: ${empNome}`;
+      const sel = document.getElementById('roleModalSelect');
+      sel.innerHTML = '<option>Carregando...</option>';
+      document.getElementById('roleModalOverlay').classList.add('open');
+      try {
+        const roles = await window.api.getRolesDaEmpresa(empId);
+        sel.innerHTML = roles.length
+          ? roles.map(r => `<option value="${r.id}">${escapeHtml(r.nome)}</option>`).join('')
+          : '<option value="">Nenhum cargo cadastrado nesta empresa</option>';
+      } catch (e) {
+        sel.innerHTML = '<option value="">Erro ao carregar cargos</option>';
+      }
+    }
+    function fecharRoleModal() {
+      document.getElementById('roleModalOverlay').classList.remove('open');
+      rolePending = null;
+    }
+    async function confirmarConcederAcesso() {
+      if (!rolePending) return;
+      const roleId = document.getElementById('roleModalSelect').value;
+      if (!roleId) { alert('Selecione um cargo para esta empresa.'); return; }
+      const btn = document.getElementById('roleModalConfirm');
+      btn.disabled = true;
+      try {
+        await window.api.concederAcessoSubaccount(rolePending.subId, rolePending.empId, roleId);
+        fecharRoleModal();
+        await carregarSubaccounts();
+      } catch (e) {
+        alert(e?.message || 'Erro ao conceder acesso');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function revogarAcesso(subId, empId, empNome) {
+      if (!confirm(`Remover o acesso a "${empNome}"?`)) return;
+      try {
+        await window.api.revogarAcessoSubaccount(subId, empId);
+        await carregarSubaccounts();
+      } catch (e) {
+        alert(e?.message || 'Erro ao remover acesso');
+      }
+    }
   </script>
 </body>
 </html>
