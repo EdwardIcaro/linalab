@@ -28,11 +28,40 @@
       .emp-switch-item:hover { background:#f1f5f9; }
       .emp-switch-item.current { color:#0066cc; font-weight:600; }
       .emp-switch-item .emp-ck { width:14px; text-align:center; color:#0066cc; }
+      .emp-switch-loading { position:fixed; inset:0; z-index:100000; display:flex; flex-direction:column; align-items:center;
+        justify-content:center; gap:16px; background:rgba(255,255,255,.92); backdrop-filter:blur(3px); opacity:0;
+        transition:opacity .15s; }
+      .emp-switch-loading.show { opacity:1; }
+      .emp-switch-loading .sp { width:44px; height:44px; border:4px solid #dbeafe; border-top-color:#0066cc; border-radius:50%;
+        animation:emp-spin .7s linear infinite; }
+      .emp-switch-loading .txt { color:#1e293b; font-size:15px; font-weight:600; }
+      .emp-switch-loading .sub { color:#64748b; font-size:13px; margin-top:-8px; }
+      @keyframes emp-spin { to { transform:rotate(360deg); } }
     `;
     document.head.appendChild(st);
   }
 
-  async function doSwitchEmpresa(empresaId) {
+  function showSwitchLoading(nome) {
+    let ov = document.getElementById('empSwitchLoading');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'empSwitchLoading';
+      ov.className = 'emp-switch-loading';
+      ov.innerHTML = '<div class="sp"></div><div class="txt">Trocando de empresa...</div><div class="sub"></div>';
+      document.body.appendChild(ov);
+    }
+    ov.querySelector('.sub').textContent = nome ? ('→ ' + nome) : '';
+    // força reflow p/ a transição de opacidade rodar
+    void ov.offsetWidth;
+    ov.classList.add('show');
+  }
+  function hideSwitchLoading() {
+    const ov = document.getElementById('empSwitchLoading');
+    if (ov) ov.classList.remove('show');
+  }
+
+  async function doSwitchEmpresa(empresaId, nome) {
+    showSwitchLoading(nome);
     try {
       const res = await window.api.switchEmpresa(empresaId);
       if (!res || !res.token) throw new Error('Resposta inválida do servidor');
@@ -41,9 +70,10 @@
       localStorage.setItem('empresaNome', res.empresa.nome);
       if (res.role && res.role.permissoes) localStorage.setItem('permissoes', JSON.stringify(res.role.permissoes));
       if (res.role && res.role.nome) localStorage.setItem('cargo', res.role.nome);
-      if (typeof showToast === 'function') showToast('Empresa: ' + res.empresa.nome, 'success');
-      setTimeout(function () { location.reload(); }, 350);
+      // mantém o overlay visível até o reload trocar de página
+      setTimeout(function () { location.reload(); }, 300);
     } catch (e) {
+      hideSwitchLoading();
       if (typeof showToast === 'function') showToast((e && e.message) || 'Erro ao trocar de empresa', 'error');
       else alert((e && e.message) || 'Erro ao trocar de empresa');
     }
@@ -110,7 +140,8 @@
       ev.stopPropagation();
       menu.classList.remove('open');
       const id = item.dataset.id;
-      if (id !== localStorage.getItem('empresaId')) doSwitchEmpresa(id);
+      const nome = item.lastElementChild ? item.lastElementChild.textContent : '';
+      if (id !== localStorage.getItem('empresaId')) doSwitchEmpresa(id, nome);
     });
   }
 
