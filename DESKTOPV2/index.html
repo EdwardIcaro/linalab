@@ -4453,15 +4453,12 @@
                 // ==========================================
                 async init() {
                     try {
-                        console.log('[Dashboard] init() starting...');
-
                         // Check authentication
                         if (!window.api.isAuthenticated()) {
                             console.warn('[Dashboard] ⚠️ Not authenticated - redirecting to login');
                             window.location.href = 'login.html';
                             return;
                         }
-                        console.log('[Dashboard] ✅ Authenticated');
 
                         // Handle initial redirect
                         this.handleInitialRedirect();
@@ -4513,7 +4510,6 @@
                             this.loadRecentOrders();
                         }, 60000);
 
-                        console.log('[Dashboard] ✅ init() completed successfully');
                     } catch (error) {
                         console.error('[Dashboard] ❌ FATAL ERROR in init():', error);
                         console.error('[Dashboard] Error stack:', error.stack);
@@ -4528,25 +4524,16 @@
                 // INITIAL REDIRECT
                 // ==========================================
                 handleInitialRedirect() {
-                    console.log('[Redirect] Checking for initial redirect...');
-
                     if (sessionStorage.getItem('initialRedirectDone')) {
-                        console.log('[Redirect] ✅ Already redirected this session - skipping');
                         return;
                     }
 
                     const defaultPage = localStorage.getItem('paginaInicialPadrao');
                     const currentPage = window.location.pathname.split('/').pop();
 
-                    console.log('[Redirect] Default page:', defaultPage);
-                    console.log('[Redirect] Current page:', currentPage);
-
                     if (defaultPage && defaultPage !== currentPage && defaultPage !== 'index.html') {
-                        console.warn('[Redirect] ⚠️ REDIRECTING TO:', defaultPage, '- This may cause top bar to flash!');
                         sessionStorage.setItem('initialRedirectDone', 'true');
                         window.location.href = defaultPage;
-                    } else {
-                        console.log('[Redirect] ✅ No redirect needed');
                     }
                 },
 
@@ -4659,10 +4646,8 @@
                 async loadWhatsappStatus() {
                     try {
                         this.whatsappLoading = true;
-                        console.log('[WhatsApp] Carregando status...');
 
                         const response = await window.api.call('GET', '/whatsapp/status');
-                        console.log('[WhatsApp] Resposta status:', response);
 
                         if (response && response.status) {
                             const previousStatus = this.whatsappStatus;
@@ -4691,7 +4676,6 @@
 
                             // Se estava esperando QR e voltou desconectado, reconectar automaticamente
                             if (previousStatus === 'qr_code' && response.status === 'disconnected') {
-                                console.log('[WhatsApp] QR expirou/desconectou, reconectando em 3s...');
                                 this.whatsappStatusText = '🔄 Reconectando...';
                                 setTimeout(async () => {
                                     try {
@@ -4700,7 +4684,6 @@
                                 }, 3000);
                             }
 
-                            console.log('[WhatsApp] Status:', response.status, '| QR:', this.qrCodeUrl ? 'sim' : 'não', '| Phone:', this.ownerPhone);
                         } else {
                             console.warn('[WhatsApp] Resposta sem status:', response);
                         }
@@ -4720,26 +4703,19 @@
                         }
 
                         this.whatsappLoading = true;
-                        console.log('[WhatsApp Setup] Iniciando...');
 
                         const response = await window.api.call('POST', '/whatsapp/setup');
 
-                        console.log('[WhatsApp Setup] Resposta recebida:', response);
-
                         if (response && response.status === 'qr_code') {
-                            console.log('[WhatsApp Setup] QR code gerado:', response.qrCode ? 'sim' : 'não');
                             this.whatsappStatus = 'qr_code';
                             this.whatsappStatusText = '📱 Aguardando escaneamento';
                             this.qrCodeUrl = response.qrCode;
-
-                            console.log('[WhatsApp Setup] Status atualizado, QR exibido');
 
                             if (typeof showToast === 'function') {
                                 showToast('Código QR gerado! Escaneie com seu WhatsApp.', 'success');
                             }
 
                             // Auto-polling já iniciado no init() - não precisa chamar novamente
-                            console.log('[WhatsApp Setup] Auto-polling já ativo, QR vai atualizar a cada 3s');
                         } else {
                             console.error('[WhatsApp Setup] Resposta inválida:', response);
                             throw new Error('Resposta inválida do servidor: ' + JSON.stringify(response));
@@ -5036,7 +5012,6 @@
                                     }
                                 });
 
-                            console.log('[Chart] ✅ Initialized successfully with', cleanData.length, 'data points');
                         } catch (error) {
                             console.error('[Chart] ❌ Failed to initialize:', error);
                             this.chartInstance = null;
@@ -5054,7 +5029,6 @@
                 buildHourlyData(orders) {
                     // MANDATORY GUARD: Exit early if no chart instance
                     if (!this.chartInstance) {
-                        console.log('[Chart] No chart instance - skipping buildHourlyData');
                         return;
                     }
 
@@ -5125,8 +5099,6 @@
 
                             // Use 'none' mode to skip animations (better performance)
                             rawChart.update('none');
-
-                            console.log('[Chart] ✅ Updated with', cleanData.length, 'data points');
                         } catch (e) {
                             console.error('[Chart] ❌ Failed to update chart data:', e);
                             console.error('[Chart] Error stack:', e.stack);
@@ -5693,29 +5665,10 @@
         // DEFENSIVE: COMPREHENSIVE VISIBILITY DIAGNOSTICS
         // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Diagnostics] DOMContentLoaded fired');
-
-            // Check body/html visibility
-            const bodyStyles = window.getComputedStyle(document.body);
-            const htmlStyles = window.getComputedStyle(document.documentElement);
-
-            console.log('[Diagnostics] Body styles:', {
-                display: bodyStyles.display,
-                visibility: bodyStyles.visibility,
-                opacity: bodyStyles.opacity
-            });
-
-            console.log('[Diagnostics] HTML styles:', {
-                display: htmlStyles.display,
-                visibility: htmlStyles.visibility,
-                opacity: htmlStyles.opacity
-            });
-
             // Check for overlays
             const screenLock = document.getElementById('screenLockModal');
             if (screenLock) {
                 const lockDisplay = window.getComputedStyle(screenLock).display;
-                console.log('[Diagnostics] Screen lock overlay display:', lockDisplay);
                 if (lockDisplay !== 'none') {
                     console.error('[Diagnostics] ❌ SCREEN LOCK IS ACTIVE! This is covering the page!');
                 }
@@ -5734,12 +5687,8 @@
                 opacity: 1 !important;
             `;
 
-            console.log('[Layout] ✅ No top bar - full screen dashboard layout');
-
             // Check Alpine.js initialization after a short delay
             setTimeout(() => {
-                console.log('[Diagnostics] Checking Alpine.js initialization...');
-
                 if (typeof Alpine === 'undefined') {
                     console.error('[Alpine] ❌ Alpine.js not loaded!');
                     return;
@@ -5747,20 +5696,10 @@
 
                 // Check if x-cloak was removed from main content
                 const mainContent = document.querySelector('.app-content');
-                if (mainContent) {
-                    if (mainContent.hasAttribute('x-cloak')) {
-                        console.error('[Alpine] ❌ x-cloak still present! Alpine.js failed to initialize.');
-                        console.error('[Alpine] This means the dashboard() function likely threw an error.');
-                        console.error('[Alpine] Check console for errors in dashboard init()');
-
-                        // Force remove x-cloak to show content anyway
-                        mainContent.removeAttribute('x-cloak');
-                        console.warn('[Alpine] Manually removed x-cloak as fallback');
-                    } else {
-                        console.log('[Alpine] ✅ x-cloak removed - Alpine.js initialized successfully');
-                    }
-                } else {
-                    console.error('[Alpine] ❌ Main content element not found!');
+                if (mainContent && mainContent.hasAttribute('x-cloak')) {
+                    // Alpine falhou ao iniciar — remove x-cloak para mostrar o conteúdo
+                    console.error('[Alpine] ❌ x-cloak still present! Alpine.js failed to initialize.');
+                    mainContent.removeAttribute('x-cloak');
                 }
             }, 1000);
         });
