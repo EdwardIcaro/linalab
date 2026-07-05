@@ -22,7 +22,7 @@ if ('serviceWorker' in navigator) {
     let modalAberto = false;
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const ehFuncionario = window.location.pathname.includes('index-funcionario');
+    const ehFuncionario = window.location.pathname.includes('/funcionario');
     const corPrimaria = '#6b3fa1';
 
     if (isIOS) {

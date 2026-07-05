@@ -23,7 +23,7 @@ function createFuncionarioHeader(pageTitle) {
   return `
     <header class="header-funcionario">
       <div class="header-left">
-        <a href="../index-funcionario.html" class="logo-link">
+        <a href="index.html" class="logo-link">
           <div class="logo">
             <i class="fas fa-briefcase"></i>
           </div>
@@ -35,7 +35,7 @@ function createFuncionarioHeader(pageTitle) {
       </div>
 
       <div class="header-right">
-        <a href="../perfil-funcionario.html" class="icon-btn" title="Meu Perfil">
+        <a href="perfil.html" class="icon-btn" title="Meu Perfil">
           <i class="fas fa-user-circle"></i>
         </a>
         <button class="icon-btn" onclick="logout()" title="Sair">
@@ -53,11 +53,11 @@ function createFuncionarioHeader(pageTitle) {
 function createFuncionarioMenu() {
   return `
     <div class="menu-dropdown" id="menuDropdown">
-      <a href="../perfil-funcionario.html">
+      <a href="perfil.html">
         <i class="fas fa-id-card"></i>
         <span>Meu Perfil</span>
       </a>
-      <a href="../index-funcionario.html">
+      <a href="index.html">
         <i class="fas fa-home"></i>
         <span>Início</span>
       </a>
@@ -76,7 +76,7 @@ function createMobileNav(activePage) {
 
   let html = `
     <nav class="mobile-bottom-nav">
-      <a href="../index-funcionario.html" class="nav-item ${activePage === 'home' ? 'active' : ''}" title="Início">
+      <a href="index.html" class="nav-item ${activePage === 'home' ? 'active' : ''}" title="Início">
         <i class="fas fa-home"></i>
         <span>Início</span>
       </a>
@@ -84,7 +84,7 @@ function createMobileNav(activePage) {
 
   if (permissoes.includes('gerenciar_ordens')) {
     html += `
-      <a href="ordens-funcionario.html" class="nav-item ${activePage === 'ordens' ? 'active' : ''}" title="Ordens">
+      <a href="ordens.html" class="nav-item ${activePage === 'ordens' ? 'active' : ''}" title="Ordens">
         <i class="fas fa-list-alt"></i>
         <span>Ordens</span>
       </a>
@@ -93,7 +93,7 @@ function createMobileNav(activePage) {
 
   if (permissoes.includes('gerenciar_clientes')) {
     html += `
-      <a href="clientes-funcionario.html" class="nav-item ${activePage === 'clientes' ? 'active' : ''}" title="Clientes">
+      <a href="clientes.html" class="nav-item ${activePage === 'clientes' ? 'active' : ''}" title="Clientes">
         <i class="fas fa-users"></i>
         <span>Clientes</span>
       </a>
@@ -102,7 +102,7 @@ function createMobileNav(activePage) {
 
   if (permissoes.includes('gerenciar_funcionarios')) {
     html += `
-      <a href="funcionarios-funcionario.html" class="nav-item ${activePage === 'funcionarios' ? 'active' : ''}" title="Equipe">
+      <a href="equipe.html" class="nav-item ${activePage === 'funcionarios' ? 'active' : ''}" title="Equipe">
         <i class="fas fa-user-tie"></i>
         <span>Equipe</span>
       </a>
@@ -111,7 +111,7 @@ function createMobileNav(activePage) {
 
   if (permissoes.includes('ver_financeiro')) {
     html += `
-      <a href="financeiro-funcionario.html" class="nav-item ${activePage === 'financeiro' ? 'active' : ''}" title="Financeiro">
+      <a href="financeiro.html" class="nav-item ${activePage === 'financeiro' ? 'active' : ''}" title="Financeiro">
         <i class="fas fa-chart-line"></i>
         <span>Financeiro</span>
       </a>
@@ -120,7 +120,7 @@ function createMobileNav(activePage) {
 
   if (permissoes.includes('config_ver_servicos')) {
     html += `
-      <a href="servicos-funcionario.html" class="nav-item ${activePage === 'servicos' ? 'active' : ''}" title="Serviços">
+      <a href="servicos.html" class="nav-item ${activePage === 'servicos' ? 'active' : ''}" title="Serviços">
         <i class="fas fa-wrench"></i>
         <span>Serviços</span>
       </a>
@@ -307,7 +307,7 @@ async function loadUserInfo() {
 
 // ===== SELETOR DE EMPRESA (MULTI-EMPRESA) =====
 // Carrega o módulo dedicado empresa-switcher.js (fonte única, com auto-init).
-// Assim toda página que já inclui utils-funcionario.js ganha o seletor.
+// Assim toda página que já inclui utils.js ganha o seletor.
 (function loadEmpresaSwitcher() {
   if (document.querySelector('script[data-emp-switcher]')) return;
   const s = document.createElement('script');
