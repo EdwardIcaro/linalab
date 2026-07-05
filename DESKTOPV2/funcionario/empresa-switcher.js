@@ -17,7 +17,8 @@
     st.id = 'emp-switch-styles';
     st.textContent = `
       #empresaNome.emp-switch-on { cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; }
-      .emp-chev { cursor:pointer; margin-left:5px; font-size:.9em; opacity:.75; user-select:none; }
+      .emp-chev { cursor:pointer; margin-left:6px; font-size:.85em; color:#0066cc; user-select:none; transition:opacity .15s; }
+      .emp-chev:hover { opacity:.7; }
       .emp-switch-menu { position:fixed; z-index:99999; background:#fff; border:1px solid #e2e8f0; border-radius:12px;
         box-shadow:0 12px 32px rgba(0,0,0,.18); min-width:210px; max-width:82vw; padding:6px; opacity:0; transform:translateY(-6px);
         pointer-events:none; transition:opacity .15s, transform .15s; }
@@ -72,7 +73,8 @@
     if (!chev || !chev.classList || !chev.classList.contains('emp-chev')) {
       chev = document.createElement('span');
       chev.className = 'emp-chev';
-      chev.innerHTML = '&#9662;'; // ▾
+      chev.title = 'Trocar de empresa';
+      chev.innerHTML = '<i class="fas fa-right-left"></i>'; // ícone de troca
       el.insertAdjacentElement('afterend', chev);
     }
 
