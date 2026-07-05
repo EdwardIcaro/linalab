@@ -119,22 +119,41 @@ const authMiddleware = async (
       });
     }
 
-    // 4b. Subaccount token validation
+    // 4b. Subaccount token validation — aceita a empresa PRIMÁRIA ou um ACESSO
+    // ADICIONAL concedido em subaccount_empresa_acessos (multi-empresa). O escopo
+    // sempre vem de decoded.empresaId (assinado), validado contra o banco.
     if (decoded.subaccountId) {
-      const subCacheKey = `sub:${decoded.subaccountId}`;
-      let subaccount = getCachedAuth(subCacheKey);
+      const subCacheKey = `sub:${decoded.subaccountId}:${decoded.empresaId}`;
+      let ctx = getCachedAuth(subCacheKey);
 
-      if (!subaccount) {
-        subaccount = await prisma.subaccount.findFirst({
-          where: { id: decoded.subaccountId, empresaId: decoded.empresaId },
-          include: {
-            empresa: { select: { id: true, nome: true, ativo: true } }
-          }
+      if (!ctx) {
+        const subaccount = await prisma.subaccount.findUnique({
+          where: { id: decoded.subaccountId },
+          include: { empresa: { select: { id: true, nome: true, ativo: true } } },
         });
-        if (subaccount) setCachedAuth(subCacheKey, subaccount);
+
+        if (subaccount) {
+          if (subaccount.empresaId === decoded.empresaId) {
+            // Empresa primária
+            if (subaccount.empresa?.ativo) {
+              ctx = { id: subaccount.id, nome: subaccount.nome, empresaId: subaccount.empresa.id, empresaNome: subaccount.empresa.nome };
+            }
+          } else {
+            // Empresa de acesso adicional (multi-empresa)
+            const acesso = await prisma.subaccountEmpresaAcesso.findUnique({
+              where: { subaccountId_empresaId: { subaccountId: decoded.subaccountId, empresaId: decoded.empresaId } },
+              include: { empresa: { select: { id: true, nome: true, ativo: true } } },
+            });
+            if (acesso?.empresa?.ativo) {
+              ctx = { id: subaccount.id, nome: subaccount.nome, empresaId: acesso.empresa.id, empresaNome: acesso.empresa.nome };
+            }
+          }
+        }
+
+        if (ctx) setCachedAuth(subCacheKey, ctx);
       }
 
-      if (!subaccount || !subaccount.empresa?.ativo) {
+      if (!ctx) {
         return res.status(403).json({
           error: 'Acesso negado: você não tem permissão para acessar esta empresa',
           code: 'ACCESS_DENIED'
@@ -142,11 +161,11 @@ const authMiddleware = async (
       }
 
       const authenticatedReq = req as AuthenticatedRequest;
-      authenticatedReq.usuarioId = subaccount.id;
-      authenticatedReq.subaccountId = subaccount.id;
-      authenticatedReq.empresaId = subaccount.empresa.id;
-      authenticatedReq.usuarioNome = subaccount.nome;
-      authenticatedReq.empresaNome = subaccount.empresa.nome;
+      authenticatedReq.usuarioId = ctx.id;
+      authenticatedReq.subaccountId = ctx.id;
+      authenticatedReq.empresaId = ctx.empresaId;
+      authenticatedReq.usuarioNome = ctx.nome;
+      authenticatedReq.empresaNome = ctx.empresaNome;
 
       next();
       return;

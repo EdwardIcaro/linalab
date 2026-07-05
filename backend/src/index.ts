@@ -22,6 +22,7 @@ import tipoVeiculoRoutes from './routes/tipoVeiculo';
 import notificacaoRoutes from './routes/notificacao';
 import adminRoutes from './routes/adminRoutes';
 import { confirmarTelefoneAdmin } from './controllers/recuperacaoSenhaController';
+import subaccountRoutes from './routes/subaccount';
 import adminSetupRoutes from './routes/admin';
 import themeRoutes from './routes/themeRoutes';
 import roleRoutes from './routes/roles';
@@ -176,6 +177,7 @@ app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middlewa
 app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
 app.use('/api/gorjeta', authMiddleware, gorjetaRoutes); // Gorjetas de lavadores
 app.use('/api/hub', userAuthMiddleware, hubRoutes);
+app.use('/api/subaccount', userAuthMiddleware, subaccountRoutes);
 app.use('/api/dp', userAuthMiddleware, dataPointRoutes);
 
 // Bot Lina — setup/disconnect apenas LINA_OWNER; status qualquer token válido

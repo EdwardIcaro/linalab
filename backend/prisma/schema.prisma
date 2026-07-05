@@ -70,6 +70,7 @@ model Empresa {
   sistemasAtivos             EmpresaSistema[]
   dpFuncionarios             DpFuncionario[]
   gorjetas                   Gorjeta[]
+  subaccountAcessos          SubaccountEmpresaAcesso[]
 
   @@map("empresas")
 }
@@ -394,6 +395,7 @@ model Role {
   botFeatures Json?
   empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuarios    Subaccount[]
+  subaccountAcessos SubaccountEmpresaAcesso[]
 
   @@unique([empresaId, nome])
   @@map("roles")
@@ -424,8 +426,26 @@ model Subaccount {
 
   whatsappBotUsers WhatsappBotUser[]
   reports          OrdemReport[]
+  empresaAcessos   SubaccountEmpresaAcesso[]
 
   @@map("subaccounts")
+}
+
+// Acessos multi-empresa de um Subaccount. A empresa/role PRIMÁRIA continua em
+// Subaccount.empresaId/roleId; esta tabela guarda apenas os acessos ADICIONAIS.
+model SubaccountEmpresaAcesso {
+  id           String     @id @default(cuid())
+  subaccountId String
+  empresaId    String
+  roleId       String
+  createdAt    DateTime   @default(now())
+
+  subaccount   Subaccount @relation(fields: [subaccountId], references: [id], onDelete: Cascade)
+  empresa      Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([subaccountId, empresaId])
+  @@map("subaccount_empresa_acessos")
 }
 
 model Adiantamento {

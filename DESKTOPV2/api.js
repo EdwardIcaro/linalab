@@ -154,6 +154,24 @@ const api = {
   // ===== HUB =====
   getHub: () => fetchApi('/hub'),
 
+  // ===== MULTI-EMPRESA: SUBACCOUNTS =====
+  // Subaccount (funcionário logado)
+  getMinhasEmpresas: () => fetchApi('/subaccount/me/empresas'),
+  switchEmpresa: (empresaId) => fetchApi('/subaccount/switch-empresa', {
+    method: 'POST',
+    body: JSON.stringify({ empresaId }),
+  }),
+  // OWNER (gestão via hub)
+  getSubaccountsComAcessos: () => fetchApi('/hub/subaccounts-todos'),
+  getRolesDaEmpresa: (empresaId) => fetchApi(`/hub/empresas/${empresaId}/roles`),
+  concederAcessoSubaccount: (subaccountId, empresaId, roleId) => fetchApi(`/hub/subaccounts/${subaccountId}/acessos`, {
+    method: 'POST',
+    body: JSON.stringify({ empresaId, roleId }),
+  }),
+  revogarAcessoSubaccount: (subaccountId, empresaId) => fetchApi(`/hub/subaccounts/${subaccountId}/acessos/${empresaId}`, {
+    method: 'DELETE',
+  }),
+
   // Data Point
   getPlanosDp: () => fetchApi('/dp/planos'),
   contratarDp: (planId) => fetchApi('/dp/contratar', { method: 'POST', body: JSON.stringify({ planId }) }),
