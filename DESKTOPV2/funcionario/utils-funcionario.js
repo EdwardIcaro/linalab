@@ -303,115 +303,17 @@ async function loadUserInfo() {
   }
 
   document.title = document.title + ' - ' + usuarioNome;
-
-  // Seletor multi-empresa — só aparece se o funcionário tiver acesso a 2+ empresas
-  initEmpresaSwitcher();
 }
 
 // ===== SELETOR DE EMPRESA (MULTI-EMPRESA) =====
-// Transforma o #empresaNome do header num dropdown quando o subaccount tem acesso
-// a mais de uma empresa. Centralizado aqui → funciona em todas as páginas /funcionario.
-async function initEmpresaSwitcher() {
-  const el = document.getElementById('empresaNome');
-  if (!el || el.dataset.switcherReady) return;
-  el.dataset.switcherReady = '1'; // marca cedo para evitar inicialização concorrente
-
-  let empresas = [];
-  try {
-    empresas = await window.api.getMinhasEmpresas();
-  } catch (e) {
-    return; // Sem acesso multi-empresa / não é subaccount → mantém comportamento normal
-  }
-  if (!Array.isArray(empresas) || empresas.length < 2) return;
-
-  const currentId = localStorage.getItem('empresaId');
-
-  if (!document.getElementById('emp-switch-styles')) {
-    const st = document.createElement('style');
-    st.id = 'emp-switch-styles';
-    st.textContent = `
-      .emp-switch-trigger { cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
-      .emp-switch-trigger .emp-chev { font-size:.75em; opacity:.7; }
-      .emp-switch-menu { position:fixed; z-index:9999; background:#fff; border:1px solid #e2e8f0; border-radius:12px;
-        box-shadow:0 12px 32px rgba(0,0,0,.16); min-width:210px; max-width:80vw; padding:6px; opacity:0; transform:translateY(-6px);
-        pointer-events:none; transition:opacity .15s, transform .15s; }
-      .emp-switch-menu.open { opacity:1; transform:translateY(0); pointer-events:auto; }
-      .emp-switch-item { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px; cursor:pointer;
-        font-size:14px; color:#1e293b; }
-      .emp-switch-item:hover { background:#f1f5f9; }
-      .emp-switch-item.current { color:#0066cc; font-weight:600; }
-      .emp-switch-item .emp-ck { width:14px; text-align:center; color:#0066cc; }
-    `;
-    document.head.appendChild(st);
-  }
-
-  el.classList.add('emp-switch-trigger');
-  if (!el.querySelector('.emp-chev')) {
-    const chev = document.createElement('i');
-    chev.className = 'fas fa-chevron-down emp-chev';
-    el.appendChild(chev);
-  }
-
-  let menu = document.getElementById('empSwitchMenu');
-  if (!menu) {
-    menu = document.createElement('div');
-    menu.id = 'empSwitchMenu';
-    menu.className = 'emp-switch-menu';
-    document.body.appendChild(menu);
-  }
-  menu.innerHTML = empresas.map(e => {
-    const nome = String(e.nome || '').replace(/</g, '&lt;');
-    const isCur = e.id === currentId;
-    return `<div class="emp-switch-item ${isCur ? 'current' : ''}" data-id="${e.id}">
-      <span class="emp-ck">${isCur ? '✓' : ''}</span><span>${nome}</span></div>`;
-  }).join('');
-
-  el.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    const r = el.getBoundingClientRect();
-    menu.style.top = (r.bottom + 6) + 'px';
-    menu.style.left = Math.max(8, r.left) + 'px';
-    menu.classList.toggle('open');
-  });
-  document.addEventListener('click', () => menu.classList.remove('open'));
-  window.addEventListener('resize', () => menu.classList.remove('open'));
-
-  menu.addEventListener('click', async (ev) => {
-    const item = ev.target.closest('.emp-switch-item');
-    if (!item) return;
-    ev.stopPropagation();
-    menu.classList.remove('open');
-    const id = item.dataset.id;
-    if (id !== localStorage.getItem('empresaId')) await doSwitchEmpresa(id);
-  });
-}
-
-async function doSwitchEmpresa(empresaId) {
-  try {
-    const res = await window.api.switchEmpresa(empresaId);
-    if (!res?.token) throw new Error('Resposta inválida do servidor');
-    localStorage.setItem('token', res.token);
-    localStorage.setItem('empresaId', res.empresa.id);
-    localStorage.setItem('empresaNome', res.empresa.nome);
-    if (res.role?.permissoes) localStorage.setItem('permissoes', JSON.stringify(res.role.permissoes));
-    if (res.role?.nome) localStorage.setItem('cargo', res.role.nome);
-    if (typeof showToast === 'function') showToast(`Empresa: ${res.empresa.nome}`, 'success');
-    setTimeout(() => location.reload(), 350);
-  } catch (e) {
-    if (typeof showToast === 'function') showToast(e?.message || 'Erro ao trocar de empresa', 'error');
-  }
-}
-
-// Auto-inicializa o seletor de empresa assim que o header (#empresaNome) existir.
-// Cobre páginas que não chamam loadUserInfo e headers injetados dinamicamente.
-(function autoInitEmpresaSwitcher() {
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries++;
-    const el = document.getElementById('empresaNome');
-    if (el && !el.dataset.switcherReady) initEmpresaSwitcher();
-    if ((el && el.dataset.switcherReady) || tries >= 20) clearInterval(timer);
-  }, 300);
+// Carrega o módulo dedicado empresa-switcher.js (fonte única, com auto-init).
+// Assim toda página que já inclui utils-funcionario.js ganha o seletor.
+(function loadEmpresaSwitcher() {
+  if (document.querySelector('script[data-emp-switcher]')) return;
+  const s = document.createElement('script');
+  s.src = 'empresa-switcher.js'; // relativo à pasta /funcionario
+  s.setAttribute('data-emp-switcher', '1');
+  document.head.appendChild(s);
 })();
 
 // ===== FORMAT CURRENCY =====
