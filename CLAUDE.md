@@ -132,6 +132,7 @@ Usuario → Empresa → Cliente → Veiculo
   api.js             → TODOS os chamados de API via window.api.*
   utils.js           → Utilitários compartilhados (admin)
   index.html         → Dashboard
+  nova-ordem.html    → Criação de nova ordem (era novaordem.html)
   ordens.html        → Ordens de serviço
   historico.html     → Histórico de ordens finalizadas
   financeiro.html    → Financeiro (Alpine.js)
@@ -141,13 +142,24 @@ Usuario → Empresa → Cliente → Veiculo
   configuracoes-whatsapp.html → Config WhatsApp + PIX (Alpine.js)
   fila-entrada.html  → Criação em massa de ordens (Alpine.js)
   /funcionario       → Portal do funcionário (mobile-first)
-    utils-funcionario.js
-    index-funcionario.html
-    ordens-funcionario.html
-    financeiro-funcionario.html
-    servicos-funcionario.html
-    fila-entrada-funcionario.html
-    comissoes-funcionario.html
+    ⚠️  Sem sufixo -funcionario: a pasta já dá o contexto (reorg 2026-07-05)
+    utils.js          → Utilitários do funcionário (era utils-funcionario.js)
+    index.html        → Home do funcionário (era ../index-funcionario.html)
+    perfil.html       → Perfil (era ../perfil-funcionario.html)
+    ordens.html · nova-ordem.html · higienizacao.html
+    clientes.html · equipe.html (era funcionarios-funcionario)
+    servicos.html · comissoes.html · financeiro.html · fila-entrada.html
+    empresa-switcher.js
+  /data-point        → Módulo Data Point (era data-point-*.html na raiz; reorg 2026-07-05)
+    index.html (era data-point-dashboard) · funcionarios.html · espelho.html
+    ajustes.html · planos.html · onboarding.html
+  lavador-publico.html → Portal público do lavador por token (fica na raiz — link já compartilhado)
+
+  ⚠️  URLs: vercel.json usa cleanUrls (URLs sem .html) + redirects 307
+      dos nomes antigos → novos (compatibilidade). Arquivos travados por
+      dependência externa NÃO renomear: index, login, p, app-start, ponto,
+      pagamento-retorno, assinatura, planos, selecionar-empresa, ordens,
+      admin/*, lavador-publico.
 
 /Features            → Specs de features futuras (leia antes de implementar!)
   fila-de-entrada.md             ✅ Implementado
@@ -199,7 +211,7 @@ Acesso separado para usuários com role `USER`. Regras:
 ### Alpine.js
 - `financeiro.html`: componente `financeDashboard`
 - `configuracoes-whatsapp.html`: componente inline com `x-data`
-- `fila-entrada.html` / `fila-entrada-funcionario.html`: componente `filaEntrada`
+- `fila-entrada.html` / `funcionario/fila-entrada.html`: componente `filaEntrada`
 - ⚠️ `<template x-for>` dentro de `<td>/<tr>` é relocado pelo parser HTML antes do Alpine processar → **sempre usar CSS Grid com `<div>` em vez de `<table>` para layouts tabulares Alpine**
 
 ### CSS Grid para layouts tabulares (Alpine)
@@ -215,14 +227,14 @@ Acesso separado para usuários com role `USER`. Regras:
 - `getServicos()` → retorna `{ servicos: [...], pagination: {} }` — extrair com `res.servicos`
 - `getVeiculoByPlaca(placa)` → retorna objeto veículo ou null
 
-### Modal de Pagamento (`ordens.html` e `ordens-funcionario.html`)
+### Modal de Pagamento (`ordens.html` e `funcionario/ordens.html`)
 - `paymentMethodsConfig` tem **5 métodos**: `DINHEIRO`, `PIX`, `CARTAO`, `NFE`, `DEBITO_FUNCIONARIO`
   - `NFE` defaults `!== false` (igual aos outros 3 principais); `DEBITO_FUNCIONARIO` defaults `=== true` (opt-in)
 - **Troco**: ao digitar valor maior que o restante, exibe banner verde com o troco calculado em tempo real
   - Ao confirmar com **DINHEIRO**: registra apenas o valor restante (sem bloquear)
   - Outros métodos (PIX, Cartão…): continuam bloqueando valor > restante
 
-### KPI "Hoje" — `index-funcionario.html`
+### KPI "Hoje" — `funcionario/index.html`
 - Card swipeable: deslize para esquerda mostra **"Total Bruto"** (todos os status, âncora `createdAt`)
 - Deslize para direita volta para **"Hoje"** (FINALIZADO + AGUARDANDO, âncora `dataFim`)
 - Data calculada em BRT (`UTC-3`) — nunca usar `toISOString()` direto para gerar `today`
@@ -459,7 +471,7 @@ dataFim: { gte: start, lte: end }             // âncora: quando o serviço foi 
 status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] }  // padrão
 // ?todosStatus=true → sem filtro de status, âncora muda para createdAt
 ```
-- Aceita `?todosStatus=true` para mostrar todas as ordens do dia (KPI "Total Bruto" no index-funcionario)
+- Aceita `?todosStatus=true` para mostrar todas as ordens do dia (KPI "Total Bruto" no funcionario/index.html)
 
 **`getResumoDia` (backend — financeiro):**
 - Âncora: `Pagamento.pagoEm` (dinheiro efetivamente recebido)
