@@ -557,6 +557,8 @@
     .com-bal.blurred { filter:blur(11px); }
     .com-rows { display:flex; gap:10px; margin-top:16px; }
     .com-chip { flex:1; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:13px; padding:10px 12px; }
+    .com-chip-click { cursor:pointer; transition:background .15s; -webkit-tap-highlight-color:transparent; }
+    .com-chip-click:active { background:rgba(255,255,255,.16); }
     .com-chip-lbl { font-size:9px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:rgba(255,255,255,.42); margin-bottom:3px; }
     .com-chip-val { font-size:15px; font-weight:900; letter-spacing:-.3px; }
     .com-chip-val.blurred { filter:blur(7px); }
@@ -871,6 +873,18 @@
       <button class="modal-close" onclick="fecharComPagModal()"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body" id="comPagModalBody"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL COMISSÕES ABERTAS ══ -->
+<div class="modal-bg" id="comAbertasModal" onclick="fecharComissoesAbertas(event)">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <span class="modal-title">Comissões abertas</span>
+      <button class="modal-close" onclick="fecharComissoesAbertas()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="comAbertasModalBody"></div>
   </div>
 </div>
 
@@ -1413,11 +1427,22 @@ function renderComHero(){
       </div>`;
   } else {
     const tagAdd = s.modo==='ADICIONAL' ? '<span class="com-tag-add">só adicionais</span>' : '';
+    let chipAberto;
+    if(s.modo==='ADICIONAL'){
+      // Comissões abertas = todas as não pagas (em andamento + finalizadas aguardando). Clicável.
+      const totalAbertas = comComissoesAbertas().reduce((a,x)=>a+x.ganho,0);
+      chipAberto = `<div class="com-chip com-chip-click" onclick="abrirComissoesAbertas()">
+        <div class="com-chip-lbl">Comissões abertas <i class="fas fa-chevron-right" style="font-size:8px;opacity:.55"></i></div>
+        <div class="com-chip-val amber${blur}">+${comBRL(totalAbertas)}</div>
+      </div>`;
+    } else {
+      chipAberto = `<div class="com-chip"><div class="com-chip-lbl">Em andamento</div><div class="com-chip-val amber${blur}">+${comBRL(s.creditosPendentes)}</div></div>`;
+    }
     corpo = `
       <div class="com-bal-lbl"><span>A receber (finalizados)</span>${tagAdd}</div>
       <div class="com-bal${s.saldo<0?' neg':''}${blur}">${comBRL(s.saldo)}</div>
       <div class="com-rows">
-        <div class="com-chip"><div class="com-chip-lbl">Em andamento</div><div class="com-chip-val amber${blur}">+${comBRL(s.creditosPendentes)}</div></div>
+        ${chipAberto}
         <div class="com-chip"><div class="com-chip-lbl">Vale / dívida</div><div class="com-chip-val red${blur}">${s.divida>0?'-'+comBRL(s.divida):comBRL(0)}</div></div>
       </div>`;
   }
@@ -1629,6 +1654,47 @@ function openComPagModal(idx){
 function fecharComPagModal(e){
   if(e && e.target !== document.getElementById('comPagModal')) return;
   document.getElementById('comPagModal').classList.remove('open');
+}
+
+// ── Comissões abertas (não pagas: em andamento + finalizadas aguardando) ──
+function comComissoesAbertas(){
+  const out = [];
+  (comData.ordens||[]).forEach(o=>{
+    if(!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
+    const rel = (o.ordemLavadores||[]).find(r=>r.lavadorId===comLavadorId);
+    const paga = rel ? rel.comissaoPaga : o.comissaoPaga;
+    if(paga) return;
+    const g = comWasherShare(o, comLavadorId, comData.comissao);
+    if(!isFinite(g) || g<=0) return;
+    out.push({ ordem:o, ganho:g, adicionais: comAdicionaisDaOrdem(o) });
+  });
+  return out;
+}
+function abrirComissoesAbertas(){
+  const lista = comComissoesAbertas();
+  const total = lista.reduce((a,x)=>a+x.ganho,0);
+  const blur = comOculto ? ' blurred' : '';
+  let html;
+  if(!lista.length){
+    html = '<div class="com-empty" style="padding:20px 0"><i class="fas fa-circle-check"></i><span>Nenhuma comissão em aberto</span></div>';
+  } else {
+    html = lista.map(x=>{
+      const car = x.ordem.veiculo?.modelo || x.ordem.itemAvulso || 'Veículo';
+      const add = x.adicionais.join(', ') || 'Adicional';
+      return `<div class="com-card">
+        <div class="com-ico add"><i class="fas fa-plus"></i></div>
+        <div class="com-cinfo"><div class="com-cveic">${car}</div><div class="com-cserv">${add}</div></div>
+        <div class="com-cright"><div class="com-cval${blur}">${comBRL(x.ganho)}</div></div>
+      </div>`;
+    }).join('');
+    html += `<div class="com-day-total" style="margin-top:6px"><span>Total em aberto</span><b class="${comOculto?'blurred':''}">${comBRL(total)}</b></div>`;
+  }
+  document.getElementById('comAbertasModalBody').innerHTML = html;
+  document.getElementById('comAbertasModal').classList.add('open');
+}
+function fecharComissoesAbertas(e){
+  if(e && e.target !== document.getElementById('comAbertasModal')) return;
+  document.getElementById('comAbertasModal').classList.remove('open');
 }
 
 // ── Ponto ─────────────────────────────────────────────────────────────────────
