@@ -866,6 +866,17 @@ export async function handleIncomingMessage(
     const empresaDetectada = detectEmpresaNoTexto(message, empresas);
     if (empresaDetectada) {
       setContext(from, empresaDetectada.id, empresaDetectada.nome);
+
+      // Se havia comando pendente aguardando a seleção de empresa (ex: usuário
+      // pediu "fechamento de caixa" e respondeu ao menu com o NOME da empresa
+      // em vez do número), executa-o agora com a empresa já resolvida.
+      const pendingMsg = pendingCommands.get(from);
+      if (pendingMsg && pendingMsg.trim().toLowerCase() !== message.trim().toLowerCase()) {
+        pendingCommands.delete(from);
+        const resultado = await handleIncomingMessage(from, senderName, pendingMsg);
+        return `✅ *${empresaDetectada.nome}* selecionada.\n\n${resultado}`;
+      }
+      pendingCommands.delete(from);
     }
 
     // Verificar contexto ativo
