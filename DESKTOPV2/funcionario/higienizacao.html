@@ -39,6 +39,10 @@
     .chip { flex-shrink:0; padding:9px 15px; border:2px solid var(--border); border-radius:var(--rpill); background:var(--bg); cursor:pointer; font-size:13px; font-weight:600; color:var(--mid); white-space:nowrap; transition:all .15s; }
     .chip:hover { border-color:var(--purple-m); }
     .chip.on { border-color:var(--purple); background:var(--purple-l); color:var(--purple-d); }
+    .chip { display:inline-flex; align-items:center; gap:6px; }
+    .chip i { font-size:12px; opacity:.85; }
+    .add-svc-btn { display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:2px dashed var(--purple-m); border-radius:var(--r); background:var(--purple-l); color:var(--purple-d); font-size:13px; font-weight:700; cursor:pointer; }
+    .add-svc-btn:hover { border-style:solid; }
 
     /* Serviços */
     .svc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -156,9 +160,13 @@
       <div class="sec-empty" x-show="loadingItens" x-cloak>Carregando itens...</div>
       <div class="chips" x-show="!loadingItens">
         <template x-for="it in itens" :key="it.key">
-          <button class="chip" :class="{on: item===it.key}" @click="selecionarItem(it.key)" x-text="it.label"></button>
+          <button class="chip" :class="{on: item===it.key}" @click="selecionarItem(it.key)">
+            <i class="fas" :class="it.icon"></i> <span x-text="it.label"></span>
+          </button>
         </template>
-        <button class="chip" :class="{on: item==='OUTROS'}" @click="selecionarItem('OUTROS')">Outros</button>
+        <button class="chip" :class="{on: item==='OUTROS'}" @click="selecionarItem('OUTROS')">
+          <i class="fas fa-ellipsis"></i> Outros
+        </button>
       </div>
     </div>
 
@@ -177,8 +185,11 @@
           </div>
         </template>
       </div>
-      <div class="sec-empty" x-show="item!=='OUTROS' && !loadingServicos && servicos.length===0" x-cloak>
-        Nenhum serviço cadastrado para este item. Use "valor na hora".
+      <div x-show="item!=='OUTROS' && !loadingServicos && servicos.length===0" x-cloak style="text-align:center;padding:6px 0 4px;">
+        <div style="color:var(--mid);font-size:13px;margin-bottom:10px;">Nenhum serviço cadastrado para este item.</div>
+        <button class="add-svc-btn" @click="abrirNovoServico()">
+          <i class="fas fa-plus-circle"></i> Adicionar um novo serviço
+        </button>
       </div>
 
       <!-- Valor na hora -->
@@ -296,6 +307,40 @@
     </div>
   </div>
 
+  <!-- SHEET: NOVO SERVIÇO -->
+  <div class="backdrop" x-show="showNovoServico" x-cloak @click.self="showNovoServico=false">
+    <div class="sheet" @click.stop>
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">Novo serviço</div>
+          <div style="font-size:12px;color:var(--light);margin-top:2px;" x-text="item ? labelItem(item) : ''"></div>
+        </div>
+        <button class="sheet-close" @click="showNovoServico=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="fld">
+          <label>Nome do serviço <span>*</span></label>
+          <input type="text" class="inp" x-model="novoSvc.nome" placeholder="Ex: Higienização de tapete">
+        </div>
+        <div class="fld">
+          <label>Preço <span>*</span></label>
+          <input type="number" class="inp" x-model="novoSvc.preco" step="0.01" min="0.01" placeholder="R$ 0,00">
+        </div>
+        <div class="fld">
+          <label>Comissão (%) <span style="color:var(--light)">— opcional</span></label>
+          <input type="number" class="inp" x-model="novoSvc.comissao" step="0.01" min="0" placeholder="Ex: 40">
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showNovoServico=false">Cancelar</button>
+        <button class="btn-confirm" :disabled="salvandoServico" @click="salvarNovoServico()">
+          <span x-text="salvandoServico ? 'Salvando...' : 'Criar serviço'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- SHEET: SUCESSO -->
   <div class="backdrop" x-show="sucesso" x-cloak>
     <div class="sheet-success" @click.stop>
@@ -322,6 +367,8 @@
         svc: null,
         modoValorHora: false, vhNome: '', vhPreco: '',
         qtd: 1,
+        // Novo serviço (modal rápido)
+        showNovoServico: false, novoSvc: { nome: '', preco: '', comissao: '' }, salvandoServico: false,
         // Cliente
         searchQuery: '', showDrop: false, results: [], buscando: false, _t: null,
         cliente: null,
@@ -336,25 +383,32 @@
           await Promise.all([this.loadItens(), this.loadLavadores()]);
         },
 
+        // Sempre mostra todas as categorias sugeridas + as já cadastradas (mesmo sem serviço)
         async loadItens() {
           this.loadingItens = true;
+          const SUGERIDOS = ['TAPETE','CARPETE','BANCO','SOFA','ESTOFADO','CADEIRA'];
           try {
             const tipos = await window.api.getTiposVeiculo();
-            const avulsos = (tipos || []).filter(t => t.nome === 'AVULSO' && t.categoria && t.ativo !== false);
-            const vistos = new Set();
-            this.itens = [];
-            for (const t of avulsos) {
-              if (vistos.has(t.categoria)) continue;
-              vistos.add(t.categoria);
-              this.itens.push({ key: t.categoria, label: this.labelItem(t.categoria) });
-            }
-          } catch { this.itens = []; }
+            const registrados = (tipos || [])
+              .filter(t => t.nome === 'AVULSO' && t.categoria && t.ativo !== false)
+              .map(t => t.categoria);
+            const todas = [...new Set([...SUGERIDOS, ...registrados])];
+            this.itens = todas.map(cat => ({ key: cat, label: this.labelItem(cat), icon: this.iconItem(cat) }));
+          } catch {
+            // fallback: pelo menos os sugeridos
+            this.itens = SUGERIDOS.map(cat => ({ key: cat, label: this.labelItem(cat), icon: this.iconItem(cat) }));
+          }
           finally { this.loadingItens = false; }
         },
 
         labelItem(k) {
           const map = { TAPETE:'Tapete', CARPETE:'Carpete', BANCO:'Banco', SOFA:'Sofá', ESTOFADO:'Estofado', CADEIRA:'Cadeira' };
           return map[k] || (k.charAt(0) + k.slice(1).toLowerCase());
+        },
+
+        iconItem(k) {
+          const map = { TAPETE:'fa-rug', CARPETE:'fa-rug', BANCO:'fa-chair', SOFA:'fa-couch', ESTOFADO:'fa-couch', CADEIRA:'fa-chair' };
+          return map[k] || 'fa-couch';
         },
 
         async loadLavadores() {
@@ -391,6 +445,34 @@
         toggleValorHora() {
           this.modoValorHora = !this.modoValorHora;
           if (this.modoValorHora) this.svc = null;
+        },
+
+        // ── Novo serviço (modal rápido) ──
+        abrirNovoServico() {
+          this.novoSvc = { nome: '', preco: '', comissao: '' };
+          this.showNovoServico = true;
+        },
+        async salvarNovoServico() {
+          const nome  = this.novoSvc.nome.trim();
+          const preco = parseFloat(this.novoSvc.preco);
+          if (!nome || !(preco > 0)) { showToast('Preencha nome e preço', 'error'); return; }
+          this.salvandoServico = true;
+          try {
+            const comissao = this.novoSvc.comissao !== '' ? parseFloat(this.novoSvc.comissao) : null;
+            await window.api.createServico({
+              nome, preco, tipoVeiculo: 'AVULSO', subtiposVeiculo: [this.item],
+              comissaoPercentual: comissao,
+            });
+            this.showNovoServico = false;
+            // recarrega os serviços da categoria e já seleciona o recém-criado
+            const data = await window.api.getServicos({ tipoVeiculo: 'AVULSO', subtipoVeiculo: this.item });
+            this.servicos = data.servicos || [];
+            const novo = this.servicos.find(s => s.nome === nome);
+            if (novo) this.pickServico(novo);
+            showToast('Serviço criado!', 'success');
+          } catch (e) {
+            showToast(e?.details || e?.error || e?.message || 'Erro ao criar serviço', 'error');
+          } finally { this.salvandoServico = false; }
         },
 
         // ── Cliente ──
