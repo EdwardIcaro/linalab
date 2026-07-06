@@ -1179,7 +1179,7 @@ function renderHub() {
       <div class="mod-badge pulse">${isSalarioFixo ? '!' : hoje.totalOrdens + ' hoje'}</div>
       <div>
         <div class="mod-label">${isSalarioFixo ? 'Extrato' : 'Comissões'}</div>
-        <div class="mod-stat">${isSalarioFixo ? 'Ver vales e débitos' : 'R$ ' + ganhoHoje + ' hoje'}</div>
+        <div class="mod-stat">${isSalarioFixo ? 'Serviços, vales e débitos' : 'R$ ' + ganhoHoje + ' hoje'}</div>
       </div>
     </div>` : ''}
 
@@ -1390,17 +1390,11 @@ function renderComTudo(){
   const tabs = document.getElementById('comTabs');
   const paneG = document.getElementById('comPaneGanhos');
   const paneP = document.getElementById('comPanePagamentos');
-  if(comModo==='SALARIO'){
-    tabs.style.display = 'none';
-    paneG.style.display = 'none';
-    paneP.style.display = 'block';
-    renderComPagamentos();
-  } else {
-    tabs.style.display = 'flex';
-    renderComTabs();
-    if(comAba==='ganhos'){ paneG.style.display='block'; paneP.style.display='none'; renderComGanhos(); }
-    else { paneG.style.display='none'; paneP.style.display='block'; renderComPagamentos(); }
-  }
+  // Todos os modos (inclusive SALARIO) mostram o extrato de serviços + pagamentos
+  tabs.style.display = 'flex';
+  renderComTabs();
+  if(comAba==='ganhos'){ paneG.style.display='block'; paneP.style.display='none'; renderComGanhos(); }
+  else { paneG.style.display='none'; paneP.style.display='block'; renderComPagamentos(); }
 }
 
 function renderComHero(){
@@ -1442,9 +1436,12 @@ function renderComHero(){
 function comToggleOcultar(){ comOculto = !comOculto; renderComTudo(); }
 
 function renderComTabs(){
+  const salario = comData?.tipoRemuneracao === 'SALARIO';
+  const gLabel = salario ? 'Serviços' : 'Meus ganhos';
+  const gIcon  = salario ? 'fa-car' : 'fa-hand-holding-dollar';
   document.getElementById('comTabs').innerHTML = `
     <button class="com-tab${comAba==='ganhos'?' on':''}" onclick="comSetAba('ganhos')">
-      <i class="fas fa-hand-holding-dollar"></i> Meus ganhos
+      <i class="fas ${gIcon}"></i> ${gLabel}
     </button>
     <button class="com-tab${comAba==='pagamentos'?' on':''}" onclick="comSetAba('pagamentos')">
       <i class="fas fa-money-check-dollar"></i> Pagamentos
@@ -1461,10 +1458,10 @@ function comSetAba(aba){
 
 // ── Aba Meus ganhos ──
 function comOrdensPorDia(iso){
+  // Mostra TODOS os carros que o lavador trabalhou no dia (não só os com ganho).
+  // O valor por carro é exibido só quando há comissão (ver renderComGanhos).
   return (comData.ordens||[]).filter(o=>{
     if(!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return false;
-    const g = comWasherShare(o, comLavadorId, comData.comissao);
-    if(g<=0) return false;  // no modo ADICIONAL, ordens sem adicional têm ganho 0 → filtradas
     return comISO(o.dataFim||o.createdAt) === iso;
   });
 }
@@ -1472,8 +1469,7 @@ function comDiasComOrdens(){
   const set = new Set();
   (comData.ordens||[]).forEach(o=>{
     if(!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
-    const g = comWasherShare(o, comLavadorId, comData.comissao);
-    if(g>0) set.add(comISO(o.dataFim||o.createdAt));
+    set.add(comISO(o.dataFim||o.createdAt));
   });
   return set;
 }
@@ -1504,33 +1500,46 @@ function renderComGanhos(){
   const blur = comOculto ? ' blurred' : '';
   let lista = '';
   if(ordens.length===0){
-    lista = `<div class="com-empty"><i class="fas fa-soap"></i><span>${comModo==='ADICIONAL'?'Nenhum adicional vendido neste dia':'Nenhuma lavagem neste dia'}</span></div>`;
+    lista = `<div class="com-empty"><i class="fas fa-soap"></i><span>Nenhuma lavagem neste dia</span></div>`;
   } else {
+    // Salário puro nunca mostra valor por carro (é só a lista de serviços feitos)
+    const mostrarValor = comData.tipoRemuneracao !== 'SALARIO';
     ordens.forEach(o=>{
       const ganho = comWasherShare(o, comLavadorId, comData.comissao);
       const pend = o.status!=='FINALIZADO';
-      if(comModo==='ADICIONAL'){
-        const adds = comAdicionaisDaOrdem(o);
+      const adds = comAdicionaisDaOrdem(o);
+      const temAdd = comModo==='ADICIONAL' && adds.length>0;
+      const valHtml = (mostrarValor && ganho>0) ? `<div class="com-cval${blur}">${comBRL(ganho)}</div>` : '';
+      if(temAdd){
+        // Carro em que vendeu adicional (recebe comissão)
         lista += `<div class="com-card">
           <div class="com-ico add"><i class="fas fa-plus"></i></div>
-          <div class="com-cinfo"><div class="com-cveic">${adds.join(', ')||'Adicionais'}</div><div class="com-cserv">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div></div>
-          <div class="com-cright"><div class="com-cval${blur}">${comBRL(ganho)}</div>${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
+          <div class="com-cinfo"><div class="com-cveic">${adds.join(', ')}</div><div class="com-cserv">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div></div>
+          <div class="com-cright">${valHtml}${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
         </div>`;
       } else {
         const multi = comIsMulti(o);
         lista += `<div class="com-card">
           <div class="com-ico"><i class="fas fa-car"></i></div>
           <div class="com-cinfo"><div class="com-cveic">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div><div class="com-cserv">${comServicosDaOrdem(o)}</div></div>
-          <div class="com-cright"><div class="com-cval${blur}">${comBRL(ganho)}</div>${multi?'<span class="com-cbadge"><i class="fas fa-users"></i> dividida</span>':''}${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
+          <div class="com-cright">${valHtml}${multi?'<span class="com-cbadge"><i class="fas fa-users"></i> dividida</span>':''}${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
         </div>`;
       }
     });
-    const totalDia = ordens.reduce((s,o)=>s+comWasherShare(o,comLavadorId,comData.comissao),0);
-    lista += `<div class="com-day-total"><span>Total do dia</span><b class="${comOculto?'blurred':''}">${comBRL(totalDia)}</b></div>`;
+    if(mostrarValor){
+      const totalDia = ordens.reduce((s,o)=>s+comWasherShare(o,comLavadorId,comData.comissao),0);
+      lista += `<div class="com-day-total"><span>Total do dia</span><b class="${comOculto?'blurred':''}">${comBRL(totalDia)}</b></div>`;
+    } else {
+      lista += `<div class="com-day-total"><span>Lavagens no dia</span><b>${ordens.length}</b></div>`;
+    }
   }
 
-  const note = comModo==='ADICIONAL'
-    ? `<div class="com-note"><i class="fas fa-circle-info"></i><span>Você recebe comissão apenas sobre os <b>adicionais vendidos</b>. A lavagem base entra no salário.</span></div>` : '';
+  let note = '';
+  if(comModo==='ADICIONAL'){
+    note = `<div class="com-note"><i class="fas fa-circle-info"></i><span>Você recebe comissão apenas sobre os <b>adicionais vendidos</b>. A lavagem base entra no salário.</span></div>`;
+  } else if(comData.tipoRemuneracao === 'SALARIO'){
+    note = `<div class="com-note"><i class="fas fa-circle-info"></i><span>Você é <b>salário fixo</b>. Aqui estão os serviços que você realizou no período — para acompanhar seu trabalho.</span></div>`;
+  }
 
   pane.innerHTML = `
     <div class="com-cal">
