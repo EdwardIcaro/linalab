@@ -282,6 +282,10 @@ const api = {
     (id, data) => fetchApi(`/lavadores/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     '/lavadores/simple'
   ),
+  toggleLavadorStatus: _withCacheInvalidation(
+    (id, ativo) => fetchApi(`/lavadores/${id}`, { method: 'PUT', body: JSON.stringify({ ativo }) }),
+    '/lavadores/simple'
+  ),
   deleteLavador: _withCacheInvalidation(
     (id) => fetchApi(`/lavadores/${id}`, { method: 'DELETE' }),
     '/lavadores/simple'

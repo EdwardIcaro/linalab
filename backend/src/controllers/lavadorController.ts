@@ -212,7 +212,7 @@ export const updateLavador = async (req: EmpresaRequest, res: Response) => {
     if (Array.isArray(id)) {
       return res.status(400).json({ error: 'ID inválido' });
     }
-  const { nome, comissao, tipoRemuneracao, baseComissao, salario } = req.body;
+  const { nome, comissao, tipoRemuneracao, baseComissao, salario, ativo } = req.body;
 
   try {
     const lavador = await prisma.lavador.update({
@@ -223,6 +223,7 @@ export const updateLavador = async (req: EmpresaRequest, res: Response) => {
         ...(tipoRemuneracao !== undefined && { tipoRemuneracao }),
         ...(baseComissao    !== undefined && { baseComissao }),
         ...(salario         !== undefined && { salario: salario === null ? null : Number(salario) }),
+        ...(ativo           !== undefined && { ativo: Boolean(ativo) }),
       },
     });
     res.json(lavador);
