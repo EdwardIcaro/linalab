@@ -407,6 +407,9 @@
   <!-- MAIN -->
   <main class="main">
     <p class="section-label" id="teamCount" style="display:none"></p>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;cursor:pointer;margin:0 0 12px;">
+      <input type="checkbox" id="toggleInativosEquipe" onchange="loadFuncionarios()"> Mostrar inativos
+    </label>
     <div class="team-grid" id="content"></div>
   </main>
 
@@ -499,21 +502,26 @@
 
       try {
         const response     = await window.api.getLavadores();
-        const funcionarios = response.lavadores || [];
+        const todos        = response.lavadores || [];
+
+        // Inativos ocultos por padrão (soft-delete); toggle revela para reativar
+        const mostrarInativos = document.getElementById('toggleInativosEquipe')?.checked;
+        const funcionarios = mostrarInativos ? todos : todos.filter(f => f.ativo);
+        const inativosOcultos = todos.length - funcionarios.length;
 
         if (funcionarios.length === 0) {
           countEl.style.display = 'none';
           content.innerHTML = `
             <div class="empty-wrap">
               <div class="empty-icon"><i class="fas fa-users"></i></div>
-              <div class="empty-title">Nenhum funcionário</div>
-              <div class="empty-msg">Não há funcionários cadastrados no momento.</div>
+              <div class="empty-title">${todos.length === 0 ? 'Nenhum funcionário' : 'Nenhum funcionário ativo'}</div>
+              <div class="empty-msg">${todos.length === 0 ? 'Não há funcionários cadastrados no momento.' : `${inativosOcultos} inativo(s) oculto(s) — marque "Mostrar inativos".`}</div>
             </div>`;
           return;
         }
 
-        const ativos = funcionarios.filter(f => f.ativo).length;
-        countEl.textContent = `${funcionarios.length} membro${funcionarios.length !== 1 ? 's' : ''} · ${ativos} ativo${ativos !== 1 ? 's' : ''}`;
+        const ativos = todos.filter(f => f.ativo).length;
+        countEl.textContent = `${todos.length} membro${todos.length !== 1 ? 's' : ''} · ${ativos} ativo${ativos !== 1 ? 's' : ''}`;
         countEl.style.display = 'block';
 
         content.innerHTML = funcionarios.map(f => {

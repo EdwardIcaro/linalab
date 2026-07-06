@@ -107,7 +107,10 @@
                 <h2>Gerenciamento de Funcionários</h2>
                 <p>Adicione, edite e gerencie seus lavadores.</p>
             </div>
-            <div class="header-controls">
+            <div class="header-controls" style="display:flex;align-items:center;gap:14px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#64748b;cursor:pointer;white-space:nowrap;">
+                    <input type="checkbox" id="toggleInativosFunc" onchange="loadLavadores()"> Mostrar inativos
+                </label>
                 <button onclick="openLavadorModal()" class="btn-primary">
                     <i class="fas fa-plus"></i>
                     <span>Novo Funcionário</span>
@@ -271,12 +274,19 @@
         async function loadLavadores() {
             try {
                 const response = await window.api.getLavadores();
-                const lavadores = response.lavadores || []; // Garante que lavadores seja um array
+                const todos = response.lavadores || []; // Garante que lavadores seja um array
+
+                // Inativos ficam ocultos por padrão (soft-delete); toggle revela para reativar
+                const mostrarInativos = document.getElementById('toggleInativosFunc')?.checked;
+                const lavadores = mostrarInativos ? todos : todos.filter(l => l.ativo);
+                const inativosOcultos = todos.length - lavadores.length;
 
                 const tableBody = document.getElementById('lavadoresTableBody');
                 tableBody.innerHTML = '';
                 if (lavadores.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-secondary">Nenhum funcionário cadastrado.</td></tr>';
+                    tableBody.innerHTML = todos.length === 0
+                        ? '<tr><td colspan="6" class="text-center p-4 text-secondary">Nenhum funcionário cadastrado.</td></tr>'
+                        : `<tr><td colspan="6" class="text-center p-4 text-secondary">Nenhum funcionário ativo. ${inativosOcultos} inativo(s) oculto(s) — marque "Mostrar inativos".</td></tr>`;
                     return;
                 }
 
