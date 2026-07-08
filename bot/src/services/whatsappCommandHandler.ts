@@ -1623,9 +1623,10 @@ async function handleFechamentoCaixa(empresaId: string, data: Date): Promise<str
     }),
   ]);
 
-  const entradas = registros.filter(r => r.tipo === 'ENTRADA').reduce((s,r) => s + r.valor, 0);
-  const saidas   = registros.filter(r => r.tipo === 'SAIDA').reduce((s,r) => s + r.valor, 0);
-  const saldo    = entradas - saidas;
+  // Saídas físicas do caixa: SAIDA + SANGRIA (igual ao cálculo do backend)
+  const saidas = registros
+    .filter(r => r.tipo === 'SAIDA' || r.tipo === 'SANGRIA')
+    .reduce((s,r) => s + r.valor, 0);
 
   let r = `📅 *${dataFmt.toUpperCase()}*\n\n`;
 
@@ -1636,35 +1637,78 @@ async function handleFechamentoCaixa(empresaId: string, data: Date): Promise<str
     r += `🔓 Abertura: _não registrada_\n`;
   }
 
-  // Movimento do dia
-  r += `\n💰 Movimento:\n`;
-  r += `Entradas: *R$ ${entradas.toFixed(2)}*\n`;
-  r += `Saídas: *R$ ${saidas.toFixed(2)}*\n`;
-  r += `Saldo: *R$ ${saldo.toFixed(2)}*\n`;
-
-  // Fechamento
+  // Sem fechamento → mostra só o básico e encerra
   if (!fechamento) {
+    r += `📉 Saídas: *R$ ${saidas.toFixed(2)}*\n`;
     r += `\n🔒 Fechamento: _não realizado neste dia_`;
     return r.trim();
   }
 
-  r += `\n🔒 *Fechamento:*\n`;
-  r += `PIX: *R$ ${fechamento.pix.toFixed(2)}*\n`;
-  r += `Dinheiro: *R$ ${fechamento.dinheiro.toFixed(2)}*\n`;
-  r += `Cartão: *R$ ${fechamento.cartao.toFixed(2)}*\n`;
-  if (fechamento.nfe) r += `NFe: *R$ ${fechamento.nfe.toFixed(2)}*\n`;
+  // Status (badge)
+  const statusBadge =
+    fechamento.status === 'CONFERIDO'  ? '✅ CONFERIDO'  :
+    fechamento.status === 'DIVERGENTE' ? '⚠️ DIVERGENTE' :
+    `_${fechamento.status}_`;
+
+  // Faturamento real (receita bruta dos pagamentos) + saídas + status
+  r += `💵 Faturamento do dia: *R$ ${fechamento.faturamentoDia.toFixed(2)}*\n`;
+  r += `📉 Saídas: *R$ ${saidas.toFixed(2)}*\n`;
+  r += `\nStatus: *${statusBadge}*\n`;
+
+  // relatorio salvo: { METODO: { digitado, computado, diferenca } }
+  type LinhaRel = { digitado: number; computado: number; diferenca: number };
+  let rel: Record<string, LinhaRel> | null = null;
+  if (fechamento.relatorio) {
+    try { rel = JSON.parse(fechamento.relatorio); } catch { rel = null; }
+  }
+
+  const labels: Record<string, string> = { DINHEIRO: 'Dinheiro', PIX: 'PIX', CARTAO: 'Cartão', NFE: 'NFe' };
+
+  r += `\n🔒 *Conferência* (digitado × esperado):\n`;
+  if (rel) {
+    for (const metodo of ['DINHEIRO','PIX','CARTAO','NFE']) {
+      const m = rel[metodo];
+      if (!m) continue;
+      // Esconde NFe quando não houve nada digitado nem esperado
+      if (metodo === 'NFE' && Math.abs(m.digitado) < 0.01 && Math.abs(m.computado) < 0.01) continue;
+      let marca: string;
+      if (Math.abs(m.diferenca) < 0.01)   marca = '✅';
+      else if (m.diferenca > 0)           marca = `📈 +${m.diferenca.toFixed(2)}`;
+      else                                marca = `📉 −${Math.abs(m.diferenca).toFixed(2)}`;
+      r += `${labels[metodo]}: R$ ${m.digitado.toFixed(2)} × R$ ${m.computado.toFixed(2)}  ${marca}\n`;
+    }
+  } else {
+    // Fechamentos antigos sem relatório JSON: mostra só o digitado
+    r += `Dinheiro: R$ ${fechamento.dinheiro.toFixed(2)}\n`;
+    r += `PIX: R$ ${fechamento.pix.toFixed(2)}\n`;
+    r += `Cartão: R$ ${fechamento.cartao.toFixed(2)}\n`;
+    if (fechamento.nfe) r += `NFe: R$ ${fechamento.nfe.toFixed(2)}\n`;
+  }
 
   const totalDigitado = fechamento.pix + fechamento.dinheiro + fechamento.cartao + (fechamento.nfe ?? 0);
   r += `Total digitado: *R$ ${totalDigitado.toFixed(2)}*\n`;
 
-  // Divergência
-  if (Math.abs(fechamento.diferenca) > 0.01) {
-    const sinal = fechamento.diferenca > 0 ? '📈 Sobra' : '📉 Falta';
-    r += `\n${sinal}: *R$ ${Math.abs(fechamento.diferenca).toFixed(2)}*`;
-    if (fechamento.observacao) r += `\n_Obs: ${fechamento.observacao}_`;
-  } else {
+  // Divergências — separando dinheiro físico (sobra/falta real) de eletrônico (erro de digitação)
+  if (rel) {
+    const difDin = rel.DINHEIRO?.diferenca ?? 0;
+    if (Math.abs(difDin) > 0.01) {
+      const sinal = difDin > 0 ? '📈 Sobra em dinheiro' : '📉 Falta em dinheiro';
+      r += `\n${sinal}: *R$ ${Math.abs(difDin).toFixed(2)}*`;
+    }
+    const difEletronico = ['PIX','CARTAO','NFE']
+      .reduce((a, mt) => a + Math.abs(rel![mt]?.diferenca ?? 0), 0);
+    if (difEletronico > 0.01) {
+      r += `\n⚠️ Divergência eletrônica (PIX/Cartão/NFe): *R$ ${difEletronico.toFixed(2)}* — conferir digitação`;
+    }
+    if (Math.abs(difDin) < 0.01 && difEletronico < 0.01) {
+      r += `\n✅ Sem divergência`;
+    }
+  } else if (fechamento.status === 'CONFERIDO') {
     r += `\n✅ Sem divergência`;
   }
+
+  if (fechamento.observacao) r += `\n\n📝 _Obs: ${fechamento.observacao}_`;
+  r += `\n\n_Detalhes: «fc ${fechamento.id}»_`;
 
   return r.trim();
 }
