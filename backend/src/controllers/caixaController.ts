@@ -908,8 +908,11 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
                         },
                     });
                     if (pendingLavadores === 0) {
-                        await tx.ordemServico.update({
-                            where: { id: ordemId },
+                        // updateMany (e não update) para ser tolerante a ids que não
+                        // são ordens reais (ex: card sintético "salary"): atualiza 0
+                        // linhas em vez de lançar "Record to update not found" → 500.
+                        await tx.ordemServico.updateMany({
+                            where: { id: ordemId, empresaId },
                             data: {
                                 comissaoPaga: true,
                                 fechamentoComissaoId: fechamento.id,

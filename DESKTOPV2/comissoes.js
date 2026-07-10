@@ -482,7 +482,12 @@ async function handleConfirmarFechamento() {
         return;
     }
 
-    const comissaoIds = creditosSelecionados.map(el => el.dataset.id);
+    // O card de salário (SALARIO / SALARIO_COMISSAO) tem data-id="salary" e não é
+    // uma ordem — seu valor já entra no valorPago. Não pode ir em comissaoIds, senão
+    // o backend tenta atualizar uma OrdemServico inexistente e retorna 500.
+    const comissaoIds = creditosSelecionados
+        .filter(el => el.dataset.salary !== 'true' && el.dataset.id !== 'salary')
+        .map(el => el.dataset.id);
     const adiantamentoIds = debitosSelecionados
         .filter(el => el.dataset.adiantamentoId)
         .map(el => el.dataset.adiantamentoId);
