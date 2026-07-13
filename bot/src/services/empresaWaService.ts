@@ -21,11 +21,15 @@ interface EmpresaState {
   reconnectDelay: number;
   isInitializing: boolean;
   connectedAt: number | null;
+  everConnected: boolean; // já conectou alguma vez nesta sessão (passou da fase de QR)
 }
 
 const BASE_DELAY    = 5000;
 const MAX_DELAY     = 60000;
 const MAX_RECONNECT = 50;
+// Sessão que nunca conectou (fase de QR): limita ciclos de geração de QR sem scan.
+// Evita loop infinito de "gera 6 QRs → timeout → reconecta" que troca o QR sem parar.
+const MAX_QR_CYCLES = 3;
 
 const sessions = new Map<string, EmpresaState>();
 
@@ -57,6 +61,7 @@ function getState(empresaId: string): EmpresaState {
     sessions.set(empresaId, {
       socket: null, status: 'DESCONECTADO', qrDataUrl: null,
       reconnectCount: 0, reconnectDelay: BASE_DELAY, isInitializing: false, connectedAt: null,
+      everConnected: false,
     });
   }
   return sessions.get(empresaId)!;
@@ -134,8 +139,9 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
   if (st.socket || st.isInitializing) return;
   st.isInitializing  = true;
   st.status          = 'CONECTANDO';
-  st.reconnectCount  = 0;
-  st.reconnectDelay  = BASE_DELAY;
+  // ⚠️ NÃO zerar reconnectCount aqui: como o próprio reconnect chama connectEmpresa,
+  // zerar aqui fazia o MAX_RECONNECT/MAX_QR_CYCLES nunca serem atingidos (loop infinito).
+  // O contador é zerado em 'open' (sucesso) e no desistir/disconnect.
 
   try {
     await loadBaileys();
@@ -160,6 +166,9 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
       browser: _Browsers.macOS('Safari'),
       generateHighQualityLinkPreview: false,
       keepAliveIntervalMs: 15000,
+      // Cada QR vive 60s (default do Baileys é 60s só no 1º e 20s nos seguintes).
+      // Sem isso os QRs trocavam a cada 20s e o usuário não conseguia escanear a tempo.
+      qrTimeout: 60000,
       getMessage: async () => ({ conversation: '' }),
     });
 
@@ -197,6 +206,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         st.reconnectDelay  = BASE_DELAY;
         st.isInitializing  = false;
         st.connectedAt     = Date.now();
+        st.everConnected   = true;
         const phone = sock.user?.id?.split(':')[0] ?? null;
         console.log(`[EmpresaWA:${empresaId}] ✅ Conectado: ${phone}`);
         try {
@@ -214,7 +224,11 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         const restartCode = _DisconnectReason?.restartRequired ?? 515;
         const isLogout    = code === logoutCode && st.status === 'CONECTADO';
         const isRestart   = code === restartCode;
-        const shouldRetry = !isLogout && st.reconnectCount < MAX_RECONNECT;
+        // Nunca conectou → está na fase de QR: limita os ciclos (evita trocar QR pra sempre).
+        // Já conectou antes → queda de conexão: permite muitas tentativas (resiliência).
+        const emFaseQr    = !st.everConnected;
+        const limite      = emFaseQr ? MAX_QR_CYCLES : MAX_RECONNECT;
+        const shouldRetry = !isLogout && st.reconnectCount < limite;
 
         st.socket        = null;
         st.isInitializing = false;
@@ -227,7 +241,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
           const delay = isRestart ? 2000 : st.reconnectDelay;
           if (!isRestart) st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
           st.connectedAt = null;
-          console.log(`[EmpresaWA:${empresaId}] Reconectando em ${delay / 1000}s (${st.reconnectCount}/${MAX_RECONNECT})`);
+          console.log(`[EmpresaWA:${empresaId}] Reconectando em ${delay / 1000}s (${st.reconnectCount}/${limite})`);
           setTimeout(() => connectEmpresa(empresaId).catch(console.error), delay);
           try {
             await (prisma as any).whatsappEmpresaSession.updateMany({
@@ -236,15 +250,18 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
             });
           } catch {}
         } else {
-          st.status    = 'DESCONECTADO';
-          st.qrDataUrl = null;
+          st.status         = 'DESCONECTADO';
+          st.qrDataUrl      = null;
+          // Zera o contador para que um novo clique em "Conectar" comece limpo.
+          st.reconnectCount = 0;
+          st.reconnectDelay = BASE_DELAY;
           try {
             await (prisma as any).whatsappEmpresaSession.updateMany({
               where: { empresaId },
               data:  { status: 'DESCONECTADO', qrCode: null, ...(isLogout ? { authState: null } : {}) },
             });
           } catch {}
-          console.log(`[EmpresaWA:${empresaId}] ${isLogout ? 'Logout real — auth limpo' : 'Max tentativas atingido'}`);
+          console.log(`[EmpresaWA:${empresaId}] ${isLogout ? 'Logout real — auth limpo' : (emFaseQr ? 'QR não escaneado — geração pausada' : 'Max tentativas atingido')}`);
         }
       }
     });
@@ -284,6 +301,7 @@ export async function disconnectEmpresa(empresaId: string): Promise<void> {
     st.reconnectDelay = BASE_DELAY;
     st.connectedAt    = null;
     st.isInitializing = false;
+    st.everConnected  = false;
   }
   try {
     await (prisma as any).whatsappEmpresaSession.updateMany({
