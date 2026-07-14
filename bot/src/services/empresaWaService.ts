@@ -86,6 +86,22 @@ async function restoreAuthFromDb(empresaId: string): Promise<void> {
   }
 }
 
+/** Limpa o auth (arquivos locais + authState no banco) — usado quando a sessão
+ *  corrompe (badSession 500). Não mexe no status: o reconnect gera QR novo e
+ *  re-pareia do zero. */
+async function clearAuthState(empresaId: string): Promise<void> {
+  const dir = authDir(empresaId);
+  try { if (existsSync(dir)) rmSync(dir, { recursive: true, force: true }); } catch {}
+  try {
+    await (prisma as any).whatsappEmpresaSession.updateMany({
+      where: { empresaId },
+      data:  { authState: null },
+    });
+  } catch (err) {
+    console.error(`[EmpresaWA:${empresaId}] Erro ao limpar auth corrompido:`, err);
+  }
+}
+
 async function persistAuthToDb(empresaId: string): Promise<void> {
   try {
     const dir = authDir(empresaId);
@@ -187,7 +203,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
 
       if (qr) {
         try { st.qrDataUrl = await _QRCode.toDataURL(qr); st.status = 'QR'; } catch {}
-        console.log(`[EmpresaWA:${empresaId}] QR gerado`);
+        console.log(`[EmpresaWA:${empresaId}] QR gerado @ ${new Date().toISOString()}`);
         try {
           await (prisma as any).whatsappEmpresaSession.upsert({
             where:  { empresaId },
@@ -222,8 +238,10 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         const code        = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const logoutCode  = _DisconnectReason?.loggedOut ?? 401;
         const restartCode = _DisconnectReason?.restartRequired ?? 515;
+        const badSessCode = _DisconnectReason?.badSession ?? 500;
         const isLogout    = code === logoutCode && st.status === 'CONECTADO';
         const isRestart   = code === restartCode;
+        const isBadSession = code === badSessCode;
         // Nunca conectou → está na fase de QR: limita os ciclos (evita trocar QR pra sempre).
         // Já conectou antes → queda de conexão: permite muitas tentativas (resiliência).
         const emFaseQr    = !st.everConnected;
@@ -233,6 +251,13 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         st.socket        = null;
         st.isInitializing = false;
 
+        // badSession (500): auth corrompido. Limpar antes de reconectar para
+        // re-parear do zero — senão o WhatsApp derruba a cada ~10s em loop.
+        if (isBadSession && shouldRetry) {
+          console.log(`[EmpresaWA:${empresaId}] Sessão corrompida (badSession) — limpando auth para re-parear`);
+          await clearAuthState(empresaId);
+        }
+
         if (shouldRetry) {
           st.reconnectCount++;
           // Conexão instável: se ficou conectado menos de 10s, aplica backoff progressivo
@@ -241,7 +266,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
           const delay = isRestart ? 2000 : st.reconnectDelay;
           if (!isRestart) st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
           st.connectedAt = null;
-          console.log(`[EmpresaWA:${empresaId}] Reconectando em ${delay / 1000}s (${st.reconnectCount}/${limite})`);
+          console.log(`[EmpresaWA:${empresaId}] Fechou (code=${code}, fase=${emFaseQr ? 'QR' : 'conectado'}) — reconectando em ${delay / 1000}s (${st.reconnectCount}/${limite})`);
           setTimeout(() => connectEmpresa(empresaId).catch(console.error), delay);
           try {
             await (prisma as any).whatsappEmpresaSession.updateMany({
