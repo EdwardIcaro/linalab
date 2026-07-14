@@ -239,7 +239,8 @@ app.post('/empresa-wa/connect/:empresaId', async (req, res) => {
     if (cur.status === 'CONECTADO') return res.json({ status: 'CONECTADO' });
     // Fire-and-forget: inicia conexão e retorna imediatamente.
     // O QR é salvo no banco pelo empresaWaService para o backend servir sem ngrok.
-    connectEmpresa(empresaId).catch(console.error);
+    // userInitiated=true → limpa auth antigo antes do 1º QR (pareamento limpo).
+    connectEmpresa(empresaId, true).catch(console.error);
     return res.json({ status: 'CONECTANDO' });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao conectar empresa', details: String(err) });
@@ -302,7 +303,8 @@ async function startBot() {
           const cur = getEmpresaStatus(empresaId);
           if (cur.status === 'CONECTADO' || cur.status === 'QR') continue;
           console.log(`[EmpresaWA:${empresaId}] Pedido de conexão detectado no banco, iniciando...`);
-          connectEmpresa(empresaId).catch(console.error);
+          // Pedido vindo do clique do usuário → pareamento limpo (limpa auth antigo).
+          connectEmpresa(empresaId, true).catch(console.error);
         }
       } catch {}
     }, 5000);

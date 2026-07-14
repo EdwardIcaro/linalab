@@ -150,7 +150,7 @@ export async function restoreAllEmpresaSessions(): Promise<void> {
   }
 }
 
-export async function connectEmpresa(empresaId: string): Promise<void> {
+export async function connectEmpresa(empresaId: string, userInitiated = false): Promise<void> {
   const st = getState(empresaId);
   if (st.socket || st.isInitializing) return;
   st.isInitializing  = true;
@@ -161,16 +161,35 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
 
   try {
     await loadBaileys();
+
+    // Clique manual em "Conectar" numa empresa que NÃO está conectada → pareamento novo.
+    // Limpa qualquer auth antigo/corrompido ANTES de gerar o 1º QR, senão o usuário
+    // escaneia um QR de sessão podre que morre com badSession e o celular fica travado.
+    // (Reconnect interno pós-scan NÃO passa userInitiated → preserva as creds do pareamento.)
+    if (userInitiated) {
+      try {
+        const sess = await (prisma as any).whatsappEmpresaSession.findUnique({
+          where: { empresaId }, select: { status: true },
+        });
+        if (sess?.status !== 'CONECTADO') {
+          await clearAuthState(empresaId);
+          console.log(`[EmpresaWA:${empresaId}] Conexão manual — auth antigo limpo para pareamento novo`);
+        }
+      } catch {}
+    }
+
     await restoreAuthFromDb(empresaId);
 
     const dir = authDir(empresaId);
     mkdirSync(dir, { recursive: true });
 
     let version: number[] = [2, 3000, 1023000166];
+    let versionSource = 'fallback';
     try {
       const v = await _fetchLatestBaileysVersion();
-      if (v?.version?.length === 3) version = v.version;
+      if (v?.version?.length === 3) { version = v.version; versionSource = 'online'; }
     } catch {}
+    console.log(`[EmpresaWA:${empresaId}] Versão WA: ${version.join('.')} (${versionSource})`);
 
     const { state: authState, saveCreds } = await _useMultiFileAuthState(dir);
 
@@ -199,7 +218,12 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
     sock.ev.on('messages.upsert', () => {});
 
     sock.ev.on('connection.update', async (update: any) => {
-      const { connection, lastDisconnect, qr } = update;
+      const { connection, lastDisconnect, qr, isNewLogin, receivedPendingNotifications } = update;
+
+      // Diagnóstico do pareamento: loga cada transição relevante (sem o qr em si)
+      if (connection || isNewLogin !== undefined) {
+        console.log(`[EmpresaWA:${empresaId}] update: connection=${connection ?? '-'} isNewLogin=${isNewLogin ?? '-'} pending=${receivedPendingNotifications ?? '-'} code=${(lastDisconnect?.error as Boom)?.output?.statusCode ?? '-'}`);
+      }
 
       if (qr) {
         try { st.qrDataUrl = await _QRCode.toDataURL(qr); st.status = 'QR'; } catch {}
