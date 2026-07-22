@@ -168,14 +168,18 @@ export function validateCreateOrder(data: any): ValidationResult {
   }
 
   // Validate veiculo/novoVeiculo
-  if (!data.veiculoId && !data.novoVeiculo) {
-    errors.push('veiculoId ou novoVeiculo é obrigatório');
-  } else if (data.novoVeiculo) {
-    const plateError = validators.isValidPlate(data.novoVeiculo.placa, 'novoVeiculo.placa');
-    if (plateError) errors.push(plateError);
+  // Ordens avulsas (higienização de tapete, sofá, etc.) não têm veículo — pula a exigência.
+  const isAvulso = data.tipoOrdem === 'AVULSO';
+  if (!isAvulso) {
+    if (!data.veiculoId && !data.novoVeiculo) {
+      errors.push('veiculoId ou novoVeiculo é obrigatório');
+    } else if (data.novoVeiculo) {
+      const plateError = validators.isValidPlate(data.novoVeiculo.placa, 'novoVeiculo.placa');
+      if (plateError) errors.push(plateError);
 
-    const modelError = validators.isNonEmptyString(data.novoVeiculo.modelo, 'novoVeiculo.modelo');
-    if (modelError) errors.push(modelError);
+      const modelError = validators.isNonEmptyString(data.novoVeiculo.modelo, 'novoVeiculo.modelo');
+      if (modelError) errors.push(modelError);
+    }
   }
 
   // Validate items array
