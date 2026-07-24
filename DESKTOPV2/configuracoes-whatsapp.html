@@ -2762,23 +2762,33 @@
 
         // ── Contatos salvos (destino = Números) ──
         function _telDigitos(t) { return String(t || '').replace(/\D/g, ''); }
+        // Chave de comparação: JID (contém '@') compara literal; número compara por dígitos.
+        function _chaveDestino(v) { const s = String(v || '').trim(); return s.includes('@') ? s : _telDigitos(s); }
 
-        // Reúne contatos com número real: lavadores + funcionários (botUsers) e admins (adminPhones).
+        // Reúne TODOS os contatos com forma de entrega da empresa:
+        //  - lavadores + funcionários (botUsers, telefone via bot)
+        //  - admins (número real ou, se pareado, o próprio jid)
+        // Cada contato tem `destino` = o que vai no CSV (número em dígitos OU jid).
         function _contatosDestinoDisponiveis() {
             const lista = [];
             (botUsers || []).forEach(u => {
                 const tel = _telDigitos(u.telefone);
                 if (!tel) return;
-                lista.push({ nome: u.nome, telefone: tel, grupo: u.origem === 'lavador' ? 'Lavadores' : 'Funcionários' });
+                lista.push({ nome: u.nome, destino: tel, label: tel, grupo: u.origem === 'lavador' ? 'Lavadores' : 'Funcionários' });
             });
             (adminPhones || []).forEach(a => {
-                if (!a.telefone || a.telefone.startsWith('lid_')) return; // admin pareado não tem número real
-                const tel = _telDigitos(a.telefone);
-                if (!tel) return;
-                lista.push({ nome: a.nome || 'Admin', telefone: tel, grupo: 'Admins' });
+                if (a.ativo === false) return;
+                const pareado = a.telefone && String(a.telefone).startsWith('lid_');
+                if (!pareado) {
+                    const tel = _telDigitos(a.telefone);
+                    if (tel) lista.push({ nome: a.nome || 'Admin', destino: tel, label: tel, grupo: 'Admins' });
+                } else if (a.jid) {
+                    // Admin pareado: sem número digitável, mas o jid é entregável (sendMessage aceita '@').
+                    lista.push({ nome: a.nome || 'Admin', destino: a.jid, label: '✅ Pareado', grupo: 'Admins' });
+                }
             });
             const vistos = new Set();
-            return lista.filter(c => { if (vistos.has(c.telefone)) return false; vistos.add(c.telefone); return true; });
+            return lista.filter(c => { const k = _chaveDestino(c.destino); if (vistos.has(k)) return false; vistos.add(k); return true; });
         }
 
         function renderContatosDestino(selecionados) {
@@ -2796,29 +2806,32 @@
                 <div style="font-size:.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:.4rem .2rem .2rem;">${g}</div>
                 ${grupos[g].map(c => `
                     <label style="display:flex;align-items:center;gap:.5rem;padding:.4rem .3rem;cursor:pointer;border-radius:6px;">
-                        <input type="checkbox" class="regra-contato-chk" value="${c.telefone}" ${sel.has(c.telefone) ? 'checked' : ''} style="width:16px;height:16px;flex-shrink:0;">
+                        <input type="checkbox" class="regra-contato-chk" value="${escHtml(c.destino)}" ${sel.has(_chaveDestino(c.destino)) ? 'checked' : ''} style="width:16px;height:16px;flex-shrink:0;">
                         <span style="font-size:.85rem;color:#374151;">${escHtml(c.nome)}</span>
-                        <span style="font-size:.75rem;color:#9ca3af;font-family:monospace;margin-left:auto;">${escHtml(c.telefone)}</span>
+                        <span style="font-size:.75rem;color:#9ca3af;font-family:monospace;margin-left:auto;">${escHtml(c.label)}</span>
                     </label>
                 `).join('')}
             `).join('');
         }
 
-        // Junta contatos marcados + números avulsos, deduplicado, em CSV
+        // Junta contatos marcados (número ou jid) + números avulsos, deduplicado, em CSV
         function coletarNumerosDestino() {
-            const marcados = Array.from(document.querySelectorAll('.regra-contato-chk:checked')).map(c => c.value);
+            const marcados = Array.from(document.querySelectorAll('.regra-contato-chk:checked')).map(c => c.value.trim());
             const outros = document.getElementById('regraDestinoNumeros').value
                 .split(',').map(n => _telDigitos(n)).filter(Boolean);
-            return Array.from(new Set([...marcados, ...outros])).join(',');
+            const vistos = new Set();
+            return [...marcados, ...outros].filter(v => { const k = _chaveDestino(v); if (!k || vistos.has(k)) return false; vistos.add(k); return true; }).join(',');
         }
 
-        // Na edição: marca os contatos que batem com o CSV salvo; o resto vira "outros números"
+        // Na edição: marca os contatos que batem com o CSV salvo; o resto (número avulso) vira "outros números"
         function hidratarDestinoNumeros(csv) {
-            const nums = String(csv || '').split(',').map(n => _telDigitos(n)).filter(Boolean);
-            const contatosTel = new Set(_contatosDestinoDisponiveis().map(c => c.telefone));
-            const selecionados = new Set(nums.filter(n => contatosTel.has(n)));
+            const tokens = String(csv || '').split(',').map(s => s.trim()).filter(Boolean);
+            const contatos = _contatosDestinoDisponiveis();
+            const chavesContato = new Set(contatos.map(c => _chaveDestino(c.destino)));
+            const selecionados = new Set(tokens.map(_chaveDestino).filter(k => chavesContato.has(k)));
             renderContatosDestino(selecionados);
-            document.getElementById('regraDestinoNumeros').value = nums.filter(n => !contatosTel.has(n)).join(', ');
+            const outros = tokens.filter(t => !chavesContato.has(_chaveDestino(t)) && !t.includes('@')).map(_telDigitos).filter(Boolean);
+            document.getElementById('regraDestinoNumeros').value = outros.join(', ');
         }
 
         function abrirModalRegraEmail() {

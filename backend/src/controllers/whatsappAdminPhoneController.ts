@@ -32,11 +32,12 @@ export async function listAdminPhones(req: AuthenticatedRequest, res: Response) 
       return res.status(401).json({ error: 'Empresa não identificada' });
     }
 
-    const adminPhones = await prisma.whatsappAdminPhone.findMany({
+    const adminPhones = await (prisma.whatsappAdminPhone as any).findMany({
       where: { empresaId },
       select: {
         id: true,
         telefone: true,
+        jid: true,
         nome: true,
         ativo: true,
       },
