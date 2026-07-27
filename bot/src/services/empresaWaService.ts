@@ -22,14 +22,23 @@ interface EmpresaState {
   isInitializing: boolean;
   connectedAt: number | null;
   everConnected: boolean; // já conectou alguma vez nesta sessão (passou da fase de QR)
+  qrShownAt: number | null; // quando o QR atual foi exibido (para distinguir timeout real de erro de stream)
+  qrTimeoutCount: number;   // quantos QRs expiraram sem scan (usuário ausente)
+  qrErrorCount: number;     // quantas quedas por erro de stream durante o pareamento
 }
 
 const BASE_DELAY    = 5000;
 const MAX_DELAY     = 60000;
 const MAX_RECONNECT = 50;
-// Sessão que nunca conectou (fase de QR): limita ciclos de geração de QR sem scan.
-// Evita loop infinito de "gera 6 QRs → timeout → reconecta" que troca o QR sem parar.
-const MAX_QR_CYCLES = 3;
+// Fase de QR (nunca conectou). Distinguimos DOIS motivos de queda:
+//  • QR expirou sem scan (~60s no ar) → usuário ausente. Após MAX_QR_TIMEOUTS, pausa.
+//  • Queda precoce por erro de stream (badSession 500 / connectionClosed 428) enquanto
+//    OUTRA empresa está conectada — o WhatsApp derruba o handshake novo. NÃO é culpa do
+//    usuário nem QR expirado; reconecta rápido e tolera muitas tentativas até o WA aceitar.
+const MAX_QR_TIMEOUTS   = 3;     // QRs expirados sem scan antes de pausar (≈3 min)
+const MAX_QR_ERRORS     = 20;    // quedas por erro de stream toleradas no pareamento
+const QR_ERROR_DELAY    = 2000;  // reconexão rápida após erro de stream (minimiza janela sem QR)
+const QR_LIFE_THRESHOLD = 45000; // QR vivo ≥45s = expirou sem scan; <45s = erro de stream
 
 const sessions = new Map<string, EmpresaState>();
 
@@ -61,7 +70,7 @@ function getState(empresaId: string): EmpresaState {
     sessions.set(empresaId, {
       socket: null, status: 'DESCONECTADO', qrDataUrl: null,
       reconnectCount: 0, reconnectDelay: BASE_DELAY, isInitializing: false, connectedAt: null,
-      everConnected: false,
+      everConnected: false, qrShownAt: null, qrTimeoutCount: 0, qrErrorCount: 0,
     });
   }
   return sessions.get(empresaId)!;
@@ -118,6 +127,18 @@ async function persistAuthToDb(empresaId: string): Promise<void> {
 
 export async function restoreAllEmpresaSessions(): Promise<void> {
   try {
+    // Limpa sessões presas em QR/CONECTANDO de execuções anteriores: após um restart
+    // não existe socket vivo para elas, então o status estava mentindo para o frontend.
+    try {
+      const limpas = await (prisma as any).whatsappEmpresaSession.updateMany({
+        where: { status: { in: ['QR', 'CONECTANDO'] } },
+        data:  { status: 'DESCONECTADO', qrCode: null },
+      });
+      if (limpas.count) console.log(`[EmpresaWA] ${limpas.count} sessão(ões) presas em QR/CONECTANDO resetadas para DESCONECTADO`);
+    } catch (e) {
+      console.error('[EmpresaWA] Erro ao limpar sessões presas:', e);
+    }
+
     const rows = await (prisma as any).whatsappEmpresaSession.findMany({
       where: { status: 'CONECTADO' },
       select: { empresaId: true },
@@ -194,6 +215,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
 
       if (qr) {
         try { st.qrDataUrl = await _QRCode.toDataURL(qr); st.status = 'QR'; } catch {}
+        st.qrShownAt = Date.now(); // marca quando ESTE QR foi exibido
         console.log(`[EmpresaWA:${empresaId}] QR gerado @ ${new Date().toISOString()}`);
         try {
           await (prisma as any).whatsappEmpresaSession.upsert({
@@ -214,6 +236,9 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         st.isInitializing  = false;
         st.connectedAt     = Date.now();
         st.everConnected   = true;
+        st.qrShownAt       = null;
+        st.qrTimeoutCount  = 0;
+        st.qrErrorCount    = 0;
         const phone = sock.user?.id?.split(':')[0] ?? null;
         console.log(`[EmpresaWA:${empresaId}] ✅ Conectado: ${phone}`);
         try {
@@ -231,35 +256,62 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
         const restartCode = _DisconnectReason?.restartRequired ?? 515;
         const isLogout    = code === logoutCode && st.status === 'CONECTADO';
         const isRestart   = code === restartCode;
-        // Nunca conectou → está na fase de QR: limita os ciclos (evita trocar QR pra sempre).
-        // Já conectou antes → queda de conexão: permite muitas tentativas (resiliência).
         const emFaseQr    = !st.everConnected;
-        const limite      = emFaseQr ? MAX_QR_CYCLES : MAX_RECONNECT;
-        const shouldRetry = !isLogout && st.reconnectCount < limite;
 
         st.socket        = null;
         st.isInitializing = false;
 
+        // ── Fase de QR (ainda não pareou) ─────────────────────────────────────
+        // Duas causas de queda com tratamento distinto:
+        //   • QR ficou no ar ≥45s → expirou sem scan (usuário ausente): conta como
+        //     timeout; após MAX_QR_TIMEOUTS pausa a geração.
+        //   • Queda precoce (<45s): erro de stream (badSession 500 / 428) porque o
+        //     WhatsApp derruba o handshake novo enquanto outra empresa está conectada.
+        //     NÃO é culpa do usuário nem QR expirado → reconecta rápido (2s) e tolera
+        //     muitas tentativas (MAX_QR_ERRORS) até o WA aceitar o pareamento.
+        if (emFaseQr && !isLogout && !isRestart) {
+          const viveu       = st.qrShownAt ? Date.now() - st.qrShownAt : 0;
+          const expirou     = viveu >= QR_LIFE_THRESHOLD;
+          if (expirou) st.qrTimeoutCount++; else st.qrErrorCount++;
+          const shouldRetry = st.qrTimeoutCount < MAX_QR_TIMEOUTS && st.qrErrorCount < MAX_QR_ERRORS;
+
+          if (shouldRetry) {
+            const delay = expirou ? 1000 : QR_ERROR_DELAY;
+            console.log(`[EmpresaWA:${empresaId}] Fechou (code=${code}, fase=QR, ${expirou ? 'QR expirou' : 'erro de stream'}) — reconectando em ${delay / 1000}s (timeouts ${st.qrTimeoutCount}/${MAX_QR_TIMEOUTS}, erros ${st.qrErrorCount}/${MAX_QR_ERRORS})`);
+            setTimeout(() => connectEmpresa(empresaId).catch(console.error), delay);
+            try {
+              await (prisma as any).whatsappEmpresaSession.updateMany({ where: { empresaId }, data: { qrCode: null } });
+            } catch {}
+          } else {
+            st.status = 'DESCONECTADO'; st.qrDataUrl = null; st.qrShownAt = null;
+            st.qrTimeoutCount = 0; st.qrErrorCount = 0;
+            try {
+              await (prisma as any).whatsappEmpresaSession.updateMany({
+                where: { empresaId }, data: { status: 'DESCONECTADO', qrCode: null },
+              });
+            } catch {}
+            console.log(`[EmpresaWA:${empresaId}] Pareamento pausado (${st.qrTimeoutCount >= MAX_QR_TIMEOUTS ? 'QR não escaneado' : 'WhatsApp recusou o handshake repetidamente'}) — clique em Conectar para tentar de novo`);
+          }
+          return;
+        }
+
+        // ── Já conectou alguma vez → queda de conexão: resiliência alta ───────
+        const shouldRetry = !isLogout && st.reconnectCount < MAX_RECONNECT;
         if (shouldRetry) {
           st.reconnectCount++;
-          // Conexão instável: se ficou conectado menos de 10s, aplica backoff progressivo
           const wasUnstable = st.connectedAt !== null && (Date.now() - st.connectedAt) < 10000;
           if (wasUnstable) st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
           const delay = isRestart ? 2000 : st.reconnectDelay;
           if (!isRestart) st.reconnectDelay = Math.min(st.reconnectDelay * 1.5, MAX_DELAY);
           st.connectedAt = null;
-          console.log(`[EmpresaWA:${empresaId}] Fechou (code=${code}, fase=${emFaseQr ? 'QR' : 'conectado'}) — reconectando em ${delay / 1000}s (${st.reconnectCount}/${limite})`);
+          console.log(`[EmpresaWA:${empresaId}] Fechou (code=${code}, fase=conectado) — reconectando em ${delay / 1000}s (${st.reconnectCount}/${MAX_RECONNECT})`);
           setTimeout(() => connectEmpresa(empresaId).catch(console.error), delay);
           try {
-            await (prisma as any).whatsappEmpresaSession.updateMany({
-              where: { empresaId },
-              data:  { qrCode: null },
-            });
+            await (prisma as any).whatsappEmpresaSession.updateMany({ where: { empresaId }, data: { qrCode: null } });
           } catch {}
         } else {
           st.status         = 'DESCONECTADO';
           st.qrDataUrl      = null;
-          // Zera o contador para que um novo clique em "Conectar" comece limpo.
           st.reconnectCount = 0;
           st.reconnectDelay = BASE_DELAY;
           try {
@@ -268,7 +320,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
               data:  { status: 'DESCONECTADO', qrCode: null, ...(isLogout ? { authState: null } : {}) },
             });
           } catch {}
-          console.log(`[EmpresaWA:${empresaId}] ${isLogout ? 'Logout real — auth limpo' : (emFaseQr ? 'QR não escaneado — geração pausada' : 'Max tentativas atingido')}`);
+          console.log(`[EmpresaWA:${empresaId}] ${isLogout ? 'Logout real — auth limpo' : 'Max tentativas atingido'}`);
         }
       }
     });
@@ -309,6 +361,9 @@ export async function disconnectEmpresa(empresaId: string): Promise<void> {
     st.connectedAt    = null;
     st.isInitializing = false;
     st.everConnected  = false;
+    st.qrShownAt      = null;
+    st.qrTimeoutCount = 0;
+    st.qrErrorCount   = 0;
   }
   try {
     await (prisma as any).whatsappEmpresaSession.updateMany({
