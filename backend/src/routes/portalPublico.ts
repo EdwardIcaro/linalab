@@ -15,6 +15,9 @@ import {
   desvincularWpp,
   validarTokenPonto,
   confirmarPonto,
+  validarTokenFace,
+  confirmarFace,
+  getFaceDoPonto,
 } from '../controllers/portalPublicoController';
 
 const router: Router = Router();
@@ -30,7 +33,12 @@ router.get('/me/ajustes',       portalSessionMiddleware, getAjustesPortal);
 
 // Ponto via WhatsApp — token único gerado pelo bot (sem autenticação de sessão)
 router.get('/ponto/validar',    validarTokenPonto);
+router.get('/ponto/face',       getFaceDoPonto);
 router.post('/ponto/confirmar', confirmarPonto);
+
+// Cadastro do rosto — token pessoal gerado pelo gestor (uso único)
+router.get('/face/validar',   validarTokenFace);
+router.post('/face/confirmar', confirmarFace);
 
 // Públicas (sem autenticação)
 router.get('/:token',               resolverTokenPublico);

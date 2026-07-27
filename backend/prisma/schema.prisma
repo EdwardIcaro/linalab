@@ -926,6 +926,10 @@ model DpFuncionario {
   pontoToken        String?      @unique
   pontoTokenExpiraEm DateTime?
   pontoTokenUsadoEm  DateTime?
+  faceEmbedding     String?      // vetor 128D em JSON (null = facial não cadastrada)
+  faceCapturadoEm   DateTime?    // data do enrollment — base para re-captura periódica
+  faceToken         String?      @unique // token pessoal de cadastro do rosto (uso único)
+  faceTokenExpiraEm DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   empresa           Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -948,6 +952,7 @@ model DpMarcacao {
   gpsPrecisao         Float?
   gpsPrecisaoSuspeita Boolean       @default(false)
   gpsNegado           Boolean       @default(false)
+  faceScore           Float?        // confiança da verificação facial (null = não usou facial)
   ip                  String?
   ajustado            Boolean       @default(false)
   createdAt           DateTime      @default(now())

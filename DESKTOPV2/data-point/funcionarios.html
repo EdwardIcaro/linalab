@@ -220,6 +220,7 @@
     .badge-linawash { background: var(--p100);      color: var(--p700); }
     .badge-pin      { background: var(--green-bg);  color: var(--green); }
     .badge-nopin    { background: var(--red-bg);    color: var(--red); }
+    .badge-face     { background: var(--teal100);   color: var(--teal700); }
 
     /* Ações do row */
     .func-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -720,6 +721,9 @@ function buildFuncRow(f, idx) {
   const linaBadge = f.lavadorId
     ? '<span class="badge badge-linawash"><i class="fa fa-link"></i> Lina Wash</span>'
     : '';
+  const faceBadge = f.faceCadastrado
+    ? '<span class="badge badge-face"><i class="fa fa-smile"></i> Rosto ok</span>'
+    : '';
 
   const portalLink = f.portalToken
     ? `${window.location.origin}/p/${f.portalToken}`
@@ -737,6 +741,7 @@ function buildFuncRow(f, idx) {
         ${f.cargo ? `<span><i class="fa fa-briefcase"></i> ${f.cargo}</span>` : ''}
         ${jornadaInfo ? `<span><i class="fa fa-clock"></i> ${jornadaInfo}</span>` : ''}
         ${pinBadge}
+        ${faceBadge}
       </div>
     </div>
     <div class="func-actions">
@@ -749,6 +754,10 @@ function buildFuncRow(f, idx) {
       </button>
       <button class="act-btn amber" title="Redefinir PIN" onclick="confirmarResetPin('${f.id}', '${escapar(f.nome)}')">
         <i class="fa fa-key"></i>
+      </button>
+      <button class="act-btn teal" title="${f.faceCadastrado ? 'Rosto cadastrado — gerar novo link' : 'Gerar link de cadastro do rosto'}"
+        onclick="gerarLinkFacial('${f.id}', '${escapar(f.nome)}')">
+        <i class="fa fa-smile"></i>
       </button>
       <button class="act-btn" title="Mais ações" onclick="abrirMenuStatus('${f.id}', '${f.status}', '${escapar(f.nome)}')">
         <i class="fa fa-ellipsis-v"></i>
@@ -954,6 +963,51 @@ function copiarLink(link) {
   }).catch(() => {
     prompt('Copie o link manualmente:', link);
   });
+}
+
+// ── Cadastro facial ───────────────────────────────────────────────────────────
+// Cada funcionário recebe um link pessoal e de uso único: ninguém consegue
+// cadastrar o rosto no lugar de outra pessoa.
+async function gerarLinkFacial(id, nome) {
+  const f = todos.find(x => x.id === id);
+
+  if (f && f.faceCadastrado) {
+    return abrirConfirm(
+      '😊',
+      'Rosto já cadastrado',
+      `<strong>${nome}</strong> já tem o rosto cadastrado.<br><br>` +
+      'Gerar um novo link permite recadastrar (útil se o reconhecimento estiver falhando).',
+      'neutral',
+      () => { fecharConfirm(); solicitarLinkFacial(id, nome); }
+    );
+  }
+  solicitarLinkFacial(id, nome);
+}
+
+async function solicitarLinkFacial(id, nome) {
+  try {
+    const r    = await api.gerarFaceTokenDpFuncionario(id);
+    const link = `${window.location.origin}/face?t=${r.token}`;
+
+    abrirConfirm(
+      '📸',
+      'Link de cadastro do rosto',
+      `Envie este link para <strong>${nome}</strong>. Ele vale <strong>7 dias</strong> ` +
+      'e funciona uma única vez.<br><br>' +
+      `<div style="background:var(--gray100);padding:10px;border-radius:8px;` +
+      `font-size:11px;word-break:break-all;text-align:left;line-height:1.5">${link}</div>`,
+      'neutral',
+      () => {
+        navigator.clipboard.writeText(link)
+          .then(() => mostrarToast('Link copiado!', 'success'))
+          .catch(() => prompt('Copie o link manualmente:', link));
+        fecharConfirm();
+      }
+    );
+    document.getElementById('confirmBtn').textContent = 'Copiar link';
+  } catch (e) {
+    mostrarToast(e.message || 'Erro ao gerar link de cadastro facial', 'error');
+  }
 }
 
 // ── Confirm overlay ───────────────────────────────────────────────────────────

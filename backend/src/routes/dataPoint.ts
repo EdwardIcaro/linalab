@@ -12,6 +12,8 @@ import {
   atualizarDpFuncionario,
   resetarPinDpFuncionario,
   regenerarLinkDpFuncionario,
+  gerarFaceTokenDpFuncionario,
+  removerFaceDpFuncionario,
   atualizarConfigDp,
   getMarcacoesDia,
   criarMarcacaoManual,
@@ -48,6 +50,8 @@ router.post('/funcionarios',                        authMiddleware, criarDpFunci
 router.put('/funcionarios/:id',                     authMiddleware, atualizarDpFuncionario);
 router.post('/funcionarios/:id/reset-pin',          authMiddleware, resetarPinDpFuncionario);
 router.post('/funcionarios/:id/regenerar-link',     authMiddleware, regenerarLinkDpFuncionario);
+router.post('/funcionarios/:id/face-token',         authMiddleware, gerarFaceTokenDpFuncionario);
+router.delete('/funcionarios/:id/face',             authMiddleware, removerFaceDpFuncionario);
 
 // Marcações (CRUD admin)
 router.get('/marcacoes',           authMiddleware, getMarcacoesDia);

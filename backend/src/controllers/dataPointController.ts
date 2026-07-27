@@ -724,6 +724,7 @@ export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
         salarioBase: true, cargaHoraria: true, telefone: true,
         status: true, lavadorId: true, jornadaEntrada: true,
         cargaHorariaDia: true, pinDefinido: true, linkToken: true,
+        faceCapturadoEm: true,
         createdAt: true,
       },
       orderBy: { nome: 'asc' },
@@ -749,6 +750,7 @@ export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
         ? (linksPorLavador.get(f.lavadorId) ?? null)
         : f.linkToken,
       portalSuportado: !!f.lavadorId,
+      faceCadastrado: !!f.faceCapturadoEm,
     }));
 
     res.json({ funcionarios: result });
@@ -906,6 +908,66 @@ export const regenerarLinkDpFuncionario = async (req: EmpresaRequest, res: Respo
   } catch (error) {
     console.error('[dp] regenerarLink:', error);
     res.status(500).json({ error: 'Erro ao regenerar link' });
+  }
+};
+
+// ─── POST /api/dp/funcionarios/:id/face-token ────────────────────────────────
+// Gera o link pessoal de cadastro do rosto. Cada funcionário recebe o seu:
+// ninguém consegue cadastrar o rosto no lugar de outra pessoa.
+export const gerarFaceTokenDpFuncionario = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpFuncionario.findFirst({
+      where: { id, empresaId },
+      select: { id: true, nome: true, wppJid: true },
+    });
+    if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const token    = gerarTokenCurto(8);
+    const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+    await prisma.dpFuncionario.update({
+      where: { id },
+      data: { faceToken: token, faceTokenExpiraEm: expiraEm },
+    });
+
+    res.json({ token, expiraEm, nome: existente.nome, temWhatsapp: !!existente.wppJid });
+  } catch (error) {
+    console.error('[dp] gerarFaceToken:', error);
+    res.status(500).json({ error: 'Erro ao gerar link de cadastro facial' });
+  }
+};
+
+// ─── DELETE /api/dp/funcionarios/:id/face ────────────────────────────────────
+// Direito ao esquecimento (LGPD): apaga o vetor facial. O histórico de
+// marcações continua, mas sem nenhum dado biométrico associado.
+export const removerFaceDpFuncionario = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpFuncionario.findFirst({
+      where: { id, empresaId },
+      select: { id: true },
+    });
+    if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    await prisma.dpFuncionario.update({
+      where: { id },
+      data: {
+        faceEmbedding: null,
+        faceCapturadoEm: null,
+        faceToken: null,
+        faceTokenExpiraEm: null,
+      },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[dp] removerFace:', error);
+    res.status(500).json({ error: 'Erro ao remover cadastro facial' });
   }
 };
 

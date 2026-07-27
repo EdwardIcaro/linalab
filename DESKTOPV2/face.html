@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lina · Cadastrar rosto</title>
+  <meta name="theme-color" content="#6b3fa1">
+  <meta name="robots" content="noindex">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg:     #f1f5f9;
+      --card:   #ffffff;
+      --border: #e2e8f0;
+      --text:   #1e293b;
+      --muted:  #64748b;
+      --green:  #059669;
+      --green-l:#d1fae5;
+      --red:    #dc2626;
+      --amber:  #d97706;
+      --amber-l:#fef3c7;
+      --purple: #7c3aed;
+    }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.10);
+      text-align: center;
+    }
+    .logo {
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #7c3aed, #5b21b6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 900; color: #fff;
+      margin: 0 auto 24px;
+      box-shadow: 0 6px 20px rgba(124,58,237,.35);
+    }
+    .tela { display: none; }
+    .tela.ativa { display: block; }
+
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+      margin: 0 auto 20px;
+    }
+    .spinner.green { border-top-color: var(--green); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .tela-titulo { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .tela-sub    { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* intro */
+    .saudacao { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .empresa  { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .dicas {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    .dicas li {
+      list-style: none;
+      font-size: 13px;
+      color: var(--text);
+      padding: 5px 0 5px 24px;
+      position: relative;
+      line-height: 1.4;
+    }
+    .dicas li::before {
+      content: '✓';
+      position: absolute; left: 0;
+      color: var(--green); font-weight: 800;
+    }
+    .lgpd {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      background: var(--green-l);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 18px;
+      text-align: left;
+    }
+    .lgpd strong { color: var(--green); }
+
+    /* captura */
+    .camera-wrap {
+      width: 220px; height: 220px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      overflow: hidden;
+      position: relative;
+      border: 4px solid var(--border);
+      background: #0f172a;
+      transition: border-color .2s;
+    }
+    .camera-wrap.ok { border-color: var(--green); }
+    #cam {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* espelha: o usuário se vê como no espelho */
+    }
+    .contador {
+      font-size: 13px; font-weight: 700;
+      color: var(--purple);
+      margin-bottom: 10px;
+    }
+    .barra {
+      height: 6px; background: var(--border);
+      border-radius: 99px; overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .barra-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #059669);
+      border-radius: 99px;
+      transition: width .3s;
+    }
+    .dica-live {
+      font-size: 13px; color: var(--muted);
+      min-height: 20px;
+    }
+
+    /* sucesso */
+    .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .success-tit  { font-size: 19px; font-weight: 800; margin-bottom: 8px; }
+
+    /* erro */
+    .error-icon { font-size: 48px; margin-bottom: 16px; }
+    .error-msg  { font-size: 15px; color: var(--red); font-weight: 600; margin-bottom: 8px; }
+    .error-sub  { font-size: 13px; color: var(--muted); }
+
+    .btn {
+      width: 100%; padding: 14px;
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); opacity: .9; }
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-ghost   { background: var(--bg); color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">L</div>
+
+  <!-- Verificando link -->
+  <div id="tela-loading" class="tela ativa">
+    <div class="spinner"></div>
+    <div class="tela-titulo">Verificando link...</div>
+  </div>
+
+  <!-- Instruções + consentimento -->
+  <div id="tela-intro" class="tela">
+    <div id="intro-nome" class="saudacao"></div>
+    <div id="intro-empresa" class="empresa"></div>
+
+    <ul class="dicas">
+      <li>Fique em um lugar bem iluminado</li>
+      <li>Tire óculos escuros e boné</li>
+      <li>Mantenha o rosto neutro, olhando para a câmera</li>
+      <li>Deixe o celular a uns 30 cm do rosto</li>
+    </ul>
+
+    <div class="lgpd">
+      <strong>Sua privacidade:</strong> nenhuma foto ou vídeo é guardado.
+      O sistema salva apenas um código numérico do seu rosto, que não permite
+      remontar sua imagem. Você pode pedir a remoção a qualquer momento.
+    </div>
+
+    <button class="btn btn-primary" onclick="comecar()">Aceito cadastrar meu rosto</button>
+  </div>
+
+  <!-- Preparando (baixando lib + modelos) -->
+  <div id="tela-prep" class="tela">
+    <div class="spinner"></div>
+    <div class="tela-titulo" id="prep-titulo">Preparando...</div>
+    <div class="tela-sub">Pode levar alguns segundos na primeira vez.</div>
+  </div>
+
+  <!-- Captura -->
+  <div id="tela-captura" class="tela">
+    <div class="camera-wrap" id="camWrap">
+      <video id="cam" playsinline autoplay muted></video>
+    </div>
+    <div class="contador"><span id="cont-validas">0</span> de <span id="cont-alvo">8</span> capturas</div>
+    <div class="barra"><div class="barra-fill" id="barraFill"></div></div>
+    <div class="dica-live" id="dicaLive">Posicione seu rosto no círculo</div>
+  </div>
+
+  <!-- Salvando -->
+  <div id="tela-salvando" class="tela">
+    <div class="spinner green"></div>
+    <div class="tela-titulo">Salvando seu cadastro...</div>
+  </div>
+
+  <!-- Sucesso -->
+  <div id="tela-success" class="tela">
+    <div class="success-icon">✅</div>
+    <div class="success-tit">Rosto cadastrado!</div>
+    <div class="tela-sub">
+      A partir de agora, ao bater ponto pelo link do WhatsApp,
+      o sistema vai reconhecer você automaticamente.
+    </div>
+  </div>
+
+  <!-- Erro -->
+  <div id="tela-erro" class="tela">
+    <div class="error-icon">⚠️</div>
+    <div id="error-msg" class="error-msg"></div>
+    <div id="error-sub" class="error-sub"></div>
+    <button class="btn btn-ghost" id="btn-retry" style="display:none" onclick="location.reload()">Tentar novamente</button>
+  </div>
+</div>
+
+<script src="/face.js"></script>
+<script>
+  const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:3001/api'
+    : '/api';
+
+  const token = new URLSearchParams(location.search).get('t');
+  const ALVO  = 8;
+
+  function show(id) {
+    document.querySelectorAll('.tela').forEach(el => el.classList.remove('ativa'));
+    document.getElementById(id).classList.add('ativa');
+  }
+
+  function showErro(msg, sub, retry) {
+    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error-sub').textContent = sub || '';
+    document.getElementById('btn-retry').style.display = retry ? 'block' : 'none';
+    show('tela-erro');
+  }
+
+  // ── 1. valida o token pessoal ───────────────────────────────────────────────
+  async function validar() {
+    if (!token) {
+      return showErro('Link inválido.', 'Peça um novo link ao seu gestor.');
+    }
+    try {
+      const res  = await fetch(`${API}/p/face/validar?t=${encodeURIComponent(token)}`);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        return showErro(data.erro || 'Link inválido ou expirado.', 'Peça um novo link ao seu gestor.');
+      }
+
+      document.getElementById('intro-nome').textContent    = `Olá, ${data.nome}!`;
+      document.getElementById('intro-empresa').textContent = data.empresaNome || '';
+      document.getElementById('cont-alvo').textContent     = ALVO;
+      show('tela-intro');
+    } catch {
+      showErro('Serviço indisponível.', 'Tente novamente em alguns minutos.', true);
+    }
+  }
+
+  // ── 2. prepara e captura ────────────────────────────────────────────────────
+  async function comecar() {
+    if (!LinaFace.isSupported()) {
+      return showErro(
+        'Aparelho não compatível.',
+        'Este celular não suporta o reconhecimento facial. Fale com seu gestor — você pode bater ponto normalmente pelo link do WhatsApp.'
+      );
+    }
+
+    show('tela-prep');
+    try {
+      await LinaFace.ready(etapa => {
+        const txt = { lib: 'Carregando...', modelos: 'Baixando o reconhecimento...', pronto: 'Tudo pronto!' };
+        document.getElementById('prep-titulo').textContent = txt[etapa] || 'Preparando...';
+      });
+    } catch {
+      return showErro('Falha ao carregar.', 'Verifique sua conexão e tente novamente.', true);
+    }
+
+    const video = document.getElementById('cam');
+    try {
+      await LinaFace.startCamera(video);
+    } catch {
+      return showErro('Câmera bloqueada.', 'Permita o acesso à câmera nas configurações do navegador e tente novamente.', true);
+    }
+
+    show('tela-captura');
+    capturar(video);
+  }
+
+  async function capturar(video) {
+    const wrap  = document.getElementById('camWrap');
+    const fill  = document.getElementById('barraFill');
+    const cont  = document.getElementById('cont-validas');
+    const dica  = document.getElementById('dicaLive');
+
+    const r = await LinaFace.enroll(video, {
+      alvo: ALVO,
+      timeoutMs: 60000,
+      onProgresso: ({ validas, alvo, motivo }) => {
+        cont.textContent = validas;
+        fill.style.width = `${(validas / alvo) * 100}%`;
+        if (motivo) {
+          wrap.classList.remove('ok');
+          dica.textContent = LinaFace.texto(motivo);
+        } else {
+          wrap.classList.add('ok');
+          dica.textContent = 'Boa! Continue assim';
+        }
+      },
+    });
+
+    LinaFace.stopCamera();
+
+    if (!r.ok) {
+      return showErro(
+        'Não consegui capturar seu rosto.',
+        'Procure um lugar mais iluminado e tente de novo.',
+        true
+      );
+    }
+
+    salvar(r);
+  }
+
+  // ── 3. salva o vetor ────────────────────────────────────────────────────────
+  async function salvar(r) {
+    show('tela-salvando');
+    try {
+      const res = await fetch(`${API}/p/face/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: token, embedding: r.embedding, amostras: r.amostras }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        return showErro(data.erro || 'Não foi possível salvar.', 'Peça um novo link ao seu gestor.');
+      }
+      show('tela-success');
+    } catch {
+      showErro('Serviço indisponível.', 'Tente novamente em alguns minutos.', true);
+    }
+  }
+
+  validar();
+</script>
+</body>
+</html>

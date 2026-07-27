@@ -191,6 +191,8 @@ const api = {
   atualizarDpFuncionario: (id, data) => fetchApi(`/dp/funcionarios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   resetarPinDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/reset-pin`, { method: 'POST' }),
   regenerarLinkDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/regenerar-link`, { method: 'POST' }),
+  gerarFaceTokenDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/face-token`, { method: 'POST' }),
+  removerFaceDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/face`, { method: 'DELETE' }),
 
   // Marcações admin
   getDpMarcacoesDia: (funcionarioId, data) => fetchApi(`/dp/marcacoes?funcionarioId=${funcionarioId}&data=${data}`),

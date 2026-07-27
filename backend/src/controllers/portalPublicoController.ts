@@ -1030,10 +1030,113 @@ export const validarTokenPonto = async (req: Request, res: Response) => {
   }
 };
 
+// ─── Reconhecimento facial ───────────────────────────────────────────────────
+// O vetor de 128 números é irreversível: não permite reconstruir o rosto.
+// Nenhuma foto ou vídeo trafega — o processamento acontece no aparelho.
+
+function embeddingValido(v: unknown): v is number[] {
+  return Array.isArray(v) && v.length === 128 && v.every((n) => typeof n === 'number' && isFinite(n));
+}
+
+// GET /api/p/face/validar?t=TOKEN — valida o link pessoal de cadastro
+export const validarTokenFace = async (req: Request, res: Response) => {
+  const { t } = req.query as { t?: string };
+  if (!t) return res.status(400).json({ erro: 'Token obrigatório' });
+
+  try {
+    const func = await prisma.dpFuncionario.findUnique({
+      where: { faceToken: t },
+      select: {
+        nome: true, status: true, faceTokenExpiraEm: true,
+        empresa: { select: { nome: true } },
+      },
+    });
+
+    if (!func) return res.status(404).json({ erro: 'Link inválido' });
+    if (func.status === 'DESLIGADO') return res.status(403).json({ erro: 'Funcionário inativo' });
+    if (!func.faceTokenExpiraEm || new Date() > func.faceTokenExpiraEm)
+      return res.status(410).json({ erro: 'Link expirado. Peça um novo ao seu gestor' });
+
+    res.json({ nome: func.nome, empresaNome: func.empresa.nome });
+  } catch (error) {
+    console.error('[portal] validarTokenFace:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// POST /api/p/face/confirmar — grava o vetor e queima o token (uso único)
+export const confirmarFace = async (req: Request, res: Response) => {
+  const { t, embedding, amostras } = req.body as {
+    t?: string; embedding?: unknown; amostras?: number;
+  };
+  if (!t) return res.status(400).json({ erro: 'Token obrigatório' });
+  if (!embeddingValido(embedding)) return res.status(400).json({ erro: 'Leitura facial inválida' });
+
+  try {
+    const func = await prisma.dpFuncionario.findUnique({
+      where: { faceToken: t },
+      select: { id: true, nome: true, status: true, faceTokenExpiraEm: true, wppJid: true },
+    });
+
+    if (!func) return res.status(404).json({ erro: 'Link inválido' });
+    if (func.status === 'DESLIGADO') return res.status(403).json({ erro: 'Funcionário inativo' });
+    if (!func.faceTokenExpiraEm || new Date() > func.faceTokenExpiraEm)
+      return res.status(410).json({ erro: 'Link expirado. Peça um novo ao seu gestor' });
+
+    await prisma.dpFuncionario.update({
+      where: { id: func.id },
+      data: {
+        faceEmbedding: JSON.stringify(embedding),
+        faceCapturadoEm: new Date(),
+        faceToken: null,
+        faceTokenExpiraEm: null,
+      },
+    });
+
+    if (func.wppJid) {
+      botSend(func.wppJid,
+        `✅ *Rosto cadastrado com sucesso!*\n\nA partir de agora o sistema reconhece você ao bater ponto.`
+      ).catch(() => {});
+    }
+
+    console.log(`[FACE] cadastro concluído: ${func.nome} (${amostras ?? '?'} amostras)`);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[portal] confirmarFace:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// GET /api/p/ponto/face?t=PONTO_TOKEN — devolve o vetor do dono do token.
+// Verificação é 1:1 (o token já diz quem é a pessoa), então nunca expomos
+// os vetores dos outros funcionários da empresa.
+export const getFaceDoPonto = async (req: Request, res: Response) => {
+  const { t } = req.query as { t?: string };
+  if (!t) return res.status(400).json({ erro: 'Token obrigatório' });
+
+  try {
+    const func = await prisma.dpFuncionario.findUnique({
+      where: { pontoToken: t },
+      select: { faceEmbedding: true, pontoTokenExpiraEm: true, pontoTokenUsadoEm: true },
+    });
+
+    if (!func) return res.status(404).json({ erro: 'Link inválido' });
+    if (func.pontoTokenUsadoEm) return res.status(410).json({ erro: 'Link já utilizado' });
+    if (!func.pontoTokenExpiraEm || new Date() > func.pontoTokenExpiraEm)
+      return res.status(410).json({ erro: 'Link expirado' });
+
+    // null = funcionário ainda não cadastrou o rosto → a página pula a etapa
+    res.json({ embedding: func.faceEmbedding ? JSON.parse(func.faceEmbedding) : null });
+  } catch (error) {
+    console.error('[portal] getFaceDoPonto:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
 // ─── POST /api/p/ponto/confirmar ─────────────────────────────────────────────
 export const confirmarPonto = async (req: Request, res: Response) => {
-  const { token, lat, lng, accuracy } = req.body as {
-    token: string; lat?: number; lng?: number; accuracy?: number;
+  const { token, lat, lng, accuracy, faceScore } = req.body as {
+    token: string; lat?: number; lng?: number; accuracy?: number; faceScore?: number;
   };
   if (!token) return res.status(400).json({ erro: 'Token obrigatório' });
 
@@ -1124,6 +1227,7 @@ export const confirmarPonto = async (req: Request, res: Response) => {
           gpsPrecisao: accuracy ?? null,
           gpsPrecisaoSuspeita,
           gpsNegado,
+          faceScore: typeof faceScore === 'number' && isFinite(faceScore) ? faceScore : null,
           ip: req.ip || null,
         },
       }),
