@@ -2536,40 +2536,75 @@
             }
         }
 
+        function _falhaEmpresaWaHtml(msg) {
+            return `
+                <div style="text-align:center;color:#c0392b;padding:1rem;">
+                    <div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div>
+                    <div style="font-weight:600;margin-bottom:0.5rem;">${msg || 'Não foi possível conectar'}</div>
+                    <div style="font-size:0.85rem;color:#666;margin-bottom:1rem;">
+                        Tente escanear novamente. Se persistir, limpe a sessão.
+                    </div>
+                    <button onclick="conectarEmpresaWa()" style="padding:0.5rem 1.2rem;background:#25d366;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;margin-right:0.5rem;">
+                        Tentar de novo
+                    </button>
+                    <button onclick="forcarReconexaoEmpresaWa()" style="padding:0.5rem 1.2rem;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">
+                        Limpar sessão
+                    </button>
+                </div>`;
+        }
+
         function iniciarPollConexaoEmpresaWa() {
             if (_empresaWaQrPollTimer) clearInterval(_empresaWaQrPollTimer);
-            let tentativas = 0;
-            const MAX_TENTATIVAS = 10; // 10 × 3s = 30s
+            let semQr = 0;              // polls seguidos sem QR e sem conexão
+            let qrJaApareceu = false;   // já exibimos ao menos um QR nesta tentativa
+            const LIMITE_ANTES_QR = 12; // 12 × 3s = 36s para o 1º QR surgir
+            const LIMITE_APOS_QR  = 40; // 40 × 3s = 120s tolerando o handshake/reconexão do WhatsApp
             _empresaWaQrPollTimer = setInterval(async () => {
-                tentativas++;
-                try {
-                    const data = await window.api.empresaWaStatus();
-                    if (data.status === 'CONECTADO') {
-                        clearInterval(_empresaWaQrPollTimer);
-                        fecharModalEmpresaWaQr();
-                        await carregarStatusEmpresaWa();
-                        return;
-                    } else if (data.qrDataUrl) {
-                        tentativas = 0; // QR apareceu, resetar contador
-                        document.getElementById('empresaWaQrContainer').innerHTML =
-                            `<img src="${data.qrDataUrl}" style="width:220px;height:220px;border-radius:8px;">`;
-                        return;
-                    }
-                } catch {}
-                if (tentativas >= MAX_TENTATIVAS) {
-                    clearInterval(_empresaWaQrPollTimer);
-                    _empresaWaQrPollTimer = null;
+                let data;
+                try { data = await window.api.empresaWaStatus(); } catch { return; }
+
+                if (data.status === 'CONECTADO') {
+                    clearInterval(_empresaWaQrPollTimer); _empresaWaQrPollTimer = null;
+                    fecharModalEmpresaWaQr();
+                    await carregarStatusEmpresaWa();
+                    showAlert('WhatsApp da empresa conectado! ✅', 'success');
+                    return;
+                }
+
+                if (data.qrDataUrl) {
+                    qrJaApareceu = true; semQr = 0;
+                    document.getElementById('empresaWaQrContainer').innerHTML =
+                        `<img src="${data.qrDataUrl}" style="width:220px;height:220px;border-radius:8px;">
+                         <div style="font-size:0.8rem;color:#888;margin-top:0.6rem;">Aponte a câmera do WhatsApp para o código</div>`;
+                    return;
+                }
+
+                // Bot desistiu do pareamento (WhatsApp recusou repetidamente ou QR não escaneado)
+                if (data.status === 'DESCONECTADO' && qrJaApareceu) {
+                    clearInterval(_empresaWaQrPollTimer); _empresaWaQrPollTimer = null;
+                    document.getElementById('empresaWaQrContainer').innerHTML =
+                        _falhaEmpresaWaHtml('O WhatsApp não concluiu a conexão');
+                    return;
+                }
+
+                // Sem QR e não conectado
+                semQr++;
+                if (qrJaApareceu) {
+                    // Já escaneou / handshake em andamento — NÃO desconectar, apenas aguardar
                     document.getElementById('empresaWaQrContainer').innerHTML = `
-                        <div style="text-align:center;color:#c0392b;padding:1rem;">
-                            <div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div>
-                            <div style="font-weight:600;margin-bottom:0.5rem;">QR Code não gerado</div>
-                            <div style="font-size:0.85rem;color:#666;margin-bottom:1rem;">
-                                Pode haver uma sessão antiga bloqueando.<br>Limpe e tente novamente.
-                            </div>
-                            <button onclick="forcarReconexaoEmpresaWa()" style="padding:0.5rem 1.2rem;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">
-                                Limpar sessão e reconectar
-                            </button>
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:0.75rem;color:#555;font-size:0.9rem;">
+                            <div class="spinner"></div>
+                            <div>Conectando… mantenha esta janela aberta.</div>
                         </div>`;
+                    if (semQr >= LIMITE_APOS_QR) {
+                        clearInterval(_empresaWaQrPollTimer); _empresaWaQrPollTimer = null;
+                        document.getElementById('empresaWaQrContainer').innerHTML =
+                            _falhaEmpresaWaHtml('Tempo esgotado durante a conexão');
+                    }
+                } else if (semQr >= LIMITE_ANTES_QR) {
+                    clearInterval(_empresaWaQrPollTimer); _empresaWaQrPollTimer = null;
+                    document.getElementById('empresaWaQrContainer').innerHTML =
+                        _falhaEmpresaWaHtml('QR Code não gerado');
                 }
             }, 3000);
         }
