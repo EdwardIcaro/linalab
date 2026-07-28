@@ -772,6 +772,12 @@
     let transferClienteSel    = null;
     let transferTimer         = null;
 
+    // Checa uma permissão do cargo (mesmo catálogo do RBAC do backend)
+    function temPermissao(p) {
+      try { return JSON.parse(localStorage.getItem('permissoes') || '[]').includes(p); }
+      catch { return false; }
+    }
+
     // ── INIT ──────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
@@ -990,7 +996,7 @@
             <div class="cc-actions" onclick="event.stopPropagation()">
               ${waBtn}
               <button class="cc-action-btn" title="Editar" onclick="openFormEdit('${c.id}')"><i class="fas fa-pencil-alt"></i></button>
-              <button class="cc-action-btn danger" title="Excluir" onclick="confirmDelete('${c.id}', '${escHtml(c.nome)}')"><i class="fas fa-trash"></i></button>
+              ${temPermissao('excluir_clientes') ? `<button class="cc-action-btn danger" title="Excluir" onclick="confirmDelete('${c.id}', '${escHtml(c.nome)}')"><i class="fas fa-trash"></i></button>` : ''}
             </div>
           </div>
         </div>
@@ -1099,9 +1105,9 @@
           <button class="btn-detail-action" onclick="openFormEdit('${c.id}')">
             <i class="fas fa-pencil-alt"></i> Editar
           </button>
-          <button class="btn-detail-action danger" onclick="confirmDelete('${c.id}', '${escHtml(c.nome || 'N/A')}')">
+          ${temPermissao('excluir_clientes') ? `<button class="btn-detail-action danger" onclick="confirmDelete('${c.id}', '${escHtml(c.nome || 'N/A')}')">
             <i class="fas fa-trash"></i> Excluir
-          </button>
+          </button>` : ''}
         </div>
 
         <div class="detail-section-title">Informações</div>
