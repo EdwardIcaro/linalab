@@ -368,6 +368,7 @@
     .btn-action-done { background: linear-gradient(135deg, var(--green-d), var(--green)); color: #fff; box-shadow: 0 4px 12px rgba(5,150,105,.3); }
     .btn-action-pay  { background: linear-gradient(135deg, var(--orange), #ea580c); color: #fff; box-shadow: 0 4px 12px rgba(234,88,12,.3); }
     .btn-action-edit { background: rgba(59,130,246,.1); color: var(--blue-d); border: 1.5px solid rgba(59,130,246,.2); }
+    .btn-action-del  { background: rgba(220,38,38,.08); color: #b91c1c; border: 1.5px solid rgba(220,38,38,.2); }
     .btn-action-wa   { background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; box-shadow: 0 4px 12px rgba(37,211,102,.3); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
     /* ── PAYMENT MODAL ───────────────────────── */
@@ -1002,6 +1003,12 @@
     let currentView = 'list'; // 'list' | 'detail'
     let ordensCache = [];     // ordens da lista em memória (evita re-fetch a cada ação)
     let _maxDescontoCache = null; // maxDesconto do perfil (não muda na sessão)
+
+    // Checa uma permissão do cargo (mesmo catálogo do RBAC do backend)
+    function temPermissao(p) {
+      try { return JSON.parse(localStorage.getItem('permissoes') || '[]').includes(p); }
+      catch { return false; }
+    }
     let paymentModal = {
       isOpen: false, isProcessing: false,
       orderId: null, total: 0, paid: 0, remaining: 0,
@@ -1330,6 +1337,12 @@
             <i class="fas fa-edit"></i>
           </button>`;
         }
+        // Excluir ordem — só para quem tem a permissão (ação destrutiva)
+        if (temPermissao('excluir_ordens')) {
+          actionsHtml += `<button class="btn-action btn-action-del" onclick="excluirOrdem('${currentOrdem.id}')" title="Excluir ordem">
+            <i class="fas fa-trash-alt"></i>
+          </button>`;
+        }
 
         main.innerHTML = `
           <div class="detail-wrap">
@@ -1431,6 +1444,24 @@
       } catch {
         showToast('Erro ao atualizar ordem.', 'error');
       }
+    }
+
+    // Excluir ordem (permissão excluir_ordens) — ação destrutiva com confirmação
+    async function excluirOrdem(ordemId) {
+      showConfirm(
+        'Excluir Ordem',
+        'Tem certeza que deseja excluir esta ordem? Esta ação não pode ser desfeita.',
+        async () => {
+          try {
+            await window.api.deleteOrdem(ordemId);
+            showToast('Ordem excluída.', 'success');
+            if (currentView === 'detail') goBack();
+            else patchOrdemLocal(ordemId, { status: 'COMPLETO' }); // some do filtro ativo
+          } catch (e) {
+            showToast(e?.error || e?.message || 'Erro ao excluir ordem.', 'error');
+          }
+        }
+      );
     }
 
     // ── PAYMENT MODAL ─────────────────────────────

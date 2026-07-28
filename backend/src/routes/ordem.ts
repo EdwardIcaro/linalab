@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import authMiddleware from '../middlewares/authMiddleware';
-import { requirePermissionByMethod } from '../middlewares/permissionMiddleware';
+import { requirePermission, requirePermissionByMethod } from '../middlewares/permissionMiddleware';
 import {
   createOrdem,
   getOrdens,
@@ -29,6 +29,7 @@ router.put('/:id', authMiddleware, updateOrdem);
 router.post('/:id/finalizar', authMiddleware, finalizarOrdem);
 router.post('/:id/pix', authMiddleware, gerarPixQr);
 router.patch('/:id/cancel', authMiddleware, cancelOrdem);
-router.delete('/:id', authMiddleware, deleteOrdem);
+// Excluir ordem = ação destrutiva opt-in: além de gerenciar_ordens (router), exige excluir_ordens
+router.delete('/:id', authMiddleware, requirePermission('excluir_ordens'), deleteOrdem);
 
 export default router;
