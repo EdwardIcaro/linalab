@@ -40,7 +40,8 @@ router.post('/fechamento', caixaOperar, createFechamento);
 router.get('/comissoes', comissoesTime, getDadosComissao);
 router.get('/comissoes/historico', comissoesTime, getHistoricoComissoes);
 router.get('/comissoes/fechamento/:id', comissoesTime, getFechamentoComissaoById);
-router.post('/comissoes/fechar', comissoesTime, fecharComissao);
+// Fechar comissão = ação de pagamento: além de comissoesTime, exige fechar_comissao
+router.post('/comissoes/fechar', comissoesTime, requirePermission('fechar_comissao'), fecharComissao);
 router.post('/comissoes/migrar-historico', comissoesTime, migrarPagamentosComissaoAntigos);
 
 // Dados financeiros sensíveis

@@ -467,6 +467,35 @@
     <span id="toastMsg"></span>
   </div>
 
+  <!-- MODAL FECHAR COMISSÃO -->
+  <div id="fecharModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));">
+      <div style="font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;">Fechar e Pagar Comissão</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:14px;">Fecha todas as comissões e adiantamentos do período mostrado.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+        <span style="font-size:13px;color:#6b7280;">Valor a pagar</span>
+        <span id="fecharValor" style="font-size:20px;font-weight:800;color:#059669;">R$ 0,00</span>
+      </div>
+      <div id="fecharFormaWrap" style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Forma de pagamento</label>
+        <select id="fecharForma" style="width:100%;padding:11px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:15px;">
+          <option value="">Selecione...</option>
+          <option value="DINHEIRO">💵 Dinheiro</option>
+          <option value="PIX">📱 PIX</option>
+          <option value="CARTAO">💳 Cartão</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Observação (opcional)</label>
+        <textarea id="fecharObs" rows="2" placeholder="Ex: adiantamento descontado" style="width:100%;padding:11px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:15px;resize:none;"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="fecharModalClose()" style="flex:1;padding:13px;background:#f3f4f6;color:#374151;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Cancelar</button>
+        <button id="fecharConfirmBtn" onclick="confirmarFechar()" style="flex:2;padding:13px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Fechar e Pagar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../api.js"></script>
   <script src="utils.js"></script>
   <script>
@@ -483,6 +512,65 @@
     let activeStatusFilter = '';
     let dateInicio         = '';
     let dateFim            = '';
+
+    function temPermissao(p) {
+      try { return JSON.parse(localStorage.getItem('permissoes') || '[]').includes(p); }
+      catch { return false; }
+    }
+
+    // Resumo do fechamento do lavador selecionado (mesma conta do renderStats)
+    function _resumoFechamento() {
+      const totalComissao = ordensComissao.reduce((s, o) => s + getWasherShare(o, selectedId), 0);
+      const totalAdianto  = adiantamentosPend.reduce((s, a) => s + (parseFloat(a.valor) || 0), 0);
+      const totalDebOS    = debitosOS.reduce((s, o) => s + getWasherShare(o, selectedId), 0);
+      const saldo = totalComissao - (totalAdianto + totalDebOS);
+      return { saldo };
+    }
+
+    function abrirFecharModal() {
+      const { saldo } = _resumoFechamento();
+      document.getElementById('fecharValor').textContent = formatCurrency(saldo);
+      // Forma de pagamento só é exigida quando há valor a pagar (saldo > 0)
+      document.getElementById('fecharFormaWrap').style.display = saldo > 0 ? 'block' : 'none';
+      document.getElementById('fecharForma').value = '';
+      document.getElementById('fecharObs').value = '';
+      document.getElementById('fecharModal').style.display = 'flex';
+    }
+    function fecharModalClose() {
+      document.getElementById('fecharModal').style.display = 'none';
+    }
+
+    async function confirmarFechar() {
+      const { saldo } = _resumoFechamento();
+      const forma = document.getElementById('fecharForma').value;
+      if (saldo > 0 && !forma) { showToast('Selecione a forma de pagamento', 'error'); return; }
+
+      // Espelha o admin: débitos de OS só reduzem o valorPago (não vão em comissaoIds)
+      const payload = {
+        lavadorId: selectedId,
+        comissaoIds: ordensComissao.map(o => o.id),
+        adiantamentoIds: adiantamentosPend.map(a => a.id),
+        valorPago: parseFloat(saldo.toFixed(2)),
+        formaPagamento: saldo > 0 ? forma : 'NA',
+        observacao: document.getElementById('fecharObs').value || '',
+      };
+      if (payload.comissaoIds.length === 0 && payload.adiantamentoIds.length === 0) {
+        showToast('Nada para fechar no período.', 'error'); return;
+      }
+
+      const btn = document.getElementById('fecharConfirmBtn');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+      try {
+        await window.api.fecharComissao(payload);
+        showToast('Comissão fechada com sucesso!', 'success');
+        fecharModalClose();
+        await loadOrdens();
+      } catch (e) {
+        showToast(e?.error || e?.message || 'Erro ao fechar comissão.', 'error');
+      } finally {
+        btn.disabled = false; btn.innerHTML = 'Fechar e Pagar';
+      }
+    }
 
     // ── INIT ──
     document.addEventListener('DOMContentLoaded', async () => {
@@ -685,6 +773,9 @@
 
       const labelPeriodo = { today: 'Hoje', week: 'Esta semana', month: 'Este mês', abertas: 'Todas abertas', custom: 'Período' }[activePreset] || '';
 
+      // Botão de fechar só para quem tem a permissão e havendo algo a fechar
+      const podeFechar = temPermissao('fechar_comissao') && (ordensComissao.length > 0 || adiantamentosPend.length > 0);
+
       document.getElementById('statsCard').innerHTML = `
         <div class="stats-card">
           <div class="stats-name">
@@ -707,6 +798,9 @@
               <div class="stats-pill-lbl">Débitos</div>
             </div>
           </div>
+          ${podeFechar ? `<button onclick="abrirFecharModal()" style="width:100%;margin-top:14px;padding:13px;background:rgba(255,255,255,.16);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+            <i class="fas fa-check-circle" style="margin-right:6px"></i> Fechar e Pagar Comissão
+          </button>` : ''}
         </div>`;
     }
 
