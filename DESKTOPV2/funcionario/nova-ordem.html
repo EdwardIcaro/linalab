@@ -6,7 +6,7 @@
   <title>Nova Ordem — Lina X</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  <script defer src="/vendor/alpinejs/cdn.min.js"></script>
   <style>
     :root {
       --navy:   #0f172a;
@@ -1735,20 +1735,29 @@
         // ── Carregar dados da API ──────────
         async loadServicos() {
           if (!this.tipo) { this.servicos = []; return; }
-          this.loadingServicos = true;
-          try {
-            const data = await window.api.getServicos({
-              tipoVeiculo: this.tipo,
-              subtipoVeiculo: this.cat || undefined,
-            });
-            this.servicos = data.servicos || [];
-            // Auto-seleciona o último serviço realizado, se estiver disponível nesta lista
-            if (this.ultimoServicoId && !this.svc) {
-              const ultimo = this.servicos.find(s => s.id === this.ultimoServicoId);
-              if (ultimo) this.svc = ultimo;
-            }
-          } catch { this.servicos = []; }
-          finally { this.loadingServicos = false; }
+          // Cache por (tipo|categoria) durante a sessão da página — evita re-fetch ao
+          // alternar tipo/categoria (getServicos é filtrado, não passa pelo cache global).
+          const cacheKey = `${this.tipo}||${this.cat || ''}`;
+          this._servicosCache = this._servicosCache || {};
+          if (this._servicosCache[cacheKey]) {
+            this.servicos = this._servicosCache[cacheKey];
+          } else {
+            this.loadingServicos = true;
+            try {
+              const data = await window.api.getServicos({
+                tipoVeiculo: this.tipo,
+                subtipoVeiculo: this.cat || undefined,
+              });
+              this.servicos = data.servicos || [];
+              this._servicosCache[cacheKey] = this.servicos;
+            } catch { this.servicos = []; }
+            finally { this.loadingServicos = false; }
+          }
+          // Auto-seleciona o último serviço realizado, se estiver disponível nesta lista
+          if (this.ultimoServicoId && !this.svc) {
+            const ultimo = this.servicos.find(s => s.id === this.ultimoServicoId);
+            if (ultimo) this.svc = ultimo;
+          }
         },
 
         async loadAdicionais() {
@@ -1796,7 +1805,6 @@
           try {
             const tipos = await window.api.getTiposVeiculo();
             this.tiposVeiculo = tipos || [];
-            console.log('[Nova Ordem] Tipos de veículos carregados:', this.tiposVeiculo);
           } catch {
             this.tiposVeiculo = [];
             console.warn('[Nova Ordem] Erro ao carregar tipos de veículo');
