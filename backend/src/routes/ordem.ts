@@ -8,6 +8,7 @@ import {
   updateOrdem,
   cancelOrdem,
   getOrdensStats,
+  getDashboardResumo,
   deleteOrdem,
   finalizarOrdem,
   gerarPixQr
@@ -22,6 +23,7 @@ router.use(requirePermissionByMethod({ read: ['gerenciar_ordens', 'ver_dashboard
 router.post('/', authMiddleware, createOrdem);
 router.get('/', authMiddleware, getOrdens);
 router.get('/stats', authMiddleware, getOrdensStats);
+router.get('/dashboard-resumo', authMiddleware, getDashboardResumo);
 router.get('/:id', authMiddleware, getOrdemById);
 router.put('/:id', authMiddleware, updateOrdem);
 router.post('/:id/finalizar', authMiddleware, finalizarOrdem);

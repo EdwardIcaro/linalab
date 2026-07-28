@@ -1242,21 +1242,35 @@
         const nowBRT = new Date(Date.now() - 3 * 60 * 60 * 1000);
         const today = nowBRT.toISOString().split('T')[0];
 
-        const [ordens, aguardando, stats, statsBruto] = await Promise.all([
-          window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'ACTIVE') : Promise.resolve({}),
-          window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'AGUARDANDO_PAGAMENTO') : Promise.resolve({}),
-          window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today }) : Promise.resolve({}),
-          window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today, todosStatus: true }) : Promise.resolve({})
-        ]);
+        let ordensAtivas, aguardandoTotal, fatHoje, fatBruto;
 
-        document.getElementById('statOrdens').textContent =
-          ordens.pagination?.total ?? ordens.total ?? '-';
-        document.getElementById('statAguardando').textContent =
-          aguardando.pagination?.total ?? aguardando.total ?? '-';
+        try {
+          // Caminho r\u00e1pido: 1 requisi\u00e7\u00e3o agregada
+          const r = await window.api.getDashboardResumo(today);
+          ordensAtivas   = r.ordensAtivas;
+          aguardandoTotal = r.aguardandoPagamento;
+          fatHoje        = r.faturamentoHoje;
+          fatBruto       = r.faturamentoBrutoHoje;
+        } catch {
+          // Fallback (backend antigo sem o endpoint): 4 chamadas
+          const [ordens, aguardando, stats, statsBruto] = await Promise.all([
+            window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'ACTIVE') : Promise.resolve({}),
+            window.api.getOrdens ? window.api.getOrdens(1, 1, '', 'AGUARDANDO_PAGAMENTO') : Promise.resolve({}),
+            window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today }) : Promise.resolve({}),
+            window.api.getOrdensStats ? window.api.getOrdensStats({ dataInicio: today, dataFim: today, todosStatus: true }) : Promise.resolve({})
+          ]);
+          ordensAtivas    = ordens.pagination?.total ?? ordens.total;
+          aguardandoTotal = aguardando.pagination?.total ?? aguardando.total;
+          fatHoje         = stats.valorTotal || 0;
+          fatBruto        = statsBruto.valorTotal || 0;
+        }
+
+        document.getElementById('statOrdens').textContent = ordensAtivas ?? '-';
+        document.getElementById('statAguardando').textContent = aguardandoTotal ?? '-';
 
         const fmt = v => v > 0 ? 'R$\u00a0' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : 'R$\u00a00';
-        document.getElementById('statFat').textContent = fmt(stats.valorTotal || 0);
-        document.getElementById('statFatTotal').textContent = fmt(statsBruto.valorTotal || 0);
+        document.getElementById('statFat').textContent = fmt(fatHoje || 0);
+        document.getElementById('statFatTotal').textContent = fmt(fatBruto || 0);
       } catch { /* silencioso */ }
 
       // Swipe no card "Hoje"

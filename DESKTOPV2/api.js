@@ -346,6 +346,9 @@ const api = {
     return fetchApi(`/ordens/stats?${params.toString()}`);
   },
 
+  // Resumo agregado do painel (4 números em 1 request). data = 'YYYY-MM-DD' (BRT)
+  getDashboardResumo: (data = '') => fetchApi(`/ordens/dashboard-resumo${data ? `?data=${data}` : ''}`),
+
   createOrdem: (data) => fetchApi('/ordens', {
     method: 'POST',
     body: JSON.stringify(data),

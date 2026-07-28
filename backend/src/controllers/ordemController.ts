@@ -1200,6 +1200,44 @@ export const cancelOrdem = async (req: EmpresaRequest, res: Response) => {
 /**
  * Obter estatísticas de ordens de serviço
  */
+// Resumo do painel do funcionário: os 4 números do topo em UMA requisição
+// (antes o front fazia 4 chamadas — 2x getOrdens + 2x getOrdensStats pesado).
+export const getDashboardResumo = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId;
+    // Aceita ?data=YYYY-MM-DD (BRT); default = hoje em BRT (UTC-3)
+    const dataParam = (req.query.data as string) || new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const { start, end } = getDateRangeBRT(dataParam);
+
+    const [ordensAtivas, aguardandoPagamento, fatFiltrado, fatBruto] = await Promise.all([
+      prisma.ordemServico.count({
+        where: { empresaId, status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any } },
+      }),
+      prisma.ordemServico.count({
+        where: { empresaId, status: 'AGUARDANDO_PAGAMENTO' as any },
+      }),
+      prisma.ordemServico.aggregate({
+        where: { empresaId, status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: start, lte: end } },
+        _sum: { valorTotal: true },
+      }),
+      prisma.ordemServico.aggregate({
+        where: { empresaId, status: { not: 'CANCELADO' as any }, createdAt: { gte: start, lte: end } },
+        _sum: { valorTotal: true },
+      }),
+    ]);
+
+    return res.json({
+      ordensAtivas,
+      aguardandoPagamento,
+      faturamentoHoje: fatFiltrado._sum.valorTotal || 0,
+      faturamentoBrutoHoje: fatBruto._sum.valorTotal || 0,
+    });
+  } catch (error) {
+    console.error('Erro ao carregar resumo do painel:', error);
+    return res.status(500).json({ error: 'Erro ao carregar resumo do painel' });
+  }
+};
+
 export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
   try {
     const { dataInicio, dataFim, lavadorId, servicoId, todosStatus } = req.query;
