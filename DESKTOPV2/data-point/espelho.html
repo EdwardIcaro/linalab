@@ -222,6 +222,8 @@
     .batida-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}
     .tag-manual{background:#ede9fe;color:#7c3aed}
     .tag-gps{background:#fee2e2;color:#dc2626}
+    .tag-face{background:#ccfbf1;color:#0f766e}
+    .tag-noface{background:#fef3c7;color:#d97706}
     .batida-acts{display:flex;gap:5px;flex-shrink:0}
     .batida-act{width:28px;height:28px;border-radius:7px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:inherit;transition:all .15s}
     .batida-act.edit{background:#eff6ff;color:#2563eb}
@@ -594,9 +596,19 @@ function renderMarcacoesDia() {
       const isEntrada = m.tipo === 'ENTRADA';
       const icoCls = m.canal === 'MANUAL' ? 'manual' : isEntrada ? 'entrada' : 'saida';
       const ico = m.canal === 'MANUAL' ? 'fa-pencil-alt' : isEntrada ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket';
+      // Facial: confirma que quem bateu é o dono do cadastro.
+      // "Sem rosto" só aparece em batidas feitas depois do cadastro facial —
+      // o histórico anterior não vira alerta retroativo.
+      const face = m.faceScore != null
+        ? `<span class="batida-tag tag-face" title="Rosto reconhecido com ${Math.round(m.faceScore * 100)}% de confiança"><i class="fa fa-smile"></i> ${Math.round(m.faceScore * 100)}%</span>`
+        : m.faceEsperado
+          ? '<span class="batida-tag tag-noface" title="Bateu ponto sem passar pelo reconhecimento facial">Sem rosto</span>'
+          : '';
+
       const tags = [
         m.canal === 'MANUAL' ? '<span class="batida-tag tag-manual">Manual</span>' : '',
         m.gpsPrecisaoSuspeita ? '<span class="batida-tag tag-gps">GPS suspeito</span>' : '',
+        face,
       ].filter(Boolean).join(' ');
       html += `
         <div class="batida-row" id="br-${m.id}">

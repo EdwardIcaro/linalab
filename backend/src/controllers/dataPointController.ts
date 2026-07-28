@@ -1039,11 +1039,24 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
   try {
     const { start, end } = getDateRangeBRT(data);
 
-    const marcacoes = await prisma.dpMarcacao.findMany({
-      where: { empresaId, funcionarioId, timestamp: { gte: start, lte: end } },
-      select: { id: true, tipo: true, timestamp: true, canal: true, ajustado: true, gpsPrecisaoSuspeita: true },
-      orderBy: { timestamp: 'asc' },
-    });
+    const [marcacoes, func] = await Promise.all([
+      prisma.dpMarcacao.findMany({
+        where: { empresaId, funcionarioId, timestamp: { gte: start, lte: end } },
+        select: {
+          id: true, tipo: true, timestamp: true, canal: true,
+          ajustado: true, gpsPrecisaoSuspeita: true, faceScore: true,
+        },
+        orderBy: { timestamp: 'asc' },
+      }),
+      prisma.dpFuncionario.findFirst({
+        where: { id: funcionarioId, empresaId },
+        select: { faceCapturadoEm: true },
+      }),
+    ]);
+
+    // Só cobramos verificação facial de batidas feitas depois do cadastro do
+    // rosto — o histórico anterior não vira alerta retroativo.
+    const rostoDesde = func?.faceCapturadoEm ?? null;
 
     res.json({
       marcacoes: marcacoes.map(m => ({
@@ -1053,6 +1066,8 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
         canal: m.canal,
         ajustado: m.ajustado,
         gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
+        faceScore: m.faceScore,
+        faceEsperado: !!rostoDesde && m.canal !== 'MANUAL' && m.timestamp >= rostoDesde,
       })),
     });
   } catch (error) {
