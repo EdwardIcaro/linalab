@@ -32,13 +32,14 @@ const MAX_DELAY     = 60000;
 const MAX_RECONNECT = 50;
 // Fase de QR (nunca conectou). Distinguimos DOIS motivos de queda:
 //  • QR expirou sem scan (~60s no ar) → usuário ausente. Após MAX_QR_TIMEOUTS, pausa.
-//  • Queda precoce por erro de stream (badSession 500 / connectionClosed 428) enquanto
-//    OUTRA empresa está conectada — o WhatsApp derruba o handshake novo. NÃO é culpa do
-//    usuário nem QR expirado; reconecta rápido e tolera muitas tentativas até o WA aceitar.
-const MAX_QR_TIMEOUTS   = 3;     // QRs expirados sem scan antes de pausar (≈3 min)
-const MAX_QR_ERRORS     = 20;    // quedas por erro de stream toleradas no pareamento
-const QR_ERROR_DELAY    = 2000;  // reconexão rápida após erro de stream (minimiza janela sem QR)
-const QR_LIFE_THRESHOLD = 45000; // QR vivo ≥45s = expirou sem scan; <45s = erro de stream
+//  • Queda precoce por erro de stream (badSession 500 / connectionClosed 428) → é o WhatsApp
+//    rejeitando o pareamento. ⚠️ Reconexão AGRESSIVA aqui dispara o anti-abuso do WhatsApp
+//    ("não é possível conectar novos dispositivos neste momento") e bloqueia o número. Por
+//    isso: poucas tentativas, com intervalo LONGO, dando fôlego para o WhatsApp.
+const MAX_QR_TIMEOUTS   = 3;      // QRs expirados sem scan antes de pausar (≈3 min)
+const MAX_QR_ERRORS     = 4;      // quedas por erro de stream antes de pausar (evita rate-limit)
+const QR_ERROR_DELAY    = 20000;  // 20s entre tentativas — NÃO martelar o WhatsApp
+const QR_LIFE_THRESHOLD = 45000;  // QR vivo ≥45s = expirou sem scan; <45s = erro de stream
 
 const sessions = new Map<string, EmpresaState>();
 
