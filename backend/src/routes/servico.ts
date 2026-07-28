@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requirePermissionByMethod } from '../middlewares/permissionMiddleware';
 import {
   createServico,
   createAdicional,
@@ -15,6 +16,9 @@ import {
 } from '../controllers/servicoController';
 
 const router: Router = Router();
+
+// RBAC: ler serviços libera pra quem cria ordem; editar exige config_ver_servicos
+router.use(requirePermissionByMethod({ read: ['config_ver_servicos', 'gerenciar_ordens'], write: ['config_ver_servicos'] }));
 
 // Rotas de serviços adicionais (ex: /api/servicos/adicionais)
 router.post('/adicionais', createAdicional);

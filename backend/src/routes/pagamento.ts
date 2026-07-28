@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requirePermission } from '../middlewares/permissionMiddleware';
 import {
   createPagamento,
   getPagamentosByOrdem,
@@ -10,6 +11,9 @@ import {
 } from '../controllers/pagamentoController';
 
 const router: Router = Router();
+
+// RBAC: pagamentos são parte do fluxo de ordens
+router.use(requirePermission('gerenciar_ordens'));
 
 /**
  * Criar novo pagamento

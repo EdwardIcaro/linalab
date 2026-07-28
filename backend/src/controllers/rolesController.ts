@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../db';
+import { clearAuthCache } from '../middlewares/authMiddleware';
+import { clearPermCache } from '../middlewares/permissionMiddleware';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -108,6 +110,8 @@ export const upsertRole = async (req: EmpresaRequest, res: Response) => {
         });
       });
 
+      // Permiss\u00f5es do cargo mudaram \u2192 invalida cache de quem usa esse cargo
+      clearPermCache(empresaId);
       return res.json({
         message: 'Fun\u00e7\u00e3o atualizada com sucesso',
         role: updatedRole
@@ -207,6 +211,7 @@ export const deleteRole = async (req: EmpresaRequest, res: Response) => {
     }
 
     await prisma.role.delete({ where: { id } });
+    clearPermCache(empresaId);
 
     res.json({ message: 'Fun\u00e7\u00e3o exclu\u00edda com sucesso' });
   } catch (error) {
@@ -337,6 +342,9 @@ export const updateSubaccount = async (req: EmpresaRequest, res: Response) => {
       }
     });
 
+    // Cargo do funcion\u00e1rio pode ter mudado \u2192 invalida cache de permiss\u00f5es e de auth
+    clearPermCache(empresaId);
+    clearAuthCache(empresaId);
     res.json({
       message: 'Usu\u00e1rio atualizado com sucesso',
       usuario: user

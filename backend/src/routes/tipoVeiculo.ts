@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requirePermissionByMethod } from '../middlewares/permissionMiddleware';
 import {
   createTipoVeiculo,
   getTiposVeiculo,
@@ -10,6 +11,9 @@ import {
 } from '../controllers/tipoVeiculoController';
 
 const router: Router = Router();
+
+// RBAC: leitura livre (usada na Nova Ordem); edição exige config_ver_servicos
+router.use(requirePermissionByMethod({ read: [], write: ['config_ver_servicos'] }));
 
 // Rotas de tipos de veículo (ex: /api/tipos-veiculo)
 router.post('/', createTipoVeiculo);

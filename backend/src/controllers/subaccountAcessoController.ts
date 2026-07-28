@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../db';
 import { clearAuthCache } from '../middlewares/authMiddleware';
+import { clearPermCache } from '../middlewares/permissionMiddleware';
 
 /**
  * Multi-empresa para Subaccounts.
@@ -239,6 +240,7 @@ export const concederAcesso = async (req: Request, res: Response) => {
     });
 
     clearAuthCache(empresaId);
+    clearPermCache(empresaId);
     return res.status(201).json(acesso);
   } catch (error: any) {
     if (error?.code === 'P2002') {
@@ -271,6 +273,7 @@ export const revogarAcesso = async (req: Request, res: Response) => {
 
     await prisma.subaccountEmpresaAcesso.deleteMany({ where: { subaccountId, empresaId } });
     clearAuthCache(empresaId);
+    clearPermCache(empresaId);
     return res.json({ success: true });
   } catch (error) {
     console.error('[SubaccountAcesso] revogarAcesso:', error);

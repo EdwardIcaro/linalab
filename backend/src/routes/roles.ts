@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requirePermission } from '../middlewares/permissionMiddleware';
 import {
   getRolesAndUsers,
   upsertRole,
@@ -10,6 +11,9 @@ import {
 } from '../controllers/rolesController';
 
 const router: Router = Router();
+
+// RBAC: gestão de cargos/funcionários
+router.use(requirePermission('config_ver_usuarios', 'gerenciar_funcionarios'));
 
 // Roles
 router.get('/', getRolesAndUsers);

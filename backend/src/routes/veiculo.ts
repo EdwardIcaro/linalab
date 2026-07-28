@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requirePermission } from '../middlewares/permissionMiddleware';
 import {
   createVeiculo,
   getVeiculos,
@@ -10,6 +11,9 @@ import {
 } from '../controllers/veiculoController';
 
 const router: Router = Router();
+
+// RBAC: veículos acompanham clientes (também usados na Nova Ordem)
+router.use(requirePermission('gerenciar_clientes', 'gerenciar_ordens'));
 
 // Rotas de veículos (todas requerem middleware de multi-empresa)
 router.post('/', createVeiculo);
