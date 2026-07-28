@@ -383,14 +383,6 @@ function createSkeleton(height = '20px', width = '100%') {
   return `<div class="skeleton" style="height: ${height}; width: ${width}; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite;"></div>`;
 }
 
-// ===== GET USER LAVADOR =====
-async function getUserLavador() {
-  const usuarioId = localStorage.getItem('usuarioId');
-  const response = await window.api.getLavadores();
-  const lavadores = response.lavadores || [];
-  return lavadores.find(l => l.usuarioId === usuarioId);
-}
-
 // ===== FILTER HELPERS =====
 function getDatePreset(preset) {
   const today = new Date();

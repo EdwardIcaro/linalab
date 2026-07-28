@@ -13,6 +13,7 @@ function clearSession() {
   });
   localStorage.clear();
   Object.entries(preserved).forEach(([k, v]) => localStorage.setItem(k, v));
+  if (typeof clearDataCache === 'function') clearDataCache(); // limpa o cache leve de listas
 }
 window.clearSession = clearSession;
 
@@ -31,6 +32,35 @@ function _withCacheInvalidation(fn, ...endpoints) {
     return result;
   };
 }
+
+// ── Cache leve (sessionStorage) para dados quase estáticos, com TTL curto ──
+// Corta refetch repetido a cada navegação (lavadores/serviços/tipos/adicionais).
+// Escopo por empresaId; expira em 60s; qualquer escrita (não-GET) limpa tudo.
+const _DATA_CACHE_TTL = 60000; // 60s
+function _dataCacheKey(name) {
+  return `lx_cache:${localStorage.getItem('empresaId') || '_'}:${name}`;
+}
+async function cachedGet(name, fetchFn) {
+  try {
+    const raw = sessionStorage.getItem(_dataCacheKey(name));
+    if (raw) {
+      const { ts, data } = JSON.parse(raw);
+      if (Date.now() - ts < _DATA_CACHE_TTL) return data;
+    }
+  } catch { /* cache corrompido → busca normal */ }
+  const data = await fetchFn(); // se falhar (ex: 403), o throw propaga e nada é cacheado
+  try { sessionStorage.setItem(_dataCacheKey(name), JSON.stringify({ ts: Date.now(), data })); } catch { /* quota */ }
+  return data;
+}
+function clearDataCache() {
+  try {
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const k = sessionStorage.key(i);
+      if (k && k.indexOf('lx_cache:') === 0) sessionStorage.removeItem(k);
+    }
+  } catch { /* ignora */ }
+}
+window.clearDataCache = clearDataCache;
 
 // Função auxiliar para fazer requisições
 // SECURITY: empresaId is now embedded in the JWT token (not sent as header)
@@ -100,6 +130,9 @@ async function fetchApi(endpoint, options = {}) {
 
     throw errorBody;
   }
+
+  // Escrita bem-sucedida invalida o cache leve de listas (dados podem ter mudado)
+  if ((options.method || 'GET').toUpperCase() !== 'GET') clearDataCache();
 
   if (response.status === 204) {
     return Promise.resolve(null);
@@ -243,7 +276,7 @@ const api = {
     const params = new URLSearchParams(filters);
     return fetchApi(`/servicos?${params.toString()}`);
   },
-  getServicosSimple: () => fetchApi('/servicos/simple'),
+  getServicosSimple: () => cachedGet('servicos_simple', () => fetchApi('/servicos/simple')),
   createServico: _withCacheInvalidation(
     (data) => fetchApi('/servicos', { method: 'POST', body: JSON.stringify(data) }),
     '/servicos/simple'
@@ -258,8 +291,8 @@ const api = {
   ),
 
   // ===== ADICIONAIS =====
-  getAdicionais: () => fetchApi('/adicionais'),
-  getAdicionaisSimple: () => fetchApi('/adicionais/simple'),
+  getAdicionais: () => cachedGet('adicionais', () => fetchApi('/adicionais')),
+  getAdicionaisSimple: () => cachedGet('adicionais_simple', () => fetchApi('/adicionais/simple')),
   createAdicional: _withCacheInvalidation(
     (data) => fetchApi('/adicionais', { method: 'POST', body: JSON.stringify(data) }),
     '/adicionais/simple'
@@ -274,8 +307,8 @@ const api = {
   ),
 
   // ===== LAVADORES =====
-  getLavadores: () => fetchApi('/lavadores'),
-  getLavadoresSimple: () => fetchApi('/lavadores/simple'),
+  getLavadores: () => cachedGet('lavadores', () => fetchApi('/lavadores')),
+  getLavadoresSimple: () => cachedGet('lavadores_simple', () => fetchApi('/lavadores/simple')),
   createLavador: _withCacheInvalidation(
     (data) => fetchApi('/lavadores', { method: 'POST', body: JSON.stringify(data) }),
     '/lavadores/simple'
@@ -460,7 +493,7 @@ const api = {
   getFornecedores: () => fetchApi('/fornecedores'),
 
   // ===== TIPOS DE VEÍCULO =====
-  getTiposVeiculo: () => fetchApi('/tipos-veiculo'),
+  getTiposVeiculo: () => cachedGet('tipos_veiculo', () => fetchApi('/tipos-veiculo')),
   reordenarTiposVeiculo: (itens) => fetchApi('/tipos-veiculo/reordenar', { method: 'PUT', body: JSON.stringify({ itens }) }),
 
   // ===== NOTIFICAÇÕES =====
