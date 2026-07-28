@@ -1332,7 +1332,9 @@
             <i class="fas fa-credit-card"></i> Pagar
           </button>`;
         }
-        if (status !== 'COMPLETO') {
+        // Editar: livre nas ativas; em FINALIZADA/CANCELADA só com editar_ordem_finalizada
+        const podeEditar = (status !== 'FINALIZADO' && status !== 'CANCELADO') || temPermissao('editar_ordem_finalizada');
+        if (podeEditar) {
           actionsHtml += `<button class="btn-action btn-action-edit" onclick="editOrdem('${currentOrdem.id}')">
             <i class="fas fa-edit"></i>
           </button>`;

@@ -7,6 +7,7 @@ import { botSend } from '../services/botServiceClient';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
+import { hasPermission } from '../middlewares/permissionMiddleware';
 
 
 interface EmpresaRequest extends Request {
@@ -884,6 +885,21 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
   }
 
   try {
+    // Editar ordem FINALIZADA/CANCELADA exige permissão específica (supervisor)
+    const { id: ordemIdCheck } = req.params as { id: string };
+    const atual = await prisma.ordemServico.findFirst({
+      where: { id: ordemIdCheck, empresaId: req.empresaId },
+      select: { status: true },
+    });
+    if (atual && (atual.status === 'FINALIZADO' || atual.status === 'CANCELADO')) {
+      if (!(await hasPermission(req, 'editar_ordem_finalizada'))) {
+        return res.status(403).json({
+          error: 'Sem permissão para editar uma ordem finalizada.',
+          code: 'FORBIDDEN',
+        });
+      }
+    }
+
     const updatedOrdemResultRaw = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const { id } = req.params as { id: string };
       const { status, lavadorId, lavadorIds, observacoes, itens } = validation.sanitizedData!;

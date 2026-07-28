@@ -100,6 +100,15 @@ function negar(res: Response) {
 }
 
 /**
+ * Checagem pontual dentro de um controller: o chamador tem a permissão?
+ * Owner sempre true. Ex.: gate condicional (editar ordem finalizada).
+ */
+export async function hasPermission(req: Request, name: string): Promise<boolean> {
+  const perms = await resolvePermissoes(req);
+  return perms === null || perms.has(name);
+}
+
+/**
  * Exige QUALQUER uma das permissões informadas (OR). Sem argumentos = só autenticado.
  * Aplica a todos os métodos da rota/roteador.
  */
