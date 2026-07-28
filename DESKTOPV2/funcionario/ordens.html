@@ -1000,6 +1000,8 @@
     let currentOrdem = null;
     let currentFilter = 'ACTIVE';
     let currentView = 'list'; // 'list' | 'detail'
+    let ordensCache = [];     // ordens da lista em memória (evita re-fetch a cada ação)
+    let _maxDescontoCache = null; // maxDesconto do perfil (não muda na sessão)
     let paymentModal = {
       isOpen: false, isProcessing: false,
       orderId: null, total: 0, paid: 0, remaining: 0,
@@ -1065,9 +1067,25 @@
 
       try {
         const response = await window.api.getOrdens(1, 50, '', currentFilter);
-        const ordens = response.data || response.ordens || [];
+        ordensCache = response.data || response.ordens || [];
+        renderOrdensList(ordensCache);
+      } catch (error) {
+        console.error('Erro ao carregar ordens:', error);
+        main.innerHTML = `
+          <div class="empty-wrap">
+            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-title">Erro ao carregar</div>
+            <div class="empty-sub">Tente novamente em instantes.</div>
+            <button class="btn-empty" onclick="loadOrdens()">Tentar novamente</button>
+          </div>
+        `;
+      }
+    }
 
-        let listHTML = `
+    // Renderiza a lista a partir de um array em memória (sem re-fetch)
+    function renderOrdensList(ordens) {
+      const main = document.getElementById('mainContent');
+      let listHTML = `
           <div class="quick-links">
             <a href="fila-entrada.html" class="qlink qlink-amber">
               <i class="fas fa-bolt"></i> Fila de Entrada
@@ -1164,30 +1182,54 @@
         }
 
         main.innerHTML = listHTML;
+    }
 
+    // Um card ainda pertence ao filtro atual?
+    function _ordemMatchesFilter(status) {
+      if (currentFilter === 'ACTIVE') return ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(status);
+      return status === currentFilter;
+    }
+
+    // Atualiza uma ordem localmente e re-renderiza só a lista (sem re-fetch das 50).
+    // Se sair do filtro (ex: finalizada), some da lista. Fora do cache → fallback pro fetch.
+    function patchOrdemLocal(ordemId, changes) {
+      const i = ordensCache.findIndex(o => o.id === ordemId);
+      if (i === -1) { loadOrdens(); return; }
+      Object.assign(ordensCache[i], changes);
+      if (!_ordemMatchesFilter(ordensCache[i].status)) ordensCache.splice(i, 1);
+      renderOrdensList(ordensCache);
+    }
+
+    // ── LOAD ORDEM DETAIL ─────────────────────────
+    async function loadOrdemDetail(ordemId, preloaded = null) {
+      const main = document.getElementById('mainContent');
+      if (preloaded) {
+        currentOrdem = preloaded;
+        renderOrdemDetail();   // pinta na hora com o que a lista já tinha
+      } else {
+        main.innerHTML = `<div class="loading-wrap"><div class="spin"></div><div class="loading-txt">Carregando...</div></div>`;
+      }
+
+      try {
+        const response = await window.api.getOrdemById(ordemId);
+        currentOrdem = response.data || response;
+        renderOrdemDetail();   // reconcilia com os dados completos
       } catch (error) {
-        console.error('Erro ao carregar ordens:', error);
-        main.innerHTML = `
+        console.error('Erro:', error);
+        if (!preloaded) main.innerHTML = `
           <div class="empty-wrap">
             <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
             <div class="empty-title">Erro ao carregar</div>
-            <div class="empty-sub">Tente novamente em instantes.</div>
-            <button class="btn-empty" onclick="loadOrdens()">Tentar novamente</button>
+            <button class="btn-empty" onclick="goBack()">Voltar</button>
           </div>
         `;
       }
     }
 
-    // ── LOAD ORDEM DETAIL ─────────────────────────
-    async function loadOrdemDetail(ordemId) {
+    // Renderiza o detalhe a partir de currentOrdem (sem fetch)
+    function renderOrdemDetail() {
       const main = document.getElementById('mainContent');
-      main.innerHTML = `<div class="loading-wrap"><div class="spin"></div><div class="loading-txt">Carregando...</div></div>`;
-
-      try {
-        const response = await window.api.getOrdemById(ordemId);
-        currentOrdem = response.data || response;
-
-        const status = currentOrdem.status || 'PENDENTE';
+      const status = currentOrdem.status || 'PENDENTE';
         const badgeClass = `sbadge-${status}`;
         const statusLabel = {
           PENDENTE: 'Pendente',
@@ -1338,17 +1380,6 @@
 
           <div class="sticky-actions">${actionsHtml}</div>
         `;
-
-      } catch (error) {
-        console.error('Erro:', error);
-        main.innerHTML = `
-          <div class="empty-wrap">
-            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
-            <div class="empty-title">Erro ao carregar</div>
-            <button class="btn-empty" onclick="goBack()">Voltar</button>
-          </div>
-        `;
-      }
     }
 
     // ── MARK AS COMPLETE ──────────────────────────
@@ -1362,34 +1393,40 @@
     }
 
     async function markOrderCompletedFromTable(ordemId) {
-      try {
-        const response = await window.api.getOrdemById(ordemId);
-        currentOrdem = response.data || response;
-        markAsComplete();
-      } catch {
-        showToast('Erro ao carregar ordem.', 'error');
-      }
+      // Concluir só precisa do id — sem getOrdemById redundante
+      showConfirm(
+        'Concluir Lavagem',
+        'Confirma que a lavagem foi concluída?',
+        () => updateOrdemStatusById(ordemId, 'AGUARDANDO_PAGAMENTO')
+      );
     }
 
     async function openPaymentModalFromTable(ordemId) {
       try {
+        // Aqui o getOrdemById é necessário: o modal precisa dos pagamentos da ordem,
+        // que a lista não carrega. currentView permanece 'list'.
         const response = await window.api.getOrdemById(ordemId);
-        currentOrdem = response.data || response;
-        openPaymentModal(currentOrdem);
+        openPaymentModal(response.data || response);
       } catch {
         showToast('Erro ao carregar ordem.', 'error');
       }
     }
 
     // ── UPDATE STATUS ─────────────────────────────
+    // Da tela de detalhe (usa currentOrdem)
     async function updateOrdemStatus(newStatus) {
+      updateOrdemStatusById(currentOrdem.id, newStatus);
+    }
+
+    // Muda status por id; atualiza a lista localmente (sem re-fetch) ou o detalhe
+    async function updateOrdemStatusById(ordemId, newStatus) {
       try {
-        await window.api.updateOrdem(currentOrdem.id, { status: newStatus });
+        await window.api.updateOrdem(ordemId, { status: newStatus });
         showToast('Ordem atualizada!', 'success');
         if (currentView === 'detail') {
-          await loadOrdemDetail(currentOrdem.id);
+          await loadOrdemDetail(ordemId);
         } else {
-          await loadOrdens();
+          patchOrdemLocal(ordemId, { status: newStatus });
         }
       } catch {
         showToast('Erro ao atualizar ordem.', 'error');
@@ -1416,11 +1453,14 @@
       paymentModal.maxDesconto  = 0;
       paymentModal.isOpen       = true;
 
-      // Carrega maxDesconto do usuário atual
-      try {
-        const perfil = await window.api.getMeuPerfil();
-        paymentModal.maxDesconto = perfil.maxDesconto ?? 0;
-      } catch { paymentModal.maxDesconto = 0; }
+      // maxDesconto do usuário — busca uma vez por visita (não muda na sessão)
+      if (_maxDescontoCache === null) {
+        try {
+          const perfil = await window.api.getMeuPerfil();
+          _maxDescontoCache = perfil.maxDesconto ?? 0;
+        } catch { _maxDescontoCache = 0; }
+      }
+      paymentModal.maxDesconto = _maxDescontoCache;
 
       updateDiscountSection();
       updatePaymentModalUI();
@@ -1882,9 +1922,14 @@
       try {
         await window.api.finalizarOrdem(paymentModal.orderId, payload);
         showToast('Ordem finalizada com sucesso!', 'success');
+        const finalizadaId = paymentModal.orderId;
         closePaymentModal();
-        if (currentOrdem?.id === paymentModal.orderId) goBack();
-        setTimeout(() => loadOrdens(), 300);
+        if (currentView === 'detail') {
+          goBack(); // sai do detalhe → volta pra lista
+        } else {
+          // Finalizada sai do filtro ativo — remove o card na hora, sem re-fetch nem delay
+          patchOrdemLocal(finalizadaId, { status: 'COMPLETO' });
+        }
       } catch (error) {
         showToast(`Erro: ${error.error || 'Tente novamente.'}`, 'error');
         submitBtn.disabled = false;
@@ -1897,7 +1942,9 @@
     function viewOrdem(id) {
       showDetailMode();
       window.history.pushState({}, '', `?id=${id}`);
-      loadOrdemDetail(id);
+      // Pinta na hora com a ordem que a lista já tem; loadOrdemDetail reconcilia com o fetch
+      const cached = ordensCache.find(o => o.id === id) || null;
+      loadOrdemDetail(id, cached);
     }
 
     // Redireciona para openEditModal (mantém compatibilidade com chamadas externas)
@@ -2121,7 +2168,7 @@
         if (currentView === 'detail') {
           await loadOrdemDetail(ordemId);
         } else {
-          await loadOrdens();
+          patchOrdemLocal(ordemId, { status: 'EM_ANDAMENTO', lavadorId: lavIds[0] });
         }
       } catch {
         showToast('Erro ao setar funcionário.', 'error');
