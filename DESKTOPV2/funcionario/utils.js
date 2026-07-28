@@ -143,12 +143,12 @@ function createEmptyState(icon, title, message, actionText = null, actionFn = nu
   let html = `
     <div class="empty-state">
       <i class="fas ${icon}"></i>
-      <h2>${title}</h2>
-      <p>${message}</p>
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(message)}</p>
   `;
 
   if (actionText && actionFn) {
-    html += `<button class="btn-primary" onclick="${actionFn}">${actionText}</button>`;
+    html += `<button class="btn-primary" onclick="${actionFn}">${escapeHtml(actionText)}</button>`;
   }
 
   html += `</div>`;
@@ -169,6 +169,13 @@ function createLoading() {
   return `<div class="table-container"><div class="loading-skeleton">${rows}</div></div>`;
 }
 
+// ===== ESCAPE HTML (evita XSS ao interpolar dado do servidor em innerHTML) =====
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
 // ===== TOAST NOTIFICATION =====
 function showToast(message, type = 'success') {
   // Remove toast anterior se existir
@@ -180,12 +187,18 @@ function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.id = 'toast';
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
-    <div class="toast-content">
-      <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-      <span>${message}</span>
-    </div>
-  `;
+
+  // Estrutura montada sem interpolar a mensagem em innerHTML (message pode vir do servidor)
+  const iconClass = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+  const content = document.createElement('div');
+  content.className = 'toast-content';
+  const iconEl = document.createElement('i');
+  iconEl.className = `fas ${iconClass}`;
+  const textEl = document.createElement('span');
+  textEl.textContent = message; // texto puro, sem risco de HTML
+  content.appendChild(iconEl);
+  content.appendChild(textEl);
+  toast.appendChild(content);
 
   document.body.appendChild(toast);
 
@@ -206,8 +219,8 @@ function showConfirm(title, message, onConfirm, onCancel = null) {
   dialog.innerHTML = `
     <div class="confirm-overlay"></div>
     <div class="confirm-box">
-      <h2>${title}</h2>
-      <p>${message}</p>
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(message)}</p>
       <div class="confirm-buttons">
         <button class="btn-cancel" id="confirmCancel">
           Cancelar
@@ -268,7 +281,14 @@ function logout() {
     () => {
       showToast('Até logo!', 'success');
       setTimeout(() => {
-        if (typeof clearSession === 'function') { clearSession(); } else { localStorage.clear(); }
+        if (typeof clearSession === 'function') {
+          clearSession();
+        } else {
+          // Fallback (api.js não carregado): preserva o que sobrevive ao logout (ver PERSIST_ON_LOGOUT em api.js)
+          const saved = localStorage.getItem('lx_saved_accounts');
+          localStorage.clear();
+          if (saved !== null) localStorage.setItem('lx_saved_accounts', saved);
+        }
         window.location.href = '../login.html';
       }, 500);
     }
