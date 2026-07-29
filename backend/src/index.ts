@@ -1,4 +1,5 @@
-﻿import express from 'express';
+﻿// Deploy marker: 2026-07-29 (trigger Railway redeploy dos commits RBAC/comissões)
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
