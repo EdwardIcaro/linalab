@@ -2290,6 +2290,8 @@
       const wrap  = document.getElementById('setarLavadoresWrap');
       if (!modal || !wrap) return;
       wrap.innerHTML = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
+      // Quando aberto pelo histórico (z-index 1300), sobe acima dele; senão volta ao padrão
+      modal.style.zIndex = contexto === 'historico' ? '1400' : '';
       modal.style.display = 'flex';
       try {
         const data = await window.api.getLavadoresSimple();
@@ -2321,8 +2323,8 @@
 
     function closeSetarLavadorModal() {
       const modal = document.getElementById('setarLavadorModal');
-      if (modal) modal.style.display = 'none';
-      setarLavadorState = { ordemId: null, selecionados: [], todosLavadores: [] };
+      if (modal) { modal.style.display = 'none'; modal.style.zIndex = ''; }
+      setarLavadorState = { ordemId: null, selecionados: [], todosLavadores: [], contexto: 'lista' };
     }
 
     async function confirmarSetarLavador() {
