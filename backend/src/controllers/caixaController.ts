@@ -193,7 +193,10 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             })
         ]);
 
-        const faturamentoDia = pagamentos.reduce((acc: number, p) => acc + p.valor, 0);
+        // Cortesia não conta como faturamento (valor cedido, não recebido)
+        const faturamentoDia = pagamentos
+            .filter(p => (p.metodo as string) !== 'CORTESIA')
+            .reduce((acc: number, p) => acc + p.valor, 0);
 
         // Calcular totais por forma de pagamento
         const totalDinheiro = pagamentos
@@ -210,6 +213,10 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
 
         const totalNfe = pagamentos
             .filter(p => (p.metodo as string) === 'NFE')
+            .reduce((acc: number, p) => acc + p.valor, 0);
+
+        const totalCortesia = pagamentos
+            .filter(p => (p.metodo as string) === 'CORTESIA')
             .reduce((acc: number, p) => acc + p.valor, 0);
 
         const totalSaidas = saidas.reduce((acc: number, s) => acc + s.valor, 0);
@@ -229,6 +236,7 @@ export const getResumoDia = async (req: EmpresaRequest, res: Response) => {
             totalCartao,
             totalPix,
             totalNfe,
+            totalCortesia,
             totalSaidas,
             totalAdiantamentos,
             totalSaidasOperacionais,
@@ -341,8 +349,10 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
         }
 
         const diferencaTotal = Object.values(relatorio).reduce((a, r) => a + Math.abs(r.diferenca), 0);
-        // faturamentoDia = receita bruta de pagamentos (exclui valorInicial e sangrías)
-        const faturamentoDia = pagamentos.reduce((a, p) => a + p.valor, 0);
+        // faturamentoDia = receita bruta de pagamentos (exclui valorInicial, sangrías e cortesias)
+        const faturamentoDia = pagamentos
+            .filter(p => (p.metodo as string) !== 'CORTESIA')
+            .reduce((a, p) => a + p.valor, 0);
         const totalSaidas = saidas.reduce((a, s) => a + s.valor, 0);
         const status = diferencaTotal < 0.01 ? 'CONFERIDO' : 'DIVERGENTE';
         const fechadoPor = req.usuarioNome || 'Administrador';
@@ -653,8 +663,9 @@ export const getHistorico = async (req: EmpresaRequest, res: Response) => {
             new Date(b.data!).getTime() - new Date(a.data!).getTime()
         );
 
+        // Cortesia não conta como faturamento (valor cedido, não recebido)
         const totalEntradas = registrosPagamento
-            .filter(p => p.tipo === 'PAGAMENTO')
+            .filter(p => p.tipo === 'PAGAMENTO' && (p as any).formaPagamento !== 'CORTESIA')
             .reduce((acc, p) => acc + p.valor, 0);
         const totalSaidas = outrosRegistros
             .filter(r => r.tipo === 'SAIDA' || r.tipo === 'SANGRIA')

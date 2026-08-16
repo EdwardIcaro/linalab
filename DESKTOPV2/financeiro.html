@@ -2798,6 +2798,15 @@
                             >
                                 <i class="fas fa-file-invoice"></i> NFe
                             </button>
+                            <button
+                                @click="processarQuitarPendencia(quitarModal.ordem.id, 'CORTESIA')"
+                                class="btn btn-primary"
+                                style="padding: 14px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; grid-column: 1 / -1;"
+                                :disabled="quitarModal.isProcessing"
+                                title="Não conta como faturamento. A comissão do lavador é paga normalmente."
+                            >
+                                <i class="fas fa-gift"></i> Cortesia
+                            </button>
                         </div>
 
                         <div class="modal-actions">
@@ -3694,7 +3703,8 @@
                         this.relatorioModal.relatorio = f.relatorio || {};
                         this.relatorioModal.movimentacoes = movs;
 
-                        const entradas = movs.filter(m => m.tipo === 'PAGAMENTO').reduce((s, m) => s + m.valor, 0);
+                        // Cortesia não conta como faturamento
+                        const entradas = movs.filter(m => m.tipo === 'PAGAMENTO' && m.formaPagamento !== 'CORTESIA').reduce((s, m) => s + m.valor, 0);
                         const saidas = movs.filter(m => m.tipo === 'SAIDA' && !m.descricao?.includes('[Adiantamento]')).reduce((s, m) => s + m.valor, 0);
                         const adiant = movs.filter(m => m.tipo === 'SAIDA' && m.descricao?.includes('[Adiantamento]')).reduce((s, m) => s + m.valor, 0);
                         const sangrias = movs.filter(m => m.tipo === 'SANGRIA').reduce((s, m) => s + m.valor, 0);

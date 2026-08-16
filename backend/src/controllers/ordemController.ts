@@ -1225,7 +1225,7 @@ export const getDashboardResumo = async (req: EmpresaRequest, res: Response) => 
     const dataParam = (req.query.data as string) || new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
     const { start, end } = getDateRangeBRT(dataParam);
 
-    const [ordensAtivas, aguardandoPagamento, fatFiltrado, fatBruto] = await Promise.all([
+    const [ordensAtivas, aguardandoPagamento, fatFiltrado, fatBruto, cortesiaFiltrado, cortesiaBruto] = await Promise.all([
       prisma.ordemServico.count({
         where: { empresaId, status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any } },
       }),
@@ -1240,13 +1240,22 @@ export const getDashboardResumo = async (req: EmpresaRequest, res: Response) => 
         where: { empresaId, status: { not: 'CANCELADO' as any }, createdAt: { gte: start, lte: end } },
         _sum: { valorTotal: true },
       }),
+      // Cortesia não conta como faturamento: subtrai a parcela paga como cortesia de cada agregado acima
+      prisma.pagamento.aggregate({
+        where: { empresaId, metodo: 'CORTESIA' as any, ordem: { status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] as any }, dataFim: { gte: start, lte: end } } },
+        _sum: { valor: true },
+      }),
+      prisma.pagamento.aggregate({
+        where: { empresaId, metodo: 'CORTESIA' as any, ordem: { status: { not: 'CANCELADO' as any }, createdAt: { gte: start, lte: end } } },
+        _sum: { valor: true },
+      }),
     ]);
 
     return res.json({
       ordensAtivas,
       aguardandoPagamento,
-      faturamentoHoje: fatFiltrado._sum.valorTotal || 0,
-      faturamentoBrutoHoje: fatBruto._sum.valorTotal || 0,
+      faturamentoHoje: (fatFiltrado._sum.valorTotal || 0) - (cortesiaFiltrado._sum.valor || 0),
+      faturamentoBrutoHoje: (fatBruto._sum.valorTotal || 0) - (cortesiaBruto._sum.valor || 0),
     });
   } catch (error) {
     console.error('Erro ao carregar resumo do painel:', error);
@@ -1410,12 +1419,6 @@ export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
       })
     ]);
 
-    // Calcular estatísticas adicionais
-    const valorTotalFormatado = valorTotal._sum.valorTotal || 0;
-    const totalOrdensCount = ordensIdsList.length;
-    const taxaConclusao = totalOrdensCount > 0 ? (ordensFinalizadas / totalOrdensCount) * 100 : 0;
-    const ticketMedio = ordensFinalizadas > 0 ? valorTotalFormatado / ordensFinalizadas : 0;
-
     // Estatísticas de pagamentos
     const pagamentosStats = await prisma.pagamento.groupBy({
       by: ['metodo'],
@@ -1431,6 +1434,15 @@ export const getOrdensStats = async (req: EmpresaRequest, res: Response) => {
         _all: true
       }
     });
+
+    // Calcular estatísticas adicionais.
+    // Cortesia não conta como faturamento (valor cedido, não recebido) — subtrai a
+    // parcela paga como cortesia do total bruto de OrdemServico.valorTotal.
+    const cortesiaStat = pagamentosStats.find((p: any) => p.metodo === 'CORTESIA');
+    const valorTotalFormatado = (valorTotal._sum.valorTotal || 0) - (cortesiaStat?._sum.valor || 0);
+    const totalOrdensCount = ordensIdsList.length;
+    const taxaConclusao = totalOrdensCount > 0 ? (ordensFinalizadas / totalOrdensCount) * 100 : 0;
+    const ticketMedio = ordensFinalizadas > 0 ? valorTotalFormatado / ordensFinalizadas : 0;
 
     const pagamentosPendentes = await prisma.pagamento.aggregate({
         where: {
@@ -1727,7 +1739,7 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
 
       // 2. Criar registros de pagamento
       // ✅ Validar métodos de pagamento permitidos
-      const METODOS_VALIDOS = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
+      const METODOS_VALIDOS = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO', 'CORTESIA'];
 
       // Validar cada pagamento antes de criar
       for (const pag of pagamentos) {

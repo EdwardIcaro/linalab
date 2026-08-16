@@ -706,6 +706,7 @@
                         <option value="PIX">PIX</option>
                         <option value="CARTAO">Cartão</option>
                         <option value="NFE">NFe</option>
+                        <option value="CORTESIA">Cortesia</option>
                         <option value="PENDENTE">Pendente</option>
                     </select>
                 </div>
@@ -960,6 +961,7 @@ function createCompactCard(order) {
                 case 'NFE': return 'NFe';
                 case 'PENDENTE': return 'Pendente';
                 case 'DEBITO_FUNCIONARIO': return 'Débito Func.';
+                case 'CORTESIA': return 'Cortesia';
                 default: return m;
             }
         });
@@ -1152,9 +1154,16 @@ function createTimelineCard(order) {
 function updateStats(orders) {
     document.getElementById('totalOrders').textContent = orders.length;
     
+    // Cortesia não conta como faturamento: subtrai a parcela paga como cortesia
+    // de cada ordem (cobre também pagamento dividido, parte cortesia + parte pago)
     const revenue = orders
         .filter(order => !order.pagamentos.some(p => p.status === 'PENDENTE'))
-        .reduce((sum, order) => sum + order.valorTotal, 0);
+        .reduce((sum, order) => {
+            const cortesia = order.pagamentos
+                .filter(p => p.metodo === 'CORTESIA')
+                .reduce((s, p) => s + p.valor, 0);
+            return sum + (order.valorTotal - cortesia);
+        }, 0);
     document.getElementById('totalRevenue').textContent = formatCurrency(revenue);
     
     const avgTicket = orders.length > 0 ? revenue / orders.length : 0;
@@ -1271,6 +1280,9 @@ async function payPending(orderId) {
                     </button>
                     <button onclick="processPayPending('${orderId}', '${pagamentoPendente.id}', 'NFE')" class="btn btn-primary" style="padding: 14px; font-size: 14px;">
                         <i class="fas fa-file-invoice"></i> NFe
+                    </button>
+                    <button onclick="processPayPending('${orderId}', '${pagamentoPendente.id}', 'CORTESIA')" class="btn btn-primary" style="padding: 14px; font-size: 14px; grid-column: 1 / -1;" title="Não conta como faturamento. A comissão do lavador é paga normalmente.">
+                        <i class="fas fa-gift"></i> Cortesia
                     </button>
                 </div>
             </div>

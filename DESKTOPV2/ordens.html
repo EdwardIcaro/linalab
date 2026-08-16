@@ -951,6 +951,9 @@
                     <button class="payment-method-btn" @click="addPayment('DEBITO_FUNCIONARIO')" x-show="paymentMethodsConfig.DEBITO_FUNCIONARIO">
                         <i class="fas fa-user-tag"></i> Debito Funcionario
                     </button>
+                    <button class="payment-method-btn" @click="addPayment('CORTESIA')" x-show="paymentMethodsConfig.CORTESIA" title="Não conta como faturamento. A comissão do lavador é paga normalmente.">
+                        <i class="fas fa-gift"></i> Cortesia
+                    </button>
                     <button class="payment-method-btn pending" @click="addPayment('PENDENTE')">
                         <i class="fas fa-clock"></i> Pendente
                     </button>
@@ -1069,7 +1072,8 @@
                     PIX: true,
                     CARTAO: true,
                     NFE: true,
-                    DEBITO_FUNCIONARIO: false
+                    DEBITO_FUNCIONARIO: false,
+                    CORTESIA: true
                 },
                 paymentKeydownHandler: null,
 
@@ -1212,7 +1216,8 @@
                             PIX: paymentConfig.PIX !== false,
                             CARTAO: paymentConfig.CARTAO !== false,
                             NFE: paymentConfig.NFE !== false,
-                            DEBITO_FUNCIONARIO: paymentConfig.DEBITO_FUNCIONARIO === true
+                            DEBITO_FUNCIONARIO: paymentConfig.DEBITO_FUNCIONARIO === true,
+                            CORTESIA: paymentConfig.CORTESIA !== false
                         };
                     } catch (error) {
                         console.error('Error loading payment methods config:', error);

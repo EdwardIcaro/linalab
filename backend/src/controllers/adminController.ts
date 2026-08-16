@@ -28,6 +28,12 @@ export const getGlobalStats = async (req: Request, res: Response) => {
       _count: true,
     });
 
+    // Cortesia não conta como faturamento (valor cedido, não recebido)
+    const cortesiaFinalizadas = await prisma.pagamento.aggregate({
+      where: { metodo: 'CORTESIA' as any, ordem: { status: 'FINALIZADO' } },
+      _sum: { valor: true },
+    });
+
     // Calculate pending revenue (PENDENTE + EM_ANDAMENTO + AGUARDANDO_PAGAMENTO)
     const ordensPendentes = await prisma.ordemServico.aggregate({
       where: { status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] } },
@@ -47,7 +53,7 @@ export const getGlobalStats = async (req: Request, res: Response) => {
       totalEmpresas,
       empresasAtivas,
       totalUsuarios,
-      faturamentoTotal: ordensFinalizadas._sum.valorTotal || 0,
+      faturamentoTotal: (ordensFinalizadas._sum.valorTotal || 0) - (cortesiaFinalizadas._sum.valor || 0),
       ordensFinalizadas: ordensFinalizadas._count,
       valorPendente: ordensPendentes._sum.valorTotal || 0,
       ordensPendentes: ordensPendentes._count,
@@ -96,10 +102,15 @@ export const listCompanies = async (req: Request, res: Response) => {
           },
           _sum: { valorTotal: true },
         });
+        // Cortesia não conta como faturamento
+        const cortesia = await prisma.pagamento.aggregate({
+          where: { empresaId: empresa.id, metodo: 'CORTESIA' as any, ordem: { status: 'FINALIZADO' } },
+          _sum: { valor: true },
+        });
 
         return {
           ...empresa,
-          faturamento: revenue._sum.valorTotal || 0,
+          faturamento: (revenue._sum.valorTotal || 0) - (cortesia._sum.valor || 0),
         };
       })
     );
@@ -157,6 +168,12 @@ export const getCompanyDetails = async (req: Request, res: Response) => {
       _count: true,
     });
 
+    // Cortesia não conta como faturamento
+    const cortesiaSummary = await prisma.pagamento.aggregate({
+      where: { empresaId: id, metodo: 'CORTESIA' as any },
+      _sum: { valor: true },
+    });
+
     const ordensFinalizadas = await prisma.ordemServico.count({
       where: { empresaId: id, status: 'FINALIZADO' },
     });
@@ -175,7 +192,7 @@ export const getCompanyDetails = async (req: Request, res: Response) => {
     res.json({
       ...empresa,
       financialSummary: {
-        totalReceita: financialSummary._sum.valorTotal || 0,
+        totalReceita: (financialSummary._sum.valorTotal || 0) - (cortesiaSummary._sum.valor || 0),
         totalOrdens: financialSummary._count,
         ordensFinalizadas,
       },

@@ -28,6 +28,17 @@ import {
 
 const PORTAL_URL = (process.env.PORTAL_URL ?? '').replace(/\/$/, '');
 
+/**
+ * Soma valorTotal das ordens excluindo a parcela paga como CORTESIA (não conta
+ * como faturamento — valor cedido, não recebido). Exige `pagamentos` no include.
+ */
+function faturamentoSemCortesia(ordens: { valorTotal: number; pagamentos?: { metodo: string; valor: number }[] }[]): number {
+  return ordens.reduce((s, o) => {
+    const cortesia = (o.pagamentos ?? []).filter(p => p.metodo === 'CORTESIA').reduce((sp, p) => sp + p.valor, 0);
+    return s + (o.valorTotal - cortesia);
+  }, 0);
+}
+
 /** Chamado pelo baileyService quando recebe uma imagem. */
 export async function handleIncomingImage(from: string, buffer: Buffer): Promise<string | null> {
   return handleIncomingImageForReport(from, buffer);
@@ -1185,7 +1196,7 @@ function formatarMetodo(metodo: string): string {
     PIX: 'PIX', DINHEIRO: 'DINHEIRO', CARTAO: 'CARTÃO',
     CARTAO_CREDITO: 'CARTÃO CRÉDITO', CARTAO_DEBITO: 'CARTÃO DÉBITO',
     NFE: 'NFE/FROTA', OUTRO: 'OUTRO', PENDENTE: 'PENDENTE',
-    DEBITO_FUNCIONARIO: 'DÉB. FUNCIONÁRIO',
+    DEBITO_FUNCIONARIO: 'DÉB. FUNCIONÁRIO', CORTESIA: 'CORTESIA',
   };
   return map[metodo] ?? metodo;
 }
@@ -1227,7 +1238,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
     linhas += `${modelo.toUpperCase()}: R$ ${o.valorTotal.toFixed(2)} · *${pagMethods}*\n`;
   }
 
-  const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const total = faturamentoSemCortesia(ordens);
 
   // Totais por método de pagamento
   const porMetodo: Record<string, number> = {};
@@ -1313,7 +1324,8 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
     if (!porDia.has(chave)) porDia.set(chave, { date: dataRef, ordens: [], total: 0 });
     const d = porDia.get(chave)!;
     d.ordens.push(o);
-    d.total += o.valorTotal;
+    const cortesiaOrdem = (o.pagamentos ?? []).filter(p => p.metodo === 'CORTESIA').reduce((sp, p) => sp + p.valor, 0);
+    d.total += o.valorTotal - cortesiaOrdem;
   }
 
   // Abreviações de dia da semana
@@ -1330,7 +1342,7 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
   }
 
   // Totais gerais
-  const totalFat    = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const totalFat    = faturamentoSemCortesia(ordens);
   const totalOrdens = ordens.length;
   r += `\nTOTAL: *R$ ${totalFat.toFixed(2)}* | *${totalOrdens}* lavagem(ns)\n`;
 
@@ -1908,11 +1920,17 @@ async function handleStatusLavador(lavadorId: string, empresaId: string): Promis
   const [ordensDia, ordensMes] = await Promise.all([
     prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO', ...filtroLavador, dataFim: { gte: diaStart, lte: diaEnd } },
-      include: { ordemLavadores: { where: { lavadorId }, select: { ganho: true } } },
+      include: {
+        ordemLavadores: { where: { lavadorId }, select: { ganho: true } },
+        pagamentos: { select: { metodo: true, valor: true } },
+      },
     }),
     prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO', ...filtroLavador, dataFim: { gte: inicioMes, lte: fimMes } },
-      include: { ordemLavadores: { where: { lavadorId }, select: { ganho: true } } },
+      include: {
+        ordemLavadores: { where: { lavadorId }, select: { ganho: true } },
+        pagamentos: { select: { metodo: true, valor: true } },
+      },
     }),
   ]);
 
@@ -1921,9 +1939,9 @@ async function handleStatusLavador(lavadorId: string, empresaId: string): Promis
     return s + (entrada ? entrada.ganho : o.valorTotal * (lavador.comissao / 100));
   }, 0);
 
-  const fatDia  = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+  const fatDia  = faturamentoSemCortesia(ordensDia);
   const comDia  = calcCom(ordensDia);
-  const fatMes  = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+  const fatMes  = faturamentoSemCortesia(ordensMes);
   const comMes  = calcCom(ordensMes);
 
   const portalLink = await getLinkPortal(lavadorId);
@@ -2025,14 +2043,14 @@ async function buildContextForDate(empresaId: string, date: Date): Promise<strin
     const [ordens, caixa, lavadores] = await Promise.all([
       prisma.ordemServico.findMany({
         where: { empresaId, status: { not: 'CANCELADO' as any }, dataFim: { gte: start, lte: end } },
-        include: { lavador: { select: { nome: true } } },
+        include: { lavador: { select: { nome: true } }, pagamentos: { select: { metodo: true, valor: true } } },
       }),
       prisma.caixaRegistro.findMany({ where: { empresaId, data: { gte: start, lte: end } } }),
       prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
     ]);
 
     const dataLabel = date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const fat = ordens.reduce((s, o) => s + o.valorTotal, 0);
+    const fat = faturamentoSemCortesia(ordens);
     const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
@@ -2044,7 +2062,7 @@ async function buildContextForDate(empresaId: string, date: Date): Promise<strin
     for (const lav of lavadores) {
       const ords = ordens.filter(o => o.lavadorId === lav.id);
       if (ords.length > 0) {
-        const fatLav = ords.reduce((s, o) => s + o.valorTotal, 0);
+        const fatLav = faturamentoSemCortesia(ords);
         ctx += `• ${lav.nome}: ${ords.length} ordem(ns), R$ ${fatLav.toFixed(2)}\n`;
       }
     }
@@ -2093,6 +2111,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       include: {
         lavador: { select: { nome: true } },
         ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+        pagamentos: { select: { metodo: true, valor: true } },
       }
     });
 
@@ -2102,6 +2121,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       include: {
         lavador: { select: { nome: true } },
         ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+        pagamentos: { select: { metodo: true, valor: true } },
       }
     });
 
@@ -2126,6 +2146,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
         include: {
           lavador: { select: { nome: true } },
           ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+          pagamentos: { select: { metodo: true, valor: true } },
         }
       }),
       prisma.caixaRegistro.findMany({
@@ -2166,7 +2187,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
 
     // --- DIA ---
     ctx += `=== HOJE ===\n`;
-    const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+    const fatDia = faturamentoSemCortesia(ordensDia);
     ctx += `Finalizadas: *${ordensDia.length}* | Faturamento: *R$ ${fatDia.toFixed(2)}*\n`;
     ctx += `Pátio agora: *${ordensDiaPatio.filter(o => o.status === 'EM_ANDAMENTO').length}* em andamento, `;
     ctx += `*${ordensDiaPatio.filter(o => o.status === 'PENDENTE').length}* pendentes, `;
@@ -2176,7 +2197,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     ctx += `Lavadores hoje:\n`;
     for (const lav of lavadores) {
       const qtd = contaOrdensLavador(ordensDia, lav.id);
-      const fat = ordensDia.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)).reduce((s, o) => s + o.valorTotal, 0);
+      const fat = faturamentoSemCortesia(ordensDia.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)));
       const com = calcGanhoLavador(ordensDia, lav.id, lav.comissao);
       ctx += `• *${lav.nome}*: *${qtd}* ordem(ns), faturamento *R$ ${fat.toFixed(2)}*, comissão hoje *R$ ${com.toFixed(2)}*\n`;
     }
@@ -2184,14 +2205,14 @@ async function buildDailyContext(empresaId: string): Promise<string> {
 
     // --- MÊS ---
     ctx += `=== MÊS ATUAL (${mesNomeFmt}) ===\n`;
-    const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+    const fatMes = faturamentoSemCortesia(ordensMes);
     ctx += `Finalizadas: *${ordensMes.length}* | Faturamento total: *R$ ${fatMes.toFixed(2)}*\n`;
     ctx += `Caixa mês: Entradas *R$ ${entradasMes.toFixed(2)}* | Saídas *R$ ${saidasMes.toFixed(2)}* | Saldo *R$ ${(entradasMes - saidasMes).toFixed(2)}*\n\n`;
 
     ctx += `Comissões do mês por lavador:\n`;
     for (const lav of lavadores) {
       const qtdMes = contaOrdensLavador(ordensMes, lav.id);
-      const fatLav = ordensMes.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)).reduce((s, o) => s + o.valorTotal, 0);
+      const fatLav = faturamentoSemCortesia(ordensMes.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)));
       const comMes = calcGanhoLavador(ordensMes, lav.id, lav.comissao);
       const adiant = adiantamentos.filter(a => a.lavadorId === lav.id).reduce((s, a) => s + a.valor, 0);
       ctx += `• *${lav.nome}*: *${qtdMes}* ordem(ns), fat. *R$ ${fatLav.toFixed(2)}*, comissão bruta *R$ ${comMes.toFixed(2)}*, adiant. *R$ ${adiant.toFixed(2)}*, líquido *R$ ${(comMes - adiant).toFixed(2)}*\n`;
@@ -2201,7 +2222,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     // --- MÊS ANTERIOR ---
     const entradasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasMesAnt   = caixaMesAnterior.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
-    const fatMesAnt = ordensMesAnterior.reduce((s, o) => s + o.valorTotal, 0);
+    const fatMesAnt = faturamentoSemCortesia(ordensMesAnterior);
     ctx += `=== MÊS ANTERIOR (${mesAntNomeFmt}) ===\n`;
     ctx += `Finalizadas: *${ordensMesAnterior.length}* | Faturamento: *R$ ${fatMesAnt.toFixed(2)}*\n`;
     ctx += `Caixa: Entradas *R$ ${entradasMesAnt.toFixed(2)}* | Saídas *R$ ${saidasMesAnt.toFixed(2)}* | Saldo *R$ ${(entradasMesAnt - saidasMesAnt).toFixed(2)}*\n`;
@@ -2209,7 +2230,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     ctx += `Comissões do mês anterior por lavador:\n`;
     for (const lav of lavadores) {
       const qtdAnt = contaOrdensLavador(ordensMesAnterior, lav.id);
-      const fatAnt = ordensMesAnterior.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)).reduce((s, o) => s + o.valorTotal, 0);
+      const fatAnt = faturamentoSemCortesia(ordensMesAnterior.filter(o => o.lavadorId === lav.id || o.ordemLavadores.some((x: any) => x.lavadorId === lav.id)));
       const comAnt = calcGanhoLavador(ordensMesAnterior, lav.id, lav.comissao);
       ctx += `• *${lav.nome}*: *${qtdAnt}* ordem(ns), faturamento *R$ ${fatAnt.toFixed(2)}*, comissão *R$ ${comAnt.toFixed(2)}*\n`;
     }
@@ -2251,13 +2272,14 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
     // Só FINALIZADAS com dataFim dentro da janela de hoje
     prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
+      include: { pagamentos: { select: { metodo: true, valor: true } } },
     }),
     prisma.caixaRegistro.findMany({
       where: { empresaId, data: { gte: start, lte: end } },
     }),
   ]);
 
-  const fat      = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const fat      = faturamentoSemCortesia(ordens);
   const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
   const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
@@ -2278,7 +2300,7 @@ async function handleLavadoresCommand(empresaId: string): Promise<string> {
     prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
     prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
-      include: { ordemLavadores: { select: { lavadorId: true } } },
+      include: { ordemLavadores: { select: { lavadorId: true } }, pagamentos: { select: { metodo: true, valor: true } } },
     }),
   ]);
 
@@ -2290,8 +2312,10 @@ async function handleLavadoresCommand(empresaId: string): Promise<string> {
     const ords = ordens.filter(o =>
       o.lavadorId === lav.id || o.ordemLavadores.some(ol => ol.lavadorId === lav.id)
     );
-    const fat = ords.reduce((s, o) => s + o.valorTotal, 0);
-    const com = fat * (lav.comissao / 100);
+    const fat = faturamentoSemCortesia(ords);
+    // Comissão incide sobre o valor total da ordem — cortesia não reduz a comissão do lavador
+    const fatBrutoComissao = ords.reduce((s, o) => s + o.valorTotal, 0);
+    const com = fatBrutoComissao * (lav.comissao / 100);
     r += `• *${lav.nome}*: ${ords.length} ordem(ns) | Fat.: *R$ ${fat.toFixed(2)}* | Com.: *R$ ${com.toFixed(2)}*\n`;
   }
 
@@ -2451,7 +2475,10 @@ async function buildContextLavadorConversacional(message: string, empresaId: str
     const inicioMes  = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fimMes     = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
 
-    const lavOlInclude = { ordemLavadores: { where: { lavadorId: lavador.id }, select: { ganho: true } } };
+    const lavOlInclude = {
+      ordemLavadores: { where: { lavadorId: lavador.id }, select: { ganho: true } },
+      pagamentos: { select: { metodo: true, valor: true } },
+    };
     const lavOlWhere = (extra: object) => ({ empresaId, status: { not: 'CANCELADO' as const }, OR: [{ lavadorId: lavador.id }, { ordemLavadores: { some: { lavadorId: lavador.id } } }], ...extra });
     const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
       prisma.ordemServico.findMany({ where: lavOlWhere({ createdAt: { gte: hoje, lt: amanha } }), include: lavOlInclude }),
@@ -2460,9 +2487,9 @@ async function buildContextLavadorConversacional(message: string, empresaId: str
     ]);
 
     const getG = (o: any) => { const ol = o.ordemLavadores?.[0]; return ol ? ol.ganho : (o.comissao ?? 0); };
-    const fatDia      = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+    const fatDia      = faturamentoSemCortesia(ordensDia);
     const comDia      = ordensDia.reduce((s, o) => s + getG(o), 0);
-    const fatMes      = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+    const fatMes      = faturamentoSemCortesia(ordensMes);
     const comBrutaMes = ordensMes.reduce((s, o) => s + getG(o), 0);
     const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
     const comLiqMes   = comBrutaMes - totalAdiant;
@@ -2505,7 +2532,10 @@ async function handleLavadorEspecifico(
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
 
-    const lavOlInclude = { ordemLavadores: { where: { lavadorId: lavador.id }, select: { ganho: true } } };
+    const lavOlInclude = {
+      ordemLavadores: { where: { lavadorId: lavador.id }, select: { ganho: true } },
+      pagamentos: { select: { metodo: true, valor: true } },
+    };
     const lavOlWhere = (extra: object) => ({ empresaId, status: { not: 'CANCELADO' as const }, OR: [{ lavadorId: lavador.id }, { ordemLavadores: { some: { lavadorId: lavador.id } } }], ...extra });
     const [ordensDia, ordensMes, adiantamentos] = await Promise.all([
       prisma.ordemServico.findMany({ where: lavOlWhere({ createdAt: { gte: hoje, lt: amanha } }), include: lavOlInclude }),
@@ -2516,9 +2546,9 @@ async function handleLavadorEspecifico(
     ]);
 
     const getG = (o: any) => { const ol = o.ordemLavadores?.[0]; return ol ? ol.ganho : (o.comissao ?? 0); };
-    const fatDia = ordensDia.reduce((s, o) => s + o.valorTotal, 0);
+    const fatDia = faturamentoSemCortesia(ordensDia);
     const comDia = ordensDia.reduce((s, o) => s + getG(o), 0);
-    const fatMes = ordensMes.reduce((s, o) => s + o.valorTotal, 0);
+    const fatMes = faturamentoSemCortesia(ordensMes);
     const comBrutaMes = ordensMes.reduce((s, o) => s + getG(o), 0);
     const totalAdiant = adiantamentos.reduce((s, a) => s + a.valor, 0);
     const comLiquidaMes = comBrutaMes - totalAdiant;

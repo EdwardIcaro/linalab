@@ -421,13 +421,22 @@ export async function cronResumoDiario(): Promise<void> {
       const [finalizadas, caixa] = await Promise.all([
         prisma.ordemServico.findMany({
           where: { empresaId: empresa.id, status: 'FINALIZADO', dataFim: { gte: hoje, lte: fimHoje } },
-          include: { ordemLavadores: { include: { lavador: { select: { nome: true } } } } },
+          include: {
+            ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+            pagamentos: { select: { metodo: true, valor: true } },
+          },
         }),
         prisma.caixaRegistro.findMany({
           where: { empresaId: empresa.id, data: { gte: hoje, lte: fimHoje } },
         }),
       ]);
-      const fat    = finalizadas.reduce((s, o) => s + o.valorTotal, 0);
+      // Cortesia não conta como faturamento (valor cedido, não recebido)
+      const fat = finalizadas.reduce((s, o: any) => {
+        const cortesia = (o.pagamentos || [])
+          .filter((p: any) => p.metodo === 'CORTESIA')
+          .reduce((sp: number, p: any) => sp + p.valor, 0);
+        return s + (o.valorTotal - cortesia);
+      }, 0);
       const saidas = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
       // Top lavadores por ganho real (OrdemServicoLavador.ganho já tem divisão multi-lavador aplicada)

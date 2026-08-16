@@ -248,7 +248,7 @@ export function validateFinalizarOrdem(data: any): ValidationResult {
   }
 
   // Validate each payment
-  const validMethods = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO'];
+  const validMethods = ['DINHEIRO', 'CARTAO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'NFE', 'OUTRO', 'PENDENTE', 'DEBITO_FUNCIONARIO', 'CORTESIA'];
 
   data.pagamentos.forEach((pag: any, index: number) => {
     // ✅ Normalizar método: aceita tanto 'metodo' quanto 'method', converte para maiúsculas
