@@ -847,7 +847,7 @@
         <button class="pay-method-btn" onclick="addPayment('NFE')">
           <i class="fas fa-file-invoice"></i> NFe
         </button>
-        <button class="pay-method-btn" onclick="addPayment('CORTESIA')" title="Não conta como faturamento. A comissão do lavador é paga normalmente.">
+        <button id="btnPayCortesia" class="pay-method-btn" onclick="addPayment('CORTESIA')" title="Não conta como faturamento. A comissão do lavador é paga normalmente.">
           <i class="fas fa-gift"></i> Cortesia
         </button>
         <button class="pay-method-btn pending" onclick="addPayment('PENDENTE')">
@@ -1075,6 +1075,7 @@
       if (!validateFuncionarioAccess()) return;
       await loadUserInfo();
       window.api.empresaWaStatus().then(r => { empresaWaConectado = r.status === 'CONECTADO'; }).catch(() => {});
+      loadPaymentMethodsConfig();
 
       const urlParams = new URLSearchParams(window.location.search);
       const ordemId = urlParams.get('id');
@@ -2428,6 +2429,16 @@
     function formatDate(date) {
       if (!date) return '—';
       return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(date));
+    }
+    async function loadPaymentMethodsConfig() {
+      try {
+        const empresaId = localStorage.getItem('empresaId');
+        if (!empresaId) return;
+        const empresa = await window.api.getEmpresaById(empresaId);
+        const cfg = empresa.paymentMethodsConfig || {};
+        const btnCortesia = document.getElementById('btnPayCortesia');
+        if (btnCortesia) btnCortesia.style.display = cfg.CORTESIA === false ? 'none' : '';
+      } catch (e) { /* mantém visível por padrão em caso de falha */ }
     }
     async function loadUserInfo() {
       const empresaNomeEl = document.getElementById('empresaNome');

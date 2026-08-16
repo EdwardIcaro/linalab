@@ -995,11 +995,11 @@ function createCompactCard(order) {
             </div>
             <div>
                 <div class="history-compact-label">Veículo</div>
-                <div class="history-compact-value">${order.veiculo.modelo || 'N/A'}</div>
+                <div class="history-compact-value">${order.veiculo?.modelo || order.itemAvulso || 'N/A'}</div>
             </div>
             <div>
                 <div class="history-compact-label">Placa</div>
-                <div class="history-compact-value">${order.veiculo.placa}</div>
+                <div class="history-compact-value">${order.veiculo?.placa || '—'}</div>
             </div>
         </div>
         <div class="history-card-footer">
@@ -1115,8 +1115,8 @@ function createTimelineCard(order) {
             </div>
             <div class="timeline-detail-item">
                 <div class="timeline-detail-label">Veículo</div>
-                <div class="timeline-detail-value">${order.veiculo.modelo || 'N/A'}</div>
-                <div style="font-size: 11px; color: var(--text-secondary);">${order.veiculo.placa}</div>
+                <div class="timeline-detail-value">${order.veiculo?.modelo || order.itemAvulso || 'N/A'}</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">${order.veiculo?.placa || '—'}</div>
             </div>
             <div class="timeline-detail-item">
                 <div class="timeline-detail-label">Lavador</div>
@@ -1200,8 +1200,8 @@ async function viewDetails(orderId) {
                 <div style="background: var(--background-light); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
                     <p style="margin: 4px 0;"><strong>Cliente:</strong> ${order.cliente.nome}</p>
                     <p style="margin: 4px 0;"><strong>Telefone:</strong> ${order.cliente.telefone || 'N/A'}</p>
-                    <p style="margin: 4px 0;"><strong>Veículo:</strong> ${order.veiculo.modelo || 'N/A'}</p>
-                    <p style="margin: 4px 0;"><strong>Placa:</strong> ${order.veiculo.placa}</p>
+                    <p style="margin: 4px 0;"><strong>Veículo:</strong> ${order.veiculo?.modelo || order.itemAvulso || 'N/A'}</p>
+                    <p style="margin: 4px 0;"><strong>Placa:</strong> ${order.veiculo?.placa || '—'}</p>
                     <p style="margin: 4px 0;"><strong>Lavador:</strong> ${order.lavador?.nome || 'Não atribuído'}</p>
                 </div>
                 
@@ -1364,7 +1364,7 @@ function exportData() {
         'Número': order.numeroOrdem,
         'Data': new Date(order.dataFim || order.updatedAt).toLocaleDateString('pt-BR'),
         'Cliente': order.cliente.nome,
-        'Veículo': `${order.veiculo.modelo || 'N/A'} - ${order.veiculo.placa}`,
+        'Veículo': order.veiculo ? `${order.veiculo.modelo || 'N/A'} - ${order.veiculo.placa}` : (order.itemAvulso || 'Avulso'),
         'Status': order.status,
         'Lavador': order.lavador?.nome || 'N/A',
         'Pagamento': [...new Set(order.pagamentos.map(p => p.metodo))].join(', '),
