@@ -5,1240 +5,371 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuração de WhatsApp - Lina X</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="configuracoes-whatsapp.css">
     <script src="utils.js"></script>
     <script src="api.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <style>
-        .whatsapp-config {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .config-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--primary-color);
-        }
-
-        .config-header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-        }
-
-        .lavadores-grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .lavador-card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: box-shadow 0.2s;
-        }
-
-        .lavador-card:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .lavador-info {
-            flex: 1;
-        }
-
-        .lavador-nome {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 0 0 0.5rem 0;
-            color: #333;
-        }
-
-        .lavador-details {
-            font-size: 0.9rem;
-            color: #666;
-            margin: 0.3rem 0;
-        }
-
-        .lavador-phone {
-            font-family: monospace;
-            font-weight: 500;
-            color: #25d366;
-            margin-top: 0.5rem;
-        }
-
-        .lavador-phone.vazio {
-            color: #999;
-            font-style: italic;
-        }
-
-        .lavador-actions {
-            display: flex;
-            gap: 0.8rem;
-            align-items: center;
-        }
-
-        .btn-phone {
-            padding: 0.6rem 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .btn-edit-phone {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-edit-phone:hover {
-            opacity: 0.9;
-        }
-
-        .btn-delete-phone {
-            background: #ff4757;
-            color: white;
-        }
-
-        .btn-delete-phone:hover {
-            opacity: 0.9;
-        }
-
-        .btn-delete-phone:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: #666;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 2rem;
-            color: #999;
-            background: #f9f9f9;
-            border-radius: 8px;
-            border: 1px dashed #ddd;
-        }
-
-        .modal-phone {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-phone.active {
-            display: flex;
-        }
-
-        .modal-content-phone {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .modal-header-phone {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .modal-header-phone h2 {
-            margin: 0;
-            font-size: 1.3rem;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #666;
-        }
-
-        .form-group-phone {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group-phone label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #333;
-        }
-
-        .form-group-phone input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-
-        .form-group-phone input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-        }
-
-        .modal-footer-phone {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            padding-top: 1rem;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .btn-modal {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .btn-save-phone {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-save-phone:hover:not(:disabled) {
-            opacity: 0.9;
-        }
-
-        .btn-cancel {
-            background: #e0e0e0;
-            color: #333;
-        }
-
-        .btn-cancel:hover {
-            background: #d0d0d0;
-        }
-
-        .helper-text {
-            font-size: 0.85rem;
-            color: #999;
-            margin-top: 0.3rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .status-ativo {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-inativo {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .config-card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2rem;
-        }
-
-        .config-text h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.1rem;
-            color: #333;
-        }
-
-        .config-text p {
-            margin: 0;
-            color: #666;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-            flex-shrink: 0;
-            margin-top: 0.5rem;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: 0.4s;
-            border-radius: 34px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: 0.4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .toggle-slider {
-            background-color: var(--primary-color);
-        }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(26px);
-        }
-
-        .admin-section {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .section-header h2 {
-            margin: 0;
-            font-size: 1.3rem;
-        }
-
-
-        .admin-list {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .admin-card {
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .admin-info {
-            flex: 1;
-        }
-
-        .admin-number {
-            font-family: monospace;
-            font-weight: 600;
-            color: #25d366;
-            font-size: 1rem;
-        }
-
-        .admin-name {
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 0.3rem;
-        }
-
-        .admin-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .btn-sm {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-
-        .btn-delete-admin {
-            background: #ff4757;
-            color: white;
-        }
-
-        .btn-delete-admin:hover {
-            opacity: 0.9;
-        }
-
-        .empty-admin {
-            text-align: center;
-            padding: 2rem;
-            color: #999;
-            background: #f9f9f9;
-            border-radius: 6px;
-            border: 1px dashed #ddd;
-        }
-
-        .lavadores-section {
-            margin-top: 3rem;
-        }
-
-        /* Pareamento */
-        .pairing-waiting {
-            text-align: center;
-            padding: 2rem 1rem;
-        }
-
-        .pairing-pulse-ring {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #25d36622;
-            position: relative;
-            margin-bottom: 1.2rem;
-        }
-
-        .pairing-pulse-ring::before,
-        .pairing-pulse-ring::after {
-            content: '';
-            position: absolute;
-            border-radius: 50%;
-            border: 2px solid #25d366;
-            animation: pairingPulse 1.8s ease-out infinite;
-        }
-
-        .pairing-pulse-ring::after {
-            animation-delay: 0.9s;
-        }
-
-        @keyframes pairingPulse {
-            0%   { width: 70%;  height: 70%;  opacity: 1; }
-            100% { width: 160%; height: 160%; opacity: 0; }
-        }
-
-        .pairing-pulse-icon {
-            font-size: 2rem;
-            z-index: 1;
-        }
-
-        .pairing-waiting h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.1rem;
-            color: #333;
-        }
-
-        .pairing-waiting p {
-            margin: 0;
-            color: #666;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        /* Tabs do modal de admin */
-        .admin-tabs {
-            display: flex;
-            border-bottom: 1px solid #e5e7eb;
-            margin: 0 -1.5rem;
-            padding: 0 1.5rem;
-            gap: 4px;
-        }
-        .admin-tab {
-            padding: 8px 16px;
-            border: none;
-            background: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #888;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            transition: all .15s;
-        }
-        .admin-tab.active {
-            color: #7f56d9;
-            border-bottom-color: #7f56d9;
-        }
-        .admin-tab:hover:not(.active) { color: #444; }
-
-        /* Display do código de 4 dígitos */
-        .code-display-box {
-            background: #f0fdf4;
-            border: 2px solid #bbf7d0;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin: 12px 0;
-        }
-        .code-label {
-            font-size: 0.8rem;
-            color: #065f46;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            margin-bottom: 10px;
-        }
-        .code-digits {
-            font-size: 3rem;
-            font-weight: 800;
-            letter-spacing: 12px;
-            color: #047857;
-            font-family: 'Courier New', monospace;
-            line-height: 1;
-        }
-        .code-expires {
-            font-size: 0.78rem;
-            color: #6b7280;
-            margin-top: 10px;
-        }
-        .code-expires.expiring { color: #ef4444; font-weight: 700; }
-
-        .pairing-form-hint {
-            font-size: 0.85rem;
-            color: #888;
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: #f5f5f5;
-            border-radius: 6px;
-            line-height: 1.5;
-        }
-
-        .admin-paired-badge {
-            font-size: 0.75rem;
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 0.2rem 0.5rem;
-            border-radius: 12px;
-            margin-left: 0.4rem;
-        }
-
-        /* ── Modal de Preferências de Notificação ── */
-        .modal-notif {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.5);
-            z-index: 1100;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-        .modal-notif.active { display: flex; }
-        .modal-notif-content {
-            background: #fff;
-            border-radius: 14px;
-            width: 100%;
-            max-width: 520px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,.18);
-            display: flex;
-            flex-direction: column;
-        }
-        .modal-notif-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            background: #fff;
-            z-index: 1;
-        }
-        .modal-notif-header h2 { margin: 0; font-size: 1.15rem; }
-        .modal-notif-body { padding: 1.25rem 1.5rem; flex: 1; }
-        .modal-notif-footer {
-            display: flex;
-            gap: .75rem;
-            justify-content: flex-end;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #e5e7eb;
-            position: sticky;
-            bottom: 0;
-            background: #fff;
-        }
-
-        .notif-group { margin-bottom: 1.5rem; }
-        .notif-group-label {
-            font-size: .75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .6px;
-            color: #9ca3af;
-            margin-bottom: .75rem;
-        }
-        .notif-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: .75rem 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        .notif-row:last-child { border-bottom: none; }
-        .notif-info { flex: 1; }
-        .notif-title {
-            font-size: .9rem;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: .2rem;
-        }
-        .notif-desc {
-            font-size: .8rem;
-            color: #6b7280;
-            line-height: 1.4;
-        }
-        .notif-badge-default {
-            font-size: .7rem;
-            background: #fef3c7;
-            color: #92400e;
-            padding: .15rem .45rem;
-            border-radius: 8px;
-            margin-left: .4rem;
-            font-weight: 600;
-        }
-
-        .btn-notif-open {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .55rem 1.1rem;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: .875rem;
-            font-weight: 600;
-            color: #374151;
-            cursor: pointer;
-            transition: background .15s;
-        }
-        .btn-notif-open:hover { background: #e5e7eb; }
-
-        /* ── Seção de usuários do bot ── */
-        .bot-users-section { margin-top: 2rem; }
-        .bot-users-toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .bot-users-toolbar h2 { margin: 0; font-size: 1.2rem; }
-        .toolbar-actions { display: flex; gap: .6rem; }
-
-        .bot-users-table { width: 100%; border-collapse: collapse; }
-        .bot-users-table th {
-            text-align: left;
-            font-size: .75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: #9ca3af;
-            padding: .5rem .75rem;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .bot-users-table td {
-            padding: .75rem;
-            border-bottom: 1px solid #f3f4f6;
-            font-size: .9rem;
-            vertical-align: middle;
-        }
-        .bot-users-table tr:last-child td { border-bottom: none; }
-        .bot-users-table tr:hover td { background: #f9fafb; }
-
-        .role-badge {
-            display: inline-block;
-            padding: .2rem .6rem;
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 700;
-        }
-        .role-lavador    { background: #dbeafe; color: #1e40af; }
-        .role-subaccount { background: #ede9fe; color: #5b21b6; }
-        .cargo-badge {
-            display: inline-block;
-            margin-left: .35rem;
-            padding: .15rem .5rem;
-            border-radius: 20px;
-            font-size: .7rem;
-            font-weight: 600;
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-
-        .jid-badge {
-            font-size: .75rem;
-            padding: .15rem .45rem;
-            border-radius: 8px;
-        }
-        .jid-ok  { background: #d1fae5; color: #065f46; }
-        .jid-pend{ background: #f3f4f6; color: #9ca3af; }
-
-        .btn-icon {
-            background: none;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: .3rem .6rem;
-            cursor: pointer;
-            font-size: .85rem;
-            transition: all .15s;
-        }
-        .btn-icon:hover { background: #f3f4f6; }
-        .btn-icon-danger:hover { background: #fee2e2; border-color: #fca5a5; }
-
-        /* ── Modal usuário bot ── */
-        .modal-bot-user {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.5);
-            z-index: 1100;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-        .modal-bot-user.active { display: flex; }
-        .modal-bu-content {
-            background: #fff;
-            border-radius: 14px;
-            width: 100%;
-            max-width: 460px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.18);
-        }
-        .modal-bu-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.1rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .modal-bu-header h2 { margin: 0; font-size: 1.1rem; }
-        .modal-bu-body { padding: 1.25rem 1.5rem; }
-        .modal-bu-footer {
-            display: flex;
-            gap: .75rem;
-            justify-content: flex-end;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        /* ── Modal PIN ── */
-        .pin-display-box {
-            background: #f0fdf4;
-            border: 2px solid #bbf7d0;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin: 8px 0 16px;
-        }
-        .pin-digits {
-            font-size: 3rem;
-            font-weight: 800;
-            letter-spacing: 14px;
-            color: #047857;
-            font-family: 'Courier New', monospace;
-        }
-        .pin-expires { font-size: .78rem; color: #6b7280; margin-top: 8px; }
-        .pin-expires.expiring { color: #ef4444; font-weight: 700; }
-
-        /* ── Modal Configurar Roles ── */
-        .modal-roles {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.5);
-            z-index: 1100;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-        .modal-roles.active { display: flex; }
-        .modal-roles-content {
-            background: #fff;
-            border-radius: 14px;
-            width: 100%;
-            max-width: 560px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,.18);
-        }
-        .modal-roles-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.1rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky; top: 0; background: #fff; z-index: 1;
-        }
-        .modal-roles-header h2 { margin: 0; font-size: 1.1rem; }
-        .modal-roles-body { padding: 1.25rem 1.5rem; }
-        .modal-roles-footer {
-            display: flex;
-            gap: .75rem;
-            justify-content: flex-end;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #e5e7eb;
-            position: sticky; bottom: 0; background: #fff;
-        }
-
-        .cargo-select {
-            width: 100%;
-            padding: .6rem .75rem;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: .9rem;
-            font-weight: 600;
-            color: #374151;
-            background: #fff;
-            margin-bottom: 1.25rem;
-        }
-
-        .perm-section-label {
-            font-size: .72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: #9ca3af;
-            margin: 1rem 0 .5rem;
-        }
-        .perm-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: .5rem;
-        }
-        .perm-item {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .5rem .75rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all .15s;
-            font-size: .85rem;
-        }
-        .perm-item:hover { background: #f9fafb; }
-        .perm-item input[type=checkbox] { accent-color: #2563eb; width: 15px; height: 15px; }
-        .perm-item.locked { opacity: .45; cursor: not-allowed; }
-        .perm-reset-link {
-            font-size: .8rem;
-            color: #6b7280;
-            cursor: pointer;
-            text-decoration: underline;
-            display: inline-block;
-            margin-top: .5rem;
-        }
-        .perm-reset-link:hover { color: #374151; }
-    </style>
 </head>
 <body>
     <div class="container">
-        <div class="whatsapp-config">
+        <div class="whatsapp-config" id="whatsapp-config-page">
             <div class="config-header">
-                <h1>📱 WhatsApp Bot - Números dos Lavadores</h1>
+                <h1>🤖 Configurações do WhatsApp</h1>
+                <p>Conecte o bot, gerencie quem tem acesso e o que ele faz automaticamente.</p>
             </div>
 
-            <!-- Configuração de bloqueio -->
-            <div class="config-card">
-                <div class="config-item">
-                    <div class="config-text">
-                        <h3>Bloquear Números Desconhecidos</h3>
-                        <p>Se ativado, o bot não responderá a mensagens de números não cadastrados e enviará uma mensagem de acesso negado. Se desativado, o bot ignorará completamente essas mensagens.</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="blockUnknownToggle" onchange="updateBlockUnknown()">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- ===== Notificações Proativas ===== -->
-            <div class="config-card">
-                <div class="config-item">
-                    <div class="config-text">
-                        <h3>Notificações Proativas do Bot</h3>
-                        <p>Defina quais eventos o bot deve notificar automaticamente via WhatsApp — novas ordens, resumo diário, alertas de caixa e mais.</p>
-                    </div>
-                    <button class="btn-notif-open" onclick="openNotifModal()">
-                        🔔 Configurar eventos
-                    </button>
-                </div>
+            <div class="wa-tabs">
+                <button class="tab-button active" data-tab="conexao" onclick="showWaTab('conexao')">🔌 Conexão</button>
+                <button class="tab-button" data-tab="usuarios" onclick="showWaTab('usuarios')">👥 Usuários &amp; Acesso</button>
+                <button class="tab-button" data-tab="notificacoes" onclick="showWaTab('notificacoes')">🔔 Notificações &amp; Capacidades</button>
+                <button class="tab-button" data-tab="pagamentos" onclick="showWaTab('pagamentos')">💳 Pagamentos</button>
+                <button class="tab-button" data-tab="email" onclick="showWaTab('email')">📧 Automação de Email</button>
             </div>
 
             <div id="alert" class="alert" style="display: none;"></div>
 
-            <!-- ===== WhatsApp da Empresa ===== -->
-            <div class="admin-section" id="empresaWaSection" style="margin-top:2rem;">
-                <div class="section-header">
-                    <h2>📱 WhatsApp da Empresa</h2>
-                    <span id="empresaWaStatusBadge" class="status-badge" style="background:#f5f5f5;color:#999;">Verificando...</span>
-                </div>
-                <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">
-                    Conecte o WhatsApp da sua empresa para enviar avisos diretamente aos clientes quando uma ordem estiver pronta.
-                    As mensagens saem do <strong>número da sua empresa</strong> — não do bot Lina.
-                </p>
+            <!-- ===================== ABA: CONEXÃO ===================== -->
+            <div class="tab-panel active" data-tab-panel="conexao">
 
-                <!-- Status conectado -->
-                <div id="empresaWaConnected" style="display:none;">
-                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
-                        <span style="font-size:1.5rem;">✅</span>
-                        <div>
-                            <div style="font-weight:700;color:#065f46;">Conectado</div>
-                            <div id="empresaWaPhone" style="font-family:monospace;color:#047857;font-size:0.9rem;"></div>
+                <!-- ===== Status do Bot Lina ===== -->
+                <div class="admin-section" id="botStatusSection">
+                    <div class="section-header">
+                        <h2>🤖 Bot Lina</h2>
+                        <span id="botStatusBadge" class="status-badge" style="background:#f5f5f5;color:#999;">Verificando...</span>
+                    </div>
+                    <div id="botDisconnectedMsg" style="display:none;color:#666;font-size:0.9rem;padding:0.5rem 0;">
+                        ⚠️ O Bot Lina não está conectado. Contate o administrador Lina para conectar o bot.
+                    </div>
+                    <div id="botConnectedInfo" style="display:none;">
+                        <p style="color:#666;font-size:0.9rem;margin:0 0 1rem 0;">
+                            Para adicionar um admin via código, escaneie o QR abaixo ou clique no link para abrir a conversa com o Bot Lina no WhatsApp, depois envie o código de 4 dígitos gerado.
+                        </p>
+                        <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
+                            <canvas id="botQrCanvas" style="border-radius:8px;border:1px solid #e0e0e0;"></canvas>
+                            <div>
+                                <p id="botPhoneDisplay" style="font-size:1rem;font-weight:600;color:#333;margin:0 0 0.4rem 0;font-family:monospace;"></p>
+                                <p style="font-size:0.85rem;color:#666;margin:0;line-height:1.5;">
+                                    Escaneie para abrir o chat com o Bot Lina.<br>
+                                    Depois envie o código de 4 dígitos gerado abaixo.
+                                </p>
+                                <a id="botWaMeLink" href="#" target="_blank"
+                                   style="display:inline-block;margin-top:0.75rem;padding:0.5rem 1.2rem;background:#25d366;color:white;border-radius:6px;text-decoration:none;font-size:0.9rem;font-weight:600;">
+                                    📱 Abrir no WhatsApp
+                                </a>
+                            </div>
                         </div>
-                        <button onclick="desconectarEmpresaWa()" style="margin-left:auto;padding:0.5rem 1rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.85rem;">
-                            Desconectar
+                    </div>
+                </div>
+
+                <!-- ===== WhatsApp da Empresa ===== -->
+                <div class="admin-section" id="empresaWaSection">
+                    <div class="section-header">
+                        <h2>📱 WhatsApp da Empresa</h2>
+                        <span id="empresaWaStatusBadge" class="status-badge" style="background:#f5f5f5;color:#999;">Verificando...</span>
+                    </div>
+                    <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">
+                        Conecte o WhatsApp da sua empresa para enviar avisos diretamente aos clientes quando uma ordem estiver pronta.
+                        As mensagens saem do <strong>número da sua empresa</strong> — não do bot Lina.
+                    </p>
+
+                    <!-- Status conectado -->
+                    <div id="empresaWaConnected" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;padding:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                            <span style="font-size:1.5rem;">✅</span>
+                            <div>
+                                <div style="font-weight:700;color:#065f46;">Conectado</div>
+                                <div id="empresaWaPhone" style="font-family:monospace;color:#047857;font-size:0.9rem;"></div>
+                            </div>
+                            <button onclick="desconectarEmpresaWa()" style="margin-left:auto;padding:0.5rem 1rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                                Desconectar
+                            </button>
+                        </div>
+
+                        <button type="button" class="btn-advanced-toggle" onclick="toggleEmpresaWaAdvanced()">
+                            🔧 <span id="empresaWaAdvancedLabel">Modo avançado</span>
+                        </button>
+                        <div id="empresaWaAdvancedWrap" style="display:none;">
+                            <div class="debug-box">
+                                <div style="font-size:0.8rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">🧪 Enviar mensagem teste</div>
+                                <div style="display:flex;gap:0.5rem;align-items:center;">
+                                    <input id="debugWaPhone" type="text" placeholder="Número (ex: 11999990000)" style="flex:1;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
+                                    <input id="debugWaText" type="text" placeholder="Mensagem" value="Teste do WhatsApp da empresa 🚗" style="flex:2;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
+                                    <button onclick="debugEnviarMensagemEmpresa()" style="padding:0.5rem 1rem;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;">Enviar</button>
+                                </div>
+                                <div id="debugWaResult" style="margin-top:0.5rem;font-size:0.82rem;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status desconectado -->
+                    <div id="empresaWaDisconnected">
+                        <button onclick="conectarEmpresaWa()" id="btnConectarEmpresaWa" class="btn-primary" style="margin-bottom:1.5rem;">
+                            📱 Conectar WhatsApp da Empresa
                         </button>
                     </div>
-                    <!-- DEBUG -->
-                    <div style="padding:1rem;background:#fefce8;border:1px dashed #fbbf24;border-radius:8px;margin-bottom:1rem;">
-                        <div style="font-size:0.8rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">🧪 DEBUG — Enviar mensagem teste</div>
-                        <div style="display:flex;gap:0.5rem;align-items:center;">
-                            <input id="debugWaPhone" type="text" placeholder="Número (ex: 11999990000)" style="flex:1;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
-                            <input id="debugWaText" type="text" placeholder="Mensagem" value="Teste do WhatsApp da empresa 🚗" style="flex:2;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
-                            <button onclick="debugEnviarMensagemEmpresa()" style="padding:0.5rem 1rem;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;">Enviar</button>
+
+                    <!-- Templates -->
+                    <div id="empresaWaTemplates" style="display:none;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-top:1rem;border-top:1px solid #e0e0e0;">
+                            <h3 style="margin:0;font-size:1rem;">Modelos de Mensagem</h3>
+                            <button onclick="abrirModalNovoTemplate()" class="btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;">+ Novo</button>
                         </div>
-                        <div id="debugWaResult" style="margin-top:0.5rem;font-size:0.82rem;"></div>
-                    </div>
-                </div>
-
-                <!-- Status desconectado -->
-                <div id="empresaWaDisconnected">
-                    <button onclick="conectarEmpresaWa()" id="btnConectarEmpresaWa" class="btn-primary" style="margin-bottom:1.5rem;">
-                        📱 Conectar WhatsApp da Empresa
-                    </button>
-                </div>
-
-                <!-- Templates -->
-                <div id="empresaWaTemplates" style="display:none;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-top:1rem;border-top:1px solid #e0e0e0;">
-                        <h3 style="margin:0;font-size:1rem;">Modelos de Mensagem</h3>
-                        <button onclick="abrirModalNovoTemplate()" class="btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;">+ Novo</button>
-                    </div>
-                    <div id="templatesListWa" style="display:grid;gap:0.75rem;"></div>
-                </div>
-            </div>
-
-            <!-- Modal QR Empresa WA -->
-            <div id="modalEmpresaWaQr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-                <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-                    <h3 style="margin:0 0 0.5rem 0;">Conectar WhatsApp da Empresa</h3>
-                    <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Escaneie com o celular da empresa (o número que será usado para avisar clientes)</p>
-                    <div id="empresaWaQrContainer" style="margin-bottom:1.5rem;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
-                            <div class="spinner"></div> Gerando QR Code...
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:0.75rem;justify-content:center;">
-                        <button onclick="verificarConexaoEmpresaWa()" style="padding:0.6rem 1.2rem;background:#25d366;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Já escaneei</button>
-                        <button onclick="fecharModalEmpresaWaQr()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                        <div id="templatesListWa" style="display:grid;gap:0.75rem;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Modal Template -->
-            <div id="modalTemplate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-                <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-                    <h3 id="modalTemplateTitle" style="margin:0 0 1.5rem 0;">Novo Modelo</h3>
-                    <input type="hidden" id="templateEditId">
-                    <div class="form-group-phone">
-                        <label>Nome do modelo</label>
-                        <input type="text" id="templateNome" placeholder="Ex: Veículo pronto" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                    </div>
-                    <div class="form-group-phone">
-                        <label>Categoria</label>
-                        <select id="templateCategoria" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                            <option value="FINALIZACAO">Finalização de ordem</option>
-                            <option value="POS_VENDA">Pós-venda</option>
-                            <option value="PRE_VENDA">Pré-venda / Reativação</option>
-                            <option value="CUSTOM">Personalizado</option>
-                        </select>
-                    </div>
-                    <div class="form-group-phone">
-                        <label>Mensagem</label>
-                        <textarea id="templateTexto" rows="4" placeholder="Ex: Olá {{nome}}! Seu veículo {{placa}} está pronto. 🚗✨"
-                                  style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
-                        <div class="helper-text">Variáveis disponíveis: {{nome}}, {{placa}}, {{valor}}, {{dias}}, {{empresa}}</div>
-                    </div>
-                    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
-                        <button onclick="fecharModalTemplate()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
-                        <button onclick="salvarTemplate()" class="btn-primary">Salvar</button>
-                    </div>
-                </div>
-            </div>
+            <!-- ===================== ABA: USUÁRIOS & ACESSO ===================== -->
+            <div class="tab-panel" data-tab-panel="usuarios">
 
-            <!-- Modal Regra de Email -->
-            <div id="modalRegraEmail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-                <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-                    <h3 id="modalRegraEmailTitle" style="margin:0 0 1.5rem 0;">Nova Regra</h3>
-                    <input type="hidden" id="regraEmailId">
-                    <div class="form-group-phone">
-                        <label>Nome da regra</label>
-                        <input type="text" id="regraNome" placeholder="Ex: Código Localiza NFe" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                <!-- Seção de Admins -->
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h2>👨‍💼 Números de Admin</h2>
+                        <button class="btn-primary" onclick="openAddAdminModal()">+ Adicionar Admin</button>
                     </div>
-                    <div class="form-group-phone">
-                        <label>Remetente contém</label>
-                        <input type="text" id="regraRemetente" placeholder="Ex: localiza" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                        <div class="helper-text">Parte do email/nome do remetente. Ex: "localiza" pega qualquer remetente com localiza.</div>
-                    </div>
-                    <div class="form-group-phone">
-                        <label>Assunto contém (opcional)</label>
-                        <input type="text" id="regraAssunto" placeholder="Ex: Código de validação" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                    </div>
-                    <div class="form-group-phone">
-                        <label>Regex de extração</label>
-                        <input type="text" id="regraRegex" placeholder="Ex: \d{6}" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;font-family:monospace;">
-                        <div class="helper-text">O que capturar do corpo. <code>\d{6}</code> = 6 dígitos. O valor capturado vira {{valor}}.</div>
-                    </div>
-                    <div class="form-group-phone">
-                        <label>Mensagem</label>
-                        <textarea id="regraTemplate" rows="3" placeholder="Ex: 🔑 Código Localiza: {{valor}} (expira em 10min)"
-                                  style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
-                        <div class="helper-text">Use {{valor}} onde o valor capturado deve aparecer.</div>
-                    </div>
-                    <div class="form-group-phone">
-                        <label>Destino</label>
-                        <select id="regraDestinoTipo" onchange="onRegraDestinoTipoChange()" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                            <option value="NUMEROS">Números de WhatsApp</option>
-                            <option value="GRUPO">Grupo de WhatsApp</option>
-                        </select>
-                    </div>
-                    <div class="form-group-phone" id="regraDestinoNumerosWrap">
-                        <label>Contatos salvos</label>
-                        <div id="regraContatosSalvos" style="max-height:190px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:0.4rem 0.5rem;margin-bottom:0.6rem;"></div>
-                        <label>Outros números (separados por vírgula)</label>
-                        <input type="text" id="regraDestinoNumeros" placeholder="Ex: 5599999998888, 5599999997777" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                        <div class="helper-text">Marque os contatos salvos e/ou digite números avulsos. Tudo é combinado no envio.</div>
-                    </div>
-                    <div class="form-group-phone" id="regraDestinoGrupoWrap" style="display:none;">
-                        <label>Grupo</label>
-                        <div style="display:flex;gap:0.5rem;">
-                            <select id="regraDestinoGrupo" style="flex:1;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                                <option value="">— selecione —</option>
-                            </select>
-                            <button type="button" onclick="listarGruposBot()" class="btn-primary" style="white-space:nowrap;">Listar grupos</button>
-                        </div>
-                        <div class="helper-text">O bot precisa estar no grupo. Clique em "Listar grupos" para carregar.</div>
-                    </div>
-                    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
-                        <button onclick="fecharModalRegraEmail()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
-                        <button onclick="salvarRegraEmail()" class="btn-primary">Salvar</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== Integração PIX ===== -->
-            <div class="admin-section" style="margin-top:2rem;">
-                <div class="section-header">
-                    <h2>💳 Integração PIX</h2>
-                </div>
-                <p style="color:#666;margin-bottom:1.5rem;">
-                    Cadastre sua chave PIX para que os funcionários possam gerar QR Codes de pagamento diretamente pelo WhatsApp.<br>
-                    O cliente escaneia o QR Code e paga. Sem intermediários, sem taxas.
-                </p>
-
-                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="pixAtivoToggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span style="font-weight:600;">Ativar PIX pelo WhatsApp</span>
+                    <div id="adminPhones" class="admin-list"></div>
                 </div>
 
-                <div id="pixConfigFields">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-                        <div class="form-group-phone">
-                            <label for="pixChave">Chave PIX</label>
-                            <input type="text" id="pixChave" placeholder="Ex: 11999999999 ou seu@email.com">
-                        </div>
-                        <div class="form-group-phone">
-                            <label for="pixTipo">Tipo da Chave</label>
-                            <select id="pixTipo" style="width:100%;padding:0.6rem 0.8rem;border:1px solid #ddd;border-radius:6px;font-size:0.95rem;">
-                                <option value="ALEATORIA">Chave Aleatória (EVP)</option>
-                                <option value="CPF">CPF</option>
-                                <option value="CNPJ">CNPJ</option>
-                                <option value="EMAIL">E-mail</option>
-                                <option value="TELEFONE">Telefone</option>
-                            </select>
-                        </div>
+                <!-- Seção de Usuários do Bot -->
+                <div class="bot-users-section">
+                    <div class="bot-users-toolbar">
+                        <h2>👤 Usuários do Bot</h2>
                     </div>
-
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-                        <div class="form-group-phone">
-                            <label for="pixNomeRecebedor">Nome do Recebedor (máx. 25 chars)</label>
-                            <input type="text" id="pixNomeRecebedor" placeholder="Ex: Lava Jato Silva" maxlength="25">
-                        </div>
-                        <div class="form-group-phone">
-                            <label for="pixExpiracao">Validade do QR Code (minutos)</label>
-                            <input type="number" id="pixExpiracao" min="1" max="1440" value="30" placeholder="30">
-                        </div>
-                    </div>
-
-                    <button class="btn-primary" onclick="salvarPixConfig()" id="btnSalvarPix">
-                        Salvar Configuração PIX
-                    </button>
-                </div>
-            </div>
-
-            <!-- ===== Status do Bot Lina ===== -->
-            <div class="admin-section" id="botStatusSection">
-                <div class="section-header">
-                    <h2>🤖 Bot Lina</h2>
-                    <span id="botStatusBadge" class="status-badge" style="background:#f5f5f5;color:#999;">Verificando...</span>
-                </div>
-                <div id="botDisconnectedMsg" style="display:none;color:#666;font-size:0.9rem;padding:0.5rem 0;">
-                    ⚠️ O Bot Lina não está conectado. Contate o administrador Lina para conectar o bot.
-                </div>
-                <div id="botConnectedInfo" style="display:none;">
-                    <p style="color:#666;font-size:0.9rem;margin:0 0 1rem 0;">
-                        Para adicionar um admin via código, escaneie o QR abaixo ou clique no link para abrir a conversa com o Bot Lina no WhatsApp, depois envie o código de 4 dígitos gerado.
+                    <p style="font-size:.85rem;color:#6b7280;margin:0 0 .75rem;">
+                        Lavadores ativos e funcionários cadastrados que podem se conectar à Lina pelo WhatsApp. Gere um PIN para conectar ou desvincule quem já está conectado.
                     </p>
-                    <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
-                        <canvas id="botQrCanvas" style="border-radius:8px;border:1px solid #e0e0e0;"></canvas>
-                        <div>
-                            <p id="botPhoneDisplay" style="font-size:1rem;font-weight:600;color:#333;margin:0 0 0.4rem 0;font-family:monospace;"></p>
-                            <p style="font-size:0.85rem;color:#666;margin:0;line-height:1.5;">
-                                Escaneie para abrir o chat com o Bot Lina.<br>
-                                Depois envie o código de 4 dígitos gerado abaixo.
-                            </p>
-                            <a id="botWaMeLink" href="#" target="_blank"
-                               style="display:inline-block;margin-top:0.75rem;padding:0.5rem 1.2rem;background:#25d366;color:white;border-radius:6px;text-decoration:none;font-size:0.9rem;font-weight:600;">
-                                📱 Abrir no WhatsApp
-                            </a>
+                    <div id="botUsersWrap" class="bot-users-wrap">
+                        <div id="botUsersLoading" class="loading" style="display:none;"><div class="spinner"></div> Carregando...</div>
+                        <table class="bot-users-table" id="botUsersTable">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="botUsersTbody"></tbody>
+                        </table>
+                        <div id="botUsersEmpty" class="empty-state" style="display:none;">Nenhum lavador ativo ou funcionário cadastrado.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== ABA: NOTIFICAÇÕES & CAPACIDADES ===================== -->
+            <div class="tab-panel" data-tab-panel="notificacoes">
+                <!-- ===== Notificações Proativas ===== -->
+                <div class="config-card">
+                    <div class="config-item action-card">
+                        <div class="config-text">
+                            <h3>Notificações Proativas do Bot</h3>
+                            <p>Defina quais eventos o bot deve notificar automaticamente via WhatsApp — novas ordens, resumo diário, alertas de caixa e mais.</p>
                         </div>
+                        <button class="btn-notif-open" onclick="openNotifModal()">
+                            🔔 Configurar eventos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ===== Capacidades do Bot ===== -->
+                <div class="config-card">
+                    <div class="config-item action-card">
+                        <div class="config-text">
+                            <h3>Capacidades do Bot</h3>
+                            <p>Escolha o que lavadores e cada cargo de funcionário podem fazer e receber pelo WhatsApp.</p>
+                        </div>
+                        <button class="btn-notif-open" onclick="openRolesModal()">
+                            ⚙️ Configurar capacidades
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Seção de Admins -->
-            <div class="admin-section">
-                <div class="section-header">
-                    <h2>👨‍💼 Números de Admin</h2>
-                    <button class="btn-primary" onclick="openAddAdminModal()">+ Adicionar Admin</button>
-                </div>
-                <div id="adminPhones" class="admin-list"></div>
-            </div>
+            <!-- ===================== ABA: PAGAMENTOS ===================== -->
+            <div class="tab-panel" data-tab-panel="pagamentos">
+                <!-- ===== Integração PIX ===== -->
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h2>💳 Integração PIX</h2>
+                    </div>
+                    <p style="color:#666;margin-bottom:1.5rem;">
+                        Cadastre sua chave PIX para que os funcionários possam gerar QR Codes de pagamento diretamente pelo WhatsApp.<br>
+                        O cliente escaneia o QR Code e paga. Sem intermediários, sem taxas.
+                    </p>
 
-            <!-- Seção de Regras de Leitura de Email -->
-            <div class="admin-section">
-                <div class="section-header">
-                    <h2>📧 Regras de Leitura de Email</h2>
-                    <button class="btn-primary" onclick="abrirModalRegraEmail()">+ Nova Regra</button>
-                </div>
-                <p style="font-size:.85rem;color:#6b7280;margin:0 0 .75rem;">
-                    A Lina lê um email dedicado e, quando chega uma mensagem que casa com a regra, extrai um valor (ex: código de validação) e envia no WhatsApp — num grupo ou para números de admin.
-                </p>
-                <div id="regrasEmailList" class="admin-list"></div>
-            </div>
+                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="pixAtivoToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span style="font-weight:600;">Ativar PIX pelo WhatsApp</span>
+                    </div>
 
-            <!-- Seção de Usuários do Bot -->
-            <div class="bot-users-section">
-                <div class="bot-users-toolbar">
-                    <h2>👤 Usuários do Bot</h2>
-                    <div class="toolbar-actions">
-                        <button class="btn-notif-open" onclick="openRolesModal()">⚙️ Capacidades do bot</button>
+                    <div id="pixConfigFields">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                            <div class="form-group-phone">
+                                <label for="pixChave">Chave PIX</label>
+                                <input type="text" id="pixChave" placeholder="Ex: 11999999999 ou seu@email.com">
+                            </div>
+                            <div class="form-group-phone">
+                                <label for="pixTipo">Tipo da Chave</label>
+                                <select id="pixTipo" style="width:100%;padding:0.6rem 0.8rem;border:1px solid #ddd;border-radius:6px;font-size:0.95rem;">
+                                    <option value="ALEATORIA">Chave Aleatória (EVP)</option>
+                                    <option value="CPF">CPF</option>
+                                    <option value="CNPJ">CNPJ</option>
+                                    <option value="EMAIL">E-mail</option>
+                                    <option value="TELEFONE">Telefone</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+                            <div class="form-group-phone">
+                                <label for="pixNomeRecebedor">Nome do Recebedor (máx. 25 chars)</label>
+                                <input type="text" id="pixNomeRecebedor" placeholder="Ex: Lava Jato Silva" maxlength="25">
+                            </div>
+                            <div class="form-group-phone">
+                                <label for="pixExpiracao">Validade do QR Code (minutos)</label>
+                                <input type="number" id="pixExpiracao" min="1" max="1440" value="30" placeholder="30">
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" onclick="salvarPixConfig()" id="btnSalvarPix">
+                            Salvar Configuração PIX
+                        </button>
                     </div>
                 </div>
-                <p style="font-size:.85rem;color:#6b7280;margin:0 0 .75rem;">
-                    Lavadores ativos e funcionários cadastrados que podem se conectar à Lina pelo WhatsApp. Gere um PIN para conectar ou desvincule quem já está conectado.
-                </p>
-                <div id="botUsersWrap" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-                    <div id="botUsersLoading" class="loading" style="display:none;"><div class="spinner"></div> Carregando...</div>
-                    <table class="bot-users-table" id="botUsersTable">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Tipo</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="botUsersTbody"></tbody>
-                    </table>
-                    <div id="botUsersEmpty" class="empty-state" style="display:none;">Nenhum lavador ativo ou funcionário cadastrado.</div>
+            </div>
+
+            <!-- ===================== ABA: AUTOMAÇÃO DE EMAIL ===================== -->
+            <div class="tab-panel" data-tab-panel="email">
+                <div class="config-card">
+                    <div class="config-item action-card">
+                        <div class="config-text">
+                            <h3>Automatizar via email</h3>
+                            <p>A Lina lê um email dedicado e, quando chega uma mensagem que casa com a regra, extrai um valor (ex: código de validação) e envia no WhatsApp — num grupo ou para números de admin.</p>
+                        </div>
+                        <button class="btn-primary" onclick="abrirModalRegraEmail()">+ Nova Regra</button>
+                    </div>
                 </div>
+
+                <!-- Seção de Regras de Leitura de Email -->
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h2>📧 Regras Cadastradas</h2>
+                    </div>
+                    <div id="regrasEmailList" class="admin-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal QR Empresa WA -->
+    <div id="modalEmpresaWaQr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+            <h3 style="margin:0 0 0.5rem 0;">Conectar WhatsApp da Empresa</h3>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Escaneie com o celular da empresa (o número que será usado para avisar clientes)</p>
+            <div id="empresaWaQrContainer" style="margin-bottom:1.5rem;">
+                <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
+                    <div class="spinner"></div> Gerando QR Code...
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:center;">
+                <button onclick="verificarConexaoEmpresaWa()" style="padding:0.6rem 1.2rem;background:#25d366;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Já escaneei</button>
+                <button onclick="fecharModalEmpresaWaQr()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Template -->
+    <div id="modalTemplate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+            <h3 id="modalTemplateTitle" style="margin:0 0 1.5rem 0;">Novo Modelo</h3>
+            <input type="hidden" id="templateEditId">
+            <div class="form-group-phone">
+                <label>Nome do modelo</label>
+                <input type="text" id="templateNome" placeholder="Ex: Veículo pronto" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div class="form-group-phone">
+                <label>Categoria</label>
+                <select id="templateCategoria" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                    <option value="FINALIZACAO">Finalização de ordem</option>
+                    <option value="POS_VENDA">Pós-venda</option>
+                    <option value="PRE_VENDA">Pré-venda / Reativação</option>
+                    <option value="CUSTOM">Personalizado</option>
+                </select>
+            </div>
+            <div class="form-group-phone">
+                <label>Mensagem</label>
+                <textarea id="templateTexto" rows="4" placeholder="Ex: Olá {{nome}}! Seu veículo {{placa}} está pronto. 🚗✨"
+                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
+                <div class="helper-text">Variáveis disponíveis: {{nome}}, {{placa}}, {{valor}}, {{dias}}, {{empresa}}</div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
+                <button onclick="fecharModalTemplate()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                <button onclick="salvarTemplate()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Regra de Email -->
+    <div id="modalRegraEmail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+            <h3 id="modalRegraEmailTitle" style="margin:0 0 1.5rem 0;">Nova Regra</h3>
+            <input type="hidden" id="regraEmailId">
+            <div class="form-group-phone">
+                <label>Nome da regra</label>
+                <input type="text" id="regraNome" placeholder="Ex: Código Localiza NFe" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div class="form-group-phone">
+                <label>Remetente contém</label>
+                <input type="text" id="regraRemetente" placeholder="Ex: localiza" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                <div class="helper-text">Parte do email/nome do remetente. Ex: "localiza" pega qualquer remetente com localiza.</div>
+            </div>
+            <div class="form-group-phone">
+                <label>Assunto contém (opcional)</label>
+                <input type="text" id="regraAssunto" placeholder="Ex: Código de validação" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div class="form-group-phone">
+                <label>Regex de extração</label>
+                <input type="text" id="regraRegex" placeholder="Ex: \d{6}" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;font-family:monospace;">
+                <div class="helper-text">O que capturar do corpo. <code>\d{6}</code> = 6 dígitos. O valor capturado vira {{valor}}.</div>
+            </div>
+            <div class="form-group-phone">
+                <label>Mensagem</label>
+                <textarea id="regraTemplate" rows="3" placeholder="Ex: 🔑 Código Localiza: {{valor}} (expira em 10min)"
+                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
+                <div class="helper-text">Use {{valor}} onde o valor capturado deve aparecer.</div>
+            </div>
+            <div class="form-group-phone">
+                <label>Destino</label>
+                <select id="regraDestinoTipo" onchange="onRegraDestinoTipoChange()" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                    <option value="NUMEROS">Números de WhatsApp</option>
+                    <option value="GRUPO">Grupo de WhatsApp</option>
+                </select>
+            </div>
+            <div class="form-group-phone" id="regraDestinoNumerosWrap">
+                <label>Contatos salvos</label>
+                <div id="regraContatosSalvos" style="max-height:190px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:0.4rem 0.5rem;margin-bottom:0.6rem;"></div>
+                <label>Outros números (separados por vírgula)</label>
+                <input type="text" id="regraDestinoNumeros" placeholder="Ex: 5599999998888, 5599999997777" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                <div class="helper-text">Marque os contatos salvos e/ou digite números avulsos. Tudo é combinado no envio.</div>
+            </div>
+            <div class="form-group-phone" id="regraDestinoGrupoWrap" style="display:none;">
+                <label>Grupo</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <select id="regraDestinoGrupo" style="flex:1;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                        <option value="">— selecione —</option>
+                    </select>
+                    <button type="button" onclick="listarGruposBot()" class="btn-primary" style="white-space:nowrap;">Listar grupos</button>
+                </div>
+                <div class="helper-text">O bot precisa estar no grupo. Clique em "Listar grupos" para carregar.</div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
+                <button onclick="fecharModalRegraEmail()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                <button onclick="salvarRegraEmail()" class="btn-primary">Salvar</button>
             </div>
         </div>
     </div>
@@ -1539,14 +670,18 @@
                 <button class="close-modal" onclick="closeRolesModal()">&times;</button>
             </div>
             <div class="modal-roles-body">
-                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1rem;">O que cada tipo de usuário pode fazer pelo WhatsApp: marque ou desmarque os comandos liberados e as notificações automáticas recebidas.</p>
+                <p style="font-size:.85rem;color:#6b7280;margin:0 0 1rem;">O que cada tipo de usuário pode fazer pelo WhatsApp: marque ou desmarque os comandos liberados e as notificações automáticas recebidas. Isso controla apenas os comandos abaixo — os demais comandos do bot (veja o aviso mais abaixo) funcionam para qualquer pessoa conectada, independente do que estiver marcado aqui.</p>
 
                 <div class="perm-section-label" style="margin-top:0;">👷 Lavadores</div>
-                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Marque ou desmarque o que os lavadores com WhatsApp vinculado podem consultar pelo bot. <strong>Reportar avaria</strong> e <strong>meu portal (link)</strong> estão sempre disponíveis.</p>
+                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Marque ou desmarque o que os lavadores com WhatsApp vinculado podem consultar pelo bot. <strong>Reportar avaria</strong> e <strong>meu portal (link)</strong> estão sempre disponíveis — não aparecem aqui porque não podem ser desativados.</p>
                 <div id="lavadorPermContent" class="perm-grid"></div>
 
+                <div class="perm-info-box">
+                    ℹ️ <strong>Comandos sem controle de permissão hoje:</strong> PIX (gerar e reenviar cobrança), vales de comissão, fechamento de caixa, relatórios por período/semanais e reportar/consultar avarias funcionam para <strong>qualquer pessoa conectada ao bot</strong>, independente do que está marcado aqui. As opções desta tela controlam apenas Financeiro, Ordens, Clientes e Equipe.
+                </div>
+
                 <div class="perm-section-label">🧑‍💼 Funcionários (por Cargo)</div>
-                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .75rem;">Selecione um cargo e marque o que esses funcionários podem fazer pelo bot e quais notificações automáticas recebem. Isso é independente das permissões do painel (Funcionários → Cargos).</p>
+                <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .75rem;">Selecione um cargo e marque o que esses funcionários podem fazer pelo bot e quais notificações automáticas recebem. Isso é independente das permissões do painel (Funcionários → Cargos) — pode liberar um comando pelo bot mesmo que o cargo não tenha a permissão equivalente no sistema, e vice-versa.</p>
                 <select id="cargoSelect" class="cargo-select" onchange="onCargoChange(this.value)"></select>
                 <div id="rolePermContent"></div>
             </div>
@@ -1906,41 +1041,30 @@
 
         // Inicializar
         async function init() {
+            showWaTab('conexao');
             await loadBotStatus();
             await loadAdminPhones();
             await loadBotUsers();
-            await loadConfig();
             await loadPixConfig();
             carregarStatusEmpresaWa();
             carregarRegrasEmail();
         }
 
-        // Carregar configuração
-        async function loadConfig() {
-            try {
-                const response = await window.api.whatsappConfig.get();
-                const blockUnknown = response.data.blockUnknown;
-                document.getElementById('blockUnknownToggle').checked = blockUnknown;
-            } catch (error) {
-                console.error('Erro ao carregar config:', error);
-            }
+        // ── Abas ──────────────────────────────────────────────────────────────
+        function showWaTab(tabName) {
+            document.querySelectorAll('#whatsapp-config-page .tab-button')
+                .forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+            document.querySelectorAll('#whatsapp-config-page .tab-panel')
+                .forEach(panel => panel.classList.toggle('active', panel.dataset.tabPanel === tabName));
         }
 
-        // Atualizar configuração
-        async function updateBlockUnknown() {
-            const blockUnknown = document.getElementById('blockUnknownToggle').checked;
-            try {
-                await window.api.whatsappConfig.update(blockUnknown);
-                showAlert(
-                    blockUnknown
-                        ? 'Bot agora bloqueará números desconhecidos'
-                        : 'Bot agora ignorará números desconhecidos',
-                    'success'
-                );
-            } catch (error) {
-                showAlert('Erro ao atualizar configuração', 'error');
-                console.error(error);
-            }
+        // ── Modo avançado (WhatsApp da Empresa) ──────────────────────────────────
+        function toggleEmpresaWaAdvanced() {
+            const wrap = document.getElementById('empresaWaAdvancedWrap');
+            const label = document.getElementById('empresaWaAdvancedLabel');
+            const isOpen = wrap.style.display !== 'none';
+            wrap.style.display = isOpen ? 'none' : 'block';
+            label.textContent = isOpen ? 'Modo avançado' : 'Ocultar modo avançado';
         }
 
         // Carregar lista de lavadores
@@ -2670,21 +1794,18 @@
                 }
                 const catLabel = { FINALIZACAO:'Finalização', POS_VENDA:'Pós-venda', PRE_VENDA:'Pré-venda', CUSTOM:'Personalizado' };
                 list.innerHTML = data.templates.map(t => `
-                    <div style="border:1px solid #e0e0e0;border-radius:8px;padding:1rem;background:${t.ativo?'#fff':'#f9f9f9'};">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-                            <div style="flex:1;">
-                                <div style="font-weight:700;margin-bottom:0.25rem;">${escHtml(t.nome)}</div>
-                                <div style="font-size:0.75rem;color:#999;margin-bottom:0.5rem;">${catLabel[t.categoria]||t.categoria}</div>
-                                <div style="font-size:0.9rem;color:#555;line-height:1.5;">${escHtml(t.texto)}</div>
-                            </div>
-                            <div style="display:flex;gap:0.5rem;flex-shrink:0;">
-                                <button onclick="editarTemplate('${t.id}')" title="Editar" style="padding:0.3rem 0.6rem;border:1px solid #e0e0e0;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;">✏️</button>
-                                <button onclick="toggleTemplate('${t.id}',${!t.ativo})" title="${t.ativo?'Desativar':'Ativar'}"
-                                        style="padding:0.3rem 0.6rem;border:1px solid #e0e0e0;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;">
-                                    ${t.ativo?'⏸':'▶'}
-                                </button>
-                                <button onclick="excluirTemplate('${t.id}')" title="Excluir" style="padding:0.3rem 0.6rem;border:1px solid #fecaca;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;color:#dc2626;">🗑</button>
-                            </div>
+                    <div class="admin-card" style="align-items:flex-start;opacity:${t.ativo?'1':'.6'};">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;margin-bottom:0.25rem;">${escHtml(t.nome)}</div>
+                            <div style="font-size:0.75rem;color:#999;margin-bottom:0.5rem;">${catLabel[t.categoria]||t.categoria}</div>
+                            <div style="font-size:0.9rem;color:#555;line-height:1.5;">${escHtml(t.texto)}</div>
+                        </div>
+                        <div class="admin-actions">
+                            <button class="btn-icon" onclick="editarTemplate('${t.id}')" title="Editar">✏️</button>
+                            <button class="btn-icon" onclick="toggleTemplate('${t.id}',${!t.ativo})" title="${t.ativo?'Desativar':'Ativar'}">
+                                ${t.ativo?'⏸':'▶'}
+                            </button>
+                            <button class="btn-icon btn-icon-danger" onclick="excluirTemplate('${t.id}')" title="Excluir" style="color:#dc2626;">🗑</button>
                         </div>
                     </div>
                 `).join('');
@@ -2770,19 +1891,16 @@
                         ? '👥 Grupo'
                         : '📱 ' + escHtml(r.destinoValor);
                     return `
-                    <div style="border:1px solid #e0e0e0;border-radius:8px;padding:1rem;background:${r.ativo?'#fff':'#f9f9f9'};margin-bottom:0.5rem;">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-                            <div style="flex:1;">
-                                <div style="font-weight:700;margin-bottom:0.25rem;">${escHtml(r.nome)}</div>
-                                <div style="font-size:0.75rem;color:#999;margin-bottom:0.35rem;">Remetente: ${escHtml(r.remetenteContem)}${r.assuntoContem?' · Assunto: '+escHtml(r.assuntoContem):''} · Destino: ${destino}</div>
-                                <div style="font-size:0.9rem;color:#555;line-height:1.4;">${escHtml(r.template)}</div>
-                            </div>
-                            <div style="display:flex;gap:0.5rem;flex-shrink:0;">
-                                <button onclick="editarRegraEmail('${r.id}')" title="Editar" style="padding:0.3rem 0.6rem;border:1px solid #e0e0e0;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;">✏️</button>
-                                <button onclick="toggleRegraEmail('${r.id}',${!r.ativo})" title="${r.ativo?'Desativar':'Ativar'}"
-                                        style="padding:0.3rem 0.6rem;border:1px solid #e0e0e0;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;">${r.ativo?'⏸':'▶'}</button>
-                                <button onclick="excluirRegraEmail('${r.id}')" title="Excluir" style="padding:0.3rem 0.6rem;border:1px solid #fecaca;border-radius:5px;background:none;cursor:pointer;font-size:0.8rem;color:#dc2626;">🗑</button>
-                            </div>
+                    <div class="admin-card" style="align-items:flex-start;opacity:${r.ativo?'1':'.6'};">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;margin-bottom:0.25rem;">${escHtml(r.nome)}</div>
+                            <div style="font-size:0.75rem;color:#999;margin-bottom:0.35rem;">Remetente: ${escHtml(r.remetenteContem)}${r.assuntoContem?' · Assunto: '+escHtml(r.assuntoContem):''} · Destino: ${destino}</div>
+                            <div style="font-size:0.9rem;color:#555;line-height:1.4;">${escHtml(r.template)}</div>
+                        </div>
+                        <div class="admin-actions">
+                            <button class="btn-icon" onclick="editarRegraEmail('${r.id}')" title="Editar">✏️</button>
+                            <button class="btn-icon" onclick="toggleRegraEmail('${r.id}',${!r.ativo})" title="${r.ativo?'Desativar':'Ativar'}">${r.ativo?'⏸':'▶'}</button>
+                            <button class="btn-icon btn-icon-danger" onclick="excluirRegraEmail('${r.id}')" title="Excluir" style="color:#dc2626;">🗑</button>
                         </div>
                     </div>`;
                 }).join('');

@@ -1,0 +1,784 @@
+/* ==========================================================================
+   Configurações WhatsApp — estilos dedicados desta página.
+   Escopado por #whatsapp-config-page para não vazar para outras páginas.
+   Reusa os tokens globais (--primary-color, --border-color, --background-light
+   de style.css) e replica a linguagem visual de configuracoes.css (cards
+   arredondados, gradientes suaves, toggle moderno) sem depender daquele
+   arquivo (evita colisão de seletores não escopados / especificidade de ID).
+   ========================================================================== */
+
+#whatsapp-config-page {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+/* ---------- Cabeçalho ---------- */
+#whatsapp-config-page .config-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#whatsapp-config-page .config-header h1 {
+    margin: 0 0 .3rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+#whatsapp-config-page .config-header p {
+    margin: 0;
+    color: var(--text-secondary, #6b7280);
+    font-size: .9rem;
+}
+
+/* ---------- Abas ---------- */
+#whatsapp-config-page .wa-tabs {
+    display: flex;
+    gap: .4rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    padding-bottom: .35rem;
+    border-bottom: 1px solid var(--border-color);
+    -webkit-overflow-scrolling: touch;
+}
+
+#whatsapp-config-page .tab-button {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    flex-shrink: 0;
+    padding: .65rem 1.1rem;
+    border: none;
+    background: transparent;
+    border-radius: 12px 12px 0 0;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+    transition: all .15s ease;
+    white-space: nowrap;
+}
+
+#whatsapp-config-page .tab-button:hover {
+    background: var(--background-light);
+    color: var(--text-primary, #111827);
+}
+
+#whatsapp-config-page .tab-button.active {
+    color: var(--primary-color);
+    background: var(--background-light);
+    box-shadow: inset 0 -3px 0 var(--primary-color);
+}
+
+#whatsapp-config-page .tab-panel { display: none; }
+#whatsapp-config-page .tab-panel.active { display: block; animation: waFadeIn .18s ease; }
+
+@keyframes waFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Cards / seções ---------- */
+#whatsapp-config-page .config-card,
+#whatsapp-config-page .admin-section {
+    background: linear-gradient(135deg, var(--background-light) 0%, rgba(243, 244, 246, 0.5) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 1.5rem;
+    transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+#whatsapp-config-page .config-card:hover,
+#whatsapp-config-page .admin-section:hover {
+    border-color: var(--primary-purple, #7f56d9);
+    box-shadow: 0 4px 16px rgba(127, 86, 217, 0.08);
+}
+
+#whatsapp-config-page .config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+}
+
+#whatsapp-config-page .config-text h3 {
+    margin: 0 0 .4rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+#whatsapp-config-page .config-text p {
+    margin: 0;
+    color: var(--text-secondary, #6b7280);
+    font-size: .88rem;
+    line-height: 1.55;
+}
+
+#whatsapp-config-page .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: .9rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#whatsapp-config-page .section-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+/* ---------- Botão de ícone circular pra cabeçalho de card ---------- */
+#whatsapp-config-page .card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(0, 188, 212, 0.18) 0%, rgba(0, 188, 212, 0.08) 100%);
+}
+
+/* ---------- Toggle switch (mesmo nome de classe, visual novo) ---------- */
+#whatsapp-config-page .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 30px;
+    flex-shrink: 0;
+    margin-top: .2rem;
+}
+
+#whatsapp-config-page .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+#whatsapp-config-page .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .3s cubic-bezier(.4,0,.2,1);
+    border-radius: 30px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.08);
+}
+
+#whatsapp-config-page .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: #fff;
+    transition: .3s cubic-bezier(.4,0,.2,1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2);
+}
+
+#whatsapp-config-page input:checked + .toggle-slider {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-purple, #7f56d9) 100%);
+    box-shadow: 0 3px 10px rgba(127, 86, 217, .35);
+}
+
+#whatsapp-config-page input:checked + .toggle-slider:before {
+    transform: translateX(22px);
+}
+
+#whatsapp-config-page input:focus + .toggle-slider {
+    box-shadow: 0 0 0 4px rgba(127, 86, 217, .18);
+}
+
+/* ---------- Botão "abrir modal" (Notificações / Capacidades) ---------- */
+#whatsapp-config-page .btn-notif-open {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .65rem 1.2rem;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--primary-purple, #7f56d9);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+#whatsapp-config-page .btn-notif-open:hover {
+    background: var(--primary-purple, #7f56d9);
+    color: #fff;
+    border-color: var(--primary-purple, #7f56d9);
+    box-shadow: 0 4px 12px rgba(127, 86, 217, .3);
+}
+
+/* ---------- Cards clicáveis (Notificações Proativas / Capacidades) ---------- */
+#whatsapp-config-page .action-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+/* ---------- Alerta global ---------- */
+#whatsapp-config-page .alert {
+    padding: 1rem 1.1rem;
+    border-radius: 12px;
+    margin-bottom: 1.25rem;
+    font-size: .9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+#whatsapp-config-page .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+#whatsapp-config-page .alert-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ---------- Status badges ---------- */
+#whatsapp-config-page .status-badge {
+    display: inline-block;
+    padding: .3rem .85rem;
+    border-radius: 20px;
+    font-size: .78rem;
+    font-weight: 700;
+}
+#whatsapp-config-page .status-ativo { background: #d1fae5; color: #065f46; }
+#whatsapp-config-page .status-inativo { background: #fee2e2; color: #991b1b; }
+
+/* ---------- "Modo avançado" (bloco debug escondido) ---------- */
+#whatsapp-config-page .btn-advanced-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary, #6b7280);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: .4rem 0;
+    margin-bottom: .5rem;
+}
+#whatsapp-config-page .btn-advanced-toggle:hover { color: var(--primary-purple, #7f56d9); }
+#whatsapp-config-page .debug-box {
+    padding: 1rem;
+    background: #fefce8;
+    border: 1px dashed #fbbf24;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+/* ---------- Admin list / cards ---------- */
+#whatsapp-config-page .admin-list { display: grid; gap: .75rem; }
+#whatsapp-config-page .admin-card {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color .15s ease;
+}
+#whatsapp-config-page .admin-card:hover { border-color: var(--primary-purple, #7f56d9); }
+#whatsapp-config-page .admin-info { flex: 1; }
+#whatsapp-config-page .admin-number { font-family: monospace; font-weight: 700; color: #25d366; font-size: .95rem; }
+#whatsapp-config-page .admin-name { color: var(--text-secondary, #6b7280); font-size: .85rem; margin-top: .25rem; }
+#whatsapp-config-page .admin-actions { display: flex; gap: .5rem; }
+#whatsapp-config-page .admin-paired-badge {
+    font-size: .72rem; background: #d1fae5; color: #065f46;
+    padding: .2rem .55rem; border-radius: 12px; margin-left: .4rem; font-weight: 700;
+}
+#whatsapp-config-page .empty-admin,
+#whatsapp-config-page .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--text-secondary, #9ca3af);
+    background: var(--background-light);
+    border-radius: 12px;
+    border: 1px dashed var(--border-color);
+    font-size: .88rem;
+}
+
+#whatsapp-config-page .btn-sm {
+    padding: .45rem .9rem;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 600;
+    transition: all .15s ease;
+}
+#whatsapp-config-page .btn-delete-admin { color: #ef4444; border-color: #fecaca; }
+#whatsapp-config-page .btn-delete-admin:hover { background: #fef2f2; }
+
+/* ---------- Tabela de Usuários do Bot ---------- */
+#whatsapp-config-page .bot-users-section { margin-top: 1.5rem; }
+#whatsapp-config-page .bot-users-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: .75rem;
+}
+#whatsapp-config-page .bot-users-toolbar h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+#whatsapp-config-page .toolbar-actions { display: flex; gap: .6rem; }
+
+#whatsapp-config-page .bot-users-table { width: 100%; border-collapse: collapse; }
+#whatsapp-config-page .bot-users-table th {
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-secondary, #9ca3af);
+    padding: .6rem .9rem;
+    border-bottom: 1px solid var(--border-color);
+}
+#whatsapp-config-page .bot-users-table td {
+    padding: .8rem .9rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: .88rem;
+    vertical-align: middle;
+}
+#whatsapp-config-page .bot-users-table tr:last-child td { border-bottom: none; }
+#whatsapp-config-page .bot-users-table tr:hover td { background: var(--background-light); }
+#whatsapp-config-page .bot-users-wrap {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+#whatsapp-config-page .role-badge {
+    display: inline-block;
+    padding: .2rem .65rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+}
+#whatsapp-config-page .role-lavador    { background: #dbeafe; color: #1e40af; }
+#whatsapp-config-page .role-subaccount { background: #ede9fe; color: #5b21b6; }
+#whatsapp-config-page .cargo-badge {
+    display: inline-block;
+    margin-left: .35rem;
+    padding: .15rem .55rem;
+    border-radius: 20px;
+    font-size: .68rem;
+    font-weight: 600;
+    background: var(--background-light);
+    color: var(--text-secondary, #6b7280);
+}
+#whatsapp-config-page .jid-badge { font-size: .72rem; padding: .15rem .5rem; border-radius: 8px; font-weight: 600; }
+#whatsapp-config-page .jid-ok   { background: #d1fae5; color: #065f46; }
+#whatsapp-config-page .jid-pend { background: var(--background-light); color: #9ca3af; }
+
+#whatsapp-config-page .btn-icon {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: .35rem .65rem;
+    cursor: pointer;
+    font-size: .85rem;
+    transition: all .15s ease;
+}
+#whatsapp-config-page .btn-icon:hover { background: var(--background-light); }
+#whatsapp-config-page .btn-icon-danger:hover { background: #fef2f2; border-color: #fca5a5; }
+
+/* ---------- Botões primários (reforço local) ---------- */
+#whatsapp-config-page .btn-primary {
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+/* ---------- Modais (4 sistemas — base de posicionamento, mesmo nome de classe) ---------- */
+#whatsapp-config-page .modal-phone {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+#whatsapp-config-page .modal-phone.active { display: flex; }
+#whatsapp-config-page .modal-content-phone {
+    background: #fff;
+    padding: 2rem;
+    width: 90%;
+    max-width: 400px;
+}
+#whatsapp-config-page .modal-header-phone {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);
+}
+#whatsapp-config-page .modal-header-phone h2 { margin: 0; font-size: 1.25rem; }
+
+#whatsapp-config-page .modal-notif,
+#whatsapp-config-page .modal-bot-user,
+#whatsapp-config-page .modal-roles {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(2px);
+}
+#whatsapp-config-page .modal-notif.active,
+#whatsapp-config-page .modal-bot-user.active,
+#whatsapp-config-page .modal-roles.active { display: flex; }
+
+#whatsapp-config-page .modal-notif-content { max-width: 520px; }
+#whatsapp-config-page .modal-bu-content { max-width: 460px; }
+#whatsapp-config-page .modal-roles-content { max-width: 560px; }
+#whatsapp-config-page .modal-notif-content,
+#whatsapp-config-page .modal-roles-content {
+    width: 100%; max-height: 90vh; overflow-y: auto;
+}
+#whatsapp-config-page .modal-bu-content { width: 100%; }
+
+#whatsapp-config-page .modal-notif-header,
+#whatsapp-config-page .modal-bu-header,
+#whatsapp-config-page .modal-roles-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);
+    position: sticky; top: 0; z-index: 1;
+}
+#whatsapp-config-page .modal-notif-body,
+#whatsapp-config-page .modal-roles-body { padding: 1.25rem 1.5rem; }
+#whatsapp-config-page .modal-bu-body { padding: 1.25rem 1.5rem; }
+#whatsapp-config-page .modal-notif-footer,
+#whatsapp-config-page .modal-bu-footer,
+#whatsapp-config-page .modal-roles-footer {
+    display: flex; gap: .75rem; justify-content: flex-end;
+    padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);
+    position: sticky; bottom: 0;
+}
+
+#whatsapp-config-page .modal-content-phone,
+#whatsapp-config-page .modal-notif-content,
+#whatsapp-config-page .modal-bu-content,
+#whatsapp-config-page .modal-roles-content {
+    border-radius: 20px !important;
+    box-shadow: 0 25px 50px rgba(0,0,0,.25) !important;
+}
+
+#whatsapp-config-page .modal-header-phone,
+#whatsapp-config-page .modal-notif-header,
+#whatsapp-config-page .modal-bu-header,
+#whatsapp-config-page .modal-roles-header {
+    background: linear-gradient(135deg, var(--background-light) 0%, #fff 100%);
+}
+
+#whatsapp-config-page .modal-header-phone h2,
+#whatsapp-config-page .modal-notif-header h2,
+#whatsapp-config-page .modal-bu-header h2,
+#whatsapp-config-page .modal-roles-header h2 {
+    font-weight: 800;
+}
+
+#whatsapp-config-page .close-modal {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 1.3rem;
+    line-height: 1;
+    color: var(--text-secondary, #6b7280);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--background-light);
+    transition: all .15s ease;
+}
+#whatsapp-config-page .close-modal:hover { background: #fee2e2; color: #ef4444; }
+
+#whatsapp-config-page .btn-modal {
+    border-radius: 10px;
+    font-weight: 700;
+}
+#whatsapp-config-page .btn-save-phone {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-purple, #7f56d9) 100%);
+    box-shadow: 0 4px 12px rgba(127, 86, 217, .3);
+}
+
+/* ---------- Notificações (linhas dentro do modal) ---------- */
+#whatsapp-config-page .notif-group { margin-bottom: 1.5rem; }
+#whatsapp-config-page .notif-group-label {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--primary-purple, #7f56d9);
+    margin-bottom: .75rem;
+}
+#whatsapp-config-page .notif-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem;
+    border-radius: 10px;
+    transition: background .15s ease;
+}
+#whatsapp-config-page .notif-row:hover { background: var(--background-light); }
+#whatsapp-config-page .notif-info { flex: 1; }
+#whatsapp-config-page .notif-title { font-size: .9rem; font-weight: 700; color: var(--text-primary, #111827); margin-bottom: .2rem; }
+#whatsapp-config-page .notif-desc { font-size: .8rem; color: var(--text-secondary, #6b7280); line-height: 1.45; }
+#whatsapp-config-page .notif-badge-default {
+    font-size: .68rem;
+    background: #fef3c7;
+    color: #92400e;
+    padding: .15rem .5rem;
+    border-radius: 8px;
+    margin-left: .4rem;
+    font-weight: 700;
+}
+
+/* ---------- Capacidades do bot ---------- */
+#whatsapp-config-page .cargo-select {
+    width: 100%;
+    padding: .7rem .85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-primary, #374151);
+    background: #fff;
+    margin-bottom: 1.25rem;
+}
+#whatsapp-config-page .perm-section-label {
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--primary-purple, #7f56d9);
+    margin: 1.1rem 0 .5rem;
+}
+#whatsapp-config-page .perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+#whatsapp-config-page .perm-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem .8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .15s ease;
+    font-size: .85rem;
+}
+#whatsapp-config-page .perm-item:hover { border-color: var(--primary-purple, #7f56d9); background: var(--background-light); }
+#whatsapp-config-page .perm-item input[type=checkbox] { accent-color: var(--primary-purple, #7f56d9); width: 15px; height: 15px; }
+#whatsapp-config-page .perm-item.locked { opacity: .45; cursor: not-allowed; }
+#whatsapp-config-page .perm-reset-link {
+    font-size: .8rem;
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+    text-decoration: underline;
+    display: inline-block;
+    margin-top: .5rem;
+}
+#whatsapp-config-page .perm-reset-link:hover { color: var(--primary-purple, #7f56d9); }
+
+/* ---------- Aviso informativo (capacidades sem gate) ---------- */
+#whatsapp-config-page .perm-info-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: .85rem 1rem;
+    font-size: .8rem;
+    color: #92400e;
+    line-height: 1.55;
+    margin: 1rem 0;
+}
+#whatsapp-config-page .perm-info-box strong { color: #78350f; }
+
+/* ---------- Pareamento / código ---------- */
+#whatsapp-config-page .admin-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin: 0 -2rem;
+    padding: 0 2rem;
+    gap: 4px;
+}
+#whatsapp-config-page .admin-tab {
+    padding: .55rem 1rem;
+    border: none;
+    background: none;
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--text-secondary, #9ca3af);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s ease;
+}
+#whatsapp-config-page .admin-tab.active { color: var(--primary-purple, #7f56d9); border-bottom-color: var(--primary-purple, #7f56d9); }
+#whatsapp-config-page .admin-tab:hover:not(.active) { color: var(--text-primary, #374151); }
+
+#whatsapp-config-page .pairing-waiting { text-align: center; padding: 2rem 1rem; }
+#whatsapp-config-page .pairing-pulse-ring {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: rgba(37, 211, 102, .13);
+    position: relative; margin-bottom: 1.2rem;
+}
+#whatsapp-config-page .pairing-pulse-ring::before,
+#whatsapp-config-page .pairing-pulse-ring::after {
+    content: ''; position: absolute; border-radius: 50%;
+    border: 2px solid #25d366; animation: pairingPulse 1.8s ease-out infinite;
+}
+#whatsapp-config-page .pairing-pulse-ring::after { animation-delay: .9s; }
+@keyframes pairingPulse {
+    0%   { width: 70%;  height: 70%;  opacity: 1; }
+    100% { width: 160%; height: 160%; opacity: 0; }
+}
+#whatsapp-config-page .pairing-pulse-icon { font-size: 2rem; z-index: 1; }
+#whatsapp-config-page .pairing-form-hint {
+    font-size: .85rem; color: var(--text-secondary, #6b7280); margin-top: 1rem;
+    padding: .85rem; background: var(--background-light); border-radius: 10px; line-height: 1.55;
+}
+
+#whatsapp-config-page .code-display-box,
+#whatsapp-config-page .pin-display-box {
+    background: #f0fdf4;
+    border: 2px solid #bbf7d0;
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+    margin: 12px 0;
+}
+#whatsapp-config-page .code-label { font-size: .8rem; color: #065f46; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+#whatsapp-config-page .code-digits,
+#whatsapp-config-page .pin-digits {
+    font-size: 3rem; font-weight: 800; letter-spacing: 12px; color: #047857;
+    font-family: 'Courier New', monospace; line-height: 1;
+}
+#whatsapp-config-page .code-expires,
+#whatsapp-config-page .pin-expires { font-size: .78rem; color: var(--text-secondary, #6b7280); margin-top: 10px; }
+#whatsapp-config-page .code-expires.expiring,
+#whatsapp-config-page .pin-expires.expiring { color: #ef4444; font-weight: 800; }
+
+/* ---------- Formulários dentro dos modais ---------- */
+#whatsapp-config-page .form-group-phone { margin-bottom: 1.25rem; }
+#whatsapp-config-page .form-group-phone label {
+    display: block; margin-bottom: .5rem; font-weight: 600; font-size: .85rem; color: var(--text-primary, #374151);
+}
+#whatsapp-config-page .form-group-phone input,
+#whatsapp-config-page .form-group-phone select,
+#whatsapp-config-page .form-group-phone textarea {
+    width: 100%;
+    padding: .7rem .85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px !important;
+    font-size: .9rem;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+#whatsapp-config-page .form-group-phone input:focus,
+#whatsapp-config-page .form-group-phone select:focus,
+#whatsapp-config-page .form-group-phone textarea:focus {
+    outline: none;
+    border-color: var(--primary-purple, #7f56d9) !important;
+    box-shadow: 0 0 0 3px rgba(127, 86, 217, .12);
+}
+#whatsapp-config-page .helper-text { font-size: .8rem; color: var(--text-secondary, #9ca3af); margin-top: .3rem; }
+
+/* ---------- Rodapé/botões de modal (compartilhado por vários modais) ---------- */
+#whatsapp-config-page .modal-footer-phone {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    margin-top: .5rem;
+    border-top: 1px solid var(--border-color);
+}
+#whatsapp-config-page .btn-modal {
+    padding: .7rem 1.4rem;
+    border: none;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+#whatsapp-config-page .btn-save-phone { color: #fff; }
+#whatsapp-config-page .btn-save-phone:hover:not(:disabled) { opacity: .92; }
+#whatsapp-config-page .btn-cancel { background: var(--background-light); color: var(--text-primary, #374151); }
+#whatsapp-config-page .btn-cancel:hover { background: var(--border-color); }
+
+/* ---------- Loading / spinner ---------- */
+#whatsapp-config-page .loading { text-align: center; padding: 2rem; color: var(--text-secondary, #6b7280); }
+#whatsapp-config-page .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color);
+    border-top: 2px solid var(--primary-purple, #7f56d9);
+    border-radius: 50%;
+    animation: waSpin 1s linear infinite;
+}
+@keyframes waSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* ---------- Legado (#phoneModal — não usado, mas ainda presente no DOM) ---------- */
+#whatsapp-config-page .lavadores-grid { display: grid; gap: 1.5rem; }
+#whatsapp-config-page .lavador-card {
+    background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;
+    display: flex; justify-content: space-between; align-items: center;
+}
+#whatsapp-config-page .lavador-nome { font-size: 1.05rem; font-weight: 700; margin: 0 0 .5rem; }
+#whatsapp-config-page .lavador-details { font-size: .88rem; color: var(--text-secondary, #6b7280); margin: .3rem 0; }
+#whatsapp-config-page .lavador-phone { font-family: monospace; font-weight: 600; color: #25d366; margin-top: .5rem; }
+#whatsapp-config-page .lavador-phone.vazio { color: #9ca3af; font-style: italic; }
+#whatsapp-config-page .lavador-actions { display: flex; gap: .8rem; align-items: center; }
+#whatsapp-config-page .btn-phone { padding: .6rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600; }
+#whatsapp-config-page .btn-edit-phone { background: var(--primary-color); color: #fff; }
+#whatsapp-config-page .btn-delete-phone { background: #ef4444; color: #fff; }
+#whatsapp-config-page .btn-delete-phone:disabled { background: var(--border-color); cursor: not-allowed; }
+
+/* ---------- Dark mode ---------- */
+body.dark #whatsapp-config-page .config-card,
+body.dark #whatsapp-config-page .admin-section,
+body.dark #whatsapp-config-page .admin-card,
+body.dark #whatsapp-config-page .bot-users-wrap,
+body.dark #whatsapp-config-page .btn-notif-open {
+    background: var(--background-light);
+    border-color: var(--border-color);
+}
+body.dark #whatsapp-config-page .modal-content-phone,
+body.dark #whatsapp-config-page .modal-notif-content,
+body.dark #whatsapp-config-page .modal-bu-content,
+body.dark #whatsapp-config-page .modal-roles-content {
+    background: var(--background-light);
+    color: var(--text-primary, #e5e7eb);
+}
+body.dark #whatsapp-config-page .modal-header-phone,
+body.dark #whatsapp-config-page .modal-notif-header,
+body.dark #whatsapp-config-page .modal-bu-header,
+body.dark #whatsapp-config-page .modal-roles-header,
+body.dark #whatsapp-config-page .modal-notif-footer,
+body.dark #whatsapp-config-page .modal-roles-footer,
+body.dark #whatsapp-config-page .modal-bu-footer {
+    background: var(--background-light);
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 768px) {
+    #whatsapp-config-page .config-item { flex-direction: column; gap: 1rem; align-items: stretch; }
+    #whatsapp-config-page .action-card { flex-direction: column; align-items: stretch; }
+    #whatsapp-config-page .perm-grid { grid-template-columns: 1fr; }
+    #whatsapp-config-page .wa-tabs { gap: .25rem; }
+    #whatsapp-config-page .tab-button { padding: .55rem .8rem; font-size: .82rem; }
+    #whatsapp-config-page .bot-users-table { display: block; overflow-x: auto; white-space: nowrap; }
+}

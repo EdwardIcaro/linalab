@@ -568,13 +568,6 @@ const api = {
       method: 'DELETE'
     }),
   },
-  whatsappConfig: {
-    get: () => fetchApi('/whatsapp/config'),
-    update: (blockUnknown) => fetchApi('/whatsapp/config', {
-      method: 'PATCH',
-      body: JSON.stringify({ blockUnknown })
-    }),
-  },
   whatsappAdminPhones: {
     list: () => fetchApi('/whatsapp/admin-phones'),
     create: (telefone, nome) => fetchApi('/whatsapp/admin-phones', {
