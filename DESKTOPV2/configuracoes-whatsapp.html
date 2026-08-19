@@ -564,7 +564,7 @@
 
                 <div class="perm-section-label" style="margin-top:0;">👷 Lavadores</div>
                 <p style="font-size:.8rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Marque ou desmarque o que os lavadores com WhatsApp vinculado podem consultar pelo bot. <strong>Reportar avaria</strong> e <strong>meu portal (link)</strong> estão sempre disponíveis — não aparecem aqui porque não podem ser desativados.</p>
-                <div id="lavadorPermContent" class="perm-grid"></div>
+                <div id="lavadorPermContent"></div>
 
                 <div class="perm-info-box">
                     ℹ️ <strong>Comandos sem controle de permissão hoje:</strong> PIX (gerar e reenviar cobrança), vales de comissão, fechamento de caixa, relatórios por período/semanais e reportar/consultar avarias funcionam para <strong>qualquer pessoa conectada ao bot</strong>, independente do que está marcado aqui. As opções desta tela controlam apenas Financeiro, Ordens, Clientes e Equipe.
@@ -1418,6 +1418,11 @@
         ];
         const DEFAULT_LAVADOR_FEATURES = LAVADOR_COMMAND_DEFS.map(d => d.key);
 
+        // Notificações proativas (o bot avisa sem o lavador perguntar) — desativadas por padrão
+        const LAVADOR_NOTIF_DEFS = [
+            { key: 'novaOrdemAtribuida', label: '🆕 Nova ordem atribuída a mim' },
+        ];
+
         let rolesConfig = {};
         let cargos = [];
         let currentCargoId = null;
@@ -1459,13 +1464,31 @@
             if (!content) return;
             const saved = rolesConfig.lavador?.botFeatures;
             const enabled = new Set(Array.isArray(saved) ? saved : DEFAULT_LAVADOR_FEATURES);
+            // Sem config salva ainda = nenhuma notificação ativa (oposto do padrão dos comandos)
+            const savedNotifs = rolesConfig.lavador?.notifs;
+            const enabledNotifs = new Set(Array.isArray(savedNotifs) ? savedNotifs : []);
 
-            content.innerHTML = LAVADOR_COMMAND_DEFS.map(def => `
+            let html = `<div class="perm-grid">`;
+            html += LAVADOR_COMMAND_DEFS.map(def => `
                 <label class="perm-item">
                     <input type="checkbox" data-lavador-feature="${def.key}" ${enabled.has(def.key) ? 'checked' : ''}>
                     ${def.label}
                 </label>
             `).join('');
+            html += `</div>`;
+
+            html += `<div class="perm-section-label">Notificações</div>`;
+            html += `<p style="font-size:.75rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Desativada por padrão — o lavador só recebe se você ativar aqui.</p>`;
+            html += `<div class="perm-grid">`;
+            html += LAVADOR_NOTIF_DEFS.map(def => `
+                <label class="perm-item">
+                    <input type="checkbox" data-lavador-notif="${def.key}" ${enabledNotifs.has(def.key) ? 'checked' : ''}>
+                    ${def.label}
+                </label>
+            `).join('');
+            html += `</div>`;
+
+            content.innerHTML = html;
         }
 
         function collectLavador() {
@@ -1473,7 +1496,11 @@
             document.querySelectorAll('#lavadorPermContent [data-lavador-feature]').forEach(el => {
                 if (el.checked) features.push(el.dataset.lavadorFeature);
             });
-            rolesConfig.lavador = { ...(rolesConfig.lavador || {}), botFeatures: features };
+            const notifs = [];
+            document.querySelectorAll('#lavadorPermContent [data-lavador-notif]').forEach(el => {
+                if (el.checked) notifs.push(el.dataset.lavadorNotif);
+            });
+            rolesConfig.lavador = { ...(rolesConfig.lavador || {}), botFeatures: features, notifs };
         }
 
         function closeRolesModal() {

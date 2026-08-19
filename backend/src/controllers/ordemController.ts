@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
-import { notifyNovaOrdem, notifyOrdemFinalizada, notifyOrdemCancelada, notifyClienteVip } from '../services/whatsappNotificationService';
+import { notifyNovaOrdem, notifyOrdemFinalizada, notifyOrdemCancelada, notifyClienteVip, notifyLavadorNovaOrdem } from '../services/whatsappNotificationService';
 import { botSend } from '../services/botServiceClient';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
@@ -429,6 +429,15 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         servico: servicoNome,
         valor: ordemFinal.valorTotal,
         lavadorNome: ordemFinal.lavador?.nome ?? null,
+      }).catch(() => {});
+
+      // WA: notificar lavador(es) atribuídos que uma nova ordem é deles (desativado por padrão)
+      notifyLavadorNovaOrdem(empresaId, normalizedLavadorIds, {
+        numeroOrdem: ordemFinal.numeroOrdem,
+        clienteNome: ordemFinal.cliente.nome,
+        placa: ordemFinal.veiculo?.placa ?? '',
+        servico: servicoNome,
+        valor: ordemFinal.valorTotal,
       }).catch(() => {});
 
       // WA: observação para lavadores atribuídos na criação

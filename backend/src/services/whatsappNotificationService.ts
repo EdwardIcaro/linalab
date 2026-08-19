@@ -131,6 +131,53 @@ export async function notifyByPermission(empresaId: string, permission: string, 
   }
 }
 
+// ─── Notificar lavadores atribuídos a uma ordem (config em whatsappRoles.lavador.notifs) ──
+// Desativada por padrão — diferente de permissionNotifEnabled, aqui a ausência de config = desligado.
+
+function lavadorNotifEnabled(empresa: { notificationPreferences: any }, notifKey: string): boolean {
+  const notifs = getNotifPrefsObj(empresa).whatsappRoles?.lavador?.notifs;
+  return Array.isArray(notifs) && notifs.includes(notifKey);
+}
+
+export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: string[], dados: {
+  numeroOrdem: number;
+  clienteNome: string;
+  placa: string;
+  servico: string;
+  valor: number;
+}): Promise<void> {
+  if (lavadorIds.length === 0) return;
+  try {
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') return;
+  } catch { return; }
+
+  try {
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+    if (!empresa || !lavadorNotifEnabled(empresa, 'novaOrdemAtribuida')) return;
+
+    // Lavador.telefone é preenchido quando o lavador envia "conectar CODIGO" ao bot
+    const lavadores = await prisma.lavador.findMany({
+      where: { id: { in: lavadorIds }, empresaId, telefone: { not: null }, ativo: true },
+      select: { telefone: true },
+    });
+    if (lavadores.length === 0) return;
+
+    const msg = `🆕 *Nova ordem atribuída a você — #${dados.numeroOrdem}*\n` +
+      `🚗 ${dados.placa} · ${dados.clienteNome}\n` +
+      `🧹 ${dados.servico} · *R$ ${dados.valor.toFixed(2)}*`;
+
+    for (const lav of lavadores) {
+      if (lav.telefone) await botSend(lav.telefone, msg).catch(() => {});
+    }
+  } catch (e) {
+    console.error('[Notif] notifyLavadorNovaOrdem:', e);
+  }
+}
+
 // ─── Hooks (chamados pelos controllers) ──────────────────────────────────────
 
 export async function notifyNovaOrdem(empresaId: string, dados: {
