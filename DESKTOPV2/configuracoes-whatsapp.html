@@ -263,116 +263,6 @@
                     <div id="regrasEmailList" class="admin-list"></div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Modal QR Empresa WA -->
-    <div id="modalEmpresaWaQr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-            <h3 style="margin:0 0 0.5rem 0;">Conectar WhatsApp da Empresa</h3>
-            <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Escaneie com o celular da empresa (o número que será usado para avisar clientes)</p>
-            <div id="empresaWaQrContainer" style="margin-bottom:1.5rem;">
-                <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
-                    <div class="spinner"></div> Gerando QR Code...
-                </div>
-            </div>
-            <div style="display:flex;gap:0.75rem;justify-content:center;">
-                <button onclick="verificarConexaoEmpresaWa()" style="padding:0.6rem 1.2rem;background:#25d366;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Já escaneei</button>
-                <button onclick="fecharModalEmpresaWaQr()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Template -->
-    <div id="modalTemplate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-            <h3 id="modalTemplateTitle" style="margin:0 0 1.5rem 0;">Novo Modelo</h3>
-            <input type="hidden" id="templateEditId">
-            <div class="form-group-phone">
-                <label>Nome do modelo</label>
-                <input type="text" id="templateNome" placeholder="Ex: Veículo pronto" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-            </div>
-            <div class="form-group-phone">
-                <label>Categoria</label>
-                <select id="templateCategoria" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                    <option value="FINALIZACAO">Finalização de ordem</option>
-                    <option value="POS_VENDA">Pós-venda</option>
-                    <option value="PRE_VENDA">Pré-venda / Reativação</option>
-                    <option value="CUSTOM">Personalizado</option>
-                </select>
-            </div>
-            <div class="form-group-phone">
-                <label>Mensagem</label>
-                <textarea id="templateTexto" rows="4" placeholder="Ex: Olá {{nome}}! Seu veículo {{placa}} está pronto. 🚗✨"
-                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
-                <div class="helper-text">Variáveis disponíveis: {{nome}}, {{placa}}, {{valor}}, {{dias}}, {{empresa}}</div>
-            </div>
-            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
-                <button onclick="fecharModalTemplate()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
-                <button onclick="salvarTemplate()" class="btn-primary">Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Regra de Email -->
-    <div id="modalRegraEmail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-            <h3 id="modalRegraEmailTitle" style="margin:0 0 1.5rem 0;">Nova Regra</h3>
-            <input type="hidden" id="regraEmailId">
-            <div class="form-group-phone">
-                <label>Nome da regra</label>
-                <input type="text" id="regraNome" placeholder="Ex: Código Localiza NFe" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-            </div>
-            <div class="form-group-phone">
-                <label>Remetente contém</label>
-                <input type="text" id="regraRemetente" placeholder="Ex: localiza" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                <div class="helper-text">Parte do email/nome do remetente. Ex: "localiza" pega qualquer remetente com localiza.</div>
-            </div>
-            <div class="form-group-phone">
-                <label>Assunto contém (opcional)</label>
-                <input type="text" id="regraAssunto" placeholder="Ex: Código de validação" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-            </div>
-            <div class="form-group-phone">
-                <label>Regex de extração</label>
-                <input type="text" id="regraRegex" placeholder="Ex: \d{6}" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;font-family:monospace;">
-                <div class="helper-text">O que capturar do corpo. <code>\d{6}</code> = 6 dígitos. O valor capturado vira {{valor}}.</div>
-            </div>
-            <div class="form-group-phone">
-                <label>Mensagem</label>
-                <textarea id="regraTemplate" rows="3" placeholder="Ex: 🔑 Código Localiza: {{valor}} (expira em 10min)"
-                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
-                <div class="helper-text">Use {{valor}} onde o valor capturado deve aparecer.</div>
-            </div>
-            <div class="form-group-phone">
-                <label>Destino</label>
-                <select id="regraDestinoTipo" onchange="onRegraDestinoTipoChange()" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                    <option value="NUMEROS">Números de WhatsApp</option>
-                    <option value="GRUPO">Grupo de WhatsApp</option>
-                </select>
-            </div>
-            <div class="form-group-phone" id="regraDestinoNumerosWrap">
-                <label>Contatos salvos</label>
-                <div id="regraContatosSalvos" style="max-height:190px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:0.4rem 0.5rem;margin-bottom:0.6rem;"></div>
-                <label>Outros números (separados por vírgula)</label>
-                <input type="text" id="regraDestinoNumeros" placeholder="Ex: 5599999998888, 5599999997777" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                <div class="helper-text">Marque os contatos salvos e/ou digite números avulsos. Tudo é combinado no envio.</div>
-            </div>
-            <div class="form-group-phone" id="regraDestinoGrupoWrap" style="display:none;">
-                <label>Grupo</label>
-                <div style="display:flex;gap:0.5rem;">
-                    <select id="regraDestinoGrupo" style="flex:1;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                        <option value="">— selecione —</option>
-                    </select>
-                    <button type="button" onclick="listarGruposBot()" class="btn-primary" style="white-space:nowrap;">Listar grupos</button>
-                </div>
-                <div class="helper-text">O bot precisa estar no grupo. Clique em "Listar grupos" para carregar.</div>
-            </div>
-            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
-                <button onclick="fecharModalRegraEmail()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
-                <button onclick="salvarRegraEmail()" class="btn-primary">Salvar</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal para adicionar admin -->
     <div id="adminModal" class="modal-phone">
@@ -730,6 +620,117 @@
             </form>
         </div>
     </div>
+        </div>
+    </div>
+
+    <!-- Modal QR Empresa WA -->
+    <div id="modalEmpresaWaQr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:420px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+            <h3 style="margin:0 0 0.5rem 0;">Conectar WhatsApp da Empresa</h3>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Escaneie com o celular da empresa (o número que será usado para avisar clientes)</p>
+            <div id="empresaWaQrContainer" style="margin-bottom:1.5rem;">
+                <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;color:#666;font-size:0.9rem;">
+                    <div class="spinner"></div> Gerando QR Code...
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:center;">
+                <button onclick="verificarConexaoEmpresaWa()" style="padding:0.6rem 1.2rem;background:#25d366;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Já escaneei</button>
+                <button onclick="fecharModalEmpresaWaQr()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Template -->
+    <div id="modalTemplate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+            <h3 id="modalTemplateTitle" style="margin:0 0 1.5rem 0;">Novo Modelo</h3>
+            <input type="hidden" id="templateEditId">
+            <div class="form-group-phone">
+                <label>Nome do modelo</label>
+                <input type="text" id="templateNome" placeholder="Ex: Veículo pronto" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div class="form-group-phone">
+                <label>Categoria</label>
+                <select id="templateCategoria" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                    <option value="FINALIZACAO">Finalização de ordem</option>
+                    <option value="POS_VENDA">Pós-venda</option>
+                    <option value="PRE_VENDA">Pré-venda / Reativação</option>
+                    <option value="CUSTOM">Personalizado</option>
+                </select>
+            </div>
+            <div class="form-group-phone">
+                <label>Mensagem</label>
+                <textarea id="templateTexto" rows="4" placeholder="Ex: Olá {{nome}}! Seu veículo {{placa}} está pronto. 🚗✨"
+                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
+                <div class="helper-text">Variáveis disponíveis: {{nome}}, {{placa}}, {{valor}}, {{dias}}, {{empresa}}</div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
+                <button onclick="fecharModalTemplate()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                <button onclick="salvarTemplate()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Regra de Email -->
+    <div id="modalRegraEmail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+            <h3 id="modalRegraEmailTitle" style="margin:0 0 1.5rem 0;">Nova Regra</h3>
+            <input type="hidden" id="regraEmailId">
+            <div class="form-group-phone">
+                <label>Nome da regra</label>
+                <input type="text" id="regraNome" placeholder="Ex: Código Localiza NFe" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div class="form-group-phone">
+                <label>Remetente contém</label>
+                <input type="text" id="regraRemetente" placeholder="Ex: localiza" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                <div class="helper-text">Parte do email/nome do remetente. Ex: "localiza" pega qualquer remetente com localiza.</div>
+            </div>
+            <div class="form-group-phone">
+                <label>Assunto contém (opcional)</label>
+                <input type="text" id="regraAssunto" placeholder="Ex: Código de validação" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div class="form-group-phone">
+                <label>Regex de extração</label>
+                <input type="text" id="regraRegex" placeholder="Ex: \d{6}" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;font-family:monospace;">
+                <div class="helper-text">O que capturar do corpo. <code>\d{6}</code> = 6 dígitos. O valor capturado vira {{valor}}.</div>
+            </div>
+            <div class="form-group-phone">
+                <label>Mensagem</label>
+                <textarea id="regraTemplate" rows="3" placeholder="Ex: 🔑 Código Localiza: {{valor}} (expira em 10min)"
+                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
+                <div class="helper-text">Use {{valor}} onde o valor capturado deve aparecer.</div>
+            </div>
+            <div class="form-group-phone">
+                <label>Destino</label>
+                <select id="regraDestinoTipo" onchange="onRegraDestinoTipoChange()" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                    <option value="NUMEROS">Números de WhatsApp</option>
+                    <option value="GRUPO">Grupo de WhatsApp</option>
+                </select>
+            </div>
+            <div class="form-group-phone" id="regraDestinoNumerosWrap">
+                <label>Contatos salvos</label>
+                <div id="regraContatosSalvos" style="max-height:190px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:0.4rem 0.5rem;margin-bottom:0.6rem;"></div>
+                <label>Outros números (separados por vírgula)</label>
+                <input type="text" id="regraDestinoNumeros" placeholder="Ex: 5599999998888, 5599999997777" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                <div class="helper-text">Marque os contatos salvos e/ou digite números avulsos. Tudo é combinado no envio.</div>
+            </div>
+            <div class="form-group-phone" id="regraDestinoGrupoWrap" style="display:none;">
+                <label>Grupo</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <select id="regraDestinoGrupo" style="flex:1;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+                        <option value="">— selecione —</option>
+                    </select>
+                    <button type="button" onclick="listarGruposBot()" class="btn-primary" style="white-space:nowrap;">Listar grupos</button>
+                </div>
+                <div class="helper-text">O bot precisa estar no grupo. Clique em "Listar grupos" para carregar.</div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
+                <button onclick="fecharModalRegraEmail()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                <button onclick="salvarRegraEmail()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         // State
