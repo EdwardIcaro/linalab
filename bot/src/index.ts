@@ -14,6 +14,7 @@ process.on('uncaughtException', (err) => {
 import {
   initBaileys,
   restoreActiveSessions,
+  startWatchdog,
   getStatus,
   getQRCode,
   getQrGeneratedAt,
@@ -286,6 +287,7 @@ async function startBot() {
 
     // Restaurar sessão WhatsApp salva no banco
     console.log('🔄 Restaurando sessão WhatsApp...');
+    startWatchdog();
     await new Promise(resolve => setTimeout(resolve, 3000)); // aguarda estabilização
     await restoreActiveSessions();
     // Restaurar sessões WhatsApp das empresas

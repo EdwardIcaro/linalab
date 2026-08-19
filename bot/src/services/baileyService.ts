@@ -37,6 +37,7 @@ let freshCreds:           boolean         = false;
 let isInitializing:       boolean         = false;
 let failedCredsAttempts:  number          = 0;
 let qrGeneratedAt:        number | null   = null;
+let lastProgressAt:       number          = Date.now();
 
 const lidToPhone = new Map<string, string>();
 
@@ -49,6 +50,9 @@ function nextDelay(): number {
   return d;
 }
 function resetDelay() { reconnectDelay = BASE_DELAY; }
+
+/** Marca que algo avançou (tentativa iniciada, QR gerado, conexão aberta/fechada). */
+function markProgress() { lastProgressAt = Date.now(); }
 
 // ==========================================
 // AUTH STATE — DB ↔ /tmp
@@ -129,6 +133,7 @@ export async function initBaileys(): Promise<void> {
       return;
     }
     isInitializing = true;
+    markProgress();
 
     console.log('[Baileys] Iniciando socket global...');
 
@@ -213,6 +218,7 @@ export async function initBaileys(): Promise<void> {
 
     sock.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr } = update;
+      markProgress();
 
       if (qr) {
         try {
@@ -613,6 +619,44 @@ export async function initBaileys(): Promise<void> {
 export function getQRCode(): string | null  { return globalQrCode; }
 export function getStatus(): string         { return globalStatus; }
 export function getQrGeneratedAt(): number | null { return qrGeneratedAt; }
+
+// ==========================================
+// WATCHDOG — detecta travamento silencioso e força restart do processo
+// ==========================================
+// Cobre o caso visto em produção: a promise de alguma etapa de initBaileys()
+// (ex.: query ao Neon numa conexão TCP meio-aberta, sem timeout) nunca resolve
+// nem rejeita. Nem o loop de retry nem o cron diário (05:00) percebem isso —
+// o processo fica "online" no PM2, mas sem nenhum progresso de conexão.
+// Aqui, "progresso" = início de tentativa, QR gerado, ou conexão aberta/fechada.
+// Se ficar sem nenhum desses eventos por tempo demais, é sinal inequívoco de
+// travamento (o ciclo normal de retry nunca fica mais de ~60s em silêncio) —
+// então derrubamos o processo com process.exit(1) e deixamos o PM2 reiniciar
+// do zero (autorestart), o que limpa qualquer conexão/estado pendurado.
+const WATCHDOG_CHECK_INTERVAL_MS = 60_000;
+const WATCHDOG_STUCK_THRESHOLD_MS = 5 * 60_000;
+let watchdogStarted = false;
+
+export function startWatchdog(): void {
+  if (watchdogStarted) return;
+  watchdogStarted = true;
+
+  setInterval(() => {
+    if (globalStatus === 'connected') {
+      markProgress();
+      return;
+    }
+    const stuckForMs = Date.now() - lastProgressAt;
+    if (stuckForMs > WATCHDOG_STUCK_THRESHOLD_MS) {
+      console.error(
+        `[Baileys][Watchdog] Sem nenhum progresso há ${Math.round(stuckForMs / 1000)}s ` +
+        `(status atual: ${globalStatus}) — processo travado, forçando restart.`
+      );
+      process.exit(1);
+    }
+  }, WATCHDOG_CHECK_INTERVAL_MS);
+
+  console.log(`[Baileys][Watchdog] Ativo — checa a cada ${WATCHDOG_CHECK_INTERVAL_MS / 1000}s, limite de ${WATCHDOG_STUCK_THRESHOLD_MS / 60_000}min sem progresso.`);
+}
 
 export async function sendMessage(to: string, text: string): Promise<void> {
   if (!globalSocket) throw new Error('Bot Lina não está conectado');
