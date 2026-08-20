@@ -414,9 +414,14 @@
         <div class="ph-title">Funcionários</div>
         <div class="ph-sub" id="phSub">—</div>
       </div>
-      <button class="btn-primary" onclick="abrirModalNovo()">
-        <i class="fa fa-plus"></i> Adicionar Funcionário
-      </button>
+      <div style="display:flex;gap:10px">
+        <button class="btn-ghost" onclick="abrirModalVincular()">
+          <i class="fa fa-link"></i> Vincular Lavador
+        </button>
+        <button class="btn-primary" onclick="abrirModalNovo()">
+          <i class="fa fa-plus"></i> Adicionar Funcionário
+        </button>
+      </div>
     </div>
 
     <!-- Stats -->
@@ -542,6 +547,26 @@
         <button class="btn-save" id="btnSalvar" onclick="salvarFuncionario()">
           <i class="fa fa-check"></i> Salvar
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MODAL VINCULAR LAVADOR ═══════════════ -->
+  <div id="modalVincular" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          <div class="ct-icon ct-teal" style="width:32px;height:32px"><i class="fa fa-link"></i></div>
+          <span>Vincular Lavador</span>
+        </div>
+        <button class="modal-close" onclick="fecharModalVincular()"><i class="fa fa-times"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--gray600);margin-bottom:16px">
+          Lavadores cadastrados no Lina Wash que ainda não têm registro no Data Point. Vincular cria o funcionário do DP usando o nome e telefone do lavador — sem alterar a configuração do sistema.
+        </p>
+        <div id="vincularList"></div>
       </div>
     </div>
   </div>
@@ -759,6 +784,9 @@ function buildFuncRow(f, idx) {
         onclick="gerarLinkFacial('${f.id}', '${escapar(f.nome)}')">
         <i class="fa fa-smile"></i>
       </button>
+      ${f.faceCadastrado ? `<button class="act-btn red" title="Apagar rosto cadastrado" onclick="confirmarRemoverFace('${f.id}', '${escapar(f.nome)}')">
+        <i class="fa fa-trash"></i>
+      </button>` : ''}
       <button class="act-btn" title="Mais ações" onclick="abrirMenuStatus('${f.id}', '${f.status}', '${escapar(f.nome)}')">
         <i class="fa fa-ellipsis-v"></i>
       </button>
@@ -1007,6 +1035,77 @@ async function solicitarLinkFacial(id, nome) {
     document.getElementById('confirmBtn').textContent = 'Copiar link';
   } catch (e) {
     mostrarToast(e.message || 'Erro ao gerar link de cadastro facial', 'error');
+  }
+}
+
+// Apaga o vetor facial (LGPD/direito ao esquecimento) — o histórico de marcações
+// continua intacto, só o reconhecimento para de funcionar até um novo cadastro.
+function confirmarRemoverFace(id, nome) {
+  abrirConfirm(
+    '🗑️',
+    'Apagar rosto cadastrado',
+    `Isso apaga o rosto cadastrado de <strong>${nome}</strong>. O histórico de marcações continua, mas o reconhecimento facial para de funcionar até um novo cadastro.<br><br>` +
+    'Gere um novo link de cadastro depois de apagar, se quiser recriar.',
+    'danger',
+    async () => {
+      try {
+        await window.api.removerFaceDpFuncionario(id);
+        mostrarToast('Rosto apagado.', 'success');
+        await carregarFuncionarios();
+      } catch {
+        mostrarToast('Erro ao apagar rosto.', 'error');
+      }
+    }
+  );
+  document.getElementById('confirmBtn').textContent = 'Apagar';
+}
+
+// ── Vincular Lavador ──────────────────────────────────────────────────────────
+async function abrirModalVincular() {
+  document.getElementById('modalVincular').classList.remove('hidden');
+  const list = document.getElementById('vincularList');
+  list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray500);font-size:13px">Carregando...</div>';
+
+  try {
+    const { lavadores } = await window.api.getImportaveisDp();
+    const disponiveis = (lavadores || []).filter(l => !l.jaImportado);
+
+    if (disponiveis.length === 0) {
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray500);font-size:13px">Todos os lavadores já estão vinculados ao Data Point.</div>';
+      return;
+    }
+
+    list.innerHTML = disponiveis.map(l => `
+      <div class="func-row">
+        <div class="func-avatar" style="background:var(--teal500)">${iniciaisNome(l.nome)}</div>
+        <div>
+          <div class="func-name">${escapar(l.nome)}</div>
+          <div class="func-meta">${l.telefone ? escapar(l.telefone) : 'Sem telefone'}</div>
+        </div>
+        <button class="btn-save" onclick="vincularLavador('${l.id}', '${escapar(l.nome)}')">
+          <i class="fa fa-link"></i> Vincular
+        </button>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error(e);
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Erro ao carregar lavadores.</div>';
+  }
+}
+
+function fecharModalVincular() {
+  document.getElementById('modalVincular').classList.add('hidden');
+}
+
+async function vincularLavador(lavadorId, nome) {
+  try {
+    await window.api.vincularLavadorDp(lavadorId);
+    mostrarToast(`${nome} vinculado ao Data Point.`, 'success');
+    fecharModalVincular();
+    await carregarFuncionarios();
+  } catch (e) {
+    console.error(e);
+    mostrarToast('Erro ao vincular lavador.', 'error');
   }
 }
 

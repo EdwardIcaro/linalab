@@ -221,6 +221,7 @@ const api = {
   dpAtualizarConfig: (data) => fetchApi('/dp/config', { method: 'PATCH', body: JSON.stringify(data) }),
   getDpFuncionarios: (status) => fetchApi(`/dp/funcionarios${status && status !== 'TODOS' ? `?status=${status}` : ''}`),
   criarDpFuncionario: (data) => fetchApi('/dp/funcionarios', { method: 'POST', body: JSON.stringify(data) }),
+  vincularLavadorDp: (lavadorId) => fetchApi('/dp/funcionarios/vincular-lavador', { method: 'POST', body: JSON.stringify({ lavadorId }) }),
   atualizarDpFuncionario: (id, data) => fetchApi(`/dp/funcionarios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   resetarPinDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/reset-pin`, { method: 'POST' }),
   regenerarLinkDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/regenerar-link`, { method: 'POST' }),

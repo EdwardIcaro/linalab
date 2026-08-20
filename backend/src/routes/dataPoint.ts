@@ -9,6 +9,7 @@ import {
   getDpEspelho,
   getDpFuncionarios,
   criarDpFuncionario,
+  vincularLavadorDp,
   atualizarDpFuncionario,
   resetarPinDpFuncionario,
   regenerarLinkDpFuncionario,
@@ -47,6 +48,7 @@ router.patch('/config', authMiddleware, atualizarConfigDp);
 // Funcionários CRUD
 router.get('/funcionarios',                         authMiddleware, getDpFuncionarios);
 router.post('/funcionarios',                        authMiddleware, criarDpFuncionario);
+router.post('/funcionarios/vincular-lavador',       authMiddleware, vincularLavadorDp);
 router.put('/funcionarios/:id',                     authMiddleware, atualizarDpFuncionario);
 router.post('/funcionarios/:id/reset-pin',          authMiddleware, resetarPinDpFuncionario);
 router.post('/funcionarios/:id/regenerar-link',     authMiddleware, regenerarLinkDpFuncionario);

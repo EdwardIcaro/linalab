@@ -795,6 +795,39 @@ export const criarDpFuncionario = async (req: EmpresaRequest, res: Response) => 
   }
 };
 
+// ─── POST /api/dp/funcionarios/vincular-lavador ──────────────────────────────
+// Vincula um lavador já existente do Lina Wash como funcionário do Data Point
+// (fora do assistente de onboarding, para lavadores criados depois da ativação do DP)
+export const vincularLavadorDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { lavadorId } = req.body;
+  if (!lavadorId) return res.status(400).json({ error: 'lavadorId obrigatório' });
+
+  try {
+    const lavador = await prisma.lavador.findFirst({ where: { id: lavadorId, empresaId } });
+    if (!lavador) return res.status(404).json({ error: 'Lavador não encontrado nesta empresa' });
+
+    const jaExiste = await prisma.dpFuncionario.findFirst({ where: { empresaId, lavadorId } });
+    if (jaExiste) return res.status(400).json({ error: 'Este lavador já está vinculado ao Data Point' });
+
+    const funcionario = await prisma.dpFuncionario.create({
+      data: {
+        empresaId,
+        nome: lavador.nome,
+        telefone: lavador.telefone,
+        lavadorId: lavador.id,
+        status: 'ATIVO',
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json({ funcionario });
+  } catch (error) {
+    console.error('[dp] vincularLavador:', error);
+    res.status(500).json({ error: 'Erro ao vincular lavador' });
+  }
+};
+
 // ─── PUT /api/dp/funcionarios/:id ─────────────────────────────────────────────
 export const atualizarDpFuncionario = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;
