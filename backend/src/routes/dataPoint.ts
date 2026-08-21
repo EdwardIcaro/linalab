@@ -26,6 +26,10 @@ import {
   criarDpAfastamento,
   atualizarDpAfastamento,
   excluirDpAfastamento,
+  getDpTotens,
+  criarDpTotem,
+  atualizarDpTotem,
+  regenerarDpTotem,
 } from '../controllers/dataPointController';
 import authMiddleware from '../middlewares/authMiddleware';
 
@@ -70,5 +74,11 @@ router.get('/afastamentos',         authMiddleware, getDpAfastamentos);
 router.post('/afastamentos',        authMiddleware, criarDpAfastamento);
 router.put('/afastamentos/:id',     authMiddleware, atualizarDpAfastamento);
 router.delete('/afastamentos/:id',  authMiddleware, excluirDpAfastamento);
+
+// Totens (aparelhos de reconhecimento facial 1:N)
+router.get('/totens',                authMiddleware, getDpTotens);
+router.post('/totens',               authMiddleware, criarDpTotem);
+router.patch('/totens/:id',          authMiddleware, atualizarDpTotem);
+router.post('/totens/:id/regenerar', authMiddleware, regenerarDpTotem);
 
 export default router;

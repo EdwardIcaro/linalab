@@ -19,6 +19,7 @@ import {
   confirmarFace,
   getFaceDoPonto,
 } from '../controllers/portalPublicoController';
+import { validarTotem, reconhecerTotem, confirmarTotem } from '../controllers/dpTotemPublicoController';
 
 const router: Router = Router();
 
@@ -39,6 +40,11 @@ router.post('/ponto/confirmar', confirmarPonto);
 // Cadastro do rosto — token pessoal gerado pelo gestor (uso único)
 router.get('/face/validar',   validarTokenFace);
 router.post('/face/confirmar', confirmarFace);
+
+// Totem — aparelho pareado à empresa, reconhecimento facial 1:N
+router.get('/totem/validar',    validarTotem);
+router.post('/totem/reconhecer', reconhecerTotem);
+router.post('/totem/confirmar',  confirmarTotem);
 
 // Públicas (sem autenticação)
 router.get('/:token',               resolverTokenPublico);

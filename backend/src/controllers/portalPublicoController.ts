@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken';
 import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
+import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
+import { embeddingValido } from '../utils/faceMatch';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
 
@@ -583,7 +585,7 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function horaFormatadaBRT(d: Date): string {
+export function horaFormatadaBRT(d: Date): string {
   return new Date(d).toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
   });
@@ -704,17 +706,8 @@ export const registrarPonto = async (req: Request, res: Response) => {
       orderBy: { timestamp: 'asc' },
     });
 
-    const lastMarcacao = marcacoesHoje[marcacoesHoje.length - 1];
-    const tipo = (!lastMarcacao || lastMarcacao.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
-
-    // Cooldown: 5 min entre marcações do mesmo tipo
-    if (lastMarcacao && lastMarcacao.tipo === tipo) {
-      const diffMin = (Date.now() - new Date(lastMarcacao.timestamp).getTime()) / 60000;
-      if (diffMin < 5) {
-        const wait = Math.ceil(5 - diffMin);
-        return res.status(429).json({ erro: `Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} para bater ponto novamente.` });
-      }
-    }
+    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesHoje);
+    if (cooldownErro) return res.status(429).json({ erro: cooldownErro });
 
     // GPS: validação baseada em nivelGps (BASICO | MEDIO | RIGIDO | MAXIMO)
     let gpsPrecisaoSuspeita = false;
@@ -1034,10 +1027,6 @@ export const validarTokenPonto = async (req: Request, res: Response) => {
 // O vetor de 128 números é irreversível: não permite reconstruir o rosto.
 // Nenhuma foto ou vídeo trafega — o processamento acontece no aparelho.
 
-function embeddingValido(v: unknown): v is number[] {
-  return Array.isArray(v) && v.length === 128 && v.every((n) => typeof n === 'number' && isFinite(n));
-}
-
 // GET /api/p/face/validar?t=TOKEN — valida o link pessoal de cadastro
 export const validarTokenFace = async (req: Request, res: Response) => {
   const { t } = req.query as { t?: string };
@@ -1168,17 +1157,8 @@ export const confirmarPonto = async (req: Request, res: Response) => {
       orderBy: { timestamp: 'asc' },
     });
 
-    const ultima = marcacoesHoje[marcacoesHoje.length - 1];
-    const tipo: 'ENTRADA' | 'SAIDA' = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
-
-    // Cooldown 5 min
-    if (ultima && ultima.tipo === tipo) {
-      const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
-      if (diffMin < 5) {
-        const wait = Math.ceil(5 - diffMin);
-        return res.status(429).json({ erro: `Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} para bater ponto novamente.` });
-      }
-    }
+    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesHoje);
+    if (cooldownErro) return res.status(429).json({ erro: cooldownErro });
 
     // GPS — só valida ENTRADA
     let gpsPrecisaoSuspeita = false;

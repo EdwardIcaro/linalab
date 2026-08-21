@@ -1355,3 +1355,86 @@ export const excluirDpAfastamento = async (req: EmpresaRequest, res: Response) =
     res.status(500).json({ error: 'Erro ao excluir afastamento' });
   }
 };
+
+// ─── TOTENS (aparelhos de reconhecimento facial 1:N) ─────────────────────────
+
+// GET /api/dp/totens
+export const getDpTotens = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+
+  try {
+    const totens = await prisma.dpTotem.findMany({
+      where: { empresaId },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({ totens });
+  } catch (error) {
+    console.error('[dp] getTotens:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// POST /api/dp/totens
+export const criarDpTotem = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { nome } = req.body;
+  if (!nome?.trim()) return res.status(400).json({ error: 'Nome é obrigatório' });
+
+  try {
+    const totem = await prisma.dpTotem.create({
+      data: {
+        empresaId,
+        nome: nome.trim(),
+        token: gerarTokenCurto(24),
+      },
+    });
+    res.status(201).json({ totem });
+  } catch (error) {
+    console.error('[dp] criarTotem:', error);
+    res.status(500).json({ error: 'Erro ao criar totem' });
+  }
+};
+
+// PATCH /api/dp/totens/:id
+export const atualizarDpTotem = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+  const { nome, ativo } = req.body;
+
+  try {
+    const existente = await prisma.dpTotem.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Totem não encontrado' });
+
+    const totem = await prisma.dpTotem.update({
+      where: { id },
+      data: {
+        ...(nome !== undefined && { nome: nome.trim() }),
+        ...(ativo !== undefined && { ativo: Boolean(ativo) }),
+      },
+    });
+    res.json({ totem });
+  } catch (error) {
+    console.error('[dp] atualizarTotem:', error);
+    res.status(500).json({ error: 'Erro ao atualizar totem' });
+  }
+};
+
+// POST /api/dp/totens/:id/regenerar — invalida o link antigo (tablet perdido/roubado)
+export const regenerarDpTotem = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpTotem.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Totem não encontrado' });
+
+    const totem = await prisma.dpTotem.update({
+      where: { id },
+      data: { token: gerarTokenCurto(24) },
+    });
+    res.json({ token: totem.token });
+  } catch (error) {
+    console.error('[dp] regenerarTotem:', error);
+    res.status(500).json({ error: 'Erro ao regenerar link do totem' });
+  }
+};

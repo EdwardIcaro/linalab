@@ -69,6 +69,7 @@ model Empresa {
   mensagensTemplate          MensagemTemplate[]
   sistemasAtivos             EmpresaSistema[]
   dpFuncionarios             DpFuncionario[]
+  dpTotens                   DpTotem[]
   gorjetas                   Gorjeta[]
   subaccountAcessos          SubaccountEmpresaAcesso[]
 
@@ -956,10 +957,28 @@ model DpMarcacao {
   faceScore           Float?        // confiança da verificação facial (null = não usou facial)
   ip                  String?
   ajustado            Boolean       @default(false)
+  totemId             String?       // aparelho de onde veio a marcação (canal TOTEM)
   createdAt           DateTime      @default(now())
   funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+  totem               DpTotem?      @relation(fields: [totemId], references: [id], onDelete: SetNull)
 
   @@map("dp_marcacoes")
+}
+
+model DpTotem {
+  id          String       @id @default(cuid())
+  empresaId   String
+  nome        String       // rótulo dado pelo admin, ex: "Tablet recepção"
+  token       String       @unique // pareamento permanente do aparelho
+  ativo       Boolean      @default(true)
+  ultimoUsoEm DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  marcacoes   DpMarcacao[]
+
+  @@index([empresaId])
+  @@map("dp_totens")
 }
 
 model DpAjuste {
