@@ -522,7 +522,7 @@ export const getDashboardDp = async (req: EmpresaRequest, res: Response) => {
     res.json({
       empresaNome: empresa?.nome ?? '',
       dataHoje: todayStr,
-      config: { jornadaEntrada: jornadaEntradaCfg, jornadaSaida: jornadaSaidaCfg, intervaloMin },
+      config: { ...cfg, jornadaEntrada: jornadaEntradaCfg, jornadaSaida: jornadaSaidaCfg, intervaloMin },
       resumo,
       funcionarios: funcProcessados,
       alertas,
