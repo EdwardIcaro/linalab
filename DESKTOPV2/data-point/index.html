@@ -431,6 +431,7 @@
     </div>
     <div class="tb-right">
       <span class="tb-date" id="tbDate">—</span>
+      <button class="tb-icon-btn" onclick="abrirTotemModal()" title="Totens de ponto"><i class="fa fa-tablet-screen-button"></i></button>
       <button class="tb-icon-btn" onclick="abrirConfigEmpresa()" title="Configurações da empresa"><i class="fa fa-sliders-h"></i></button>
       <button class="tb-icon-btn" onclick="location.href='/hub.html'" title="Voltar ao hub"><i class="fa fa-arrow-left"></i></button>
       <button class="tb-icon-btn" onclick="recarregar()" title="Atualizar"><i class="fa fa-sync-alt"></i></button>
@@ -521,6 +522,27 @@
             <i class="fa fa-check"></i> Salvar configurações
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL TOTENS DE PONTO ══ -->
+  <div id="totemModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;" onclick="fecharTotemModal(event)">
+    <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;padding:0 0 32px;" onclick="event.stopPropagation()">
+      <div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:12px auto 0;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e5e7eb;">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#111827;">Totens de Ponto</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">Aparelhos com reconhecimento facial automático (1:N)</div>
+        </div>
+        <button onclick="fecharTotemModal()" style="background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer;padding:4px;"><i class="fa fa-times"></i></button>
+      </div>
+      <div style="padding:20px 24px;">
+        <div style="display:flex;gap:8px;margin-bottom:18px;">
+          <input id="novoTotemNome" type="text" placeholder="Nome do aparelho, ex: Tablet recepção" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #d1d5db;font-size:13px;font-family:inherit;">
+          <button onclick="criarTotem()" style="padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;"><i class="fa fa-plus"></i> Criar</button>
+        </div>
+        <div id="totemList"></div>
       </div>
     </div>
   </div>
@@ -1349,6 +1371,106 @@ function abrirConfigEmpresa() {
 function fecharConfigEmpresa(e) {
   if (e && e.target !== document.getElementById('configModal')) return;
   document.getElementById('configModal').style.display = 'none';
+}
+
+// ── Totens de ponto ─────────────────────────────────────────────────────────
+let totens = [];
+
+function escaparTexto(str) {
+  const d = document.createElement('div');
+  d.textContent = str ?? '';
+  return d.innerHTML;
+}
+
+function abrirTotemModal() {
+  document.getElementById('totemModal').style.cssText =
+    'display:flex;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;';
+  carregarTotens();
+}
+
+function fecharTotemModal(e) {
+  if (e && e.target !== document.getElementById('totemModal')) return;
+  document.getElementById('totemModal').style.display = 'none';
+}
+
+async function carregarTotens() {
+  const list = document.getElementById('totemList');
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Carregando...</div>';
+  try {
+    const { totens: data } = await window.api.getDpTotens();
+    totens = data || [];
+    renderTotens();
+  } catch {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;font-size:13px;">Erro ao carregar totens.</div>';
+  }
+}
+
+function renderTotens() {
+  const list = document.getElementById('totemList');
+  if (totens.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Nenhum totem cadastrado ainda.</div>';
+    return;
+  }
+  list.innerHTML = totens.map(t => {
+    const uso = t.ultimoUsoEm
+      ? new Date(t.ultimoUsoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+      : 'Nunca usado';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid #f3f4f6;">
+        <div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;background:${t.ativo ? '#ccfbf1' : '#f3f4f6'};display:flex;align-items:center;justify-content:center;color:${t.ativo ? '#0d9488' : '#9ca3af'};font-size:16px;"><i class="fa fa-tablet-screen-button"></i></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13.5px;font-weight:700;color:#111827;display:flex;align-items:center;gap:6px;">
+            ${escaparTexto(t.nome)}
+            ${t.ativo ? '' : '<span style="font-size:10px;font-weight:700;color:#9ca3af;">DESATIVADO</span>'}
+          </div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">${uso}</div>
+        </div>
+        <button onclick="copiarLinkTotem('${t.token}')" title="Copiar link" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#4b5563;cursor:pointer;flex-shrink:0;"><i class="fa fa-link"></i></button>
+        <button onclick="toggleTotem('${t.id}', ${!t.ativo})" title="${t.ativo ? 'Desativar' : 'Ativar'}" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:${t.ativo ? '#dc2626' : '#059669'};cursor:pointer;flex-shrink:0;"><i class="fa fa-power-off"></i></button>
+        <button onclick="regenerarTotem('${t.id}')" title="Gerar novo link (revoga o atual)" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#4b5563;cursor:pointer;flex-shrink:0;"><i class="fa fa-rotate"></i></button>
+      </div>`;
+  }).join('');
+}
+
+async function criarTotem() {
+  const input = document.getElementById('novoTotemNome');
+  const nome = input.value.trim();
+  if (!nome) { alert('Digite um nome para o aparelho.'); return; }
+  try {
+    await window.api.criarDpTotem({ nome });
+    input.value = '';
+    await carregarTotens();
+  } catch (e) {
+    alert(e.error || 'Erro ao criar totem.');
+  }
+}
+
+function copiarLinkTotem(token) {
+  const link = `${window.location.origin}/totem?t=${token}`;
+  navigator.clipboard?.writeText(link).then(
+    () => alert('Link copiado! Abra no tablet/celular da empresa e instale o app.'),
+    () => alert(link)
+  );
+}
+
+async function toggleTotem(id, novoAtivo) {
+  try {
+    await window.api.atualizarDpTotem(id, { ativo: novoAtivo });
+    await carregarTotens();
+  } catch (e) {
+    alert(e.error || 'Erro ao atualizar totem.');
+  }
+}
+
+async function regenerarTotem(id) {
+  if (!confirm('Gerar um novo link invalida o link/instalação atual desse aparelho. Continuar?')) return;
+  try {
+    await window.api.regenerarDpTotem(id);
+    await carregarTotens();
+    alert('Novo link gerado. Copie e abra novamente no aparelho.');
+  } catch (e) {
+    alert(e.error || 'Erro ao regenerar link.');
+  }
 }
 
 function atualizarDescNivel() {

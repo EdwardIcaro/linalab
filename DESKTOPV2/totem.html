@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lina Totem</title>
+  <meta name="robots" content="noindex">
+  <link rel="manifest" href="/totem-manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --white:#fff; --muted:rgba(255,255,255,.7); --faint:rgba(255,255,255,.45);
+  --teal-l:#5eead4; --amber:#f59e0b; --green:#10b981; --red:#f87171;
+}
+body{
+  font-family:'Inter',-apple-system,sans-serif; background:#000; color:var(--white);
+  height:100vh; overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+.tela{display:none}
+.tela.ativa{display:block}
+
+/* câmera ocupa a tela inteira */
+.cam-full{position:fixed;inset:0;background:#000}
+.cam-full video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.vinheta{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 18%,transparent 70%,rgba(0,0,0,.45) 100%)}
+
+.brand{position:fixed;top:max(16px,env(safe-area-inset-top));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:5;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.brand-row{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--faint)}
+.brand-row i{color:var(--teal-l)}
+.empresa-nome{font-size:13px;font-weight:700;color:var(--muted)}
+
+.oval{
+  position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);
+  width:min(58vw,300px);aspect-ratio:3/4;border-radius:50%;
+  border:2px solid rgba(255,255,255,.3); z-index:3;
+  transition:border-color .3s,box-shadow .3s;
+}
+.oval.scan{border-color:rgba(255,255,255,.4);animation:breathe 2.2s ease-in-out infinite}
+.oval.ok{border-color:var(--green);box-shadow:0 0 40px rgba(16,185,129,.25);animation:none}
+.oval.warn{border-color:var(--amber);box-shadow:0 0 40px rgba(245,158,11,.2);animation:none}
+@keyframes breathe{0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.015)}}
+
+.hint{
+  position:fixed;left:0;right:0;bottom:max(46px,env(safe-area-inset-bottom));z-index:5;
+  display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
+  padding:0 32px; text-shadow:0 2px 10px rgba(0,0,0,.8);
+}
+.hint-title{font-size:16px;font-weight:700;letter-spacing:-.2px}
+.hint-sub{font-size:12.5px;font-weight:500;color:var(--muted);line-height:1.4;max-width:300px}
+
+.confirm-sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:6;
+  padding:20px 20px max(20px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 25%,rgba(0,0,0,.82) 100%);
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.confirm-nome{font-size:22px;font-weight:800}
+.confirm-sub{font-size:12.5px;color:var(--muted);margin-top:-6px}
+.btn-row{display:flex;gap:10px;width:100%;max-width:360px;margin-top:4px}
+.btn{flex:1;padding:15px;border-radius:14px;border:none;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.6}
+.btn-sim{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+.btn-nao{background:rgba(255,255,255,.12);color:#fff;backdrop-filter:blur(6px)}
+.timeout-bar{width:100%;max-width:360px;height:2.5px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
+.timeout-fill{height:100%;background:var(--teal-l);animation:shrink 8s linear forwards}
+@keyframes shrink{from{width:100%}to{width:0%}}
+
+.sucesso-flash{
+  position:fixed;inset:0;z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:rgba(6,20,15,.55); backdrop-filter:blur(3px);
+  animation:fadeInOut 1.8s ease forwards;
+}
+@keyframes fadeInOut{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
+.sucesso-ico{width:64px;height:64px;border-radius:50%;background:rgba(16,185,129,.2);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--green)}
+.sucesso-tipo{font-size:17px;font-weight:800}
+.sucesso-hora{font-size:30px;font-weight:900;letter-spacing:-.5px}
+
+/* estados de erro / carregando — telas cheias simples, sem câmera */
+.tela-central{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center;background:#000}
+.tc-ico{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted)}
+.tc-ico.erro{background:rgba(239,68,68,.15);color:var(--red)}
+.tc-titulo{font-size:17px;font-weight:800}
+.tc-sub{font-size:13px;color:var(--muted);max-width:300px;line-height:1.5}
+.spinner{width:26px;height:26px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--teal-l);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.pwa-balao{
+  position:fixed;top:max(16px,env(safe-area-inset-top));right:16px;z-index:8;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);
+  border-radius:12px;padding:9px 13px;font-size:11px;font-weight:700;color:#fff;
+  display:flex;align-items:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.pwa-balao.hidden{display:none}
+</style>
+</head>
+<body>
+
+<div id="tela-carregando" class="tela ativa">
+  <div class="tela-central">
+    <div class="spinner"></div>
+    <div class="tc-sub">Abrindo totem...</div>
+  </div>
+</div>
+
+<div id="tela-erro" class="tela">
+  <div class="tela-central">
+    <div class="tc-ico erro"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <div class="tc-titulo" id="erroTitulo">Não foi possível abrir</div>
+    <div class="tc-sub" id="erroSub"></div>
+  </div>
+</div>
+
+<div id="tela-totem" class="tela">
+  <button class="pwa-balao hidden" id="pwaBalao" onclick="instalarPWA()">
+    <i class="fa-solid fa-arrow-down-to-line"></i> Instalar app
+  </button>
+
+  <div class="cam-full"><video id="video" autoplay playsinline muted></video></div>
+  <div class="vinheta"></div>
+
+  <div class="brand">
+    <div class="brand-row"><i class="fa-solid fa-clock"></i> Data Point</div>
+    <div class="empresa-nome" id="empresaNome">—</div>
+  </div>
+
+  <div class="oval" id="oval"></div>
+
+  <div class="hint" id="hint">
+    <div class="hint-title" id="hintTitulo">Posicione seu rosto</div>
+    <div class="hint-sub" id="hintSub"></div>
+  </div>
+
+  <div class="confirm-sheet" id="confirmSheet" style="display:none">
+    <div class="confirm-nome" id="confirmNome"></div>
+    <div class="confirm-sub">É você?</div>
+    <div class="btn-row">
+      <button class="btn btn-nao" onclick="recusarMatch()"><i class="fa-solid fa-xmark"></i> Não sou eu</button>
+      <button class="btn btn-sim" id="btnSim" onclick="confirmarMatch()"><i class="fa-solid fa-check"></i> Sou eu</button>
+    </div>
+    <div class="timeout-bar"><div class="timeout-fill" id="timeoutFill"></div></div>
+  </div>
+
+  <div class="sucesso-flash" id="sucessoFlash" style="display:none">
+    <div class="sucesso-ico"><i class="fa-solid fa-check"></i></div>
+    <div class="sucesso-tipo" id="sucessoTipo">Entrada registrada</div>
+    <div class="sucesso-hora" id="sucessoHora">--:--</div>
+  </div>
+</div>
+
+<script src="/face.js"></script>
+<script>
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001/api'
+  : '/api';
+
+const token = new URLSearchParams(window.location.search).get('t');
+
+let scanando       = false;
+let pausado         = false;
+let ultimoReconhecer = 0;
+const INTERVALO_RECONHECER_MS = 1500; // limita chamadas ao /reconhecer mesmo se o rosto ficar parado no quadro
+
+let geo = null; // { lat, lng, accuracy } — best-effort, nunca bloqueia
+
+function mostrarTela(id) {
+  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+  document.getElementById(id).classList.add('ativa');
+}
+
+function erro(titulo, sub) {
+  document.getElementById('erroTitulo').textContent = titulo;
+  document.getElementById('erroSub').textContent = sub || '';
+  mostrarTela('tela-erro');
+}
+
+function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── PWA install ────────────────────────────────────────────────────────────
+let pwaPrompt = null;
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  pwaPrompt = e;
+  document.getElementById('pwaBalao').classList.remove('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwaBalao').classList.add('hidden');
+  pwaPrompt = null;
+});
+async function instalarPWA() {
+  if (!pwaPrompt) return;
+  pwaPrompt.prompt();
+  await pwaPrompt.userChoice;
+  pwaPrompt = null;
+  document.getElementById('pwaBalao').classList.add('hidden');
+}
+
+// ── geolocalização — best-effort, só para auditoria, nunca bloqueia ────────
+function iniciarGeo() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { geo = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }; },
+    () => {},
+    { timeout: 15000, maximumAge: 60000, enableHighAccuracy: true }
+  );
+}
+
+// ── init ─────────────────────────────────────────────────────────────────
+(async function init() {
+  if (!token) return erro('Link inválido', 'Nenhum token encontrado na URL.');
+  localStorage.setItem('totem_device_token', token);
+
+  let dados;
+  try {
+    const r = await fetch(`${API}/p/totem/validar?t=${encodeURIComponent(token)}`);
+    dados = await r.json();
+    if (!r.ok) return erro('Totem indisponível', dados.erro || '');
+  } catch {
+    return erro('Sem conexão', 'Verifique a internet e recarregue a página.');
+  }
+
+  if (!window.LinaFace || !LinaFace.isSupported()) {
+    return erro('Aparelho não suportado', 'Este aparelho não consegue rodar o reconhecimento facial (câmera ou navegador incompatível).');
+  }
+
+  document.getElementById('empresaNome').textContent = dados.empresaNome || '';
+  mostrarTela('tela-totem');
+  iniciarGeo();
+
+  try {
+    await LinaFace.ready();
+    await LinaFace.startCamera(document.getElementById('video'));
+  } catch {
+    return erro('Câmera bloqueada', 'Permita o acesso à câmera nas configurações do navegador e recarregue.');
+  }
+
+  loopScan();
+})();
+
+// ── loop de reconhecimento ──────────────────────────────────────────────────
+// Roda continuamente enquanto a tela está no estado "scan". Cada leitura local
+// (sample) é rápida e só dispara /reconhecer quando encontra um rosto de
+// qualidade — nunca quando o quadro está vazio.
+async function loopScan() {
+  scanando = true;
+  const video = document.getElementById('video');
+
+  while (scanando) {
+    if (pausado) { await esperar(200); continue; }
+
+    const r = await LinaFace.sample(video);
+
+    if (!r.ok) {
+      mostrarOval('scan');
+      mostrarHint(r.motivo === 'sem-rosto' ? null : LinaFace.texto(r.motivo));
+      await esperar(200);
+      continue;
+    }
+
+    const agora = Date.now();
+    if (agora - ultimoReconhecer < INTERVALO_RECONHECER_MS) {
+      await esperar(150);
+      continue;
+    }
+    ultimoReconhecer = agora;
+
+    const resp = await reconhecer(r.embedding);
+    if (resp && resp.match) {
+      mostrarMatch(resp);
+    } else {
+      mostrarOval('warn');
+      mostrarHint('Não conseguimos reconhecer', 'Aproxime-se e procure mais luz');
+      await esperar(1200);
+      mostrarOval('scan');
+      mostrarHint(null);
+    }
+  }
+}
+
+function mostrarOval(estado) {
+  document.getElementById('oval').className = 'oval ' + estado;
+}
+
+function mostrarHint(titulo, sub) {
+  document.getElementById('hintTitulo').textContent = titulo || 'Posicione seu rosto';
+  document.getElementById('hintSub').textContent = sub || '';
+}
+
+async function reconhecer(embedding) {
+  try {
+    const r = await fetch(`${API}/p/totem/reconhecer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, embedding }),
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+// ── confirmação ("é você?") ─────────────────────────────────────────────────
+let matchTokenAtual = null;
+let timeoutMatch = null;
+
+function mostrarMatch(resp) {
+  pausado = true;
+  matchTokenAtual = resp.matchToken;
+  mostrarOval('ok');
+  document.getElementById('hint').style.display = 'none';
+  document.getElementById('confirmNome').textContent = resp.nome;
+  document.getElementById('confirmSheet').style.display = 'flex';
+  document.getElementById('timeoutFill').style.animation = 'none';
+  void document.getElementById('timeoutFill').offsetWidth;
+  document.getElementById('timeoutFill').style.animation = 'shrink 8s linear forwards';
+
+  clearTimeout(timeoutMatch);
+  timeoutMatch = setTimeout(recusarMatch, 8000);
+}
+
+function fecharSheet() {
+  clearTimeout(timeoutMatch);
+  document.getElementById('confirmSheet').style.display = 'none';
+  document.getElementById('hint').style.display = 'flex';
+  matchTokenAtual = null;
+}
+
+function recusarMatch() {
+  fecharSheet();
+  mostrarOval('scan');
+  mostrarHint(null);
+  pausado = false;
+}
+
+async function confirmarMatch() {
+  if (!matchTokenAtual) return;
+  const btn = document.getElementById('btnSim');
+  btn.disabled = true;
+  clearTimeout(timeoutMatch);
+
+  try {
+    const r = await fetch(`${API}/p/totem/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        matchToken: matchTokenAtual,
+        lat: geo?.lat, lng: geo?.lng, gpsPrecisao: geo?.accuracy,
+      }),
+    });
+    const json = await r.json();
+    btn.disabled = false;
+
+    if (!r.ok) {
+      fecharSheet();
+      mostrarOval('warn');
+      mostrarHint(json.erro || 'Não foi possível registrar o ponto');
+      await esperar(1800);
+      mostrarOval('scan');
+      mostrarHint(null);
+      pausado = false;
+      return;
+    }
+
+    fecharSheet();
+    document.getElementById('sucessoTipo').textContent =
+      json.tipo === 'ENTRADA' ? 'Entrada registrada' : 'Saída registrada';
+    document.getElementById('sucessoHora').textContent = json.horaFormatada;
+    document.getElementById('sucessoFlash').style.display = 'flex';
+    await esperar(1800);
+    document.getElementById('sucessoFlash').style.display = 'none';
+    mostrarOval('scan');
+    pausado = false;
+  } catch {
+    btn.disabled = false;
+    fecharSheet();
+    mostrarOval('scan');
+    pausado = false;
+  }
+}
+</script>
+</body>
+</html>

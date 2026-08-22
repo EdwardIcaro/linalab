@@ -228,6 +228,12 @@ const api = {
   gerarFaceTokenDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/face-token`, { method: 'POST' }),
   removerFaceDpFuncionario: (id) => fetchApi(`/dp/funcionarios/${id}/face`, { method: 'DELETE' }),
 
+  // Totens (reconhecimento facial 1:N em aparelho compartilhado)
+  getDpTotens: () => fetchApi('/dp/totens'),
+  criarDpTotem: (data) => fetchApi('/dp/totens', { method: 'POST', body: JSON.stringify(data) }),
+  atualizarDpTotem: (id, data) => fetchApi(`/dp/totens/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  regenerarDpTotem: (id) => fetchApi(`/dp/totens/${id}/regenerar`, { method: 'POST' }),
+
   // Marcações admin
   getDpMarcacoesDia: (funcionarioId, data) => fetchApi(`/dp/marcacoes?funcionarioId=${funcionarioId}&data=${data}`),
   criarDpMarcacaoManual: (data) => fetchApi('/dp/marcacoes', { method: 'POST', body: JSON.stringify(data) }),
