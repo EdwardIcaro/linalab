@@ -7,6 +7,7 @@
 
 import prisma from '../db';
 import { getTodayFixedRangeBRT } from '../utils/dateUtils';
+import { sendMessage as botSend } from './baileyService';
 
 const OWNER_PIN = (process.env.OWNER_MODE_PIN || 'm4ite1105').toLowerCase();
 
@@ -32,6 +33,9 @@ interface AttemptInfo {
   lockedUntil: number; // 0 = não bloqueado
 }
 const attempts = new Map<string, AttemptInfo>(); // jid → tentativas erradas de PIN
+
+const novidadesListaAtiva = new Set<string>(); // jid → está no submenu de gerenciar lista de novidades
+const novidadeState = new Map<string, { fase: 'texto' } | { fase: 'confirmar'; texto: string }>(); // jid → composição em andamento
 
 function isSessionActive(from: string): boolean {
   const exp = sessions.get(from);
@@ -77,10 +81,16 @@ export async function handleOwnerModeMessage(from: string, message: string): Pro
   if (isSessionActive(from)) {
     if (EXIT_REGEX.test(command)) {
       sessions.delete(from);
+      novidadesListaAtiva.delete(from);
+      novidadeState.delete(from);
       return '🔓 Modo Owner encerrado.';
     }
     refreshSession(from);
-    return handleOwnerCommand(command);
+
+    if (novidadesListaAtiva.has(from)) return handleNovidadesListaStep(from, command);
+    if (novidadeState.has(from))       return handleNovidadeStep(from, message);
+
+    return handleOwnerCommand(from, command);
   }
 
   // Aguardando o PIN ser digitado
@@ -133,16 +143,20 @@ function ownerHelpText(): string {
     `• *usuarios* — lista usuários cadastrados\n` +
     `• *status* — status das instâncias WhatsApp\n` +
     `• *stats* — visão geral do sistema\n` +
+    `• *novidades* — gerenciar quem recebe avisos de novidade\n` +
+    `• *novidade* — enviar um aviso pra quem está na lista\n` +
     `• *sair* — encerra o modo owner\n\n` +
     `_Sessão expira após 15min de inatividade._`;
 }
 
-async function handleOwnerCommand(command: string): Promise<string> {
+async function handleOwnerCommand(from: string, command: string): Promise<string> {
   if (command === 'ajuda' || command === 'menu')        return ownerHelpText();
   if (command === 'empresas')                           return handleEmpresasCommand();
   if (command === 'usuarios' || command === 'usuários') return handleUsuariosCommand();
   if (command === 'status')                             return handleStatusCommand();
   if (command === 'stats' || command === 'resumo')      return handleStatsCommand();
+  if (command === 'novidades') { novidadesListaAtiva.add(from); return handleNovidadesListaStep(from, ''); }
+  if (command === 'novidade')  return iniciarNovidade(from);
   return `Não reconheci esse comando.\n\n${ownerHelpText()}`;
 }
 
@@ -225,4 +239,123 @@ async function handleStatsCommand(): Promise<string> {
     `👷 Lavadores ativos: *${lavadores}*\n` +
     `🧑‍💼 Funcionários (subaccounts): *${subaccounts}*\n` +
     `📋 Ordens criadas hoje: *${ordensHoje}*`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NOVIDADES — lista persistente de destinatários + envio de avisos
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function buscarUsuariosParaNovidades() {
+  const usuarios = await prisma.usuario.findMany({
+    select: { id: true, nome: true, recebeNovidades: true, empresas: { select: { id: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const empresaIds = usuarios.flatMap(u => u.empresas.map(e => e.id));
+  const phones = empresaIds.length > 0
+    ? await (prisma.whatsappAdminPhone as any).findMany({
+        where: { empresaId: { in: empresaIds }, ativo: true },
+        select: { empresaId: true, telefone: true, jid: true },
+      })
+    : [];
+
+  const phonesPorEmpresa = new Map<string, { telefone: string; jid: string | null }[]>();
+  for (const p of phones as Array<{ empresaId: string; telefone: string; jid: string | null }>) {
+    if (!phonesPorEmpresa.has(p.empresaId)) phonesPorEmpresa.set(p.empresaId, []);
+    phonesPorEmpresa.get(p.empresaId)!.push({ telefone: p.telefone, jid: p.jid });
+  }
+
+  return usuarios.map(u => ({
+    id: u.id,
+    nome: u.nome,
+    recebeNovidades: u.recebeNovidades,
+    telefones: u.empresas.flatMap(e => phonesPorEmpresa.get(e.id) ?? []),
+  }));
+}
+
+async function handleNovidadesListaStep(from: string, resposta: string): Promise<string> {
+  const r = resposta.trim().toLowerCase();
+
+  if (r === '0' || r === 'pronto' || r === 'fim') {
+    novidadesListaAtiva.delete(from);
+    return `✅ Lista de novidades atualizada.\n\n${ownerHelpText()}`;
+  }
+
+  if (/^[\d,\s]+$/.test(r) && r !== '') {
+    const usuarios = await buscarUsuariosParaNovidades();
+    const indices = r.split(',').map(s => parseInt(s.trim(), 10) - 1).filter(i => !isNaN(i));
+    for (const idx of indices) {
+      const u = usuarios[idx];
+      if (u) await prisma.usuario.update({ where: { id: u.id }, data: { recebeNovidades: !u.recebeNovidades } });
+    }
+  }
+
+  const usuariosAtualizados = await buscarUsuariosParaNovidades();
+  let texto = `📋 *LISTA DE NOVIDADES* (${usuariosAtualizados.filter(u => u.recebeNovidades).length} marcado(s))\n\n`;
+  usuariosAtualizados.forEach((u, i) => {
+    const marcado = u.recebeNovidades ? '✅' : '⬜';
+    const alcance = u.telefones.length > 0 ? '📱' : '⚠️';
+    texto += `${marcado} *${i + 1}.* ${u.nome} ${alcance}\n`;
+  });
+  texto += `\n_Responda com números separados por vírgula pra ligar/desligar (ex: 1,3,5), ou *0* pra sair._\n_⚠️ = sem WhatsApp pareado, não recebe mesmo se marcado._`;
+  return texto;
+}
+
+async function iniciarNovidade(from: string): Promise<string> {
+  const total = await prisma.usuario.count({ where: { recebeNovidades: true } });
+  if (total === 0) return '📭 Nenhum destinatário na lista. Use *novidades* pra adicionar antes.';
+  novidadeState.set(from, { fase: 'texto' });
+  return '📢 Mande o texto da novidade (pode ter várias linhas). Envie *cancelar* pra desistir.';
+}
+
+async function handleNovidadeStep(from: string, message: string): Promise<string> {
+  const state = novidadeState.get(from);
+  if (!state) return handleOwnerCommand(from, 'ajuda');
+  const raw = message.trim();
+
+  if (/^cancelar$/i.test(raw)) {
+    novidadeState.delete(from);
+    return '❌ Novidade cancelada.';
+  }
+
+  if (state.fase === 'texto') {
+    const texto = message.trim();
+    novidadeState.set(from, { fase: 'confirmar', texto });
+    const total = await prisma.usuario.count({ where: { recebeNovidades: true } });
+    return `📢 *Prévia:*\n\n${texto}\n\n━━━━━━━━━━━━━━━\nEnviar pra *${total}* destinatário(s)? Responda *sim* ou *cancelar*.`;
+  }
+
+  // fase === 'confirmar'
+  if (/^(sim|confirmar|s)$/i.test(raw)) {
+    const { enviados, semWhatsapp } = await enviarNovidade(state.texto);
+    novidadeState.delete(from);
+    return `✅ Enviado pra *${enviados}* número(s).` +
+      (semWhatsapp > 0 ? `\n⚠️ *${semWhatsapp}* usuário(s) na lista sem WhatsApp pareado (não recebeu).` : '');
+  }
+
+  return `Responda *sim* pra confirmar ou *cancelar* pra desistir.\n\n📢 *Prévia:*\n\n${state.texto}`;
+}
+
+async function enviarNovidade(texto: string): Promise<{ enviados: number; semWhatsapp: number }> {
+  const destinatarios = (await buscarUsuariosParaNovidades()).filter(u => u.recebeNovidades);
+  const msg = `🆕 *Novidade no Lina X*\n\n${texto}`;
+
+  const telefonesUnicos = new Map<string, { telefone: string; jid: string | null }>();
+  let semWhatsapp = 0;
+  for (const u of destinatarios) {
+    if (u.telefones.length === 0) { semWhatsapp++; continue; }
+    for (const t of u.telefones) telefonesUnicos.set(t.telefone, t);
+  }
+
+  let enviados = 0;
+  for (const t of telefonesUnicos.values()) {
+    const dest = t.jid ?? `${t.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
+    try {
+      await botSend(dest, msg);
+      enviados++;
+    } catch (e) {
+      console.error(`[Novidade] Erro ao enviar para ${dest}:`, e);
+    }
+  }
+  return { enviados, semWhatsapp };
 }
