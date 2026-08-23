@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import jwt from 'jsonwebtoken';
 import { gerarTokenCurto } from '../utils/tokenUtils';
+import { getDateRangeBRT, getMonthRangeBRT, getTodayStrBRT, getWeekRangeBRT } from '../utils/dateUtils';
+import { faturamentoBrutoPorLavador } from '../utils/faturamentoLavador';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -46,6 +48,52 @@ export const getLavadores = async (req: EmpresaRequest, res: Response) => {
     res.json({ lavadores });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar lavadores.' });
+  }
+};
+
+export const getFaturamentoBrutoLavadores = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = req.empresaId as string;
+  const { periodo, dataInicio, dataFim } = req.query as { periodo?: string; dataInicio?: string; dataFim?: string };
+
+  let range: { start: Date; end: Date };
+  if (periodo === 'semana') {
+    range = getWeekRangeBRT();
+  } else if (periodo === 'mes') {
+    const [ano, mes] = getTodayStrBRT().split('-').map(Number);
+    range = getMonthRangeBRT(ano, mes);
+  } else if (periodo === 'custom' && dataInicio && dataFim) {
+    range = { start: getDateRangeBRT(dataInicio).start, end: getDateRangeBRT(dataFim).end };
+  } else {
+    return res.status(400).json({ error: 'Parâmetros de período inválidos.' });
+  }
+
+  try {
+    const [lavadores, ordens] = await Promise.all([
+      prisma.lavador.findMany({ where: { empresaId }, select: { id: true, nome: true, ativo: true } }),
+      prisma.ordemServico.findMany({
+        where: { empresaId, status: 'FINALIZADO', dataFim: { gte: range.start, lte: range.end } },
+        select: {
+          valorTotal: true,
+          lavadorId: true,
+          ordemLavadores: { select: { lavadorId: true } },
+          pagamentos: { select: { metodo: true, valor: true } },
+        },
+      }),
+    ]);
+
+    const mapa = faturamentoBrutoPorLavador(ordens as any);
+    const resultado = lavadores.map(l => ({
+      id: l.id,
+      nome: l.nome,
+      ativo: l.ativo,
+      ordens: mapa.get(l.id)?.ordens ?? 0,
+      bruto: mapa.get(l.id)?.bruto ?? 0,
+    }));
+
+    res.json({ lavadores: resultado, periodo: range });
+  } catch (error) {
+    console.error('Erro ao buscar faturamento bruto por lavador:', error);
+    res.status(500).json({ error: 'Erro ao buscar faturamento bruto por lavador.' });
   }
 };
 

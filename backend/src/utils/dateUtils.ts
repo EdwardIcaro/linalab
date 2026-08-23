@@ -45,6 +45,25 @@ export function getMonthRangeBRT(year: number, month: number): { start: Date; en
 }
 
 /**
+ * Intervalo da semana civil (Domingo → Sábado) em BRT que contém a data informada.
+ * dateStr default = hoje (BRT).
+ */
+export function getWeekRangeBRT(dateStr: string = getTodayStrBRT()): { start: Date; end: Date } {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const ref = new Date(Date.UTC(y, m - 1, d));
+  const dow = ref.getUTCDay(); // 0=domingo … 6=sábado
+
+  const sunday = new Date(ref);
+  sunday.setUTCDate(ref.getUTCDate() - dow);
+  const saturday = new Date(sunday);
+  saturday.setUTCDate(sunday.getUTCDate() + 6);
+
+  const { start } = getDateRangeBRT(sunday.toISOString().split('T')[0]);
+  const { end } = getDateRangeBRT(saturday.toISOString().split('T')[0]);
+  return { start, end };
+}
+
+/**
  * Intervalo de turno de trabalho baseado no horário de abertura da empresa (em BRT).
  *
  * Replica a lógica de getWorkdayRange do caixaController mas com timezone correto:

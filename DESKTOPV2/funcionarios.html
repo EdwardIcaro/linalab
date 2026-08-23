@@ -21,6 +21,10 @@
         .actions-cell button { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s ease; color: var(--text-secondary); background-color: transparent; margin-left: 4px; }
         .actions-cell button:hover { color: var(--text-primary); background-color: #e5e7eb; }
 
+        .fat-filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .fat-filter-btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--white); color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .fat-filter-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+
         /* Modal Styles */
         .modal-overlay {
             position: fixed; inset: 0; background-color: rgba(16, 24, 40, 0.6); backdrop-filter: blur(4px);
@@ -117,6 +121,36 @@
                 </button>
             </div>
         </header>
+
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                <h3 style="margin:0; font-size:16px; color:var(--text-primary);">Faturamento Bruto por Lavador</h3>
+                <div class="fat-filter-buttons">
+                    <button class="fat-filter-btn active" id="fatFilter-semana" onclick="setFaturamentoFilter('semana')">Semana</button>
+                    <button class="fat-filter-btn" id="fatFilter-mes" onclick="setFaturamentoFilter('mes')">Mês</button>
+                    <button class="fat-filter-btn" id="fatFilter-custom" onclick="setFaturamentoFilter('custom')">Personalizado</button>
+                </div>
+            </div>
+            <div id="faturamentoDateInputs" style="display:none; gap:10px; align-items:flex-end; margin-bottom:14px; flex-wrap:wrap;">
+                <div>
+                    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Data início</label>
+                    <input type="date" id="faturamentoDataInicio" class="form-input" style="padding:8px 10px;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Data fim</label>
+                    <input type="date" id="faturamentoDataFim" class="form-input" style="padding:8px 10px;">
+                </div>
+                <button class="btn-primary" onclick="loadFaturamentoBruto()" style="padding:9px 16px;">Aplicar</button>
+            </div>
+            <div class="table-wrapper" style="padding:0; border:none;">
+                <table>
+                    <thead>
+                        <tr><th>Lavador</th><th>Ordens</th><th>Faturamento Bruto</th></tr>
+                    </thead>
+                    <tbody id="faturamentoBrutoTableBody"></tbody>
+                </table>
+            </div>
+        </div>
 
         <div class="table-wrapper card">
             <table>
@@ -249,7 +283,8 @@
 
 
             loadLavadores();
-            
+            loadFaturamentoBruto();
+
             document.getElementById('lavadorForm').addEventListener('submit', saveLavador);
             document.getElementById('lavadoresTableBody').addEventListener('click', handleTableActions);
             
@@ -270,6 +305,47 @@
         }
 
         const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+        // ── Faturamento Bruto por Lavador ───────────────────────────────────────
+        let faturamentoFiltroAtivo = 'semana';
+
+        function setFaturamentoFilter(periodo) {
+            faturamentoFiltroAtivo = periodo;
+            document.getElementById('faturamentoDateInputs').style.display = periodo === 'custom' ? 'flex' : 'none';
+            ['semana', 'mes', 'custom'].forEach(p => {
+                document.getElementById(`fatFilter-${p}`).classList.toggle('active', p === periodo);
+            });
+            if (periodo !== 'custom') loadFaturamentoBruto();
+        }
+
+        async function loadFaturamentoBruto() {
+            const tbody = document.getElementById('faturamentoBrutoTableBody');
+            try {
+                const params = { periodo: faturamentoFiltroAtivo };
+                if (faturamentoFiltroAtivo === 'custom') {
+                    params.dataInicio = document.getElementById('faturamentoDataInicio').value;
+                    params.dataFim = document.getElementById('faturamentoDataFim').value;
+                    if (!params.dataInicio || !params.dataFim) return;
+                }
+                const data = await window.api.getFaturamentoBrutoLavadores(params);
+                const linhas = (data.lavadores || [])
+                    .filter(l => l.ativo || l.ordens > 0)
+                    .sort((a, b) => b.bruto - a.bruto);
+
+                tbody.innerHTML = linhas.length
+                    ? linhas.map(l => `
+                        <tr>
+                            <td>${l.nome}</td>
+                            <td>${l.ordens}</td>
+                            <td>${formatCurrency(l.bruto)}</td>
+                        </tr>
+                    `).join('')
+                    : '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">Nenhum dado no período.</td></tr>';
+            } catch (error) {
+                console.error('Erro ao carregar faturamento bruto:', error);
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">Erro ao carregar dados.</td></tr>';
+            }
+        }
 
         async function loadLavadores() {
             try {

@@ -26,6 +26,22 @@ export function getMonthRangeBRT(year: number, month: number): { start: Date; en
   return { start, end };
 }
 
+/** Intervalo da semana civil (Domingo → Sábado) em BRT que contém a data informada. */
+export function getWeekRangeBRT(dateStr: string = getTodayStrBRT()): { start: Date; end: Date } {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const ref = new Date(Date.UTC(y, m - 1, d));
+  const dow = ref.getUTCDay(); // 0=domingo … 6=sábado
+
+  const sunday = new Date(ref);
+  sunday.setUTCDate(ref.getUTCDate() - dow);
+  const saturday = new Date(sunday);
+  saturday.setUTCDate(sunday.getUTCDate() + 6);
+
+  const { start } = getDateRangeBRT(sunday.toISOString().split('T')[0]);
+  const { end } = getDateRangeBRT(saturday.toISOString().split('T')[0]);
+  return { start, end };
+}
+
 export function getWorkdayRangeBRT(
   date: Date,
   horarioAbertura: string = '07:00'

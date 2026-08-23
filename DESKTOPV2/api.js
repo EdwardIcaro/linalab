@@ -316,6 +316,10 @@ const api = {
   // ===== LAVADORES =====
   getLavadores: () => cachedGet('lavadores', () => fetchApi('/lavadores')),
   getLavadoresSimple: () => cachedGet('lavadores_simple', () => fetchApi('/lavadores/simple')),
+  getFaturamentoBrutoLavadores: (params) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetchApi(`/lavadores/faturamento-bruto?${qs}`);
+  },
   createLavador: _withCacheInvalidation(
     (data) => fetchApi('/lavadores', { method: 'POST', body: JSON.stringify(data) }),
     '/lavadores/simple'

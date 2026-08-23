@@ -5,11 +5,16 @@
 
 import prisma from '../db';
 import { botSend, botGetStatus } from './botServiceClient';
-import { getTodayFixedRangeBRT, getTodayRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
+import { getTodayFixedRangeBRT, getTodayRangeBRT, getTodayStrBRT, getWeekRangeBRT } from '../utils/dateUtils';
+import { faturamentoBrutoPorLavador } from '../utils/faturamentoLavador';
 
 // Evita reenvio do resumo se o bot estava offline e o cron de retry disparou
 const resumoEnviadoHoje = new Set<string>(); // key: `${empresaId}_${YYYY-MM-DD}`
 function resumoKey(empresaId: string) { return `${empresaId}_${getTodayStrBRT()}`; }
+
+// Evita reenvio do resumo semanal (cron roda só aos sábados, então a data de hoje já é única por semana)
+const resumoSemanalEnviado = new Set<string>(); // key: `${empresaId}_semana_${YYYY-MM-DD do sábado}`
+function resumoSemanalKey(empresaId: string) { return `${empresaId}_semana_${getTodayStrBRT()}`; }
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +23,7 @@ type NotifKey =
   | 'ordemFinalizada'
   | 'ordemCancelada'
   | 'resumoDiario'
+  | 'resumoSemanal'
   | 'alertaCaixaAberto'
   | 'ordemParada'
   | 'saidaRegistrada'
@@ -34,6 +40,7 @@ const DEFAULTS: NotifPrefs = {
   ordemFinalizada:    false,
   ordemCancelada:     false,
   resumoDiario:       true,
+  resumoSemanal:      true,
   alertaCaixaAberto:  true,
   ordemParada:        false,
   ordemParadaHoras:   2,
@@ -530,6 +537,105 @@ export async function cronResumoDiario(): Promise<void> {
       resumoEnviadoHoje.add(resumoKey(empresa.id));
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
+    }
+  }
+
+  await sendAdminBlocks(adminBlocos);
+}
+
+export async function cronResumoSemanal(): Promise<void> {
+  try { const s = await botGetStatus(); if (s.status !== 'connected') return; } catch { return; }
+
+  const empresas = await prisma.empresa.findMany({
+    where: { ativo: true },
+    select: { id: true, nome: true, notificationPreferences: true },
+  });
+
+  const adminBlocos: AdminBloco[] = [];
+
+  for (const empresa of empresas) {
+    if (!prefs(empresa).resumoSemanal) continue;
+    if (resumoSemanalEnviado.has(resumoSemanalKey(empresa.id))) continue;
+    try {
+      const { start, end } = getWeekRangeBRT();
+
+      const [finalizadas, caixa] = await Promise.all([
+        prisma.ordemServico.findMany({
+          where: { empresaId: empresa.id, status: 'FINALIZADO', dataFim: { gte: start, lte: end } },
+          include: {
+            veiculo: { select: { tipoVeiculo: true } },
+            ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+            lavador: { select: { nome: true } },
+            pagamentos: { select: { metodo: true, valor: true } },
+          },
+        }),
+        prisma.caixaRegistro.findMany({
+          where: { empresaId: empresa.id, data: { gte: start, lte: end } },
+        }),
+      ]);
+
+      // Cortesia não conta como faturamento (valor cedido, não recebido)
+      const fat = finalizadas.reduce((s, o: any) => {
+        const cortesia = (o.pagamentos || [])
+          .filter((p: any) => p.metodo === 'CORTESIA')
+          .reduce((sp: number, p: any) => sp + p.valor, 0);
+        return s + (o.valorTotal - cortesia);
+      }, 0);
+      const saidas = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
+
+      const carros = finalizadas.filter((o: any) => o.tipoOrdem === 'VEICULO' && o.veiculo?.tipoVeiculo === 'CARRO').length;
+      const motos  = finalizadas.filter((o: any) => o.tipoOrdem === 'VEICULO' && o.veiculo?.tipoVeiculo === 'MOTO').length;
+
+      // Bruto dividido por cabeça (faturamentoBrutoPorLavador) + comissão real (ganho) por ordem
+      const brutoPorLav = faturamentoBrutoPorLavador(finalizadas as any);
+      const nomePorLav: Record<string, string> = {};
+      const ganhoPorLav: Record<string, number> = {};
+      for (const o of finalizadas as any[]) {
+        if (o.ordemLavadores.length > 0) {
+          for (const ol of o.ordemLavadores) {
+            nomePorLav[ol.lavadorId] = ol.lavador.nome;
+            ganhoPorLav[ol.lavadorId] = (ganhoPorLav[ol.lavadorId] ?? 0) + ol.ganho;
+          }
+        } else if (o.lavadorId) {
+          nomePorLav[o.lavadorId] = o.lavador?.nome ?? nomePorLav[o.lavadorId] ?? '—';
+        }
+      }
+
+      const dataInicioStr = start.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const dataFimStr = end.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+      let corpo = `🚗 Carros: *${carros}* · 🏍️ Motos: *${motos}*`;
+      corpo += `\n💰 Faturamento bruto: *R$ ${fat.toFixed(2)}*`;
+      corpo += `\n💸 Saídas: *R$ ${saidas.toFixed(2)}*`;
+
+      const lavIds = [...brutoPorLav.keys()].sort((a, b) => (brutoPorLav.get(b)?.bruto ?? 0) - (brutoPorLav.get(a)?.bruto ?? 0));
+      if (lavIds.length > 0) {
+        corpo += `\n━━━━━━━━━━━━━━━\n👷 Por lavador:\n`;
+        for (const id of lavIds) {
+          const bruto = brutoPorLav.get(id)?.bruto ?? 0;
+          const ganho = ganhoPorLav[id] ?? 0;
+          const pct = bruto > 0 ? Math.round((ganho / bruto) * 100) : 0;
+          corpo += `${nomePorLav[id] ?? '—'}: ${Math.round(bruto)} Bruto _(%${pct} ${Math.round(ganho)} reais)_\n`;
+        }
+      }
+      corpo = corpo.trim();
+
+      adminBlocos.push({
+        empresaId:    empresa.id,
+        empresaNome:  empresa.nome,
+        notifKey:     'resumoSemanal',
+        corpo,
+        headerSingle: `📅 *Resumo da semana — ${dataInicioStr} a ${dataFimStr}*\n━━━━━━━━━━━━━━━\n`,
+        headerMulti:  (nome) => `📅 *Resumo da semana — ${nome} — ${dataInicioStr} a ${dataFimStr}*\n━━━━━━━━━━━━━━━\n`,
+      });
+
+      if (permissionNotifEnabled(empresa, 'ver_financeiro', 'resumoSemanal')) {
+        const msgFuncionario = `📅 *Resumo da semana — ${dataInicioStr} a ${dataFimStr}*\n━━━━━━━━━━━━━━━\n${corpo}`;
+        await notifyByPermission(empresa.id, 'ver_financeiro', msgFuncionario);
+      }
+      resumoSemanalEnviado.add(resumoSemanalKey(empresa.id));
+    } catch (e) {
+      console.error(`[Notif Resumo Semanal] empresa ${empresa.id}:`, e);
     }
   }
 

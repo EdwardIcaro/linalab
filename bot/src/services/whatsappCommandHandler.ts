@@ -12,7 +12,7 @@ import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './ad
 import { handleOwnerModeMessage } from './ownerModeService';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
-import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT, getTodayRangeBRT } from '../utils/dateUtils';
+import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT, getTodayRangeBRT, getWeekRangeBRT } from '../utils/dateUtils';
 import {
   pendingReports,
   hasPendingAdminReportView,
@@ -37,6 +37,41 @@ function faturamentoSemCortesia(ordens: { valorTotal: number; pagamentos?: { met
     const cortesia = (o.pagamentos ?? []).filter(p => p.metodo === 'CORTESIA').reduce((sp, p) => sp + p.valor, 0);
     return s + (o.valorTotal - cortesia);
   }, 0);
+}
+
+/**
+ * Divide o bruto (líquido de cortesia) de cada ordem entre os lavadores atribuídos.
+ * - Se houver linhas em ordemLavadores, divide por cabeça.
+ * - Senão, se lavadorId estiver setado (ordem legado sem linha pivot), bruto inteiro pra ele.
+ * Retorna Map<lavadorId, { nome, bruto, ordens }>.
+ */
+function faturamentoBrutoPorLavador(ordens: {
+  valorTotal: number;
+  lavadorId: string | null;
+  lavador?: { nome: string } | null;
+  ordemLavadores: { lavadorId: string; lavador: { nome: string } }[];
+  pagamentos?: { metodo: string; valor: number }[];
+}[]): Map<string, { nome: string; bruto: number; ordens: number }> {
+  const map = new Map<string, { nome: string; bruto: number; ordens: number }>();
+  const add = (id: string, nome: string, brutoParcela: number) => {
+    const cur = map.get(id) ?? { nome, bruto: 0, ordens: 0 };
+    cur.bruto += brutoParcela;
+    cur.ordens += 1;
+    map.set(id, cur);
+  };
+
+  for (const o of ordens) {
+    const cortesia = (o.pagamentos ?? []).filter(p => p.metodo === 'CORTESIA').reduce((sp, p) => sp + p.valor, 0);
+    const net = o.valorTotal - cortesia;
+    if (o.ordemLavadores.length > 0) {
+      const parcela = net / o.ordemLavadores.length;
+      for (const ol of o.ordemLavadores) add(ol.lavadorId, ol.lavador.nome, parcela);
+    } else if (o.lavadorId) {
+      add(o.lavadorId, o.lavador?.nome ?? '—', net);
+    }
+  }
+
+  return map;
 }
 
 /** Chamado pelo baileyService quando recebe uma imagem. */
@@ -100,6 +135,7 @@ const COMMAND_PERMISSION_MAP: Record<string, string> = {
   'resumo diário':   'ver_financeiro',
   'caixa':           'ver_financeiro',
   'status caixa':    'ver_financeiro',
+  'faturamento':     'ver_financeiro',
   'ordens':          'gerenciar_ordens',
   'ordens paradas':  'gerenciar_ordens',
   'ordens em andamento': 'gerenciar_ordens',
@@ -128,6 +164,7 @@ const NOTIF_MENU_ITEMS = [
   { key: 'ordemCancelada',    label: '❌ Ordem cancelada' },
   { key: 'ordemParada',       label: '⚠️ Ordens paradas' },
   { key: 'resumoDiario',      label: '📊 Resumo diário (20h)' },
+  { key: 'resumoSemanal',     label: '📅 Resumo semanal (sáb 19h)' },
   { key: 'alertaCaixaAberto', label: '🕙 Alerta caixa aberto' },
   { key: 'saidaRegistrada',   label: '💸 Saída registrada' },
   { key: 'comissaoFechada',   label: '💰 Comissão fechada' },
@@ -141,6 +178,7 @@ const NOTIF_SISTEMA_DEFAULTS: Record<string, boolean> = {
   ordemFinalizada:    false,
   ordemCancelada:     false,
   resumoDiario:       true,
+  resumoSemanal:      true,
   alertaCaixaAberto:  true,
   ordemParada:        false,
   saidaRegistrada:    false,
@@ -743,6 +781,12 @@ export async function handleIncomingMessage(
       const feature = COMMAND_PERMISSION_MAP[command];
       if (feature && !hasPermission(user, feature)) return getPermissionDeniedMessage();
 
+      const faturamentoMatch = command.match(/^faturamento(?:\s+(.+))?$/);
+      if (faturamentoMatch) {
+        if (!hasPermission(user, 'ver_financeiro')) return getPermissionDeniedMessage();
+        return handleFaturamentoCommand(empresaId, faturamentoMatch[1]?.trim());
+      }
+
       if (['resumo', 'resumo do dia', 'resumo diario', 'resumo diário'].includes(command))
         return handleResumoCommand(empresaId);
       if (['caixa', 'status caixa'].includes(command))
@@ -1005,6 +1049,10 @@ export async function handleIncomingMessage(
     if (command === 'ordens')    return handleOrdensAtivas(empresaId, user);
     if (command === 'resumo')    return handleResumoCommand(empresaId);
     if (command === 'lavadores') return handleLavadoresCommand(empresaId);
+
+    const faturamentoMatchAdmin = command.match(/^faturamento(?:\s+(.+))?$/);
+    if (faturamentoMatchAdmin) return handleFaturamentoCommand(empresaId, faturamentoMatchAdmin[1]?.trim());
+
     if (command === 'caixa')     return handleCaixaCommand(empresaId);
     if (command === 'pendentes') return handlePendentesCommand(empresaId);
     if (command === 'patio' || command === 'pátio') return handlePatioCommand(empresaId);
@@ -2288,6 +2336,57 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
     `💰 CAIXA:\n` +
     `Entradas: *R$ ${entradas.toFixed(2)}* | Saídas: *R$ ${saidas.toFixed(2)}*\n` +
     `Saldo: *R$ ${(entradas - saidas).toFixed(2)}*`;
+}
+
+/*
+ * Handler: /faturamento [nome] — faturamento bruto por lavador (semana + mês atuais)
+ */
+async function handleFaturamentoCommand(empresaId: string, nomeFiltro?: string): Promise<string> {
+  let lavadorFiltroId: string | null = null;
+  let lavadorFiltroNome: string | null = null;
+
+  if (nomeFiltro) {
+    const lav = await prisma.lavador.findFirst({
+      where: { empresaId, nome: { contains: nomeFiltro, mode: 'insensitive' } },
+      select: { id: true, nome: true },
+    });
+    if (!lav) return `❌ Não encontrei nenhum lavador chamado "${nomeFiltro}". Confira o nome e tente de novo.`;
+    lavadorFiltroId = lav.id;
+    lavadorFiltroNome = lav.nome;
+  }
+
+  const buscarPeriodo = async (range: { start: Date; end: Date }) => {
+    const ordens = await prisma.ordemServico.findMany({
+      where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: range.start, lte: range.end } },
+      select: {
+        valorTotal: true,
+        lavadorId: true,
+        lavador: { select: { nome: true } },
+        ordemLavadores: { select: { lavadorId: true, lavador: { select: { nome: true } } } },
+        pagamentos: { select: { metodo: true, valor: true } },
+      },
+    });
+    return faturamentoBrutoPorLavador(ordens as any);
+  };
+
+  const [ano, mes] = getTodayStrBRT().split('-').map(Number);
+  const [mapaSemana, mapaMes] = await Promise.all([
+    buscarPeriodo(getWeekRangeBRT()),
+    buscarPeriodo(getMonthRangeBRT(ano, mes)),
+  ]);
+
+  const formatarLista = (mapa: Map<string, { nome: string; bruto: number; ordens: number }>) => {
+    let entries = [...mapa.entries()];
+    if (lavadorFiltroId) entries = entries.filter(([id]) => id === lavadorFiltroId);
+    if (entries.length === 0) return lavadorFiltroNome ? `_${lavadorFiltroNome} sem ordens no período._` : '_Sem dados no período._';
+    return entries
+      .sort((a, b) => b[1].bruto - a[1].bruto)
+      .map(([, v]) => `• *${v.nome}*: R$ ${v.bruto.toFixed(2)} (${v.ordens} ord.)`)
+      .join('\n');
+  };
+
+  const titulo = lavadorFiltroNome ? `📊 *Faturamento — ${lavadorFiltroNome}*` : `📊 *Faturamento Bruto por Lavador*`;
+  return `${titulo}\n\n*Semana atual:*\n${formatarLista(mapaSemana)}\n\n*Mês atual:*\n${formatarLista(mapaMes)}`;
 }
 
 /*

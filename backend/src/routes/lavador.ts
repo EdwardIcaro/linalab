@@ -11,7 +11,8 @@ import {
     getLavadorTokens,
     updateLavadorTokenStatus,
     toggleLavadorToken,
-    deleteLavadorToken
+    deleteLavadorToken,
+    getFaturamentoBrutoLavadores
 } from '../controllers/lavadorController';
 
 const router: Router = Router();
@@ -21,6 +22,7 @@ router.use(requirePermissionByMethod({ read: ['gerenciar_funcionarios', 'gerenci
 
 router.get('/', getLavadores);
 router.get('/simple', getLavadoresSimple); // <-- Rota que estava faltando
+router.get('/faturamento-bruto', getFaturamentoBrutoLavadores);
 // Tokens de link público do portal do lavador — restrito à gestão de equipe
 router.get('/tokens', requirePermission('gerenciar_funcionarios'), getLavadorTokens);
 router.put('/tokens/:id/status', updateLavadorTokenStatus);

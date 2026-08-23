@@ -42,7 +42,7 @@ import emailRegraRoutes from './routes/emailRegra';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
-import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas } from './services/whatsappNotificationService';
+import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
@@ -228,6 +228,10 @@ cron.schedule('0 9 * * *', () => {
 cron.schedule('0 20 * * *',  () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
 cron.schedule('30 20 * * *', () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
 cron.schedule('0 22 * * *',  () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
+
+// WhatsApp: Resumo semanal aos sábados às 19h (+ retry às 19:30 caso bot esteja offline)
+cron.schedule('0 19 * * 6',  () => { cronResumoSemanal(); }, { timezone: "America/Sao_Paulo" });
+cron.schedule('30 19 * * 6', () => { cronResumoSemanal(); }, { timezone: "America/Sao_Paulo" });
 
 // WhatsApp: Alerta de caixa aberto às 21h
 cron.schedule('0 21 * * *', () => {
