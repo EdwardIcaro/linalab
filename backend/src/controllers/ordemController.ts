@@ -1115,6 +1115,18 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
         });
       } catch {}
 
+      // WA: notificar lavador(es) recém-atribuídos que uma ordem é deles (desativado por padrão)
+      if (newlyAddedLavadorIds.length > 0) {
+        const servicoNomeEdit = (ordemFinal as any).items?.[0]?.servico?.nome ?? 'Serviço';
+        notifyLavadorNovaOrdem(req.empresaId!, newlyAddedLavadorIds, {
+          numeroOrdem: ordemFinal.numeroOrdem,
+          clienteNome: ordemFinal.cliente.nome,
+          placa: (ordemFinal as any).veiculo?.placa ?? '',
+          servico: servicoNomeEdit,
+          valor: ordemFinal.valorTotal,
+        }).catch(() => {});
+      }
+
       // WA: observação para lavadores recém-atribuídos
       if (ordemFinal.observacoes && newlyAddedLavadorIds.length > 0) {
         notifyObservacaoLavadores(
