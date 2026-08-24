@@ -12,7 +12,7 @@ import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './ad
 import { handleOwnerModeMessage } from './ownerModeService';
 import { gerarPixParaOrdem } from './pixService';
 import { sendImageBuffer } from './baileyService';
-import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT, getTodayRangeBRT, getWeekRangeBRT } from '../utils/dateUtils';
+import { getWorkdayRangeBRT, getDateRangeBRT, getFixedDayRangeBRT, getTodayFixedRangeBRT, getTodayStrBRT, getMonthRangeBRT, getTodayRangeBRT } from '../utils/dateUtils';
 import {
   pendingReports,
   hasPendingAdminReportView,
@@ -1171,30 +1171,51 @@ function parseDateFromMessage(message: string): Date | null {
 }
 
 /**
- * Extrai intervalo de datas da mensagem para relatórios de período.
- * Suporta: "do dia 10/01 ao dia 15/01", "de 10/01 a 15/01",
- *          "semanal", "da semana", "últimos 7 dias", "últimos N dias"
+ * Detecta uma expressão de período em linguagem natural dentro do texto e calcula o intervalo.
+ * Suporta: "N dias atrás" / "últimos N dias", "semana"/"semanal"/"esta semana"/"da semana"
+ * (= últimos 7 dias corridos, não semana civil — evita ficar vazio se hoje for domingo),
+ * "mês"/"mensal"/"este mês"/"do mês" (= mês civil corrente, dia 1 até o fim do mês).
+ * Retorna também `resto`: o texto restante após remover a expressão encontrada — usado pra
+ * extrair o nome do lavador quando período e nome vêm juntos (ex: "Felipe 15 dias atrás").
  */
-function parseDateRangeFromMessage(message: string): { inicio: Date; fim: Date } | null {
-  const msg = message.toLowerCase();
-
-  // Semanal / últimos 7 dias / esta semana
-  if (/semanal|[uú]ltimos\s+7\s+dias|\besta\s+semana\b|\bda\s+semana\b/.test(msg)) {
-    const fim = new Date(); fim.setHours(23, 59, 59, 999);
-    const inicio = new Date(); inicio.setDate(inicio.getDate() - 6); inicio.setHours(0, 0, 0, 0);
-    return { inicio, fim };
-  }
-
-  // Últimos N dias (ex: "últimos 10 dias")
-  const nDiasMatch = msg.match(/[uú]ltimos\s+(\d+)\s+dias/);
-  if (nDiasMatch) {
-    const n = parseInt(nDiasMatch[1]);
-    if (n >= 2 && n <= 365) {
+function extrairPeriodoBusca(texto: string): { inicio: Date; fim: Date; label: string; resto: string } | null {
+  const nMatch = texto.match(/(\d+)\s*dias?\s*atr[áa]s/i) || texto.match(/[uú]ltimos?\s+(\d+)\s*dias/i);
+  if (nMatch) {
+    const n = parseInt(nMatch[1], 10);
+    if (n >= 1 && n <= 365) {
       const fim = new Date(); fim.setHours(23, 59, 59, 999);
       const inicio = new Date(); inicio.setDate(inicio.getDate() - (n - 1)); inicio.setHours(0, 0, 0, 0);
-      return { inicio, fim };
+      return { inicio, fim, label: `últimos ${n} dias`, resto: texto.replace(nMatch[0], '').trim() };
     }
   }
+
+  const semanaMatch = texto.match(/\bsemanal\b|\besta\s+semana\b|\bda\s+semana\b|\bsemana\b/i);
+  if (semanaMatch) {
+    const fim = new Date(); fim.setHours(23, 59, 59, 999);
+    const inicio = new Date(); inicio.setDate(inicio.getDate() - 6); inicio.setHours(0, 0, 0, 0);
+    return { inicio, fim, label: 'últimos 7 dias', resto: texto.replace(semanaMatch[0], '').trim() };
+  }
+
+  const mesMatch = texto.match(/\bmensal\b|\beste\s+m[eê]s\b|\bdo\s+m[eê]s\b|\bm[eê]s\b/i);
+  if (mesMatch) {
+    const [ano, mesNum] = getTodayStrBRT().split('-').map(Number);
+    const { start, end } = getMonthRangeBRT(ano, mesNum);
+    return { inicio: start, fim: end, label: 'mês atual', resto: texto.replace(mesMatch[0], '').trim() };
+  }
+
+  return null;
+}
+
+/**
+ * Extrai intervalo de datas da mensagem para relatórios de período.
+ * Suporta: "do dia 10/01 ao dia 15/01", "de 10/01 a 15/01",
+ *          "semanal", "da semana", "mês", "N dias atrás", "últimos N dias"
+ */
+function parseDateRangeFromMessage(message: string): { inicio: Date; fim: Date } | null {
+  const periodo = extrairPeriodoBusca(message);
+  if (periodo) return { inicio: periodo.inicio, fim: periodo.fim };
+
+  const msg = message.toLowerCase();
 
   // Duas datas: "10/01 ao 15/01", "de 10/01 a 15/01", "do dia 10/01 até 15/01"
   const twoDateMatch = msg.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)[\s\S]{0,20}?(?:\bao?\b|\baté\b|\ba\b)[\s\S]{0,10}?(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
@@ -1347,7 +1368,7 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
   const ordens = await prisma.ordemServico.findMany({
     where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: inicio, lte: fim } },
     include: {
-      veiculo:  { select: { modelo: true } },
+      veiculo:  { select: { modelo: true, tipoVeiculo: true } },
       lavador:  { select: { nome: true, comissao: true } },
       ordemLavadores: { include: { lavador: { select: { nome: true, comissao: true } } } },
       pagamentos: { select: { metodo: true, valor: true } },
@@ -1393,6 +1414,12 @@ async function handleRelatorioPeriodo(inicio: Date, fim: Date, empresaId: string
   const totalFat    = faturamentoSemCortesia(ordens);
   const totalOrdens = ordens.length;
   r += `\nTOTAL: *R$ ${totalFat.toFixed(2)}* | *${totalOrdens}* lavagem(ns)\n`;
+
+  const totalCarros = ordens.filter((o: any) => o.veiculo?.tipoVeiculo === 'CARRO').length;
+  const totalMotos  = ordens.filter((o: any) => o.veiculo?.tipoVeiculo === 'MOTO').length;
+  if (totalCarros > 0 || totalMotos > 0) {
+    r += `🚗 Carros: *${totalCarros}* · 🏍️ Motos: *${totalMotos}*\n`;
+  }
 
   // Faturamento por método de pagamento
   const porMetodo: Record<string, number> = {};
@@ -2341,7 +2368,23 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
 /*
  * Handler: /faturamento [nome] — faturamento bruto por lavador (semana + mês atuais)
  */
-async function handleFaturamentoCommand(empresaId: string, nomeFiltro?: string): Promise<string> {
+async function handleFaturamentoCommand(empresaId: string, textoLivre?: string): Promise<string> {
+  // Extrai período em linguagem natural do texto (ex: "Felipe 15 dias atrás", "semana", "mes")
+  // — o que sobra depois de remover a expressão de período é o filtro de nome.
+  let nomeFiltro = textoLivre;
+  let periodoCustom: { inicio: Date; fim: Date; label: string } | null = null;
+
+  if (textoLivre) {
+    const periodo = extrairPeriodoBusca(textoLivre);
+    if (periodo) {
+      periodoCustom = periodo;
+      nomeFiltro = periodo.resto || undefined;
+    }
+  }
+
+  // "faturamento lavadores"/"faturamento todos" — sem filtro de nome, lista geral
+  if (nomeFiltro && /^(lavadores|todos|todas)$/i.test(nomeFiltro.trim())) nomeFiltro = undefined;
+
   let lavadorFiltroId: string | null = null;
   let lavadorFiltroNome: string | null = null;
 
@@ -2369,12 +2412,6 @@ async function handleFaturamentoCommand(empresaId: string, nomeFiltro?: string):
     return faturamentoBrutoPorLavador(ordens as any);
   };
 
-  const [ano, mes] = getTodayStrBRT().split('-').map(Number);
-  const [mapaSemana, mapaMes] = await Promise.all([
-    buscarPeriodo(getWeekRangeBRT()),
-    buscarPeriodo(getMonthRangeBRT(ano, mes)),
-  ]);
-
   const formatarLista = (mapa: Map<string, { nome: string; bruto: number; ordens: number }>) => {
     let entries = [...mapa.entries()];
     if (lavadorFiltroId) entries = entries.filter(([id]) => id === lavadorFiltroId);
@@ -2386,7 +2423,21 @@ async function handleFaturamentoCommand(empresaId: string, nomeFiltro?: string):
   };
 
   const titulo = lavadorFiltroNome ? `📊 *Faturamento — ${lavadorFiltroNome}*` : `📊 *Faturamento Bruto por Lavador*`;
-  return `${titulo}\n\n*Semana atual:*\n${formatarLista(mapaSemana)}\n\n*Mês atual:*\n${formatarLista(mapaMes)}`;
+
+  if (periodoCustom) {
+    const mapa = await buscarPeriodo({ start: periodoCustom.inicio, end: periodoCustom.fim });
+    return `${titulo}\n\n*${periodoCustom.label}:*\n${formatarLista(mapa)}`;
+  }
+
+  // Sem período especificado: últimos 7 dias (evita ficar vazio se hoje for domingo) + mês civil atual
+  const semanaDefault = extrairPeriodoBusca('semana')!;
+  const [ano, mes] = getTodayStrBRT().split('-').map(Number);
+  const [mapaSemana, mapaMes] = await Promise.all([
+    buscarPeriodo({ start: semanaDefault.inicio, end: semanaDefault.fim }),
+    buscarPeriodo(getMonthRangeBRT(ano, mes)),
+  ]);
+
+  return `${titulo}\n\n*Últimos 7 dias:*\n${formatarLista(mapaSemana)}\n\n*Mês atual:*\n${formatarLista(mapaMes)}`;
 }
 
 /*
