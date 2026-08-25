@@ -3,6 +3,7 @@ import prisma from '../db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
+import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
@@ -23,6 +24,14 @@ function gerarSessionJwt(lavadorId: string, empresaId: string, sessionVersion: n
 function gerarSessionJwtDp(dpFuncionarioId: string, empresaId: string, sessionVersion: number): string {
   return jwt.sign(
     { dpFuncionarioId, empresaId, sessionVersion, tipo: 'portal_session_dp' },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
+function gerarSessionJwtLc(lcFuncionarioId: string, empresaId: string, sessionVersion: number): string {
+  return jwt.sign(
+    { lcFuncionarioId, empresaId, sessionVersion, tipo: 'portal_session_lc' },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
@@ -51,8 +60,20 @@ async function buscarDpFuncionarioPorToken(token: string) {
   });
 }
 
+async function buscarLcFuncionarioPorToken(token: string) {
+  return prisma.lcFuncionario.findUnique({
+    where: { linkToken: token },
+    select: {
+      id: true, nome: true, pin: true, pinDefinido: true,
+      ativo: true, sessionVersion: true, empresaId: true,
+      tipoRemuneracao: true, comissao: true, salario: true,
+      empresa: { select: { id: true, nome: true, horarioAbertura: true } },
+    },
+  });
+}
+
 const DP_FUNC_SELECT = {
-  id: true, nome: true, cargo: true, cargaHorariaDia: true, jornadaEntrada: true,
+  id: true, nome: true, cargo: true, cargaHorariaDia: true, jornadaEntrada: true, faceEmbedding: true,
 } as const;
 
 async function buscarDpFuncPorSessao(
@@ -109,6 +130,20 @@ export const resolverTokenPublico = async (req: Request, res: Response) => {
       });
     }
 
+    const lcFunc = await buscarLcFuncionarioPorToken(token);
+    if (lcFunc?.ativo) {
+      return res.json({
+        lcFuncionarioId: lcFunc.id,
+        nome: lcFunc.nome,
+        pinDefinido: lcFunc.pinDefinido,
+        empresa: {
+          id: lcFunc.empresa.id,
+          nome: lcFunc.empresa.nome,
+          horarioAbertura: lcFunc.empresa.horarioAbertura,
+        },
+      });
+    }
+
     return res.status(404).json({ erro: 'link_invalido' });
   } catch (error) {
     console.error('[portal] resolverToken:', error);
@@ -153,6 +188,18 @@ export const setupPin = async (req: Request, res: Response) => {
       return res.json({ token: gerarSessionJwtDp(dpFunc.id, dpFunc.empresaId, dpFunc.sessionVersion) });
     }
 
+    const lcFunc = await buscarLcFuncionarioPorToken(token);
+    if (lcFunc?.ativo) {
+      if (lcFunc.pinDefinido) return res.status(400).json({ erro: 'PIN já foi definido' });
+      const hash = await bcrypt.hash(String(pin), 10);
+      await prisma.lcFuncionario.update({
+        where: { id: lcFunc.id },
+        data: { pin: hash, pinDefinido: true },
+      });
+      resetarRateLimit(`pin-setup:${ip}`);
+      return res.json({ token: gerarSessionJwtLc(lcFunc.id, lcFunc.empresaId, lcFunc.sessionVersion) });
+    }
+
     return res.status(404).json({ erro: 'link_invalido' });
   } catch (error) {
     console.error('[portal] setupPin:', error);
@@ -191,6 +238,16 @@ export const verifyPin = async (req: Request, res: Response) => {
       if (!ok) return res.status(401).json({ erro: 'PIN incorreto' });
       resetarRateLimit(`pin-fail:${ip}`);
       return res.json({ token: gerarSessionJwtDp(dpFunc.id, dpFunc.empresaId, dpFunc.sessionVersion) });
+    }
+
+    const lcFunc = await buscarLcFuncionarioPorToken(token);
+    if (lcFunc?.ativo) {
+      if (!lcFunc.pinDefinido || !lcFunc.pin)
+        return res.status(400).json({ erro: 'PIN não configurado' });
+      const ok = await bcrypt.compare(String(pin), lcFunc.pin);
+      if (!ok) return res.status(401).json({ erro: 'PIN incorreto' });
+      resetarRateLimit(`pin-fail:${ip}`);
+      return res.json({ token: gerarSessionJwtLc(lcFunc.id, lcFunc.empresaId, lcFunc.sessionVersion) });
     }
 
     return res.status(404).json({ erro: 'link_invalido' });
@@ -234,6 +291,18 @@ export const portalSessionMiddleware = async (req: Request, res: Response, next:
       return next();
     }
 
+    if (payload.tipo === 'portal_session_lc') {
+      const lcFunc = await prisma.lcFuncionario.findUnique({
+        where: { id: payload.lcFuncionarioId },
+        select: { sessionVersion: true, ativo: true },
+      });
+      if (!lcFunc || !lcFunc.ativo || lcFunc.sessionVersion !== payload.sessionVersion)
+        return res.status(401).json({ erro: 'Sessão expirada' });
+      (req as any).lcFuncionarioId = payload.lcFuncionarioId;
+      (req as any).empresaId = payload.empresaId;
+      return next();
+    }
+
     return res.status(401).json({ erro: 'Token inválido' });
   } catch {
     res.status(401).json({ erro: 'Token inválido ou expirado' });
@@ -246,6 +315,7 @@ export const portalSessionMiddleware = async (req: Request, res: Response, next:
 export const getDadosPortal = async (req: Request, res: Response) => {
   const lavadorId = (req as any).lavadorId as string | undefined;
   const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
+  const lcFuncionarioId = (req as any).lcFuncionarioId as string | undefined;
   const empresaId = (req as any).empresaId as string;
 
   // Sessão dpFuncionario (usuário sistema, sem Lina Wash)
@@ -272,9 +342,88 @@ export const getDadosPortal = async (req: Request, res: Response) => {
         dataPointAtivo: !!sistemaDP,
         hoje: { ganho: 0, totalOrdens: 0, ordens: [] },
         mes: { ganho: 0, totalOrdens: 0 },
+        linaCenterAtivo: false,
+        lc: null,
       });
     } catch (error) {
       console.error('[portal] getDadosPortal (dp):', error);
+      return res.status(500).json({ erro: 'Erro interno' });
+    }
+  }
+
+  // Sessão lcFuncionario (Lina Center)
+  if (!lavadorId && !dpFuncionarioId && lcFuncionarioId) {
+    try {
+      const lcFunc = await prisma.lcFuncionario.findUnique({
+        where: { id: lcFuncionarioId },
+        select: { nome: true, empresa: { select: { nome: true } } },
+      });
+      if (!lcFunc) return res.status(404).json({ erro: 'Funcionário não encontrado' });
+
+      const { start: inicioHoje, end: fimHoje } = getTodayRangeBRT();
+      const inicioMes = new Date(inicioHoje);
+      inicioMes.setDate(1);
+
+      const ordensHojeLc = await prisma.lcOrdemServico.findMany({
+        where: {
+          funcionarioId: lcFuncionarioId,
+          status: { in: ['FINALIZADO', 'AGUARDANDO_PAGAMENTO'] },
+          dataFim: { gte: inicioHoje, lte: fimHoje },
+        },
+        select: {
+          comissao: true, valorTotal: true, status: true,
+          cliente: { select: { nome: true } },
+          veiculo: { select: { placa: true, modelo: true } },
+          items: { select: { servico: { select: { nome: true } }, nomeCustom: true } },
+        },
+        orderBy: { dataFim: 'desc' },
+      });
+
+      const mesAggLc = await prisma.lcOrdemServico.aggregate({
+        where: { funcionarioId: lcFuncionarioId, status: 'FINALIZADO', dataFim: { gte: inicioMes } },
+        _sum: { comissao: true },
+        _count: true,
+      });
+
+      const ganhoHojeLc = ordensHojeLc.reduce((s, o) => s + (o.comissao ?? 0), 0);
+
+      return res.json({
+        lavador: {
+          nome: lcFunc.nome,
+          empresa: lcFunc.empresa.nome,
+          tipoRemuneracao: null,
+          baseComissao: null,
+          comissao: null,
+          salario: null,
+          telefone: null,
+        },
+        dataPointAtivo: false,
+        hoje: { ganho: 0, totalOrdens: 0, ordens: [] },
+        mes: { ganho: 0, totalOrdens: 0 },
+        linaCenterAtivo: true,
+        lc: {
+          nome: lcFunc.nome,
+          empresa: lcFunc.empresa.nome,
+          hoje: {
+            ganho: ganhoHojeLc,
+            totalOrdens: ordensHojeLc.length,
+            ordens: ordensHojeLc.map((o) => ({
+              cliente: o.cliente?.nome ?? '—',
+              veiculo: o.veiculo ? `${o.veiculo.modelo}${o.veiculo.placa ? ' · ' + o.veiculo.placa : ''}` : '—',
+              servicos: o.items.map((i) => i.servico?.nome ?? i.nomeCustom).filter(Boolean).join(', '),
+              valorTotal: o.valorTotal,
+              comissao: o.comissao ?? 0,
+              status: o.status,
+            })),
+          },
+          mes: {
+            ganho: mesAggLc._sum.comissao ?? 0,
+            totalOrdens: mesAggLc._count ?? 0,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('[portal] getDadosPortal (lc):', error);
       return res.status(500).json({ erro: 'Erro interno' });
     }
   }
@@ -377,6 +526,8 @@ export const getDadosPortal = async (req: Request, res: Response) => {
         ganho: ordensMes._sum?.ganho ?? 0,
         totalOrdens: ordensMes._count?.ordemId ?? 0,
       },
+      linaCenterAtivo: false,
+      lc: null,
     });
   } catch (error) {
     console.error('[portal] getDadosPortal:', error);
@@ -494,6 +645,58 @@ export const getExtratoPortal = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[portal] extrato:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── GET /api/p/me/lc/extrato — extrato do funcionário do Lina Center ────────
+// Mais simples que o extrato do Lina Wash: um funcionário por ordem, sem
+// fechamento de comissão, sem gorjetas — a comissão já vem calculada e
+// guardada em LcOrdemServico.comissao no momento da criação/finalização.
+export const getExtratoLcPortal = async (req: Request, res: Response) => {
+  const lcFuncionarioId = (req as any).lcFuncionarioId as string;
+
+  try {
+    const trintaDiasAtras = new Date();
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+    trintaDiasAtras.setHours(0, 0, 0, 0);
+
+    const funcionario = await prisma.lcFuncionario.findUnique({
+      where: { id: lcFuncionarioId },
+      select: {
+        id: true, nome: true, comissao: true, tipoRemuneracao: true, salario: true,
+        empresa: { select: { nome: true } },
+      },
+    });
+    if (!funcionario) return res.status(404).json({ erro: 'Funcionário não encontrado' });
+
+    const ordens = await prisma.lcOrdemServico.findMany({
+      where: {
+        funcionarioId: lcFuncionarioId,
+        createdAt: { gte: trintaDiasAtras },
+        status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO', 'FINALIZADO'] },
+      },
+      include: {
+        cliente: { select: { nome: true } },
+        veiculo: { select: { modelo: true, placa: true } },
+        items: { include: { servico: { select: { nome: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    res.json({
+      lcFuncionarioId: funcionario.id,
+      nome: funcionario.nome,
+      comissao: funcionario.comissao,
+      tipoRemuneracao: funcionario.tipoRemuneracao,
+      salario: funcionario.salario,
+      empresa: funcionario.empresa.nome,
+      ordens,
+      tokenExpiresAt: null,
+    });
+  } catch (error) {
+    console.error('[portal] extrato Lina Center:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };
@@ -665,6 +868,7 @@ export const getPontoHoje = async (req: Request, res: Response) => {
       estado,
       minutosHoje,
       cargaEsperadaMin,
+      temRostoCadastrado: !!funcionario.faceEmbedding,
       proximoTipo: (!marcacoes.length || marcacoes[marcacoes.length - 1].tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA',
       marcacoes: marcacoes.map(m => ({
         id: m.id,
@@ -676,6 +880,37 @@ export const getPontoHoje = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[portal] pontoHoje:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/p/me/face-token ────────────────────────────────────────────────
+// Self-service: o próprio funcionário logado no portal gera seu token pessoal
+// de cadastro facial (mesmo mecanismo que o gestor usa em funcionarios.html,
+// só que disparado por quem já está autenticado — sem precisar de um link à parte).
+// Expira em 30min (uso imediato, não precisa da folga de 7 dias do link do gestor).
+export const gerarFaceTokenPortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
+  const empresaId = (req as any).empresaId as string;
+
+  try {
+    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId);
+    if (!funcionario) {
+      return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
+    }
+
+    const token = gerarTokenCurto(8);
+    const expiraEm = new Date(Date.now() + 30 * 60 * 1000);
+
+    await prisma.dpFuncionario.update({
+      where: { id: funcionario.id },
+      data: { faceToken: token, faceTokenExpiraEm: expiraEm },
+    });
+
+    res.json({ token });
+  } catch (error) {
+    console.error('[portal] gerarFaceTokenPortal:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };

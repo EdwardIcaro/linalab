@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Links de Cadastro - Admin Lina Forge</title>
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .links-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9f9f9; padding: 15px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 15px; border-bottom: 1px solid #e0e0e0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: #f5f5f5; }
+
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .status-disponivel { background: #fef3c7; color: #92400e; }
+        .status-usado { background: #d1fae5; color: #065f46; }
+        .status-desativado { background: #fee2e2; color: #991b1b; }
+
+        .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-small { padding: 8px 12px; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .btn-info { background: #e0f2fe; color: #0369a1; }
+        .btn-info:hover { background: #bae6fd; }
+        .btn-danger { background: #fee2e2; color: #991b1b; }
+        .btn-danger:hover { background: #fecaca; }
+        .btn-small:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #666; }
+        .empty-state i { font-size: 3rem; color: #ccc; margin-bottom: 15px; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+
+        .error-message, .success-message { padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .error-message { background: #fee; color: #c33; }
+        .success-message { background: #efe; color: #3c3; }
+        .error-message.show, .success-message.show { display: block; }
+
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-header { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: #333; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+        .btn-modal { padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-modal.primary { background: #00BCD4; color: white; }
+        .btn-modal.primary:hover { background: #00A0B8; }
+        .btn-modal.secondary { background: #f0f0f0; color: #333; }
+        .btn-modal.secondary:hover { background: #e0e0e0; }
+        .btn-modal:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .field { margin-bottom: 18px; }
+        .field label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 0.9rem; }
+        .field select, .field input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.95rem; }
+        .field select:disabled { background: #f5f5f5; color: #999; }
+
+        .link-result { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; }
+        .link-result p { color: #166534; font-size: 0.9rem; margin-bottom: 10px; }
+        .link-result-row { display: flex; gap: 8px; }
+        .link-result-row input { flex: 1; padding: 10px; border: 1.5px solid #bbf7d0; border-radius: 6px; font-size: 0.85rem; background: white; }
+    </style>
+</head>
+<body class="admin-layout">
+    <div class="container-fluid">
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i> <span id="errorText"></span>
+        </div>
+        <div class="success-message" id="successMessage">
+            <i class="fas fa-check-circle"></i> <span id="successText"></span>
+        </div>
+
+        <div class="header-section">
+            <div>
+                <h1><i class="fas fa-link"></i> Links de Cadastro</h1>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="openGenerateModal()" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-plus"></i> Gerar Link
+                </button>
+                <a href="dashboard.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <div id="loadingState" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Carregando links...
+        </div>
+
+        <div id="mainContent" style="display: none;">
+            <div class="links-table">
+                <div id="tableContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gerar Link -->
+    <div class="modal-overlay" id="generateModal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header"><i class="fas fa-link"></i> Gerar Link de Cadastro</div>
+
+            <div id="generateForm">
+                <div class="field">
+                    <label>Sistema</label>
+                    <select id="sistemaSelect" onchange="onSistemaChange()">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Plano</label>
+                    <select id="planoSelect" disabled>
+                        <option value="">Selecione o sistema primeiro...</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Duração da assinatura concedida</label>
+                    <select id="duracaoSelect">
+                        <option value="DIAS_7">7 dias</option>
+                        <option value="MES_1">1 mês</option>
+                        <option value="MESES_6">6 meses</option>
+                        <option value="VITALICIO" selected>Vitalício</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="link-result" id="linkResult" style="display: none;">
+                <p><i class="fas fa-check-circle"></i> Link gerado — envie para a pessoa se cadastrar. É de uso único.</p>
+                <div class="link-result-row">
+                    <input type="text" id="generatedUrl" readonly>
+                    <button class="btn-modal primary" onclick="copyGeneratedUrl()"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn-modal secondary" onclick="closeGenerateModal()">Fechar</button>
+                <button class="btn-modal primary" id="generateBtn" onclick="confirmGenerate()">
+                    <i class="fas fa-magic"></i> Gerar Link
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../api.js"></script>
+    <script>
+        let allPlans = [];
+        let allLinks = [];
+
+        document.addEventListener('DOMContentLoaded', () => { loadData(); });
+
+        async function loadData() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            try {
+                const [plans, linksResp] = await Promise.all([
+                    fetchApi('/admin/subscriptions/plans'),
+                    fetchApi('/admin/subscriptions/signup-links'),
+                ]);
+                allPlans = plans;
+                allLinks = linksResp.links;
+                renderTable();
+            } catch (error) {
+                showError('Erro ao carregar dados: ' + (error.message || error.error || 'Tente novamente'));
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            }
+        }
+
+        function sistemaLabel(s) {
+            return { 'lina-wash': '🚗 Lina Wash', 'data-point': '⏰ Data Point', 'lina-center': '🔧 Lina Center' }[s] || s;
+        }
+        function duracaoLabel(d) {
+            return { DIAS_7: '7 dias', MES_1: '1 mês', MESES_6: '6 meses', VITALICIO: 'Vitalício' }[d] || d;
+        }
+        function statusInfo(l) {
+            if (l.usadoPorId) return { label: 'Usado', cls: 'status-usado' };
+            if (!l.ativo) return { label: 'Desativado', cls: 'status-desativado' };
+            return { label: 'Disponível', cls: 'status-disponivel' };
+        }
+        function formatDate(d) {
+            return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderTable() {
+            const container = document.getElementById('tableContainer');
+            if (allLinks.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-link"></i><p>Nenhum link gerado ainda.</p></div>';
+                return;
+            }
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr><th>Sistema</th><th>Plano</th><th>Duração</th><th>Status</th><th>Criado em</th><th>Usado por</th><th>Ações</th></tr>
+                    </thead>
+                    <tbody>
+                        ${allLinks.map(l => {
+                            const st = statusInfo(l);
+                            const podeAgir = !l.usadoPorId && l.ativo;
+                            return `
+                            <tr>
+                                <td>${sistemaLabel(l.plan.sistema)}</td>
+                                <td>${l.plan.nome}</td>
+                                <td>${duracaoLabel(l.duracaoTipo)}</td>
+                                <td><span class="status-badge ${st.cls}">${st.label}</span></td>
+                                <td>${formatDate(l.createdAt)}</td>
+                                <td>${l.usadoPor ? `${l.usadoPor.nome} (${l.usadoPor.email})` : '—'}</td>
+                                <td class="action-buttons">
+                                    ${podeAgir ? `<button class="btn-small btn-info" onclick="copyLink('${l.token}')"><i class="fas fa-copy"></i> Copiar</button>` : ''}
+                                    ${podeAgir ? `<button class="btn-small btn-danger" onclick="desativarLink('${l.id}')"><i class="fas fa-ban"></i> Desativar</button>` : ''}
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function copyLink(token) {
+            const url = `${window.location.origin}/signup.html?link=${token}`;
+            navigator.clipboard.writeText(url).then(() => showSuccess('Link copiado!')).catch(() => showError('Não foi possível copiar o link.'));
+        }
+
+        async function desativarLink(id) {
+            if (!confirm('Desativar este link? Ele deixa de funcionar imediatamente.')) return;
+            try {
+                await fetchApi(`/admin/subscriptions/signup-links/${id}/desativar`, { method: 'PATCH' });
+                showSuccess('Link desativado.');
+                await loadData();
+            } catch (error) {
+                showError(error.message || error.error || 'Erro ao desativar link.');
+            }
+        }
+
+        // ===== Modal Gerar Link =====
+        function openGenerateModal() {
+            const sistemas = [...new Set(allPlans.map(p => p.sistema))];
+            document.getElementById('sistemaSelect').innerHTML =
+                '<option value="">Selecione...</option>' + sistemas.map(s => `<option value="${s}">${sistemaLabel(s)}</option>`).join('');
+            document.getElementById('planoSelect').innerHTML = '<option value="">Selecione o sistema primeiro...</option>';
+            document.getElementById('planoSelect').disabled = true;
+            document.getElementById('duracaoSelect').value = 'VITALICIO';
+            document.getElementById('generateForm').style.display = 'block';
+            document.getElementById('linkResult').style.display = 'none';
+            document.getElementById('generateBtn').style.display = 'inline-flex';
+            document.getElementById('generateModal').classList.add('show');
+        }
+        function closeGenerateModal() {
+            document.getElementById('generateModal').classList.remove('show');
+        }
+        function onSistemaChange() {
+            const sistema = document.getElementById('sistemaSelect').value;
+            const planoSelect = document.getElementById('planoSelect');
+            if (!sistema) {
+                planoSelect.innerHTML = '<option value="">Selecione o sistema primeiro...</option>';
+                planoSelect.disabled = true;
+                return;
+            }
+            const planos = allPlans.filter(p => p.sistema === sistema && p.ativo);
+            planoSelect.innerHTML = '<option value="">Selecione um plano...</option>' +
+                planos.map(p => `<option value="${p.id}">${p.nome} — R$ ${p.preco.toFixed(2)}</option>`).join('');
+            planoSelect.disabled = false;
+        }
+
+        async function confirmGenerate() {
+            const planId = document.getElementById('planoSelect').value;
+            const duracaoTipo = document.getElementById('duracaoSelect').value;
+            if (!planId || !duracaoTipo) {
+                showError('Selecione o plano e a duração.');
+                return;
+            }
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            try {
+                const { link } = await fetchApi('/admin/subscriptions/signup-links', {
+                    method: 'POST',
+                    body: JSON.stringify({ planId, duracaoTipo }),
+                });
+                const url = `${window.location.origin}/signup.html?link=${link.token}`;
+                document.getElementById('generatedUrl').value = url;
+                document.getElementById('generateForm').style.display = 'none';
+                btn.style.display = 'none';
+                document.getElementById('linkResult').style.display = 'block';
+                await loadData();
+            } catch (error) {
+                showError(error.message || error.error || 'Erro ao gerar link.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function copyGeneratedUrl() {
+            const input = document.getElementById('generatedUrl');
+            navigator.clipboard.writeText(input.value).then(() => showSuccess('Link copiado!'));
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            document.getElementById('successText').textContent = message;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        document.getElementById('generateModal').addEventListener('click', function (e) {
+            if (e.target === this) closeGenerateModal();
+        });
+    </script>
+</body>
+</html>

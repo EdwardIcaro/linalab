@@ -16,7 +16,10 @@ import {
   toggleAddonStatus,
   getSubscriptionStats,
   listUsuarios,
-  createSubscriptionAssignment
+  createSubscriptionAssignment,
+  gerarSignupLink,
+  listarSignupLinks,
+  desativarSignupLink
 } from '../controllers/subscriptionAdminController';
 
 const router: Router = Router();
@@ -50,6 +53,11 @@ router.post('/addons', createAddon);
 router.put('/addons/:id', updateAddon);
 router.delete('/addons/:id', deleteAddon);
 router.patch('/addons/:id/toggle', toggleAddonStatus);
+
+// Links de cadastro com assinatura pré-configurada
+router.post('/signup-links', gerarSignupLink);
+router.get('/signup-links', listarSignupLinks);
+router.patch('/signup-links/:id/desativar', desativarSignupLink);
 
 // Estatísticas
 router.get('/stats', getSubscriptionStats);

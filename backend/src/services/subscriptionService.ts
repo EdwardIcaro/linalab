@@ -12,6 +12,8 @@ interface CreateSubscriptionParams {
   isTrial?: boolean;
   isLifetime?: boolean;
   months?: number;
+  days?: number;      // duração em dias corridos (ex: links de cadastro com 7 dias)
+  isGrant?: boolean;  // concessão administrativa — ignora cobrança mesmo em plano pago
 }
 
 interface FeatureAccess {
@@ -153,7 +155,7 @@ export class SubscriptionService {
    * Criar nova assinatura
    */
   async createSubscription(params: CreateSubscriptionParams) {
-    const { usuarioId, planId, isTrial, isLifetime, months } = params;
+    const { usuarioId, planId, isTrial, isLifetime, months, days, isGrant } = params;
 
     // Validar se já tem assinatura ativa ou pendente
     const existingSubscription = await prisma.subscription.findFirst({
@@ -201,15 +203,17 @@ export class SubscriptionService {
       ? new Date(now.getTime() + plan.trialDays * 24 * 60 * 60 * 1000)
       : null;
 
-    // Calcular endDate se houver duração em meses
+    // Calcular endDate se houver duração em dias ou meses
     let endDate: Date | null = null;
-    if (months && months > 0) {
+    if (days && days > 0) {
+      endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    } else if (months && months > 0) {
       endDate = new Date(now);
       endDate.setMonth(endDate.getMonth() + months);
     }
 
-    // Verificar se é plano pago (não é trial, não é lifetime, e tem preço > 0)
-    const requiresPayment = !isTrial && !isLifetime && plan.preco > 0;
+    // Verificar se é plano pago (não é trial, não é lifetime, não é concessão administrativa, e tem preço > 0)
+    const requiresPayment = !isTrial && !isLifetime && !isGrant && plan.preco > 0;
 
     // Calcular nextBillingDate
     let nextBillingDate: Date;
@@ -269,6 +273,38 @@ export class SubscriptionService {
       console.error('[Email] Erro ao enviar email de criação de assinatura:', error);
       // Não interromper fluxo se email falhar
     }
+
+    return subscription;
+  }
+
+  /**
+   * Resgata um link de cadastro (SignupLink): cria a assinatura pré-configurada
+   * pro usuário recém-cadastrado e marca o link como usado (uso único).
+   */
+  async grantFromSignupLink(token: string, usuarioId: string) {
+    const link = await prisma.signupLink.findUnique({ where: { token } });
+
+    if (!link || !link.ativo || link.usadoPorId) {
+      throw new Error('Link de cadastro inválido ou já utilizado');
+    }
+
+    const duracaoParams =
+      link.duracaoTipo === 'VITALICIO' ? { isLifetime: true } :
+      link.duracaoTipo === 'DIAS_7'    ? { days: 7 } :
+      link.duracaoTipo === 'MES_1'     ? { months: 1 } :
+      /* MESES_6 */                      { months: 6 };
+
+    const subscription = await this.createSubscription({
+      usuarioId,
+      planId: link.planId,
+      isGrant: true,
+      ...duracaoParams,
+    });
+
+    await prisma.signupLink.update({
+      where: { id: link.id },
+      data: { ativo: false, usadoPorId: usuarioId, usadoEm: new Date() },
+    });
 
     return subscription;
   }

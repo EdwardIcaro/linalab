@@ -10,10 +10,20 @@ import { subscriptionService } from '../services/subscriptionService';
  */
 export const createUsuario = async (req: Request, res: Response) => {
   try {
-    const { nome, email, senha } = req.body;
+    const { nome, email, senha, linkToken } = req.body;
 
     if (!nome || !email || !senha) {
       return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios' });
+    }
+
+    // Se veio de um link de cadastro, valida ANTES de criar a conta —
+    // evita cadastro "capenga" caso o link já tenha sido usado por outra pessoa.
+    let signupLink = null;
+    if (linkToken) {
+      signupLink = await prisma.signupLink.findUnique({ where: { token: linkToken } });
+      if (!signupLink || !signupLink.ativo || signupLink.usadoPorId) {
+        return res.status(400).json({ error: 'Este link de cadastro é inválido ou já foi utilizado.' });
+      }
     }
 
     const existingUsuario = await prisma.usuario.findFirst({
@@ -31,12 +41,24 @@ export const createUsuario = async (req: Request, res: Response) => {
       select: { id: true, nome: true, email: true, createdAt: true },
     });
 
-    // Criar assinatura FREE automaticamente
-    try {
-      await subscriptionService.createFreeSubscriptionForNewUser(usuario.id);
-    } catch (error) {
-      console.error('Erro ao criar assinatura FREE:', error);
-      // Não interromper signup, apenas logar
+    if (signupLink) {
+      try {
+        await subscriptionService.grantFromSignupLink(signupLink.token, usuario.id);
+      } catch (error) {
+        console.error('Erro ao conceder assinatura via link de cadastro:', error);
+        // Conta já foi criada — não bloqueia o cadastro, só cai no plano FREE padrão
+        await subscriptionService.createFreeSubscriptionForNewUser(usuario.id).catch((e) =>
+          console.error('Erro ao criar assinatura FREE de fallback:', e)
+        );
+      }
+    } else {
+      // Criar assinatura FREE automaticamente
+      try {
+        await subscriptionService.createFreeSubscriptionForNewUser(usuario.id);
+      } catch (error) {
+        console.error('Erro ao criar assinatura FREE:', error);
+        // Não interromper signup, apenas logar
+      }
     }
 
     res.status(201).json({ message: 'Usuário criado com sucesso', usuario });

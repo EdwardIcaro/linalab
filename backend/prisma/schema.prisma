@@ -22,6 +22,8 @@ model Usuario {
   adminConfig           AdminConfig?
   tentativasResetSenha  TentativaResetSenha[]
   recuperacoesSenha     RecuperacaoSenha[]
+  signupLinksCriados    SignupLink[]           @relation("SignupLinksCriados")
+  signupLinksResgatados SignupLink[]           @relation("SignupLinksResgatados")
 
   @@map("usuarios")
 }
@@ -73,6 +75,11 @@ model Empresa {
   dpTotens                   DpTotem[]
   gorjetas                   Gorjeta[]
   subaccountAcessos          SubaccountEmpresaAcesso[]
+  lcClientes                 LcCliente[]
+  lcFuncionarios             LcFuncionario[]
+  lcServicos                 LcServico[]
+  lcOrdens                   LcOrdemServico[]
+  lcPagamentos               LcPagamento[]
 
   @@map("empresas")
 }
@@ -590,6 +597,7 @@ model SubscriptionPlan {
   priceHistory  PriceHistory[]
   promotions    Promotion[]
   subscriptions Subscription[]
+  signupLinks   SignupLink[]
 
   @@map("subscription_plans")
 }
@@ -642,6 +650,36 @@ model SubscriptionPayment {
   @@index([subscriptionId])
   @@index([mercadoPagoPaymentId])
   @@map("subscription_payments")
+}
+
+// ─── LINKS DE CADASTRO COM ASSINATURA PRÉ-CONFIGURADA (LINA_OWNER) ────────────
+// Owner gera um link (sistema + plano + duração) para um usuário ainda não
+// cadastrado. Ao se cadastrar por esse link, a assinatura é criada automaticamente,
+// sem cobrança (ver subscriptionService.grantFromSignupLink). Uso único: o link
+// desativa sozinho assim que é resgatado (usadoPorId preenchido).
+
+enum SignupLinkDuracao {
+  DIAS_7
+  MES_1
+  MESES_6
+  VITALICIO
+}
+
+model SignupLink {
+  id          String            @id @default(cuid())
+  token       String            @unique
+  planId      String
+  duracaoTipo SignupLinkDuracao
+  ativo       Boolean           @default(true)
+  criadoPorId String
+  usadoPorId  String?
+  usadoEm     DateTime?
+  createdAt   DateTime          @default(now())
+  plan        SubscriptionPlan  @relation(fields: [planId], references: [id])
+  criadoPor   Usuario           @relation("SignupLinksCriados", fields: [criadoPorId], references: [id])
+  usadoPor    Usuario?          @relation("SignupLinksResgatados", fields: [usadoPorId], references: [id])
+
+  @@map("signup_links")
 }
 
 model Addon {
@@ -1013,6 +1051,148 @@ model DpAfastamento {
   funcionario      DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
 
   @@map("dp_afastamentos")
+}
+
+// ─── LINA CENTER ─────────────────────────────────────────────────────────────
+// Produto independente do ecossistema Lina (mesmo padrão do Data Point).
+// Habilitado por empresa via EmpresaSistema (sistema: 'lina-center').
+// Gestão para oficinas mecânicas / auto centers — versão simplificada do Lina Wash.
+
+model LcCliente {
+  id        String           @id @default(cuid())
+  empresaId String
+  nome      String
+  telefone  String?
+  email     String?
+  ativo     Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  empresa   Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  veiculos  LcVeiculo[]
+  ordens    LcOrdemServico[]
+
+  @@map("lc_clientes")
+}
+
+model LcVeiculo {
+  id        String           @id @default(cuid())
+  clienteId String
+  modelo    String
+  placa     String?          @unique
+  cor       String?
+  ano       Int?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  cliente   LcCliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  ordens    LcOrdemServico[]
+
+  @@map("lc_veiculos")
+}
+
+model LcFuncionario {
+  id              String           @id @default(cuid())
+  empresaId       String
+  nome            String
+  telefone        String?
+  tipoRemuneracao TipoRemuneracao  @default(COMISSAO)
+  comissao        Float?           // % comissão padrão
+  salario         Float?
+  ativo           Boolean          @default(true)
+  // Portal do funcionário (link curto + PIN, mesmo padrão do Lavador/DpFuncionario)
+  pin             String?
+  pinDefinido     Boolean          @default(false)
+  sessionVersion  Int              @default(0)
+  linkToken       String?          @unique
+  // Vínculo opcional com Subaccount role USER — acesso ao portal via login normal
+  usuarioId       String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens          LcOrdemServico[]
+
+  @@unique([nome, empresaId])
+  @@map("lc_funcionarios")
+}
+
+model LcServico {
+  id                 String               @id @default(cuid())
+  empresaId          String
+  nome               String
+  descricao          String?
+  preco              Float
+  comissaoPercentual Float?
+  ativo              Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  empresa            Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordemItems         LcOrdemServicoItem[]
+
+  @@map("lc_servicos")
+}
+
+model LcOrdemServico {
+  id            String               @id @default(cuid())
+  numeroOrdem   Int
+  empresaId     String
+  clienteId     String
+  veiculoId     String?
+  funcionarioId String?
+  status        OrdemStatus          @default(PENDENTE)
+  valorTotal    Float
+  desconto      Float                @default(0)
+  comissao      Float                @default(0)
+  comissaoPaga  Boolean              @default(false)
+  observacoes   String?
+  dataInicio    DateTime?
+  dataFim       DateTime?
+  pago          Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  empresa       Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente       LcCliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  veiculo       LcVeiculo?           @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  funcionario   LcFuncionario?       @relation(fields: [funcionarioId], references: [id])
+  items         LcOrdemServicoItem[]
+  pagamentos    LcPagamento[]
+
+  @@unique([empresaId, numeroOrdem])
+  @@index([empresaId, status])
+  @@index([empresaId, dataFim])
+  @@map("lc_ordens_servico")
+}
+
+model LcOrdemServicoItem {
+  id         String         @id @default(cuid())
+  ordemId    String
+  servicoId  String?
+  nomeCustom String?        // nome do serviço avulso digitado na hora (quando não há servicoId)
+  quantidade Int            @default(1)
+  precoUnit  Float
+  subtotal   Float
+  createdAt  DateTime       @default(now())
+  ordem      LcOrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  servico    LcServico?     @relation(fields: [servicoId], references: [id])
+
+  @@index([ordemId])
+  @@map("lc_ordens_servico_items")
+}
+
+model LcPagamento {
+  id        String          @id @default(cuid())
+  ordemId   String
+  empresaId String
+  metodo    MetodoPagamento
+  valor     Float
+  status    StatusPagamento @default(PENDENTE)
+  pagoEm    DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  empresa   Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordem     LcOrdemServico  @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+
+  @@index([ordemId])
+  @@index([empresaId])
+  @@map("lc_pagamentos")
 }
 
 model Gorjeta {

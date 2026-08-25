@@ -38,6 +38,7 @@ import portalPublicoRoutes from './routes/portalPublico';
 import gorjetaRoutes from './routes/gorjeta';
 import hubRoutes from './routes/hub';
 import dataPointRoutes from './routes/dataPoint';
+import linaCenterRoutes from './routes/linaCenter';
 import emailRegraRoutes from './routes/emailRegra';
 
 import prisma from './db'; // Importa a instância do Prisma
@@ -181,6 +182,7 @@ app.use('/api/gorjeta', authMiddleware, gorjetaRoutes); // Gorjetas de lavadores
 app.use('/api/hub', userAuthMiddleware, hubRoutes);
 app.use('/api/subaccount', userAuthMiddleware, subaccountRoutes);
 app.use('/api/dp', userAuthMiddleware, dataPointRoutes);
+app.use('/api/lc', authMiddleware, linaCenterRoutes); // Lina Center — sistema separado do ecossistema (empresa scoped)
 
 // Bot Lina — setup/disconnect apenas LINA_OWNER; status qualquer token válido
 import { setupWhatsapp, getWhatsappStatus, disconnectWhatsapp } from './controllers/whatsappController';

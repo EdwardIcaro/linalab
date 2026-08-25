@@ -289,16 +289,18 @@
     .mod-card:active { transform:scale(.96); }
     .mod-blue   { background:linear-gradient(145deg,#1e40af,#2563eb,#3b82f6); box-shadow:0 8px 24px rgba(37,99,235,.35); }
     .mod-teal   { background:linear-gradient(145deg,#0f4c75,#0d9488,#14b8a6); box-shadow:0 8px 24px rgba(13,148,136,.35); }
+    .mod-amber  { background:linear-gradient(145deg,#c2410c,#ea580c,#f97316); box-shadow:0 8px 24px rgba(234,88,12,.35); }
     .mod-ghost  { background:var(--white); border-color:var(--border); box-shadow:var(--shadow-sm); cursor:default; }
     .mod-ico { font-size:26px; margin-bottom:auto; }
-    .mod-blue .mod-ico, .mod-teal .mod-ico { color:rgba(255,255,255,.85); }
+    .mod-blue .mod-ico, .mod-teal .mod-ico, .mod-amber .mod-ico { color:rgba(255,255,255,.85); }
     .mod-ghost .mod-ico { color:var(--faint); }
     .mod-label { font-size:15px; font-weight:800; margin-bottom:2px; }
-    .mod-blue .mod-label, .mod-teal .mod-label { color:#fff; }
+    .mod-blue .mod-label, .mod-teal .mod-label, .mod-amber .mod-label { color:#fff; }
     .mod-ghost .mod-label { color:var(--muted); font-size:14px; }
     .mod-stat  { font-size:12px; font-weight:600; }
     .mod-blue .mod-stat  { color:rgba(255,255,255,.7); }
     .mod-teal .mod-stat  { color:rgba(255,255,255,.7); }
+    .mod-amber .mod-stat { color:rgba(255,255,255,.7); }
     .mod-ghost .mod-stat { color:var(--faint); font-size:12px; }
     .mod-badge {
       position:absolute; top:12px; right:12px;
@@ -573,6 +575,20 @@
     .com-pane { padding:16px; }
     .com-sec-hdr { font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:4px 2px 12px; }
 
+    /* Lista de ordens — Lina Center */
+    .lc-ord-row { display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:14px; margin-bottom:8px; box-shadow:var(--shadow-sm); }
+    .lc-ord-info { flex:1; min-width:0; }
+    .lc-ord-cliente { font-size:13px; font-weight:800; color:var(--text); }
+    .lc-ord-det { font-size:11px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lc-ord-right { text-align:right; flex-shrink:0; }
+    .lc-ord-val { font-size:13px; font-weight:800; color:#c2410c; }
+    .lc-ord-status { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; margin-top:3px; padding:2px 8px; border-radius:99px; display:inline-block; }
+    .lc-status-finalizado { background:#ecfdf5; color:#047857; }
+    .lc-status-em_andamento { background:#fffbeb; color:#b45309; }
+    .lc-status-aguardando_pagamento { background:#eff6ff; color:#1d4ed8; }
+    .lc-status-pendente { background:var(--bg); color:var(--muted); }
+    .lc-status-cancelado { background:var(--bg); color:var(--faint); }
+
     /* Banner modo adicionais */
     .com-note { background:#ede9fe; border:1px solid #ddd6fe; border-radius:12px; padding:10px 13px; display:flex; gap:9px; align-items:flex-start; margin-bottom:14px; }
     .com-note i { color:#7c3aed; font-size:14px; padding-top:1px; }
@@ -708,6 +724,16 @@
       <span id="btnPontoLabel">Carregando</span>
     </button>
     <div class="btn-ponto-hint" id="btnPontoHint">Aguarde...</div>
+  </div>
+
+  <!-- Cadastro facial — flutuante, acima do espelho -->
+  <div class="ponto-espelho-flutuante" id="linkFace" style="bottom:134px" onclick="cadastrarRosto()">
+    <div class="pef-ico" id="faceIco" style="background:#7c3aed"><i class="fas fa-camera"></i></div>
+    <div class="pef-info">
+      <div class="pef-title" id="faceTitle">Cadastrar meu rosto</div>
+      <div class="pef-sub" id="faceSub" style="color:#7c3aed">Ative o reconhecimento facial</div>
+    </div>
+    <div class="pef-arr"><i class="fas fa-chevron-right"></i></div>
   </div>
 
   <!-- Espelho de Ponto — flutuante, independente do sheet -->
@@ -861,6 +887,14 @@
     <div class="com-tabs" id="comTabs"></div>
     <div class="com-pane" id="comPaneGanhos"></div>
     <div class="com-pane" id="comPanePagamentos" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══ COMISSÕES — LINA CENTER (mais simples: 1 funcionário por ordem, sem fechamento) ══ -->
+<div id="tela-comissoes-lc" class="tela">
+  <div class="com-page">
+    <div class="com-hero" id="comLcHero" style="background:linear-gradient(148deg,#0f172a 0%,#7c2d12 120%)"></div>
+    <div class="com-pane" id="comLcLista"></div>
   </div>
 </div>
 
@@ -1175,7 +1209,7 @@ async function carregarDados() {
 
 // ── Hub ───────────────────────────────────────────────────────────────────────
 function renderHub() {
-  const { lavador, dataPointAtivo, hoje } = portalDados;
+  const { lavador, dataPointAtivo, hoje, linaCenterAtivo, lc } = portalDados;
 
   document.getElementById('hub-av').textContent       = lavador.nome.charAt(0).toUpperCase();
   document.getElementById('hub-name').textContent     = lavador.nome;
@@ -1194,6 +1228,16 @@ function renderHub() {
       <div>
         <div class="mod-label">${isSalarioFixo ? 'Extrato' : 'Comissões'}</div>
         <div class="mod-stat">${isSalarioFixo ? 'Serviços, vales e débitos' : 'R$ ' + ganhoHoje + ' hoje'}</div>
+      </div>
+    </div>` : ''}
+
+    ${linaCenterAtivo ? `
+    <div class="mod-card mod-amber" onclick="abrirComissoesLc()">
+      <div class="mod-ico"><i class="fas fa-wrench"></i></div>
+      <div class="mod-badge pulse">${lc.hoje.totalOrdens} hoje</div>
+      <div>
+        <div class="mod-label">Comissões</div>
+        <div class="mod-stat">R$ ${(lc.hoje.ganho || 0).toFixed(2).replace('.', ',')} hoje · Lina Center</div>
       </div>
     </div>` : ''}
 
@@ -1256,6 +1300,85 @@ function abrirComissoes() {
 }
 function voltarDeComissoes() {
   mostrarTela('tela-hub');
+}
+
+// ── Navegar para comissões do Lina Center (tela própria, mais simples) ─────────
+function abrirComissoesLc() {
+  mostrarTela('tela-comissoes-lc');
+  iniciarComissoesLc();
+}
+function voltarDeComissoesLc() {
+  mostrarTela('tela-hub');
+}
+
+async function iniciarComissoesLc() {
+  document.getElementById('comLcHero').innerHTML =
+    '<div style="padding:40px 0;text-align:center;color:rgba(255,255,255,.6)"><i class="fas fa-spinner fa-spin"></i></div>';
+  document.getElementById('comLcLista').innerHTML = '';
+  try {
+    const r = await fetch(`${API}/p/me/lc/extrato`, { headers: { Authorization: `Bearer ${sessionJwt}` } });
+    if (!r.ok) throw new Error('extrato-lc');
+    renderComissoesLc(await r.json());
+  } catch {
+    document.getElementById('comLcHero').innerHTML =
+      '<div style="padding:30px 0;text-align:center;color:#fca5a5"><i class="fas fa-triangle-exclamation"></i> Erro ao carregar. Tente novamente.</div>';
+  }
+}
+
+function renderComissoesLc(data) {
+  const ordensFinalizadas = (data.ordens || []).filter(o => o.status === 'FINALIZADO');
+  const totalComissao = ordensFinalizadas.reduce((s, o) => s + (o.comissao || 0), 0);
+  const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+  const comissaoMes = ordensFinalizadas
+    .filter(o => new Date(o.dataFim || o.createdAt) >= inicioMes)
+    .reduce((s, o) => s + (o.comissao || 0), 0);
+
+  document.getElementById('comLcHero').innerHTML = `
+    <div class="com-hero-top">
+      <button class="com-back" onclick="voltarDeComissoesLc()"><i class="fas fa-arrow-left"></i> Portal</button>
+    </div>
+    <div class="com-prof">
+      <div class="com-av">${(data.nome || '?').charAt(0).toUpperCase()}</div>
+      <div>
+        <div class="com-nm">${data.nome}</div>
+        <div class="com-emp"><i class="fas fa-wrench" style="font-size:9px"></i> ${data.empresa} · Lina Center</div>
+      </div>
+    </div>
+    <div class="com-bal-lbl">Comissão do mês</div>
+    <div class="com-bal">R$ ${comissaoMes.toFixed(2).replace('.', ',')}</div>
+    <div class="com-rows">
+      <div class="com-chip">
+        <div class="com-chip-lbl">Total (30 dias)</div>
+        <div class="com-chip-val">R$ ${totalComissao.toFixed(2).replace('.', ',')}</div>
+      </div>
+      <div class="com-chip">
+        <div class="com-chip-lbl">Ordens finalizadas</div>
+        <div class="com-chip-val">${ordensFinalizadas.length}</div>
+      </div>
+    </div>
+  `;
+
+  const lista = data.ordens || [];
+  document.getElementById('comLcLista').innerHTML = lista.length === 0
+    ? '<div class="com-sec-hdr">Nenhuma ordem nos últimos 30 dias</div>'
+    : `
+    <div class="com-sec-hdr">Últimas ordens</div>
+    ${lista.map(o => `
+      <div class="lc-ord-row">
+        <div class="lc-ord-info">
+          <div class="lc-ord-cliente">${o.cliente?.nome || '—'}</div>
+          <div class="lc-ord-det">${(o.veiculo?.modelo || '—')}${o.veiculo?.placa ? ' · ' + o.veiculo.placa : ''} · ${(o.items || []).map(i => i.servico?.nome || i.nomeCustom).filter(Boolean).join(', ')}</div>
+        </div>
+        <div class="lc-ord-right">
+          <div class="lc-ord-val">R$ ${(o.comissao || 0).toFixed(2).replace('.', ',')}</div>
+          <div class="lc-ord-status lc-status-${(o.status || '').toLowerCase()}">${{
+            PENDENTE: 'Pendente', EM_ANDAMENTO: 'Em andamento',
+            AGUARDANDO_PAGAMENTO: 'Aguardando pag.', FINALIZADO: 'Finalizado', CANCELADO: 'Cancelado',
+          }[o.status] || o.status}</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -2176,9 +2299,52 @@ async function carregarPontoHoje() {
       const sub = document.getElementById('linkEspelhoSub');
       if (sub) sub.textContent = `Ver histórico de ${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)}`;
     }
+
+    // Mostra card de cadastro facial (estado muda se já tem rosto cadastrado)
+    const linkFace = document.getElementById('linkFace');
+    if (linkFace) {
+      linkFace.classList.add('visivel');
+      const ico   = document.getElementById('faceIco');
+      const title = document.getElementById('faceTitle');
+      const sub   = document.getElementById('faceSub');
+      if (pontoHojeData.temRostoCadastrado) {
+        ico.style.background = 'var(--green-d)';
+        ico.innerHTML = '<i class="fas fa-check"></i>';
+        title.textContent = 'Rosto cadastrado';
+        sub.textContent = 'Reconhecimento facial ativo · atualizar';
+        sub.style.color = 'var(--green-d)';
+      } else {
+        ico.style.background = '#7c3aed';
+        ico.innerHTML = '<i class="fas fa-camera"></i>';
+        title.textContent = 'Cadastrar meu rosto';
+        sub.textContent = 'Ative o reconhecimento facial';
+        sub.style.color = '#7c3aed';
+      }
+    }
   } catch(e) {
     console.error(e);
     document.getElementById('pontoContador').textContent = 'Erro de conexão';
+  }
+}
+
+// Gera um token pessoal de cadastro facial pra esta sessão e abre a página de
+// captura — ao terminar, face.html volta pra cá (mesma URL do portal).
+async function cadastrarRosto() {
+  const linkFace = document.getElementById('linkFace');
+  if (linkFace) linkFace.style.opacity = '.6';
+  try {
+    const r = await fetch('/api/p/me/face-token', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${sessionJwt}` }
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.erro || 'Falha ao gerar link');
+    const voltar = encodeURIComponent(window.location.href);
+    window.location.href = `/face.html?t=${data.token}&voltar=${voltar}`;
+  } catch (e) {
+    console.error(e);
+    if (linkFace) linkFace.style.opacity = '1';
+    alert('Não foi possível abrir o cadastro facial. Tente novamente.');
   }
 }
 

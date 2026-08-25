@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createUsuario, authenticateUsuario, generateScopedToken, getMeuPerfil, changePassword } from '../controllers/usuarioController';
+import { resolverSignupLink } from '../controllers/signupLinkController';
 import { recuperarSenha, resetarSenha, validarTokenReset } from '../controllers/recuperacaoSenhaController';
 import userAuthMiddleware from '../middlewares/userAuthMiddleware';
 
@@ -7,6 +8,9 @@ const router: Router = Router();
 
 // Rota para criar um novo usuário
 router.post('/', createUsuario);
+
+// Resolve um link de cadastro (sistema + plano + duração) antes do cadastro
+router.get('/signup-link/:token', resolverSignupLink);
 
 // Rota para autenticar (login) um usuário
 router.post('/auth', authenticateUsuario);

@@ -221,10 +221,11 @@
   <div id="tela-success" class="tela">
     <div class="success-icon">✅</div>
     <div class="success-tit">Rosto cadastrado!</div>
-    <div class="tela-sub">
+    <div class="tela-sub" id="success-sub">
       A partir de agora, ao bater ponto pelo link do WhatsApp,
       o sistema vai reconhecer você automaticamente.
     </div>
+    <button class="btn btn-primary" id="btn-voltar" style="display:none;margin-top:20px" onclick="voltarAoPortal()">Voltar ao portal</button>
   </div>
 
   <!-- Erro -->
@@ -242,8 +243,14 @@
     ? 'http://localhost:3001/api'
     : '/api';
 
-  const token = new URLSearchParams(location.search).get('t');
-  const ALVO  = 8;
+  const params = new URLSearchParams(location.search);
+  const token  = params.get('t');
+  const voltar = params.get('voltar'); // URL do portal (p.html) — quando veio de lá, volta sozinho
+  const ALVO   = 8;
+
+  function voltarAoPortal() {
+    if (voltar) window.location.href = decodeURIComponent(voltar);
+  }
 
   function show(id) {
     document.querySelectorAll('.tela').forEach(el => el.classList.remove('ativa'));
@@ -359,6 +366,11 @@
         return showErro(data.erro || 'Não foi possível salvar.', 'Peça um novo link ao seu gestor.');
       }
       show('tela-success');
+      if (voltar) {
+        document.getElementById('success-sub').textContent = 'Voltando ao portal...';
+        document.getElementById('btn-voltar').style.display = 'block';
+        setTimeout(voltarAoPortal, 2000);
+      }
     } catch {
       showErro('Serviço indisponível.', 'Tente novamente em alguns minutos.', true);
     }

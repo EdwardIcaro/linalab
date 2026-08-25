@@ -250,6 +250,45 @@ const api = {
   atualizarDpAfastamento: (id, data) => fetchApi(`/dp/afastamentos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   excluirDpAfastamento: (id) => fetchApi(`/dp/afastamentos/${id}`, { method: 'DELETE' }),
 
+  // ===== LINA CENTER =====
+  // Clientes
+  getLcClientes: (search = '') => fetchApi(`/lc/clientes?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+  getLcClienteById: (id) => fetchApi(`/lc/clientes/${id}`),
+  createLcCliente: (data) => fetchApi('/lc/clientes', { method: 'POST', body: JSON.stringify(data) }),
+  updateLcCliente: (id, data) => fetchApi(`/lc/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteLcCliente: (id) => fetchApi(`/lc/clientes/${id}`, { method: 'DELETE' }),
+
+  // Funcionários
+  getLcFuncionarios: () => fetchApi('/lc/funcionarios'),
+  getLcFuncionariosSimple: () => fetchApi('/lc/funcionarios/simple'),
+  createLcFuncionario: (data) => fetchApi('/lc/funcionarios', { method: 'POST', body: JSON.stringify(data) }),
+  updateLcFuncionario: (id, data) => fetchApi(`/lc/funcionarios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteLcFuncionario: (id) => fetchApi(`/lc/funcionarios/${id}`, { method: 'DELETE' }),
+  resetarPinLcFuncionario: (id) => fetchApi(`/lc/funcionarios/${id}/reset-pin`, { method: 'POST' }),
+  regenerarLinkLcFuncionario: (id) => fetchApi(`/lc/funcionarios/${id}/regenerar-link`, { method: 'POST' }),
+  vincularUsuarioLcFuncionario: (id, subaccountId) => fetchApi(`/lc/funcionarios/${id}/vincular-usuario`, { method: 'POST', body: JSON.stringify({ subaccountId }) }),
+
+  // Serviços
+  getLcServicos: () => fetchApi('/lc/servicos'),
+  getLcServicosSimple: () => fetchApi('/lc/servicos/simple'),
+  createLcServico: (data) => fetchApi('/lc/servicos', { method: 'POST', body: JSON.stringify(data) }),
+  updateLcServico: (id, data) => fetchApi(`/lc/servicos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteLcServico: (id) => fetchApi(`/lc/servicos/${id}`, { method: 'DELETE' }),
+
+  // Ordens
+  getLcOrdens: (status = '') => fetchApi(`/lc/ordens?limit=200${status && status !== 'TODOS' ? `&status=${status}` : ''}`),
+  getLcOrdemById: (id) => fetchApi(`/lc/ordens/${id}`),
+  createLcOrdem: (data) => fetchApi('/lc/ordens', { method: 'POST', body: JSON.stringify(data) }),
+  updateLcOrdemStatus: (id, status) => fetchApi(`/lc/ordens/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  finalizarLcOrdem: (id, pagamentos) => fetchApi(`/lc/ordens/${id}/finalizar`, { method: 'POST', body: JSON.stringify({ pagamentos }) }),
+  cancelarLcOrdem: (id) => fetchApi(`/lc/ordens/${id}/cancel`, { method: 'PATCH' }),
+
+  // Dashboard / Financeiro
+  getLcDashboardResumo: () => fetchApi('/lc/dashboard-resumo'),
+  getLcFaturamentoPorMetodo: (mes = '') => fetchApi(`/lc/financeiro/metodos${mes ? `?mes=${mes}` : ''}`),
+  getLcComissoesPorFuncionario: (mes = '') => fetchApi(`/lc/financeiro/comissoes-funcionario${mes ? `?mes=${mes}` : ''}`),
+  getLcFaturamentoSemana: () => fetchApi('/lc/financeiro/semana'),
+
   // ===== EMPRESAS =====
   getEmpresasDoUsuario: () => fetchApi('/empresas'),
   createEmpresa: (data) => fetchApi('/empresas', {

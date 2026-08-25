@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { subscriptionService } from '../services/subscriptionService';
+import { gerarTokenCurto } from '../utils/tokenUtils';
 import prisma from '../db';
 
 /**
@@ -689,6 +690,96 @@ export const getSubscriptionStats = async (req: Request, res: Response) => {
   }
 };
 
+// ─── LINKS DE CADASTRO COM ASSINATURA PRÉ-CONFIGURADA ─────────────────────────
+
+const DURACAO_LABEL: Record<string, string> = {
+  DIAS_7: '7 dias',
+  MES_1: '1 mês',
+  MESES_6: '6 meses',
+  VITALICIO: 'Vitalício',
+};
+
+/**
+ * Gerar link de cadastro com assinatura pré-configurada (uso único)
+ * POST /api/admin/subscriptions/signup-links
+ */
+export const gerarSignupLink = async (req: Request, res: Response) => {
+  try {
+    const { planId, duracaoTipo } = req.body;
+    const criadoPorId = (req as any).usuarioId as string;
+
+    if (!planId || !duracaoTipo) {
+      return res.status(400).json({ error: 'planId e duracaoTipo são obrigatórios' });
+    }
+    if (!Object.keys(DURACAO_LABEL).includes(duracaoTipo)) {
+      return res.status(400).json({ error: `duracaoTipo inválido. Use um de: ${Object.keys(DURACAO_LABEL).join(', ')}` });
+    }
+
+    const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    if (!plan || !plan.ativo) {
+      return res.status(404).json({ error: 'Plano não encontrado ou inativo' });
+    }
+
+    const token = gerarTokenCurto(10);
+    const link = await prisma.signupLink.create({
+      data: { token, planId, duracaoTipo, criadoPorId },
+      include: { plan: true },
+    });
+
+    res.status(201).json({ message: 'Link gerado com sucesso', link });
+  } catch (error: any) {
+    console.error('Erro ao gerar link de cadastro:', error);
+    res.status(400).json({ error: error.message || 'Erro ao gerar link de cadastro' });
+  }
+};
+
+/**
+ * Listar links de cadastro gerados
+ * GET /api/admin/subscriptions/signup-links
+ */
+export const listarSignupLinks = async (req: Request, res: Response) => {
+  try {
+    const links = await prisma.signupLink.findMany({
+      include: {
+        plan: { select: { nome: true, sistema: true } },
+        criadoPor: { select: { nome: true } },
+        usadoPor: { select: { nome: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ links });
+  } catch (error) {
+    console.error('Erro ao listar links de cadastro:', error);
+    res.status(500).json({ error: 'Erro ao listar links de cadastro' });
+  }
+};
+
+/**
+ * Desativar manualmente um link de cadastro ainda não usado
+ * PATCH /api/admin/subscriptions/signup-links/:id/desativar
+ */
+export const desativarSignupLink = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    const link = await prisma.signupLink.findUnique({ where: { id } });
+    if (!link) {
+      return res.status(404).json({ error: 'Link não encontrado' });
+    }
+    if (link.usadoPorId) {
+      return res.status(400).json({ error: 'Este link já foi usado — não há o que desativar' });
+    }
+
+    await prisma.signupLink.update({ where: { id }, data: { ativo: false } });
+    res.json({ message: 'Link desativado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao desativar link de cadastro:', error);
+    res.status(500).json({ error: 'Erro ao desativar link de cadastro' });
+  }
+};
+
 export default {
   listAllSubscriptions,
   getSubscriptionDetails,
@@ -706,5 +797,8 @@ export default {
   toggleAddonStatus,
   getSubscriptionStats,
   listUsuarios,
-  createSubscriptionAssignment
+  createSubscriptionAssignment,
+  gerarSignupLink,
+  listarSignupLinks,
+  desativarSignupLink
 };

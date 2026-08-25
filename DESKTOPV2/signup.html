@@ -627,6 +627,23 @@
             animation: slideDown 0.3s ease;
         }
 
+        .invite-banner {
+            padding: 14px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            animation: slideDown 0.3s ease;
+        }
+        .invite-banner i { color: var(--success); font-size: 16px; margin-top: 2px; }
+        .invite-banner strong { color: var(--text-primary); font-size: 14px; display: block; margin-bottom: 2px; }
+        .invite-banner span { color: var(--text-secondary); font-size: 13px; }
+        .invite-banner.invalid { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.4); }
+        .invite-banner.invalid i { color: var(--error); }
+
         @keyframes slideDown {
             from {
                 opacity: 0;
@@ -999,6 +1016,25 @@
                     <p>Comece gratuitamente em minutos</p>
                 </div>
 
+                <template x-if="convite">
+                    <div class="invite-banner">
+                        <i class="fas fa-gift"></i>
+                        <div>
+                            <strong x-text="'Você foi convidado para o ' + nomeSistema(convite.sistema)"></strong>
+                            <span x-text="'Plano ' + convite.planoNome + ' · ' + convite.duracaoLabel"></span>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="conviteInvalido">
+                    <div class="invite-banner invalid">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <div>
+                            <strong>Link de convite inválido</strong>
+                            <span>Esse link já foi usado ou não existe mais. Você ainda pode se cadastrar normalmente.</span>
+                        </div>
+                    </div>
+                </template>
+
                 <div x-show="errorMessage" x-transition class="error-message">
                     <i class="fas fa-exclamation-circle"></i>
                     <span x-text="errorMessage"></span>
@@ -1151,6 +1187,25 @@
                 passwordStrengthScore: 0,
                 showTermsModal: false,
                 showPrivacyModal: false,
+                linkToken: '',
+                convite: null,
+                conviteInvalido: false,
+
+                async init() {
+                    const params = new URLSearchParams(window.location.search);
+                    const token = params.get('link');
+                    if (!token) return;
+                    this.linkToken = token;
+                    try {
+                        this.convite = await fetchApi(`/usuarios/signup-link/${token}`);
+                    } catch {
+                        this.conviteInvalido = true;
+                    }
+                },
+
+                nomeSistema(sistema) {
+                    return { 'lina-wash': 'Lina Wash', 'data-point': 'Data Point', 'lina-center': 'Lina Center' }[sistema] || sistema;
+                },
 
                 get passwordStrengthClass() {
                     if (this.senha.length === 0) return '';
@@ -1238,7 +1293,8 @@
                             body: JSON.stringify({
                                 nome: this.nome.trim(),
                                 email: this.email.trim(),
-                                senha: this.senha
+                                senha: this.senha,
+                                ...(this.linkToken && !this.conviteInvalido ? { linkToken: this.linkToken } : {})
                             })
                         });
 

@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lina Center</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/api.js"></script>
+  <style>
+    :root {
+      --navy:      #0f172a;
+      --accent:    #f97316;
+      --accent-d:  #ea580c;
+      --accent-l:  #fff7ed;
+      --accent-m:  #fed7aa;
+      --text:      #0f172a;
+      --mid:       #64748b;
+      --light:     #94a3b8;
+      --border:    #e2e8f0;
+      --bg:        #f5f6f8;
+      --white:     #ffffff;
+      --green:     #10b981;
+      --green-d:   #059669;
+      --green-l:   #ecfdf5;
+      --amber:     #f59e0b;
+      --amber-l:   #fffbeb;
+      --red:       #ef4444;
+      --red-l:     #fef2f2;
+      --blue-l:    #eff6ff;
+      --blue-d:    #1d4ed8;
+      --r:         12px;
+      --r-lg:      16px;
+      --rpill:     999px;
+      --shadow:    0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;}
+    body{
+      font-family:'Inter',sans-serif;
+      background:var(--bg);color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      overflow:hidden;
+    }
+    [x-cloak]{display:none!important;}
+    button{font-family:'Inter',sans-serif;}
+    ::-webkit-scrollbar{width:8px;height:8px;}
+    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px;}
+
+    /* ═══ TELAS DE ESTADO (loading / inativo / erro) ═══ */
+    .state-screen{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px;}
+    .state-ic{font-size:32px;}
+    .state-title{font-size:16px;font-weight:800;color:var(--text);}
+    .state-sub{font-size:13px;color:var(--mid);max-width:340px;}
+    .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ═══ SHELL ═══════════════════════════════════════════ */
+    .shell{display:flex;height:100vh;}
+
+    .sidebar{
+      width:230px;flex-shrink:0;background:var(--navy);
+      display:flex;flex-direction:column;padding:18px 12px;
+    }
+    .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;}
+    .brand-logo{
+      width:34px;height:34px;border-radius:10px;flex-shrink:0;
+      background:linear-gradient(135deg,var(--accent-d),var(--accent));
+      display:flex;align-items:center;justify-content:center;font-size:17px;
+    }
+    .brand-name{font-size:14px;font-weight:800;color:#fff;letter-spacing:-.2px;line-height:1.2;}
+    .brand-sub{font-size:10px;color:rgba(255,255,255,.4);}
+
+    .nav-lbl{
+      font-size:9.5px;font-weight:700;color:rgba(255,255,255,.3);
+      text-transform:uppercase;letter-spacing:.7px;padding:0 10px;margin:10px 0 6px;
+    }
+    .nav-item{
+      display:flex;align-items:center;gap:11px;
+      padding:9px 10px;border-radius:9px;margin-bottom:2px;
+      cursor:pointer;transition:all .15s;
+      font-size:13px;font-weight:600;color:rgba(255,255,255,.55);
+    }
+    .nav-item .ic{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+    .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+    .nav-item.on{background:rgba(249,115,22,.16);color:#fff;}
+    .nav-badge{
+      margin-left:auto;background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);
+      font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:99px;
+    }
+
+    .sidebar-foot{margin-top:auto;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
+    .user-chip{display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;cursor:pointer;transition:background .15s;}
+    .user-chip:hover{background:rgba(255,255,255,.06);}
+    .user-av{
+      width:30px;height:30px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,#334155,#475569);
+      color:#fff;font-size:12px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .user-name{font-size:12px;font-weight:700;color:#fff;}
+    .user-role{font-size:10px;color:rgba(255,255,255,.4);}
+
+    .content{flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;}
+    .topbar{
+      flex-shrink:0;background:var(--white);border-bottom:1px solid var(--border);
+      padding:16px 28px;display:flex;align-items:center;justify-content:space-between;
+    }
+    .tb-title{font-size:19px;font-weight:800;letter-spacing:-.4px;}
+    .tb-sub{font-size:12px;color:var(--light);margin-top:1px;}
+    .btn-nova{
+      display:flex;align-items:center;gap:7px;
+      background:linear-gradient(135deg,var(--accent-d),var(--accent));
+      color:#fff;border:none;border-radius:var(--rpill);
+      padding:11px 20px;font-size:13.5px;font-weight:700;
+      cursor:pointer;box-shadow:0 4px 14px rgba(234,88,12,.32);transition:all .18s;
+    }
+    .btn-nova:hover{box-shadow:0 6px 20px rgba(234,88,12,.42);transform:translateY(-1px);}
+    .btn-nova2{
+      display:flex;align-items:center;gap:6px;
+      background:var(--accent-l);color:var(--accent-d);border:1.5px solid var(--accent-m);
+      border-radius:var(--rpill);padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;
+    }
+    .btn-nova2:hover{background:var(--accent-m);}
+
+    .page{flex:1;overflow-y:auto;padding:24px 28px 40px;}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+    .kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:17px 18px;box-shadow:var(--shadow);}
+    .kpi-top{display:flex;align-items:flex-start;justify-content:space-between;}
+    .kpi-lbl{font-size:11px;font-weight:700;color:var(--mid);letter-spacing:.2px;}
+    .kpi-ic{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+    .kpi-val{font-size:25px;font-weight:800;letter-spacing:-.6px;margin-top:10px;}
+    .kpi-val em{font-size:13px;font-weight:600;color:var(--mid);font-style:normal;}
+    .kpi-delta{font-size:11.5px;font-weight:600;margin-top:5px;}
+    .kpi-delta.flat{color:var(--light);}
+
+    .row2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start;}
+    .card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);}
+    .card-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;}
+    .card-title{font-size:13.5px;font-weight:800;}
+    .card-link{font-size:11.5px;font-weight:700;color:var(--accent-d);cursor:pointer;}
+    .card-body{padding:0 18px 18px;}
+
+    .chart{display:flex;align-items:flex-end;gap:8px;height:110px;padding:6px 4px 0;}
+    .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
+    .bar{width:100%;max-width:26px;min-height:3px;border-radius:6px 6px 3px 3px;background:var(--accent-m);transition:height .4s ease;}
+    .bar.today{background:linear-gradient(180deg,var(--accent),var(--accent-d));}
+    .bar-lbl{font-size:9.5px;font-weight:700;color:var(--light);text-transform:uppercase;}
+
+    .ordem-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+    .ordem-row:last-child{border-bottom:none;}
+    .ordem-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent-d),var(--accent));color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .ordem-info{flex:1;min-width:0;}
+    .ordem-nome{font-size:12.5px;font-weight:700;}
+    .ordem-det{font-size:11px;color:var(--light);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ordem-right{text-align:right;flex-shrink:0;}
+    .ordem-val{font-size:12.5px;font-weight:800;}
+    .status{display:inline-block;margin-top:3px;font-size:9px;font-weight:700;padding:2.5px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;}
+    .status.pendente{background:var(--bg);color:var(--mid);}
+    .status.em_andamento{background:var(--amber-l);color:#b45309;}
+    .status.aguardando_pagamento{background:var(--blue-l);color:var(--blue-d);}
+    .status.finalizado{background:var(--green-l);color:#047857;}
+    .status.cancelado{background:var(--bg);color:var(--light);}
+
+    .rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+    .rank-row:last-child{border-bottom:none;}
+    .rank-pos{width:20px;height:20px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:var(--mid);flex-shrink:0;}
+    .rank-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;color:#fff;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .rank-info{flex:1;min-width:0;}
+    .rank-nome{font-size:12px;font-weight:700;}
+    .rank-sub{font-size:10.5px;color:var(--light);}
+    .rank-val{font-size:12.5px;font-weight:800;color:var(--accent-d);}
+
+    .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+    .qa{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 12px;text-align:center;cursor:pointer;transition:all .15s;}
+    .qa:hover{border-color:var(--accent-m);box-shadow:var(--shadow);transform:translateY(-1px);}
+    .qa-ic{font-size:19px;margin-bottom:6px;}
+    .qa-lbl{font-size:11.5px;font-weight:700;color:var(--text);}
+
+    .tab-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;}
+    .filter-chip{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--rpill);background:var(--white);font-size:12px;font-weight:600;color:var(--mid);cursor:pointer;transition:all .15s;}
+    .filter-chip.on{border-color:var(--accent);background:var(--accent-l);color:var(--accent-d);}
+    .search-box{position:relative;max-width:280px;flex:1;}
+    .search-box input{width:100%;padding:9px 12px 9px 32px;border:1.5px solid var(--border);border-radius:var(--rpill);font-size:12.5px;font-family:'Inter',sans-serif;outline:none;}
+    .search-box input:focus{border-color:var(--accent);}
+    .search-box .si{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--light);}
+
+    .tbl{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden;}
+    .tbl-row{display:grid;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);font-size:12.5px;}
+    .tbl-row:last-child{border-bottom:none;}
+    .tbl-row.head{background:var(--bg);font-size:10.5px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.4px;padding:10px 18px;}
+    .tbl-row.ordens{grid-template-columns:70px 1.3fr 1fr .9fr 90px 130px 150px;}
+    .tbl-row.clientes{grid-template-columns:1.3fr 1fr 1fr 90px 90px;}
+    .tbl-row.func{grid-template-columns:1.1fr .9fr .8fr .9fr 80px 190px;}
+    .tbl-row.servicos{grid-template-columns:1.4fr 1fr 1fr 90px 90px;}
+    .tbl-name{font-weight:700;}
+    .tbl-sub{color:var(--light);font-size:11px;}
+    .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;cursor:pointer;}
+    .pill.ativo{background:var(--green-l);color:#047857;}
+    .pill.inativo{background:var(--bg);color:var(--light);}
+
+    .tbl-actions{display:flex;gap:5px;flex-wrap:wrap;}
+    .act-btn{
+      width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:var(--white);
+      color:var(--mid);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;
+    }
+    .act-btn:hover{border-color:var(--accent);color:var(--accent-d);background:var(--accent-l);}
+    .act-btn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-l);}
+    .act-btn-txt{width:auto;padding:0 10px;font-size:11px;font-weight:700;gap:5px;}
+
+    .empty{text-align:center;padding:32px 16px;color:var(--light);font-size:12.5px;}
+
+    /* Financeiro */
+    .metodo-row{padding:9px 0;border-bottom:1px solid var(--border);}
+    .metodo-row:last-child{border-bottom:none;}
+    .metodo-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+    .metodo-nome{flex:1;font-size:12.5px;font-weight:600;}
+    .metodo-val{font-size:12.5px;font-weight:800;}
+    .metodo-bar-bg{height:5px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:8px;}
+    .metodo-bar-fg{height:100%;border-radius:99px;}
+
+    /* ═══ DRAWER NOVA ORDEM ═══ */
+    .drawer-backdrop{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);opacity:0;transition:opacity .25s ease;}
+    .drawer-backdrop.open{opacity:1;}
+    .drawer{position:fixed;top:0;right:0;bottom:0;z-index:210;width:460px;max-width:92vw;background:var(--white);box-shadow:-12px 0 40px rgba(15,23,42,.25);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);}
+    .drawer.open{transform:translateX(0);}
+    .drw-head{flex-shrink:0;background:var(--navy);padding:18px 20px;}
+    .drw-head-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .drw-title{font-size:16px;font-weight:800;color:#fff;}
+    .drw-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px;}
+    .drw-close{width:30px;height:30px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+    .drw-close:hover{background:rgba(255,255,255,.18);}
+
+    .search-row{display:flex;gap:8px;}
+    .sw{flex:1;position:relative;}
+    .search-input{width:100%;padding:11px 14px 11px 38px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.12);border-radius:var(--r);font-size:13.5px;font-family:'Inter',sans-serif;color:#fff;outline:none;transition:all .2s;}
+    .search-input::placeholder{color:rgba(255,255,255,.35);}
+    .search-input:focus{background:rgba(255,255,255,.16);border-color:rgba(249,115,22,.6);}
+    .si2{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
+
+    .dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--white);border-radius:11px;box-shadow:0 12px 32px rgba(0,0,0,.22);z-index:20;overflow:hidden;max-height:260px;overflow-y:auto;}
+    .dr{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;border-bottom:1px solid var(--border);}
+    .dr:last-child{border-bottom:none;}
+    .dr:hover{background:var(--bg);}
+    .dr-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent-d),var(--accent));color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .dr-av.new{background:none;border:2px dashed var(--accent);color:var(--accent-d);font-size:15px;}
+    .dr-name{font-size:12.5px;font-weight:600;}
+    .dr-sub{font-size:10.5px;color:var(--light);margin-top:1px;}
+
+    .client-tag{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.14);border-radius:var(--r);padding:9px 12px;}
+    .ct-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent-d),var(--accent));color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .ct-name{font-size:13px;font-weight:700;color:#fff;flex:1;min-width:0;}
+    .ct-info{font-size:10.5px;color:rgba(255,255,255,.45);margin-top:1px;}
+    .ct-x{background:rgba(255,255,255,.1);border:none;border-radius:50%;width:22px;height:22px;color:rgba(255,255,255,.5);font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+
+    .drw-body{flex:1;overflow-y:auto;}
+    .sec{padding:14px 20px;border-bottom:1px solid var(--border);}
+    .sec-lbl{font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px;}
+    .sec-lbl b{color:var(--accent-d);}
+
+    .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .svc-card{position:relative;overflow:hidden;padding:10px 11px 10px 14px;border:2px solid var(--border);border-radius:var(--r);background:var(--bg);cursor:pointer;transition:all .15s;}
+    .svc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--border);}
+    .svc-card:hover{border-color:var(--accent-m);}
+    .svc-card.on{border-color:var(--accent);background:var(--accent-l);}
+    .svc-card.on::before{background:var(--accent);}
+    .svc-check{position:absolute;top:7px;right:7px;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:900;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0);transition:all .2s;}
+    .svc-card.on .svc-check{opacity:1;transform:scale(1);}
+    .svc-name{font-size:12px;font-weight:700;margin-bottom:1px;}
+    .svc-card.on .svc-name{color:var(--accent-d);}
+    .svc-desc{font-size:9.5px;color:var(--light);margin-bottom:5px;line-height:1.3;min-height:12px;}
+    .svc-price{font-size:16px;font-weight:800;}
+    .svc-card.on .svc-price{color:var(--accent-d);}
+
+    .resp-row{display:flex;gap:12px;overflow-x:auto;flex-wrap:wrap;}
+    .resp{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;}
+    .resp-av{width:40px;height:40px;border-radius:50%;border:2.5px solid var(--border);background:var(--white);color:var(--mid);font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .2s;position:relative;}
+    .resp.on .resp-av{border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.22);}
+    .resp-tick{position:absolute;bottom:-2px;right:-2px;width:15px;height:15px;border-radius:50%;background:var(--green);border:2px solid #fff;color:#fff;font-size:7px;display:flex;align-items:center;justify-content:center;}
+    .resp-name{font-size:9.5px;font-weight:600;color:var(--mid);white-space:nowrap;}
+    .resp.on .resp-name{font-weight:700;color:var(--text);}
+
+    .drw-foot{flex-shrink:0;background:var(--white);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;}
+    .ft-total{flex:1;}
+    .ft-lbl{font-size:9.5px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.5px;}
+    .ft-val{font-size:22px;font-weight:800;line-height:1.1;}
+    .ft-val em{font-size:12px;font-weight:600;color:var(--mid);font-style:normal;}
+    .ft-desc{font-size:10.5px;color:var(--light);margin-top:1px;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .btn-criar{background:linear-gradient(135deg,var(--accent-d),var(--accent));color:#fff;border:none;border-radius:var(--rpill);padding:13px 22px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 16px rgba(234,88,12,.35);transition:all .2s;}
+    .btn-criar:not(:disabled):hover{box-shadow:0 6px 22px rgba(234,88,12,.45);}
+    .btn-criar:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;}
+
+    /* ═══ MODAIS GENÉRICOS ═══ */
+    .sub-backdrop{position:fixed;inset:0;z-index:250;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;}
+    .sub-sheet{background:var(--white);border-radius:18px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);animation:pop .22s cubic-bezier(.34,1.4,.64,1);}
+    @keyframes pop{from{transform:scale(.94);opacity:0;}to{transform:scale(1);opacity:1;}}
+    .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+    .sheet-title{font-size:15px;font-weight:800;}
+    .sheet-sub{font-size:11.5px;color:var(--light);margin-top:2px;}
+    .sheet-close{width:28px;height:28px;border-radius:50%;background:var(--bg);border:none;color:var(--mid);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .sheet-body{padding:16px 20px;}
+    .form-row{display:grid;gap:10px;margin-bottom:10px;}
+    .form-row.cols2{grid-template-columns:1fr 1fr;}
+    .fld label{display:block;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+    .fld label span{color:var(--red);}
+    .fld label em{color:var(--light);font-style:normal;font-weight:600;text-transform:none;letter-spacing:0;}
+    .fld input,.fld select{width:100%;padding:10.5px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);font-size:13.5px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:all .18s;}
+    .fld input:focus,.fld select:focus{border-color:var(--accent);background:var(--white);}
+    .fld input.error{border-color:var(--red);}
+    .fld-err{font-size:10px;color:var(--red);margin-top:3px;font-weight:500;}
+    .color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;}
+    .color-sw{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
+    .color-circle{width:30px;height:30px;border-radius:50%;border:3px solid transparent;position:relative;box-shadow:0 2px 6px rgba(0,0,0,.15);}
+    .color-sw.on .color-circle{border-color:var(--accent);}
+    .color-sw.on .color-circle::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4);}
+    .color-lbl{font-size:8.5px;font-weight:600;color:var(--mid);}
+    .sheet-footer{display:flex;gap:8px;padding:12px 20px 18px;border-top:1px solid var(--border);}
+    .btn-cancel{flex:0 0 auto;padding:12px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rpill);font-size:13px;font-weight:600;color:var(--mid);cursor:pointer;}
+    .btn-cancel:hover{background:var(--border);}
+    .btn-confirm{flex:1;padding:12px;background:linear-gradient(135deg,var(--accent-d),var(--accent));border:none;border-radius:var(--rpill);font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(234,88,12,.3);}
+    .btn-confirm:disabled{opacity:.4;cursor:not-allowed;}
+
+    .metodo-chip-row{display:flex;gap:8px;}
+    .metodo-chip{flex:1;padding:12px;border:2px solid var(--border);border-radius:var(--r);background:var(--bg);text-align:center;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--mid);}
+    .metodo-chip.on{border-color:var(--accent);background:var(--accent-l);color:var(--accent-d);}
+    .pag-total{text-align:center;padding:14px 0 4px;}
+    .pag-total-lbl{font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.6px;}
+    .pag-total-val{font-size:32px;font-weight:800;margin-top:2px;}
+
+    .success-box{text-align:center;padding:36px 28px;}
+    .s-ring{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--green-d),var(--green));color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 24px rgba(16,185,129,.35);}
+    .s-title{font-size:20px;font-weight:800;margin-bottom:4px;}
+    .s-sub{font-size:13px;color:var(--mid);margin-bottom:8px;}
+    .s-num{display:inline-block;background:var(--accent-l);color:var(--accent-d);border-radius:var(--rpill);padding:6px 20px;font-size:14px;font-weight:800;margin-bottom:22px;}
+
+    .link-chip{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-top:6px;}
+    .link-chip code{flex:1;font-size:11px;color:var(--mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .link-chip button{flex-shrink:0;background:var(--accent-l);color:var(--accent-d);border:none;border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+  </style>
+</head>
+<body x-data="app()" x-init="init()">
+
+  <!-- ═══ LOADING ═══ -->
+  <template x-if="carregando">
+    <div class="state-screen"><div class="spinner"></div></div>
+  </template>
+
+  <!-- ═══ SISTEMA NÃO ATIVO ═══ -->
+  <template x-if="!carregando && !ativo">
+    <div class="state-screen">
+      <div class="state-ic">🔧</div>
+      <div class="state-title">Lina Center não está ativo</div>
+      <div class="state-sub">Fale com o suporte Lina para habilitar o Lina Center nesta empresa.</div>
+    </div>
+  </template>
+
+  <!-- ═══ SHELL ═══ -->
+  <template x-if="!carregando && ativo">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">🔧</div>
+        <div>
+          <div class="brand-name">Lina Center</div>
+          <div class="brand-sub">Beta</div>
+        </div>
+      </div>
+
+      <div class="nav-lbl">Visão Geral</div>
+      <div class="nav-item" :class="{on:tab==='dashboard'}" @click="tab='dashboard'"><span class="ic">📊</span> Dashboard</div>
+
+      <div class="nav-lbl">Operação</div>
+      <div class="nav-item" :class="{on:tab==='ordens'}" @click="tab='ordens'">
+        <span class="ic">📋</span> Ordens <span class="nav-badge" x-text="ordens.filter(o=>o.status!=='FINALIZADO'&&o.status!=='CANCELADO').length"></span>
+      </div>
+      <div class="nav-item" :class="{on:tab==='clientes'}" @click="tab='clientes'"><span class="ic">👥</span> Clientes</div>
+      <div class="nav-item" :class="{on:tab==='funcionarios'}" @click="tab='funcionarios'"><span class="ic">🧑‍🔧</span> Funcionários</div>
+      <div class="nav-item" :class="{on:tab==='servicos'}" @click="tab='servicos'"><span class="ic">🧾</span> Serviços</div>
+
+      <div class="nav-lbl">Gestão</div>
+      <div class="nav-item" :class="{on:tab==='financeiro'}" @click="tab='financeiro';carregarFinanceiro()"><span class="ic">💰</span> Financeiro</div>
+
+      <div class="sidebar-foot">
+        <div class="user-chip">
+          <div class="user-av" x-text="(usuarioNome||'?').charAt(0).toUpperCase()"></div>
+          <div>
+            <div class="user-name" x-text="empresaNome || 'Minha oficina'"></div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <div class="topbar">
+        <div>
+          <div class="tb-title" x-text="tituloPagina()"></div>
+          <div class="tb-sub" x-text="subPagina()"></div>
+        </div>
+        <button class="btn-nova" @click="abrirDrawer()">+ &nbsp;Nova Ordem</button>
+      </div>
+
+      <div class="page">
+
+        <!-- ══════════ DASHBOARD ══════════ -->
+        <template x-if="tab==='dashboard'">
+          <div>
+            <div class="kpi-grid">
+              <div class="kpi">
+                <div class="kpi-top"><div class="kpi-lbl">Faturamento Hoje</div><div class="kpi-ic" style="background:var(--accent-l);color:var(--accent-d)">💵</div></div>
+                <div class="kpi-val"><em>R$&nbsp;</em><span x-text="fmt(dash.faturamentoHoje)"></span></div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-top"><div class="kpi-lbl">Faturamento do Mês</div><div class="kpi-ic" style="background:var(--green-l);color:var(--green-d)">📈</div></div>
+                <div class="kpi-val"><em>R$&nbsp;</em><span x-text="fmt(dash.faturamentoMes)"></span></div>
+                <div class="kpi-delta flat" x-text="(dash.ordensNoMes||0)+' ordens no período'"></div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-top"><div class="kpi-lbl">Em Andamento</div><div class="kpi-ic" style="background:var(--amber-l);color:#b45309">🛠️</div></div>
+                <div class="kpi-val" x-text="dash.ordensEmAndamento||0"></div>
+                <div class="kpi-delta flat">no pátio agora</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-top"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-ic" style="background:var(--blue-l);color:var(--blue-d)">🎯</div></div>
+                <div class="kpi-val"><em>R$&nbsp;</em><span x-text="fmt(dash.ticketMedio)"></span></div>
+                <div class="kpi-delta flat">últimos 30 dias</div>
+              </div>
+            </div>
+
+            <div class="qa-grid">
+              <div class="qa" @click="abrirDrawer()"><div class="qa-ic">📋</div><div class="qa-lbl">Nova Ordem</div></div>
+              <div class="qa" @click="tab='clientes';abrirFormCliente()"><div class="qa-ic">👤</div><div class="qa-lbl">Novo Cliente</div></div>
+              <div class="qa" @click="tab='funcionarios';abrirFormFunc()"><div class="qa-ic">🧑‍🔧</div><div class="qa-lbl">Novo Funcionário</div></div>
+              <div class="qa" @click="tab='servicos';abrirFormServ()"><div class="qa-ic">🧾</div><div class="qa-lbl">Novo Serviço</div></div>
+            </div>
+
+            <div class="row2">
+              <div>
+                <div class="card" style="margin-bottom:16px;">
+                  <div class="card-head"><div class="card-title">Faturamento — Últimos 7 dias</div></div>
+                  <div class="card-body">
+                    <div class="chart">
+                      <template x-for="(d,i) in semana" :key="i">
+                        <div class="bar-col">
+                          <div class="bar" :class="{today:i===semana.length-1}" :style="'height:'+alturaBarra(d.valor)+'%'"></div>
+                          <div class="bar-lbl" x-text="d.dia"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="card-head"><div class="card-title">Ordens em Andamento</div><div class="card-link" @click="tab='ordens'">Ver todas</div></div>
+                  <div class="card-body">
+                    <template x-if="ordensAtivas().length===0"><div class="empty">Nenhuma ordem em andamento</div></template>
+                    <template x-for="o in ordensAtivas()" :key="o.id">
+                      <div class="ordem-row">
+                        <div class="ordem-av" x-text="(o.cliente?.nome||'?').charAt(0)"></div>
+                        <div class="ordem-info">
+                          <div class="ordem-nome" x-text="o.cliente?.nome"></div>
+                          <div class="ordem-det" x-text="descOrdem(o)"></div>
+                        </div>
+                        <div class="ordem-right">
+                          <div class="ordem-val" x-text="'R$ '+fmt(o.valorTotal)"></div>
+                          <div class="status" :class="o.status.toLowerCase()" x-text="statusLabel(o.status)"></div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><div class="card-title">Comissões do Mês</div><div class="card-link" @click="tab='funcionarios'">Ver todos</div></div>
+                <div class="card-body">
+                  <template x-if="ranking.length===0"><div class="empty">Sem dados no mês</div></template>
+                  <template x-for="(f,i) in ranking.slice(0,5)" :key="f.id">
+                    <div class="rank-row">
+                      <div class="rank-pos" x-text="i+1"></div>
+                      <div class="rank-av" :style="'background:'+gradFor(i)" x-text="f.nome.charAt(0)"></div>
+                      <div class="rank-info">
+                        <div class="rank-nome" x-text="f.nome"></div>
+                        <div class="rank-sub" x-text="f.ordens+' ordens · '+f.pct+'%'"></div>
+                      </div>
+                      <div class="rank-val" x-text="'R$ '+fmt(f.comissao)"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ══════════ ORDENS ══════════ -->
+        <template x-if="tab==='ordens'">
+          <div>
+            <div class="tab-head">
+              <div class="filters">
+                <div class="filter-chip" :class="{on:filtroOrdem==='TODOS'}" @click="filtroOrdem='TODOS'">Todos <span x-text="'· '+ordens.length"></span></div>
+                <div class="filter-chip" :class="{on:filtroOrdem==='EM_ANDAMENTO'}" @click="filtroOrdem='EM_ANDAMENTO'">Em andamento</div>
+                <div class="filter-chip" :class="{on:filtroOrdem==='AGUARDANDO_PAGAMENTO'}" @click="filtroOrdem='AGUARDANDO_PAGAMENTO'">Aguardando pag.</div>
+                <div class="filter-chip" :class="{on:filtroOrdem==='FINALIZADO'}" @click="filtroOrdem='FINALIZADO'">Finalizado</div>
+              </div>
+            </div>
+            <div class="tbl">
+              <div class="tbl-row head ordens"><div>#</div><div>Cliente / Veículo</div><div>Serviço</div><div>Mecânico</div><div>Valor</div><div>Status</div><div>Ações</div></div>
+              <template x-if="ordensFiltradas().length===0"><div class="empty">Nenhuma ordem encontrada</div></template>
+              <template x-for="o in ordensFiltradas()" :key="o.id">
+                <div class="tbl-row ordens">
+                  <div class="tbl-sub" x-text="'#'+o.numeroOrdem"></div>
+                  <div><div class="tbl-name" x-text="o.cliente?.nome"></div><div class="tbl-sub" x-text="(o.veiculo?.modelo||'—')+(o.veiculo?.placa?' · '+o.veiculo.placa:'')"></div></div>
+                  <div class="tbl-sub" x-text="servicosDe(o)"></div>
+                  <div x-text="o.funcionario?.nome||'—'"></div>
+                  <div class="tbl-name" x-text="'R$ '+fmt(o.valorTotal)"></div>
+                  <div><span class="status" :class="o.status.toLowerCase()" x-text="statusLabel(o.status)"></span></div>
+                  <div class="tbl-actions">
+                    <template x-if="o.status==='PENDENTE'"><button class="act-btn act-btn-txt" @click="mudarStatus(o,'EM_ANDAMENTO')">Iniciar</button></template>
+                    <template x-if="o.status==='EM_ANDAMENTO'"><button class="act-btn act-btn-txt" @click="mudarStatus(o,'AGUARDANDO_PAGAMENTO')">Aguardar pag.</button></template>
+                    <template x-if="o.status==='PENDENTE'||o.status==='EM_ANDAMENTO'||o.status==='AGUARDANDO_PAGAMENTO'">
+                      <button class="act-btn act-btn-txt" @click="abrirPagamento(o)" style="background:var(--accent-l);color:var(--accent-d);border-color:var(--accent-m)">Finalizar</button>
+                    </template>
+                    <template x-if="o.status==='PENDENTE'||o.status==='EM_ANDAMENTO'||o.status==='AGUARDANDO_PAGAMENTO'">
+                      <button class="act-btn danger" @click="cancelar(o)" title="Cancelar">✕</button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- ══════════ CLIENTES ══════════ -->
+        <template x-if="tab==='clientes'">
+          <div>
+            <div class="tab-head">
+              <div class="search-box"><span class="si">🔍</span><input type="text" placeholder="Buscar cliente..." x-model="buscaCliente"></div>
+              <button class="btn-nova2" @click="abrirFormCliente()">+ Novo Cliente</button>
+            </div>
+            <div class="tbl">
+              <div class="tbl-row head clientes"><div>Nome</div><div>Veículo</div><div>Telefone</div><div>Status</div><div>Ações</div></div>
+              <template x-if="clientesFiltrados().length===0"><div class="empty">Nenhum cliente cadastrado</div></template>
+              <template x-for="c in clientesFiltrados()" :key="c.id">
+                <div class="tbl-row clientes">
+                  <div class="tbl-name" x-text="c.nome"></div>
+                  <div class="tbl-sub" x-text="(c.veiculos[0]?.modelo||'—')+(c.veiculos[0]?.placa?' · '+c.veiculos[0].placa:'')"></div>
+                  <div x-text="c.telefone||'—'"></div>
+                  <div><span class="pill" :class="c.ativo?'ativo':'inativo'" x-text="c.ativo?'Ativo':'Inativo'"></span></div>
+                  <div class="tbl-actions">
+                    <button class="act-btn" @click="abrirFormCliente(c)" title="Editar">✏️</button>
+                    <button class="act-btn danger" @click="excluirCliente(c)" title="Excluir">🗑️</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- ══════════ FUNCIONÁRIOS ══════════ -->
+        <template x-if="tab==='funcionarios'">
+          <div>
+            <div class="tab-head">
+              <div></div>
+              <button class="btn-nova2" @click="abrirFormFunc()">+ Novo Funcionário</button>
+            </div>
+            <div class="tbl">
+              <div class="tbl-row head func"><div>Nome</div><div>Remuneração</div><div>Ordens (mês)</div><div>Comissão (mês)</div><div>Status</div><div>Ações</div></div>
+              <template x-if="funcionarios.length===0"><div class="empty">Nenhum funcionário cadastrado</div></template>
+              <template x-for="f in funcionarios" :key="f.id">
+                <div class="tbl-row func">
+                  <div class="tbl-name" x-text="f.nome"></div>
+                  <div class="tbl-sub" x-text="rotuloRemuneracao(f)"></div>
+                  <div x-text="rankingDe(f.id).ordens"></div>
+                  <div class="tbl-name" x-text="'R$ '+fmt(rankingDe(f.id).comissao)"></div>
+                  <div><span class="pill" :class="f.ativo?'ativo':'inativo'" @click="toggleAtivoFunc(f)" x-text="f.ativo?'Ativo':'Inativo'"></span></div>
+                  <div class="tbl-actions">
+                    <button class="act-btn" @click="abrirFormFunc(f)" title="Editar">✏️</button>
+                    <button class="act-btn" @click="copiarLink(f)" title="Copiar link do portal" x-text="linkCopiadoId===f.id?'✓':'🔗'"></button>
+                    <button class="act-btn" @click="resetarPin(f)" title="Resetar PIN">🔁</button>
+                    <button class="act-btn danger" @click="excluirFuncionario(f)" title="Excluir">🗑️</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- ══════════ SERVIÇOS ══════════ -->
+        <template x-if="tab==='servicos'">
+          <div>
+            <div class="tab-head">
+              <div></div>
+              <button class="btn-nova2" @click="abrirFormServ()">+ Novo Serviço</button>
+            </div>
+            <div class="tbl">
+              <div class="tbl-row head servicos"><div>Serviço</div><div>Descrição</div><div>Preço</div><div>Status</div><div>Ações</div></div>
+              <template x-if="servicos.length===0"><div class="empty">Nenhum serviço cadastrado</div></template>
+              <template x-for="s in servicos" :key="s.id">
+                <div class="tbl-row servicos">
+                  <div class="tbl-name" x-text="s.nome"></div>
+                  <div class="tbl-sub" x-text="s.descricao||'—'"></div>
+                  <div class="tbl-name" x-text="'R$ '+fmt(s.preco)"></div>
+                  <div><span class="pill" :class="s.ativo?'ativo':'inativo'" @click="toggleAtivoServ(s)" x-text="s.ativo?'Ativo':'Inativo'"></span></div>
+                  <div class="tbl-actions">
+                    <button class="act-btn" @click="abrirFormServ(s)" title="Editar">✏️</button>
+                    <button class="act-btn danger" @click="excluirServico(s)" title="Excluir">🗑️</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- ══════════ FINANCEIRO ══════════ -->
+        <template x-if="tab==='financeiro'">
+          <div>
+            <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+              <div class="kpi"><div class="kpi-lbl">Faturamento Hoje</div><div class="kpi-val"><em>R$&nbsp;</em><span x-text="fmt(dash.faturamentoHoje)"></span></div></div>
+              <div class="kpi"><div class="kpi-lbl">Faturamento do Mês</div><div class="kpi-val"><em>R$&nbsp;</em><span x-text="fmt(dash.faturamentoMes)"></span></div></div>
+              <div class="kpi"><div class="kpi-lbl">Comissões do Mês</div><div class="kpi-val" style="color:var(--accent-d)"><em>R$&nbsp;</em><span x-text="fmt(dash.comissaoMes)"></span></div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div class="card-title">Faturamento por Método de Pagamento — Mês</div></div>
+              <div class="card-body">
+                <template x-if="metodos.length===0"><div class="empty">Sem pagamentos registrados no mês</div></template>
+                <template x-for="m in metodos" :key="m.metodo">
+                  <div class="metodo-row">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div class="metodo-dot" :style="'background:'+corMetodo(m.metodo)"></div>
+                      <div class="metodo-nome" x-text="rotuloMetodo(m.metodo)"></div>
+                      <div class="metodo-val" x-text="'R$ '+fmt(m.valor)"></div>
+                    </div>
+                    <div class="metodo-bar-bg"><div class="metodo-bar-fg" :style="'width:'+pctMetodo(m.valor)+'%;background:'+corMetodo(m.metodo)"></div></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </div>
+  </template>
+
+  <!-- ═══ DRAWER: NOVA ORDEM ═══ -->
+  <div class="drawer-backdrop" :class="{open:drawerOpen}" x-show="drawerOpen" x-cloak @click.self="fecharDrawer()">
+    <div class="drawer" :class="{open:drawerOpen}">
+      <div class="drw-head">
+        <div class="drw-head-row">
+          <div><div class="drw-title">Nova Ordem</div><div class="drw-sub">Preencha os dados abaixo</div></div>
+          <button class="drw-close" @click="fecharDrawer()">✕</button>
+        </div>
+
+        <div x-show="!novaOrdem.cliente">
+          <div class="search-row">
+            <div class="sw">
+              <span class="si2">🔍</span>
+              <input class="search-input" type="text" placeholder="Buscar cliente, veículo ou placa..."
+                x-model="q" @input="buscar()" @blur="setTimeout(()=> showDrop=false, 160)" @focus="if(q.length>=2) showDrop=true" autocomplete="off">
+              <div class="dropdown" x-show="showDrop" x-cloak>
+                <template x-for="r in results" :key="r.id">
+                  <div class="dr" @mousedown.prevent="pick(r)">
+                    <div class="dr-av" x-text="r.nome.charAt(0)"></div>
+                    <div><div class="dr-name" x-text="r.nome"></div><div class="dr-sub" x-text="(r.veiculos[0]?.modelo||'—')+(r.veiculos[0]?.placa?' · '+r.veiculos[0].placa:'')"></div></div>
+                  </div>
+                </template>
+                <div class="dr" @mousedown.prevent="abrirFormCliente(null,true)">
+                  <div class="dr-av new">+</div>
+                  <div><div class="dr-name" style="color:var(--accent-d)">Cadastrar novo cliente</div><div class="dr-sub" x-text="q.length>0?'Nome: &quot;'+q+'&quot;':'Preencher dados do cliente'"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="client-tag" x-show="novaOrdem.cliente" x-cloak>
+          <div class="ct-av" x-text="(novaOrdem.cliente?.nome||'?').charAt(0)"></div>
+          <div style="flex:1;min-width:0">
+            <div class="ct-name" x-text="novaOrdem.cliente?.nome"></div>
+            <div class="ct-info" x-text="(novaOrdem.cliente?.modelo||'—')+(novaOrdem.cliente?.placa?' · '+novaOrdem.cliente.placa:'')+(novaOrdem.cliente?.telefone?' · '+novaOrdem.cliente.telefone:'')"></div>
+          </div>
+          <button class="ct-x" @click="novaOrdem.cliente=null;q=''">✕</button>
+        </div>
+      </div>
+
+      <div class="drw-body">
+        <div class="sec">
+          <div class="sec-lbl">Serviços <b x-show="novaOrdem.svcs.length" x-text="'· '+novaOrdem.svcs.length"></b></div>
+          <div class="svc-grid">
+            <template x-if="servicosAtivos().length===0"><div class="empty" style="grid-column:1/-1">Cadastre um serviço primeiro</div></template>
+            <template x-for="s in servicosAtivos()" :key="s.id">
+              <div class="svc-card" :class="{on:novaOrdem.svcs.includes(s.id)}" @click="toggleSvc(s)">
+                <div class="svc-check">✓</div>
+                <div class="svc-name" x-text="s.nome"></div>
+                <div class="svc-desc" x-text="s.descricao||''"></div>
+                <div class="svc-price" x-text="'R$ '+fmt(s.preco)"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="sec" style="border-bottom:none;">
+          <div class="sec-lbl">Mecânico Responsável</div>
+          <div class="resp-row">
+            <template x-if="funcionariosAtivos().length===0"><div class="empty">Cadastre um funcionário primeiro</div></template>
+            <template x-for="(f,i) in funcionariosAtivos()" :key="f.id">
+              <div class="resp" :class="{on:novaOrdem.func===f.id}" @click="novaOrdem.func = novaOrdem.func===f.id?null:f.id">
+                <div class="resp-av" :style="novaOrdem.func===f.id ? 'background:'+gradFor(i)+';box-shadow:0 4px 14px rgba(0,0,0,.22)' : ''">
+                  <span x-text="f.nome.charAt(0)"></span>
+                  <div class="resp-tick" x-show="novaOrdem.func===f.id">✓</div>
+                </div>
+                <span class="resp-name" x-text="f.nome.split(' ')[0]"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="drw-foot">
+        <div class="ft-total">
+          <div class="ft-lbl">Total</div>
+          <div class="ft-val"><em>R$&nbsp;</em><span x-text="fmt(totalOrdem())"></span></div>
+          <div class="ft-desc" x-show="descItensOrdem()" x-text="descItensOrdem()"></div>
+        </div>
+        <button class="btn-criar" :disabled="!podeCriarOrdem()||criandoOrdem" @click="criarOrdem()" x-text="criandoOrdem?'Criando...':'✓  Criar Ordem'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: NOVO/EDITAR CLIENTE ═══ -->
+  <div class="sub-backdrop" x-show="showFormCliente" x-cloak @click.self="showFormCliente=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title" x-text="formCliente.id?'Editar Cliente':'Novo Cliente'"></div><div class="sheet-sub">Dados do cliente e veículo</div></div>
+        <button class="sheet-close" @click="showFormCliente=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="form-row cols2">
+          <div class="fld" style="grid-column:1/-1">
+            <label>Nome completo <span>*</span></label>
+            <input type="text" placeholder="Ex: João da Silva" x-model="formCliente.nome" :class="{error:erroCliente.nome}" @input="erroCliente.nome=false">
+            <div class="fld-err" x-show="erroCliente.nome">Nome é obrigatório</div>
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld"><label>Celular / WhatsApp</label><input type="tel" placeholder="(11) 9 0000-0000" x-model="formCliente.telefone" @input="maskPhone($event,formCliente)"></div>
+          <div class="fld"><label>Email</label><input type="email" placeholder="opcional" x-model="formCliente.email"></div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld">
+            <label>Modelo do veículo</label>
+            <input type="text" placeholder="Ex: HB20, Civic, Gol" x-model="formCliente.modelo">
+          </div>
+          <div class="fld"><label>Placa <em>(opcional)</em></label><input type="text" placeholder="ABC-1234" x-model="formCliente.placa" @input="formCliente.placa=$event.target.value.toUpperCase()" maxlength="8"></div>
+        </div>
+        <div class="fld" style="margin-bottom:10px">
+          <label>Cor do veículo <span x-show="formCliente.cor" x-text="'— '+formCliente.cor" style="color:var(--accent-d);text-transform:none;letter-spacing:0;font-weight:600"></span></label>
+          <div class="color-grid">
+            <template x-for="c in coresCarro" :key="c.nome">
+              <div class="color-sw" :class="{on:formCliente.cor===c.nome}" @click="formCliente.cor=c.nome">
+                <div class="color-circle" :style="'background:'+c.hex"></div><span class="color-lbl" x-text="c.nome"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld"><label>Ano</label><input type="number" placeholder="2020" x-model="formCliente.ano" min="1990" max="2030"></div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showFormCliente=false">Cancelar</button>
+        <button class="btn-confirm" @click="salvarCliente()" :disabled="salvandoCliente" x-text="salvandoCliente?'Salvando...':(formCliente.id?'Salvar Alterações':'Confirmar Cliente')"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: NOVO/EDITAR FUNCIONÁRIO ═══ -->
+  <div class="sub-backdrop" x-show="showFormFunc" x-cloak @click.self="showFormFunc=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title" x-text="formFunc.id?'Editar Funcionário':'Novo Funcionário'"></div><div class="sheet-sub">Dados e comissão</div></div>
+        <button class="sheet-close" @click="showFormFunc=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="form-row cols2">
+          <div class="fld" style="grid-column:1/-1">
+            <label>Nome completo <span>*</span></label>
+            <input type="text" placeholder="Ex: Paulo Mendes" x-model="formFunc.nome" :class="{error:erroFunc.nome}" @input="erroFunc.nome=false">
+            <div class="fld-err" x-show="erroFunc.nome">Nome é obrigatório</div>
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld"><label>Celular / WhatsApp</label><input type="tel" placeholder="(11) 9 0000-0000" x-model="formFunc.telefone" @input="maskPhone($event,formFunc)"></div>
+          <div class="fld">
+            <label>Remuneração</label>
+            <select x-model="formFunc.tipoRemuneracao">
+              <option value="COMISSAO">Comissão</option>
+              <option value="SALARIO">Salário fixo</option>
+              <option value="SALARIO_COMISSAO">Salário + comissão</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld" x-show="formFunc.tipoRemuneracao!=='SALARIO'"><label>Comissão (%)</label><input type="number" placeholder="20" x-model="formFunc.comissao" min="0" max="100" step="0.5"></div>
+          <div class="fld" x-show="formFunc.tipoRemuneracao!=='COMISSAO'"><label>Salário (R$)</label><input type="number" placeholder="1500" x-model="formFunc.salario" min="0" step="50"></div>
+        </div>
+        <template x-if="formFunc.id && formFunc.linkToken">
+          <div class="fld">
+            <label>Link do portal (comissões)</label>
+            <div class="link-chip">
+              <code x-text="linkPortal(formFunc.linkToken)"></code>
+              <button @click="copiarTexto(linkPortal(formFunc.linkToken))">Copiar</button>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showFormFunc=false">Cancelar</button>
+        <button class="btn-confirm" @click="salvarFuncionario()" :disabled="salvandoFunc" x-text="salvandoFunc?'Salvando...':(formFunc.id?'Salvar Alterações':'Criar Funcionário')"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: NOVO/EDITAR SERVIÇO ═══ -->
+  <div class="sub-backdrop" x-show="showFormServ" x-cloak @click.self="showFormServ=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title" x-text="formServ.id?'Editar Serviço':'Novo Serviço'"></div><div class="sheet-sub">Catálogo de serviços</div></div>
+        <button class="sheet-close" @click="showFormServ=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="form-row cols2">
+          <div class="fld" style="grid-column:1/-1">
+            <label>Nome do serviço <span>*</span></label>
+            <input type="text" placeholder="Ex: Troca de Óleo" x-model="formServ.nome" :class="{error:erroServ.nome}" @input="erroServ.nome=false">
+            <div class="fld-err" x-show="erroServ.nome">Nome é obrigatório</div>
+          </div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld" style="grid-column:1/-1"><label>Descrição</label><input type="text" placeholder="Ex: Óleo + filtro" x-model="formServ.descricao"></div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld">
+            <label>Preço (R$) <span>*</span></label>
+            <input type="number" placeholder="80" x-model="formServ.preco" min="0" step="1" :class="{error:erroServ.preco}" @input="erroServ.preco=false">
+            <div class="fld-err" x-show="erroServ.preco">Preço é obrigatório</div>
+          </div>
+          <div class="fld"><label>Comissão específica (%) <em>(opcional)</em></label><input type="number" placeholder="—" x-model="formServ.comissaoPercentual" min="0" max="100" step="0.5"></div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showFormServ=false">Cancelar</button>
+        <button class="btn-confirm" @click="salvarServico()" :disabled="salvandoServ" x-text="salvandoServ?'Salvando...':(formServ.id?'Salvar Alterações':'Criar Serviço')"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: FINALIZAR / PAGAMENTO ═══ -->
+  <div class="sub-backdrop" x-show="showPagamento" x-cloak @click.self="showPagamento=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title">Finalizar Ordem</div><div class="sheet-sub" x-text="'#'+(ordemPagamento?.numeroOrdem||'')"></div></div>
+        <button class="sheet-close" @click="showPagamento=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="pag-total">
+          <div class="pag-total-lbl">Valor a receber</div>
+          <div class="pag-total-val" x-text="'R$ '+fmt(ordemPagamento?.valorTotal||0)"></div>
+        </div>
+        <div class="fld" style="margin-top:8px">
+          <label>Método de pagamento</label>
+          <div class="metodo-chip-row">
+            <div class="metodo-chip" :class="{on:metodoPagamento==='DINHEIRO'}" @click="metodoPagamento='DINHEIRO'">Dinheiro</div>
+            <div class="metodo-chip" :class="{on:metodoPagamento==='PIX'}" @click="metodoPagamento='PIX'">Pix</div>
+            <div class="metodo-chip" :class="{on:metodoPagamento==='CARTAO'}" @click="metodoPagamento='CARTAO'">Cartão</div>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showPagamento=false">Cancelar</button>
+        <button class="btn-confirm" @click="confirmarFinalizacao()" :disabled="finalizando" x-text="finalizando?'Finalizando...':'✓ Confirmar Pagamento'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SUCESSO ═══ -->
+  <div class="sub-backdrop" x-show="sucesso" x-cloak style="z-index:260;">
+    <div class="sub-sheet success-box" @click.stop>
+      <div class="s-ring">✓</div>
+      <div class="s-title">Ordem Criada!</div>
+      <div class="s-sub">Adicionada à fila com sucesso</div>
+      <div class="s-num" x-text="'Ordem # '+ordemCriadaNum"></div>
+      <button class="btn-nova" style="width:100%" @click="sucesso=false">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        carregando: true,
+        ativo: true,
+        usuarioNome: '',
+        empresaNome: '',
+
+        tab: 'dashboard',
+        dash: {},
+        semana: [],
+        ordens: [],
+        clientes: [],
+        funcionarios: [],
+        servicos: [],
+        ranking: [],
+        metodos: [],
+        filtroOrdem: 'TODOS',
+        buscaCliente: '',
+
+        palette: [
+          'linear-gradient(135deg,#ea580c,#fb923c)',
+          'linear-gradient(135deg,#059669,#34d399)',
+          'linear-gradient(135deg,#7c3aed,#a78bfa)',
+          'linear-gradient(135deg,#2563eb,#60a5fa)',
+          'linear-gradient(135deg,#db2777,#f472b6)',
+        ],
+        coresCarro: [
+          {nome:'Branco',hex:'#f1f5f9'},{nome:'Preto',hex:'#1e293b'},{nome:'Prata',hex:'#94a3b8'},
+          {nome:'Cinza',hex:'#64748b'},{nome:'Vermelho',hex:'#ef4444'},{nome:'Azul',hex:'#3b82f6'},
+          {nome:'Verde',hex:'#10b981'},{nome:'Amarelo',hex:'#fbbf24'},{nome:'Laranja',hex:'#f97316'},
+          {nome:'Marrom',hex:'#92400e'},{nome:'Bege',hex:'#c4a35a'},{nome:'Vinho',hex:'#9f1239'},
+        ],
+
+        // Drawer nova ordem
+        drawerOpen: false,
+        q: '', showDrop: false, results: [],
+        novaOrdem: { cliente: null, svcs: [], func: null },
+        criandoOrdem: false,
+        sucesso: false, ordemCriadaNum: null,
+
+        // Modais
+        showFormCliente: false, formCliente: {}, erroCliente: {}, salvandoCliente: false, contextoCliente: 'clientes',
+        showFormFunc: false, formFunc: {}, erroFunc: {}, salvandoFunc: false,
+        showFormServ: false, formServ: {}, erroServ: {}, salvandoServ: false,
+        showPagamento: false, ordemPagamento: null, metodoPagamento: 'DINHEIRO', finalizando: false,
+        linkCopiadoId: null,
+
+        async init() {
+          const token = localStorage.getItem('token');
+          if (!token) { window.location.href = '/login.html'; return; }
+          this.usuarioNome = localStorage.getItem('usuarioNome') || '';
+          this.empresaNome = localStorage.getItem('empresaNome') || '';
+          await this.carregarTudo();
+        },
+
+        async carregarTudo() {
+          this.carregando = true;
+          try {
+            const [dash, semana, ordensResp, clientesResp, funcResp, servResp, rankingResp] = await Promise.all([
+              window.api.getLcDashboardResumo(),
+              window.api.getLcFaturamentoSemana(),
+              window.api.getLcOrdens(),
+              window.api.getLcClientes(),
+              window.api.getLcFuncionarios(),
+              window.api.getLcServicos(),
+              window.api.getLcComissoesPorFuncionario(),
+            ]);
+            this.dash = dash;
+            this.semana = semana.dias || [];
+            this.ordens = ordensResp.ordens || [];
+            this.clientes = clientesResp.clientes || [];
+            this.funcionarios = funcResp.funcionarios || [];
+            this.servicos = servResp.servicos || [];
+            this.ranking = rankingResp.ranking || [];
+            this.ativo = true;
+          } catch (e) {
+            if (e && e.error === 'Lina Center não está ativo para esta empresa.') {
+              this.ativo = false;
+            } else {
+              console.error(e);
+              this.ativo = false;
+            }
+          } finally {
+            this.carregando = false;
+          }
+        },
+
+        async carregarFinanceiro() {
+          try {
+            const r = await window.api.getLcFaturamentoPorMetodo();
+            this.metodos = r.metodos || [];
+          } catch (e) { console.error(e); }
+        },
+
+        // ── Helpers de exibição ──
+        fmt(v) { return (v || 0).toFixed(2).replace('.', ','); },
+        tituloPagina() {
+          return { dashboard:'Dashboard', ordens:'Ordens de Serviço', clientes:'Clientes',
+            funcionarios:'Funcionários', servicos:'Catálogo de Serviços', financeiro:'Financeiro' }[this.tab];
+        },
+        subPagina() {
+          return { dashboard:'Visão geral da oficina hoje', ordens:'Acompanhe e gerencie as ordens',
+            clientes:'Clientes e veículos cadastrados', funcionarios:'Equipe e comissões',
+            servicos:'Serviços oferecidos pela oficina', financeiro:'Faturamento geral do período' }[this.tab];
+        },
+        statusLabel(s) {
+          return { PENDENTE:'Pendente', EM_ANDAMENTO:'Em andamento', AGUARDANDO_PAGAMENTO:'Aguardando pag.',
+            FINALIZADO:'Finalizado', CANCELADO:'Cancelado' }[s] || s;
+        },
+        gradFor(i) { return this.palette[i % this.palette.length]; },
+        descOrdem(o) {
+          const svcs = (o.items || []).map(i => i.servico?.nome || i.nomeCustom).filter(Boolean).join(', ');
+          return (o.veiculo?.modelo || '—') + (svcs ? ' · ' + svcs : '') + (o.funcionario ? ' · ' + o.funcionario.nome : '');
+        },
+        servicosDe(o) { return (o.items || []).map(i => i.servico?.nome || i.nomeCustom).filter(Boolean).join(', ') || '—'; },
+        rankingDe(funcId) { return this.ranking.find(r => r.id === funcId) || { ordens: 0, comissao: 0 }; },
+        rotuloRemuneracao(f) {
+          if (f.tipoRemuneracao === 'SALARIO') return 'Salário fixo';
+          if (f.tipoRemuneracao === 'SALARIO_COMISSAO') return `Salário + ${f.comissao || 0}%`;
+          return `${f.comissao || 0}% por ordem`;
+        },
+        rotuloMetodo(m) { return { DINHEIRO:'Dinheiro', PIX:'Pix', CARTAO:'Cartão', CARTAO_CREDITO:'Cartão Crédito', CARTAO_DEBITO:'Cartão Débito', NFE:'NFE', OUTRO:'Outro' }[m] || m; },
+        corMetodo(m) { return { DINHEIRO:'#10b981', PIX:'#f97316', CARTAO:'#3b82f6', CARTAO_CREDITO:'#3b82f6', CARTAO_DEBITO:'#60a5fa', NFE:'#7c3aed' }[m] || '#94a3b8'; },
+        pctMetodo(v) {
+          const max = Math.max(...this.metodos.map(m => m.valor), 1);
+          return Math.round((v / max) * 100);
+        },
+        alturaBarra(v) {
+          const max = Math.max(...this.semana.map(d => d.valor), 1);
+          return Math.max(3, Math.round((v / max) * 100));
+        },
+        linkPortal(token) { return window.location.origin + '/p/' + token; },
+
+        // ── Listas filtradas ──
+        ordensAtivas() { return this.ordens.filter(o => o.status !== 'FINALIZADO' && o.status !== 'CANCELADO').slice(0, 4); },
+        ordensFiltradas() {
+          if (this.filtroOrdem === 'TODOS') return this.ordens;
+          return this.ordens.filter(o => o.status === this.filtroOrdem);
+        },
+        clientesFiltrados() {
+          const q = this.buscaCliente.trim().toLowerCase();
+          if (!q) return this.clientes;
+          return this.clientes.filter(c =>
+            c.nome.toLowerCase().includes(q) ||
+            (c.telefone || '').includes(q) ||
+            (c.veiculos || []).some(v => (v.placa || '').toLowerCase().includes(q) || (v.modelo || '').toLowerCase().includes(q))
+          );
+        },
+        servicosAtivos() { return this.servicos.filter(s => s.ativo); },
+        funcionariosAtivos() { return this.funcionarios.filter(f => f.ativo); },
+
+        // ── Drawer: Nova Ordem ──
+        abrirDrawer() { this.drawerOpen = true; },
+        fecharDrawer() {
+          this.drawerOpen = false;
+          this.novaOrdem = { cliente: null, svcs: [], func: null };
+          this.q = ''; this.showDrop = false;
+        },
+        buscar() {
+          const q = this.q.trim().toLowerCase();
+          this.results = q.length < 2 ? [] : this.clientes.filter(c =>
+            c.nome.toLowerCase().includes(q) ||
+            (c.veiculos || []).some(v => (v.placa || '').toLowerCase().includes(q) || (v.modelo || '').toLowerCase().includes(q))
+          ).slice(0, 8);
+          this.showDrop = q.length >= 2;
+        },
+        pick(c) {
+          const v = c.veiculos && c.veiculos[0];
+          this.novaOrdem.cliente = { id: c.id, nome: c.nome, telefone: c.telefone, veiculoId: v?.id, modelo: v?.modelo, placa: v?.placa };
+          this.q = ''; this.showDrop = false;
+        },
+        toggleSvc(s) {
+          const i = this.novaOrdem.svcs.indexOf(s.id);
+          if (i >= 0) this.novaOrdem.svcs.splice(i, 1); else this.novaOrdem.svcs.push(s.id);
+        },
+        totalOrdem() {
+          let t = 0;
+          for (const id of this.novaOrdem.svcs) t += this.servicos.find(s => s.id === id)?.preco || 0;
+          return t;
+        },
+        descItensOrdem() {
+          if (!this.novaOrdem.svcs.length) return '';
+          return this.novaOrdem.svcs.map(id => this.servicos.find(s => s.id === id)?.nome).filter(Boolean).join(' + ');
+        },
+        podeCriarOrdem() { return this.novaOrdem.cliente && this.novaOrdem.svcs.length > 0 && this.novaOrdem.func; },
+        async criarOrdem() {
+          if (!this.podeCriarOrdem() || this.criandoOrdem) return;
+          this.criandoOrdem = true;
+          try {
+            const payload = { funcionarioId: this.novaOrdem.func, itens: this.novaOrdem.svcs.map(id => ({ servicoId: id })) };
+            const c = this.novaOrdem.cliente;
+            if (c.id) {
+              payload.clienteId = c.id;
+              if (c.veiculoId) payload.veiculoId = c.veiculoId;
+            } else {
+              payload.novoCliente = { nome: c.nome, telefone: c.telefone || undefined };
+              if (c.modelo) payload.novoVeiculo = { modelo: c.modelo, placa: c.placa || undefined, cor: c.cor || undefined, ano: c.ano || undefined };
+            }
+            const resp = await window.api.createLcOrdem(payload);
+            this.ordemCriadaNum = resp.ordem.numeroOrdem;
+            this.fecharDrawer();
+            this.sucesso = true;
+            await this.carregarTudo();
+          } catch (e) {
+            alert(e?.error || 'Erro ao criar ordem.');
+          } finally {
+            this.criandoOrdem = false;
+          }
+        },
+
+        // ── Ações de ordem ──
+        async mudarStatus(o, status) {
+          try {
+            await window.api.updateLcOrdemStatus(o.id, status);
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao atualizar status.'); }
+        },
+        async cancelar(o) {
+          if (!confirm(`Cancelar a ordem #${o.numeroOrdem}?`)) return;
+          try {
+            await window.api.cancelarLcOrdem(o.id);
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao cancelar ordem.'); }
+        },
+        abrirPagamento(o) { this.ordemPagamento = o; this.metodoPagamento = 'DINHEIRO'; this.showPagamento = true; },
+        async confirmarFinalizacao() {
+          if (this.finalizando || !this.ordemPagamento) return;
+          this.finalizando = true;
+          try {
+            await window.api.finalizarLcOrdem(this.ordemPagamento.id, [{ metodo: this.metodoPagamento, valor: this.ordemPagamento.valorTotal }]);
+            this.showPagamento = false;
+            await this.carregarTudo();
+          } catch (e) {
+            alert(e?.error || 'Erro ao finalizar ordem.');
+          } finally {
+            this.finalizando = false;
+          }
+        },
+
+        // ── Cliente: modal ──
+        abrirFormCliente(c, doDrawer) {
+          this.contextoCliente = doDrawer ? 'drawer' : 'clientes';
+          if (c) {
+            const v = c.veiculos && c.veiculos[0];
+            this.formCliente = { id: c.id, nome: c.nome, telefone: c.telefone || '', email: c.email || '',
+              veiculoId: v?.id, modelo: v?.modelo || '', placa: v?.placa || '', cor: v?.cor || '', ano: v?.ano || '' };
+          } else {
+            this.formCliente = { nome: doDrawer ? this.q : '', telefone: '', email: '', modelo: '', placa: '', cor: '', ano: '' };
+          }
+          this.erroCliente = {};
+          this.showDrop = false;
+          this.showFormCliente = true;
+        },
+        async salvarCliente() {
+          this.erroCliente.nome = !this.formCliente.nome?.trim();
+          if (this.erroCliente.nome) return;
+
+          if (this.contextoCliente === 'drawer') {
+            this.novaOrdem.cliente = {
+              id: 0, nome: this.formCliente.nome.trim(), telefone: this.formCliente.telefone,
+              modelo: this.formCliente.modelo, placa: (this.formCliente.placa || '').toUpperCase(),
+              cor: this.formCliente.cor, ano: this.formCliente.ano,
+            };
+            this.showFormCliente = false;
+            return;
+          }
+
+          this.salvandoCliente = true;
+          try {
+            const veiculo = this.formCliente.modelo ? {
+              id: this.formCliente.veiculoId, modelo: this.formCliente.modelo,
+              placa: this.formCliente.placa || null, cor: this.formCliente.cor || null,
+              ano: this.formCliente.ano ? Number(this.formCliente.ano) : null,
+            } : undefined;
+
+            if (this.formCliente.id) {
+              await window.api.updateLcCliente(this.formCliente.id, {
+                nome: this.formCliente.nome, telefone: this.formCliente.telefone || null,
+                email: this.formCliente.email || null, veiculo,
+              });
+            } else {
+              await window.api.createLcCliente({
+                nome: this.formCliente.nome, telefone: this.formCliente.telefone || null,
+                email: this.formCliente.email || null, veiculo,
+              });
+            }
+            this.showFormCliente = false;
+            await this.carregarTudo();
+          } catch (e) {
+            alert(e?.error || 'Erro ao salvar cliente.');
+          } finally {
+            this.salvandoCliente = false;
+          }
+        },
+        async excluirCliente(c) {
+          if (!confirm(`Excluir o cliente "${c.nome}"?`)) return;
+          try {
+            await window.api.deleteLcCliente(c.id);
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao excluir cliente.'); }
+        },
+
+        // ── Funcionário: modal ──
+        abrirFormFunc(f) {
+          this.formFunc = f
+            ? { id: f.id, nome: f.nome, telefone: f.telefone || '', tipoRemuneracao: f.tipoRemuneracao, comissao: f.comissao ?? '', salario: f.salario ?? '', linkToken: f.linkToken }
+            : { nome: '', telefone: '', tipoRemuneracao: 'COMISSAO', comissao: '', salario: '' };
+          this.erroFunc = {};
+          this.showFormFunc = true;
+        },
+        async salvarFuncionario() {
+          this.erroFunc.nome = !this.formFunc.nome?.trim();
+          if (this.erroFunc.nome) return;
+          this.salvandoFunc = true;
+          try {
+            const data = {
+              nome: this.formFunc.nome, telefone: this.formFunc.telefone || null,
+              tipoRemuneracao: this.formFunc.tipoRemuneracao,
+              comissao: this.formFunc.comissao === '' ? null : Number(this.formFunc.comissao),
+              salario: this.formFunc.salario === '' ? null : Number(this.formFunc.salario),
+            };
+            if (this.formFunc.id) await window.api.updateLcFuncionario(this.formFunc.id, data);
+            else await window.api.createLcFuncionario(data);
+            this.showFormFunc = false;
+            await this.carregarTudo();
+          } catch (e) {
+            alert(e?.error || 'Erro ao salvar funcionário.');
+          } finally {
+            this.salvandoFunc = false;
+          }
+        },
+        async toggleAtivoFunc(f) {
+          try {
+            await window.api.updateLcFuncionario(f.id, { ativo: !f.ativo });
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao atualizar status.'); }
+        },
+        async resetarPin(f) {
+          if (!confirm(`Redefinir o PIN de "${f.nome}"? A sessão atual será encerrada.`)) return;
+          try {
+            await window.api.resetarPinLcFuncionario(f.id);
+            alert('PIN redefinido. O funcionário vai definir um novo PIN no próximo acesso ao link.');
+          } catch (e) { alert(e?.error || 'Erro ao redefinir PIN.'); }
+        },
+        async copiarLink(f) {
+          await this.copiarTexto(this.linkPortal(f.linkToken));
+          this.linkCopiadoId = f.id;
+          setTimeout(() => { this.linkCopiadoId = null; }, 1500);
+        },
+        async copiarTexto(texto) {
+          try { await navigator.clipboard.writeText(texto); } catch { /* clipboard indisponível */ }
+        },
+        async excluirFuncionario(f) {
+          if (!confirm(`Excluir o funcionário "${f.nome}"?`)) return;
+          try {
+            await window.api.deleteLcFuncionario(f.id);
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao excluir funcionário.'); }
+        },
+
+        // ── Serviço: modal ──
+        abrirFormServ(s) {
+          this.formServ = s
+            ? { id: s.id, nome: s.nome, descricao: s.descricao || '', preco: s.preco, comissaoPercentual: s.comissaoPercentual ?? '' }
+            : { nome: '', descricao: '', preco: '', comissaoPercentual: '' };
+          this.erroServ = {};
+          this.showFormServ = true;
+        },
+        async salvarServico() {
+          this.erroServ.nome = !this.formServ.nome?.trim();
+          this.erroServ.preco = this.formServ.preco === '' || this.formServ.preco === null || this.formServ.preco === undefined;
+          if (this.erroServ.nome || this.erroServ.preco) return;
+          this.salvandoServ = true;
+          try {
+            const data = {
+              nome: this.formServ.nome, descricao: this.formServ.descricao || null,
+              preco: Number(this.formServ.preco),
+              comissaoPercentual: this.formServ.comissaoPercentual === '' ? null : Number(this.formServ.comissaoPercentual),
+            };
+            if (this.formServ.id) await window.api.updateLcServico(this.formServ.id, data);
+            else await window.api.createLcServico(data);
+            this.showFormServ = false;
+            await this.carregarTudo();
+          } catch (e) {
+            alert(e?.error || 'Erro ao salvar serviço.');
+          } finally {
+            this.salvandoServ = false;
+          }
+        },
+        async toggleAtivoServ(s) {
+          try {
+            await window.api.updateLcServico(s.id, { ativo: !s.ativo });
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao atualizar status.'); }
+        },
+        async excluirServico(s) {
+          if (!confirm(`Excluir o serviço "${s.nome}"?`)) return;
+          try {
+            await window.api.deleteLcServico(s.id);
+            await this.carregarTudo();
+          } catch (e) { alert(e?.error || 'Erro ao excluir serviço.'); }
+        },
+
+        maskPhone(e, target) {
+          let v = e.target.value.replace(/\D/g, '');
+          if (v.length > 11) v = v.slice(0, 11);
+          if (v.length >= 11) v = v.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
+          else if (v.length >= 7) v = v.replace(/^(\d{2})(\d{4})(\d+)$/, '($1) $2-$3');
+          else if (v.length >= 3) v = v.replace(/^(\d{2})(\d+)$/, '($1) $2');
+          target.telefone = v;
+        },
+      };
+    }
+  </script>
+</body>
+</html>
