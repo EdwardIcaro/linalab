@@ -305,6 +305,7 @@
     }
     .sys-micon.wash { background: linear-gradient(145deg, var(--p700), var(--p500)); box-shadow: 0 4px 16px rgba(109,40,217,.25); }
     .sys-micon.dp   { background: linear-gradient(145deg, #064e3b, var(--teal500)); box-shadow: 0 4px 16px rgba(13,148,136,.25); }
+    .sys-micon.lc   { background: linear-gradient(145deg, #92400e, var(--amber)); box-shadow: 0 4px 16px rgba(217,119,6,.25); }
     .sys-micon.future { background: var(--gray100); border: 1px solid var(--gray300); }
     .sys-minfo { flex: 1; }
     .sys-mtitle { font-size: 17px; font-weight: 800; color: var(--gray900); margin-bottom: 4px; }
@@ -548,6 +549,29 @@
         </div>
       </div>
 
+      <!-- Lina Center -->
+      <div class="sys-mcard" id="mcard-lc" onclick="toggleSys('mcard-lc')">
+        <div class="sys-mcard-hdr">
+          <div class="sys-micon lc">🔧</div>
+          <div class="sys-minfo">
+            <div class="sys-mtitle">Lina Center</div>
+            <div class="sys-mdesc">Gestão simples para oficinas mecânicas: ordens, clientes e comissões.</div>
+          </div>
+          <i class="fa fa-chevron-down sys-mchevron"></i>
+        </div>
+        <div class="plans-wrap">
+          <div class="plans-divider"></div>
+          <p id="lcPlanInfo" style="font-size:13px;color:var(--gray500);margin-bottom:16px;padding:0 4px">
+            Carregando planos...
+          </p>
+          <button class="plan-btn" id="lcContratarBtn" disabled
+            style="width:100%;background:linear-gradient(135deg,#d97706,#92400e);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"
+            onclick="contratarLinaCenter(event)">
+            <i class="fa fa-wrench"></i> Ativar Lina Center
+          </button>
+        </div>
+      </div>
+
       <!-- Em breve -->
       <div class="sys-mcard coming">
         <div class="sys-mcard-hdr">
@@ -648,6 +672,68 @@
     function abrirMarketplace() {
       document.getElementById('hubView').classList.add('oculto');
       document.getElementById('marketView').classList.add('ativa');
+      atualizarCardLinaCenter();
+    }
+
+    // ══ Card Lina Center no marketplace ══
+    let hubSistemas = [];
+    let lcCardCarregado = false;
+    let lcEstado = { jaAtivo: false, planoId: null };
+
+    async function atualizarCardLinaCenter() {
+      if (lcCardCarregado) return;
+      lcCardCarregado = true;
+
+      const info = document.getElementById('lcPlanInfo');
+      const btn = document.getElementById('lcContratarBtn');
+      lcEstado.jaAtivo = hubSistemas.some(s => s.chave === 'lina-center');
+
+      try {
+        const planos = await window.api.getAvailablePlans();
+        const plano = (planos || [])
+          .filter(p => p.sistema === 'lina-center')
+          .sort((a, b) => (a.ordem || 0) - (b.ordem || 0))[0];
+
+        if (!plano) {
+          info.textContent = 'Nenhum plano disponível no momento. Fale com o suporte.';
+          return;
+        }
+        lcEstado.planoId = plano.id;
+
+        if (lcEstado.jaAtivo) {
+          info.textContent = 'Você já tem o Lina Center ativo na sua conta.';
+          btn.innerHTML = '<i class="fa fa-check"></i> Já ativo';
+          btn.disabled = true;
+          btn.style.opacity = '.6';
+          btn.style.cursor = 'default';
+          return;
+        }
+
+        info.textContent = `${plano.nome} · R$ ${plano.preco.toFixed(2).replace('.', ',')}/mês · Cancele quando quiser`;
+        btn.disabled = false;
+      } catch (e) {
+        console.error('Erro ao carregar plano do Lina Center:', e);
+        info.textContent = 'Não foi possível carregar o plano agora.';
+      }
+    }
+
+    async function contratarLinaCenter(e) {
+      e.stopPropagation();
+      if (!lcEstado.planoId || lcEstado.jaAtivo) return;
+      if (!confirm('Ativar o Lina Center na sua conta? Você vai criar uma nova empresa para esse sistema.')) return;
+
+      const btn = document.getElementById('lcContratarBtn');
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.innerHTML = 'Ativando...';
+      try {
+        await window.api.createSubscription(lcEstado.planoId, true);
+        window.location.href = 'nova-empresa.html?sistema=lina-center';
+      } catch (err) {
+        alert(err?.message || err?.error || 'Não foi possível ativar o Lina Center agora.');
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
     }
 
     function fecharMarketplace() {
@@ -736,7 +822,7 @@
       const icon = bloqueado ? 'fa-lock' : 'fa-plus';
       const label = bloqueado ? 'Limite do plano<br>atingido' : 'Nova empresa';
       return `
-        <div class="add-card ${lockClass}" onclick="${bloqueado ? '' : "window.location.href='nova-empresa.html'"}">
+        <div class="add-card ${lockClass}" onclick="${bloqueado ? '' : `window.location.href='nova-empresa.html?sistema=${sistema.chave}'`}">
           <div class="add-icon"><i class="fa ${icon}"></i></div>
           <div class="add-lbl">${label}</div>
         </div>`;
@@ -797,6 +883,7 @@
         document.getElementById('statOrdens').textContent = data.stats.ordenasHoje;
 
         // Sistemas
+        hubSistemas = data.sistemas || [];
         const wrap = document.getElementById('sistemasWrap');
         if (!data.sistemas || data.sistemas.length === 0) {
           wrap.innerHTML = `

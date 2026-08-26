@@ -123,11 +123,14 @@ export const grantLifetimeSubscription = async (req: Request, res: Response) => 
       });
     }
 
-    // Verificar se usuário já tem assinatura ativa
-    const existing = await subscriptionService.getActiveSubscription(usuarioId);
+    const plano = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    if (!plano) return res.status(404).json({ error: 'Plano não encontrado' });
+
+    // Verificar se usuário já tem assinatura ativa NESSE SISTEMA (cada sistema tem sua própria assinatura)
+    const existing = await subscriptionService.getActiveSubscription(usuarioId, plano.sistema);
 
     if (existing) {
-      // Cancelar a existente
+      // Cancelar a existente do mesmo sistema
       await subscriptionService.cancelSubscription(existing.id);
     }
 
@@ -604,11 +607,14 @@ export const createSubscriptionAssignment = async (req: Request, res: Response) 
       });
     }
 
-    // Verificar se usuário já tem assinatura ativa
-    const existing = await subscriptionService.getActiveSubscription(usuarioId);
+    const plano = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    if (!plano) return res.status(404).json({ error: 'Plano não encontrado' });
+
+    // Verificar se usuário já tem assinatura ativa NESSE SISTEMA (cada sistema tem sua própria assinatura)
+    const existing = await subscriptionService.getActiveSubscription(usuarioId, plano.sistema);
 
     if (existing) {
-      // Cancelar a existente
+      // Cancelar a existente do mesmo sistema
       await subscriptionService.cancelSubscription(existing.id);
     }
 

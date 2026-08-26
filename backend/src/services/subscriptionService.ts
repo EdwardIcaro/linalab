@@ -130,13 +130,14 @@ export class SubscriptionService {
   /**
    * Obter assinatura ativa do usuário
    */
-  async getActiveSubscription(usuarioId: string) {
+  async getActiveSubscription(usuarioId: string, sistema?: string) {
     return await prisma.subscription.findFirst({
       where: {
         usuarioId,
         status: {
           in: ['ACTIVE', 'TRIAL', 'LIFETIME']
-        }
+        },
+        ...(sistema ? { plan: { sistema } } : {})
       },
       include: {
         plan: true,
@@ -157,37 +158,39 @@ export class SubscriptionService {
   async createSubscription(params: CreateSubscriptionParams) {
     const { usuarioId, planId, isTrial, isLifetime, months, days, isGrant } = params;
 
-    // Validar se já tem assinatura ativa ou pendente
-    const existingSubscription = await prisma.subscription.findFirst({
-      where: {
-        usuarioId,
-        status: {
-          in: ['ACTIVE', 'TRIAL', 'LIFETIME', 'PENDING']
-        }
-      }
-    });
-
-    if (existingSubscription) {
-      throw new Error('Usuário já possui uma assinatura ativa ou pagamento pendente');
-    }
-
-    // Validar trial
-    if (isTrial) {
-      const hasUsedTrial = await prisma.subscription.findFirst({
-        where: { usuarioId, isTrialUsed: true }
-      });
-
-      if (hasUsedTrial) {
-        throw new Error('Trial já foi utilizado anteriormente');
-      }
-    }
-
     const plan = await prisma.subscriptionPlan.findUnique({
       where: { id: planId }
     });
 
     if (!plan || !plan.ativo) {
       throw new Error('Plano não encontrado ou inativo');
+    }
+
+    // Validar se já tem assinatura ativa ou pendente NESSE SISTEMA
+    // (um usuário pode ter uma assinatura ativa por sistema — ex: Lina Wash + Data Point + Lina Center)
+    const existingSubscription = await prisma.subscription.findFirst({
+      where: {
+        usuarioId,
+        status: {
+          in: ['ACTIVE', 'TRIAL', 'LIFETIME', 'PENDING']
+        },
+        plan: { sistema: plan.sistema }
+      }
+    });
+
+    if (existingSubscription) {
+      throw new Error('Usuário já possui uma assinatura ativa ou pagamento pendente para esse sistema');
+    }
+
+    // Validar trial (uma vez por sistema)
+    if (isTrial) {
+      const hasUsedTrial = await prisma.subscription.findFirst({
+        where: { usuarioId, isTrialUsed: true, plan: { sistema: plan.sistema } }
+      });
+
+      if (hasUsedTrial) {
+        throw new Error('Trial já foi utilizado anteriormente');
+      }
     }
 
     const usuario = await prisma.usuario.findUnique({

@@ -253,13 +253,19 @@
                     // ficou "USER" desde o login logo após o cadastro (antes de ter empresa).
                     localStorage.setItem('userRole', 'OWNER');
 
-                    // Se a assinatura ativa do usuário é de um sistema que não o Lina Wash
-                    // (ex: veio de um link de cadastro do Lina Center/Data Point), manda
-                    // para o dashboard daquele sistema em vez do Lina Wash.
+                    // Um usuário pode ter mais de uma assinatura ativa (uma por sistema), então
+                    // o sistema pretendido vem por ?sistema= na URL (setado por quem trouxe o
+                    // usuário até aqui: card "+" de uma seção do Hub, marketplace, etc.).
+                    // Sem o parâmetro (links antigos/diretos), cai no fallback de antes:
+                    // usa a assinatura mais recente do usuário.
                     let destino = 'index.html';
                     try {
-                        const minhaAssinatura = await window.api.getMySubscription();
-                        const sistema = minhaAssinatura?.subscription?.plan?.sistema;
+                        const sistemaParam = new URLSearchParams(window.location.search).get('sistema');
+                        let sistema = sistemaParam;
+                        if (!sistema) {
+                            const minhaAssinatura = await window.api.getMySubscription();
+                            sistema = minhaAssinatura?.subscription?.plan?.sistema;
+                        }
                         if (sistema === 'lina-center') {
                             await window.api.ativarLinaCenter();
                             destino = '/lina-center';

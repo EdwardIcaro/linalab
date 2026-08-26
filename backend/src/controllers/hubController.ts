@@ -28,20 +28,30 @@ export const getHub = async (req: Request, res: Response) => {
       }
     });
 
-    // Busca assinatura ativa do usuário
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        usuarioId,
-        status: { in: ['ACTIVE', 'TRIAL', 'LIFETIME'] }
-      },
-      include: { plan: { select: { nome: true, maxEmpresas: true, sistema: true } } },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const subscriptionSistema = subscription?.plan.sistema ?? 'lina-wash';
+    // Busca assinaturas ativas do usuário — uma por sistema (Lina Wash e Lina Center têm assinaturas independentes)
+    const [subscriptionWash, subscriptionLc] = await Promise.all([
+      prisma.subscription.findFirst({
+        where: {
+          usuarioId,
+          status: { in: ['ACTIVE', 'TRIAL', 'LIFETIME'] },
+          plan: { sistema: 'lina-wash' }
+        },
+        include: { plan: { select: { nome: true, maxEmpresas: true, sistema: true } } },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.subscription.findFirst({
+        where: {
+          usuarioId,
+          status: { in: ['ACTIVE', 'TRIAL', 'LIFETIME'] },
+          plan: { sistema: 'lina-center' }
+        },
+        include: { plan: { select: { nome: true, maxEmpresas: true, sistema: true } } },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
 
     // Calcula status e dias restantes de trial
-    const getStatusEmpresa = () => {
+    const getStatusEmpresa = (subscription: typeof subscriptionWash) => {
       if (!subscription) return { label: 'Expirado', tipo: 'expiro', trialDias: null };
       if (subscription.status === 'LIFETIME') return { label: 'Vitalício', tipo: 'ativo', trialDias: null };
       if (subscription.isCurrentlyTrial && subscription.trialEndDate) {
@@ -51,7 +61,8 @@ export const getHub = async (req: Request, res: Response) => {
       return { label: 'Ativo', tipo: 'ativo', trialDias: null };
     };
 
-    const statusInfo = getStatusEmpresa();
+    const statusInfoWash = getStatusEmpresa(subscriptionWash);
+    const statusInfoLc = getStatusEmpresa(subscriptionLc);
 
     // Conta ordens de hoje (todos os status exceto CANCELADO) por empresa
     const { start, end } = getTodayRangeBRT();
@@ -84,8 +95,8 @@ export const getHub = async (req: Request, res: Response) => {
       .map(e => ({
         id: e.id,
         nome: e.nome,
-        statusLabel: statusInfo.label,
-        statusTipo: statusInfo.tipo,
+        statusLabel: statusInfoWash.label,
+        statusTipo: statusInfoWash.tipo,
         stat: `${ordensPorEmpresa.get(e.id) ?? 0} ordens hoje`,
         integradoCom: null
       }));
@@ -109,8 +120,8 @@ export const getHub = async (req: Request, res: Response) => {
         .map(e => ({
           id: e.id,
           nome: e.nome,
-          statusLabel: statusInfo.label,
-          statusTipo: statusInfo.tipo,
+          statusLabel: statusInfoWash.label,
+          statusTipo: statusInfoWash.tipo,
           stat: `${funcPorEmpresa.get(e.id) ?? 0} funcionários`,
           integradoCom: 'lina-wash'
         }));
@@ -137,8 +148,8 @@ export const getHub = async (req: Request, res: Response) => {
         .map(e => ({
           id: e.id,
           nome: e.nome,
-          statusLabel: statusInfo.label,
-          statusTipo: statusInfo.tipo,
+          statusLabel: statusInfoLc.label,
+          statusTipo: statusInfoLc.tipo,
           stat: `${lcOrdensPorEmpresa.get(e.id) ?? 0} ordens hoje`,
           integradoCom: null
         }));
@@ -151,8 +162,8 @@ export const getHub = async (req: Request, res: Response) => {
         nome: 'Lina Wash',
         icone: '🚗',
         cor: 'wash',
-        plano: subscription && subscriptionSistema === 'lina-wash'
-          ? { nome: subscription.plan.nome, maxEmpresas: subscription.plan.maxEmpresas }
+        plano: subscriptionWash
+          ? { nome: subscriptionWash.plan.nome, maxEmpresas: subscriptionWash.plan.maxEmpresas }
           : null,
         empresas: empresasLinaWash
       }] : []),
@@ -169,8 +180,8 @@ export const getHub = async (req: Request, res: Response) => {
         nome: 'Lina Center',
         icone: '🔧',
         cor: 'lc',
-        plano: subscription && subscriptionSistema === 'lina-center'
-          ? { nome: subscription.plan.nome, maxEmpresas: subscription.plan.maxEmpresas }
+        plano: subscriptionLc
+          ? { nome: subscriptionLc.plan.nome, maxEmpresas: subscriptionLc.plan.maxEmpresas }
           : null,
         empresas: empresasLinaCenter
       }] : [])
