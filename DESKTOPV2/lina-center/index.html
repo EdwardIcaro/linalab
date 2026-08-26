@@ -92,6 +92,15 @@
     .sidebar-foot{margin-top:auto;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
     .user-chip{display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;cursor:pointer;transition:background .15s;}
     .user-chip:hover{background:rgba(255,255,255,.06);}
+    .foot-actions{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+    .foot-btn{
+      display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;
+      background:none;border:none;cursor:pointer;transition:background .15s;
+      font-size:12.5px;font-weight:600;color:rgba(255,255,255,.55);font-family:inherit;text-align:left;width:100%;
+    }
+    .foot-btn:hover{background:rgba(255,255,255,.06);color:#fff;}
+    .foot-btn.danger:hover{background:rgba(220,38,38,.16);color:#fca5a5;}
+    .foot-btn .ic{font-size:14px;width:16px;text-align:center;flex-shrink:0;}
     .user-av{
       width:30px;height:30px;border-radius:50%;flex-shrink:0;
       background:linear-gradient(135deg,#334155,#475569);
@@ -389,6 +398,10 @@
             <div class="user-name" x-text="empresaNome || 'Minha oficina'"></div>
             <div class="user-role">Admin</div>
           </div>
+        </div>
+        <div class="foot-actions">
+          <button class="foot-btn" onclick="location.href='/hub.html'"><span class="ic">🔀</span> Trocar sistema</button>
+          <button class="foot-btn danger" onclick="fazerLogout()"><span class="ic">🚪</span> Sair</button>
         </div>
       </div>
     </aside>
@@ -898,6 +911,11 @@
   </div>
 
   <script>
+    function fazerLogout() {
+      if (typeof clearSession === 'function') { clearSession(); } else { localStorage.clear(); }
+      window.location.href = '/login.html';
+    }
+
     function app() {
       return {
         carregando: true,
