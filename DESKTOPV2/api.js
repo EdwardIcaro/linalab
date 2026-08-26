@@ -103,16 +103,14 @@ async function fetchApi(endpoint, options = {}) {
     if (errorBody.code === 'COMPANY_LIMIT_REACHED') {
       const message = errorBody.message || 'Você atingiu o limite de empresas do seu plano.';
       alert(`${message}\n\nFaça upgrade do seu plano para criar mais empresas.`);
-      sessionStorage.setItem('activeTab', 'subscription');
-      window.location.href = 'perfil.html';
+      window.location.href = localStorage.getItem('token') ? 'hub.html' : 'login.html';
       return;
     }
 
     if (errorBody.code === 'FEATURE_NOT_AVAILABLE') {
       const feature = errorBody.feature || 'Esta funcionalidade';
       alert(`${feature} não está disponível no seu plano atual.\n\nFaça upgrade para acessar esta feature.`);
-      sessionStorage.setItem('activeTab', 'subscription');
-      window.location.href = 'perfil.html';
+      window.location.href = localStorage.getItem('token') ? 'hub.html' : 'login.html';
       return;
     }
 
