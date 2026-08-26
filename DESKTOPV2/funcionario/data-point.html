@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Data Point — Lina X</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <style>
+    :root {
+      --navy:   #0f172a;
+      --navy-m: #1e293b;
+      --blue:   #3b82f6;
+      --blue-d: #2563eb;
+      --text:   #0f172a;
+      --mid:    #64748b;
+      --light:  #94a3b8;
+      --border: #e2e8f0;
+      --bg:     #f1f5f9;
+      --white:  #ffffff;
+      --green:  #10b981;
+      --amber:  #d97706;
+      --red:    #ef4444;
+      --r:      12px;
+      --rpill:  999px;
+    }
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ─────────────────────────── */
+    .hd { background: var(--navy); flex-shrink: 0; position: sticky; top: 0; z-index: 40; }
+    .hd-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; }
+    .hd-left { display: flex; align-items: center; gap: 10px; }
+    .btn-icon-hd {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(255,255,255,.1); border: 1.5px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.8); display: flex; align-items: center; justify-content: center;
+      font-size: 13px; cursor: pointer; text-decoration: none;
+      transition: background .18s; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .btn-icon-hd:hover  { background: rgba(255,255,255,.2); }
+    .btn-icon-hd:active { transform: scale(.92); }
+    .hd-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+    .hd-sub   { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
+
+    /* ── MAIN ───────────────────────────── */
+    .main { flex: 1; overflow-y: auto; padding: 16px 14px 100px; }
+    .section-label {
+      font-size: 11px; font-weight: 700; color: var(--light);
+      letter-spacing: .06em; text-transform: uppercase; margin-bottom: 12px;
+    }
+
+    /* Resumo */
+    .resumo-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 18px; }
+    .resumo-chip { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 12px 6px; text-align: center; }
+    .resumo-val { font-size: 19px; font-weight: 800; color: var(--text); }
+    .resumo-lbl { font-size: 10px; font-weight: 600; color: var(--light); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+
+    /* Lista */
+    .dp-grid { display: flex; flex-direction: column; gap: 10px; }
+    .dp-card { background: var(--white); border-radius: var(--r); padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .dp-av { width: 40px; height: 40px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: var(--mid); flex-shrink: 0; }
+    .dp-info { flex: 1; min-width: 0; }
+    .dp-nome { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dp-det  { font-size: 12px; color: var(--mid); margin-top: 2px; }
+    .dp-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 4px 10px; border-radius: var(--rpill); flex-shrink: 0; }
+    .dp-st-dentro    { background: rgba(16,185,129,.12); color: var(--green); }
+    .dp-st-fora_temp { background: rgba(217,119,6,.12);  color: var(--amber); }
+    .dp-st-encerrou  { background: rgba(37,99,235,.1);   color: var(--blue-d); }
+    .dp-st-ausente   { background: var(--bg); color: var(--light); }
+
+    /* ── EMPTY / LOADING ────────────────── */
+    .empty-wrap { text-align: center; padding: 60px 20px; }
+    .empty-icon { width: 72px; height: 72px; border-radius: 20px; background: var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: var(--light); }
+    .empty-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .empty-msg   { font-size: 14px; color: var(--mid); line-height: 1.5; }
+    .btn-link {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--rpill);
+      border: 1.5px solid var(--border); background: var(--white); color: var(--blue-d);
+      font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+
+    /* ── MOBILE NAV / MENU (via utils.js) ── */
+    .mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--border); display: flex; justify-content: space-around; height: 68px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,.06); }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: var(--light); font-size: 10px; gap: 4px; border: none; background: none; cursor: pointer; border-top: 3px solid transparent; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: color .18s; }
+    .nav-item i      { font-size: 22px; }
+    .nav-item:hover  { color: var(--blue-d); }
+    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
+    .menu-dropdown { display: none; position: fixed; bottom: 80px; right: 16px; background: var(--white); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.12); border: 1px solid var(--border); min-width: 190px; z-index: 999; animation: slideUp .22s ease; }
+    .menu-dropdown.active { display: block; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .menu-dropdown a, .menu-dropdown button { display: flex; align-items: center; gap: 10px; padding: 12px 16px; color: var(--text); text-decoration: none; border: none; background: none; width: 100%; cursor: pointer; font-size: 14px; font-weight: 500; font-family: 'Inter', sans-serif; transition: background .15s; }
+    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--bg); }
+    .menu-dropdown .menu-logout { color: var(--red); }
+    .menu-dropdown .menu-logout:hover { background: rgba(239,68,68,.06); }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 998; }
+    .overlay.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="hd">
+    <div class="hd-top">
+      <div class="hd-left">
+        <a href="index.html" class="btn-icon-hd">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+          <div class="hd-title">Data Point</div>
+          <div class="hd-sub" id="empresaNome">Carregando...</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="resumo-grid" id="resumoGrid" style="display:none">
+      <div class="resumo-chip"><div class="resumo-val" id="resDentro">0</div><div class="resumo-lbl">Dentro</div></div>
+      <div class="resumo-chip"><div class="resumo-val" id="resPausa">0</div><div class="resumo-lbl">Pausa</div></div>
+      <div class="resumo-chip"><div class="resumo-val" id="resEncerrou">0</div><div class="resumo-lbl">Encerrou</div></div>
+      <div class="resumo-chip"><div class="resumo-val" id="resAusente">0</div><div class="resumo-lbl">Ausente</div></div>
+    </div>
+    <p class="section-label" id="teamCount" style="display:none"></p>
+    <div class="dp-grid" id="content"></div>
+  </main>
+
+  <!-- MOBILE NAV -->
+  <nav id="mobileNav"></nav>
+
+  <!-- MENU DROPDOWN -->
+  <div id="menu"></div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <script src="../api.js"></script>
+  <script src="utils.js"></script>
+  <script>
+    const PAGE_ACTIVE = 'data-point';
+
+    const DP_ESTADO_LABEL = { DENTRO: 'Dentro', FORA_TEMP: 'Saiu (pausa)', ENCERROU: 'Encerrou', AUSENTE: 'Ausente' };
+
+    // ── INIT ──────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!validateFuncionarioAccess()) return;
+
+      const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
+      if (!permissoes.includes('ver_data_point_equipe')) {
+        showToast('Sem permissão para visualizar o Data Point', 'error');
+        setTimeout(() => navigateTo('index.html'), 1500);
+        return;
+      }
+
+      document.getElementById('menu').innerHTML      = createFuncionarioMenu();
+      document.getElementById('mobileNav').innerHTML  = createMobileNav(PAGE_ACTIVE);
+
+      await loadUserInfo();
+      await loadEquipe();
+    });
+
+    // ── LOAD ──────────────────────────────────────────
+    async function loadEquipe() {
+      const content = document.getElementById('content');
+      const countEl = document.getElementById('teamCount');
+      const resumoEl = document.getElementById('resumoGrid');
+      content.innerHTML = createLoading();
+      resumoEl.style.display = 'none';
+
+      try {
+        const data = await window.api.getEquipeFuncionarioDp();
+        const funcionarios = data.funcionarios || [];
+        const resumo = data.resumo || {};
+
+        document.getElementById('resDentro').textContent   = resumo.dentro ?? 0;
+        document.getElementById('resPausa').textContent    = resumo.foratemp ?? 0;
+        document.getElementById('resEncerrou').textContent = resumo.encerrou ?? 0;
+        document.getElementById('resAusente').textContent  = resumo.ausente ?? 0;
+        resumoEl.style.display = 'grid';
+
+        if (funcionarios.length === 0) {
+          countEl.style.display = 'none';
+          content.innerHTML = `
+            <div class="empty-wrap">
+              <div class="empty-icon"><i class="fas fa-fingerprint"></i></div>
+              <div class="empty-title">Nenhum funcionário no Data Point</div>
+              <div class="empty-msg">Ainda não há funcionários cadastrados no controle de ponto.</div>
+            </div>`;
+          return;
+        }
+
+        countEl.textContent = `${funcionarios.length} funcionário${funcionarios.length !== 1 ? 's' : ''} hoje`;
+        countEl.style.display = 'block';
+
+        content.innerHTML = funcionarios.map(f => {
+          const marcs = f.marcacoesHoje || [];
+          const ultima = marcs[marcs.length - 1];
+          const det = ultima
+            ? `${ultima.tipo === 'ENTRADA' ? 'Entrou' : 'Saiu'} às ${ultima.horaFormatada}`
+            : 'Sem registro hoje';
+          return `
+            <div class="dp-card">
+              <div class="dp-av">${(f.nome || '?').charAt(0).toUpperCase()}</div>
+              <div class="dp-info">
+                <div class="dp-nome">${f.nome}${f.cargo ? ` · ${f.cargo}` : ''}</div>
+                <div class="dp-det">${det}</div>
+              </div>
+              <span class="dp-badge dp-st-${(f.estado || '').toLowerCase()}">${DP_ESTADO_LABEL[f.estado] || f.estado}</span>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error(err);
+        countEl.style.display = 'none';
+        content.innerHTML = `
+          <div class="empty-wrap">
+            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="empty-title">Erro ao carregar</div>
+            <div class="empty-msg">Tente novamente em alguns segundos.<br>
+              <button class="btn-link" style="margin-top:16px" onclick="loadEquipe()">
+                <i class="fas fa-redo"></i> Tentar novamente
+              </button>
+            </div>
+          </div>`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import {
   salvarOnboarding,
   getStatusDp,
   getDashboardDp,
+  getEquipeFuncionarioDp,
   getDpEspelho,
   getDpFuncionarios,
   criarDpFuncionario,
@@ -32,6 +33,7 @@ import {
   regenerarDpTotem,
 } from '../controllers/dataPointController';
 import authMiddleware from '../middlewares/authMiddleware';
+import { requirePermission } from '../middlewares/permissionMiddleware';
 
 const router: Router = Router();
 
@@ -42,6 +44,7 @@ router.post('/contratar', contratarDp);
 // authMiddleware por rota — empresa scoped (extrai empresaId do JWT)
 router.get('/status',                  authMiddleware, getStatusDp);
 router.get('/dashboard',               authMiddleware, getDashboardDp);
+router.get('/equipe-funcionario',      authMiddleware, requirePermission('ver_data_point_equipe'), getEquipeFuncionarioDp);
 router.get('/espelho',                 authMiddleware, getDpEspelho);
 router.get('/onboarding/importaveis',  authMiddleware, getImportaveis);
 router.post('/onboarding/salvar',      authMiddleware, salvarOnboarding);

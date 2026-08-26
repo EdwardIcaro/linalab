@@ -210,6 +210,7 @@ const api = {
   getImportaveisDp: (empresaId) => fetchApi(`/dp/onboarding/importaveis?empresaId=${empresaId}`),
   salvarOnboardingDp: (data) => fetchApi('/dp/onboarding/salvar', { method: 'POST', body: JSON.stringify(data) }),
   getDpDashboard: () => fetchApi(`/dp/dashboard?empresaId=${localStorage.getItem('empresaId') || ''}`),
+  getEquipeFuncionarioDp: () => fetchApi('/dp/equipe-funcionario'),
   getDpEspelho: (inicio, fim) => {
     const params = new URLSearchParams();
     if (inicio) params.set('inicio', inicio);
