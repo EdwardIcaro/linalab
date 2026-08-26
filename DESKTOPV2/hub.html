@@ -157,6 +157,7 @@
       font-size: 13px; font-weight: 700; color: var(--p700);
     }
     .sys-pill.teal { background: var(--teal100); border-color: rgba(13,148,136,.3); color: var(--teal700); }
+    .sys-pill.amber { background: var(--amber-bg); border-color: rgba(217,119,6,.3); color: var(--amber); }
     .plan-pill {
       background: var(--gray100); border: 1px solid var(--gray300);
       border-radius: 20px; padding: 5px 13px;
@@ -193,6 +194,7 @@
     }
     .co-cover.wash { background: linear-gradient(160deg, var(--p800) 0%, var(--p600) 55%, var(--p500) 100%); }
     .co-cover.dp   { background: linear-gradient(160deg, #064e3b 0%, var(--teal700) 55%, var(--teal500) 100%); }
+    .co-cover.lc   { background: linear-gradient(160deg, #7c2d12 0%, var(--amber) 55%, #fbbf24 100%); }
     .co-cover::after {
       content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 35%;
       background: linear-gradient(0deg, rgba(0,0,0,.18) 0%, transparent 100%);
@@ -683,6 +685,8 @@
           window.location.href = 'index.html';
         } else if (sistema === 'data-point') {
           window.location.href = 'data-point/';
+        } else if (sistema === 'lina-center') {
+          window.location.href = 'lina-center/';
         } else {
           window.location.href = 'index.html';
         }
@@ -702,7 +706,7 @@
     }
 
     function renderCard(empresa, sistema) {
-      const corCover = sistema.cor === 'dp' ? 'dp' : 'wash';
+      const corCover = sistema.cor === 'dp' ? 'dp' : sistema.cor === 'lc' ? 'lc' : 'wash';
       const linkedBadge = empresa.integradoCom
         ? `<span class="co-badge linked"><i class="fa fa-link"></i> Lina Wash</span>`
         : '';
@@ -742,7 +746,7 @@
       const planoLabel = sistema.plano
         ? `${sistema.plano.nome} · ${sistema.plano.maxEmpresas} empresa${sistema.plano.maxEmpresas !== 1 ? 's' : ''}`
         : '';
-      const pillClass = sistema.cor === 'dp' ? 'sys-pill teal' : 'sys-pill';
+      const pillClass = sistema.cor === 'dp' ? 'sys-pill teal' : sistema.cor === 'lc' ? 'sys-pill amber' : 'sys-pill';
       const bloqueado = sistema.plano && sistema.empresas.length >= sistema.plano.maxEmpresas;
 
       const cardsHtml = sistema.empresas.map(e => renderCard(e, sistema)).join('');

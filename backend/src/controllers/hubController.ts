@@ -34,9 +34,11 @@ export const getHub = async (req: Request, res: Response) => {
         usuarioId,
         status: { in: ['ACTIVE', 'TRIAL', 'LIFETIME'] }
       },
-      include: { plan: { select: { nome: true, maxEmpresas: true } } },
+      include: { plan: { select: { nome: true, maxEmpresas: true, sistema: true } } },
       orderBy: { createdAt: 'desc' }
     });
+
+    const subscriptionSistema = subscription?.plan.sistema ?? 'lina-wash';
 
     // Calcula status e dias restantes de trial
     const getStatusEmpresa = () => {
@@ -71,15 +73,22 @@ export const getHub = async (req: Request, res: Response) => {
       statusTipo: string; stat: string; integradoCom: string | null;
     };
 
-    // Monta seção Lina Wash (todas as empresas do usuário)
-    const empresasLinaWash: EmpresaCard[] = empresas.map(e => ({
-      id: e.id,
-      nome: e.nome,
-      statusLabel: statusInfo.label,
-      statusTipo: statusInfo.tipo,
-      stat: `${ordensPorEmpresa.get(e.id) ?? 0} ordens hoje`,
-      integradoCom: null
-    }));
+    // Empresas do Lina Center têm sistema próprio (não são empresas de Lina Wash)
+    const idsComLinaCenter = empresas
+      .filter(e => e.sistemasAtivos.some((s: { sistema: string }) => s.sistema === 'lina-center'))
+      .map(e => e.id);
+
+    // Monta seção Lina Wash (todas as empresas do usuário, exceto as do Lina Center)
+    const empresasLinaWash: EmpresaCard[] = empresas
+      .filter(e => !idsComLinaCenter.includes(e.id))
+      .map(e => ({
+        id: e.id,
+        nome: e.nome,
+        statusLabel: statusInfo.label,
+        statusTipo: statusInfo.tipo,
+        stat: `${ordensPorEmpresa.get(e.id) ?? 0} ordens hoje`,
+        integradoCom: null
+      }));
 
     // Monta seção Data Point (empresas com sistema 'data-point' ativo)
     const idsComDataPoint = empresas
@@ -107,18 +116,46 @@ export const getHub = async (req: Request, res: Response) => {
         }));
     }
 
+    // Monta seção Lina Center (empresas com sistema 'lina-center' ativo)
+    let empresasLinaCenter: EmpresaCard[] = [];
+    let lcOrdensHojeTotal = 0;
+    if (idsComLinaCenter.length > 0) {
+      const lcOrdensHoje = await prisma.lcOrdemServico.groupBy({
+        by: ['empresaId'],
+        where: {
+          empresaId: { in: idsComLinaCenter },
+          status: { not: 'CANCELADO' },
+          createdAt: { gte: start, lte: end }
+        },
+        _count: { id: true }
+      });
+      const lcOrdensPorEmpresa = new Map(lcOrdensHoje.map(o => [o.empresaId, o._count.id]));
+      lcOrdensHojeTotal = lcOrdensHoje.reduce((sum, o) => sum + o._count.id, 0);
+
+      empresasLinaCenter = empresas
+        .filter(e => idsComLinaCenter.includes(e.id))
+        .map(e => ({
+          id: e.id,
+          nome: e.nome,
+          statusLabel: statusInfo.label,
+          statusTipo: statusInfo.tipo,
+          stat: `${lcOrdensPorEmpresa.get(e.id) ?? 0} ordens hoje`,
+          integradoCom: null
+        }));
+    }
+
     // Monta lista de sistemas
     const sistemas = [
-      {
+      ...(empresasLinaWash.length > 0 ? [{
         chave: 'lina-wash',
         nome: 'Lina Wash',
         icone: '🚗',
         cor: 'wash',
-        plano: subscription
+        plano: subscription && subscriptionSistema === 'lina-wash'
           ? { nome: subscription.plan.nome, maxEmpresas: subscription.plan.maxEmpresas }
           : null,
         empresas: empresasLinaWash
-      },
+      }] : []),
       ...(empresasDataPoint.length > 0 ? [{
         chave: 'data-point',
         nome: 'Data Point',
@@ -126,11 +163,21 @@ export const getHub = async (req: Request, res: Response) => {
         cor: 'dp',
         plano: null,
         empresas: empresasDataPoint
+      }] : []),
+      ...(empresasLinaCenter.length > 0 ? [{
+        chave: 'lina-center',
+        nome: 'Lina Center',
+        icone: '🔧',
+        cor: 'lc',
+        plano: subscription && subscriptionSistema === 'lina-center'
+          ? { nome: subscription.plan.nome, maxEmpresas: subscription.plan.maxEmpresas }
+          : null,
+        empresas: empresasLinaCenter
       }] : [])
     ];
 
     // Stats globais
-    const totalOrdens = ordensHoje.reduce((sum, o) => sum + o._count.id, 0);
+    const totalOrdens = ordensHoje.reduce((sum, o) => sum + o._count.id, 0) + lcOrdensHojeTotal;
 
     return res.json({
       usuario: { nome: usuario.nome },
