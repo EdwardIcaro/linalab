@@ -647,14 +647,13 @@
                                 <th>Funcionário</th>
                                 <th>Link de Acesso</th>
                                 <th>Status</th>
-                                <th>Data Point</th>
                                 <th class="actions-cell">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-if="tokens.length === 0">
                                 <tr>
-                                    <td colspan="5" class="text-center p-4 text-secondary">
+                                    <td colspan="4" class="text-center p-4 text-secondary">
                                         <i class="fas fa-inbox mr-2"></i>
                                         Nenhum token de acesso gerado. Tokens são criados automaticamente na página de Funcionários.
                                     </td>
@@ -684,19 +683,6 @@
                                             <option value="true">Ativo</option>
                                             <option value="false">Inativo</option>
                                         </select>
-                                    </td>
-                                    <td>
-                                        <template x-if="dpAtivo">
-                                            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap"
-                                                title="Mostra o botão 'Equipe Data Point' (entrada/saída de todo mundo hoje) no portal deste funcionário">
-                                                <input type="checkbox" :checked="token.lavador.verDataPointPortal"
-                                                    @change="toggleVerDataPointPortal(token, $event.target.checked)">
-                                                <span>Ver equipe</span>
-                                            </label>
-                                        </template>
-                                        <template x-if="!dpAtivo">
-                                            <span class="text-secondary text-sm">—</span>
-                                        </template>
                                     </td>
                                     <td class="actions-cell">
                                         <button
@@ -1099,7 +1085,6 @@
                 roles: [],
                 users: [],
                 tokens: [],
-                dpAtivo: false,
                 expandedPermissions: [],
 
                 // Forms
@@ -1652,31 +1637,14 @@
                 async loadTokens() {
                     try {
                         console.log('[Config] Loading tokens...');
-                        const [response, dpStatus] = await Promise.all([
-                            window.api.getLavadorTokens(),
-                            window.api.getStatusDp(localStorage.getItem('empresaId')).catch(() => ({ ativo: false })),
-                        ]);
+                        const response = await window.api.getLavadorTokens();
                         console.log('[Config] Tokens API response:', response);
                         this.tokens = response.tokens || [];
-                        this.dpAtivo = !!dpStatus.ativo;
                         console.log('[Config] ✅ Tokens loaded:', this.tokens.length, 'items');
                     } catch (error) {
                         console.error('[Config] ❌ Erro ao carregar tokens:', error);
                         // Silent fail - tokens might not exist yet
                         this.tokens = [];
-                    }
-                },
-
-                async toggleVerDataPointPortal(token, checked) {
-                    try {
-                        await window.api.updateLavador(token.lavador.id, { verDataPointPortal: checked });
-                        token.lavador.verDataPointPortal = checked;
-                        showToast(checked
-                            ? `${token.lavador.nome} agora vê a equipe do Data Point no portal.`
-                            : `Visão de equipe do Data Point removida de ${token.lavador.nome}.`, 'success');
-                    } catch (error) {
-                        console.error('[Config] Erro ao atualizar verDataPointPortal:', error);
-                        showToast('Não foi possível atualizar. Tente novamente.', 'error');
                     }
                 },
 

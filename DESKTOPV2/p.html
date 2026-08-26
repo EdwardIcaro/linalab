@@ -290,19 +290,17 @@
     .mod-blue   { background:linear-gradient(145deg,#1e40af,#2563eb,#3b82f6); box-shadow:0 8px 24px rgba(37,99,235,.35); }
     .mod-teal   { background:linear-gradient(145deg,#0f4c75,#0d9488,#14b8a6); box-shadow:0 8px 24px rgba(13,148,136,.35); }
     .mod-amber  { background:linear-gradient(145deg,#c2410c,#ea580c,#f97316); box-shadow:0 8px 24px rgba(234,88,12,.35); }
-    .mod-violet { background:linear-gradient(145deg,#5b21b6,#7c3aed,#8b5cf6); box-shadow:0 8px 24px rgba(124,58,237,.35); }
     .mod-ghost  { background:var(--white); border-color:var(--border); box-shadow:var(--shadow-sm); cursor:default; }
     .mod-ico { font-size:26px; margin-bottom:auto; }
-    .mod-blue .mod-ico, .mod-teal .mod-ico, .mod-amber .mod-ico, .mod-violet .mod-ico { color:rgba(255,255,255,.85); }
+    .mod-blue .mod-ico, .mod-teal .mod-ico, .mod-amber .mod-ico { color:rgba(255,255,255,.85); }
     .mod-ghost .mod-ico { color:var(--faint); }
     .mod-label { font-size:15px; font-weight:800; margin-bottom:2px; }
-    .mod-blue .mod-label, .mod-teal .mod-label, .mod-amber .mod-label, .mod-violet .mod-label { color:#fff; }
+    .mod-blue .mod-label, .mod-teal .mod-label, .mod-amber .mod-label { color:#fff; }
     .mod-ghost .mod-label { color:var(--muted); font-size:14px; }
     .mod-stat  { font-size:12px; font-weight:600; }
     .mod-blue .mod-stat  { color:rgba(255,255,255,.7); }
     .mod-teal .mod-stat  { color:rgba(255,255,255,.7); }
     .mod-amber .mod-stat { color:rgba(255,255,255,.7); }
-    .mod-violet .mod-stat { color:rgba(255,255,255,.7); }
     .mod-ghost .mod-stat { color:var(--faint); font-size:12px; }
     .mod-badge {
       position:absolute; top:12px; right:12px;
@@ -598,22 +596,6 @@
     .lc-status-aguardando_pagamento { background:#eff6ff; color:#1d4ed8; }
     .lc-status-pendente { background:var(--bg); color:var(--muted); }
     .lc-status-cancelado { background:var(--bg); color:var(--faint); }
-
-    /* Lista de equipe — Data Point (visão de gerente) */
-    .dpq-resumo { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
-    .dpq-chip { flex:1; min-width:70px; background:rgba(255,255,255,.1); border-radius:12px; padding:8px 10px; text-align:center; }
-    .dpq-chip-val { font-size:17px; font-weight:900; }
-    .dpq-chip-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:rgba(255,255,255,.6); margin-top:1px; }
-    .dpq-row { display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:14px; margin-bottom:8px; box-shadow:var(--shadow-sm); }
-    .dpq-av { width:36px; height:36px; border-radius:50%; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--muted); flex-shrink:0; }
-    .dpq-info { flex:1; min-width:0; }
-    .dpq-nome { font-size:13px; font-weight:800; color:var(--text); }
-    .dpq-det { font-size:11px; color:var(--muted); margin-top:2px; }
-    .dpq-badge { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; padding:3px 9px; border-radius:99px; flex-shrink:0; }
-    .dpq-st-dentro     { background:#ecfdf5; color:#047857; }
-    .dpq-st-fora_temp  { background:#fffbeb; color:#b45309; }
-    .dpq-st-encerrou   { background:#eff6ff; color:#1d4ed8; }
-    .dpq-st-ausente    { background:var(--bg); color:var(--faint); }
 
     /* Banner modo adicionais */
     .com-note { background:#ede9fe; border:1px solid #ddd6fe; border-radius:12px; padding:10px 13px; display:flex; gap:9px; align-items:flex-start; margin-bottom:14px; }
@@ -935,14 +917,6 @@
   <div class="com-page">
     <div class="com-hero" id="comLcHero" style="background:linear-gradient(148deg,#0f172a 0%,#7c2d12 120%)"></div>
     <div class="com-pane" id="comLcLista"></div>
-  </div>
-</div>
-
-<!-- ══ DATA POINT — VISÃO DE EQUIPE (gerente) ══ -->
-<div id="tela-dp-equipe" class="tela">
-  <div class="com-page">
-    <div class="com-hero" id="dpqHero" style="background:linear-gradient(148deg,#0f172a 0%,#5b21b6 120%)"></div>
-    <div class="com-pane" id="dpqLista"></div>
   </div>
 </div>
 
@@ -1269,7 +1243,7 @@ function lembrarConectarWpp() {
 
 // ── Hub ───────────────────────────────────────────────────────────────────────
 function renderHub() {
-  const { lavador, dataPointAtivo, dataPointEquipeVisivel, hoje, linaCenterAtivo, lc } = portalDados;
+  const { lavador, dataPointAtivo, hoje, linaCenterAtivo, lc } = portalDados;
 
   document.getElementById('hub-av').textContent       = lavador.nome.charAt(0).toUpperCase();
   document.getElementById('hub-name').textContent     = lavador.nome;
@@ -1317,15 +1291,6 @@ function renderHub() {
         <div class="mod-stat">Não disponível</div>
       </div>
     </div>`}
-
-    ${dataPointEquipeVisivel ? `
-    <div class="mod-card mod-violet" onclick="abrirDataPointEquipe()">
-      <div class="mod-ico"><i class="fas fa-users"></i></div>
-      <div>
-        <div class="mod-label">Data Point</div>
-        <div class="mod-stat">Entrada e saída da equipe</div>
-      </div>
-    </div>` : ''}
 
     <div class="mod-card mod-ghost" style="opacity:.45">
       <div class="mod-ico"><i class="fas fa-plus"></i></div>
@@ -1447,79 +1412,6 @@ function renderComissoesLc(data) {
         </div>
       </div>
     `).join('')}
-  `;
-}
-
-// ── Navegar para o Data Point — visão de equipe (gerente) ──────────────────────
-function abrirDataPointEquipe() {
-  mostrarTela('tela-dp-equipe');
-  iniciarDataPointEquipe();
-}
-function voltarDeDataPointEquipe() {
-  mostrarTela('tela-hub');
-}
-
-async function iniciarDataPointEquipe() {
-  document.getElementById('dpqHero').innerHTML =
-    '<div style="padding:40px 0;text-align:center;color:rgba(255,255,255,.6)"><i class="fas fa-spinner fa-spin"></i></div>';
-  document.getElementById('dpqLista').innerHTML = '';
-  try {
-    const r = await fetch(`${API}/p/me/data-point/equipe`, { headers: { Authorization: `Bearer ${sessionJwt}` } });
-    if (!r.ok) throw new Error('dp-equipe');
-    renderDataPointEquipe(await r.json());
-  } catch {
-    document.getElementById('dpqHero').innerHTML = `
-      <div class="com-hero-top">
-        <button class="com-back" onclick="voltarDeDataPointEquipe()"><i class="fas fa-arrow-left"></i> Portal</button>
-      </div>
-      <div style="padding:20px 0;text-align:center;color:#fca5a5"><i class="fas fa-triangle-exclamation"></i> Erro ao carregar. Tente novamente.</div>`;
-  }
-}
-
-const DPQ_ESTADO_LABEL = { DENTRO: 'Dentro', FORA_TEMP: 'Saiu (pausa)', ENCERROU: 'Encerrou', AUSENTE: 'Ausente' };
-
-function renderDataPointEquipe(data) {
-  const resumo = data.resumo || {};
-  document.getElementById('dpqHero').innerHTML = `
-    <div class="com-hero-top">
-      <button class="com-back" onclick="voltarDeDataPointEquipe()"><i class="fas fa-arrow-left"></i> Portal</button>
-    </div>
-    <div class="com-prof">
-      <div class="com-av" style="background:linear-gradient(135deg,#7c3aed,#5b21b6)"><i class="fas fa-users"></i></div>
-      <div>
-        <div class="com-nm">Data Point</div>
-        <div class="com-emp"><i class="fas fa-building" style="font-size:9px"></i> ${data.empresaNome || ''} · Equipe hoje</div>
-      </div>
-    </div>
-    <div class="dpq-resumo">
-      <div class="dpq-chip"><div class="dpq-chip-val">${resumo.dentro ?? 0}</div><div class="dpq-chip-lbl">Dentro</div></div>
-      <div class="dpq-chip"><div class="dpq-chip-val">${resumo.foratemp ?? 0}</div><div class="dpq-chip-lbl">Pausa</div></div>
-      <div class="dpq-chip"><div class="dpq-chip-val">${resumo.encerrou ?? 0}</div><div class="dpq-chip-lbl">Encerrou</div></div>
-      <div class="dpq-chip"><div class="dpq-chip-val">${resumo.ausente ?? 0}</div><div class="dpq-chip-lbl">Ausente</div></div>
-    </div>
-  `;
-
-  const funcionarios = data.funcionarios || [];
-  document.getElementById('dpqLista').innerHTML = funcionarios.length === 0
-    ? '<div class="com-sec-hdr">Nenhum funcionário no Data Point</div>'
-    : `
-    <div class="com-sec-hdr">Funcionários</div>
-    ${funcionarios.map(f => {
-      const marcs = f.marcacoesHoje || [];
-      const ultima = marcs[marcs.length - 1];
-      const det = ultima
-        ? `${ultima.tipo === 'ENTRADA' ? 'Entrou' : 'Saiu'} às ${ultima.horaFormatada}`
-        : 'Sem registro hoje';
-      return `
-      <div class="dpq-row">
-        <div class="dpq-av">${(f.nome || '?').charAt(0).toUpperCase()}</div>
-        <div class="dpq-info">
-          <div class="dpq-nome">${f.nome}${f.cargo ? ` <span style="font-weight:600;color:var(--faint)">· ${f.cargo}</span>` : ''}</div>
-          <div class="dpq-det">${det}</div>
-        </div>
-        <span class="dpq-badge dpq-st-${(f.estado || '').toLowerCase()}">${DPQ_ESTADO_LABEL[f.estado] || f.estado}</span>
-      </div>`;
-    }).join('')}
   `;
 }
 
