@@ -249,9 +249,30 @@
                     localStorage.setItem('token', scoped.token);
                     localStorage.setItem('empresaId', scoped.empresa?.id || empresaId);
                     localStorage.setItem('empresaNome', scoped.empresa?.nome || empresaNome);
+                    // Quem cria uma empresa aqui é sempre o dono dela — corrige o role que
+                    // ficou "USER" desde o login logo após o cadastro (antes de ter empresa).
+                    localStorage.setItem('userRole', 'OWNER');
+
+                    // Se a assinatura ativa do usuário é de um sistema que não o Lina Wash
+                    // (ex: veio de um link de cadastro do Lina Center/Data Point), manda
+                    // para o dashboard daquele sistema em vez do Lina Wash.
+                    let destino = 'index.html';
+                    try {
+                        const minhaAssinatura = await window.api.getMySubscription();
+                        const sistema = minhaAssinatura?.subscription?.plan?.sistema;
+                        if (sistema === 'lina-center') {
+                            await window.api.ativarLinaCenter();
+                            destino = '/lina-center';
+                        } else if (sistema === 'data-point') {
+                            destino = 'data-point/onboarding.html';
+                        }
+                    } catch (e) {
+                        console.error('Erro ao verificar assinatura para redirecionamento:', e);
+                        // Mantém o destino padrão (Lina Wash) se algo falhar aqui
+                    }
 
                     setTimeout(() => {
-                        window.location.href = 'index.html';
+                        window.location.href = destino;
                     }, 1500);
                     return;
                 }

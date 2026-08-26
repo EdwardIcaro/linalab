@@ -1287,6 +1287,8 @@
                     this.isLoading = true;
 
                     try {
+                        const temConvite = this.linkToken && !this.conviteInvalido;
+
                         // 1) Cria usuário
                         await fetchApi('/usuarios', {
                             method: 'POST',
@@ -1294,28 +1296,32 @@
                                 nome: this.nome.trim(),
                                 email: this.email.trim(),
                                 senha: this.senha,
-                                ...(this.linkToken && !this.conviteInvalido ? { linkToken: this.linkToken } : {})
+                                ...(temConvite ? { linkToken: this.linkToken } : {})
                             })
                         });
 
-                        // 2) Login automático
-                        const data = await window.api.login(this.email, this.senha);
+                        // Veio de um link: já sabemos o sistema — loga automático e vai
+                        // direto criar a empresa (nova-empresa.html decide o dashboard certo).
+                        if (temConvite) {
+                            const data = await window.api.login(this.email, this.senha);
 
-                        // Persistir dados de sessão (mesma lógica do login)
-                        localStorage.setItem('token', data.token);
-                        localStorage.setItem('usuarioNome', data.usuario.nome);
-                        const resolvedRole = (data.usuario.role === 'LINA_OWNER')
-                            ? 'LINA_OWNER'
-                            : (data.usuario.empresas && data.usuario.empresas.length > 0 ? 'OWNER' : data.usuario.role);
-                        localStorage.setItem('userRole', resolvedRole);
-                        localStorage.setItem('permissoes', JSON.stringify(data.usuario.permissoes || []));
+                            localStorage.setItem('token', data.token);
+                            localStorage.setItem('usuarioNome', data.usuario.nome);
+                            const resolvedRole = (data.usuario.role === 'LINA_OWNER')
+                                ? 'LINA_OWNER'
+                                : (data.usuario.empresas && data.usuario.empresas.length > 0 ? 'OWNER' : data.usuario.role);
+                            localStorage.setItem('userRole', resolvedRole);
+                            localStorage.setItem('permissoes', JSON.stringify(data.usuario.permissoes || []));
 
-                        showToast('✨ Conta criada! Vamos criar sua empresa...', 'success');
+                            showToast('✨ Conta criada! Vamos criar sua empresa...', 'success');
+                            setTimeout(() => { window.location.href = 'nova-empresa.html'; }, 1000);
+                            return;
+                        }
 
-                        // 3) Ir direto para criação de empresa (primeiro acesso)
-                        setTimeout(() => {
-                            window.location.href = 'nova-empresa.html';
-                        }, 1000);
+                        // Sem link: não loga automático — manda pro login, e lá a lógica
+                        // decide levar pra escolha de sistema (ainda não sabemos o que a pessoa quer).
+                        showToast('✨ Conta criada! Faça login para continuar.', 'success');
+                        setTimeout(() => { window.location.href = 'login.html'; }, 1200);
 
                     } catch (error) {
                         console.error('Signup error:', error);

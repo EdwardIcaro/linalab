@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   requireLcAtivo,
+  ativarLinaCenter,
   createLcCliente,
   getLcClientes,
   getLcClienteById,
@@ -33,7 +34,10 @@ import {
 
 const router: Router = Router();
 
-// Todas as rotas exigem o sistema 'lina-center' ativo para a empresa (empresa_sistemas)
+// Ativação — precisa vir ANTES do gate abaixo (é o próprio passo que liga o sistema)
+router.post('/ativar', ativarLinaCenter);
+
+// Todas as demais rotas exigem o sistema 'lina-center' ativo para a empresa (empresa_sistemas)
 router.use(requireLcAtivo);
 
 // Clientes

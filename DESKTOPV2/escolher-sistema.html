@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escolha seu sistema — Lina</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<style>
+  :root {
+    --bg-main: #0f172a;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --mid: #64748b;
+    --light: #94a3b8;
+    --accent: #7c3aed;
+    --accent-d: #6d28d9;
+    --green: #10b981;
+    --glow: rgba(139,92,246,.3);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    min-height:100vh;color:var(--text);
+    background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#2d3748 100%);
+    -webkit-font-smoothing:antialiased;
+    padding:40px 20px 60px;
+    position:relative;overflow-x:hidden;
+  }
+  body::before{
+    content:'';position:fixed;top:-10%;left:-10%;width:50%;height:50%;
+    background:radial-gradient(circle,var(--glow) 0%,transparent 70%);pointer-events:none;
+  }
+  body::after{
+    content:'';position:fixed;bottom:-10%;right:-10%;width:50%;height:50%;
+    background:radial-gradient(circle,rgba(59,130,246,.15) 0%,transparent 70%);pointer-events:none;
+  }
+
+  .wrap{max-width:920px;margin:0 auto;position:relative;z-index:1;}
+  .head{text-align:center;margin-bottom:36px;}
+  .head-logo{
+    width:52px;height:52px;border-radius:15px;margin:0 auto 16px;
+    background:linear-gradient(135deg,#6d28d9,#7c3aed);
+    display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;
+    box-shadow:0 8px 24px rgba(124,58,237,.4);
+  }
+  .head h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.4px;}
+  .head p{font-size:14px;color:rgba(255,255,255,.55);margin-top:6px;}
+
+  .sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:760px){.sys-grid{grid-template-columns:1fr;}}
+
+  .sys-card{
+    background:var(--card);border-radius:20px;padding:26px 24px;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:16px;
+  }
+  .sys-top{display:flex;align-items:center;gap:14px;}
+  .sys-ic{
+    width:46px;height:46px;border-radius:13px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:21px;
+  }
+  .sys-name{font-size:17px;font-weight:800;color:var(--text);}
+  .sys-desc{font-size:12.5px;color:var(--mid);margin-top:2px;line-height:1.4;}
+
+  .plan-list{display:flex;flex-direction:column;gap:8px;}
+  .plan-opt{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border:2px solid var(--border);border-radius:12px;padding:12px 14px;
+    cursor:pointer;transition:all .15s;
+  }
+  .plan-opt:hover{border-color:#ddd6fe;}
+  .plan-opt.on{border-color:var(--accent);background:#f5f3ff;}
+  .plan-opt-info{flex:1;min-width:0;}
+  .plan-opt-nome{font-size:13.5px;font-weight:700;color:var(--text);}
+  .plan-opt-sub{font-size:11px;color:var(--light);margin-top:1px;}
+  .plan-opt-preco{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;}
+  .plan-opt-preco em{font-size:10px;font-weight:600;color:var(--light);font-style:normal;}
+  .plan-opt-radio{
+    width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .plan-opt.on .plan-opt-radio{border-color:var(--accent);}
+  .plan-opt.on .plan-opt-radio::after{content:'';width:9px;height:9px;border-radius:50%;background:var(--accent);}
+
+  .btn-escolher{
+    margin-top:4px;width:100%;padding:13px;border:none;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent-d),var(--accent));color:#fff;
+    font-size:13.5px;font-weight:700;cursor:pointer;transition:all .2s;
+    box-shadow:0 6px 20px rgba(124,58,237,.3);
+  }
+  .btn-escolher:hover:not(:disabled){box-shadow:0 8px 26px rgba(124,58,237,.4);transform:translateY(-1px);}
+  .btn-escolher:disabled{opacity:.5;cursor:not-allowed;}
+
+  .empty-sys{color:rgba(255,255,255,.5);text-align:center;font-size:13px;padding:40px 0;grid-column:1/-1;}
+  .loading{color:rgba(255,255,255,.6);text-align:center;padding:60px 0;font-size:14px;}
+  .loading i{font-size:24px;margin-bottom:10px;display:block;}
+
+  .foot-link{display:block;text-align:center;margin-top:28px;color:rgba(255,255,255,.4);font-size:12.5px;}
+  .foot-link a{color:#c4b5fd;text-decoration:none;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="head-logo"><i class="fas fa-layer-group"></i></div>
+    <h1>Escolha seu sistema</h1>
+    <p>Selecione o que você quer usar agora — dá pra adicionar outro sistema depois.</p>
+  </div>
+
+  <div id="loading" class="loading"><i class="fas fa-spinner fa-spin"></i>Carregando planos...</div>
+  <div id="sysGrid" class="sys-grid" style="display:none"></div>
+
+  <div class="foot-link"><a href="login.html">Voltar pro login</a></div>
+</div>
+
+<script src="api.js"></script>
+<script src="utils.js"></script>
+<script>
+  const SISTEMAS_VISIVEIS = ['lina-wash', 'data-point'];
+  const SISTEMA_META = {
+    'lina-wash':  { nome: 'Lina Wash',  desc: 'Gestão completa para lava-jatos: ordens, clientes, comissões e financeiro.', ic: 'fa-car', bg: '#eff6ff', fg: '#1d4ed8' },
+    'data-point': { nome: 'Data Point', desc: 'Controle de ponto CLT com reconhecimento facial e geolocalização.', ic: 'fa-fingerprint', bg: '#f0fdfa', fg: '#0f766e' },
+  };
+
+  let selecionado = {}; // { 'lina-wash': planId, 'data-point': planId }
+  let escolhendo = false;
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  async function init() {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = 'login.html'; return; }
+
+    try {
+      const planos = await fetchApi('/subscriptions/plans');
+      renderSistemas(planos || []);
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loading').innerHTML = 'Não foi possível carregar os planos. <a href="javascript:location.reload()" style="color:#c4b5fd">Tentar de novo</a>';
+    }
+  }
+
+  function renderSistemas(planos) {
+    const porSistema = {};
+    planos.forEach(p => {
+      if (!SISTEMAS_VISIVEIS.includes(p.sistema)) return;
+      (porSistema[p.sistema] = porSistema[p.sistema] || []).push(p);
+    });
+
+    const grid = document.getElementById('sysGrid');
+    const sistemasComPlano = SISTEMAS_VISIVEIS.filter(s => (porSistema[s] || []).length > 0);
+
+    if (sistemasComPlano.length === 0) {
+      grid.innerHTML = '<div class="empty-sys">Nenhum plano disponível no momento. Fale com o suporte.</div>';
+    } else {
+      grid.innerHTML = sistemasComPlano.map(sistema => {
+        const meta = SISTEMA_META[sistema];
+        const planosDoSistema = porSistema[sistema].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+        selecionado[sistema] = planosDoSistema[0].id;
+
+        return `
+          <div class="sys-card">
+            <div class="sys-top">
+              <div class="sys-ic" style="background:${meta.bg};color:${meta.fg}"><i class="fas ${meta.ic}"></i></div>
+              <div><div class="sys-name">${meta.nome}</div><div class="sys-desc">${meta.desc}</div></div>
+            </div>
+            <div class="plan-list" data-sistema="${sistema}">
+              ${planosDoSistema.map((p, i) => `
+                <div class="plan-opt ${i === 0 ? 'on' : ''}" onclick="selecionarPlano('${sistema}','${p.id}',this)">
+                  <div class="plan-opt-radio"></div>
+                  <div class="plan-opt-info">
+                    <div class="plan-opt-nome">${p.nome}</div>
+                    <div class="plan-opt-sub">${p.preco === 0 ? 'Sem custo' : (p.trialDays > 0 ? `${p.trialDays} dias grátis, depois cobrança mensal` : 'Cobrança mensal')}</div>
+                  </div>
+                  <div class="plan-opt-preco">${p.preco > 0 ? 'R$ ' + p.preco.toFixed(2).replace('.', ',') : 'Grátis'}${p.preco > 0 ? '<br><em>/mês</em>' : ''}</div>
+                </div>
+              `).join('')}
+            </div>
+            <button class="btn-escolher" onclick="escolherSistema('${sistema}', this)">Começar com ${meta.nome}</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    grid.style.display = 'grid';
+  }
+
+  function selecionarPlano(sistema, planId, el) {
+    selecionado[sistema] = planId;
+    el.parentElement.querySelectorAll('.plan-opt').forEach(o => o.classList.remove('on'));
+    el.classList.add('on');
+  }
+
+  async function escolherSistema(sistema, btn) {
+    if (escolhendo) return;
+    escolhendo = true;
+
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Ativando...';
+
+    const planId = selecionado[sistema];
+
+    try {
+      if (sistema === 'lina-wash') {
+        await window.api.createSubscription(planId, true);
+      } else if (sistema === 'data-point') {
+        await window.api.contratarDp(planId);
+      }
+
+      if (typeof showToast === 'function') showToast('✨ Sistema ativado! Agora vamos criar sua empresa.', 'success');
+      setTimeout(() => { window.location.href = 'nova-empresa.html'; }, 900);
+    } catch (e) {
+      console.error(e);
+      const msg = e?.message || e?.error || 'Não foi possível ativar esse sistema. Tente novamente.';
+      if (typeof showToast === 'function') showToast(msg, 'error'); else alert(msg);
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+      escolhendo = false;
+    }
+  }
+</script>
+</body>
+</html>

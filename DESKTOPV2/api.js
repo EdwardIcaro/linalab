@@ -251,6 +251,7 @@ const api = {
   excluirDpAfastamento: (id) => fetchApi(`/dp/afastamentos/${id}`, { method: 'DELETE' }),
 
   // ===== LINA CENTER =====
+  ativarLinaCenter: () => fetchApi('/lc/ativar', { method: 'POST' }),
   // Clientes
   getLcClientes: (search = '') => fetchApi(`/lc/clientes?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`),
   getLcClienteById: (id) => fetchApi(`/lc/clientes/${id}`),

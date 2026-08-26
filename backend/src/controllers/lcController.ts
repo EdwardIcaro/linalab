@@ -20,6 +20,27 @@ async function gerarLinkTokenUnico(): Promise<string> {
 }
 
 /**
+ * Ativa o Lina Center para a empresa do token atual (empresa_sistemas).
+ * Chamado uma vez, logo após a empresa ser criada — sem wizard de onboarding
+ * ainda (diferente do Data Point), então é uma ativação direta.
+ * Idempotente: upsert, não falha se já estiver ativo.
+ */
+export const ativarLinaCenter = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId!;
+    const sistema = await prisma.empresaSistema.upsert({
+      where: { empresaId_sistema: { empresaId, sistema: 'lina-center' } },
+      update: { ativo: true },
+      create: { empresaId, sistema: 'lina-center', ativo: true },
+    });
+    res.json({ message: 'Lina Center ativado com sucesso', sistema });
+  } catch (error) {
+    console.error('Erro ao ativar Lina Center:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * Garante que o sistema Lina Center está ativo para a empresa (empresa_sistemas)
  */
 export const requireLcAtivo = async (req: EmpresaRequest, res: Response, next: NextFunction) => {

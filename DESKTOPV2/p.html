@@ -353,6 +353,14 @@
     .btn-desvincular { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:var(--white); font-family:inherit; font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; }
     .wpp-instrucao { font-size:12px; color:var(--muted); text-align:center; line-height:1.5; }
 
+    /* Configurações (menu do portal) */
+    .config-item { margin-bottom:8px; }
+    .config-fld { margin-bottom:12px; }
+    .config-fld label { display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+    .config-fld input { width:100%; padding:12px 14px; border-radius:12px; border:1.5px solid var(--border); background:var(--bg); font-family:inherit; font-size:18px; letter-spacing:6px; text-align:center; outline:none; }
+    .config-fld input:focus { border-color:var(--blue-d); background:var(--white); }
+    .config-erro { font-size:12px; color:var(--red); font-weight:600; margin:-4px 0 12px; }
+
     /* ══════════════════════════════════════
        ESPELHO DE PONTO
     ══════════════════════════════════════ */
@@ -779,7 +787,7 @@
     <div class="hub-head">
       <div class="hub-top">
         <div class="hub-brand"><i class="fas fa-droplet"></i> <b>Lina</b> Portal</div>
-        <button class="hub-menu-btn"><i class="fas fa-ellipsis"></i></button>
+        <button class="hub-menu-btn" onclick="abrirConfigModal()"><i class="fas fa-ellipsis"></i></button>
       </div>
       <div class="hub-profile">
         <div class="hub-av" id="hub-av">?</div>
@@ -810,6 +818,20 @@
       <button class="modal-close" onclick="fecharModalWpp()"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body" id="wppModalBody">
+      <!-- preenchido via JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIGURAÇÕES ══ -->
+<div class="modal-bg" id="configModal" onclick="fecharConfigModal(event)">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <span class="modal-title" id="configModalTitle">Configurações</span>
+      <button class="modal-close" onclick="fecharConfigModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="configModalBody">
       <!-- preenchido via JS -->
     </div>
   </div>
@@ -1203,8 +1225,20 @@ async function carregarDados() {
     if (!r.ok) return false;
     portalDados = await r.json();
     renderHub();
+    lembrarConectarWpp();
     return true;
   } catch { return false; }
+}
+
+// Lembrete de WhatsApp — só pra quem é do Lina Wash (tipoRemuneracao definido) e ainda
+// não conectou. Dispara toda vez que o portal carrega (não uma vez só) até a pessoa
+// conectar; quem já tem WhatsApp vinculado nunca vê isso.
+function lembrarConectarWpp() {
+  const temLinaWash = portalDados?.lavador?.tipoRemuneracao !== null && portalDados?.lavador?.tipoRemuneracao !== undefined;
+  const telefone = portalDados?.lavador?.telefone ?? null;
+  if (temLinaWash && !telefone) {
+    setTimeout(() => abrirModalWpp(), 700);
+  }
 }
 
 // ── Hub ───────────────────────────────────────────────────────────────────────
@@ -2520,6 +2554,9 @@ function renderModalWpp({ codigo, expiraEm, botNumero, conectado, numero }) {
   const url      = botNumero ? `https://wa.me/55${botNumero}?text=${urlText}` : `https://wa.me/?text=${urlText}`;
 
   body.innerHTML = `
+    <p style="font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.5">
+      <i class="fas fa-triangle-exclamation"></i> Conectar o WhatsApp é essencial — é por lá que você recebe avisos de comissão, ordens e outros comunicados.
+    </p>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Toque em <strong>"Abrir WhatsApp"</strong> — a mensagem já vem preenchida, só apertar enviar.
     </p>
@@ -2575,6 +2612,131 @@ function fecharModalWpp(e) {
   if (e && e.target !== document.getElementById('wppModal')) return;
   document.getElementById('wppModal').classList.remove('open');
   clearInterval(wppTimer);
+}
+
+// ── Configurações (trocar/remover PIN, sair) ──────────────────────────────────
+function abrirConfigModal() {
+  configModalTela('menu');
+  document.getElementById('configModal').classList.add('open');
+}
+function fecharConfigModal(e) {
+  if (e && e.target !== document.getElementById('configModal')) return;
+  document.getElementById('configModal').classList.remove('open');
+}
+
+function configModalTela(tela) {
+  const title = document.getElementById('configModalTitle');
+  const body = document.getElementById('configModalBody');
+
+  if (tela === 'menu') {
+    title.textContent = 'Configurações';
+    body.innerHTML = `
+      <div class="status-row config-item" onclick="configModalTela('trocar')">
+        <div class="status-ico" style="background:var(--blue-l);color:var(--blue-d)"><i class="fas fa-key"></i></div>
+        <div class="status-info">
+          <div class="status-title">Trocar PIN</div>
+          <div class="status-sub">Define um novo PIN de acesso</div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--faint)"></i>
+      </div>
+      <div class="status-row config-item" onclick="configModalTela('remover')">
+        <div class="status-ico" style="background:var(--red-l);color:var(--red)"><i class="fas fa-trash"></i></div>
+        <div class="status-info">
+          <div class="status-title">Remover PIN</div>
+          <div class="status-sub">Você cria um novo no próximo acesso</div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--faint)"></i>
+      </div>
+      <div class="status-row config-item" onclick="sair()">
+        <div class="status-ico" style="background:var(--bg);color:var(--muted)"><i class="fas fa-right-from-bracket"></i></div>
+        <div class="status-info"><div class="status-title">Sair</div></div>
+      </div>
+    `;
+    return;
+  }
+
+  if (tela === 'trocar') {
+    title.textContent = 'Trocar PIN';
+    body.innerHTML = `
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.5">Digite seu PIN atual e o novo PIN de 4 dígitos.</p>
+      <div class="config-fld"><label>PIN atual</label><input type="tel" maxlength="4" inputmode="numeric" id="cfgPinAtual" placeholder="••••"></div>
+      <div class="config-fld"><label>Novo PIN</label><input type="tel" maxlength="4" inputmode="numeric" id="cfgPinNovo" placeholder="••••"></div>
+      <div class="config-fld"><label>Confirmar novo PIN</label><input type="tel" maxlength="4" inputmode="numeric" id="cfgPinNovo2" placeholder="••••"></div>
+      <div id="cfgTrocarErro" class="config-erro" style="display:none"></div>
+      <button class="btn-wpp bwpp-conectar" onclick="confirmarTrocarPin()"><i class="fas fa-check"></i> Salvar novo PIN</button>
+      <button class="btn-desvincular" onclick="configModalTela('menu')">Voltar</button>
+    `;
+    return;
+  }
+
+  if (tela === 'remover') {
+    title.textContent = 'Remover PIN';
+    body.innerHTML = `
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.5">Isso remove seu PIN atual — no próximo acesso pelo link, você vai precisar criar um novo. Digite seu PIN atual pra confirmar.</p>
+      <div class="config-fld"><label>PIN atual</label><input type="tel" maxlength="4" inputmode="numeric" id="cfgPinRemover" placeholder="••••"></div>
+      <div id="cfgRemoverErro" class="config-erro" style="display:none"></div>
+      <button class="btn-wpp" style="background:var(--red);color:#fff" onclick="confirmarRemoverPin()"><i class="fas fa-trash"></i> Remover PIN</button>
+      <button class="btn-desvincular" onclick="configModalTela('menu')">Voltar</button>
+    `;
+  }
+}
+
+function mostrarErroConfig(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function confirmarTrocarPin() {
+  const atual = document.getElementById('cfgPinAtual').value.trim();
+  const novo = document.getElementById('cfgPinNovo').value.trim();
+  const novo2 = document.getElementById('cfgPinNovo2').value.trim();
+  const erroEl = document.getElementById('cfgTrocarErro');
+  erroEl.style.display = 'none';
+
+  if (!/^\d{4}$/.test(atual)) return mostrarErroConfig(erroEl, 'Digite seu PIN atual (4 dígitos).');
+  if (!/^\d{4}$/.test(novo)) return mostrarErroConfig(erroEl, 'O novo PIN precisa ter 4 dígitos.');
+  if (novo !== novo2) return mostrarErroConfig(erroEl, 'Os PINs novos não coincidem.');
+
+  try {
+    const r = await fetch(`${API}/p/me/pin/alterar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionJwt}` },
+      body: JSON.stringify({ pinAtual: atual, pinNovo: novo }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return mostrarErroConfig(erroEl, data.erro || 'Não foi possível trocar o PIN.');
+    fecharConfigModal();
+    alert('PIN alterado com sucesso!');
+  } catch {
+    mostrarErroConfig(erroEl, 'Sem conexão. Tente novamente.');
+  }
+}
+
+async function confirmarRemoverPin() {
+  const atual = document.getElementById('cfgPinRemover').value.trim();
+  const erroEl = document.getElementById('cfgRemoverErro');
+  erroEl.style.display = 'none';
+
+  if (!/^\d{4}$/.test(atual)) return mostrarErroConfig(erroEl, 'Digite seu PIN atual (4 dígitos).');
+
+  try {
+    const r = await fetch(`${API}/p/me/pin/remover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionJwt}` },
+      body: JSON.stringify({ pinAtual: atual }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return mostrarErroConfig(erroEl, data.erro || 'Não foi possível remover o PIN.');
+
+    // Sessão foi invalidada no servidor (sessionVersion mudou) — limpa local e recarrega
+    // pra cair de novo na tela de definir um novo PIN.
+    sessionStorage.removeItem(`pjwt_${linkToken}`);
+    sessionJwt = '';
+    fecharConfigModal();
+    window.location.reload();
+  } catch {
+    mostrarErroConfig(erroEl, 'Sem conexão. Tente novamente.');
+  }
 }
 
 // ── Sair ──────────────────────────────────────────────────────────────────────

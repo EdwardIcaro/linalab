@@ -8,6 +8,8 @@ import {
   getExtratoPortal,
   getPontoHoje,
   gerarFaceTokenPortal,
+  alterarPinPortal,
+  removerPinPortal,
   registrarPonto,
   getEspelhoPortal,
   criarAjustePortal,
@@ -31,6 +33,8 @@ router.get('/me/extrato',      portalSessionMiddleware, getExtratoPortal);
 router.get('/me/lc/extrato',   portalSessionMiddleware, getExtratoLcPortal);
 router.get('/me/ponto/hoje',    portalSessionMiddleware, getPontoHoje);
 router.post('/me/face-token',   portalSessionMiddleware, gerarFaceTokenPortal);
+router.post('/me/pin/alterar',  portalSessionMiddleware, alterarPinPortal);
+router.post('/me/pin/remover',  portalSessionMiddleware, removerPinPortal);
 router.post('/me/ponto',        portalSessionMiddleware, registrarPonto);
 router.get('/me/ponto/espelho', portalSessionMiddleware, getEspelhoPortal);
 router.post('/me/ajuste',       portalSessionMiddleware, criarAjustePortal);

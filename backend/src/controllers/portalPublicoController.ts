@@ -777,6 +777,88 @@ export const desvincularWpp = async (req: Request, res: Response) => {
   }
 };
 
+// ─── PIN — trocar / remover (self-service, sessão autenticada) ───────────────
+
+type EntidadePin = { id: string; pin: string | null };
+
+async function buscarEntidadePinPorSessao(req: Request): Promise<{ registro: EntidadePin; modelo: 'lavador' | 'dpFuncionario' | 'lcFuncionario' } | null> {
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
+  const lcFuncionarioId = (req as any).lcFuncionarioId as string | undefined;
+
+  if (lavadorId) {
+    const registro = await prisma.lavador.findUnique({ where: { id: lavadorId }, select: { id: true, pin: true } });
+    return registro ? { registro, modelo: 'lavador' } : null;
+  }
+  if (dpFuncionarioId) {
+    const registro = await prisma.dpFuncionario.findUnique({ where: { id: dpFuncionarioId }, select: { id: true, pin: true } });
+    return registro ? { registro, modelo: 'dpFuncionario' } : null;
+  }
+  if (lcFuncionarioId) {
+    const registro = await prisma.lcFuncionario.findUnique({ where: { id: lcFuncionarioId }, select: { id: true, pin: true } });
+    return registro ? { registro, modelo: 'lcFuncionario' } : null;
+  }
+  return null;
+}
+
+// POST /api/p/me/pin/alterar — troca o PIN mantendo a sessão atual válida
+export const alterarPinPortal = async (req: Request, res: Response) => {
+  const { pinAtual, pinNovo } = req.body as { pinAtual?: string; pinNovo?: string };
+
+  if (!pinAtual || !pinNovo || !/^\d{4}$/.test(String(pinNovo))) {
+    return res.status(400).json({ erro: 'Informe o PIN atual e um novo PIN de 4 dígitos.' });
+  }
+
+  try {
+    const encontrado = await buscarEntidadePinPorSessao(req);
+    if (!encontrado || !encontrado.registro.pin) {
+      return res.status(404).json({ erro: 'PIN não encontrado.' });
+    }
+
+    const ok = await bcrypt.compare(String(pinAtual), encontrado.registro.pin);
+    if (!ok) return res.status(401).json({ erro: 'PIN atual incorreto.' });
+
+    const hash = await bcrypt.hash(String(pinNovo), 10);
+    const { id } = encontrado.registro;
+    if (encontrado.modelo === 'lavador') await prisma.lavador.update({ where: { id }, data: { pin: hash } });
+    if (encontrado.modelo === 'dpFuncionario') await prisma.dpFuncionario.update({ where: { id }, data: { pin: hash } });
+    if (encontrado.modelo === 'lcFuncionario') await prisma.lcFuncionario.update({ where: { id }, data: { pin: hash } });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[portal] alterarPin:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// POST /api/p/me/pin/remover — apaga o PIN e invalida a sessão (sessionVersion++);
+// próximo acesso pelo link cai direto na tela de definir um PIN novo.
+export const removerPinPortal = async (req: Request, res: Response) => {
+  const { pinAtual } = req.body as { pinAtual?: string };
+  if (!pinAtual) return res.status(400).json({ erro: 'Informe o PIN atual para confirmar.' });
+
+  try {
+    const encontrado = await buscarEntidadePinPorSessao(req);
+    if (!encontrado || !encontrado.registro.pin) {
+      return res.status(404).json({ erro: 'PIN não encontrado.' });
+    }
+
+    const ok = await bcrypt.compare(String(pinAtual), encontrado.registro.pin);
+    if (!ok) return res.status(401).json({ erro: 'PIN atual incorreto.' });
+
+    const { id } = encontrado.registro;
+    const data = { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } };
+    if (encontrado.modelo === 'lavador') await prisma.lavador.update({ where: { id }, data });
+    if (encontrado.modelo === 'dpFuncionario') await prisma.dpFuncionario.update({ where: { id }, data });
+    if (encontrado.modelo === 'lcFuncionario') await prisma.lcFuncionario.update({ where: { id }, data });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[portal] removerPin:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
 // ─── helpers ponto ───────────────────────────────────────────────────────────
 
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {

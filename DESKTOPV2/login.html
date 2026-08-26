@@ -1391,6 +1391,21 @@
                         return;
                     }
 
+                    // Conta nova (zero empresas ainda): decide entre "já escolheu um
+                    // sistema, só falta criar a empresa" e "ainda não escolheu nada".
+                    if (!data.usuario.empresas || data.usuario.empresas.length === 0) {
+                        try {
+                            const minhaAssinatura = await window.api.getMySubscription();
+                            window.location.href = minhaAssinatura?.hasSubscription
+                                ? 'nova-empresa.html'
+                                : 'escolher-sistema.html';
+                        } catch (e) {
+                            console.error('Erro ao verificar assinatura:', e);
+                            window.location.href = 'escolher-sistema.html';
+                        }
+                        return;
+                    }
+
                     window.location.href = 'hub.html';
                 }
             };

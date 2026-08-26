@@ -51,15 +51,9 @@ export const createUsuario = async (req: Request, res: Response) => {
           console.error('Erro ao criar assinatura FREE de fallback:', e)
         );
       }
-    } else {
-      // Criar assinatura FREE automaticamente
-      try {
-        await subscriptionService.createFreeSubscriptionForNewUser(usuario.id);
-      } catch (error) {
-        console.error('Erro ao criar assinatura FREE:', error);
-        // Não interromper signup, apenas logar
-      }
     }
+    // Sem link: não concede FREE automaticamente — o usuário escolhe o sistema
+    // em escolher-sistema.html depois de logar (fluxo de onboarding multi-sistema).
 
     res.status(201).json({ message: 'Usuário criado com sucesso', usuario });
   } catch (error) {
