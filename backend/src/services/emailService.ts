@@ -743,7 +743,7 @@ class EmailService {
             </ul>
 
             <p style="text-align: center; margin-top: 30px;">
-              <a href="${this.FRONTEND_URL}/selecionar-empresa.html" class="button">Acessar Dashboard</a>
+              <a href="${this.FRONTEND_URL}/hub.html" class="button">Acessar Dashboard</a>
             </p>
 
             <p style="margin-top: 20px; color: #666; font-size: 14px;">

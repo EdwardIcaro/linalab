@@ -737,7 +737,7 @@ async function main() {
   console.log('════════════════════════════════════════════════');
   console.log('\n✅ Role system ACTIVE - Login routing by role:');
   console.log('   LINA_OWNER → admin/dashboard.html');
-  console.log('   OWNER/MANAGER/USER → selecionar-empresa.html');
+  console.log('   OWNER/MANAGER/USER → hub.html');
   console.log('\n🚀 You can now test your dashboards with realistic data!');
   console.log('📊 Charts should show vehicles per hour distribution');
   console.log('💳 Financial module should display transactions and balance\n');
