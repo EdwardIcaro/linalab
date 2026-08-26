@@ -187,12 +187,25 @@ export const getHub = async (req: Request, res: Response) => {
       }] : [])
     ];
 
+    // Sistemas com assinatura ativa mas sem nenhuma empresa criada ainda — normalmente
+    // acontece quando o owner atribui uma assinatura direto pra uma conta que já usa
+    // outro sistema (ex: já tem Lina Wash e ganhou acesso ao Lina Center). O usuário
+    // precisa "aceitar" criando a empresa daquele sistema.
+    const pendentes: { chave: string; nome: string; icone: string; cor: string; plano: string }[] = [];
+    if (subscriptionWash && empresasLinaWash.length === 0) {
+      pendentes.push({ chave: 'lina-wash', nome: 'Lina Wash', icone: '🚗', cor: 'wash', plano: subscriptionWash.plan.nome });
+    }
+    if (subscriptionLc && empresasLinaCenter.length === 0) {
+      pendentes.push({ chave: 'lina-center', nome: 'Lina Center', icone: '🔧', cor: 'lc', plano: subscriptionLc.plan.nome });
+    }
+
     // Stats globais
     const totalOrdens = ordensHoje.reduce((sum, o) => sum + o._count.id, 0) + lcOrdensHojeTotal;
 
     return res.json({
       usuario: { nome: usuario.nome },
       sistemas,
+      pendentes,
       stats: {
         totalSistemas: sistemas.length,
         totalEmpresas: empresas.length,

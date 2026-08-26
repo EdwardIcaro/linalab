@@ -145,6 +145,32 @@
     .wb-stat-lbl { font-size: 10px; color: var(--gray500); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; }
     .wb-divider { width: 1px; background: var(--p200); align-self: stretch; }
 
+    /* ── PENDÊNCIA (assinatura atribuída aguardando criação de empresa) ── */
+    .pend-card {
+      display: flex; align-items: center; gap: 16px;
+      background: linear-gradient(135deg, var(--amber-bg) 0%, #fffbeb 100%);
+      border: 1px solid rgba(217,119,6,.3); border-radius: 16px;
+      padding: 16px 20px; margin-bottom: 18px;
+    }
+    .pend-icon {
+      width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+      background: linear-gradient(145deg, #92400e, var(--amber));
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      box-shadow: 0 4px 14px rgba(217,119,6,.3);
+    }
+    .pend-info { flex: 1; min-width: 0; }
+    .pend-title { font-size: 14px; font-weight: 800; color: var(--gray900); }
+    .pend-sub { font-size: 12.5px; color: var(--gray700); margin-top: 2px; }
+    .pend-btn {
+      flex-shrink: 0; padding: 10px 18px; border: none; border-radius: 11px;
+      background: linear-gradient(135deg, var(--amber), #92400e); color: #fff;
+      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 8px; text-decoration: none; transition: all .18s;
+      box-shadow: 0 4px 14px rgba(217,119,6,.3);
+    }
+    .pend-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(217,119,6,.4); }
+    @media (max-width: 560px) { .pend-card { flex-wrap: wrap; } .pend-btn { width: 100%; justify-content: center; } }
+
     /* ── SEÇÃO DE SISTEMA ── */
     .sys-section { margin-bottom: 30px; }
     .sys-section-header {
@@ -449,6 +475,9 @@
         </div>
       </div>
 
+      <!-- Sistemas atribuídos pelo owner, aguardando o usuário criar a empresa -->
+      <div id="pendentesWrap"></div>
+
       <!-- Conteúdo dinâmico -->
       <div id="sistemasWrap">
         <div class="loading-wrap">
@@ -677,8 +706,24 @@
 
     // ══ Card Lina Center no marketplace ══
     let hubSistemas = [];
+    let hubPendentes = [];
+
+    function renderPendentes() {
+      const wrap = document.getElementById('pendentesWrap');
+      if (!hubPendentes.length) { wrap.innerHTML = ''; return; }
+      wrap.innerHTML = hubPendentes.map(p => `
+        <div class="pend-card">
+          <div class="pend-icon">${p.icone}</div>
+          <div class="pend-info">
+            <div class="pend-title">Você ganhou acesso ao ${p.nome}</div>
+            <div class="pend-sub">Plano ${p.plano} liberado — crie sua empresa para começar a usar.</div>
+          </div>
+          <a class="pend-btn" href="nova-empresa.html?sistema=${p.chave}"><i class="fa fa-check"></i> Aceitar e criar empresa</a>
+        </div>
+      `).join('');
+    }
     let lcCardCarregado = false;
-    let lcEstado = { jaAtivo: false, planoId: null };
+    let lcEstado = { jaAtivo: false, pendente: false, planoId: null };
 
     async function atualizarCardLinaCenter() {
       if (lcCardCarregado) return;
@@ -687,6 +732,23 @@
       const info = document.getElementById('lcPlanInfo');
       const btn = document.getElementById('lcContratarBtn');
       lcEstado.jaAtivo = hubSistemas.some(s => s.chave === 'lina-center');
+      lcEstado.pendente = hubPendentes.some(p => p.chave === 'lina-center');
+
+      if (lcEstado.jaAtivo) {
+        info.textContent = 'Você já tem o Lina Center ativo na sua conta.';
+        btn.innerHTML = '<i class="fa fa-check"></i> Já ativo';
+        btn.disabled = true;
+        btn.style.opacity = '.6';
+        btn.style.cursor = 'default';
+        return;
+      }
+
+      if (lcEstado.pendente) {
+        info.textContent = 'Sua assinatura já foi liberada — falta só criar a empresa.';
+        btn.innerHTML = '<i class="fa fa-arrow-right"></i> Criar empresa do Lina Center';
+        btn.disabled = false;
+        return;
+      }
 
       try {
         const planos = await window.api.getAvailablePlans();
@@ -699,16 +761,6 @@
           return;
         }
         lcEstado.planoId = plano.id;
-
-        if (lcEstado.jaAtivo) {
-          info.textContent = 'Você já tem o Lina Center ativo na sua conta.';
-          btn.innerHTML = '<i class="fa fa-check"></i> Já ativo';
-          btn.disabled = true;
-          btn.style.opacity = '.6';
-          btn.style.cursor = 'default';
-          return;
-        }
-
         info.textContent = `${plano.nome} · R$ ${plano.preco.toFixed(2).replace('.', ',')}/mês · Cancele quando quiser`;
         btn.disabled = false;
       } catch (e) {
@@ -719,7 +771,15 @@
 
     async function contratarLinaCenter(e) {
       e.stopPropagation();
-      if (!lcEstado.planoId || lcEstado.jaAtivo) return;
+      if (lcEstado.jaAtivo) return;
+
+      // Já tem assinatura liberada (ex: atribuída pelo owner) — só falta criar a empresa
+      if (lcEstado.pendente) {
+        window.location.href = 'nova-empresa.html?sistema=lina-center';
+        return;
+      }
+
+      if (!lcEstado.planoId) return;
       if (!confirm('Ativar o Lina Center na sua conta? Você vai criar uma nova empresa para esse sistema.')) return;
 
       const btn = document.getElementById('lcContratarBtn');
@@ -884,6 +944,8 @@
 
         // Sistemas
         hubSistemas = data.sistemas || [];
+        hubPendentes = data.pendentes || [];
+        renderPendentes();
         const wrap = document.getElementById('sistemasWrap');
         if (!data.sistemas || data.sistemas.length === 0) {
           wrap.innerHTML = `
