@@ -40,7 +40,7 @@ interface EmpresaRequest extends Request {
  */
 export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
   try {
-    const { nome } = req.body; 
+    const { nome, sistema } = req.body;
     const usuarioId = req.usuarioId; // O ID do usuário virá do middleware
 
     if (!nome) {
@@ -50,9 +50,10 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
       return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
-    // Validar limite de empresas baseado no plano de assinatura
+    // Validar limite de empresas baseado no plano de assinatura do sistema pretendido
+    // (cada sistema — Lina Wash, Lina Center — tem sua própria assinatura e limite)
     const { subscriptionService } = await import('../services/subscriptionService');
-    const canCreate = await subscriptionService.canCreateMoreCompanies(usuarioId);
+    const canCreate = await subscriptionService.canCreateMoreCompanies(usuarioId, sistema);
 
     if (!canCreate.allowed) {
       return res.status(403).json({

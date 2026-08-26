@@ -48,25 +48,34 @@ export class SubscriptionService {
   /**
    * Verifica se usuário pode criar mais empresas
    */
-  async canCreateMoreCompanies(usuarioId: string): Promise<{
+  async canCreateMoreCompanies(usuarioId: string, sistema: string = 'lina-wash'): Promise<{
     allowed: boolean;
     limit: number;
     current: number;
     reason?: string;
   }> {
-    const subscription = await this.getActiveSubscription(usuarioId);
+    const subscription = await this.getActiveSubscription(usuarioId, sistema);
 
     if (!subscription) {
       return {
         allowed: false,
         limit: 0,
         current: 0,
-        reason: 'Nenhuma assinatura ativa. Assine um plano para criar empresas.'
+        reason: 'Nenhuma assinatura ativa para esse sistema. Assine um plano para criar empresas.'
       };
     }
 
+    // Cada sistema conta suas próprias empresas contra o limite do seu plano
+    // (Lina Center marca a empresa em empresa_sistemas; Lina Wash é o padrão
+    // implícito de qualquer empresa que não tenha o Lina Center ativo).
     const empresasCount = await prisma.empresa.count({
-      where: { usuarioId, ativo: true }
+      where: {
+        usuarioId,
+        ativo: true,
+        sistemasAtivos: sistema === 'lina-center'
+          ? { some: { sistema: 'lina-center', ativo: true } }
+          : { none: { sistema: 'lina-center', ativo: true } }
+      }
     });
 
     const limit = subscription.plan.maxEmpresas;
@@ -76,7 +85,7 @@ export class SubscriptionService {
       allowed,
       limit,
       current: empresasCount,
-      reason: allowed ? undefined : `Limite de ${limit} empresa(s) atingido. Faça upgrade do plano.`
+      reason: allowed ? undefined : `Limite de ${limit} empresa(s) atingido para esse sistema. Faça upgrade do plano.`
     };
   }
 
