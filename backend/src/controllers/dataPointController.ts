@@ -374,18 +374,18 @@ function calcMinutosTrabalhados(
 }
 
 // ─── GET /api/dp/dashboard ────────────────────────────────────────────────────
-export const getDashboardDp = async (req: EmpresaRequest, res: Response) => {
-  const empresaId = ((req as any).empresaId || req.query.empresaId) as string;
-  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+// Núcleo do dashboard (status de hoje de todos os funcionários) — reutilizado
+// pela rota de admin (abaixo) e pela visão de equipe no portal do funcionário
+// (portalPublicoController.getDataPointEquipePortal, quando o lavador tem
+// verDataPointPortal habilitado).
+export async function buildDpDashboardData(empresaId: string) {
+  const [sistema, empresa] = await Promise.all([
+    prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true } }),
+    prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } }),
+  ]);
+  if (!sistema) return null;
 
-  try {
-    const [sistema, empresa] = await Promise.all([
-      prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true } }),
-      prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } }),
-    ]);
-    if (!sistema) return res.status(403).json({ error: 'Data Point não ativo para esta empresa' });
-
-    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+  const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
     const jornadaEntradaCfg: string = cfg.jornadaEntrada || '08:00';
     const jornadaSaidaCfg: string  = cfg.jornadaSaida  || '17:00';
     const intervaloMin: number     = cfg.intervaloMin  || 60;
@@ -519,14 +519,24 @@ export const getDashboardDp = async (req: EmpresaRequest, res: Response) => {
       }
     }
 
-    res.json({
-      empresaNome: empresa?.nome ?? '',
-      dataHoje: todayStr,
-      config: { ...cfg, jornadaEntrada: jornadaEntradaCfg, jornadaSaida: jornadaSaidaCfg, intervaloMin },
-      resumo,
-      funcionarios: funcProcessados,
-      alertas,
-    });
+  return {
+    empresaNome: empresa?.nome ?? '',
+    dataHoje: todayStr,
+    config: { ...cfg, jornadaEntrada: jornadaEntradaCfg, jornadaSaida: jornadaSaidaCfg, intervaloMin },
+    resumo,
+    funcionarios: funcProcessados,
+    alertas,
+  };
+}
+
+export const getDashboardDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = ((req as any).empresaId || req.query.empresaId) as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const data = await buildDpDashboardData(empresaId);
+    if (!data) return res.status(403).json({ error: 'Data Point não ativo para esta empresa' });
+    res.json(data);
   } catch (error) {
     console.error('[dp] dashboard:', error);
     res.status(500).json({ error: 'Erro interno' });

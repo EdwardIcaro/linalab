@@ -8,6 +8,7 @@ import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/date
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
 import { embeddingValido } from '../utils/faceMatch';
+import { buildDpDashboardData } from './dataPointController';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
 
@@ -340,6 +341,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
           telefone: null,
         },
         dataPointAtivo: !!sistemaDP,
+        dataPointEquipeVisivel: false,
         hoje: { ganho: 0, totalOrdens: 0, ordens: [] },
         mes: { ganho: 0, totalOrdens: 0 },
         linaCenterAtivo: false,
@@ -398,6 +400,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
           telefone: null,
         },
         dataPointAtivo: false,
+        dataPointEquipeVisivel: false,
         hoje: { ganho: 0, totalOrdens: 0, ordens: [] },
         mes: { ganho: 0, totalOrdens: 0 },
         linaCenterAtivo: true,
@@ -434,7 +437,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
       select: {
         id: true, nome: true, comissao: true,
         tipoRemuneracao: true, baseComissao: true, salario: true,
-        telefone: true,
+        telefone: true, verDataPointPortal: true,
         empresa: { select: { nome: true } },
       },
     });
@@ -503,6 +506,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
         telefone: lavador.telefone ?? null,
       },
       dataPointAtivo: !!sistemaDP,
+      dataPointEquipeVisivel: !!sistemaDP && !!lavador.verDataPointPortal,
       hoje: {
         ganho: ganhoHoje,
         totalOrdens: ordensHoje.length,
@@ -962,6 +966,37 @@ export const getPontoHoje = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[portal] pontoHoje:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── GET /api/p/me/data-point/equipe ──────────────────────────────────────────
+// Visão de equipe do Data Point dentro do portal do lavador (entrada/saída de
+// todo mundo hoje) — só liberado pra lavadores com verDataPointPortal=true,
+// marcado pelo dono/gestor na tela de Links de Acesso (configuracoes.html).
+export const getDataPointEquipePortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const empresaId = (req as any).empresaId as string;
+
+  if (!lavadorId) {
+    return res.status(403).json({ erro: 'Recurso disponível apenas para lavadores.' });
+  }
+
+  try {
+    const lavador = await prisma.lavador.findUnique({
+      where: { id: lavadorId },
+      select: { verDataPointPortal: true },
+    });
+    if (!lavador?.verDataPointPortal) {
+      return res.status(403).json({ erro: 'Você não tem acesso à visão de equipe do Data Point.' });
+    }
+
+    const data = await buildDpDashboardData(empresaId);
+    if (!data) return res.status(403).json({ erro: 'Data Point não está ativo para esta empresa.' });
+
+    res.json(data);
+  } catch (error) {
+    console.error('[portal] dataPointEquipe:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };

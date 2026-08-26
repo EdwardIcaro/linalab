@@ -138,7 +138,8 @@ export const getLavadorTokens = async (req: EmpresaRequest, res: Response) => {
         lavador: {
           select: {
             id: true,
-            nome: true
+            nome: true,
+            verDataPointPortal: true
           }
         }
       },
@@ -260,7 +261,7 @@ export const updateLavador = async (req: EmpresaRequest, res: Response) => {
     if (Array.isArray(id)) {
       return res.status(400).json({ error: 'ID inválido' });
     }
-  const { nome, comissao, tipoRemuneracao, baseComissao, salario, ativo } = req.body;
+  const { nome, comissao, tipoRemuneracao, baseComissao, salario, ativo, verDataPointPortal } = req.body;
 
   try {
     const lavador = await prisma.lavador.update({
@@ -272,6 +273,7 @@ export const updateLavador = async (req: EmpresaRequest, res: Response) => {
         ...(baseComissao    !== undefined && { baseComissao }),
         ...(salario         !== undefined && { salario: salario === null ? null : Number(salario) }),
         ...(ativo           !== undefined && { ativo: Boolean(ativo) }),
+        ...(verDataPointPortal !== undefined && { verDataPointPortal: Boolean(verDataPointPortal) }),
       },
     });
     res.json(lavador);

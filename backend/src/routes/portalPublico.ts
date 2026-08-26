@@ -15,6 +15,7 @@ import {
   criarAjustePortal,
   getAjustesPortal,
   getExtratoLcPortal,
+  getDataPointEquipePortal,
   gerarCodigoWpp,
   desvincularWpp,
   validarTokenPonto,
@@ -31,6 +32,7 @@ const router: Router = Router();
 router.get('/me/dados',        portalSessionMiddleware, getDadosPortal);
 router.get('/me/extrato',      portalSessionMiddleware, getExtratoPortal);
 router.get('/me/lc/extrato',   portalSessionMiddleware, getExtratoLcPortal);
+router.get('/me/data-point/equipe', portalSessionMiddleware, getDataPointEquipePortal);
 router.get('/me/ponto/hoje',    portalSessionMiddleware, getPontoHoje);
 router.post('/me/face-token',   portalSessionMiddleware, gerarFaceTokenPortal);
 router.post('/me/pin/alterar',  portalSessionMiddleware, alterarPinPortal);
