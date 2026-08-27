@@ -196,11 +196,16 @@ app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas aute
 app.use('/api/email-regras', userAuthMiddleware, emailRegraRoutes); // Regras de leitura de email (config global)
 
 // Rota de saúde
+// `commit` vem das variáveis que o Railway injeta no build — serve para conferir
+// QUAL versão está de fato no ar (deploys ficam bloqueados 9h–21h BRT no free
+// tier, então nem todo push chega ao servidor na hora).
 app.get('/health', (_req: express.Request, res: express.Response) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
+    deployedAt: process.env.RAILWAY_DEPLOYMENT_CREATED_AT ?? null,
   });
 });
 
