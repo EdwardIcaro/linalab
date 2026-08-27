@@ -281,6 +281,13 @@ async function handleConectarPortal(from: string, message: string): Promise<stri
       where: { id: lavador.id },
       data: { telefone, codigoWpp: null, codigoWppExpiraEm: null },
     });
+    // Se esse Lavador também é funcionário do Data Point, vincula o mesmo número
+    // ao DpFuncionario — as notificações de ponto saem por `wppJid`, que ficava
+    // nulo nesse caminho e deixava o funcionário sem confirmação de ponto.
+    await (prisma as any).dpFuncionario.updateMany({
+      where: { lavadorId: lavador.id, wppJid: null },
+      data: { wppJid: from },
+    });
     return `Oi, ${lavador.nome}! 👋 Sou a Lina, tudo bem?\n\nSeu WhatsApp tá vinculado agora — a partir de agora você recebe suas notificações de comissão por aqui e pode me perguntar qualquer coisa sobre seus serviços. Manda um *ajuda* pra ver o que eu consigo fazer por você, viu?`;
   }
 

@@ -7,6 +7,7 @@ import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
+import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
@@ -1073,10 +1074,16 @@ export const registrarPonto = async (req: Request, res: Response) => {
       },
     });
 
+    const horaFormatada = horaFormatadaBRT(marcacao.timestamp);
+
+    // Confirmação no WhatsApp do funcionário (fire-and-forget)
+    const alertaGps = gpsForaRaio ? '\n\n⚠️ Localização fora do raio da empresa.' : '';
+    notificarPontoRegistrado(funcionario.id, tipo, horaFormatada, alertaGps).catch(() => {});
+
     res.json({
       ok: true,
       tipo,
-      horaFormatada: horaFormatadaBRT(marcacao.timestamp),
+      horaFormatada,
       gpsPrecisaoSuspeita,
     });
   } catch (error) {
@@ -1537,12 +1544,8 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     const horaFormatada = horaFormatadaBRT(marcacao.timestamp);
 
     // Notifica funcionário no WhatsApp (fire-and-forget)
-    if (func.wppJid) {
-      const emoji = tipo === 'ENTRADA' ? '✅' : '👋';
-      const alerta = tipo === 'ENTRADA' && gpsForaRaio ? '\n\n⚠️ Localização fora do raio da empresa.' : '';
-      const msg = `${emoji} *${tipo}* registrada às ${horaFormatada}!${alerta}`;
-      botSend(func.wppJid, msg).catch(() => {});
-    }
+    const alerta = tipo === 'ENTRADA' && gpsForaRaio ? '\n\n⚠️ Localização fora do raio da empresa.' : '';
+    notificarPontoRegistrado(func.id, tipo, horaFormatada, alerta).catch(() => {});
 
     // redirectUrl baseado no tipo de vínculo
     let redirectUrl: string | null = null;

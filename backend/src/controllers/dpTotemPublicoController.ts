@@ -5,6 +5,7 @@ import { verificarRateLimit } from '../utils/rateLimiter';
 import { getTodayRangeBRT } from '../utils/dateUtils';
 import { distanciaEuclidiana, embeddingValido } from '../utils/faceMatch';
 import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
+import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { horaFormatadaBRT } from './portalPublicoController';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
@@ -152,7 +153,12 @@ export const confirmarTotem = async (req: Request, res: Response) => {
       prisma.dpTotem.update({ where: { id: totemId }, data: { ultimoUsoEm: new Date() } }),
     ]);
 
-    res.json({ ok: true, tipo, horaFormatada: horaFormatadaBRT(marcacao.timestamp) });
+    const horaFormatada = horaFormatadaBRT(marcacao.timestamp);
+
+    // Confirmação no WhatsApp do funcionário (fire-and-forget)
+    notificarPontoRegistrado(funcionario.id, tipo, horaFormatada).catch(() => {});
+
+    res.json({ ok: true, tipo, horaFormatada });
   } catch (error) {
     console.error('[totem] confirmar:', error);
     res.status(500).json({ erro: 'Erro interno' });
