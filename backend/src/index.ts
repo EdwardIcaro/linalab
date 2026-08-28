@@ -198,7 +198,9 @@ app.use('/api/email-regras', userAuthMiddleware, emailRegraRoutes); // Regras de
 // Rota de saúde
 // `commit` vem das variáveis que o Railway injeta no build — serve para conferir
 // QUAL versão está de fato no ar (deploys ficam bloqueados 9h–21h BRT no free
-// tier, então nem todo push chega ao servidor na hora).
+// tier, então nem todo push chega ao servidor na hora). Se um push cair bem na
+// borda da janela de bloqueio, o deploy pode não disparar sozinho depois que
+// ela libera — nesse caso, um novo commit (como este) força o redeploy.
 app.get('/health', (_req: express.Request, res: express.Response) => {
   res.json({
     status: 'OK',
