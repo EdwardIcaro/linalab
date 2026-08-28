@@ -669,7 +669,17 @@ export async function sendMessage(to: string, text: string): Promise<void> {
     // resolver, cai no fallback de JID direto (dígitos limpos).
     const cleanPhone = to.replace(/\D/g, '');
     const resolved = await resolvePhoneToJid(cleanPhone);
-    jid = resolved || `${cleanPhone}@s.whatsapp.net`;
+    if (resolved) {
+      jid = resolved;
+    } else if (cleanPhone.length > 13) {
+      // Não existe telefone real com mais de 13 dígitos (BR = 55+DD+9 dígitos).
+      // Isso indica que o número salvo veio de um JID @lid (WhatsApp "Linked ID")
+      // não resolvido no momento do "conectar CODIGO" — o valor em si é válido,
+      // só faltou o sufixo certo. Tenta como LID antes de desistir.
+      jid = `${cleanPhone}@lid`;
+    } else {
+      jid = `${cleanPhone}@s.whatsapp.net`;
+    }
   }
   await globalSocket.sendMessage(jid, { text });
 }
