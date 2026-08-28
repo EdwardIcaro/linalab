@@ -597,7 +597,14 @@ export async function initBaileys(): Promise<void> {
         }
 
         if (response?.trim()) {
-          await sock.sendMessage(from, { text: response });
+          // Responde sempre pro rawFrom (JID exato de onde a mensagem chegou), igual
+          // aos outros ramos (imagem/áudio/localização) acima. Usar `from` aqui é
+          // arriscado: quando o @lid resolve pro telefone só a partir da 2ª mensagem
+          // da conversa, o Baileys não tem sessão Signal estabelecida com esse JID
+          // "novo" e o send falha com "not-acceptable" — silenciosamente, porque cai
+          // no catch do handler. É exatamente isso que fazia o menu do lavador (ex:
+          // responder "1" depois de "ajuda") não voltar nenhuma resposta.
+          await sock.sendMessage(rawFrom, { text: response });
         }
       } catch (err) {
         console.error('[Baileys] Erro ao processar mensagem:', err);
