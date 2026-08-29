@@ -310,6 +310,7 @@ const api = {
   updateCliente: (id, data) => fetchApi(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCliente: (id) => fetchApi(`/clientes/${id}`, { method: 'DELETE' }),
   getVeiculoByPlaca: (placa) => fetchApi(`/clientes/veiculo/placa/${placa}`),
+  ignorarNotificacaoCliente: (id) => fetchApi(`/clientes/${id}/ignorar-notificacao`, { method: 'PATCH' }),
 
   // ===== VEÍCULOS =====
   createVeiculo: (data) => fetchApi('/veiculos', { method: 'POST', body: JSON.stringify(data) }),

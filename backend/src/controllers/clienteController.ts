@@ -362,6 +362,42 @@ export const deleteCliente = async (req: EmpresaRequest, res: Response) => {
 };
 
 /**
+ * Ignora a notificação de "cliente sem visitar há muito tempo" por 15 dias
+ */
+export const ignorarNotificacaoCliente = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (Array.isArray(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: { id, empresaId: req.empresaId },
+      select: { id: true }
+    });
+
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+
+    const notificacaoIgnoradaAte = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+
+    await prisma.cliente.update({
+      where: { id },
+      data: { notificacaoIgnoradaAte }
+    });
+
+    res.json({
+      message: 'Notificação ignorada por 15 dias',
+      notificacaoIgnoradaAte
+    });
+  } catch (error) {
+    console.error('Erro ao ignorar notificação do cliente:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * Buscar cliente por placa do veículo
  */
 export const getClienteByPlaca = async (req: EmpresaRequest, res: Response) => {

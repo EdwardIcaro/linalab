@@ -62,6 +62,50 @@
       align-items: center; gap: 6px; transition: background .15s;
     }
     .hd-btn:hover { background: var(--blue); }
+    .hd-right { display: flex; align-items: center; gap: 10px; }
+    .hd-bell {
+      position: relative;
+      background: none; border: none; color: #fff;
+      font-size: 17px; cursor: pointer; padding: 8px;
+      border-radius: 8px; transition: background .15s;
+    }
+    .hd-bell:hover { background: rgba(255,255,255,.1); }
+    .hd-bell-badge {
+      position: absolute; top: 1px; right: 1px;
+      background: var(--red); color: #fff;
+      font-size: 10px; font-weight: 700; line-height: 1;
+      min-width: 16px; height: 16px; padding: 0 3px;
+      border-radius: 99px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid var(--navy);
+    }
+
+    /* ── NOTIFICAÇÕES: CLIENTES INATIVOS ── */
+    .notif-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-info { min-width: 0; flex: 1; }
+    .notif-nome {
+      font-size: 14px; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .notif-meta { font-size: 12px; color: var(--mid); margin-top: 2px; }
+    .notif-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-notif-ignore, .btn-notif-msg {
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 10px; border-radius: 8px;
+      font-size: 11px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+      border: 1.5px solid var(--border); background: none; color: var(--mid);
+      transition: all .15s;
+    }
+    .btn-notif-ignore:hover { border-color: var(--red); color: var(--red); background: #fef2f2; }
+    .btn-notif-msg { border-color: #bbf7d0; color: #25D366; }
+    .btn-notif-msg:hover { background: #f0fdf4; border-color: #25D366; }
+    .btn-notif-msg:disabled { opacity: .4; cursor: not-allowed; }
 
     /* ── BUSCA ── */
     .search-bar {
@@ -673,9 +717,15 @@
         <div class="hd-subtitle" id="countLabel">Carregando...</div>
       </div>
     </div>
-    <button class="hd-btn" onclick="openFormNew()">
-      <i class="fas fa-plus"></i> Novo
-    </button>
+    <div class="hd-right">
+      <button class="hd-bell" id="btnNotif" onclick="openNotifPanel()" style="display:none" title="Clientes sem visitar há muito tempo">
+        <i class="fas fa-bell"></i>
+        <span class="hd-bell-badge" id="notifBadge">0</span>
+      </button>
+      <button class="hd-btn" onclick="openFormNew()">
+        <i class="fas fa-plus"></i> Novo
+      </button>
+    </div>
   </header>
 
   <!-- BUSCA + FILTROS -->
@@ -766,6 +816,13 @@
     let editingId     = null;
     let vehCount      = 0;
     let filtroAtivo   = 'todos';
+    let filterCounts  = {};
+    let searchTimer   = null;
+
+    // Renderização em lotes (evita recriar centenas de cards de uma vez)
+    const GRID_BATCH   = 60;
+    let renderedCount  = 0;
+    let gridObserver   = null;
 
     // Estado da transferência
     let transferVeiculoData   = null;
@@ -794,20 +851,148 @@
     });
 
     // ── CARREGAR ──────────────────────────────────
+    // Busca a 1ª página e exibe na hora; o resto entra em background sem travar a tela.
+    // (antes buscava tudo de uma vez com limit=500 fixo — arriscado, empresas já
+    // com 450+ clientes ficavam a um passo de perder cadastro silenciosamente)
     async function loadClientes() {
       setGrid(`<div class="state-container"><div class="spin"></div></div>`);
       try {
-        const r = await window.api.getClientes(1, 500, '');
-        allClientes = r.clientes || r.data || [];
-        filtered    = [...allClientes];
+        const PAGE_SIZE = 200;
+        const first = await window.api.getClientes(1, PAGE_SIZE, '');
+        allClientes = first.clientes || first.data || [];
+        refreshComputed();
+        filtered = applyFilterAndSearch();
         renderFilterBar();
         renderGrid();
+
+        const pages = first.pagination?.pages || 1;
+        for (let p = 2; p <= pages; p++) {
+          const r = await window.api.getClientes(p, PAGE_SIZE, '');
+          allClientes.push(...(r.clientes || r.data || []));
+        }
+        if (pages > 1) {
+          refreshComputed();
+          filtered = applyFilterAndSearch();
+          renderFilterBar();
+          renderGrid();
+        }
       } catch {
         setGrid(`<div class="state-container">
           <i class="fas fa-exclamation-triangle state-icon"></i>
           <div class="state-title">Erro ao carregar</div>
           <div class="state-sub">Verifique a conexão e tente novamente.</div>
         </div>`);
+      }
+    }
+
+    // Recalcula, uma única vez por carregamento, os valores derivados de cada
+    // cliente (gasto total, dias desde a última visita, etc.) e as contagens dos
+    // filtros — antes eram recalculados a cada render/clique, com todos os
+    // clientes sendo varridos várias vezes seguidas.
+    function refreshComputed() {
+      const hoje = getHojeBRT();
+      for (const c of allClientes) {
+        const ordensValidas = (c.ordens || []).filter(o => o.status !== 'CANCELADO');
+        c._totalOrdens = ordensValidas.length || c._count?.ordens || 0;
+        c._totalGasto  = ordensValidas.reduce((acc, o) => acc + (o.valorTotal || 0), 0);
+        const datas = ordensValidas.map(o => o.dataFim || o.createdAt).filter(Boolean).map(d => new Date(d));
+        c._ultimaVisita = datas.length ? new Date(Math.max(...datas)) : null;
+        c._dias         = c._ultimaVisita ? Math.floor((Date.now() - c._ultimaVisita.getTime()) / 86400000) : null;
+        c._temHoje      = ordensValidas.some(o => o.createdAt && dataBRT(o.createdAt) === hoje);
+      }
+
+      filterCounts = { todos: allClientes.length, hoje: 0, recentes: 0, inativos: 0, semNome: 0 };
+      for (const c of allClientes) {
+        if (matchFiltro(c, 'hoje'))     filterCounts.hoje++;
+        if (matchFiltro(c, 'recentes')) filterCounts.recentes++;
+        if (matchFiltro(c, 'inativos')) filterCounts.inativos++;
+        if (matchFiltro(c, 'semNome'))  filterCounts.semNome++;
+      }
+
+      computeNotificaveis();
+    }
+
+    // ── NOTIFICAÇÃO: CLIENTES SEM VISITAR HÁ MUITO TEMPO ──
+    // Mesmo limite do filtro "Inativos 30d+" já existente no CRM. "Ignorar" some
+    // com o cliente da lista por 15 dias (campo notificacaoIgnoradaAte no banco,
+    // compartilhado entre todos os funcionários/dispositivos da empresa).
+    const DIAS_NOTIF = 30;
+    let notificaveis = [];
+
+    function computeNotificaveis() {
+      const agora = Date.now();
+      notificaveis = allClientes.filter(c =>
+        c._dias !== null && c._dias >= DIAS_NOTIF &&
+        (!c.notificacaoIgnoradaAte || new Date(c.notificacaoIgnoradaAte).getTime() <= agora)
+      ).sort((a, b) => (b._dias || 0) - (a._dias || 0));
+      renderNotifBadge();
+    }
+
+    function renderNotifBadge() {
+      const btn   = document.getElementById('btnNotif');
+      const badge = document.getElementById('notifBadge');
+      if (!btn || !badge) return;
+      if (notificaveis.length > 0) {
+        btn.style.display = 'flex';
+        badge.textContent = notificaveis.length > 99 ? '99+' : notificaveis.length;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    function openNotifPanel() {
+      openDrawer();
+      document.getElementById('drawerFooter').style.display = 'none';
+      renderNotifPanelBody();
+    }
+
+    function renderNotifPanelBody() {
+      document.getElementById('drawerTitle').textContent = `Sem visitar há ${DIAS_NOTIF}d+ (${notificaveis.length})`;
+      const body = document.getElementById('drawerBody');
+
+      if (!notificaveis.length) {
+        body.innerHTML = `<div class="state-container">
+          <i class="fas fa-check-circle state-icon" style="color:var(--green)"></i>
+          <div class="state-title">Tudo em dia!</div>
+          <div class="state-sub">Nenhum cliente esquecido no momento.</div>
+        </div>`;
+        return;
+      }
+
+      body.innerHTML = notificaveis.map(c => {
+        const nome = c.nome && c.nome !== 'N/A' ? c.nome : 'Cliente sem nome';
+        return `
+          <div class="notif-row" id="notifRow_${c.id}">
+            <div class="notif-info">
+              <div class="notif-nome">${escHtml(nome)}</div>
+              <div class="notif-meta">${c.telefone ? escHtml(c.telefone) : 'Sem telefone'} · ${c._dias}d sem visitar</div>
+            </div>
+            <div class="notif-actions">
+              <button class="btn-notif-ignore" onclick="ignorarNotificacao('${c.id}')" title="Não mostrar por 15 dias">
+                <i class="fas fa-clock"></i> Ignorar
+              </button>
+              <button class="btn-notif-msg" onclick="openWaModal('${c.id}')" title="Enviar mensagem" ${!c.telefone ? 'disabled' : ''}>
+                <i class="fab fa-whatsapp"></i> Mensagem
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    async function ignorarNotificacao(id) {
+      const row = document.getElementById(`notifRow_${id}`);
+      if (row) row.style.opacity = '.5';
+      try {
+        const r = await window.api.ignorarNotificacaoCliente(id);
+        const c = allClientes.find(x => x.id === id);
+        if (c) c.notificacaoIgnoradaAte = r.notificacaoIgnoradaAte || new Date(Date.now() + 15 * 86400000).toISOString();
+        notificaveis = notificaveis.filter(x => x.id !== id);
+        renderNotifBadge();
+        renderNotifPanelBody();
+        showToast('Cliente ignorado por 15 dias', 'success');
+      } catch {
+        showToast('Erro ao ignorar cliente', 'error');
+        if (row) row.style.opacity = '1';
       }
     }
 
@@ -821,7 +1006,7 @@
         { id: 'semNome',  label: 'Sem Nome' }
       ];
       document.getElementById('filterBar').innerHTML = filtros.map(f => {
-        const count = f.id === 'todos' ? allClientes.length : contarFiltro(f.id);
+        const count = filterCounts[f.id] ?? 0;
         return `<button class="filter-btn ${filtroAtivo === f.id ? 'active' : ''}"
                         onclick="setFiltro('${f.id}')">
           ${f.label}
@@ -832,13 +1017,9 @@
 
     function setFiltro(id) {
       filtroAtivo = id;
-      const q = document.getElementById('searchInput').value.trim().toLowerCase();
-      applyFilters(q);
+      filtered = applyFilterAndSearch();
+      renderGrid();
       renderFilterBar();
-    }
-
-    function contarFiltro(tipo) {
-      return allClientes.filter(c => matchFiltro(c, tipo)).length;
     }
 
     function matchFiltro(c, tipo) {
@@ -861,29 +1042,19 @@
       return brt.toISOString().slice(0, 10);
     }
 
+    // Lêem os valores calculados uma única vez em refreshComputed() — evita
+    // reprocessar o array de ordens de cada cliente a cada render/filtro.
     function clienteTevOrdemHoje(c) {
-      const hoje = getHojeBRT();
-      return (c.ordens || []).some(o =>
-        o.status !== 'CANCELADO' && o.createdAt && dataBRT(o.createdAt) === hoje
-      );
+      return !!c._temHoje;
     }
 
     // ── HELPERS DE DATA / VISITA ──────────────────
     function ultimaVisitaDate(c) {
-      const ordens = (c.ordens || []).filter(o => o.status !== 'CANCELADO');
-      if (!ordens.length) return null;
-      const datas = ordens
-        .map(o => o.dataFim || o.createdAt)
-        .filter(Boolean)
-        .map(d => new Date(d));
-      if (!datas.length) return null;
-      return new Date(Math.max(...datas));
+      return c._ultimaVisita ?? null;
     }
 
     function diasDesdeUltimaVisita(c) {
-      const data = ultimaVisitaDate(c);
-      if (!data) return null;
-      return Math.floor((Date.now() - data.getTime()) / 86400000);
+      return c._dias ?? null;
     }
 
     function badgeVisitaHtml(c) {
@@ -897,9 +1068,7 @@
     }
 
     function calcTotalGasto(c) {
-      return (c.ordens || [])
-        .filter(o => o.status !== 'CANCELADO')
-        .reduce((acc, o) => acc + (o.valorTotal || 0), 0);
+      return c._totalGasto ?? 0;
     }
 
     function gerarLinkWhatsApp(c, dias) {
@@ -910,6 +1079,10 @@
     }
 
     // ── RENDER GRID ───────────────────────────────
+    // Renderiza em lotes de GRID_BATCH cards, carregando mais conforme o usuário
+    // rola a tela (IntersectionObserver) — evita recriar centenas de cards de
+    // uma vez a cada busca/filtro, que é o que travava a rolagem em celulares
+    // mais fracos com listas de clientes grandes.
     function renderGrid() {
       const total    = filtered.length;
       const allTotal = allClientes.length;
@@ -917,6 +1090,8 @@
         total === allTotal
           ? `${total} cliente${total !== 1 ? 's' : ''}`
           : `${total} de ${allTotal} cliente${allTotal !== 1 ? 's' : ''}`;
+
+      if (gridObserver) { gridObserver.disconnect(); gridObserver = null; }
 
       if (total === 0) {
         setGrid(`<div class="state-container">
@@ -927,7 +1102,29 @@
         return;
       }
 
-      document.getElementById('grid').innerHTML = filtered.map(c => clienteCard(c)).join('');
+      const g = document.getElementById('grid');
+      g.style.display = 'grid';
+      g.innerHTML = '';
+      renderedCount = 0;
+      appendNextBatch();
+    }
+
+    function appendNextBatch() {
+      const g = document.getElementById('grid');
+      const sentinel = document.getElementById('gridSentinel');
+      if (sentinel) sentinel.remove();
+
+      const next = filtered.slice(renderedCount, renderedCount + GRID_BATCH);
+      g.insertAdjacentHTML('beforeend', next.map(c => clienteCard(c)).join(''));
+      renderedCount += next.length;
+
+      if (renderedCount < filtered.length) {
+        g.insertAdjacentHTML('beforeend', '<div id="gridSentinel" style="grid-column:1/-1;height:1px"></div>');
+        gridObserver = new IntersectionObserver((entries) => {
+          if (entries[0].isIntersecting) appendNextBatch();
+        }, { rootMargin: '600px' });
+        gridObserver.observe(document.getElementById('gridSentinel'));
+      }
     }
 
     function setGrid(html) {
@@ -943,9 +1140,9 @@
       const primeiraPlaca = veiculos[0]?.placa || null;
       const displayNome   = isNA ? (primeiraPlaca || 'Sem nome') : c.nome;
       const initial       = isNA ? (primeiraPlaca ? primeiraPlaca.charAt(0).toUpperCase() : '?') : c.nome.charAt(0).toUpperCase();
-      const totalGasto= calcTotalGasto(c);
-      const totalOrdens = (c.ordens || []).filter(o => o.status !== 'CANCELADO').length || c._count?.ordens || 0;
-      const visitaBadge = badgeVisitaHtml(c);
+      const totalGasto   = calcTotalGasto(c);
+      const totalOrdens  = c._totalOrdens ?? 0;
+      const visitaBadge  = badgeVisitaHtml(c);
 
       // Se sem nome, não mostrar a placa novamente nas tags (já está no nome)
       const veiculosParaTags = isNA && primeiraPlaca ? veiculos.slice(1) : veiculos;
@@ -1004,14 +1201,21 @@
     }
 
     // ── BUSCA ─────────────────────────────────────
+    // Debounce de 250ms: digitando rápido, só filtra/re-renderiza o grid depois
+    // que a pessoa parar de digitar, em vez de refazer o grid a cada tecla.
     function onSearch(input) {
       const q = input.value.trim().toLowerCase();
       document.getElementById('searchClear').classList.toggle('visible', q.length > 0);
-      applyFilters(q);
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        filtered = applyFilterAndSearch(q);
+        renderGrid();
+      }, 250);
     }
 
-    function applyFilters(q) {
-      filtered = allClientes.filter(c => {
+    function applyFilterAndSearch(q) {
+      if (q === undefined) q = document.getElementById('searchInput').value.trim().toLowerCase();
+      return allClientes.filter(c => {
         const matchSearch = !q ||
           (c.nome || '').toLowerCase().includes(q) ||
           (c.telefone || '').includes(q) ||
@@ -1022,13 +1226,14 @@
         const matchFilter = filtroAtivo === 'todos' || matchFiltro(c, filtroAtivo);
         return matchSearch && matchFilter;
       });
-      renderGrid();
     }
 
     function clearSearch() {
+      clearTimeout(searchTimer);
       document.getElementById('searchInput').value = '';
       document.getElementById('searchClear').classList.remove('visible');
-      applyFilters('');
+      filtered = applyFilterAndSearch('');
+      renderGrid();
     }
 
     // ── DRAWER DETALHE ────────────────────────────
@@ -1041,8 +1246,7 @@
       document.getElementById('drawerFooter').style.display = 'none';
 
       const totalGasto  = calcTotalGasto(c);
-      const ordensValidas = (c.ordens || []).filter(o => o.status !== 'CANCELADO');
-      const totalOrdens = ordensValidas.length || c._count?.ordens || 0;
+      const totalOrdens = c._totalOrdens ?? 0;
       const veiculos    = c.veiculos || [];
       const dias        = diasDesdeUltimaVisita(c);
       const uvData      = ultimaVisitaDate(c);
