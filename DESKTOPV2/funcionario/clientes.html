@@ -81,6 +81,15 @@
     }
 
     /* ── NOTIFICAÇÕES: CLIENTES INATIVOS ── */
+    .notif-toggle {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--mid); font-weight: 600;
+      padding: 2px 0 14px;
+      cursor: pointer;
+    }
+    .notif-toggle input {
+      width: 15px; height: 15px; accent-color: var(--blue-d); cursor: pointer;
+    }
     .notif-row {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px; padding: 12px 0;
@@ -916,15 +925,21 @@
     // Mesmo limite do filtro "Inativos 30d+" já existente no CRM. "Ignorar" some
     // com o cliente da lista por 15 dias (campo notificacaoIgnoradaAte no banco,
     // compartilhado entre todos os funcionários/dispositivos da empresa).
+    // Por padrão só entram quem tem WhatsApp cadastrado (é o que dá pra agir);
+    // quem não tem fica escondido atrás de um toggle, com atalho pra cadastrar o número.
     const DIAS_NOTIF = 30;
-    let notificaveis = [];
+    let notificaveis          = []; // elegíveis com telefone
+    let notificaveisSemFone   = []; // elegíveis sem telefone
+    let mostrarSemWhatsapp    = false;
 
     function computeNotificaveis() {
       const agora = Date.now();
-      notificaveis = allClientes.filter(c =>
+      const elegiveis = allClientes.filter(c =>
         c._dias !== null && c._dias >= DIAS_NOTIF &&
         (!c.notificacaoIgnoradaAte || new Date(c.notificacaoIgnoradaAte).getTime() <= agora)
-      ).sort((a, b) => (b._dias || 0) - (a._dias || 0));
+      );
+      notificaveis        = elegiveis.filter(c => c.telefone).sort((a, b) => (b._dias || 0) - (a._dias || 0));
+      notificaveisSemFone = elegiveis.filter(c => !c.telefone).sort((a, b) => (b._dias || 0) - (a._dias || 0));
       renderNotifBadge();
     }
 
@@ -941,17 +956,30 @@
     }
 
     function openNotifPanel() {
+      mostrarSemWhatsapp = false;
       openDrawer();
       document.getElementById('drawerFooter').style.display = 'none';
+      renderNotifPanelBody();
+    }
+
+    function toggleSemWhatsapp(checkbox) {
+      mostrarSemWhatsapp = checkbox.checked;
       renderNotifPanelBody();
     }
 
     function renderNotifPanelBody() {
       document.getElementById('drawerTitle').textContent = `Sem visitar há ${DIAS_NOTIF}d+ (${notificaveis.length})`;
       const body = document.getElementById('drawerBody');
+      const lista = mostrarSemWhatsapp ? [...notificaveis, ...notificaveisSemFone] : notificaveis;
 
-      if (!notificaveis.length) {
-        body.innerHTML = `<div class="state-container">
+      const toggleHtml = notificaveisSemFone.length > 0 ? `
+        <label class="notif-toggle">
+          <input type="checkbox" ${mostrarSemWhatsapp ? 'checked' : ''} onchange="toggleSemWhatsapp(this)">
+          Mostrar também ${notificaveisSemFone.length} sem WhatsApp cadastrado
+        </label>` : '';
+
+      if (!lista.length) {
+        body.innerHTML = toggleHtml + `<div class="state-container">
           <i class="fas fa-check-circle state-icon" style="color:var(--green)"></i>
           <div class="state-title">Tudo em dia!</div>
           <div class="state-sub">Nenhum cliente esquecido no momento.</div>
@@ -959,8 +987,15 @@
         return;
       }
 
-      body.innerHTML = notificaveis.map(c => {
+      body.innerHTML = toggleHtml + lista.map(c => {
         const nome = c.nome && c.nome !== 'N/A' ? c.nome : 'Cliente sem nome';
+        const acaoMsg = c.telefone
+          ? `<button class="btn-notif-msg" onclick="openWaModal('${c.id}')" title="Enviar mensagem">
+               <i class="fab fa-whatsapp"></i> Mensagem
+             </button>`
+          : `<button class="btn-notif-msg" style="color:var(--blue-d);border-color:#bfdbfe" onclick="openFormEdit('${c.id}')" title="Cadastrar WhatsApp">
+               <i class="fas fa-pencil-alt"></i> Adicionar nº
+             </button>`;
         return `
           <div class="notif-row" id="notifRow_${c.id}">
             <div class="notif-info">
@@ -971,9 +1006,7 @@
               <button class="btn-notif-ignore" onclick="ignorarNotificacao('${c.id}')" title="Não mostrar por 15 dias">
                 <i class="fas fa-clock"></i> Ignorar
               </button>
-              <button class="btn-notif-msg" onclick="openWaModal('${c.id}')" title="Enviar mensagem" ${!c.telefone ? 'disabled' : ''}>
-                <i class="fab fa-whatsapp"></i> Mensagem
-              </button>
+              ${acaoMsg}
             </div>
           </div>`;
       }).join('');
@@ -986,7 +1019,8 @@
         const r = await window.api.ignorarNotificacaoCliente(id);
         const c = allClientes.find(x => x.id === id);
         if (c) c.notificacaoIgnoradaAte = r.notificacaoIgnoradaAte || new Date(Date.now() + 15 * 86400000).toISOString();
-        notificaveis = notificaveis.filter(x => x.id !== id);
+        notificaveis        = notificaveis.filter(x => x.id !== id);
+        notificaveisSemFone = notificaveisSemFone.filter(x => x.id !== id);
         renderNotifBadge();
         renderNotifPanelBody();
         showToast('Cliente ignorado por 15 dias', 'success');
