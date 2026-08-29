@@ -1307,7 +1307,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
   // Linha por ordem
   let linhas = '';
   for (const o of ordens) {
-    const modelo = o.veiculo.modelo ?? 'Veículo';
+    const modelo = o.veiculo?.modelo ?? 'Item avulso';
     const pagMethods = o.pagamentos.length > 0
       ? o.pagamentos.map(p => formatarMetodo(p.metodo)).join('/')
       : 'PENDENTE';
@@ -1335,7 +1335,7 @@ async function handleRelatorioData(date: Date, empresaId: string): Promise<strin
   // Comissões por lavador — usa OrdemServicoLavador.ganho (já divide multi-lavador)
   const comissoesPorLavador: Record<string, { taxa: number; total: number; itens: string[] }> = {};
   for (const o of ordens) {
-    const modelo = (o.veiculo.modelo ?? 'Veículo').toUpperCase();
+    const modelo = (o.veiculo?.modelo ?? 'Item avulso').toUpperCase();
     if (o.ordemLavadores.length > 0) {
       for (const ol of o.ordemLavadores) {
         const nome = ol.lavador.nome;
@@ -1895,7 +1895,10 @@ async function handlePatioCommand(empresaId: string): Promise<string> {
     const horarioEntrada = ordem.dataInicio?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       ?? ordem.createdAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    resultado += `🚗 *${(ordem.veiculo.modelo ?? 'Veículo').toUpperCase()}* (${ordem.veiculo.placa})\n`;
+    const veiculoLinha = ordem.veiculo
+      ? `*${(ordem.veiculo.modelo ?? 'Veículo').toUpperCase()}* (${ordem.veiculo.placa})`
+      : `*ITEM AVULSO*`;
+    resultado += `🚗 ${veiculoLinha}\n`;
     resultado += `  Cliente: ${ordem.cliente.nome}\n`;
     resultado += `  Entrada: *${horarioEntrada}*\n`;
     resultado += `  Lavador: ${ordem.lavador?.nome ?? '(sem atribuição)'}\n`;
@@ -2571,8 +2574,8 @@ async function handlePendentesCommand(empresaId: string): Promise<string> {
 
   let r = `⏳ *ORDENS ATIVAS (${ordens.length})*\n\n`;
   for (const o of ordens) {
-    const modelo = (o.veiculo.modelo ?? 'Veículo').toUpperCase();
-    r += `#${o.numeroOrdem} · ${modelo} ${o.veiculo.placa ?? ''} · *R$ ${o.valorTotal.toFixed(2)}*\n`;
+    const modelo = (o.veiculo?.modelo ?? 'Item avulso').toUpperCase();
+    r += `#${o.numeroOrdem} · ${modelo} ${o.veiculo?.placa ?? ''} · *R$ ${o.valorTotal.toFixed(2)}*\n`;
     r += `  ${lbl[o.status] ?? o.status} · ${o.lavador?.nome ?? '(sem lavador)'}\n\n`;
   }
 
@@ -3118,8 +3121,8 @@ async function handleOrdensAtivas(empresaId: string, user: WhatsAppUser): Promis
 
   let r = `📋 *Ordens ativas agora (${ordens.length}):*\n\n`;
   for (const o of ordens) {
-    const modelo = (o.veiculo.modelo ?? 'Veículo').toUpperCase();
-    const placa = o.veiculo.placa ?? '';
+    const modelo = (o.veiculo?.modelo ?? 'Item avulso').toUpperCase();
+    const placa = o.veiculo?.placa ?? '';
     const status = statusLabel[o.status] ?? o.status;
     r += `#${o.numeroOrdem} · ${modelo} ${placa} · *R$ ${o.valorTotal.toFixed(2)}* · ${status}\n`;
   }
@@ -3184,8 +3187,8 @@ async function handlePixOrdem(
     const { qrCodeBuffer, expiraEm, txId } = await gerarPixParaOrdem(ordem.id, empresaId, reusar);
 
     const cliente = ordem.cliente.nome;
-    const modelo = (ordem.veiculo.modelo ?? 'Veículo').toUpperCase();
-    const placa = ordem.veiculo.placa ?? '';
+    const modelo = (ordem.veiculo?.modelo ?? 'Item avulso').toUpperCase();
+    const placa = ordem.veiculo?.placa ?? '';
     const expMin = Math.round((expiraEm.getTime() - Date.now()) / 60000);
 
     const caption =
