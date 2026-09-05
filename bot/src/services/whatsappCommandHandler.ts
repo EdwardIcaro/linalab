@@ -127,6 +127,9 @@ const pendingCommands = new Map<string, string>();
 // Admin navegando menu de notificações individuais (JID → empresaId)
 const pendingNotifMenu = new Map<string, string>();
 
+// Admin com menu de "resumo das saídas" aberto, aguardando o número do período (JID → empresaId)
+const pendingResumoSaidas = new Map<string, string>();
+
 // Lavador com menu numerado aberto (JID → { lavadorId, empresaId })
 const pendingLavadorMenu = new Map<string, { lavadorId: string; empresaId: string; actions: string[] }>();
 
@@ -836,6 +839,11 @@ export async function handleIncomingMessage(
       return handleNotifMenuStep(from, pendingNotifMenu.get(from)!, command);
     }
 
+    // Menu de "resumo das saídas" aguardando escolha de período
+    if (pendingResumoSaidas.has(from)) {
+      return handleResumoSaidasStep(pendingResumoSaidas.get(from)!, from, command);
+    }
+
     // Detectar saudação simples — usada para evitar menu de empresa e contexto desnecessário
     const isSaudacao = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo\s*bem|ol[aá]\s*lina|oi\s*lina|hey|opa|eae|boa|sauda[çc][aã]o|sauda[çc][oõ]es|salve|oi\s*gente|oi\s*pessoal|boas|al[oô])$/i.test(command);
 
@@ -1010,6 +1018,13 @@ export async function handleIncomingMessage(
       const hoje = new Date(); hoje.setHours(0,0,0,0);
       const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
       return handleSaidasDetalhadas(hoje, amanha, empresaId);
+    }
+
+    // "resumo das saídas" / "resumo saídas" — abre o menu numerado de período.
+    // Verificar ANTES do isRelatorioRequest (que também casa com "resumo").
+    if (/^resumo\s+(das?\s+)?sa[íi]das?\b/i.test(message)) {
+      pendingResumoSaidas.set(from, empresaId);
+      return buildResumoSaidasMenuText();
     }
 
     const isRelatorioRequest = /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
@@ -1583,6 +1598,81 @@ async function handleSaidasDetalhadas(inicio: Date, fim: Date, empresaId: string
   }
   const total = saidas.reduce((acc, s) => acc + s.valor, 0);
   r += `\nTotal: *R$ ${total.toFixed(2)}* (${saidas.length} lançamento(s))`;
+  return r.trim();
+}
+
+// ==========================================
+// RESUMO DAS SAÍDAS — menu numerado de período
+// ==========================================
+
+function buildResumoSaidasMenuText(): string {
+  return `📊 *Resumo das Saídas*\n\nDe qual período você quer ver?\n\n` +
+    `1️⃣ Hoje\n2️⃣ Últimos 7 dias\n3️⃣ Últimos 15 dias\n4️⃣ Últimos 30 dias\n\n` +
+    `_Responda com o número._`;
+}
+
+const RESUMO_SAIDAS_OPCOES = [
+  { label: 'Hoje', dias: 1 },
+  { label: 'Últimos 7 dias', dias: 7 },
+  { label: 'Últimos 15 dias', dias: 15 },
+  { label: 'Últimos 30 dias', dias: 30 },
+];
+
+async function handleResumoSaidasStep(empresaId: string, from: string, command: string): Promise<string> {
+  pendingResumoSaidas.delete(from);
+  const idx = parseInt(command, 10);
+  const opcao = RESUMO_SAIDAS_OPCOES[idx - 1];
+  if (!opcao) return '❌ Opção inválida. Digite *resumo das saídas* de novo pra escolher.';
+
+  const fim = new Date(); fim.setHours(23, 59, 59, 999);
+  const inicio = new Date(); inicio.setDate(inicio.getDate() - (opcao.dias - 1)); inicio.setHours(0, 0, 0, 0);
+
+  return handleResumoSaidas(opcao.label, inicio, fim, opcao.dias, empresaId);
+}
+
+async function handleResumoSaidas(periodoLabel: string, inicio: Date, fim: Date, dias: number, empresaId: string): Promise<string> {
+  const saidas = await prisma.caixaRegistro.findMany({
+    where: { empresaId, tipo: 'SAIDA', data: { gte: inicio, lte: fim } },
+    select: { valor: true, categoriaGasto: true },
+  });
+
+  if (saidas.length === 0) {
+    return `💸 *Resumo das Saídas — ${periodoLabel}*\n\nNenhuma saída registrada nesse período.`;
+  }
+
+  const total = saidas.reduce((s, r) => s + r.valor, 0);
+
+  const porCategoria = new Map<string, number>();
+  for (const s of saidas) {
+    const cat = s.categoriaGasto || 'Outros';
+    porCategoria.set(cat, (porCategoria.get(cat) ?? 0) + s.valor);
+  }
+
+  // Compara com o período anterior de mesmo tamanho (ex: 7 dias vs os 7 dias antes)
+  const inicioAnt = new Date(inicio); inicioAnt.setDate(inicioAnt.getDate() - dias);
+  const fimAnt = new Date(inicio); fimAnt.setDate(fimAnt.getDate() - 1); fimAnt.setHours(23, 59, 59, 999);
+  const saidasAnt = await prisma.caixaRegistro.findMany({
+    where: { empresaId, tipo: 'SAIDA', data: { gte: inicioAnt, lte: fimAnt } },
+    select: { valor: true },
+  });
+  const totalAnt = saidasAnt.reduce((s, r) => s + r.valor, 0);
+
+  let r = `💸 *Resumo das Saídas — ${periodoLabel}*\n\n`;
+  r += `Total: *R$ ${total.toFixed(2)}* (${saidas.length} lançamento${saidas.length === 1 ? '' : 's'})\n`;
+
+  if (totalAnt > 0) {
+    const variacao = ((total - totalAnt) / totalAnt) * 100;
+    const seta = variacao >= 0 ? '▲' : '▼';
+    r += `Período anterior: R$ ${totalAnt.toFixed(2)} (${seta} ${Math.abs(variacao).toFixed(0)}%)\n`;
+  }
+
+  r += `\n*Por categoria:*\n`;
+  const ordenado = [...porCategoria.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [cat, valor] of ordenado) {
+    const pct = Math.round((valor / total) * 100);
+    r += `• ${cat}: *R$ ${valor.toFixed(2)}* (${pct}%)\n`;
+  }
+
   return r.trim();
 }
 
@@ -2579,23 +2669,31 @@ async function handleClientesCommand(empresaId: string): Promise<string> {
  * Handler: /caixa — query direta ao banco
  */
 async function handleCaixaCommand(empresaId: string): Promise<string> {
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const amanha = new Date(hoje); amanha.setDate(amanha.getDate()+1);
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { horarioAbertura: true } });
+  const { start, end } = getWorkdayRangeBRT(new Date(), empresa?.horarioAbertura ?? undefined);
 
-  const caixa = await prisma.caixaRegistro.findMany({
-    where: { empresaId, data: { gte: hoje, lt: amanha } },
-    orderBy: { data: 'desc' },
-  });
+  // Entradas de verdade vêm de Pagamento (dinheiro efetivamente recebido) — CaixaRegistro.tipo
+  // "ENTRADA" nunca é criado no sistema, só existe "SAIDA". Usar isso aqui sempre dava R$0,00.
+  const [pagamentos, saidasRegistros] = await Promise.all([
+    prisma.pagamento.findMany({
+      where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
+      select: { valor: true },
+    }),
+    prisma.caixaRegistro.findMany({
+      where: { empresaId, tipo: 'SAIDA', data: { gte: start, lte: end } },
+      orderBy: { data: 'desc' },
+    }),
+  ]);
 
-  const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s,c) => s + c.valor, 0);
-  const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s,c) => s + c.valor, 0);
+  const entradas = pagamentos.reduce((s, p) => s + p.valor, 0);
+  const saidas = saidasRegistros.reduce((s, c) => s + c.valor, 0);
 
   let r = `💰 *CAIXA DO DIA*\n\n`;
   r += `Entradas: *R$ ${entradas.toFixed(2)}*\n`;
   r += `Saídas: *R$ ${saidas.toFixed(2)}*\n`;
   r += `Saldo: *R$ ${(entradas - saidas).toFixed(2)}*`;
 
-  const ultSaidas = caixa.filter(c => c.tipo === 'SAIDA').slice(0, 5);
+  const ultSaidas = saidasRegistros.slice(0, 5);
   if (ultSaidas.length > 0) {
     r += `\n\n📋 Últimas saídas:\n`;
     for (const s of ultSaidas) {
@@ -2660,7 +2758,8 @@ function handleAjudaCommand(): string {
     `vale [nome] · vales em aberto\n\n` +
     `*Saídas:*\n` +
     `saídas · saídas hoje · saídas semana · saídas mês\n` +
-    `saídas 01/04 · saídas de 01/04 a 07/04\n\n` +
+    `saídas 01/04 · saídas de 01/04 a 07/04\n` +
+    `resumo das saídas _(menu por período + categoria)_\n\n` +
     `*Avarias:*\n` +
     `reports · ver avarias · tem report · fotos de avaria\n\n` +
     `*PIX:*\n` +
