@@ -783,6 +783,11 @@ export async function handleIncomingMessage(
       // Step pendente de report tem prioridade
       if (pendingReports.has(from)) return handleReportStep(from, message);
 
+      // Menu de "resumo das saídas" aguardando escolha de período
+      if (pendingResumoSaidas.has(from)) {
+        return handleResumoSaidasStep(pendingResumoSaidas.get(from)!, from, command);
+      }
+
       const isSaudacaoFunc = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo|hey|opa|eae|boa|salve|boas|al[oô])$/i.test(command);
       if (isSaudacaoFunc || command === 'ajuda' || command === 'menu')
         return handleSaudacaoFuncionario(user);
@@ -810,6 +815,12 @@ export async function handleIncomingMessage(
         return handleClientesCommand(empresaId);
       if (['funcionarios', 'funcionários', 'equipe', 'lavadores'].includes(command))
         return handleLavadoresCommand(empresaId);
+
+      if (/^resumo\s+(?:d[ae]s?\s+)?sa[íi]das?\b/i.test(message)) {
+        if (!hasPermission(user, 'ver_financeiro')) return getPermissionDeniedMessage();
+        pendingResumoSaidas.set(from, empresaId);
+        return buildResumoSaidasMenuText();
+      }
 
       return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
     }
