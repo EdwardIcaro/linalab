@@ -88,3 +88,7 @@ export async function botGetPin(id: string): Promise<{ active: boolean; claimed:
 export async function botCancelPin(id: string): Promise<void> {
   await botFetch(`/bot-pin/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
+
+export async function botGerarRelatorioFinanceiro(empresaId: string, ano: number, mes: number): Promise<{ token: string; hp: number }> {
+  return botFetch('/gerar-relatorio-financeiro', { method: 'POST', body: { empresaId, ano, mes } });
+}

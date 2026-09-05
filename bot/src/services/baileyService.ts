@@ -11,6 +11,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
 import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio, handleDpPontoKeyword, handleDpLocation, handleDpEspelho } from './whatsappCommandHandler';
+import { notificarReconexao } from './ownerNotificationService';
 import { validateAndClaimByCode } from './pairingCodeStore';
 import { validateAndClaimBotCode } from './botUserCodeStore';
 
@@ -262,6 +263,7 @@ export async function initBaileys(): Promise<void> {
           data: { status: 'connected', qrCode: null, ownerPhone: phone },
         });
         console.log('[Baileys] ✅ Conectado:', phone);
+        notificarReconexao(phone).catch(e => console.error('[OwnerNotify] Erro ao notificar reconexão:', e));
       }
 
       if (connection === 'close') {

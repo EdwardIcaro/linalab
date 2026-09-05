@@ -50,6 +50,8 @@ import {
 
 import { botAuth } from './middleware/botAuth';
 import { scheduleCleanupReports } from './cron/cleanupReports';
+import { scheduleRelatorioFinanceiroMensal } from './cron/relatorioFinanceiroMensal';
+import { gerarRelatorioMensal } from './services/relatorioFinanceiroService';
 import prisma from './db';
 
 const app = express();
@@ -147,6 +149,20 @@ app.post('/send-image', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao enviar imagem', details: String(err) });
+  }
+});
+
+// ── Gerar/regenerar relatório de saúde financeira de um mês específico ───────
+app.post('/gerar-relatorio-financeiro', async (req, res) => {
+  const { empresaId, ano, mes } = req.body as { empresaId: string; ano: number; mes: number };
+  if (!empresaId || !ano || !mes) return res.status(400).json({ error: 'empresaId, ano e mes são obrigatórios' });
+
+  try {
+    const resultado = await gerarRelatorioMensal(empresaId, ano, mes);
+    if (!resultado) return res.status(422).json({ error: 'Sem movimentação financeira nesse período' });
+    return res.json({ token: resultado.token, hp: resultado.hp });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao gerar relatório', details: String(err) });
   }
 });
 
@@ -284,6 +300,7 @@ async function startBot() {
     });
 
     scheduleCleanupReports();
+    scheduleRelatorioFinanceiroMensal();
 
     // Restaurar sessão WhatsApp salva no banco
     console.log('🔄 Restaurando sessão WhatsApp...');

@@ -521,6 +521,8 @@ const api = {
   },
   createFechamento: (data) => fetchApi('/caixa/fechamento', { method: 'POST', body: JSON.stringify(data) }),
   createSaida: (data) => fetchApi('/caixa/saida', { method: 'POST', body: JSON.stringify(data) }),
+  getRelatorioFinanceiro: (token) => fetchPublicApi(`/relatorio-financeiro/${token}`),
+  gerarRelatorioFinanceiro: (mes, ano) => fetchApi('/relatorio-financeiro/gerar', { method: 'POST', body: JSON.stringify({ mes, ano }) }),
   getRolesAndUsers: () => fetchApi('/roles'),
   createSangria: (data) => fetchApi('/caixa/sangria', { method: 'POST', body: JSON.stringify(data) }),
   updateCaixaRegistro: (id, data) => fetchApi(`/caixa/registros/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

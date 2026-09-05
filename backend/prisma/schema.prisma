@@ -80,6 +80,7 @@ model Empresa {
   lcServicos                 LcServico[]
   lcOrdens                   LcOrdemServico[]
   lcPagamentos               LcPagamento[]
+  relatoriosFinanceiroLinks  RelatorioFinanceiroLink[]
 
   @@map("empresas")
 }
@@ -235,6 +236,7 @@ model CaixaRegistro {
   fornecedorId   String?
   lavadorId      String?
   descricao      String
+  categoriaGasto String?        // Produtos | Contas | Manutenção | Vale/Adiantamento | Outros — análise financeira inteligente
   comprovante    String?
   origem         String?
   lancadoPor     String?
@@ -1280,4 +1282,44 @@ model EmailRegra {
   updatedAt       DateTime @updatedAt
 
   @@map("email_regras")
+}
+
+// Log de eventos do sistema pro dono da plataforma (restart do bot, erros não
+// tratados, perguntas que a Lina não conseguiu responder). Só o bot lê/escreve
+// nela hoje — espelhada aqui pra manter os dois schema.prisma sincronizados.
+model SystemEvent {
+  id        String    @id @default(cuid())
+  tipo      String // 'RESTART' | 'ERRO_USUARIO' | 'TOOL_FALHA' | ...
+  mensagem  String
+  contexto  Json?
+  criadoEm  DateTime  @default(now())
+  enviadoEm DateTime?
+
+  @@index([tipo, enviadoEm])
+  @@map("system_events")
+}
+
+// Relatório mensal de "Saúde Financeira" — gerado pelo cron do bot (dia 1),
+// dados congelados no momento da geração. Espelhado aqui pro backend servir
+// a página pública via token; expira em 7 dias, admin pode gerar um novo.
+model RelatorioFinanceiroLink {
+  id             String    @id @default(cuid())
+  token          String    @unique
+  empresaId      String
+  mesReferencia  String    // "2026-08"
+  entradas       Float
+  saidas         Float
+  saldo          Float
+  entradasMesAnt Float
+  saidasMesAnt   Float
+  hp             Int
+  categorias     Json      // [{ nome, valor }]
+  lancamentos    Json      // [{ data, descricao, categoria, valor }]
+  insightIA      String
+  criadoEm       DateTime  @default(now())
+  expiraEm       DateTime
+  empresa        Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, mesReferencia])
+  @@map("relatorio_financeiro_links")
 }

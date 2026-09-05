@@ -2361,6 +2361,16 @@
                         </div>
                     </div>
 
+                    <div class="form-group" x-show="transactionModal.type === 'saida' && transactionModal.categoria !== 'Adiantamento'">
+                        <label class="form-label">Tipo de gasto <span style="color: var(--finance-text-muted); font-weight: 400;">(pro relatório financeiro)</span></label>
+                        <select class="form-select" x-model="transactionModal.categoriaGasto">
+                            <option value="Produtos">Produtos</option>
+                            <option value="Contas">Contas</option>
+                            <option value="Manutenção">Manutenção</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Responsável (Fornecedor / Funcionário)</label>
                         <input
@@ -2870,6 +2880,7 @@
                 valor: '',
                 formaPagamento: 'DINHEIRO',
                 categoria: 'Despesa',
+                categoriaGasto: 'Outros', // Produtos | Contas | Manutenção | Vale/Adiantamento | Outros — análise financeira
                 descricao: '',
                 lavadorId: '',
                 fornecedorNome: '',
@@ -3466,6 +3477,7 @@
                     modalState.valor = tx.valor;
                     modalState.formaPagamento = tx.formaPagamento || 'DINHEIRO';
                     modalState.categoria = tx.lavadorId ? 'Adiantamento' : (tx.categoria || 'Despesa');
+                    modalState.categoriaGasto = tx.categoriaGasto || 'Outros';
                     modalState.descricao = tx.descricao.replace(/\[(Despesa|Adiantamento|Outro)\]\s*/, '').replace(/^Adiantamento para .+$/, '');
                     modalState.lavadorId = tx.lavadorId || '';
                     modalState.fornecedorNome = tx.fornecedor?.nome || tx.lavador?.nome || '';
@@ -3595,6 +3607,7 @@
                                 valor: valor,
                                 formaPagamento: modal.formaPagamento,
                                 tipo: modal.categoria,
+                                categoriaGasto: modal.categoria === 'Adiantamento' ? 'Vale/Adiantamento' : modal.categoriaGasto,
                                 descricao: modal.descricao,
                                 fornecedorNome: modal.fornecedorNome,
                                 lavadorId: modal.lavadorId || null,

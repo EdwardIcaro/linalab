@@ -6,7 +6,9 @@
 import { randomBytes } from 'crypto';
 import prisma from '../db';
 import { registrarPontoPoller } from './dpPontoPoller';
-import { chatCompletion, transcribeAudio } from './groqService';
+import { chatCompletion, chatCompletionComFerramentas, transcribeAudio } from './groqService';
+import { FERRAMENTAS, executarFerramenta } from './linaTools';
+import { registrarEvento, formatarErro } from './ownerNotificationService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
 import { handleOwnerModeMessage } from './ownerModeService';
@@ -107,6 +109,7 @@ interface PendingSaida {
   descricao: string | null;
   formaPagamento: string | null;
   categoria: string;
+  categoriaGasto: string; // Produtos | Contas | Manutenção | Vale/Adiantamento | Outros — análise financeira
   fornecedorNome: string | null | undefined; // undefined = não perguntado; null = pulou; string = fornecido
   lavadorId: string | null | undefined;      // undefined = não perguntado; null = pulou
   lavadorNome: string | null | undefined;
@@ -869,6 +872,21 @@ export async function handleIncomingMessage(
       ]);
     }
 
+    // Pergunta sobre o PRÓPRIO SISTEMA (planos, Data Point, Lina Center, ecossistema)
+    // não depende de nenhuma empresa — responde antes do gate de seleção abaixo,
+    // que senão bloquearia toda pergunta livre até escolher uma empresa à toa.
+    const isPerguntaSistema = /\b(data\s*point|lina\s*center|lina\s*wash|ecossistema\s*lina|plano[s]?\s+(da\s+)?lina|assinatura[s]?\s+(da\s+)?lina|o\s+que\s+[eé]\s+(o|a)\s+(sistema|lina)|como\s+funciona\s+(o|a)\s+lina)\b/i.test(message);
+    if (isPerguntaSistema) {
+      const { resposta } = await chatCompletionComFerramentas(
+        message,
+        '',
+        FERRAMENTAS.filter(f => f.function?.name === 'explicarSistema'),
+        (nome, args) => executarFerramenta(nome, args, { empresaId: '', user }),
+        'explicarSistema'
+      );
+      return resposta || 'Não tenho uma explicação pronta sobre isso ainda.';
+    }
+
     // ── ADMIN: resolver empresa pelo contexto ─────────────────────────────────
     const empresas = user.empresas ?? [];
 
@@ -1106,10 +1124,23 @@ export async function handleIncomingMessage(
       dailyContext += ctxExtra;
     }
 
-    return chatCompletion(message, dailyContext);
+    const { resposta, falhas } = await chatCompletionComFerramentas(
+      message,
+      dailyContext,
+      FERRAMENTAS,
+      (nome, args) => executarFerramenta(nome, args, { empresaId, user })
+    );
+
+    if (falhas.length > 0) {
+      registrarEvento('TOOL_FALHA', `Ferramenta(s) falharam: ${falhas.join(', ')} — pergunta: "${message.slice(0, 100)}"`, { empresaId, from }).catch(() => {});
+    }
+
+    return resposta || '❌ Não consegui montar uma resposta agora. Tenta reformular?';
 
   } catch (error) {
     console.error('[WhatsApp] Erro ao processar mensagem:', error);
+    const { texto, contexto } = formatarErro(error, { from, mensagemUsuario: message });
+    registrarEvento('ERRO_USUARIO', texto, contexto).catch(() => {});
     return '❌ Desculpe, ocorreu um erro. Tente novamente.';
   }
 }
@@ -1201,6 +1232,29 @@ function extrairPeriodoBusca(texto: string): { inicio: Date; fim: Date; label: s
     const fim = new Date(); fim.setHours(23, 59, 59, 999);
     const inicio = new Date(); inicio.setDate(inicio.getDate() - 6); inicio.setHours(0, 0, 0, 0);
     return { inicio, fim, label: 'últimos 7 dias', resto: texto.replace(semanaMatch[0], '').trim() };
+  }
+
+  // Mês nomeado ("agosto", "do mês de agosto", "setembro de 2026") — checado ANTES do
+  // "mês atual" genérico abaixo, senão "do mês" é consumido primeiro e sobra "de agosto"
+  // tentando virar (erroneamente) um nome de lavador.
+  const MESES: Record<string, number> = {
+    janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6,
+    julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+  };
+  const mesNomeMatch = texto.match(
+    /\b(?:(?:do|no|em)\s+m[eê]s\s+de\s+|m[eê]s\s+de\s+|de\s+)?(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b(?:\s*(?:de|\/)\s*(\d{4}))?/i
+  );
+  if (mesNomeMatch) {
+    const nomeMes = mesNomeMatch[1].toLowerCase().replace('ç', 'c');
+    const mesNum = MESES[nomeMes];
+    const ano = mesNomeMatch[2] ? parseInt(mesNomeMatch[2], 10) : new Date().getFullYear();
+    const { start, end } = getMonthRangeBRT(ano, mesNum);
+    return {
+      inicio: start,
+      fim: end,
+      label: `${mesNomeMatch[1]}${mesNomeMatch[2] ? '/' + mesNomeMatch[2] : ''}`,
+      resto: texto.replace(mesNomeMatch[0], '').trim(),
+    };
   }
 
   const mesMatch = texto.match(/\bmensal\b|\beste\s+m[eê]s\b|\bdo\s+m[eê]s\b|\bm[eê]s\b/i);
@@ -2392,8 +2446,8 @@ async function handleFaturamentoCommand(empresaId: string, textoLivre?: string):
     }
   }
 
-  // "faturamento lavadores"/"faturamento todos" — sem filtro de nome, lista geral
-  if (nomeFiltro && /^(lavadores|todos|todas)$/i.test(nomeFiltro.trim())) nomeFiltro = undefined;
+  // "faturamento lavadores"/"faturamento todos"/"faturamento total" — sem filtro, lista geral
+  if (nomeFiltro && /^(lavadores|todos|todas|total|geral)$/i.test(nomeFiltro.trim())) nomeFiltro = undefined;
 
   let lavadorFiltroId: string | null = null;
   let lavadorFiltroNome: string | null = null;
@@ -2836,6 +2890,7 @@ async function extrairDadosSaida(message: string): Promise<{
   descricao: string | null;
   formaPagamento: string | null;
   categoria: string;
+  categoriaGasto: string;
 } | null> {
   const prompt = `Extraia dados de uma saída financeira. Retorne APENAS JSON sem markdown.
 Campos:
@@ -2843,18 +2898,23 @@ Campos:
 - descricao: texto do que foi pago (null se não mencionado explicitamente)
 - formaPagamento: "PIX" | "DINHEIRO" | "CARTAO" | "NFE" (null se não mencionado)
 - categoria: "Despesa" | "Adiantamento" | "Outro" (padrão "Despesa")
+- categoriaGasto: "Produtos" | "Contas" | "Manutenção" | "Vale/Adiantamento" | "Outros" — classificação
+  pro relatório financeiro. "Produtos" = insumos/material usado no serviço (produto químico,
+  cera, peça). "Contas" = despesas fixas recorrentes (aluguel, água, luz, internet). "Manutenção"
+  = concerto/reparo de equipamento ou estrutura. "Vale/Adiantamento" = sempre que categoria for
+  "Adiantamento". "Outros" = quando não se encaixa claramente ou não há descrição.
 
 Regras:
 - formaPagamento: só preencha se o usuário mencionar explicitamente
 - descricao: só preencha se descreve claramente o gasto; capitalize
-- Se a mensagem tiver "adiantamento" → categoria = "Adiantamento"
+- Se a mensagem tiver "adiantamento" → categoria = "Adiantamento" e categoriaGasto = "Vale/Adiantamento"
 
 Exemplos:
-"saida 50 material de limpeza pix" → {"valor":50,"descricao":"Material de limpeza","formaPagamento":"PIX","categoria":"Despesa"}
-"gastei 120 conta de luz" → {"valor":120,"descricao":"Conta de luz","formaPagamento":null,"categoria":"Despesa"}
-"saida 120 dinheiro" → {"valor":120,"descricao":null,"formaPagamento":"DINHEIRO","categoria":"Despesa"}
-"despesa 80" → {"valor":80,"descricao":null,"formaPagamento":null,"categoria":"Despesa"}
-"adiantamento 200" → {"valor":200,"descricao":null,"formaPagamento":null,"categoria":"Adiantamento"}
+"saida 50 material de limpeza pix" → {"valor":50,"descricao":"Material de limpeza","formaPagamento":"PIX","categoria":"Despesa","categoriaGasto":"Produtos"}
+"gastei 120 conta de luz" → {"valor":120,"descricao":"Conta de luz","formaPagamento":null,"categoria":"Despesa","categoriaGasto":"Contas"}
+"saida 120 dinheiro" → {"valor":120,"descricao":null,"formaPagamento":"DINHEIRO","categoria":"Despesa","categoriaGasto":"Outros"}
+"despesa 80 conserto da máquina" → {"valor":80,"descricao":"Conserto da máquina","formaPagamento":null,"categoria":"Despesa","categoriaGasto":"Manutenção"}
+"adiantamento 200" → {"valor":200,"descricao":null,"formaPagamento":null,"categoria":"Adiantamento","categoriaGasto":"Vale/Adiantamento"}
 
 Mensagem: "${message}"`;
 
@@ -2864,11 +2924,13 @@ Mensagem: "${message}"`;
     const dados = JSON.parse(json);
     const valor = Number(dados.valor);
     if (!dados.valor || isNaN(valor) || valor <= 0) return null;
+    const CATEGORIAS_VALIDAS = ['Produtos', 'Contas', 'Manutenção', 'Vale/Adiantamento', 'Outros'];
     return {
       valor,
       descricao: dados.descricao || null,
       formaPagamento: dados.formaPagamento || null,
       categoria: dados.categoria || 'Despesa',
+      categoriaGasto: CATEGORIAS_VALIDAS.includes(dados.categoriaGasto) ? dados.categoriaGasto : 'Outros',
     };
   } catch {
     return null;
@@ -2887,6 +2949,7 @@ async function handleSaidaWhatsapp(message: string, from: string, senderName: st
     descricao:      dados?.descricao ?? null,
     formaPagamento: dados?.formaPagamento ?? null,
     categoria:      dados?.categoria ?? 'Despesa',
+    categoriaGasto: dados?.categoriaGasto ?? 'Outros',
     fornecedorNome: undefined,
     lavadorId:      undefined,
     lavadorNome:    undefined,
@@ -3020,6 +3083,8 @@ async function confirmarSaida(pendingKey: string, senderName: string): Promise<s
   try {
     const finalDescricao = `[${pending.categoria}] ${pending.descricao || 'Saída'}`;
     const formaFinal = (pending.formaPagamento || 'DINHEIRO') as any;
+    // Adiantamento sempre é "Vale/Adiantamento" — não depende do palpite da IA
+    const categoriaGastoFinal = pending.categoria === 'Adiantamento' ? 'Vale/Adiantamento' : pending.categoriaGasto;
 
     // Lookup ou cria fornecedor se informado
     let fornecedorId: string | undefined;
@@ -3042,6 +3107,7 @@ async function confirmarSaida(pendingKey: string, senderName: string): Promise<s
         valor: pending.valor,
         formaPagamento: formaFinal,
         descricao: finalDescricao,
+        categoriaGasto: categoriaGastoFinal,
         ...(fornecedorId ? { fornecedorId } : {}),
         origem: 'WHATSAPP',
         lancadoPor: senderName,

@@ -402,7 +402,7 @@ export const createFechamento = async (req: EmpresaRequest, res: Response) => {
 
 export const createSaida = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
-    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId, dataRetroativo, comprovante, origem, lancadoPor } = req.body;
+    const { valor, formaPagamento, descricao, fornecedorNome, tipo, categoriaGasto, lavadorId, dataRetroativo, comprovante, origem, lancadoPor } = req.body;
 
     if (!valor || !formaPagamento || !tipo) {
         return res.status(400).json({ error: 'Valor, forma de pagamento e categoria são obrigatórios.' });
@@ -442,6 +442,10 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                 ? `[Adiantamento] ${fornecedorNome || 'funcionário'}${descricao ? ` — ${descricao}` : ''}`
                 : `[${tipo}] ${descricao}`;
 
+            // Adiantamento sempre é "Vale/Adiantamento" pra análise financeira —
+            // não depende do que foi (ou não) selecionado no formulário
+            const categoriaGastoFinal = tipo === 'Adiantamento' ? 'Vale/Adiantamento' : (categoriaGasto || 'Outros');
+
             return await tx.caixaRegistro.create({
                 data: {
                     empresaId,
@@ -449,6 +453,7 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                     valor: valor,
                     formaPagamento: formaPagamento as any,
                     descricao: finalDescricao,
+                    categoriaGasto: categoriaGastoFinal,
                     fornecedorId,
                     lavadorId: lavadorId || null,
                     data: dataRegistro,
@@ -1039,7 +1044,7 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
     if (Array.isArray(id)) {
       return res.status(400).json({ error: 'ID inválido' });
     }
-    const { valor, formaPagamento, descricao, fornecedorNome, tipo, lavadorId, dataRetroativo, comprovante } = req.body;
+    const { valor, formaPagamento, descricao, fornecedorNome, tipo, categoriaGasto, lavadorId, dataRetroativo, comprovante } = req.body;
 
     try {
         let fornecedorId: string | undefined;
@@ -1059,6 +1064,7 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
             valor: valor,
             formaPagamento: formaPagamento as any,
             descricao: finalDescricao,
+            categoriaGasto: tipo === 'Adiantamento' ? 'Vale/Adiantamento' : (categoriaGasto || 'Outros'),
             fornecedorId,
             lavadorId: tipo === 'Adiantamento' ? (lavadorId || null) : null,
         };

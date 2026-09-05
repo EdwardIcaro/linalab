@@ -35,6 +35,7 @@ import whatsappRoutes from './routes/whatsapp';
 import empresaWaRoutes from './routes/empresaWa';
 import ocrRoutes from './routes/ocr';
 import portalPublicoRoutes from './routes/portalPublico';
+import relatorioFinanceiroRoutes from './routes/relatorioFinanceiro';
 import gorjetaRoutes from './routes/gorjeta';
 import hubRoutes from './routes/hub';
 import dataPointRoutes from './routes/dataPoint';
@@ -107,6 +108,9 @@ app.post('/api/public/lavador-data', getLavadorPublicData);
 
 // Portal público do funcionário (resolve token curto sem autenticação)
 app.use('/api/p', portalPublicoRoutes);
+
+// Relatório de Saúde Financeira (leitura pública por token + geração autenticada)
+app.use('/api/relatorio-financeiro', relatorioFinanceiroRoutes);
 
 // Endpoints públicos de subscriptions (para ver planos e promoções antes de fazer login)
 app.get('/api/subscriptions/plans', async (_req, _res) => {

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saúde Financeira — Lina X</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Roboto+Slab:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --page-bg-0: #06101f;
+    --page-bg-1: #0d2d50;
+    --page-bg-2: #0e4165;
+    --brand: #7c3aed;
+    --brand-strong: #9356d4;
+
+    --paper: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --ink-muted: #898781;
+    --hairline: #e1e0d9;
+
+    --good: #0ca30c;
+    --critical: #d03b3b;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(180deg, var(--page-bg-0), var(--page-bg-1) 55%, var(--page-bg-2));
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  .page { min-height: 100vh; padding: 28px 16px 60px; display: flex; flex-direction: column; align-items: center; }
+
+  .chrome-top { width: 100%; max-width: 560px; text-align: center; color: #eef3fa; margin-bottom: 18px; }
+  .chrome-top .brand { font-family: 'Big Shoulders Display', sans-serif; font-size: 13px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--brand-strong); }
+  .chrome-top h1 { font-family: 'Big Shoulders Display', sans-serif; font-size: 26px; font-weight: 800; margin: 4px 0 2px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .chrome-top .sub { font-size: 13px; color: #9db0cc; }
+
+  .paper {
+    width: 100%; max-width: 560px;
+    background: var(--paper);
+    border-radius: 20px;
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,0.55);
+    overflow: hidden;
+  }
+
+  .estado {
+    padding: 60px 24px; text-align: center;
+  }
+  .estado .ic { font-size: 40px; margin-bottom: 12px; }
+  .estado h2 { font-family: 'Big Shoulders Display', sans-serif; font-size: 20px; margin: 0 0 8px; }
+  .estado p { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; margin: 0; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--hairline); border-top-color: var(--brand); border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .p-head {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--hairline);
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 10px;
+  }
+  .p-head .empresa { font-size: 18px; font-weight: 700; }
+  .p-head .periodo { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+  .p-head .selo { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); text-align: right; }
+
+  .section { padding: 20px 22px; border-bottom: 1px solid var(--hairline); }
+  .section:last-child { border-bottom: none; }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-muted); font-family: 'Big Shoulders Display', sans-serif; font-weight: 700; margin-bottom: 12px; }
+
+  .hp-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .hp-score { font-family: 'Roboto Slab', serif; font-size: 34px; font-weight: 700; line-height: 1; }
+  .hp-score small { font-size: 15px; color: var(--ink-muted); font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; }
+  .hp-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; }
+  .hp-track { position: relative; height: 18px; border-radius: 999px; background: #eeede9; overflow: hidden; border: 1px solid var(--hairline); }
+  .hp-fill { position: absolute; inset: 0; border-radius: 999px; transition: width 0.6s ease; }
+  .hp-ticks { position: absolute; inset: 0; display: flex; }
+  .hp-ticks span { flex: 1; border-right: 1px solid rgba(255,255,255,0.55); }
+  .hp-ticks span:last-child { border-right: none; }
+  .hp-legend { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-muted); margin-top: 6px; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .kpi { background: #f9f9f7; border: 1px solid var(--hairline); border-radius: 12px; padding: 12px; }
+  .kpi .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
+  .kpi .v { font-family: 'Roboto Slab', serif; font-size: 18px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .kpi .d { font-size: 11.5px; margin-top: 4px; font-weight: 600; display: flex; align-items: center; gap: 3px; }
+  .kpi .d.up-good { color: var(--good); }
+  .kpi .d.up-bad { color: var(--critical); }
+
+  .insight {
+    background: linear-gradient(160deg, rgba(124,58,237,0.07), rgba(124,58,237,0.02));
+    border: 1px solid rgba(124,58,237,0.20);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .insight .ic { font-size: 20px; line-height: 1; }
+  .insight .txt { font-size: 13px; line-height: 1.55; color: #2a2140; }
+  .insight .tag { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--brand); font-weight: 700; margin-bottom: 4px; font-family: 'Big Shoulders Display', sans-serif; }
+
+  .donut-wrap { display: flex; gap: 18px; align-items: center; }
+  .donut-svg { flex-shrink: 0; }
+  .legend { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .legend-row .sw { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .legend-row .nm { flex: 1; color: var(--ink); }
+  .legend-row .pct { font-family: 'Roboto Slab', serif; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .legend-row .val { font-size: 10.5px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+  .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; padding: 6px 11px; border-radius: 999px;
+    border: 1px solid var(--hairline); background: #f9f9f7; color: var(--ink-2);
+    cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .chip.on { background: color-mix(in srgb, var(--chip-cor, var(--brand)) 14%, white); border-color: color-mix(in srgb, var(--chip-cor, var(--brand)) 45%, transparent); color: var(--ink); }
+  .chip .n { color: var(--ink-muted); font-weight: 500; }
+
+  .sort-row { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--ink-muted); margin-bottom: 10px; }
+  .sort-btn { background: none; border: none; color: var(--brand); font-weight: 600; font-size: 11.5px; cursor: pointer; padding: 0; font-family: 'IBM Plex Sans', sans-serif; }
+
+  .lanc-list { display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; border: 1px solid var(--hairline); border-radius: 12px; }
+  .lanc-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--hairline); font-size: 12.5px; }
+  .lanc-row:last-child { border-bottom: none; }
+  .lanc-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .lanc-row .info { flex: 1; min-width: 0; }
+  .lanc-row .desc { color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lanc-row .meta { font-size: 10.5px; color: var(--ink-muted); margin-top: 1px; }
+  .lanc-row .val { font-family: 'Roboto Slab', serif; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lanc-empty { padding: 24px; text-align: center; color: var(--ink-muted); font-size: 12.5px; }
+
+  .p-foot { padding: 16px 22px 20px; text-align: center; }
+  .p-foot .exp { font-size: 11.5px; color: var(--ink-muted); }
+  .p-foot .brand2 { font-size: 10.5px; color: var(--ink-muted); margin-top: 6px; }
+
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .hp-fill { transition: none; } .spinner { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="chrome-top">
+    <div class="brand">Lina X · Ecossistema Financeiro</div>
+    <h1>Saúde Financeira</h1>
+    <div class="sub">Relatório gerado automaticamente — link enviado por WhatsApp</div>
+  </div>
+
+  <div class="paper">
+    <div id="estadoCarregando" class="estado">
+      <div class="spinner"></div>
+      <h2>Carregando relatório...</h2>
+    </div>
+
+    <div id="estadoErro" class="estado" hidden>
+      <div class="ic">🔒</div>
+      <h2 id="erroTitulo">Link não encontrado</h2>
+      <p id="erroTexto">Confira se o link está completo e tente de novo.</p>
+    </div>
+
+    <div id="conteudo" hidden>
+      <div class="p-head">
+        <div>
+          <div class="empresa" id="empresaNome"></div>
+          <div class="periodo" id="periodo"></div>
+        </div>
+        <div class="selo" id="selo"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Saúde financeira do mês</div>
+        <div class="hp-row">
+          <div class="hp-score" id="hpScore"></div>
+          <div class="hp-badge" id="hpBadge"></div>
+        </div>
+        <div class="hp-track">
+          <div class="hp-fill" id="hpFill"></div>
+          <div class="hp-ticks"><span></span><span></span><span></span><span></span></div>
+        </div>
+        <div class="hp-legend"><span>Crítico</span><span>Atenção</span><span>Estável</span><span>Saudável</span></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">O mês em números</div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="k">Entradas</div>
+            <div class="v" id="kpiEntradas"></div>
+            <div class="d" id="kpiEntradasD"></div>
+          </div>
+          <div class="kpi">
+            <div class="k">Saídas</div>
+            <div class="v" id="kpiSaidas"></div>
+            <div class="d" id="kpiSaidasD"></div>
+          </div>
+          <div class="kpi">
+            <div class="k">Saldo</div>
+            <div class="v" id="kpiSaldo"></div>
+            <div class="d" id="kpiSaldoD"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" id="secaoInsight" hidden>
+        <div class="insight">
+          <div class="ic">💡</div>
+          <div class="txt">
+            <span class="tag">O que a Lina notou</span>
+            <span id="insightTexto"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" id="secaoDonut" hidden>
+        <div class="section-title">Com o que o dinheiro saiu</div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" id="donutSvg" width="140" height="140" viewBox="0 0 140 140"></svg>
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
+
+      <div class="section" id="secaoDetalhe" hidden>
+        <div class="section-title">Detalhamento das saídas</div>
+        <div class="filter-row" id="filterRow"></div>
+        <div class="sort-row">
+          <span id="sortResumo"></span>
+          <button class="sort-btn" id="sortBtn" onclick="alternarOrdenacao()">↕ Mais recentes</button>
+        </div>
+        <div class="lanc-list" id="lancList"></div>
+      </div>
+
+      <div class="p-foot">
+        <div class="exp" id="expiracaoTexto">🔒 Este link expira em breve. Depois disso, peça um novo pelo painel.</div>
+        <div class="brand2">Lina X — gestão inteligente para o seu negócio</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  const CORES_CATEGORIA = {
+    'Produtos': '#2a78d6',
+    'Vale/Adiantamento': '#eb6834',
+    'Contas': '#1baf7a',
+    'Outros': '#eda100',
+    'Manutenção': '#e87ba4',
+  };
+  const ORDEM_CATEGORIA = ['Produtos', 'Vale/Adiantamento', 'Contas', 'Outros', 'Manutenção'];
+
+  const BANDAS = [
+    { min: 75, max: 100, nome: 'Saudável',    cor: '#0ca30c', corTexto: '#0a6b0a', ic: '💚' },
+    { min: 50, max: 74,  nome: 'Atenção',     cor: '#fab219', corTexto: '#7a5400', ic: '⚠️' },
+    { min: 25, max: 49,  nome: 'Preocupante', cor: '#ec835a', corTexto: '#8a3d1e', ic: '🔶' },
+    { min: 0,  max: 24,  nome: 'Crítico',     cor: '#d03b3b', corTexto: '#d03b3b', ic: '🔴' },
+  ];
+
+  const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  let dados = null;
+  let filtroAtivo = 'Todos';
+  let ordenacao = 'data';
+
+  function fmtBRL(v) {
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function pctVariacao(atual, anterior) {
+    if (!anterior) return null;
+    return ((atual - anterior) / anterior) * 100;
+  }
+
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (!token) {
+      mostrarErro('Link inválido', 'Esse link não tem um token válido. Peça um novo pelo painel.');
+      return;
+    }
+
+    try {
+      dados = await window.api.getRelatorioFinanceiro(token);
+      renderizar();
+    } catch (e) {
+      if (e?.code === 'LINK_EXPIRADO') {
+        mostrarErro('Link expirado', 'Este relatório expirou. Gere um novo pelo painel de configurações.');
+      } else if (e?.code === 'LINK_NAO_ENCONTRADO') {
+        mostrarErro('Link não encontrado', 'Confira se o link está completo e tente de novo.');
+      } else {
+        mostrarErro('Não foi possível carregar', 'Tente novamente em alguns instantes.');
+      }
+    }
+  }
+
+  function mostrarErro(titulo, texto) {
+    document.getElementById('estadoCarregando').hidden = true;
+    document.getElementById('erroTitulo').textContent = titulo;
+    document.getElementById('erroTexto').textContent = texto;
+    document.getElementById('estadoErro').hidden = false;
+  }
+
+  function renderizar() {
+    document.getElementById('estadoCarregando').hidden = true;
+    document.getElementById('conteudo').hidden = false;
+
+    const [ano, mes] = dados.mesReferencia.split('-').map(Number);
+    document.getElementById('empresaNome').textContent = dados.empresaNome;
+    document.getElementById('periodo').textContent = `${MESES_PT[mes - 1].replace(/^./, c => c.toUpperCase())} de ${ano}`;
+    const fechado = new Date(dados.criadoEm).toLocaleDateString('pt-BR');
+    document.getElementById('selo').innerHTML = `Fechado em<br>${fechado}`;
+
+    // HP
+    const hp = dados.hp;
+    const banda = BANDAS.find(b => hp >= b.min && hp <= b.max) || BANDAS[BANDAS.length - 1];
+    document.getElementById('hpScore').innerHTML = `${hp}<small>/100</small>`;
+    document.getElementById('hpFill').style.width = hp + '%';
+    document.getElementById('hpFill').style.background = banda.cor;
+    const badge = document.getElementById('hpBadge');
+    badge.textContent = `${banda.ic} ${banda.nome}`;
+    badge.style.background = `color-mix(in srgb, ${banda.cor} 16%, transparent)`;
+    badge.style.color = banda.corTexto;
+    badge.style.border = `1px solid color-mix(in srgb, ${banda.cor} 35%, transparent)`;
+
+    // KPIs
+    document.getElementById('kpiEntradas').textContent = fmtBRL(dados.entradas);
+    document.getElementById('kpiSaidas').textContent = fmtBRL(dados.saidas);
+    document.getElementById('kpiSaldo').textContent = fmtBRL(dados.saldo);
+
+    renderDelta('kpiEntradasD', pctVariacao(dados.entradas, dados.entradasMesAnt), true);
+    renderDelta('kpiSaidasD', pctVariacao(dados.saidas, dados.saidasMesAnt), false);
+    const saldoMesAnt = dados.entradasMesAnt - dados.saidasMesAnt;
+    renderDelta('kpiSaldoD', pctVariacao(dados.saldo, saldoMesAnt), true);
+
+    // Insight
+    if (dados.insightIA) {
+      document.getElementById('insightTexto').textContent = dados.insightIA;
+      document.getElementById('secaoInsight').hidden = false;
+    }
+
+    // Donut + detalhamento
+    const categorias = (dados.categorias || []).filter(c => c.valor > 0);
+    if (categorias.length > 0) {
+      renderDonut(categorias);
+      document.getElementById('secaoDonut').hidden = false;
+    }
+    if ((dados.lancamentos || []).length > 0) {
+      renderFiltros(categorias);
+      renderLista();
+      document.getElementById('secaoDetalhe').hidden = false;
+    }
+
+    // Expiração
+    const expiraEm = new Date(dados.expiraEm);
+    const diasRestantes = Math.max(0, Math.ceil((expiraEm - new Date()) / 86400000));
+    document.getElementById('expiracaoTexto').textContent =
+      `🔒 Este link expira em ${diasRestantes} dia${diasRestantes === 1 ? '' : 's'}. Depois disso, gere um novo pelo painel.`;
+  }
+
+  function renderDelta(elId, pct, aumentoEBom) {
+    const el = document.getElementById(elId);
+    if (pct === null || !isFinite(pct)) { el.textContent = ''; return; }
+    const subiu = pct >= 0;
+    const bom = subiu === aumentoEBom;
+    el.className = 'd ' + (bom ? 'up-good' : 'up-bad');
+    el.textContent = `${subiu ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%`;
+  }
+
+  function renderDonut(categorias) {
+    const ordenadas = ORDEM_CATEGORIA.map(nome => categorias.find(c => c.nome === nome)).filter(Boolean);
+    const total = ordenadas.reduce((s, c) => s + c.valor, 0);
+
+    const cx = 70, cy = 70, r = 52, strokeW = 24;
+    const circunf = 2 * Math.PI * r;
+    const svg = document.getElementById('donutSvg');
+
+    let html = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eeede9" stroke-width="${strokeW}"/>`;
+    let offsetAcumulado = 0;
+    ordenadas.forEach(c => {
+      const frac = c.valor / total;
+      const gap = 2;
+      const comprimento = Math.max(frac * circunf - gap, 0);
+      const dasharray = `${comprimento} ${circunf - comprimento}`;
+      const dashoffset = -offsetAcumulado;
+      const cor = CORES_CATEGORIA[c.nome] || '#898781';
+      html += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cor}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${dasharray}" stroke-dashoffset="${dashoffset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+      offsetAcumulado += frac * circunf;
+    });
+    html += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" style="font-family:'Roboto Slab',serif;font-weight:700;font-size:13px;fill:#0b0b0b">${fmtBRL(total)}</text>
+      <text x="${cx}" y="${cy + 10}" text-anchor="middle" style="font-size:8px;fill:#898781;letter-spacing:0.06em">SAÍDAS</text>`;
+    svg.innerHTML = html;
+
+    document.getElementById('legend').innerHTML = ordenadas
+      .slice().sort((a, b) => b.valor - a.valor)
+      .map(c => {
+        const pct = Math.round((c.valor / total) * 100);
+        const cor = CORES_CATEGORIA[c.nome] || '#898781';
+        return `<div class="legend-row">
+          <span class="sw" style="background:${cor}"></span>
+          <span class="nm">${c.nome}</span>
+          <span class="pct">${pct}%</span>
+          <span class="val">${fmtBRL(c.valor)}</span>
+        </div>`;
+      }).join('');
+  }
+
+  function renderFiltros(categorias) {
+    const lancamentos = dados.lancamentos || [];
+    const grupos = [{ nome: 'Todos', cor: '#7c3aed', n: lancamentos.length }]
+      .concat(categorias.map(c => ({ nome: c.nome, cor: CORES_CATEGORIA[c.nome] || '#898781', n: lancamentos.filter(l => l.categoria === c.nome).length })));
+
+    document.getElementById('filterRow').innerHTML = grupos.map(g => `
+      <button class="chip ${filtroAtivo === g.nome ? 'on' : ''}" style="--chip-cor:${g.cor}" onclick="filtrarPor('${g.nome}')">
+        ${g.nome !== 'Todos' ? `<span class="dot" style="background:${g.cor}"></span>` : ''}
+        ${g.nome} <span class="n">${g.n}</span>
+      </button>`).join('');
+  }
+
+  function renderLista() {
+    const lancamentos = dados.lancamentos || [];
+    let itens = filtroAtivo === 'Todos' ? [...lancamentos] : lancamentos.filter(l => l.categoria === filtroAtivo);
+    itens.sort((a, b) => ordenacao === 'valor' ? b.valor - a.valor : new Date(b.data) - new Date(a.data));
+
+    document.getElementById('sortResumo').textContent = `${itens.length} lançamento${itens.length === 1 ? '' : 's'}`;
+    document.getElementById('sortBtn').textContent = ordenacao === 'valor' ? '↕ Maior valor' : '↕ Mais recentes';
+
+    document.getElementById('lancList').innerHTML = itens.length === 0
+      ? `<div class="lanc-empty">Nenhum lançamento nessa categoria.</div>`
+      : itens.map(l => {
+          const d = new Date(l.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          const cor = CORES_CATEGORIA[l.categoria] || '#898781';
+          return `<div class="lanc-row">
+            <span class="dot" style="background:${cor}"></span>
+            <div class="info">
+              <div class="desc">${l.descricao}</div>
+              <div class="meta">${d} · ${l.categoria}</div>
+            </div>
+            <span class="val">${fmtBRL(l.valor)}</span>
+          </div>`;
+        }).join('');
+  }
+
+  window.filtrarPor = function(nome) {
+    filtroAtivo = nome;
+    renderFiltros((dados.categorias || []).filter(c => c.valor > 0));
+    renderLista();
+  };
+  window.alternarOrdenacao = function() {
+    ordenacao = ordenacao === 'valor' ? 'data' : 'valor';
+    renderLista();
+  };
+
+  init();
+</script>
+</body>
+</html>
