@@ -1022,7 +1022,7 @@ export async function handleIncomingMessage(
 
     // "resumo das saídas" / "resumo saídas" — abre o menu numerado de período.
     // Verificar ANTES do isRelatorioRequest (que também casa com "resumo").
-    if (/^resumo\s+(das?\s+)?sa[íi]das?\b/i.test(message)) {
+    if (/^resumo\s+(?:d[ae]s?\s+)?sa[íi]das?\b/i.test(message)) {
       pendingResumoSaidas.set(from, empresaId);
       return buildResumoSaidasMenuText();
     }
