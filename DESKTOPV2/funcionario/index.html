@@ -917,6 +917,15 @@
           <button class="cat-chip" data-cat="Outro" onclick="selectIndexCat('Outro')"><i class="fas fa-ellipsis-h" style="color:#8b5cf6"></i> Outro</button>
         </div>
       </div>
+      <div class="sfield" id="indexCategoriaGastoField">
+        <label>Tipo de gasto</label>
+        <select id="indexSCategoriaGasto">
+          <option value="Produtos">Produtos</option>
+          <option value="Contas">Contas</option>
+          <option value="Manutenção">Manutenção</option>
+          <option value="Outros" selected>Outros</option>
+        </select>
+      </div>
       <div class="sfield" style="margin-top:14px">
         <label>Valor (R$) *</label>
         <input type="number" id="indexSValor" step="0.01" min="0.01" placeholder="0,00">
@@ -1665,6 +1674,7 @@
       document.getElementById('indexSDescLabel').textContent   = isAdiant ? 'Descrição (opcional, ex: vale marmitex)' : 'Descrição *';
       document.getElementById('indexSDescricao').placeholder   = isAdiant ? 'Ex: vale marmitex, adiantamento salário...' : 'Ex: Compra de produto de limpeza';
       document.getElementById('indexSDescField').style.display = 'block';
+      document.getElementById('indexCategoriaGastoField').style.display = isAdiant ? 'none' : 'block';
       document.getElementById('indexLavDropdown').style.display = 'none';
       if (isAdiant) renderIndexLavDropdown('');
     }
@@ -1732,6 +1742,7 @@
           tipo: indexCatSelecionada,
           valor,
           formaPagamento: forma,
+          categoriaGasto: indexCatSelecionada === 'Adiantamento' ? 'Vale/Adiantamento' : document.getElementById('indexSCategoriaGasto').value,
           descricao: desc || undefined,
           fornecedorNome: indexCatSelecionada !== 'Adiantamento' && resp ? resp : undefined,
           lavadorId: indexCatSelecionada === 'Adiantamento' ? lavId : undefined,

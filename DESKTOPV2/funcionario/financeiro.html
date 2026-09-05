@@ -559,6 +559,17 @@
       </div>
     </div>
 
+    <!-- Tipo de gasto (pro relatório financeiro) — some quando é Adiantamento -->
+    <div class="field" id="sCategoriaGastoField">
+      <label>Tipo de gasto</label>
+      <select id="sCategoriaGasto">
+        <option value="Produtos">Produtos</option>
+        <option value="Contas">Contas</option>
+        <option value="Manutenção">Manutenção</option>
+        <option value="Outros" selected>Outros</option>
+      </select>
+    </div>
+
     <!-- Valor -->
     <div class="field">
       <label>Valor (R$) *</label>
@@ -1018,6 +1029,7 @@ function selectCat(cat) {
   document.getElementById('sDescLabel').textContent = isAdiant ? 'Descrição (opcional, ex: vale marmitex)' : 'Descrição *';
   document.getElementById('sDescricao').placeholder = isAdiant ? 'Ex: vale marmitex, adiantamento salário...' : 'Ex: Compra de produto de limpeza';
   document.getElementById('sDescField').style.display = 'block';
+  document.getElementById('sCategoriaGastoField').style.display = isAdiant ? 'none' : 'block';
   document.getElementById('lavDropdown').style.display = 'none';
   if (isAdiant) renderLavDropdown('');
 }
@@ -1087,6 +1099,7 @@ async function submitSaida() {
       tipo: catSelecionada,
       valor,
       formaPagamento: forma,
+      categoriaGasto: catSelecionada === 'Adiantamento' ? 'Vale/Adiantamento' : document.getElementById('sCategoriaGasto').value,
       descricao: desc || undefined,
       fornecedorNome: catSelecionada !== 'Adiantamento' && resp ? resp : undefined,
       lavadorId: catSelecionada === 'Adiantamento' ? lavId : undefined,

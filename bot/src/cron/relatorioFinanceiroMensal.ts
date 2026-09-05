@@ -36,7 +36,7 @@ export async function runRelatorioFinanceiroMensal(): Promise<void> {
         });
         if (admins.length === 0) continue;
 
-        const link = `${PORTAL_URL}/relatorio-financeiro?token=${resultado.token}`;
+        const link = `${PORTAL_URL}/health?token=${resultado.token}`;
         const msg = `📊 *Saúde Financeira — ${resultado.empresaNome}*\n\nSeu relatório do mês fechado está pronto (HP ${resultado.hp}/100).\n\n${link}\n\n_Link válido por 7 dias._`;
 
         for (const admin of admins) {
