@@ -118,6 +118,15 @@
     .act-btn:hover{background:var(--gray200)}
     .act-btn.red:hover{background:var(--red-bg);border-color:#fca5a5;color:var(--red)}
 
+    /* SELEÇÃO MÚLTIPLA DE FUNCIONÁRIOS */
+    .func-checklist{max-height:180px;overflow-y:auto;border:1px solid var(--gray300);border-radius:9px;padding:6px}
+    .func-check-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;font-size:13px;color:var(--gray800);cursor:pointer}
+    .func-check-item:hover{background:var(--gray50)}
+    .func-check-item input{width:15px;height:15px;accent-color:var(--teal600);cursor:pointer}
+    .btn-select-all{padding:4px 10px;border-radius:7px;border:1px solid var(--teal500);background:var(--teal50);color:var(--teal700);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+    .btn-select-all:hover{background:var(--teal100)}
+    .afas-func-readonly{padding:9px 12px;background:var(--gray50);border-radius:9px;font-size:13px;font-weight:700;color:var(--gray800)}
+
     /* EMPTY */
     .empty{padding:48px 20px;text-align:center}
     .empty i{font-size:38px;color:var(--gray300);margin-bottom:12px;display:block}
@@ -187,6 +196,9 @@
       <button class="tab-btn" id="tabAfastamentos" onclick="mudarAba('afastamentos')">
         <i class="fa fa-calendar-xmark"></i> Afastamentos
       </button>
+      <button class="tab-btn" id="tabFeriados" onclick="mudarAba('feriados')">
+        <i class="fa fa-star"></i> Feriados
+      </button>
     </div>
 
     <!-- ABA AJUSTES -->
@@ -213,6 +225,17 @@
           <button class="btn-primary" onclick="abrirModalAfastamento()"><i class="fa fa-plus"></i> Registrar</button>
         </div>
         <div id="listaAfastamentos"></div>
+      </div>
+    </div>
+
+    <!-- ABA FERIADOS -->
+    <div id="secaoFeriados" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="ct-icon ct-amber"><i class="fa fa-star"></i></div> Feriados e Fechamentos</div>
+          <button class="btn-primary" onclick="abrirModalFeriado()"><i class="fa fa-plus"></i> Registrar</button>
+        </div>
+        <div id="listaFeriados"></div>
       </div>
     </div>
 
@@ -249,8 +272,12 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">Funcionário <span>*</span></label>
-          <select class="form-select" id="afasFuncId"></select>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px" id="afasFuncHeader">
+            <label class="form-label" style="margin-bottom:0">Funcionários <span>*</span></label>
+            <button type="button" class="btn-select-all" id="btnSelTodosFunc" onclick="toggleSelecionarTodosFunc()">Selecionar todos</button>
+          </div>
+          <div class="func-checklist" id="afasFuncList"></div>
+          <div class="afas-func-readonly hidden" id="afasFuncEditInfo"></div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -287,6 +314,34 @@
     </div>
   </div>
 
+  <!-- MODAL FERIADO -->
+  <div id="modalFeriado" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Registrar Feriado / Fechamento</div>
+        <button class="modal-close" onclick="fecharModalFeriado()"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Nome <span>*</span></label>
+          <input class="form-input" type="text" id="ferNome" placeholder="Ex: Natal, Reforma da loja...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data <span>*</span></label>
+          <input class="form-input" type="date" id="ferData">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray700);cursor:pointer">
+          <input type="checkbox" id="ferRecorrente" style="width:15px;height:15px;accent-color:var(--teal600)">
+          Repete todo ano nessa data
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="fecharModalFeriado()">Cancelar</button>
+        <button class="btn-save" id="btnSalvarFer" onclick="salvarFeriado()"><i class="fa fa-check"></i> Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST -->
   <div id="toast" class="toast hidden"></div>
 
@@ -296,8 +351,10 @@ let filtroAjuste = 'TODOS';
 let todosAjustes = [];
 let todosAfastamentos = [];
 let todosFuncionarios = [];
+let todosFeriados = [];
 let ajusteRespondendoId = null;
 let afastamentoEditandoId = null;
+let funcSelecionados = new Set();
 
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
@@ -316,9 +373,12 @@ function mudarAba(aba) {
   abaAtiva = aba;
   document.getElementById('secaoAjustes').classList.toggle('hidden', aba !== 'ajustes');
   document.getElementById('secaoAfastamentos').classList.toggle('hidden', aba !== 'afastamentos');
+  document.getElementById('secaoFeriados').classList.toggle('hidden', aba !== 'feriados');
   document.getElementById('tabAjustes').classList.toggle('on', aba === 'ajustes');
   document.getElementById('tabAfastamentos').classList.toggle('on', aba === 'afastamentos');
+  document.getElementById('tabFeriados').classList.toggle('on', aba === 'feriados');
   if (aba === 'afastamentos' && todosAfastamentos.length === 0) carregarAfastamentos();
+  if (aba === 'feriados' && todosFeriados.length === 0) carregarFeriados();
 }
 
 // ── Ajustes ───────────────────────────────────────────────────────────────────
@@ -429,9 +489,36 @@ async function carregarFuncionarios() {
   try {
     const data = await window.api.getDpFuncionarios('ATIVO');
     todosFuncionarios = data.funcionarios || [];
-    const sel = document.getElementById('afasFuncId');
-    sel.innerHTML = todosFuncionarios.map(f => `<option value="${f.id}">${f.nome}${f.cargo ? ' · ' + f.cargo : ''}</option>`).join('');
+    renderFuncChecklist();
   } catch {}
+}
+
+function renderFuncChecklist() {
+  const wrap = document.getElementById('afasFuncList');
+  wrap.innerHTML = todosFuncionarios.map(f => `
+    <label class="func-check-item">
+      <input type="checkbox" value="${f.id}" ${funcSelecionados.has(f.id) ? 'checked' : ''} onchange="onToggleFunc('${f.id}', this.checked)">
+      ${f.nome}${f.cargo ? ' · ' + f.cargo : ''}
+    </label>`).join('');
+  atualizarBtnSelTodos();
+}
+
+function onToggleFunc(id, checked) {
+  if (checked) funcSelecionados.add(id); else funcSelecionados.delete(id);
+  atualizarBtnSelTodos();
+}
+
+function toggleSelecionarTodosFunc() {
+  if (funcSelecionados.size === todosFuncionarios.length) funcSelecionados.clear();
+  else todosFuncionarios.forEach(f => funcSelecionados.add(f.id));
+  renderFuncChecklist();
+}
+
+function atualizarBtnSelTodos() {
+  const btn = document.getElementById('btnSelTodosFunc');
+  if (!btn) return;
+  btn.textContent = (funcSelecionados.size === todosFuncionarios.length && todosFuncionarios.length > 0)
+    ? 'Limpar seleção' : 'Selecionar todos';
 }
 
 function renderAfastamentos() {
@@ -467,7 +554,12 @@ function renderAfastamentos() {
 
 function abrirModalAfastamento() {
   afastamentoEditandoId = null;
+  funcSelecionados.clear();
   document.getElementById('modalAfasTitulo').textContent = 'Registrar Afastamento';
+  document.getElementById('afasFuncHeader').classList.remove('hidden');
+  document.getElementById('afasFuncList').classList.remove('hidden');
+  document.getElementById('afasFuncEditInfo').classList.add('hidden');
+  renderFuncChecklist();
   document.getElementById('afasTipo').value = 'FERIAS';
   document.getElementById('afasInicio').value = '';
   document.getElementById('afasFim').value = '';
@@ -485,7 +577,11 @@ function editarAfastamento(id) {
   if (!af) return;
   afastamentoEditandoId = id;
   document.getElementById('modalAfasTitulo').textContent = 'Editar Afastamento';
-  document.getElementById('afasFuncId').value = af.funcionarioId;
+  document.getElementById('afasFuncHeader').classList.add('hidden');
+  document.getElementById('afasFuncList').classList.add('hidden');
+  const info = document.getElementById('afasFuncEditInfo');
+  info.textContent = af.funcionario?.nome || '—';
+  info.classList.remove('hidden');
   document.getElementById('afasTipo').value = af.tipo;
   document.getElementById('afasInicio').value = af.dataInicio;
   document.getElementById('afasFim').value = af.dataFim;
@@ -494,25 +590,25 @@ function editarAfastamento(id) {
 }
 
 async function salvarAfastamento() {
-  const funcionarioId = document.getElementById('afasFuncId').value;
   const tipo = document.getElementById('afasTipo').value;
   const dataInicio = document.getElementById('afasInicio').value;
   const dataFim = document.getElementById('afasFim').value;
   const descricao = document.getElementById('afasDesc').value.trim();
 
-  if (!funcionarioId || !dataInicio || !dataFim) { mostrarToast('Preencha todos os campos obrigatórios.', 'error'); return; }
+  if (!dataInicio || !dataFim) { mostrarToast('Preencha todos os campos obrigatórios.', 'error'); return; }
   if (dataFim < dataInicio) { mostrarToast('Data fim deve ser após a data início.', 'error'); return; }
+  if (!afastamentoEditandoId && funcSelecionados.size === 0) { mostrarToast('Selecione ao menos um funcionário.', 'error'); return; }
 
   const btn = document.getElementById('btnSalvarAfas');
   btn.disabled = true;
   try {
-    const payload = { funcionarioId, tipo, dataInicio, dataFim, descricao: descricao || null };
     if (afastamentoEditandoId) {
-      await window.api.atualizarDpAfastamento(afastamentoEditandoId, payload);
+      await window.api.atualizarDpAfastamento(afastamentoEditandoId, { tipo, dataInicio, dataFim, descricao: descricao || null });
       mostrarToast('Afastamento atualizado.', 'success');
     } else {
-      await window.api.criarDpAfastamento(payload);
-      mostrarToast('Afastamento registrado.', 'success');
+      const funcionarioIds = [...funcSelecionados];
+      await window.api.criarDpAfastamento({ funcionarioIds, tipo, dataInicio, dataFim, descricao: descricao || null });
+      mostrarToast(`Afastamento registrado para ${funcionarioIds.length} funcionário(s).`, 'success');
     }
     fecharModalAfastamento();
     await carregarAfastamentos();
@@ -526,6 +622,74 @@ async function excluirAfastamento(id) {
     await window.api.excluirDpAfastamento(id);
     mostrarToast('Afastamento excluído.', 'success');
     await carregarAfastamentos();
+  } catch { mostrarToast('Erro ao excluir.', 'error'); }
+}
+
+// ── Feriados / Fechamentos ──────────────────────────────────────────────────────
+async function carregarFeriados() {
+  try {
+    const data = await window.api.getDpFeriados();
+    todosFeriados = data.feriados || [];
+    renderFeriados();
+  } catch { mostrarToast('Erro ao carregar feriados', 'error'); }
+}
+
+function renderFeriados() {
+  const lista = document.getElementById('listaFeriados');
+  if (todosFeriados.length === 0) {
+    lista.innerHTML = '<div class="empty"><i class="fa fa-star"></i><p>Nenhum feriado cadastrado.</p></div>';
+    return;
+  }
+
+  lista.innerHTML = todosFeriados.map(f => `
+    <div class="afas-row">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+          <span class="afas-nome">${escapeHtml(f.nome)}</span>
+          ${f.recorrente ? '<span class="afas-tipo afas-ferias"><i class="fa fa-rotate" style="font-size:9px"></i> Recorrente</span>' : ''}
+        </div>
+        <div class="afas-periodo"><i class="fa fa-calendar-days" style="font-size:10px"></i> ${formatarDataBR(f.data)}</div>
+      </div>
+      <div class="afas-actions">
+        <button class="act-btn red" title="Excluir" onclick="excluirFeriado('${f.id}')"><i class="fa fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+
+function abrirModalFeriado() {
+  document.getElementById('ferNome').value = '';
+  document.getElementById('ferData').value = '';
+  document.getElementById('ferRecorrente').checked = false;
+  document.getElementById('modalFeriado').classList.remove('hidden');
+}
+
+function fecharModalFeriado() {
+  document.getElementById('modalFeriado').classList.add('hidden');
+}
+
+async function salvarFeriado() {
+  const nome = document.getElementById('ferNome').value.trim();
+  const data = document.getElementById('ferData').value;
+  const recorrente = document.getElementById('ferRecorrente').checked;
+  if (!nome || !data) { mostrarToast('Preencha nome e data.', 'error'); return; }
+
+  const btn = document.getElementById('btnSalvarFer');
+  btn.disabled = true;
+  try {
+    await window.api.criarDpFeriado({ nome, data, recorrente });
+    mostrarToast('Feriado registrado.', 'success');
+    fecharModalFeriado();
+    await carregarFeriados();
+  } catch (e) { mostrarToast(e?.error || 'Erro ao salvar feriado.', 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function excluirFeriado(id) {
+  if (!confirm('Excluir este feriado?')) return;
+  try {
+    await window.api.excluirDpFeriado(id);
+    mostrarToast('Feriado excluído.', 'success');
+    await carregarFeriados();
   } catch { mostrarToast('Erro ao excluir.', 'error'); }
 }
 

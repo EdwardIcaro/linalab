@@ -249,6 +249,11 @@ const api = {
   atualizarDpAfastamento: (id, data) => fetchApi(`/dp/afastamentos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   excluirDpAfastamento: (id) => fetchApi(`/dp/afastamentos/${id}`, { method: 'DELETE' }),
 
+  // Feriados / fechamentos coletivos
+  getDpFeriados: () => fetchApi('/dp/feriados'),
+  criarDpFeriado: (data) => fetchApi('/dp/feriados', { method: 'POST', body: JSON.stringify(data) }),
+  excluirDpFeriado: (id) => fetchApi(`/dp/feriados/${id}`, { method: 'DELETE' }),
+
   // ===== LINA CENTER =====
   ativarLinaCenter: () => fetchApi('/lc/ativar', { method: 'POST' }),
   // Clientes

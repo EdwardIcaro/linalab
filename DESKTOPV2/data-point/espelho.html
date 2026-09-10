@@ -21,6 +21,7 @@
       --green:#059669;--green-bg:#d1fae5;
       --amber:#d97706;--amber-bg:#fef3c7;
       --red:#dc2626;--red-bg:#fee2e2;
+      --blue:#2563eb;--blue-bg:#dbeafe;
     }
     *{font-family:'Inter',sans-serif;box-sizing:border-box;margin:0;padding:0}
     body{
@@ -167,6 +168,8 @@
     .chip-parcial{background:var(--amber-bg);color:var(--amber)}
     .chip-falta{background:var(--red-bg);color:var(--red)}
     .chip-folga{background:var(--gray100);color:var(--gray400)}
+    .chip-feriado{background:#fef9c3;color:#ca8a04}
+    .chip-afastamento{background:var(--blue-bg);color:var(--blue)}
     .chip-hoje{outline:2px solid var(--teal500);outline-offset:1px}
 
     /* Totais col */
@@ -320,6 +323,8 @@
           <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div> Parcial</div>
           <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div> Falta</div>
           <div class="leg-item"><div class="leg-dot" style="background:var(--gray300)"></div> Folga</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#ca8a04"></div> Feriado</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div> Afastamento</div>
         </div>
       </div>
       <div class="tabela-wrap">
@@ -528,12 +533,17 @@ function buildChip(cell, isHoje) {
     FALTA_PARCIAL:{ cls:'chip-parcial', ico:'~',  label:'' },
     FALTA:       { cls:'chip-falta',   ico:'✕',  label:'' },
     FOLGA:       { cls:'chip-folga',   ico:'—',  label:'' },
+    FERIADO:     { cls:'chip-feriado',     ico:'★', label:'' },
+    AFASTAMENTO: { cls:'chip-afastamento', ico:'✈', label:'' },
   };
+  const tipoAfastamentoLabel = { FERIAS:'Férias', ATESTADO:'Atestado', LICENCA:'Licença', FOLGA_COMP:'Folga comp.', OUTRO:'Outro' };
   const s = map[cell.status] || map.FOLGA;
   const horas = cell.minutosTrabalhou > 0 ? `<span class="chip-horas">${formatMin(cell.minutosTrabalhou)}</span>` : '';
   const tip = cell.status === 'FOLGA' ? 'Folga'
+    : cell.status === 'FERIADO' ? `Feriado: ${cell.label || ''}`
+    : cell.status === 'AFASTAMENTO' ? (tipoAfastamentoLabel[cell.label] || cell.label || 'Afastamento')
     : cell.horaEntrada ? `${cell.horaEntrada}${cell.horaSaida ? ' → ' + cell.horaSaida : ' (aberto)'}` : '';
-  return `<div class="chip ${s.cls}${isHoje ? ' chip-hoje' : ''}" data-tip="${tip}">
+  return `<div class="chip ${s.cls}${isHoje ? ' chip-hoje' : ''}" data-tip="${tip.replace(/"/g, '&quot;')}">
     <span>${s.ico}</span>${horas}
   </div>`;
 }

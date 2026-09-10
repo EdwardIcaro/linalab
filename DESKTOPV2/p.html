@@ -423,6 +423,8 @@
     .ep-day-card.ep-warn     { border-color:#fde68a; background:#fffdf0; }
     .ep-day-card.ep-falta    { border-color:#fca5a5; background:#fff5f5; }
     .ep-day-card.ep-folga    { background:#f8fafc; opacity:.6; }
+    .ep-day-card.ep-feriado     { background:#fefce8; opacity:.75; }
+    .ep-day-card.ep-afastamento { background:#f0fdfa; opacity:.75; }
     .ep-day-card.ep-hoje     { border-color:var(--blue-d); border-width:2px; }
     .ep-day-card.ep-he       { border-color:#a5b4fc; }
     .ep-day-card.ep-futuro   { opacity:.35; }
@@ -447,6 +449,8 @@
     .ep-day-sub.tag-warn  { color:var(--amber); font-weight:700; }
     .ep-day-sub.tag-falta { color:var(--red); font-weight:700; }
     .ep-day-sub.tag-hoje  { color:var(--blue-d); font-weight:700; }
+    .ep-day-sub.tag-feriado     { color:#ca8a04; font-weight:700; }
+    .ep-day-sub.tag-afastamento { color:#0f766e; font-weight:700; }
 
     /* Coluna de status */
     .ep-status-col { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
@@ -459,6 +463,8 @@
     .ep-bk-folga { background:#f1f5f9;         color:var(--faint); }
     .ep-bk-hoje  { background:var(--blue-l);   color:var(--blue-d); }
     .ep-bk-he    { background:#ede9fe;          color:#7c3aed; }
+    .ep-bk-feriado     { background:#fef9c3; color:#ca8a04; }
+    .ep-bk-afastamento { background:#ccfbf1; color:#0f766e; }
 
     .ep-future-txt { text-align:center; padding:10px 0; font-size:12px; color:var(--faint); font-weight:600; letter-spacing:.3px; }
 
@@ -878,6 +884,8 @@
         <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#7c3aed"></div> Horas extras</div>
         <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--blue-d)"></div> Dia atual</div>
         <div class="ep-leg-item"><div class="ep-leg-dot" style="background:var(--faint)"></div> Folga / DSR</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#ca8a04"></div> Feriado / fechamento</div>
+        <div class="ep-leg-item"><div class="ep-leg-dot" style="background:#0f766e"></div> Afastamento (férias, atestado...)</div>
       </div>
     </div>
 
@@ -2021,6 +2029,7 @@ function renderEspelho(data) {
   let html = '';
   let hasFuturo = false;
   const hoje = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const TIPO_AFASTAMENTO_LABEL = { FERIAS:'Férias', ATESTADO:'Atestado', LICENCA:'Licença', FOLGA_COMP:'Folga comp.', OUTRO:'Outro' };
 
   data.dias.forEach(dia => {
     if (dia.status === 'FUTURO') { hasFuturo = true; return; }
@@ -2032,6 +2041,8 @@ function renderEspelho(data) {
 
     let cardCls = 'ep-day-card';
     if (dia.status === 'FOLGA')       cardCls += ' ep-folga';
+    else if (dia.status === 'FERIADO')     cardCls += ' ep-feriado';
+    else if (dia.status === 'AFASTAMENTO') cardCls += ' ep-afastamento';
     else if (dia.status === 'HOJE')   cardCls += ' ep-hoje';
     else if (dia.status === 'INCOMPLETO') cardCls += ' ep-warn';
     else if (dia.status === 'FALTA' || dia.status === 'FALTA_PARCIAL') cardCls += ' ep-falta';
@@ -2044,6 +2055,8 @@ function renderEspelho(data) {
     let badgeCls = 'ep-badge ';
     let badgeIco = '';
     if (dia.status === 'FOLGA')       { badgeCls += 'ep-bk-folga'; badgeIco = 'fas fa-moon'; }
+    else if (dia.status === 'FERIADO')     { badgeCls += 'ep-bk-feriado';     badgeIco = 'fas fa-star'; }
+    else if (dia.status === 'AFASTAMENTO') { badgeCls += 'ep-bk-afastamento'; badgeIco = 'fas fa-plane'; }
     else if (dia.status === 'HOJE')   { badgeCls += 'ep-bk-hoje';  badgeIco = 'fas fa-clock'; }
     else if (dia.status === 'INCOMPLETO') { badgeCls += 'ep-bk-warn'; badgeIco = 'fas fa-triangle-exclamation'; }
     else if (dia.status === 'FALTA' || dia.status === 'FALTA_PARCIAL') { badgeCls += 'ep-bk-falta'; badgeIco = 'fas fa-xmark'; }
@@ -2054,6 +2067,10 @@ function renderEspelho(data) {
     let punchLine = '';
     if (dia.status === 'FOLGA') {
       punchLine = '<span style="color:var(--faint)">Folga</span>';
+    } else if (dia.status === 'FERIADO') {
+      punchLine = `<span style="color:#ca8a04">Feriado: ${dia.label || ''}</span>`;
+    } else if (dia.status === 'AFASTAMENTO') {
+      punchLine = `<span style="color:#0f766e">${TIPO_AFASTAMENTO_LABEL[dia.label] || dia.label || 'Afastamento'}</span>`;
     } else if (dia.marcacoes.length === 0) {
       punchLine = '<span style="color:var(--red)">— Sem marcações —</span>';
     } else {
