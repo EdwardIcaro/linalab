@@ -23,3 +23,27 @@ export function determinarTipoEValidarCooldown(marcacoesHoje: DpMarcacaoMinima[]
   }
   return { tipo, cooldownErro: null };
 }
+
+// Feriado exato (data igual) ou recorrente (mesmo mês/dia, ano ignorado).
+export function resolveFeriadoDia(
+  dia: string,
+  feriados: { data: string; nome: string; recorrente: boolean }[],
+): string | null {
+  for (const f of feriados) {
+    if (f.data === dia) return f.nome;
+    if (f.recorrente && f.data.slice(5) === dia.slice(5)) return f.nome;
+  }
+  return null;
+}
+
+// Comparação lexicográfica de strings YYYY-MM-DD é cronológica — sem parse de Date.
+export function resolveAfastamentoDia(
+  funcionarioId: string,
+  dia: string,
+  afastamentos: { funcionarioId: string; tipo: string; dataInicio: string; dataFim: string }[],
+): string | null {
+  const af = afastamentos.find(
+    a => a.funcionarioId === funcionarioId && a.dataInicio <= dia && dia <= a.dataFim,
+  );
+  return af ? af.tipo : null;
+}

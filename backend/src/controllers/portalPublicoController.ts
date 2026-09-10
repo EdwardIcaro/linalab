@@ -6,7 +6,7 @@ import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
-import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
+import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
@@ -1138,6 +1138,17 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
       orderBy: { timestamp: 'asc' },
     });
 
+    const [feriados, afastamentos] = await Promise.all([
+      prisma.dpFeriado.findMany({
+        where: { empresaId },
+        select: { data: true, nome: true, recorrente: true },
+      }),
+      prisma.dpAfastamento.findMany({
+        where: { funcionarioId: funcionario.id },
+        select: { funcionarioId: true, tipo: true, dataInicio: true, dataFim: true },
+      }),
+    ]);
+
     const hoje = getTodayStrBRT();
     const now  = new Date();
 
@@ -1163,6 +1174,17 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
       if (isFds && marcacoesDia.length === 0) {
         return { dia, diaSemana, status: 'FOLGA', minutosTrabalhou: 0, marcacoes: [] };
+      }
+
+      if (marcacoesDia.length === 0) {
+        const nomeFeriado = resolveFeriadoDia(dia, feriados);
+        if (nomeFeriado) {
+          return { dia, diaSemana, status: 'FERIADO', minutosTrabalhou: 0, marcacoes: [], label: nomeFeriado };
+        }
+        const tipoAfastamento = resolveAfastamentoDia(funcionario.id, dia, afastamentos);
+        if (tipoAfastamento) {
+          return { dia, diaSemana, status: 'AFASTAMENTO', minutosTrabalhou: 0, marcacoes: [], label: tipoAfastamento };
+        }
       }
 
       const fimCalculo     = isHoje ? now : end;

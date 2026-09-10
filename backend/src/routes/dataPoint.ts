@@ -27,6 +27,9 @@ import {
   criarDpAfastamento,
   atualizarDpAfastamento,
   excluirDpAfastamento,
+  getDpFeriados,
+  criarDpFeriado,
+  excluirDpFeriado,
   getDpTotens,
   criarDpTotem,
   atualizarDpTotem,
@@ -77,6 +80,11 @@ router.get('/afastamentos',         authMiddleware, getDpAfastamentos);
 router.post('/afastamentos',        authMiddleware, criarDpAfastamento);
 router.put('/afastamentos/:id',     authMiddleware, atualizarDpAfastamento);
 router.delete('/afastamentos/:id',  authMiddleware, excluirDpAfastamento);
+
+// Feriados / fechamentos coletivos
+router.get('/feriados',        authMiddleware, getDpFeriados);
+router.post('/feriados',       authMiddleware, criarDpFeriado);
+router.delete('/feriados/:id', authMiddleware, excluirDpFeriado);
 
 // Totens (aparelhos de reconhecimento facial 1:N)
 router.get('/totens',                authMiddleware, getDpTotens);

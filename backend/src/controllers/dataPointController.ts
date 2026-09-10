@@ -3,6 +3,7 @@ import prisma from '../db';
 import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
+import { resolveFeriadoDia, resolveAfastamentoDia } from '../utils/dpPontoUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -627,6 +628,17 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       orderBy: { timestamp: 'asc' },
     });
 
+    const [feriados, afastamentos] = await Promise.all([
+      prisma.dpFeriado.findMany({
+        where: { empresaId },
+        select: { data: true, nome: true, recorrente: true },
+      }),
+      prisma.dpAfastamento.findMany({
+        where: { empresaId, funcionarioId: { in: funcionarios.map(f => f.id) } },
+        select: { funcionarioId: true, tipo: true, dataInicio: true, dataFim: true },
+      }),
+    ]);
+
     const now = new Date();
 
     const resultado = funcionarios.map(f => {
@@ -638,6 +650,8 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       let diasFalta = 0;
       let diasParcial = 0;
       let diasFolga = 0;
+      let diasFeriado = 0;
+      let diasAfastamento = 0;
 
       const diasMap: Record<string, {
         status: string;
@@ -645,6 +659,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         marcacoes: number;
         horaEntrada: string | null;
         horaSaida: string | null;
+        label?: string;
       }> = {};
 
       for (const dia of dias) {
@@ -677,6 +692,36 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
           continue;
         }
 
+        if (minutosTrabalhou === 0) {
+          const nomeFeriado = resolveFeriadoDia(dia, feriados);
+          if (nomeFeriado) {
+            diasMap[dia] = {
+              status: 'FERIADO',
+              minutosTrabalhou: 0,
+              marcacoes: 0,
+              horaEntrada: null,
+              horaSaida: null,
+              label: nomeFeriado,
+            };
+            diasFeriado++;
+            continue;
+          }
+
+          const tipoAfastamento = resolveAfastamentoDia(f.id, dia, afastamentos);
+          if (tipoAfastamento) {
+            diasMap[dia] = {
+              status: 'AFASTAMENTO',
+              minutosTrabalhou: 0,
+              marcacoes: 0,
+              horaEntrada: null,
+              horaSaida: null,
+              label: tipoAfastamento,
+            };
+            diasAfastamento++;
+            continue;
+          }
+        }
+
         let status: string;
         if (minutosTrabalhou === 0) {
           status = 'FALTA';
@@ -700,7 +745,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         };
       }
 
-      const diasUteis = dias.length - diasFolga;
+      const diasUteis = dias.length - diasFolga - diasFeriado - diasAfastamento;
       const minutosEsperadoTotal = cargaEsperadaMin * diasUteis;
 
       return {
@@ -714,6 +759,8 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
           diasFalta,
           diasParcial,
           diasFolga,
+          diasFeriado,
+          diasAfastamento,
           minutosTotal: totalMinutosTrabalhou,
           minutosEsperadoTotal,
           saldoMin: totalMinutosTrabalhou - minutosEsperadoTotal,
@@ -1301,35 +1348,45 @@ export const getDpAfastamentos = async (req: EmpresaRequest, res: Response) => {
 };
 
 // ─── POST /api/dp/afastamentos ────────────────────────────────────────────────
+// Aceita lote: funcionarioIds: string[] (min. 1) — cria um DpAfastamento por funcionário.
 export const criarDpAfastamento = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;
   if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
 
-  const { funcionarioId, tipo, dataInicio, dataFim, descricao } = req.body;
-  if (!funcionarioId || !tipo || !dataInicio || !dataFim)
-    return res.status(400).json({ error: 'funcionarioId, tipo, dataInicio e dataFim são obrigatórios' });
+  const { funcionarioIds, tipo, dataInicio, dataFim, descricao } = req.body;
+  if (!Array.isArray(funcionarioIds) || funcionarioIds.length === 0 || !tipo || !dataInicio || !dataFim)
+    return res.status(400).json({ error: 'funcionarioIds, tipo, dataInicio e dataFim são obrigatórios' });
 
   const tiposValidos = ['FERIAS', 'ATESTADO', 'LICENCA', 'FOLGA_COMP', 'OUTRO'];
   if (!tiposValidos.includes(tipo))
     return res.status(400).json({ error: 'Tipo inválido' });
 
   try {
-    const func = await prisma.dpFuncionario.findFirst({ where: { id: funcionarioId, empresaId } });
-    if (!func) return res.status(404).json({ error: 'Funcionário não encontrado' });
-
-    const afastamento = await prisma.dpAfastamento.create({
-      data: {
-        empresaId,
-        funcionarioId,
-        tipo,
-        dataInicio,
-        dataFim,
-        descricao: descricao?.trim() || null,
-        updatedAt: new Date(),
-      },
+    const funcs = await prisma.dpFuncionario.findMany({
+      where: { id: { in: funcionarioIds }, empresaId },
+      select: { id: true },
     });
+    if (funcs.length !== funcionarioIds.length)
+      return res.status(404).json({ error: 'Um ou mais funcionários não encontrados' });
 
-    res.status(201).json({ afastamento });
+    const descricaoTrim = descricao?.trim() || null;
+    const afastamentos = await prisma.$transaction(
+      funcionarioIds.map((funcionarioId: string) =>
+        prisma.dpAfastamento.create({
+          data: {
+            empresaId,
+            funcionarioId,
+            tipo,
+            dataInicio,
+            dataFim,
+            descricao: descricaoTrim,
+            updatedAt: new Date(),
+          },
+        }),
+      ),
+    );
+
+    res.status(201).json({ afastamentos });
   } catch (error) {
     console.error('[dp] criarAfastamento:', error);
     res.status(500).json({ error: 'Erro ao criar afastamento' });
@@ -1379,6 +1436,63 @@ export const excluirDpAfastamento = async (req: EmpresaRequest, res: Response) =
   } catch (error) {
     console.error('[dp] excluirAfastamento:', error);
     res.status(500).json({ error: 'Erro ao excluir afastamento' });
+  }
+};
+
+// ─── GET /api/dp/feriados ──────────────────────────────────────────────────────
+// Calendário de feriados/fechamentos por empresa — afeta o espelho de todos os funcionários.
+export const getDpFeriados = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  try {
+    const feriados = await prisma.dpFeriado.findMany({
+      where: { empresaId },
+      orderBy: { data: 'asc' },
+    });
+    res.json({ feriados });
+  } catch (error) {
+    console.error('[dp] getFeriados:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/dp/feriados ─────────────────────────────────────────────────────
+export const criarDpFeriado = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
+
+  const { nome, data, recorrente } = req.body;
+  if (!nome?.trim() || !data)
+    return res.status(400).json({ error: 'nome e data são obrigatórios' });
+
+  try {
+    const feriado = await prisma.dpFeriado.create({
+      data: { empresaId, nome: nome.trim(), data, recorrente: !!recorrente },
+    });
+    res.status(201).json({ feriado });
+  } catch (error: any) {
+    if (error?.code === 'P2002')
+      return res.status(400).json({ error: 'Já existe um feriado cadastrado nessa data' });
+    console.error('[dp] criarFeriado:', error);
+    res.status(500).json({ error: 'Erro ao criar feriado' });
+  }
+};
+
+// ─── DELETE /api/dp/feriados/:id ───────────────────────────────────────────────
+export const excluirDpFeriado = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+
+  try {
+    const existente = await prisma.dpFeriado.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Feriado não encontrado' });
+
+    await prisma.dpFeriado.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[dp] excluirFeriado:', error);
+    res.status(500).json({ error: 'Erro ao excluir feriado' });
   }
 };
 

@@ -73,6 +73,7 @@ model Empresa {
   sistemasAtivos             EmpresaSistema[]
   dpFuncionarios             DpFuncionario[]
   dpTotens                   DpTotem[]
+  dpFeriados                 DpFeriado[]
   gorjetas                   Gorjeta[]
   subaccountAcessos          SubaccountEmpresaAcesso[]
   lcClientes                 LcCliente[]
@@ -1054,6 +1055,19 @@ model DpAfastamento {
   funcionario      DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
 
   @@map("dp_afastamentos")
+}
+
+model DpFeriado {
+  id         String   @id @default(cuid())
+  empresaId  String
+  data       String   // YYYY-MM-DD (se recorrente, só mês/dia importam pro match)
+  nome       String
+  recorrente Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  empresa    Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, data])
+  @@map("dp_feriados")
 }
 
 // ─── LINA CENTER ─────────────────────────────────────────────────────────────
