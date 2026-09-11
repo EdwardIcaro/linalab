@@ -573,7 +573,7 @@ async function getPagamentosDoPeriodoOptimizado(
                 valor: true,
                 metodo: true,
                 pagoEm: true,
-                ordem: { select: { veiculo: { select: { placa: true, modelo: true } } } }
+                ordem: { select: { itemAvulso: true, veiculo: { select: { placa: true, modelo: true } } } }
             },
         }) : Promise.resolve([]),
 
@@ -588,7 +588,7 @@ async function getPagamentosDoPeriodoOptimizado(
                 valor: true,
                 metodo: true,
                 createdAt: true,
-                ordem: { select: { veiculo: { select: { placa: true, modelo: true } } } }
+                ordem: { select: { itemAvulso: true, veiculo: { select: { placa: true, modelo: true } } } }
             },
         }) : Promise.resolve([]),
     ]);
@@ -599,7 +599,9 @@ async function getPagamentosDoPeriodoOptimizado(
         data: p.pagoEm || p.createdAt,
         valor: p.valor,
         formaPagamento: p.metodo,
-        descricao: `Pagamento OS: ${p.ordem.veiculo.modelo} (${p.ordem.veiculo.placa})`,
+        descricao: p.ordem.veiculo
+            ? `Pagamento OS: ${p.ordem.veiculo.modelo} (${p.ordem.veiculo.placa})`
+            : `Pagamento OS: ${p.ordem.itemAvulso ?? 'Avulso'}`,
     }));
 }
 
@@ -730,7 +732,7 @@ export const getFechamentoById = async (req: EmpresaRequest, res: Response) => {
 
         const pagamentos = await prisma.pagamento.findMany({
             where: { empresaId, status: 'PAGO', pagoEm: { gte: start, lte: end } },
-            select: { valor: true, metodo: true, pagoEm: true, ordem: { select: { veiculo: { select: { placa: true } } } } }
+            select: { valor: true, metodo: true, pagoEm: true, ordem: { select: { itemAvulso: true, veiculo: { select: { placa: true } } } } }
         });
 
         const registrosPagamento = pagamentos.map((p: any) => ({
@@ -739,7 +741,9 @@ export const getFechamentoById = async (req: EmpresaRequest, res: Response) => {
             data: p.pagoEm,
             valor: p.valor,
             formaPagamento: p.metodo,
-            descricao: `Pagamento OS (Placa: ${p.ordem.veiculo.placa})`,
+            descricao: p.ordem.veiculo
+                ? `Pagamento OS (Placa: ${p.ordem.veiculo.placa})`
+                : `Pagamento OS (${p.ordem.itemAvulso ?? 'Avulso'})`,
             lavador: null,
             fornecedor: null
         }));
