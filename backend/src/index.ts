@@ -205,6 +205,7 @@ app.use('/api/email-regras', userAuthMiddleware, emailRegraRoutes); // Regras de
 // tier, então nem todo push chega ao servidor na hora). Se um push cair bem na
 // borda da janela de bloqueio, o deploy pode não disparar sozinho depois que
 // ela libera — nesse caso, um novo commit (como este) força o redeploy.
+// (Mais um caso: ef10b40 foi enviado às 13:48 BRT, dentro da janela bloqueada.)
 app.get('/health', (_req: express.Request, res: express.Response) => {
   res.json({
     status: 'OK',
