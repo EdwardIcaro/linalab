@@ -700,7 +700,10 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
         const subtotal = precoUnit * quantidade;
         valorTotal += subtotal;
 
-        const pctComissao = servico?.comissaoPercentual ?? funcionario?.comissao ?? 0;
+        // SALARIO_COMISSAO sempre usa a % pessoal do funcionário, nunca o override do serviço
+        const pctComissao = (servico?.comissaoPercentual != null && funcionario?.tipoRemuneracao !== 'SALARIO_COMISSAO')
+          ? servico.comissaoPercentual
+          : (funcionario?.comissao ?? 0);
         comissaoTotal += subtotal * (pctComissao / 100);
 
         return {
