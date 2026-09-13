@@ -1062,7 +1062,13 @@
             await loadBotUsers();
             await loadPixConfig();
             carregarStatusEmpresaWa();
-            carregarRegrasEmail();
+
+            // Automação de Email é config global do sistema — só o LINA_OWNER vê (backend também bloqueia)
+            if (getEffectiveRole() === 'LINA_OWNER') {
+                carregarRegrasEmail();
+            } else {
+                document.querySelectorAll('[data-tab="email"], [data-tab-panel="email"]').forEach(el => el.remove());
+            }
         }
 
         // ── Abas ──────────────────────────────────────────────────────────────
