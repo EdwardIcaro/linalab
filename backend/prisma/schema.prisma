@@ -74,6 +74,8 @@ model Empresa {
   dpFuncionarios             DpFuncionario[]
   dpTotens                   DpTotem[]
   dpFeriados                 DpFeriado[]
+  dpCargos                   DpCargo[]
+  dpFechamentosBanco         DpFechamentoBanco[]
   gorjetas                   Gorjeta[]
   subaccountAcessos          SubaccountEmpresaAcesso[]
   lcClientes                 LcCliente[]
@@ -961,6 +963,9 @@ model DpFuncionario {
   usuarioId         String?      // vínculo opcional com Subaccount role USER
   jornadaEntrada    String?      // override individual: "08:00" (null = usa padrão da empresa)
   cargaHorariaDia   Float?       // override individual: 6.0 h/dia (null = usa padrão da empresa)
+  dataAdmissao      DateTime?    // âncora do ciclo de 30 dias do banco de horas; null = usa createdAt como fallback
+  cargoId           String?
+  saldoBancoHorasAtual Float     @default(0) // cache do saldoAcumulado mais recente em DpFechamentoBanco
   pin               String?
   pinDefinido       Boolean      @default(false)
   sessionVersion    Int          @default(0)
@@ -981,6 +986,8 @@ model DpFuncionario {
   marcacoes         DpMarcacao[]
   ajustes           DpAjuste[]
   afastamentos      DpAfastamento[]
+  cargoRef          DpCargo?       @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+  fechamentosBanco  DpFechamentoBanco[]
 
   @@map("dp_funcionarios")
 }
@@ -1068,6 +1075,39 @@ model DpFeriado {
 
   @@unique([empresaId, data])
   @@map("dp_feriados")
+}
+
+model DpCargo {
+  id              String          @id @default(cuid())
+  empresaId       String
+  nome            String
+  cargaHorariaDia Float
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  empresa         Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  funcionarios    DpFuncionario[]
+
+  @@unique([nome, empresaId])
+  @@map("dp_cargos")
+}
+
+model DpFechamentoBanco {
+  id                     String        @id @default(cuid())
+  empresaId              String
+  funcionarioId          String
+  periodoInicio          DateTime
+  periodoFim             DateTime
+  horasEsperadas         Float
+  horasTrabalhadas       Float
+  horasFeriadoTrabalhado Float         @default(0) // já incluso em horasTrabalhadas, peso ×2 (seção 7 da spec) — separado só pra auditoria
+  saldoPeriodo           Float         // horasTrabalhadas - horasEsperadas (pode ser negativo)
+  saldoAcumulado         Float         // saldo total do funcionário após esse fechamento
+  fechadoEm              DateTime      @default(now())
+  empresa                Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  funcionario            DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@index([funcionarioId, periodoFim])
+  @@map("dp_fechamentos_banco")
 }
 
 // ─── LINA CENTER ─────────────────────────────────────────────────────────────

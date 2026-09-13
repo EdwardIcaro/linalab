@@ -3,11 +3,26 @@ const BRT_OFFSET_HOURS = 3;
 const BRT_OFFSET_MS = BRT_OFFSET_HOURS * 3600000;
 
 /**
+ * Converte qualquer Date/timestamp pra string YYYY-MM-DD no dia BRT correspondente.
+ * Ex: 2026-04-29T02:30:00Z (23:30 BRT de 28/04) → '2026-04-28'
+ */
+export function dateToStrBRT(d: Date | number): string {
+  return new Date(new Date(d).getTime() - BRT_OFFSET_MS).toISOString().split('T')[0];
+}
+
+/**
  * Retorna a data atual em BRT como string YYYY-MM-DD.
  * Ex: às 23:30 BRT de 28/04 retorna '2026-04-28' (não '2026-04-29' como daria toISOString())
  */
 export function getTodayStrBRT(): string {
-  return new Date(Date.now() - BRT_OFFSET_MS).toISOString().split('T')[0];
+  return dateToStrBRT(Date.now());
+}
+
+/** Soma (ou subtrai, com N negativo) N dias a uma string YYYY-MM-DD, sem cair em fuso horário. */
+export function addDiasStrBRT(dataStr: string, dias: number): string {
+  const d = new Date(dataStr + 'T12:00:00');
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().split('T')[0];
 }
 
 /**

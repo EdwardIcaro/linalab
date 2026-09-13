@@ -45,6 +45,7 @@ import emailRegraRoutes from './routes/emailRegra';
 import prisma from './db'; // Importa a instância do Prisma
 import { subscriptionService } from './services/subscriptionService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
+import { fecharBancoHorasDiario } from './services/bancoHorasService';
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
@@ -255,6 +256,12 @@ cron.schedule('0 21 * * *', () => {
 // WhatsApp: Ordens paradas há 1h+ (a cada 2 horas)
 cron.schedule('0 */2 * * *', () => {
   cronOrdensParadas();
+}, { timezone: "America/Sao_Paulo" });
+
+// Data Point: fecha o ciclo de 30 dias do banco de horas de quem venceu hoje (1x ao dia às 02:00)
+cron.schedule('0 2 * * *', () => {
+  console.log(`[${new Date().toISOString()}] Fechando banco de horas...`);
+  fecharBancoHorasDiario();
 }, { timezone: "America/Sao_Paulo" });
 
 

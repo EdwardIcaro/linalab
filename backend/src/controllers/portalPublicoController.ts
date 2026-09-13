@@ -6,7 +6,7 @@ import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
-import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia } from '../utils/dpPontoUtils';
+import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
@@ -1160,7 +1160,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
     const dias = diasDoMes.map(dia => {
       const diaSemana  = new Date(dia + 'T12:00:00').getDay(); // 0=dom
-      const isDiaFechado = !diasFuncionamento.includes(diaSemana);
+      const diaFechado = isDiaFechado(diaSemana, diasFuncionamento);
       const isHoje     = dia === hoje;
       const isFuturo   = dia > hoje;
 
@@ -1173,7 +1173,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
         return { dia, diaSemana, status: 'FUTURO', minutosTrabalhou: 0, marcacoes: [] };
       }
 
-      if (isDiaFechado && marcacoesDia.length === 0) {
+      if (diaFechado && marcacoesDia.length === 0) {
         return { dia, diaSemana, status: 'FOLGA', minutosTrabalhou: 0, marcacoes: [] };
       }
 

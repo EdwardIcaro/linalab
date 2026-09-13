@@ -47,3 +47,42 @@ export function resolveAfastamentoDia(
   );
   return af ? af.tipo : null;
 }
+
+// Dia da semana (0=dom...6=sáb) fora dos dias de funcionamento configurados pela empresa.
+export function isDiaFechado(diaSemana: number, diasFuncionamento: number[]): boolean {
+  return !diasFuncionamento.includes(diaSemana);
+}
+
+// Hierarquia de carga horária esperada: override individual > cargo > padrão fixo (8h).
+export function resolverCargaHorariaDia(
+  cargaIndividual: number | null | undefined,
+  cargaCargo: number | null | undefined,
+): number {
+  return cargaIndividual ?? cargaCargo ?? 8;
+}
+
+// Soma minutos trabalhados a partir de pares ENTRADA/SAÍDA. ENTRADA sem SAÍDA correspondente
+// conta até `now` (turno em andamento).
+export function calcMinutosTrabalhados(
+  marcacoes: Array<{ tipo: string; timestamp: Date }>,
+  now: Date,
+): number {
+  let total = 0;
+  let i = 0;
+  while (i < marcacoes.length) {
+    if (marcacoes[i].tipo === 'ENTRADA') {
+      let j = i + 1;
+      while (j < marcacoes.length && marcacoes[j].tipo !== 'SAIDA') j++;
+      if (j < marcacoes.length) {
+        total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i = j + 1;
+      } else {
+        total += Math.round((now.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        i++;
+      }
+    } else {
+      i++;
+    }
+  }
+  return total;
+}

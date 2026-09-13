@@ -3,7 +3,7 @@ import prisma from '../db';
 import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
-import { resolveFeriadoDia, resolveAfastamentoDia } from '../utils/dpPontoUtils';
+import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado } from '../utils/dpPontoUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -350,30 +350,6 @@ function formatHoraBRT(d: Date): string {
   });
 }
 
-function calcMinutosTrabalhados(
-  marcacoes: Array<{ tipo: string; timestamp: Date }>,
-  now: Date,
-): number {
-  let total = 0;
-  let i = 0;
-  while (i < marcacoes.length) {
-    if (marcacoes[i].tipo === 'ENTRADA') {
-      let j = i + 1;
-      while (j < marcacoes.length && marcacoes[j].tipo !== 'SAIDA') j++;
-      if (j < marcacoes.length) {
-        total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
-        i = j + 1;
-      } else {
-        total += Math.round((now.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
-        i++;
-      }
-    } else {
-      i++;
-    }
-  }
-  return total;
-}
-
 // ─── GET /api/dp/dashboard ────────────────────────────────────────────────────
 // Núcleo do dashboard (status de hoje de todos os funcionários) — reutilizado
 // pela rota de admin (abaixo) e pela visão de equipe no portal do funcionário
@@ -667,7 +643,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
 
       for (const dia of dias) {
         const diaSemana = new Date(dia + 'T12:00:00').getDay(); // 0=dom, 6=sab
-        const isDiaFechado = !diasFuncionamento.includes(diaSemana); // dia da semana sem expediente pra empresa
+        const diaFechado = isDiaFechado(diaSemana, diasFuncionamento); // dia da semana sem expediente pra empresa
 
         const { start, end } = getDateRangeBRT(dia);
         const marcacoesDia = marcacoesFuncionario.filter(
@@ -683,7 +659,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         const primeiraEntrada = marcacoesDia.find(m => m.tipo === 'ENTRADA');
         const ultimaSaida = [...marcacoesDia].reverse().find(m => m.tipo === 'SAIDA');
 
-        if (isDiaFechado && minutosTrabalhou === 0) {
+        if (diaFechado && minutosTrabalhou === 0) {
           diasMap[dia] = {
             status: 'FOLGA',
             minutosTrabalhou: 0,
@@ -1088,7 +1064,7 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
     nomeEmpresa, cnpj, setor, endereco,
     lat, lng, raioGps, nivelGps,
     jornadaEntrada, jornadaSaida, intervaloMin, toleranciaMin,
-    modoEncerramento, modoAutenticacao, diasFuncionamento,
+    modoEncerramento, modoAutenticacao, diasFuncionamento, bancoHorasAtivo,
   } = req.body;
 
   try {
@@ -1125,6 +1101,9 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
       ...(modoEncerramento !== undefined && { modoEncerramento }),
       ...(modoAutenticacao !== undefined && { modoAutenticacao }),
       ...(diasFuncionamentoValido !== undefined && { diasFuncionamento: diasFuncionamentoValido }),
+      // Opt-in explícito pro cron do banco de horas — ver bancoHorasService.ts. Sem UI dedicada
+      // ainda; liga/desliga direto por essa rota até a tela existir.
+      ...(bancoHorasAtivo !== undefined && { bancoHorasAtivo: bancoHorasAtivo === true || bancoHorasAtivo === 'true' }),
     };
 
     await prisma.empresaSistema.update({
