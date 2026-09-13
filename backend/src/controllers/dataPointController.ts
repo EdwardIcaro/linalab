@@ -584,6 +584,9 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
     const toleranciaMin: number = cfg.toleranciaMin ?? 10;
     const cargaHorariaDiaCfg: number = 8;
+    // Dias da semana (0=dom...6=sáb) em que a empresa funciona — configurável,
+    // default replica o comportamento antigo (fixo sáb+dom = folga)
+    const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
 
     // Período: padrão semana atual
     const hoje = getTodayStrBRT();
@@ -664,7 +667,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
 
       for (const dia of dias) {
         const diaSemana = new Date(dia + 'T12:00:00').getDay(); // 0=dom, 6=sab
-        const isFimDeSemana = diaSemana === 0 || diaSemana === 6;
+        const isDiaFechado = !diasFuncionamento.includes(diaSemana); // dia da semana sem expediente pra empresa
 
         const { start, end } = getDateRangeBRT(dia);
         const marcacoesDia = marcacoesFuncionario.filter(
@@ -680,7 +683,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         const primeiraEntrada = marcacoesDia.find(m => m.tipo === 'ENTRADA');
         const ultimaSaida = [...marcacoesDia].reverse().find(m => m.tipo === 'SAIDA');
 
-        if (isFimDeSemana && minutosTrabalhou === 0) {
+        if (isDiaFechado && minutosTrabalhou === 0) {
           diasMap[dia] = {
             status: 'FOLGA',
             minutosTrabalhou: 0,
@@ -771,7 +774,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
     res.json({
       periodo: { inicio: dataInicio, fim: dataFim },
       dias,
-      config: { toleranciaMin, cargaHorariaDia: cargaHorariaDiaCfg },
+      config: { toleranciaMin, cargaHorariaDia: cargaHorariaDiaCfg, diasFuncionamento },
       funcionarios: resultado,
     });
   } catch (error) {
@@ -1085,7 +1088,7 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
     nomeEmpresa, cnpj, setor, endereco,
     lat, lng, raioGps, nivelGps,
     jornadaEntrada, jornadaSaida, intervaloMin, toleranciaMin,
-    modoEncerramento, modoAutenticacao,
+    modoEncerramento, modoAutenticacao, diasFuncionamento,
   } = req.body;
 
   try {
@@ -1095,6 +1098,15 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
     if (!sistema) return res.status(404).json({ error: 'Data Point não ativo para esta empresa' });
 
     const cfgAtual = sistema.config ? JSON.parse(sistema.config as string) : {};
+
+    // diasFuncionamento: array de 0(dom)-6(sáb) que são dias de expediente.
+    // Nunca deixa vazio — cairia num estado sem nenhum dia útil.
+    let diasFuncionamentoValido: number[] | undefined;
+    if (diasFuncionamento !== undefined) {
+      const arr = Array.isArray(diasFuncionamento) ? diasFuncionamento.map((d: any) => Number(d)) : [];
+      const filtrado = [...new Set(arr.filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6))];
+      diasFuncionamentoValido = filtrado.length > 0 ? filtrado : (cfgAtual.diasFuncionamento ?? [1, 2, 3, 4, 5]);
+    }
 
     const cfgNovo = {
       ...cfgAtual,
@@ -1112,6 +1124,7 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
       ...(toleranciaMin  !== undefined && { toleranciaMin: parseInt(toleranciaMin) }),
       ...(modoEncerramento !== undefined && { modoEncerramento }),
       ...(modoAutenticacao !== undefined && { modoAutenticacao }),
+      ...(diasFuncionamentoValido !== undefined && { diasFuncionamento: diasFuncionamentoValido }),
     };
 
     await prisma.empresaSistema.update({

@@ -1119,6 +1119,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
     const toleranciaMin: number = cfg.toleranciaMin ?? 10;
+    const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
     const cargaEsperadaMin = (funcionario.cargaHorariaDia ?? 8) * 60;
 
     // Dias do mês
@@ -1159,7 +1160,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
     const dias = diasDoMes.map(dia => {
       const diaSemana  = new Date(dia + 'T12:00:00').getDay(); // 0=dom
-      const isFds      = diaSemana === 0 || diaSemana === 6;
+      const isDiaFechado = !diasFuncionamento.includes(diaSemana);
       const isHoje     = dia === hoje;
       const isFuturo   = dia > hoje;
 
@@ -1172,7 +1173,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
         return { dia, diaSemana, status: 'FUTURO', minutosTrabalhou: 0, marcacoes: [] };
       }
 
-      if (isFds && marcacoesDia.length === 0) {
+      if (isDiaFechado && marcacoesDia.length === 0) {
         return { dia, diaSemana, status: 'FOLGA', minutosTrabalhou: 0, marcacoes: [] };
       }
 

@@ -525,10 +525,11 @@ function renderTabela(d) {
     const diaSem = DIAS_SEM[dt.getDay()];
     const diaNum = dt.getDate();
     const isHoje = dia === hojeStr;
-    const isFds  = dt.getDay() === 0 || dt.getDay() === 6;
+    const diasFuncionamento = d.config?.diasFuncionamento ?? [1, 2, 3, 4, 5];
+    const isDiaFechado = !diasFuncionamento.includes(dt.getDay());
     const feriado = feriadosMap.get(dia);
     const tip = feriado ? `Feriado: ${feriado.nome}` : 'Clique para marcar feriado';
-    html += `<th class="th-dia ${isHoje ? 'th-hoje' : ''}" style="${isFds ? 'opacity:.55' : ''}" onclick="abrirFeriadoDia('${dia}')" data-tip="${tip.replace(/"/g, '&quot;')}">
+    html += `<th class="th-dia ${isHoje ? 'th-hoje' : ''}" style="${isDiaFechado ? 'opacity:.55' : ''}" onclick="abrirFeriadoDia('${dia}')" data-tip="${tip.replace(/"/g, '&quot;')}">
       <div class="th-dia-num">${diaNum}</div>
       <div class="th-dia-sem">${diaSem}</div>
       ${feriado ? '<div class="th-feriado-badge"><i class="fa fa-star"></i></div>' : ''}
