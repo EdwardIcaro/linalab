@@ -6,9 +6,14 @@ import { sendMessage } from './baileyService';
 /**
  * Poller de leitura de email → WhatsApp.
  *
- * A cada ciclo, conecta no Gmail (IMAP), busca emails não lidos e, para cada
- * regra ativa cadastrada na config (tabela email_regras), verifica remetente +
- * assunto, extrai um valor via regex e envia o template no destino (grupo/números).
+ * A cada ciclo, conecta no Gmail (IMAP), busca os emails que CHEGARAM desde o último ciclo
+ * (por UID, não por "não lido") e, para cada regra ativa cadastrada na config (tabela
+ * email_regras), verifica remetente + assunto, extrai um valor via regex e envia o template
+ * no destino (grupo/números).
+ *
+ * Por que UID e não "não lidos": a caixa pode ter milhares de emails não lidos (caixa pessoal)
+ * — baixar todos a cada 20s travava o bot e, na 1ª ativação, reenviava códigos já expirados.
+ * O histórico é ignorado: no 1º ciclo só marca o ponto de partida (código expira em ~10min).
  *
  * Credenciais do Gmail ficam só no .env do bot (fora do banco):
  *   GMAIL_IMAP_USER, GMAIL_IMAP_PASS  (senha de app — exige 2FA na conta Gmail)
@@ -20,6 +25,11 @@ const IMAP_USER = process.env.GMAIL_IMAP_USER || '';
 const IMAP_PASS = process.env.GMAIL_IMAP_PASS || '';
 
 let rodando = false; // trava anti-concorrência entre ciclos
+
+// Ponto de partida na INBOX: maior UID já visto. null = ainda não inicializado.
+// Se o uidValidity mudar (Gmail recriou a caixa), os UIDs antigos não valem mais → reinicializa.
+let ultimoUid: number | null = null;
+let uidValidityAtual: string | null = null;
 
 interface Regra {
   id: string;
@@ -94,9 +104,28 @@ async function processarCiclo(): Promise<void> {
 
     const lock = await client.getMailboxLock('INBOX');
     try {
-      const uids = await client.search({ seen: false }, { uid: true });
-      if (uids && uids.length) {
-        for await (const msg of client.fetch(uids, { source: true }, { uid: true })) {
+      const mailbox = client.mailbox as { uidNext: number; uidValidity: bigint } | false;
+      if (!mailbox) return;
+
+      const uidValidity = String(mailbox.uidValidity);
+      if (ultimoUid === null || uidValidity !== uidValidityAtual) {
+        // 1º ciclo: começa do fim da caixa — histórico ignorado de propósito
+        ultimoUid = mailbox.uidNext - 1;
+        uidValidityAtual = uidValidity;
+        console.log(`[EmailPoller] Ponto de partida definido (UID ${ultimoUid}) — só emails novos serão processados.`);
+        return;
+      }
+
+      // IMAP devolve a última mensagem em "N:*" mesmo se N > maior UID → filtra de novo
+      const desde = ultimoUid;
+      const uids = ((await client.search({ uid: `${desde + 1}:*` }, { uid: true })) || [])
+        .filter(uid => uid > desde);
+      if (!uids.length) return;
+
+      for await (const msg of client.fetch(uids, { source: true }, { uid: true })) {
+        // Avança antes de processar: se o envio falhar, não reenvia em loop (código expira rápido)
+        ultimoUid = Math.max(ultimoUid ?? 0, msg.uid);
+        try {
           const parsed = await simpleParser(msg.source as Buffer);
           const from    = (parsed.from?.text || '').toLowerCase();
           const subject = (parsed.subject || '');
@@ -122,10 +151,12 @@ async function processarCiclo(): Promise<void> {
             casou = true;
           }
 
-          // Marca como lido para não reprocessar (só se alguma regra casou)
+          // Marca como lido só o que alguma regra usou (o resto da caixa fica intocado)
           if (casou) {
             await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
           }
+        } catch (e) {
+          console.error(`[EmailPoller] Erro ao processar email UID ${msg.uid}:`, e instanceof Error ? e.message : e);
         }
       }
     } finally {
