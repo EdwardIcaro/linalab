@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { ErroPublico } from '../utils/erroPublico';
 import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
@@ -226,7 +227,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         if (item.tipo === 'SERVICO') {
           const servico = servicoMap.get(item.itemId);
           if (!servico) {
-            throw new Error(`Serviço com ID ${item.itemId} não encontrado.`);
+            throw new ErroPublico(`Serviço com ID ${item.itemId} não encontrado.`);
           }
           precoUnit = servico.preco;
           const subtotal = precoUnit * item.quantidade;
@@ -241,7 +242,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         } else if (item.tipo === 'ADICIONAL') {
           const adicional = adicionalMap.get(item.itemId);
           if (!adicional) {
-            throw new Error(`Adicional com ID ${item.itemId} não encontrado.`);
+            throw new ErroPublico(`Adicional com ID ${item.itemId} não encontrado.`);
           }
           precoUnit = adicional.preco;
           const subtotal = precoUnit * item.quantidade;
@@ -254,7 +255,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
             adicionalId: item.itemId
           };
         } else {
-          throw new Error(`Tipo de item desconhecido: ${item.tipo}`);
+          throw new ErroPublico(`Tipo de item desconhecido: ${item.tipo}`);
         }
 
         return itemData;
@@ -263,10 +264,10 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       // Add a final validation check before creating the order
       // Ordem avulsa exige apenas cliente; ordem de veículo exige cliente + veículo.
       if (!finalClienteId) {
-        throw new Error("ID do cliente não pôde ser determinado.");
+        throw new ErroPublico("ID do cliente não pôde ser determinado.");
       }
       if (!isAvulso && !finalVeiculoId) {
-        throw new Error("ID do veículo não pôde ser determinado.");
+        throw new ErroPublico("ID do veículo não pôde ser determinado.");
       }
 
       // ✅ OTIMIZAÇÃO: Paralelizar lookups dos lavadores e número da ordem
@@ -484,7 +485,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
     console.error('Erro detalhado ao criar ordem de serviço:', error);
     res.status(500).json({
         error: 'Erro interno do servidor ao criar ordem.',
-        details: error.message || 'Nenhuma mensagem de erro específica.'
+        ...(error instanceof ErroPublico ? { details: error.message } : {})
     });
   }
 };
@@ -1772,10 +1773,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       // Validar cada pagamento antes de criar
       for (const pag of pagamentos) {
         if (!pag.metodo || !METODOS_VALIDOS.includes(pag.metodo)) {
-          throw new Error(`Método de pagamento inválido: "${pag.metodo}". Valores válidos: ${METODOS_VALIDOS.join(', ')}`);
+          throw new ErroPublico(`Método de pagamento inválido: "${pag.metodo}". Valores válidos: ${METODOS_VALIDOS.join(', ')}`);
         }
         if (!pag.valor || pag.valor <= 0) {
-          throw new Error(`Valor de pagamento inválido: ${pag.valor}. Deve ser maior que zero.`);
+          throw new ErroPublico(`Valor de pagamento inválido: ${pag.valor}. Deve ser maior que zero.`);
         }
       }
 
@@ -1862,7 +1863,7 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
     console.error('Erro ao finalizar ordem de serviço:', error);
     res.status(500).json({
       error: 'Erro interno do servidor ao finalizar ordem',
-      details: error.message || 'Erro desconhecido'
+      ...(error instanceof ErroPublico ? { details: error.message } : {})
     });
   }
 };

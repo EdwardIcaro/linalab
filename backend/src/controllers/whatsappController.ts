@@ -50,7 +50,7 @@ export async function setupWhatsapp(req: AuthenticatedRequest, res: Response) {
     return res.json({ status: result.status, qrCode: result.qrCode, message: 'Bot Lina iniciado. Escaneie o QR code.' });
   } catch (err) {
     console.error('[WhatsApp Setup] Erro:', err);
-    return res.status(500).json({ error: 'Erro ao configurar bot', details: String(err) });
+    return res.status(500).json({ error: 'Erro ao configurar bot' });
   }
 }
 
@@ -81,7 +81,8 @@ export async function getWhatsappStatus(req: AuthenticatedRequest, res: Response
 
     return res.json({ status: 'disconnected', message: 'Bot Lina desconectado' });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao obter status', details: String(err) });
+    console.error('[WhatsApp] Erro ao obter status:', err);
+    return res.status(500).json({ error: 'Erro ao obter status' });
   }
 }
 
@@ -96,7 +97,8 @@ export async function disconnectWhatsapp(req: AuthenticatedRequest, res: Respons
     await botDisconnect();
     return res.json({ message: 'Bot Lina desconectado com sucesso' });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao desconectar', details: String(err) });
+    console.error('[WhatsApp] Erro ao desconectar:', err);
+    return res.status(500).json({ error: 'Erro ao desconectar' });
   }
 }
 
@@ -120,7 +122,8 @@ export async function generatePairingCode(req: AuthenticatedRequest, res: Respon
 
     return res.json({ code, expiresInSeconds: 300 });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao gerar código', details: String(err) });
+    console.error('[WhatsApp] Erro ao gerar código:', err);
+    return res.status(500).json({ error: 'Erro ao gerar código' });
   }
 }
 
@@ -145,7 +148,8 @@ export async function getNotifPrefs(req: AuthenticatedRequest, res: Response) {
     const merged = { ...getDefaultPrefs(), ...raw };
     return res.json({ data: merged });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao buscar preferências', details: String(err) });
+    console.error('[WhatsApp] Erro ao buscar preferências:', err);
+    return res.status(500).json({ error: 'Erro ao buscar preferências' });
   }
 }
 
@@ -175,6 +179,7 @@ export async function updateNotifPrefs(req: AuthenticatedRequest, res: Response)
 
     return res.json({ message: 'Preferências salvas' });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao salvar preferências', details: String(err) });
+    console.error('[WhatsApp] Erro ao salvar preferências:', err);
+    return res.status(500).json({ error: 'Erro ao salvar preferências' });
   }
 }

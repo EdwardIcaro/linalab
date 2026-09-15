@@ -47,8 +47,7 @@ export async function listAdminPhones(req: AuthenticatedRequest, res: Response) 
     return res.json({ data: adminPhones });
   } catch (error) {
     console.error('[WhatsApp Admin Phones] Erro ao listar:', error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao listar números de admin', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao listar números de admin' });
   }
 }
 
@@ -134,7 +133,7 @@ export async function createAdminPhone(req: AuthenticatedRequest, res: Response)
     if (errorMsg.includes('Unique constraint') || errorMsg.includes('unique')) {
       return res.status(400).json({ error: 'Este número de telefone já foi adicionado' });
     }
-    return res.status(500).json({ error: 'Erro ao adicionar número', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao adicionar número' });
   }
 }
 
@@ -168,8 +167,7 @@ export async function deleteAdminPhone(req: AuthenticatedRequest, res: Response)
     return res.json({ message: 'Número de admin removido com sucesso' });
   } catch (error) {
     console.error('[WhatsApp Admin Phones] Erro ao deletar:', error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao remover número', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao remover número' });
   }
 }
 
@@ -219,8 +217,7 @@ export async function updateAdminPhone(req: AuthenticatedRequest, res: Response)
     });
   } catch (error) {
     console.error('[WhatsApp Admin Phones] Erro ao atualizar:', error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao atualizar número', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao atualizar número' });
   }
 }
 
@@ -251,8 +248,7 @@ export async function startPairing(req: AuthenticatedRequest, res: Response) {
     return res.json({ message: 'Modo de pareamento ativado. Peça ao admin para enviar uma mensagem.' });
   } catch (error) {
     console.error('[WhatsApp Admin Phones] Erro ao iniciar pareamento:', error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao iniciar pareamento', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao iniciar pareamento' });
   }
 }
 
@@ -274,8 +270,7 @@ export async function cancelPairing(req: AuthenticatedRequest, res: Response) {
     return res.json({ message: 'Pareamento cancelado' });
   } catch (error) {
     console.error('[WhatsApp Admin Phones] Erro ao cancelar pareamento:', error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao cancelar pareamento', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao cancelar pareamento' });
   }
 }
 
@@ -300,8 +295,8 @@ export async function gerarCodigoPareamento(req: AuthenticatedRequest, res: Resp
 
     return res.json({ data: { code, expiresIn: 300 } });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao gerar código', details: errorMsg });
+    console.error('[WhatsApp Admin Phones] Erro ao gerar código:', error);
+    return res.status(500).json({ error: 'Erro ao gerar código' });
   }
 }
 
@@ -321,8 +316,8 @@ export async function statusCodigoPareamento(req: AuthenticatedRequest, res: Res
 
     return res.json({ data: entry });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao obter status do código', details: errorMsg });
+    console.error('[WhatsApp Admin Phones] Erro ao obter status do código:', error);
+    return res.status(500).json({ error: 'Erro ao obter status do código' });
   }
 }
 
@@ -337,8 +332,8 @@ export async function cancelarCodigoPareamento(req: AuthenticatedRequest, res: R
     await botCancelPairingCode(req.usuarioId!);
     return res.json({ message: 'Código cancelado' });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao cancelar código', details: errorMsg });
+    console.error('[WhatsApp Admin Phones] Erro ao cancelar código:', error);
+    return res.status(500).json({ error: 'Erro ao cancelar código' });
   }
 }
 
@@ -367,7 +362,6 @@ export async function getPairingStatus(req: AuthenticatedRequest, res: Response)
     });
   } catch (error) {
     console.error('[WhatsApp Admin Phones] Erro ao obter status pareamento:', error);
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({ error: 'Erro ao obter status', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao obter status' });
   }
 }

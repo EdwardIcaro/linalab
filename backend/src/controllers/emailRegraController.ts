@@ -109,6 +109,7 @@ export const getWhatsappGrupos = async (_req: Request, res: Response) => {
     const data = await botGetGrupos();
     res.json({ grupos: data.grupos || [] });
   } catch (error: any) {
-    res.status(502).json({ error: 'Não foi possível listar os grupos do bot.', details: String(error?.message || error) });
+    console.error('[EmailRegras] Erro ao listar grupos do bot:', error);
+    res.status(502).json({ error: 'Não foi possível listar os grupos do bot.' });
   }
 };

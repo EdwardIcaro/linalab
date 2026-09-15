@@ -2,6 +2,14 @@ import { Request, Response } from 'express';
 import prisma from '../db';
 import { empresaWaConnect, empresaWaStatus, empresaWaDisconnect, empresaWaSend } from '../services/empresaWaClient';
 
+// Erro de envio: só códigos conhecidos do bot viram mensagem pro usuário; o resto fica no log
+function responderErroEnvio(res: Response, err: any) {
+  if (err?.code === 'NUMERO_NAO_ENCONTRADO') return res.status(422).json({ error: 'Esse número não tem WhatsApp.' });
+  if (err?.code === 'NAO_CONECTADO') return res.status(409).json({ error: 'O WhatsApp da empresa não está conectado. Conecte em Configurações → WhatsApp.' });
+  console.error('[WhatsApp Empresa] Erro ao enviar mensagem:', err);
+  return res.status(500).json({ error: 'Não foi possível enviar a mensagem agora. Tente de novo.' });
+}
+
 const TEMPLATES_PADRAO = [
   { nome: 'Veículo pronto', categoria: 'FINALIZACAO', texto: 'Olá {{nome}}! Seu veículo {{placa}} está pronto para retirada. 🚗✨' },
   { nome: 'Pesquisa de satisfação', categoria: 'POS_VENDA', texto: 'Olá {{nome}}! Como ficou o {{placa}}? Esperamos que tenha gostado do nosso serviço! 😊' },
@@ -23,7 +31,8 @@ export async function getStatus(req: Request, res: Response) {
       ...(session.qrCode ? { qrDataUrl: session.qrCode } : {}),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao buscar status do WhatsApp:', err);
+    return res.status(500).json({ error: 'Erro ao buscar status do WhatsApp' });
   }
 }
 
@@ -58,7 +67,8 @@ export async function connect(req: Request, res: Response) {
       ...(session?.qrCode ? { qrDataUrl: session.qrCode } : {}),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao iniciar conexão do WhatsApp:', err);
+    return res.status(500).json({ error: 'Erro ao iniciar conexão do WhatsApp' });
   }
 }
 
@@ -69,7 +79,8 @@ export async function disconnect(req: Request, res: Response) {
     await empresaWaDisconnect(empresaId);
     return res.json({ ok: true });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao desconectar o WhatsApp:', err);
+    return res.status(500).json({ error: 'Erro ao desconectar o WhatsApp' });
   }
 }
 
@@ -82,7 +93,7 @@ export async function send(req: Request, res: Response) {
     await empresaWaSend(empresaId, telefone, texto);
     return res.json({ ok: true });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return responderErroEnvio(res, err);
   }
 }
 
@@ -141,7 +152,7 @@ export async function enviarTemplate(req: Request, res: Response) {
 
     return res.json({ ok: true, mensagem: texto });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Erro ao enviar mensagem' });
+    return responderErroEnvio(res, err);
   }
 }
 
@@ -193,7 +204,7 @@ export async function enviarParaCliente(req: Request, res: Response) {
     await empresaWaSend(empresaId, telefone, mensagem);
     return res.json({ ok: true, mensagem });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Erro ao enviar mensagem' });
+    return responderErroEnvio(res, err);
   }
 }
 
@@ -207,7 +218,8 @@ export async function getTemplates(req: Request, res: Response) {
     });
     return res.json({ templates });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao buscar modelos de mensagem:', err);
+    return res.status(500).json({ error: 'Erro ao buscar modelos de mensagem' });
   }
 }
 
@@ -221,7 +233,8 @@ export async function createTemplate(req: Request, res: Response) {
     });
     return res.status(201).json({ template });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao criar modelo de mensagem:', err);
+    return res.status(500).json({ error: 'Erro ao criar modelo de mensagem' });
   }
 }
 
@@ -238,7 +251,8 @@ export async function updateTemplate(req: Request, res: Response) {
     });
     return res.json({ template: updated });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao atualizar modelo de mensagem:', err);
+    return res.status(500).json({ error: 'Erro ao atualizar modelo de mensagem' });
   }
 }
 
@@ -251,6 +265,7 @@ export async function deleteTemplate(req: Request, res: Response) {
     await prisma.mensagemTemplate.delete({ where: { id: templateId } });
     return res.json({ ok: true });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Empresa] Erro ao excluir modelo de mensagem:', err);
+    return res.status(500).json({ error: 'Erro ao excluir modelo de mensagem' });
   }
 }

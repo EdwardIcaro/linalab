@@ -59,7 +59,7 @@ export async function listLavadorPhones(req: AuthenticatedRequest, res: Response
     console.error('[WhatsApp Phones] Erro ao listar:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('[WhatsApp Phones] Detalhes:', errorMsg);
-    return res.status(500).json({ error: 'Erro ao listar lavadores', details: errorMsg });
+    return res.status(500).json({ error: 'Erro ao listar lavadores' });
   }
 }
 

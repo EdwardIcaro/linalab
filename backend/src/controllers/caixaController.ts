@@ -994,11 +994,8 @@ export const fecharComissao = async (req: EmpresaRequest, res: Response) => {
     } catch (error) {
         console.error('Erro ao fechar comissão:', error);
 
-        // Melhor logging do erro real
-        const errorMessage = error instanceof Error ? error.message : String(error);
         res.status(500).json({
             error: 'Erro interno ao processar o pagamento da comissão.',
-            details: errorMessage, // Remover em produção se necessário
         });
     }
 };

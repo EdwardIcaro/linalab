@@ -61,7 +61,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // ── Saúde (público) ──────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', botStatus: getStatus(), timestamp: new Date().toISOString() });
+  res.json({ status: 'OK' }); // público (URL do ngrok): não expõe status do WhatsApp
 });
 
 // ── Proteger todas as demais rotas ───────────────────────────────────────────
@@ -82,7 +82,8 @@ app.get('/grupos', async (_req, res) => {
     const grupos = await listGroups();
     res.json({ grupos });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar grupos', details: String(err) });
+    console.error('[Bot] Erro ao listar grupos:', err);
+    res.status(500).json({ error: 'Erro ao listar grupos' });
   }
 });
 
@@ -111,7 +112,8 @@ app.post('/initialize', async (_req, res) => {
 
     return res.json({ status: getStatus(), qrCode: getQRCode() });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao inicializar bot', details: String(err) });
+    console.error('[Bot] Erro ao inicializar bot:', err);
+    return res.status(500).json({ error: 'Erro ao inicializar bot' });
   }
 });
 
@@ -121,7 +123,8 @@ app.post('/disconnect', async (_req, res) => {
     await disconnect();
     return res.json({ message: 'Bot desconectado' });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao desconectar', details: String(err) });
+    console.error('[Bot] Erro ao desconectar:', err);
+    return res.status(500).json({ error: 'Erro ao desconectar' });
   }
 });
 
@@ -134,7 +137,8 @@ app.post('/send', async (req, res) => {
     await sendMessage(to, text);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao enviar mensagem', details: String(err) });
+    console.error('[Bot] Erro ao enviar mensagem:', err);
+    return res.status(500).json({ error: 'Erro ao enviar mensagem' });
   }
 });
 
@@ -148,7 +152,8 @@ app.post('/send-image', async (req, res) => {
     await sendImageBuffer(to, buf, caption);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao enviar imagem', details: String(err) });
+    console.error('[Bot] Erro ao enviar imagem:', err);
+    return res.status(500).json({ error: 'Erro ao enviar imagem' });
   }
 });
 
@@ -162,7 +167,8 @@ app.post('/gerar-relatorio-financeiro', async (req, res) => {
     if (!resultado) return res.status(422).json({ error: 'Sem movimentação financeira nesse período' });
     return res.json({ token: resultado.token, hp: resultado.hp });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao gerar relatório', details: String(err) });
+    console.error('[Bot] Erro ao gerar relatório:', err);
+    return res.status(500).json({ error: 'Erro ao gerar relatório' });
   }
 });
 
@@ -175,7 +181,8 @@ app.post('/resolve-jid', async (req, res) => {
     const jid = await resolvePhoneToJid(phone);
     return res.json({ jid });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao resolver JID', details: String(err) });
+    console.error('[Bot] Erro ao resolver JID:', err);
+    return res.status(500).json({ error: 'Erro ao resolver JID' });
   }
 });
 
@@ -188,7 +195,8 @@ app.post('/send-capture-jid', async (req, res) => {
     const jid = await sendMessageAndCaptureJid(phone, text);
     return res.json({ jid });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao enviar/capturar JID', details: String(err) });
+    console.error('[Bot] Erro ao enviar/capturar JID:', err);
+    return res.status(500).json({ error: 'Erro ao enviar/capturar JID' });
   }
 });
 
@@ -201,7 +209,8 @@ app.post('/pairing-code', (req, res) => {
     const code = generateCode(userId, empresaId, nome);
     return res.json({ code, expiresInSeconds: 300 });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao gerar código', details: String(err) });
+    console.error('[Bot] Erro ao gerar código:', err);
+    return res.status(500).json({ error: 'Erro ao gerar código' });
   }
 });
 
@@ -231,7 +240,8 @@ app.post('/bot-pin/:id', (req, res) => {
     const code = generateBotUserCode(id, empresaId, role, nome, lavadorId ?? null);
     return res.json({ code, expiresInSeconds: 300 });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao gerar PIN', details: String(err) });
+    console.error('[Bot] Erro ao gerar PIN:', err);
+    return res.status(500).json({ error: 'Erro ao gerar PIN' });
   }
 });
 
@@ -259,7 +269,8 @@ app.post('/empresa-wa/connect/:empresaId', async (req, res) => {
     connectEmpresa(empresaId).catch(console.error);
     return res.json({ status: 'CONECTANDO' });
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao conectar empresa', details: String(err) });
+    console.error('[Bot] Erro ao conectar empresa:', err);
+    return res.status(500).json({ error: 'Erro ao conectar empresa' });
   }
 });
 
@@ -276,7 +287,13 @@ app.post('/empresa-wa/send/:empresaId', async (req, res) => {
     await sendEmpresaMessage(empresaId, telefone, texto);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: String(err) });
+    // Só um código conhecido sai do bot; o texto cru (com o telefone) fica no log
+    const msg  = String((err as Error)?.message ?? err);
+    const code = msg.includes('não está conectado')         ? 'NAO_CONECTADO'
+               : msg.includes('não encontrado no WhatsApp') ? 'NUMERO_NAO_ENCONTRADO'
+               : 'ERRO_ENVIO';
+    if (code === 'ERRO_ENVIO') console.error('[Bot] Erro ao enviar mensagem da empresa:', err);
+    return res.status(code === 'ERRO_ENVIO' ? 500 : 422).json({ error: 'Erro ao enviar mensagem', code });
   }
 });
 
@@ -286,7 +303,8 @@ app.post('/empresa-wa/disconnect/:empresaId', async (req, res) => {
     await disconnectEmpresa(empresaId);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: String(err) });
+    console.error('[Bot] Erro ao desconectar empresa:', err);
+    return res.status(500).json({ error: 'Erro ao desconectar' });
   }
 });
 

@@ -91,7 +91,8 @@ export async function listBotUsers(req: AuthReq, res: Response) {
 
     return res.json(result);
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao listar usuários do bot', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao listar usuários do bot:', e);
+    return res.status(500).json({ error: 'Erro ao listar usuários do bot' });
   }
 }
 
@@ -134,7 +135,8 @@ export async function connectBotUser(req: AuthReq, res: Response) {
 
     return res.status(400).json({ error: 'Origem inválida' });
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao gerar PIN', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao gerar PIN:', e);
+    return res.status(500).json({ error: 'Erro ao gerar PIN' });
   }
 }
 
@@ -170,7 +172,8 @@ export async function desvincularBotUser(req: AuthReq, res: Response) {
 
     return res.status(400).json({ error: 'Origem inválida' });
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao desvincular', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao desvincular:', e);
+    return res.status(500).json({ error: 'Erro ao desvincular' });
   }
 }
 
@@ -192,7 +195,8 @@ export async function createBotUser(req: AuthReq, res: Response) {
     });
     return res.status(201).json(user);
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao criar usuário', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao criar usuário:', e);
+    return res.status(500).json({ error: 'Erro ao criar usuário' });
   }
 }
 
@@ -223,7 +227,8 @@ export async function updateBotUser(req: AuthReq, res: Response) {
     });
     return res.json(updated);
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao atualizar usuário', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao atualizar usuário:', e);
+    return res.status(500).json({ error: 'Erro ao atualizar usuário' });
   }
 }
 
@@ -239,7 +244,8 @@ export async function deleteBotUser(req: AuthReq, res: Response) {
     await db.whatsappBotUser.delete({ where: { id } });
     return res.json({ message: 'Usuário removido' });
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao remover usuário', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao remover usuário:', e);
+    return res.status(500).json({ error: 'Erro ao remover usuário' });
   }
 }
 
@@ -255,7 +261,8 @@ export async function generatePin(req: AuthReq, res: Response) {
     const code = await botGeneratePin(id, req.empresaId!, user.role as string, user.nome as string, user.lavadorId as string | null);
     return res.json({ code, expiresInSeconds: 300 });
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao gerar PIN', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao gerar PIN:', e);
+    return res.status(500).json({ error: 'Erro ao gerar PIN' });
   }
 }
 
@@ -305,7 +312,8 @@ export async function generateMyPin(req: AuthReq, res: Response) {
 
     return res.json({ code, expiresInSeconds: 300, botNumero });
   } catch (e) {
-    return res.status(500).json({ error: 'Erro ao gerar PIN', details: String(e) });
+    console.error('[WhatsApp Bot Users] Erro ao gerar PIN:', e);
+    return res.status(500).json({ error: 'Erro ao gerar PIN' });
   }
 }
 

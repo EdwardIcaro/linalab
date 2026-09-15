@@ -16,7 +16,10 @@ async function botEmpresaFetch(path: string, opts?: { method?: string; body?: un
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Bot empresa service ${res.status}: ${text}`);
+    let code: string | undefined;
+    try { code = JSON.parse(text)?.code; } catch { /* corpo não-JSON */ }
+    // A mensagem (com o corpo cru) é só pra log; quem responde ao navegador usa o code
+    throw Object.assign(new Error(`Bot empresa service ${res.status}: ${text}`), { code });
   }
   return res.json();
 }

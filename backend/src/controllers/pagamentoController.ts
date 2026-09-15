@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { ErroPublico } from '../utils/erroPublico';
 import prisma from '../db';
 import { Prisma, Pagamento } from '@prisma/client';
 
@@ -374,7 +375,7 @@ export const quitarPendenciaSimples = async (req: EmpresaRequest, res: Response)
       });
 
       if (!pagamentoPendente) {
-        throw new Error('Pagamento pendente não encontrado');
+        throw new ErroPublico('Pagamento pendente não encontrado');
       }
 
       // 2. Obter valor do pagamento para criar novo registro
@@ -404,7 +405,7 @@ export const quitarPendenciaSimples = async (req: EmpresaRequest, res: Response)
     });
   } catch (error) {
     console.error('Erro ao quitar pendência:', error);
-    const errorMsg = error instanceof Error ? error.message : 'Erro ao quitar pendência.';
+    const errorMsg = error instanceof ErroPublico ? error.message : 'Erro ao quitar pendência.';
     res.status(500).json({
       error: errorMsg,
       details: errorMsg
