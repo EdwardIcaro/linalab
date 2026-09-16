@@ -96,28 +96,42 @@ export class SubscriptionService {
     usuarioId: string,
     featureKey: string
   ): Promise<FeatureAccess> {
-    const subscription = await this.getActiveSubscription(usuarioId);
+    // Olha TODAS as assinaturas ativas, não só a mais recente: o usuário pode ter uma por
+    // sistema (Lina Wash + Data Point + Lina Center). Antes pegava a mais recente de qualquer
+    // sistema — quem assinava o Data Point depois perdia as features do plano do Lina Wash.
+    const subscriptions = await prisma.subscription.findMany({
+      where: {
+        usuarioId,
+        status: {
+          in: ['ACTIVE', 'TRIAL', 'LIFETIME']
+        }
+      },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' }
+    });
 
-    if (!subscription) {
+    if (subscriptions.length === 0) {
       return {
         hasAccess: false,
         reason: 'Nenhuma assinatura ativa'
       };
     }
 
-    // Verificar features do plano base
-    const planFeatures = subscription.plan.features as string[];
-    if (planFeatures.includes(featureKey)) {
+    // Features do plano base (de qualquer assinatura ativa)
+    const comFeature = subscriptions.find(s =>
+      ((s.plan.features as string[]) || []).includes(featureKey)
+    );
+    if (comFeature) {
       return {
         hasAccess: true,
-        planName: subscription.plan.nome
+        planName: comFeature.plan.nome
       };
     }
 
-    // Verificar add-ons ativos
+    // Add-ons ativos de qualquer uma das assinaturas
     const hasAddon = await prisma.subscriptionAddon.findFirst({
       where: {
-        subscriptionId: subscription.id,
+        subscriptionId: { in: subscriptions.map(s => s.id) },
         ativo: true,
         addon: {
           featureKey: featureKey,
@@ -132,7 +146,7 @@ export class SubscriptionService {
 
     return {
       hasAccess: false,
-      reason: `Feature não incluída no plano ${subscription.plan.nome}`
+      reason: `Feature não incluída no plano ${subscriptions.map(s => s.plan.nome).join(', ')}`
     };
   }
 
