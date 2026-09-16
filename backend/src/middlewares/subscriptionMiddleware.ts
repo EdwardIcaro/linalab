@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { subscriptionService } from '../services/subscriptionService';
+import prisma from '../db';
 
 /**
  * SUBSCRIPTION MIDDLEWARE
@@ -143,8 +144,62 @@ export const checkCompanyLimit = async (
   }
 };
 
+/**
+ * Igual ao requireFeature, mas resolve a assinatura pelo DONO DA EMPRESA.
+ *
+ * Por que existe: para funcionário (subaccount) o authMiddleware coloca em
+ * req.usuarioId o id da SUBCONTA, e a assinatura pertence ao usuário dono —
+ * o requireFeature negaria acesso a todo funcionário mesmo com a empresa paga.
+ *
+ * Uso: app.use('/api/x', authMiddleware, requireFeatureEmpresa('lina_whatsapp'), rotas)
+ */
+export const requireFeatureEmpresa = (featureKey: string) => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void | Response> => {
+    const empresaId = (req as AuthenticatedRequest).empresaId;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Empresa não identificada', code: 'UNAUTHORIZED' });
+    }
+
+    try {
+      const empresa = await prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { usuarioId: true }
+      });
+
+      if (!empresa) {
+        return res.status(404).json({ error: 'Empresa não encontrada', code: 'NOT_FOUND' });
+      }
+
+      const access = await subscriptionService.hasFeatureAccess(empresa.usuarioId, featureKey);
+
+      if (!access.hasAccess) {
+        return res.status(403).json({
+          error: 'Acesso negado',
+          message: access.reason || 'Essa funcionalidade não está disponível no plano da empresa',
+          feature: featureKey,
+          code: 'FEATURE_NOT_AVAILABLE'
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Erro ao validar feature da empresa:', error);
+      return res.status(500).json({
+        error: 'Erro ao validar acesso',
+        code: 'SUBSCRIPTION_CHECK_ERROR'
+      });
+    }
+  };
+};
+
 export default {
   requireFeature,
+  requireFeatureEmpresa,
   requireActiveSubscription,
   checkCompanyLimit
 };

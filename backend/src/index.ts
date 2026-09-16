@@ -41,8 +41,10 @@ import hubRoutes from './routes/hub';
 import dataPointRoutes from './routes/dataPoint';
 import linaCenterRoutes from './routes/linaCenter';
 import emailRegraRoutes from './routes/emailRegra';
+import emailAutomacaoRoutes from './routes/emailAutomacao';
 
 import prisma from './db'; // Importa a instância do Prisma
+import { chaveConfigurada } from './utils/credCrypto';
 import { subscriptionService } from './services/subscriptionService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
@@ -51,7 +53,7 @@ import { fecharBancoHorasDiario } from './services/bancoHorasService';
 import authMiddleware from './middlewares/authMiddleware';
 import userAuthMiddleware from './middlewares/userAuthMiddleware';
 import adminMiddleware from './middlewares/adminMiddleware';
-import { requireActiveSubscription } from './middlewares/subscriptionMiddleware';
+import { requireActiveSubscription, requireFeatureEmpresa } from './middlewares/subscriptionMiddleware';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -199,6 +201,8 @@ app.use('/api/whatsapp', authMiddleware, whatsappRoutes);
 app.use('/api/whatsapp-empresa', empresaWaRoutes);
 app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas autenticação de usuário)
 app.use('/api/email-regras', userAuthMiddleware, emailRegraRoutes); // Regras de leitura de email (config global)
+// Automação de email por empresa: plano Premium (lina_whatsapp) + permissão de cargo nas rotas
+app.use('/api/email-automacao', authMiddleware, requireFeatureEmpresa('lina_whatsapp'), emailAutomacaoRoutes);
 
 // Rota de saúde
 // `commit` vem das variáveis que o Railway injeta no build — serve para conferir
@@ -216,6 +220,8 @@ app.get('/health', (_req: express.Request, res: express.Response) => {
     version: '1.0.0',
     commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
     deployedAt: process.env.RAILWAY_DEPLOYMENT_CREATED_AT ?? null,
+    // Só diz SE a chave de criptografia das senhas de email está configurada — nunca o valor
+    emailCredKey: chaveConfigurada(),
   });
 });
 
