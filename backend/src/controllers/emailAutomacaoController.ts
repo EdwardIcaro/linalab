@@ -3,6 +3,7 @@ import prisma from '../db';
 import { criptografar, descriptografar, aadDaConta, chaveConfigurada } from '../utils/credCrypto';
 import { verificarRateLimit } from '../utils/rateLimiter';
 import { testarLogin, listarRecentes, lerEmail as lerEmailImap, ErroImap } from '../services/emailImapService';
+import { botSendCaptureJid } from '../services/botServiceClient';
 import { resolverDestinos, enfileirarEnvios, DestinoRegra } from '../services/emailAutomacaoFila';
 
 /**
@@ -294,15 +295,17 @@ async function validarDestinos(empresaId: string, destinos: unknown): Promise<{ 
   if (destinos.length > 20) return { erro: 'Escolha no máximo 20 destinatários.' };
 
   const limpos = (destinos as DestinoEntrada[]).map(d => ({ tipo: String(d?.tipo ?? ''), id: String(d?.id ?? '') }));
-  if (limpos.some(d => !['ADMIN', 'BOT_USER'].includes(d.tipo) || !d.id)) return { erro: 'Destinatário inválido.' };
+  if (limpos.some(d => !['ADMIN', 'BOT_USER', 'DESTINATARIO'].includes(d.tipo) || !d.id)) return { erro: 'Destinatário inválido.' };
 
   const idsAdmin = limpos.filter(d => d.tipo === 'ADMIN').map(d => d.id);
   const idsBot = limpos.filter(d => d.tipo === 'BOT_USER').map(d => d.id);
-  const [admins, botUsers] = await Promise.all([
+  const idsDest = limpos.filter(d => d.tipo === 'DESTINATARIO').map(d => d.id);
+  const [admins, botUsers, destinatarios] = await Promise.all([
     idsAdmin.length ? prisma.whatsappAdminPhone.findMany({ where: { id: { in: idsAdmin }, empresaId }, select: { id: true } }) : [],
     idsBot.length ? prisma.whatsappBotUser.findMany({ where: { id: { in: idsBot }, empresaId }, select: { id: true } }) : [],
+    idsDest.length ? prisma.emailDestinatario.findMany({ where: { id: { in: idsDest }, empresaId }, select: { id: true } }) : [],
   ]);
-  if (admins.length !== idsAdmin.length || botUsers.length !== idsBot.length) {
+  if (admins.length !== idsAdmin.length || botUsers.length !== idsBot.length || destinatarios.length !== idsDest.length) {
     return { erro: 'Algum destinatário não pertence a esta empresa.' };
   }
   return { valor: limpos };
@@ -437,9 +440,10 @@ export async function removerRegra(req: Req, res: Response) {
 export async function listarContatos(req: Req, res: Response) {
   const empresaId = empresaDo(req);
   try {
-    const [admins, botUsers] = await Promise.all([
+    const [admins, botUsers, destinatarios] = await Promise.all([
       prisma.whatsappAdminPhone.findMany({ where: { empresaId, ativo: true }, select: { id: true, nome: true, telefone: true, jid: true } }),
       prisma.whatsappBotUser.findMany({ where: { empresaId, ativo: true }, select: { id: true, nome: true, telefone: true, jid: true, role: true } }),
+      prisma.emailDestinatario.findMany({ where: { empresaId, ativo: true }, select: { id: true, nome: true, telefone: true }, orderBy: { createdAt: 'asc' } }),
     ]);
     const mascarar = (t?: string | null) => {
       const d = String(t ?? '').replace(/\D/g, '');
@@ -449,11 +453,79 @@ export async function listarContatos(req: Req, res: Response) {
       contatos: [
         ...admins.map(a => ({ tipo: 'ADMIN', id: a.id, nome: a.nome || 'Admin', grupo: 'Admins', telefoneMascarado: mascarar(a.telefone) })),
         ...botUsers.map(b => ({ tipo: 'BOT_USER', id: b.id, nome: b.nome, grupo: b.role === 'LAVADOR' ? 'Lavadores' : 'Funcionários', telefoneMascarado: mascarar(b.telefone) })),
+        ...destinatarios.map(d => ({ tipo: 'DESTINATARIO', id: d.id, nome: d.nome, grupo: 'Só automações', telefoneMascarado: mascarar(d.telefone) })),
       ],
     });
   } catch (err) {
     console.error('[EmailAutomacao] Erro ao listar contatos:', err);
     return res.status(500).json({ error: 'Erro ao listar os contatos' });
+  }
+}
+
+/**
+ * Cadastra quem vai receber as automações. NÃO vira admin do bot: não entra em
+ * Usuários & Acesso e não recebe resumo diário, alerta de caixa etc.
+ *
+ * Como é número avulso (não escolhido da lista), manda uma mensagem avisando —
+ * serve também para confirmar que o número existe no WhatsApp e pegar o JID real.
+ */
+export async function criarDestinatario(req: Req, res: Response) {
+  const empresaId = empresaDo(req);
+  const nome = String(req.body?.nome ?? '').trim().slice(0, 60);
+  const telefone = String(req.body?.telefone ?? '').replace(/\D/g, '');
+
+  if (!nome) return res.status(400).json({ error: 'Informe o nome do contato.' });
+  if (telefone.length < 10 || telefone.length > 15) return res.status(400).json({ error: 'Número inválido. Use DDD + número.' });
+  if (!verificarRateLimit(`email-destinatario:${empresaId}`, 10, 60 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Muitos contatos cadastrados seguidos. Tente de novo mais tarde.' });
+  }
+
+  try {
+    const jaExiste = await prisma.emailDestinatario.findFirst({ where: { empresaId, telefone }, select: { id: true, nome: true } });
+    if (jaExiste) return res.status(409).json({ error: `Esse número já está cadastrado como "${jaExiste.nome}".` });
+
+    const quantos = await prisma.emailDestinatario.count({ where: { empresaId } });
+    if (quantos >= 20) return res.status(409).json({ error: 'Limite de 20 destinatários por empresa.' });
+
+    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } });
+
+    // Envia e captura o JID real de uma vez (resolve o caso @lid do WhatsApp novo)
+    let jid: string | null = null;
+    try {
+      jid = await botSendCaptureJid(
+        telefone,
+        `Olá${nome ? ' ' + nome : ''}! Você foi incluído por *${empresa?.nome ?? 'sua empresa'}* para receber avisos automáticos por aqui (como códigos recebidos por email).\n\nSe não reconhece, é só ignorar esta mensagem.`
+      );
+    } catch (err) {
+      console.error('[EmailAutomacao] Não foi possível avisar o contato novo:', err);
+    }
+
+    const destinatario = await prisma.emailDestinatario.create({
+      data: { empresaId, nome, telefone, jid, criadoPor: autorDo(req) },
+      select: { id: true, nome: true, telefone: true },
+    });
+    await auditar(empresaId, autorDo(req), 'DESTINATARIO_CRIADO');
+    return res.status(201).json({
+      destinatario: { tipo: 'DESTINATARIO', id: destinatario.id, nome: destinatario.nome, grupo: 'Só automações', telefoneMascarado: destinatario.telefone.replace(/^(\d{4})\d+(\d{4})$/, '$1•••••$2') },
+      avisado: !!jid,
+    });
+  } catch (err) {
+    console.error('[EmailAutomacao] Erro ao cadastrar destinatário:', err);
+    return res.status(500).json({ error: 'Erro ao cadastrar o contato' });
+  }
+}
+
+export async function removerDestinatario(req: Req, res: Response) {
+  const empresaId = empresaDo(req);
+  const id = req.params.id as string;
+  try {
+    const removidos = await prisma.emailDestinatario.deleteMany({ where: { id, empresaId } });
+    if (removidos.count === 0) return res.status(404).json({ error: 'Contato não encontrado' });
+    await auditar(empresaId, autorDo(req), 'DESTINATARIO_REMOVIDO');
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[EmailAutomacao] Erro ao remover destinatário:', err);
+    return res.status(500).json({ error: 'Erro ao remover o contato' });
   }
 }
 

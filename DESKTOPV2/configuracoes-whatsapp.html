@@ -816,7 +816,15 @@
                 </div>
                 <label class="form-label" style="margin-top:.8rem;">Enviar para</label>
                 <div id="eaContatosLista" style="border:1px solid #eee;border-radius:10px;padding:.3rem .5rem;max-height:200px;overflow-y:auto;"></div>
-                <div style="font-size:.78rem;color:#777;margin-top:.4rem;">Só contatos cadastrados da empresa. Não achou? Cadastre na aba <b>Usuários &amp; Acesso</b>.</div>
+                <button type="button" onclick="eaAlternarNovoContato()" style="margin-top:.5rem;background:none;border:0;color:#7f56d9;cursor:pointer;font-weight:600;">+ Adicionar contato</button>
+                <div id="eaNovoContato" style="display:none;border:1px dashed #ddd;border-radius:10px;padding:.7rem;margin-top:.4rem;">
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                        <input id="eaNovoContatoNome" placeholder="Nome (ex.: Financeiro)" maxlength="60" style="flex:1;min-width:140px;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                        <input id="eaNovoContatoTelefone" placeholder="DDD + número" maxlength="20" style="flex:1;min-width:140px;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                        <button type="button" class="btn-primary" id="eaBtnSalvarContato" onclick="eaSalvarContato()">Adicionar</button>
+                    </div>
+                    <div style="font-size:.78rem;color:#777;margin-top:.4rem;">Esse contato recebe <b>só</b> o que as automações mandarem. Ele não vira administrador nem recebe resumo diário, alerta de caixa ou avisos de ordem. Ao adicionar, mandamos uma mensagem avisando — é assim que confirmamos que o número existe no WhatsApp.</div>
+                </div>
             </div>
 
             <div style="display:flex;justify-content:space-between;gap:.5rem;padding:.9rem 1.2rem;border-top:1px solid #eee;">
@@ -2106,6 +2114,7 @@
                     <div style="color:#888;font-size:.8rem;">${r.totalDisparos ? `Disparou ${r.totalDisparos}x${r.ultimoDisparoEm ? ' · última ' + new Date(r.ultimoDisparoEm).toLocaleString('pt-BR') : ''}` : 'Ainda não disparou'}</div>
                 </div>
                 <div style="white-space:nowrap;">
+                    <button onclick="eaEditarRegra('${r.id}')" title="Editar destinatários e mensagem" style="border:0;background:none;cursor:pointer;font-size:1rem;">✏️</button>
                     <button onclick="eaTestarEnvio('${r.id}')" title="Enviar teste" style="border:0;background:none;cursor:pointer;font-size:1rem;">📨</button>
                     <button onclick="eaExcluirRegra('${r.id}')" title="Excluir" style="border:0;background:none;cursor:pointer;font-size:1rem;">🗑</button>
                 </div>
@@ -2368,19 +2377,23 @@
                 const emoji = ea.wiz.tok && ea.wiz.tok.tipo === 'valor' ? '💰' : '🔑';
                 eaEl('eaRegraMensagem').value = `${emoji} ${eaEl('eaRegraNome').value}: {{valor}}`;
             }
-            eaEl('eaContatosLista').innerHTML = ['Admins', 'Funcionários', 'Lavadores'].map(grupo => {
+            eaRenderContatos();
+            eaAtualizarPrevia();
+            eaPasso(3);
+        }
+
+        function eaRenderContatos() {
+            eaEl('eaContatosLista').innerHTML = ['Admins', 'Funcionários', 'Lavadores', 'Só automações'].map(grupo => {
                 const doGrupo = ea.contatos.filter(c => c.grupo === grupo);
                 if (!doGrupo.length) return '';
                 return `<div style="font-size:.7rem;font-weight:700;color:#999;text-transform:uppercase;margin:.45rem .2rem .15rem;">${grupo}</div>` +
                     doGrupo.map(c => `
                         <label style="display:flex;gap:.5rem;align-items:center;padding:.35rem .25rem;cursor:pointer;">
-                            <input type="checkbox" value="${c.tipo}:${c.id}" onchange="eaMarcarDestino(this)">
+                            <input type="checkbox" value="${c.tipo}:${c.id}" ${ea.wiz.destinos.some(d => d.tipo === c.tipo && d.id === c.id) ? 'checked' : ''} onchange="eaMarcarDestino(this)">
                             <span style="font-size:.88rem;">${escHtml(c.nome)}</span>
                             <span style="margin-left:auto;color:#aaa;font-size:.78rem;font-family:monospace;">${escHtml(c.telefoneMascarado)}</span>
                         </label>`).join('');
-            }).join('') || '<div style="padding:.5rem;color:#888;font-size:.85rem;">Nenhum contato cadastrado. Cadastre na aba Usuários &amp; Acesso.</div>';
-            eaAtualizarPrevia();
-            eaPasso(3);
+            }).join('') || '<div style="padding:.5rem;color:#888;font-size:.85rem;">Nenhum contato ainda. Use "+ Adicionar contato" abaixo.</div>';
         }
         function eaMarcarDestino(chk) {
             const [tipo, id] = chk.value.split(':');
@@ -2417,22 +2430,76 @@
             const mensagem = eaEl('eaRegraMensagem').value;
             if (!mensagem.includes('{{valor}}')) return showAlert('A mensagem precisa conter {{valor}}.', 'error');
             if (!w.destinos.length) return showAlert('Escolha pelo menos um destinatário.', 'error');
+            const dados = {
+                contaId: w.contaId,
+                nome: eaEl('eaRegraNome').value.trim(),
+                remetenteContem: eaEl('eaFiltroRemetente').value.trim(),
+                assuntoContem: eaEl('eaFiltroAssunto').value.trim() || null,
+                regexExtracao: w.regra.regex,
+                tipoValor: w.tok ? eaTipoValor(w.tok.tipo) : (w.tipoValorSalvo || 'AVANCADO'),
+                ancora: w.regra.ancora,
+                template: mensagem,
+                destinos: w.destinos,
+            };
             try {
-                await window.api.emailAutomacao.criarRegra({
-                    contaId: w.contaId,
-                    nome: eaEl('eaRegraNome').value.trim(),
-                    remetenteContem: eaEl('eaFiltroRemetente').value.trim(),
-                    assuntoContem: eaEl('eaFiltroAssunto').value.trim() || null,
-                    regexExtracao: w.regra.regex,
-                    tipoValor: eaTipoValor(w.tok ? w.tok.tipo : ''),
-                    ancora: w.regra.ancora,
-                    template: mensagem,
-                    destinos: w.destinos,
-                });
+                if (w.editandoId) await window.api.emailAutomacao.atualizarRegra(w.editandoId, dados);
+                else await window.api.emailAutomacao.criarRegra(dados);
                 showAlert('Automação salva.', 'success');
                 eaFecharAssistente();
                 eaCarregar();
             } catch (err) { showAlert((err && err.error) || 'Erro ao salvar a automação.', 'error'); }
+        }
+
+        // ── Cadastrar contato direto no formulário da automação ───────────
+        function eaAlternarNovoContato() {
+            const bloco = eaEl('eaNovoContato');
+            const abrindo = bloco.style.display === 'none';
+            bloco.style.display = abrindo ? 'block' : 'none';
+            if (abrindo) eaEl('eaNovoContatoNome').focus();
+        }
+        async function eaSalvarContato() {
+            const nome = eaEl('eaNovoContatoNome').value.trim();
+            const telefone = eaEl('eaNovoContatoTelefone').value.replace(/\D/g, '');
+            if (!nome) return showAlert('Informe o nome do contato.', 'error');
+            if (telefone.length < 10) return showAlert('Informe DDD + número.', 'error');
+            const btn = eaEl('eaBtnSalvarContato');
+            btn.disabled = true; btn.textContent = 'Adicionando…';
+            try {
+                const r = await window.api.emailAutomacao.criarDestinatario({ nome, telefone });
+                ea.contatos.push(r.destinatario);
+                ea.wiz.destinos.push({ tipo: 'DESTINATARIO', id: r.destinatario.id }); // já entra marcado
+                eaEl('eaNovoContatoNome').value = ''; eaEl('eaNovoContatoTelefone').value = '';
+                eaEl('eaNovoContato').style.display = 'none';
+                eaRenderContatos();
+                showAlert(r.avisado ? 'Contato adicionado e avisado no WhatsApp.' : 'Contato adicionado. Não conseguimos avisar pelo WhatsApp — confira o número.', r.avisado ? 'success' : 'error');
+            } catch (err) {
+                showAlert((err && err.error) || 'Erro ao adicionar o contato.', 'error');
+            } finally { btn.disabled = false; btn.textContent = 'Adicionar'; }
+        }
+
+        // ── Editar automação (destinatários e mensagem) ───────────────────
+        function eaEditarRegra(id) {
+            const regra = ea.regras.find(r => r.id === id);
+            if (!regra) return;
+            const conta = ea.contas.find(c => c.id === regra.contaId);
+            ea.wiz = {
+                contaId: regra.contaId, editandoId: regra.id, passo: 3, colar: false,
+                email: null, exemplo: null, tok: null,
+                regra: { regex: regra.regexExtracao, ancora: regra.ancora, teste: null },
+                tipoValorSalvo: regra.tipoValor,
+                destinos: (regra.destinos || []).map(d => ({ tipo: d.tipo, id: d.id })),
+            };
+            eaEl('eaAssTitulo').textContent = 'Editar automação';
+            eaEl('eaAssConta').textContent = conta ? 'Email: ' + conta.email : '';
+            eaEl('eaRegraNome').value = regra.nome;
+            eaEl('eaRegraMensagem').value = regra.template;
+            eaEl('eaFiltroRemetente').value = regra.remetenteContem;
+            eaEl('eaFiltroAssunto').value = regra.assuntoContem || '';
+            eaEl('eaNovoContato').style.display = 'none';
+            eaEl('eaModalAssistente').style.display = 'flex';
+            eaRenderContatos();
+            eaAtualizarPrevia();
+            eaPasso(3);
         }
 
         // ── Ações nas automações ──────────────────────────────────────────

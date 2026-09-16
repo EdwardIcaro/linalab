@@ -88,6 +88,7 @@ model Empresa {
   emailRegras                EmailRegra[]
   whatsappEnvios             WhatsappEnvio[]
   emailAutomacaoAuditoria    EmailAutomacaoAuditoria[]
+  emailDestinatarios         EmailDestinatario[]
 
   @@map("empresas")
 }
@@ -1375,6 +1376,25 @@ model EmailConta {
 
   @@unique([empresaId, email])
   @@map("email_contas")
+}
+
+// Quem recebe as automações de email. NÃO é admin do bot: não entra na lista de
+// Usuários & Acesso e não recebe os avisos automáticos (resumo diário, caixa...).
+// O admin da empresa monta essa lista dentro da própria automação.
+model EmailDestinatario {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  telefone  String   // só dígitos, com DDI/DDD
+  jid       String?  // JID real do WhatsApp (pode ser @lid), resolvido no cadastro
+  ativo     Boolean  @default(true)
+  criadoPor String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, telefone])
+  @@map("email_destinatarios")
 }
 
 // Fila de envio: o backend enfileira e o bot (PC local) consome e envia pelo número da Lina.

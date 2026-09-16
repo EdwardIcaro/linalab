@@ -19,17 +19,21 @@ export async function resolverDestinos(empresaId: string, destinos: DestinoRegra
 
   const idsAdmin = destinos.filter(d => d.tipo === 'ADMIN').map(d => d.id);
   const idsBot = destinos.filter(d => d.tipo === 'BOT_USER').map(d => d.id);
+  const idsDest = destinos.filter(d => d.tipo === 'DESTINATARIO').map(d => d.id);
 
-  const [admins, botUsers] = await Promise.all([
+  const [admins, botUsers, destinatarios] = await Promise.all([
     idsAdmin.length
       ? prisma.whatsappAdminPhone.findMany({ where: { id: { in: idsAdmin }, empresaId, ativo: true }, select: { telefone: true, jid: true } })
       : [],
     idsBot.length
       ? prisma.whatsappBotUser.findMany({ where: { id: { in: idsBot }, empresaId, ativo: true }, select: { telefone: true, jid: true } })
       : [],
+    idsDest.length
+      ? prisma.emailDestinatario.findMany({ where: { id: { in: idsDest }, empresaId, ativo: true }, select: { telefone: true, jid: true } })
+      : [],
   ]);
 
-  const alvos = [...admins, ...botUsers]
+  const alvos = [...admins, ...botUsers, ...destinatarios]
     .map(c => (c.jid ? c.jid : String(c.telefone ?? '').replace(/\D/g, '')))
     .filter(Boolean);
 

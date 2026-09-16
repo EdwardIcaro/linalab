@@ -21,6 +21,8 @@ import {
   atualizarRegra,
   removerRegra,
   listarContatos,
+  criarDestinatario,
+  removerDestinatario,
   testarEnvio,
 } from '../controllers/emailAutomacaoController';
 
@@ -41,6 +43,9 @@ router.get('/contas/:id/emails/:uid', lerEmail);
 
 // Contatos que podem receber (telefone mascarado; a regra guarda só o ID)
 router.get('/contatos', listarContatos);
+// Destinatário só de automação — não vira admin do bot
+router.post('/destinatarios', criarDestinatario);
+router.delete('/destinatarios/:id', removerDestinatario);
 
 // Automações
 router.get('/regras', listarRegras);
