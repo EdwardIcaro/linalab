@@ -48,6 +48,7 @@ import { chaveConfigurada } from './utils/credCrypto';
 import { subscriptionService } from './services/subscriptionService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
+import { iniciarEmailAutomacaoPoller } from './services/emailAutomacaoPoller';
 
 // Importar middleware
 import authMiddleware from './middlewares/authMiddleware';
@@ -276,6 +277,10 @@ cron.schedule('0 2 * * *', () => {
   console.log(`[${new Date().toISOString()}] Fechando banco de horas...`);
   fecharBancoHorasDiario();
 }, { timezone: "America/Sao_Paulo" });
+
+// Automação de email: lê as caixas dos clientes aqui no servidor (a chave das senhas
+// nunca sai daqui) e enfileira o que casar com uma regra para o bot enviar.
+iniciarEmailAutomacaoPoller();
 
 
 // Iniciar servidor com aguardo do banco de dados

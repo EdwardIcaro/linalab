@@ -66,6 +66,7 @@ model Empresa {
   mensagensTemplate          MensagemTemplate[]
   gorjetas                   Gorjeta[]
   relatoriosFinanceiroLinks  RelatorioFinanceiroLink[]
+  whatsappEnvios             WhatsappEnvio[]
 
   @@map("empresas")
 }
@@ -915,6 +916,25 @@ model EmailRegra {
 // Log de eventos do sistema pro dono da plataforma (restart do bot, erros não
 // tratados, perguntas que a Lina não conseguiu responder). Gravado sempre;
 // "enviadoEm" marca quando já foi entregue no WhatsApp (agrupado por tipo).
+// Fila de envio: o backend enfileira (automação de email) e o bot consome aqui.
+// Mantém a chave de criptografia fora do PC e não depende do ngrok.
+model WhatsappEnvio {
+  id         String    @id @default(cuid())
+  empresaId  String
+  origem     String
+  destino    String
+  texto      String
+  status     String    @default("PENDENTE")
+  tentativas Int       @default(0)
+  erro       String?
+  createdAt  DateTime  @default(now())
+  enviadoEm  DateTime?
+  empresa    Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("whatsapp_envios")
+}
+
 model SystemEvent {
   id        String    @id @default(cuid())
   tipo      String // 'RESTART' | 'ERRO_USUARIO' | 'TOOL_FALHA' | ...

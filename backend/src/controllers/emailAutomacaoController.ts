@@ -3,6 +3,7 @@ import prisma from '../db';
 import { criptografar, descriptografar, aadDaConta, chaveConfigurada } from '../utils/credCrypto';
 import { verificarRateLimit } from '../utils/rateLimiter';
 import { testarLogin, listarRecentes, lerEmail as lerEmailImap, ErroImap } from '../services/emailImapService';
+import { resolverDestinos, enfileirarEnvios, DestinoRegra } from '../services/emailAutomacaoFila';
 
 /**
  * Automação de Email por empresa (Features/automacao-email.md).
@@ -456,29 +457,6 @@ export async function listarContatos(req: Req, res: Response) {
   }
 }
 
-/** IDs de contato → destino de entrega (JID quando pareado, senão telefone). */
-export async function resolverDestinos(empresaId: string, destinos: { tipo: string; id: string }[]): Promise<string[]> {
-  const idsAdmin = destinos.filter(d => d.tipo === 'ADMIN').map(d => d.id);
-  const idsBot = destinos.filter(d => d.tipo === 'BOT_USER').map(d => d.id);
-  const [admins, botUsers] = await Promise.all([
-    idsAdmin.length ? prisma.whatsappAdminPhone.findMany({ where: { id: { in: idsAdmin }, empresaId, ativo: true }, select: { telefone: true, jid: true } }) : [],
-    idsBot.length ? prisma.whatsappBotUser.findMany({ where: { id: { in: idsBot }, empresaId, ativo: true }, select: { telefone: true, jid: true } }) : [],
-  ]);
-  const alvos = [...admins, ...botUsers]
-    .map(c => (c.jid ? c.jid : String(c.telefone ?? '').replace(/\D/g, '')))
-    .filter(Boolean);
-  return [...new Set(alvos)];
-}
-
-/** Enfileira mensagens — o bot consome a fila e envia pelo número da Lina. */
-export async function enfileirarEnvios(empresaId: string, alvos: string[], texto: string): Promise<number> {
-  if (!alvos.length) return 0;
-  const { count } = await prisma.whatsappEnvio.createMany({
-    data: alvos.map(destino => ({ empresaId, origem: 'EMAIL_AUTOMACAO', destino, texto })),
-  });
-  return count;
-}
-
 export async function testarEnvio(req: Req, res: Response) {
   const empresaId = empresaDo(req);
   const id = req.params.id as string;
@@ -489,7 +467,7 @@ export async function testarEnvio(req: Req, res: Response) {
     const regra = await prisma.emailRegra.findFirst({ where: { id, empresaId } });
     if (!regra) return res.status(404).json({ error: 'Automação não encontrada' });
 
-    const destinos = Array.isArray(regra.destinos) ? (regra.destinos as unknown as { tipo: string; id: string }[]) : [];
+    const destinos = Array.isArray(regra.destinos) ? (regra.destinos as unknown as DestinoRegra[]) : [];
     const alvos = await resolverDestinos(empresaId, destinos);
     if (!alvos.length) return res.status(400).json({ error: 'Essa automação não tem destinatário válido.' });
 

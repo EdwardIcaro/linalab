@@ -109,6 +109,68 @@ export async function listarRecentes(
   });
 }
 
+export interface MensagemNova {
+  uid: number;
+  de: string;
+  assunto: string;
+  texto: string;
+}
+
+/**
+ * Emails que chegaram DEPOIS do último UID visto.
+ *
+ * Por UID e não por "não lido": a caixa do cliente pode ter milhares de mensagens
+ * não lidas, e marcar como lido mexeria na caixa dele. Quando `ultimoUid` é null
+ * (1ª vez) ou o `uidValidity` mudou, devolve só o ponto de partida, sem histórico.
+ */
+export async function buscarNovos(
+  email: string,
+  senha: string,
+  estado: { ultimoUid: number | null; uidValidity: string | null }
+): Promise<{ uidValidity: string; ultimoUid: number; mensagens: MensagemNova[] }> {
+  return comConexao(email, senha, async (c) => {
+    const lock = await c.getMailboxLock('INBOX', { readOnly: true });
+    try {
+      const caixa = c.mailbox as { uidNext: number; uidValidity: bigint } | false;
+      if (!caixa) throw new ErroImap('INDISPONIVEL');
+
+      const uidValidity = String(caixa.uidValidity);
+      const inicio = caixa.uidNext - 1;
+
+      // 1ª leitura ou caixa recriada no servidor: só marca de onde começar
+      if (estado.ultimoUid === null || estado.uidValidity !== uidValidity) {
+        return { uidValidity, ultimoUid: inicio, mensagens: [] };
+      }
+
+      const desde = estado.ultimoUid;
+      // "N:*" devolve a última mensagem mesmo quando N > maior UID → filtra de novo
+      const uids = ((await c.search({ uid: `${desde + 1}:*` }, { uid: true })) || []).filter(u => u > desde);
+      if (!uids.length) return { uidValidity, ultimoUid: desde, mensagens: [] };
+
+      const mensagens: MensagemNova[] = [];
+      let maior = desde;
+      for await (const msg of c.fetch(uids, { source: true }, { uid: true })) {
+        maior = Math.max(maior, msg.uid);
+        try {
+          const parsed = await simpleParser(msg.source as Buffer);
+          const bruto = parsed.text || (parsed.html ? htmlParaTexto(String(parsed.html)) : '');
+          mensagens.push({
+            uid: msg.uid,
+            de: parsed.from?.value?.[0]?.address ?? '',
+            assunto: parsed.subject ?? '',
+            texto: bruto.slice(0, MAX_CORPO),
+          });
+        } catch {
+          // Um email ilegível não pode travar o ciclo inteiro
+        }
+      }
+      return { uidValidity, ultimoUid: maior, mensagens };
+    } finally {
+      lock.release();
+    }
+  });
+}
+
 function htmlParaTexto(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')

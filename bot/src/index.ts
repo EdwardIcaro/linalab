@@ -27,6 +27,7 @@ import {
 } from './services/baileyService';
 
 import { startEmailPoller } from './services/emailPoller';
+import { processarFilaEnvios, limparEnviosAntigos } from './services/filaEnvioService';
 
 import {
   connectEmpresa,
@@ -348,10 +349,17 @@ async function startBot() {
           connectEmpresa(empresaId).catch(console.error);
         }
       } catch {}
+
+      // Fila de envio da automação de email (backend enfileira aqui, bot envia)
+      await processarFilaEnvios();
     }, 5000);
 
     // Poller de leitura de email → WhatsApp (regras cadastradas na config)
     startEmailPoller();
+
+    // Fila de envio: remove os já enviados/com erro depois de 7 dias
+    limparEnviosAntigos().catch(() => {});
+    setInterval(() => { limparEnviosAntigos().catch(() => {}); }, 24 * 60 * 60 * 1000);
   } catch (err) {
     console.error('❌ Erro ao iniciar bot:', err);
     process.exit(1);
