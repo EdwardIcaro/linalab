@@ -84,6 +84,10 @@ model Empresa {
   lcOrdens                   LcOrdemServico[]
   lcPagamentos               LcPagamento[]
   relatoriosFinanceiroLinks  RelatorioFinanceiroLink[]
+  emailContas                EmailConta[]
+  emailRegras                EmailRegra[]
+  whatsappEnvios             WhatsappEnvio[]
+  emailAutomacaoAuditoria    EmailAutomacaoAuditoria[]
 
   @@map("empresas")
 }
@@ -1324,18 +1328,86 @@ model RecuperacaoSenha {
 // extrai um valor via regex e envia o template no destino (grupo ou números).
 model EmailRegra {
   id              String   @id @default(cuid())
+  // empresaId/contaId são opcionais só durante a migração da automação global (Features/automacao-email.md §9)
+  empresaId       String?
+  contaId         String?
   nome            String
   ativo           Boolean  @default(true)
   remetenteContem String   // filtro por remetente (ex: "localiza")
   assuntoContem   String?  // filtro por assunto (opcional)
-  regexExtracao   String   // ex: "\\d{6}" — o match vira {{valor}} no template
+  regexExtracao   String   // ex: "seguir:[^0-9]{0,40}([0-9]{6})" — o 1º grupo vira {{valor}}
+  tipoValor       String   @default("AVANCADO") // CODIGO | ALFANUMERICO | VALOR | LINK | AVANCADO
+  ancora          String?  // texto antes do valor — usado na explicação em português e na edição
   template        String   // ex: "🔑 Código Localiza: {{valor}}"
-  destinoTipo     String   // "GRUPO" | "NUMEROS"
-  destinoValor    String   // JID do grupo (...@g.us) ou telefones separados por vírgula
+  destinos        Json?    // [{ "tipo": "ADMIN" | "BOT_USER", "id": "..." }] — IDs, nunca telefone
+  destinoTipo     String   // LEGADO (automação global): "GRUPO" | "NUMEROS"
+  destinoValor    String   // LEGADO: JID do grupo ou telefones separados por vírgula
+  ultimoDisparoEm DateTime?
+  totalDisparos   Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  empresa         Empresa?    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  conta           EmailConta? @relation(fields: [contaId], references: [id], onDelete: Cascade)
 
+  @@index([contaId])
+  @@index([empresaId])
   @@map("email_regras")
+}
+
+// Conta de email do cliente (até 2 por empresa). A senha de app fica criptografada
+// (AES-256-GCM, utils/credCrypto.ts) e NUNCA volta pro frontend.
+model EmailConta {
+  id                 String       @id @default(cuid())
+  empresaId          String
+  email              String
+  senhaCriptografada String       // "v1:iv:tag:dados" — AAD = empresaId:contaId
+  provedor           String       @default("GMAIL")
+  status             String       @default("CONECTADO") // CONECTADO | ERRO | PAUSADO_PLANO
+  ultimoErro         String?      // mensagem HUMANA (nunca o erro cru do IMAP)
+  ultimoUid          Int?         // checkpoint do poller — sobrevive a restart
+  uidValidity        String?
+  verificadoEm       DateTime?
+  criadoPor          String?      // usuarioId ou subaccountId
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  empresa            Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  regras             EmailRegra[]
+
+  @@unique([empresaId, email])
+  @@map("email_contas")
+}
+
+// Fila de envio: o backend enfileira e o bot (PC local) consome e envia pelo número da Lina.
+// Evita ter a chave de criptografia no PC e não depende do ngrok.
+model WhatsappEnvio {
+  id         String    @id @default(cuid())
+  empresaId  String
+  origem     String    // "EMAIL_AUTOMACAO"
+  destino    String    // telefone/JID já resolvido e validado pelo backend
+  texto      String    // zerado ("") depois de ENVIADO
+  status     String    @default("PENDENTE") // PENDENTE | ENVIADO | ERRO
+  tentativas Int       @default(0)
+  erro       String?
+  createdAt  DateTime  @default(now())
+  enviadoEm  DateTime?
+  empresa    Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("whatsapp_envios")
+}
+
+// Quem conectou/removeu conta e quem abriu a caixa de entrada — exigência da revisão de segurança
+model EmailAutomacaoAuditoria {
+  id        String   @id @default(cuid())
+  empresaId String
+  contaId   String?
+  autorId   String
+  acao      String   // CONTA_CRIADA | SENHA_TROCADA | CONTA_REMOVIDA | CONTA_VERIFICADA | EMAILS_LISTADOS | EMAIL_ABERTO | TESTE_ENVIO
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, createdAt])
+  @@map("email_automacao_auditoria")
 }
 
 // Log de eventos do sistema pro dono da plataforma (restart do bot, erros não
