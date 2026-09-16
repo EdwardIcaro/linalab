@@ -227,6 +227,11 @@ app.get('/health', (_req: express.Request, res: express.Response) => {
 
 // Tratamento de erros
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  // Corpo JSON malformado é erro do cliente (400), não falha do servidor: o
+  // express.json() lança antes de qualquer rota, então caía no 500 genérico.
+  if ((err as any)?.type === 'entity.parse.failed' || (err instanceof SyntaxError && (err as any)?.status === 400)) {
+    return res.status(400).json({ error: 'Corpo da requisição inválido (JSON malformado)' });
+  }
   console.error(err.stack);
   res.status(500).json({ error: 'Algo deu errado!' });
 });
