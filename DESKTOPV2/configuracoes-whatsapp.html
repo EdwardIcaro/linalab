@@ -245,24 +245,35 @@
 
             <!-- ===================== ABA: AUTOMAÇÃO DE EMAIL ===================== -->
             <div class="tab-panel" data-tab-panel="email">
-                <div class="config-card">
-                    <div class="config-item action-card">
-                        <div class="config-text">
-                            <h3>Automatizar via email</h3>
-                            <p>A Lina lê um email dedicado e, quando chega uma mensagem que casa com a regra, extrai um valor (ex: código de validação) e envia no WhatsApp — num grupo ou para números de admin.</p>
-                        </div>
-                        <button class="btn-primary" onclick="abrirModalRegraEmail()">+ Nova Regra</button>
-                    </div>
+                <!-- Sem o plano Premium: convite, sem lista -->
+                <div class="config-card" id="eaUpsell" style="display:none;text-align:center;padding:2rem 1rem;">
+                    <div style="font-size:2.2rem;">📧➜💬</div>
+                    <h3 style="margin:.4rem 0;">Receba códigos e avisos do email direto no WhatsApp</h3>
+                    <p style="color:#666;max-width:520px;margin:0 auto 1rem;">Código de acesso de fornecedor, token do banco, aviso de Pix… a Lina lê o seu email e manda só o que importa pra você e sua equipe.</p>
+                    <a href="planos.html" class="btn-primary" style="text-decoration:none;display:inline-block;">Conhecer o plano Premium</a>
                 </div>
 
-                <!-- Seção de Regras de Leitura de Email -->
-                <div class="admin-section">
-                    <div class="section-header">
-                        <h2>📧 Regras Cadastradas</h2>
+                <!-- Sem permissão de cargo -->
+                <div class="config-card" id="eaSemPermissao" style="display:none;text-align:center;padding:2rem 1rem;">
+                    <div style="font-size:2rem;">🔒</div>
+                    <h3 style="margin:.4rem 0;">Acesso restrito</h3>
+                    <p style="color:#666;margin:0;">Só quem pode gerenciar as configurações da empresa consegue mexer na automação de email.</p>
+                </div>
+
+                <div id="eaConteudo" style="display:none;">
+                    <div class="config-card">
+                        <div class="config-item action-card">
+                            <div class="config-text">
+                                <h3>Contas de email <span id="eaContador" style="color:#999;font-weight:400;"></span></h3>
+                                <p>Cada email tem as próprias automações. Quando chega uma mensagem que combina, a Lina manda o que você escolheu no WhatsApp.</p>
+                            </div>
+                            <button class="btn-primary" id="eaBtnAdicionar" onclick="eaAbrirAdicionar()">+ Adicionar email</button>
+                        </div>
                     </div>
-                    <div id="regrasEmailList" class="admin-list"></div>
+                    <div id="eaListaContas"></div>
                 </div>
             </div>
+
 
     <!-- Modal para adicionar admin -->
     <div id="adminModal" class="modal-phone">
@@ -685,66 +696,135 @@
         </div>
     </div>
 
-    <!-- Modal Regra de Email -->
-    <div id="modalRegraEmail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-            <h3 id="modalRegraEmailTitle" style="margin:0 0 1.5rem 0;">Nova Regra</h3>
-            <input type="hidden" id="regraEmailId">
-            <div class="form-group-phone">
-                <label>Nome da regra</label>
-                <input type="text" id="regraNome" placeholder="Ex: Código Localiza NFe" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+    <!-- Janela: conectar email / trocar senha -->
+    <div id="eaModalConta" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;">
+        <div style="background:#fff;border-radius:14px;max-width:480px;width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.2rem;border-bottom:1px solid #eee;">
+                <h3 id="eaContaTitulo" style="margin:0;">Adicionar email</h3>
+                <button onclick="eaFecharConta()" style="border:0;background:none;font-size:1.1rem;cursor:pointer;">✕</button>
             </div>
-            <div class="form-group-phone">
-                <label>Remetente contém</label>
-                <input type="text" id="regraRemetente" placeholder="Ex: localiza" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                <div class="helper-text">Parte do email/nome do remetente. Ex: "localiza" pega qualquer remetente com localiza.</div>
+
+            <div id="eaContaForm" style="padding:1.1rem 1.2rem;">
+                <p style="color:#666;font-size:.85rem;margin-top:0;">Por segurança o Google não deixa usar a sua senha normal. Você cria uma <b>senha de app</b> só pra Lina — leva 2 minutos e dá pra apagar quando quiser.</p>
+                <ol style="padding-left:1.1rem;font-size:.9rem;line-height:1.7;">
+                    <li>Ative a <b>verificação em 2 etapas</b> na conta Google.<br><a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener noreferrer">Abrir verificação em 2 etapas ↗</a></li>
+                    <li>Crie uma <b>senha de app</b> com o nome <b>Lina</b> (16 letras).<br><a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Abrir senhas de app ↗</a></li>
+                    <li>Preencha abaixo:</li>
+                </ol>
+                <label class="form-label">Email do Gmail</label>
+                <input type="email" id="eaContaEmail" placeholder="lavajato@gmail.com" autocomplete="off" spellcheck="false" style="width:100%;padding:.7rem;border:1px solid #ddd;border-radius:8px;">
+                <label class="form-label" style="margin-top:.8rem;">Senha de app</label>
+                <input type="password" id="eaContaSenha" placeholder="16 letras" autocomplete="new-password" spellcheck="false" oninput="eaContarSenha()" style="width:100%;padding:.7rem;border:1px solid #ddd;border-radius:8px;font-family:monospace;">
+                <div id="eaContaContador" style="font-size:.8rem;color:#999;margin-top:.3rem;">0/16 letras</div>
+                <div id="eaContaErro" style="display:none;background:#fef2f2;color:#991b1b;border-radius:8px;padding:.6rem .7rem;margin-top:.7rem;font-size:.85rem;"></div>
+                <p style="font-size:.8rem;color:#777;margin-bottom:0;">🔒 A senha fica criptografada e nunca é mostrada de novo. A Lina só lê os emails novos pra achar os das suas automações.</p>
             </div>
-            <div class="form-group-phone">
-                <label>Assunto contém (opcional)</label>
-                <input type="text" id="regraAssunto" placeholder="Ex: Código de validação" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+
+            <div id="eaContaVerificando" style="display:none;padding:2rem 1rem;text-align:center;">
+                <div style="font-size:2rem;">⏳</div>
+                <div style="font-weight:700;margin-top:.5rem;">Verificando conexão com o Gmail…</div>
+                <div id="eaContaVerificandoEmail" style="color:#777;font-size:.85rem;"></div>
             </div>
-            <div class="form-group-phone">
-                <label>Regex de extração</label>
-                <input type="text" id="regraRegex" placeholder="Ex: \d{6}" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;font-family:monospace;">
-                <div class="helper-text">O que capturar do corpo. <code>\d{6}</code> = 6 dígitos. O valor capturado vira {{valor}}.</div>
+
+            <div id="eaContaSucesso" style="display:none;padding:1.8rem 1rem .6rem;text-align:center;">
+                <div style="width:56px;height:56px;border-radius:50%;background:#ecfdf5;color:#059669;font-size:1.8rem;display:grid;place-items:center;margin:0 auto .8rem;">✓</div>
+                <div style="font-weight:700;font-size:1.05rem;">Conexão confirmada!</div>
+                <div style="color:#666;margin-top:.3rem;">A Lina já consegue ler <b id="eaContaSucessoEmail"></b>.</div>
             </div>
-            <div class="form-group-phone">
-                <label>Mensagem</label>
-                <textarea id="regraTemplate" rows="3" placeholder="Ex: 🔑 Código Localiza: {{valor}} (expira em 10min)"
-                          style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
-                <div class="helper-text">Use {{valor}} onde o valor capturado deve aparecer.</div>
-            </div>
-            <div class="form-group-phone">
-                <label>Destino</label>
-                <select id="regraDestinoTipo" onchange="onRegraDestinoTipoChange()" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                    <option value="NUMEROS">Números de WhatsApp</option>
-                    <option value="GRUPO">Grupo de WhatsApp</option>
-                </select>
-            </div>
-            <div class="form-group-phone" id="regraDestinoNumerosWrap">
-                <label>Contatos salvos</label>
-                <div id="regraContatosSalvos" style="max-height:190px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:0.4rem 0.5rem;margin-bottom:0.6rem;"></div>
-                <label>Outros números (separados por vírgula)</label>
-                <input type="text" id="regraDestinoNumeros" placeholder="Ex: 5599999998888, 5599999997777" class="form-input" style="width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                <div class="helper-text">Marque os contatos salvos e/ou digite números avulsos. Tudo é combinado no envio.</div>
-            </div>
-            <div class="form-group-phone" id="regraDestinoGrupoWrap" style="display:none;">
-                <label>Grupo</label>
-                <div style="display:flex;gap:0.5rem;">
-                    <select id="regraDestinoGrupo" style="flex:1;padding:0.7rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-                        <option value="">— selecione —</option>
-                    </select>
-                    <button type="button" onclick="listarGruposBot()" class="btn-primary" style="white-space:nowrap;">Listar grupos</button>
-                </div>
-                <div class="helper-text">O bot precisa estar no grupo. Clique em "Listar grupos" para carregar.</div>
-            </div>
-            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
-                <button onclick="fecharModalRegraEmail()" style="padding:0.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
-                <button onclick="salvarRegraEmail()" class="btn-primary">Salvar</button>
+
+            <div style="display:flex;justify-content:space-between;gap:.5rem;padding:.9rem 1.2rem;border-top:1px solid #eee;">
+                <button onclick="eaFecharConta()" style="padding:.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Fechar</button>
+                <button id="eaContaSalvar" class="btn-primary" onclick="eaSalvarConta()">Verificar e salvar</button>
+                <button id="eaContaCriarPrimeira" class="btn-primary" style="display:none;" onclick="eaCriarPrimeiraAutomacao()">Criar primeira automação</button>
             </div>
         </div>
     </div>
 
+    <!-- Janela: confirmar remoção da conta -->
+    <div id="eaModalRemover" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:#fff;border-radius:14px;max-width:460px;width:100%;">
+            <div style="padding:1rem 1.2rem;border-bottom:1px solid #eee;"><h3 style="margin:0;">Remover email?</h3></div>
+            <div style="padding:1.1rem 1.2rem;" id="eaRemoverTexto"></div>
+            <div style="display:flex;justify-content:flex-end;gap:.5rem;padding:.9rem 1.2rem;border-top:1px solid #eee;">
+                <button onclick="eaFecharRemover()" style="padding:.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                <button onclick="eaConfirmarRemocao()" style="padding:.6rem 1.2rem;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Remover email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Janela: assistente de automação (3 passos) -->
+    <div id="eaModalAssistente" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:flex-start;justify-content:center;padding:3vh 1rem;overflow-y:auto;">
+        <div style="background:#fff;border-radius:14px;max-width:720px;width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:1rem 1.2rem;border-bottom:1px solid #eee;">
+                <div>
+                    <h3 id="eaAssTitulo" style="margin:0;">Nova automação</h3>
+                    <div id="eaAssConta" style="color:#777;font-size:.8rem;word-break:break-all;"></div>
+                    <div id="eaAssPassos" style="color:#999;font-size:.78rem;margin-top:.3rem;"></div>
+                </div>
+                <button onclick="eaFecharAssistente()" style="border:0;background:none;font-size:1.1rem;cursor:pointer;">✕</button>
+            </div>
+
+            <!-- Passo 1 -->
+            <div id="eaPasso1" style="padding:1.1rem 1.2rem;">
+                <div style="font-weight:700;">Escolha um email de exemplo</div>
+                <div style="color:#777;font-size:.85rem;margin-bottom:.6rem;">Emails dos últimos 7 dias dessa conta. Nada daqui fica salvo.</div>
+                <div id="eaEmailsLista" style="border:1px solid #eee;border-radius:10px;max-height:320px;overflow-y:auto;"></div>
+                <button style="margin-top:.6rem;background:none;border:0;color:#7f56d9;cursor:pointer;font-weight:600;" onclick="eaAlternarColar()">Prefiro colar o texto do email</button>
+                <div id="eaColarBloco" style="display:none;margin-top:.6rem;">
+                    <label class="form-label">Remetente</label>
+                    <input id="eaColarDe" placeholder="noreply@empresa.com" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                    <label class="form-label" style="margin-top:.5rem;">Assunto</label>
+                    <input id="eaColarAssunto" placeholder="Seu código de acesso" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                    <label class="form-label" style="margin-top:.5rem;">Texto do email</label>
+                    <textarea id="eaColarTexto" rows="6" placeholder="Cole aqui o texto completo do email" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;"></textarea>
+                </div>
+            </div>
+
+            <!-- Passo 2 -->
+            <div id="eaPasso2" style="display:none;padding:1.1rem 1.2rem;">
+                <div style="font-weight:700;">Clique no que a Lina deve enviar</div>
+                <div id="eaPasso2De" style="color:#777;font-size:.85rem;word-break:break-all;"></div>
+                <div style="display:flex;gap:.9rem;flex-wrap:wrap;font-size:.75rem;color:#777;margin:.5rem 0;">
+                    <span><i style="display:inline-block;width:.8rem;height:.8rem;border-radius:3px;background:#dbeafe;"></i> código</span>
+                    <span><i style="display:inline-block;width:.8rem;height:.8rem;border-radius:3px;background:#ede9fe;"></i> código com letras</span>
+                    <span><i style="display:inline-block;width:.8rem;height:.8rem;border-radius:3px;background:#dcfce7;"></i> valor</span>
+                    <span><i style="display:inline-block;width:.8rem;height:.8rem;border-radius:3px;background:#fef3c7;"></i> link</span>
+                </div>
+                <div id="eaCorpoEmail" style="white-space:pre-wrap;word-break:break-word;border:1px solid #eee;background:#fcfcfd;border-radius:10px;padding:.9rem 1rem;max-height:300px;overflow-y:auto;font-size:.86rem;line-height:1.7;"></div>
+                <div id="eaResultadoRegra" style="margin-top:.8rem;"></div>
+                <details style="margin-top:.8rem;">
+                    <summary style="cursor:pointer;color:#777;font-size:.8rem;">Ajustar filtros</summary>
+                    <label class="form-label" style="margin-top:.5rem;">Quando o remetente contém</label>
+                    <input id="eaFiltroRemetente" maxlength="120" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                    <label class="form-label" style="margin-top:.5rem;">E o assunto contém</label>
+                    <input id="eaFiltroAssunto" maxlength="120" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                </details>
+            </div>
+
+            <!-- Passo 3 -->
+            <div id="eaPasso3" style="display:none;padding:1.1rem 1.2rem;">
+                <label class="form-label">Nome da automação</label>
+                <input id="eaRegraNome" maxlength="60" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
+                <label class="form-label" style="margin-top:.6rem;">Mensagem</label>
+                <textarea id="eaRegraMensagem" rows="3" maxlength="300" oninput="eaAtualizarPrevia()" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;"></textarea>
+                <div style="font-size:.78rem;color:#777;margin-top:.2rem;">Use <b>{{valor}}</b> onde entra o que a Lina encontrou.</div>
+                <div style="background:#efeae2;border-radius:10px;padding:1rem;margin-top:.6rem;">
+                    <div style="background:#d9fdd3;border-radius:10px 10px 10px 2px;padding:.6rem .8rem;white-space:pre-wrap;word-break:break-word;">
+                        <div style="font-size:.72rem;font-weight:700;color:#128c7e;">Lina 🤖</div>
+                        <span id="eaPrevia"></span>
+                    </div>
+                </div>
+                <label class="form-label" style="margin-top:.8rem;">Enviar para</label>
+                <div id="eaContatosLista" style="border:1px solid #eee;border-radius:10px;padding:.3rem .5rem;max-height:200px;overflow-y:auto;"></div>
+                <div style="font-size:.78rem;color:#777;margin-top:.4rem;">Só contatos cadastrados da empresa. Não achou? Cadastre na aba <b>Usuários &amp; Acesso</b>.</div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;gap:.5rem;padding:.9rem 1.2rem;border-top:1px solid #eee;">
+                <button id="eaBtnVoltar" onclick="eaVoltarPasso()" style="padding:.6rem 1.2rem;background:#f0f0f0;color:#555;border:none;border-radius:8px;cursor:pointer;">Cancelar</button>
+                <button id="eaBtnAvancar" class="btn-primary" onclick="eaAvancarPasso()">Continuar →</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // State
@@ -1063,12 +1143,9 @@
             await loadPixConfig();
             carregarStatusEmpresaWa();
 
-            // Automação de Email é config global do sistema — só o LINA_OWNER vê (backend também bloqueia)
-            if (getEffectiveRole() === 'LINA_OWNER') {
-                carregarRegrasEmail();
-            } else {
-                document.querySelectorAll('[data-tab="email"], [data-tab-panel="email"]').forEach(el => el.remove());
-            }
+            // Automação de email: quem decide o acesso é o backend (plano Premium +
+            // permissão de cargo). A tela mostra upsell ou aviso conforme a resposta.
+            eaCarregar();
         }
 
         // ── Abas ──────────────────────────────────────────────────────────────
@@ -1924,222 +2001,456 @@
             return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        // ===== Regras de Leitura de Email =====
-        async function carregarRegrasEmail() {
+        // ═══════════════════════════════════════════════════════════════
+        // AUTOMAÇÃO DE EMAIL (Premium) — contas, assistente e automações
+        // Quem decide o acesso é o backend: plano + permissão de cargo.
+        // ═══════════════════════════════════════════════════════════════
+        const ea = {
+            contas: [], regras: [], contatos: [], limite: 2,
+            removerId: null,
+            conta: { id: null, fase: 'form' },
+            wiz: null,
+        };
+
+        function eaEl(id) { return document.getElementById(id); }
+        function eaMostrar(id, mostrar, display) { const el = eaEl(id); if (el) el.style.display = mostrar ? (display || 'block') : 'none'; }
+
+        async function eaCarregar() {
             try {
-                const data = await window.api.emailRegras.list();
-                const list = document.getElementById('regrasEmailList');
-                if (!list) return;
-                if (!data.regras?.length) {
-                    list.innerHTML = '<p style="color:#999;font-size:0.9rem;text-align:center;">Nenhuma regra cadastrada.</p>';
-                    window._regrasEmail = [];
-                    return;
-                }
-                window._regrasEmail = data.regras;
-                list.innerHTML = data.regras.map(r => {
-                    const destino = r.destinoTipo === 'GRUPO'
-                        ? '👥 Grupo'
-                        : '📱 ' + escHtml(r.destinoValor);
-                    return `
-                    <div class="admin-card" style="align-items:flex-start;opacity:${r.ativo?'1':'.6'};">
-                        <div style="flex:1;">
-                            <div style="font-weight:700;margin-bottom:0.25rem;">${escHtml(r.nome)}</div>
-                            <div style="font-size:0.75rem;color:#999;margin-bottom:0.35rem;">Remetente: ${escHtml(r.remetenteContem)}${r.assuntoContem?' · Assunto: '+escHtml(r.assuntoContem):''} · Destino: ${destino}</div>
-                            <div style="font-size:0.9rem;color:#555;line-height:1.4;">${escHtml(r.template)}</div>
-                        </div>
-                        <div class="admin-actions">
-                            <button class="btn-icon" onclick="editarRegraEmail('${r.id}')" title="Editar">✏️</button>
-                            <button class="btn-icon" onclick="toggleRegraEmail('${r.id}',${!r.ativo})" title="${r.ativo?'Desativar':'Ativar'}">${r.ativo?'⏸':'▶'}</button>
-                            <button class="btn-icon btn-icon-danger" onclick="excluirRegraEmail('${r.id}')" title="Excluir" style="color:#dc2626;">🗑</button>
-                        </div>
+                const [contas, regras, contatos] = await Promise.all([
+                    window.api.emailAutomacao.contas(),
+                    window.api.emailAutomacao.regras(),
+                    window.api.emailAutomacao.contatos(),
+                ]);
+                ea.contas = contas.contas || [];
+                ea.limite = contas.limite || 2;
+                ea.regras = regras.regras || [];
+                ea.contatos = contatos.contatos || [];
+                eaMostrar('eaConteudo', true);
+                eaMostrar('eaUpsell', false);
+                eaMostrar('eaSemPermissao', false);
+                eaRender();
+            } catch (err) {
+                // Sem plano ou sem permissão: a aba explica em vez de sumir
+                const semPlano = err && err.code === 'FEATURE_NOT_AVAILABLE';
+                eaMostrar('eaUpsell', semPlano);
+                eaMostrar('eaSemPermissao', !semPlano);
+                eaMostrar('eaConteudo', false);
+            }
+        }
+
+        function eaRender() {
+            eaEl('eaContador').textContent = `(${ea.contas.length} de ${ea.limite})`;
+            const btn = eaEl('eaBtnAdicionar');
+            btn.disabled = ea.contas.length >= ea.limite;
+            btn.title = btn.disabled ? `Limite de ${ea.limite} emails por empresa` : '';
+
+            if (!ea.contas.length) {
+                eaEl('eaListaContas').innerHTML = `
+                    <div class="config-card" style="text-align:center;padding:2rem 1rem;">
+                        <div style="font-size:2rem;">📭</div>
+                        <div style="font-weight:700;margin:.3rem 0;">Nenhum email conectado</div>
+                        <div style="color:#666;font-size:.9rem;">Conecte o email que recebe os códigos e avisos.</div>
                     </div>`;
-                }).join('');
-            } catch { }
-        }
-
-        function onRegraDestinoTipoChange() {
-            const tipo = document.getElementById('regraDestinoTipo').value;
-            document.getElementById('regraDestinoNumerosWrap').style.display = tipo === 'NUMEROS' ? 'block' : 'none';
-            document.getElementById('regraDestinoGrupoWrap').style.display = tipo === 'GRUPO' ? 'block' : 'none';
-        }
-
-        // ── Contatos salvos (destino = Números) ──
-        function _telDigitos(t) { return String(t || '').replace(/\D/g, ''); }
-        // Chave de comparação: JID (contém '@') compara literal; número compara por dígitos.
-        function _chaveDestino(v) { const s = String(v || '').trim(); return s.includes('@') ? s : _telDigitos(s); }
-
-        // Reúne TODOS os contatos com forma de entrega da empresa:
-        //  - lavadores + funcionários (botUsers, telefone via bot)
-        //  - admins (número real ou, se pareado, o próprio jid)
-        // Cada contato tem `destino` = o que vai no CSV (número em dígitos OU jid).
-        function _contatosDestinoDisponiveis() {
-            const lista = [];
-            (botUsers || []).forEach(u => {
-                const tel = _telDigitos(u.telefone);
-                if (!tel) return;
-                lista.push({ nome: u.nome, destino: tel, label: tel, grupo: u.origem === 'lavador' ? 'Lavadores' : 'Funcionários' });
-            });
-            (adminPhones || []).forEach(a => {
-                if (a.ativo === false) return;
-                const pareado = a.telefone && String(a.telefone).startsWith('lid_');
-                if (!pareado) {
-                    const tel = _telDigitos(a.telefone);
-                    if (tel) lista.push({ nome: a.nome || 'Admin', destino: tel, label: tel, grupo: 'Admins' });
-                } else if (a.jid) {
-                    // Admin pareado: sem número digitável, mas o jid é entregável (sendMessage aceita '@').
-                    lista.push({ nome: a.nome || 'Admin', destino: a.jid, label: '✅ Pareado', grupo: 'Admins' });
-                }
-            });
-            const vistos = new Set();
-            return lista.filter(c => { const k = _chaveDestino(c.destino); if (vistos.has(k)) return false; vistos.add(k); return true; });
-        }
-
-        function renderContatosDestino(selecionados) {
-            const cont = document.getElementById('regraContatosSalvos');
-            const contatos = _contatosDestinoDisponiveis();
-            if (!contatos.length) {
-                cont.innerHTML = '<div style="color:#9ca3af;font-size:.8rem;padding:.4rem;">Nenhum contato salvo com número. Cadastre números de lavadores/admins acima ou use o campo abaixo.</div>';
                 return;
             }
-            const sel = selecionados || new Set();
-            const grupos = {};
-            contatos.forEach(c => { (grupos[c.grupo] = grupos[c.grupo] || []).push(c); });
-            const ordem = ['Admins', 'Funcionários', 'Lavadores'];
-            cont.innerHTML = ordem.filter(g => grupos[g]).map(g => `
-                <div style="font-size:.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:.4rem .2rem .2rem;">${g}</div>
-                ${grupos[g].map(c => `
-                    <label style="display:flex;align-items:center;gap:.5rem;padding:.4rem .3rem;cursor:pointer;border-radius:6px;">
-                        <input type="checkbox" class="regra-contato-chk" value="${escHtml(c.destino)}" ${sel.has(_chaveDestino(c.destino)) ? 'checked' : ''} style="width:16px;height:16px;flex-shrink:0;">
-                        <span style="font-size:.85rem;color:#374151;">${escHtml(c.nome)}</span>
-                        <span style="font-size:.75rem;color:#9ca3af;font-family:monospace;margin-left:auto;">${escHtml(c.label)}</span>
-                    </label>
-                `).join('')}
-            `).join('');
+
+            eaEl('eaListaContas').innerHTML = ea.contas.map(conta => {
+                const regras = ea.regras.filter(r => r.contaId === conta.id);
+                const erro = conta.status === 'ERRO';
+                const pausadoPlano = conta.status === 'PAUSADO_PLANO';
+                const selo = erro
+                    ? '<span style="background:#fef2f2;color:#dc2626;border-radius:999px;padding:.15rem .55rem;font-size:.75rem;font-weight:700;">● Parou de funcionar</span>'
+                    : pausadoPlano
+                        ? '<span style="background:#fffbeb;color:#b45309;border-radius:999px;padding:.15rem .55rem;font-size:.75rem;font-weight:700;">● Pausada (plano)</span>'
+                        : '<span style="background:#ecfdf5;color:#059669;border-radius:999px;padding:.15rem .55rem;font-size:.75rem;font-weight:700;">● Conectada</span>';
+                return `
+                <div class="config-card" style="margin-bottom:1rem;">
+                    <div style="display:flex;justify-content:space-between;gap:.8rem;flex-wrap:wrap;padding-bottom:.8rem;border-bottom:1px solid #eee;">
+                        <div style="min-width:0;">
+                            <div style="font-weight:700;font-size:1rem;word-break:break-all;">${escHtml(conta.email)}</div>
+                            <div style="margin-top:.25rem;font-size:.85rem;">${selo} <span style="color:#888;">${conta.verificadoEm ? 'verificada em ' + new Date(conta.verificadoEm).toLocaleString('pt-BR') : ''}</span></div>
+                            ${conta.ultimoErro ? `<div style="background:#fef2f2;color:#991b1b;border-radius:8px;padding:.5rem .7rem;margin-top:.5rem;font-size:.82rem;">${escHtml(conta.ultimoErro)}</div>` : ''}
+                        </div>
+                        <div style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:flex-start;">
+                            <button onclick="eaVerificar('${conta.id}')" style="padding:.35rem .65rem;font-size:.8rem;border:1px solid #ddd;background:#fff;border-radius:8px;cursor:pointer;">Verificar agora</button>
+                            <button onclick="eaAbrirTrocarSenha('${conta.id}')" class="${erro ? 'btn-primary' : ''}" style="padding:.35rem .65rem;font-size:.8rem;${erro ? '' : 'border:1px solid #ddd;background:#fff;border-radius:8px;'}cursor:pointer;">Trocar senha</button>
+                            <button onclick="eaPedirRemocao('${conta.id}')" style="padding:.35rem .65rem;font-size:.8rem;border:1px solid #ddd;background:#fff;color:#dc2626;border-radius:8px;cursor:pointer;">Remover</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin:.8rem 0 .2rem;">
+                        <div style="font-weight:700;">Automações</div>
+                        <button class="btn-primary" style="padding:.35rem .65rem;font-size:.8rem;" ${conta.status === 'CONECTADO' ? '' : 'disabled'} onclick="eaNovaAutomacao('${conta.id}')">+ Nova automação</button>
+                    </div>
+                    ${regras.length ? regras.map(r => eaLinhaRegra(r, conta)).join('') : '<p style="color:#888;font-size:.85rem;margin:.4rem 0 0;">Nenhuma automação nesse email ainda.</p>'}
+                </div>`;
+            }).join('');
         }
 
-        // Junta contatos marcados (número ou jid) + números avulsos, deduplicado, em CSV
-        function coletarNumerosDestino() {
-            const marcados = Array.from(document.querySelectorAll('.regra-contato-chk:checked')).map(c => c.value.trim());
-            const outros = document.getElementById('regraDestinoNumeros').value
-                .split(',').map(n => _telDigitos(n)).filter(Boolean);
-            const vistos = new Set();
-            return [...marcados, ...outros].filter(v => { const k = _chaveDestino(v); if (!k || vistos.has(k)) return false; vistos.add(k); return true; }).join(',');
+        function eaLinhaRegra(r, conta) {
+            const nomes = (r.destinos || []).map(d => {
+                const ct = ea.contatos.find(c => c.id === d.id && c.tipo === d.tipo);
+                return ct ? ct.nome : 'contato removido';
+            });
+            const oque = { CODIGO: 'código', ALFANUMERICO: 'código com letras', VALOR: 'valor em R$', LINK: 'link' }[r.tipoValor] || 'valor';
+            const apagado = !r.ativo || conta.status !== 'CONECTADO';
+            return `
+            <div style="display:flex;gap:.9rem;align-items:flex-start;padding:.9rem 0;border-top:1px solid #f0f0f0;${apagado ? 'opacity:.55;' : ''}">
+                <label style="position:relative;display:inline-block;width:38px;height:22px;flex-shrink:0;margin-top:.15rem;">
+                    <input type="checkbox" ${r.ativo ? 'checked' : ''} ${conta.status === 'CONECTADO' ? '' : 'disabled'} onchange="eaToggleRegra('${r.id}', this.checked)" style="opacity:0;width:0;height:0;">
+                    <span style="position:absolute;inset:0;background:${r.ativo ? '#7f56d9' : '#d1d5db'};border-radius:999px;cursor:pointer;"></span>
+                </label>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;">${escHtml(r.nome)}</div>
+                    <div style="line-height:1.5;">Quando chegar email de <b>${escHtml(r.remetenteContem)}</b>${r.assuntoContem ? ` com assunto <b>"${escHtml(r.assuntoContem)}"</b>` : ''}, enviar o <b>${oque}</b> para <b>${escHtml(nomes.join(', ') || 'ninguém')}</b>.</div>
+                    <div style="color:#888;font-size:.8rem;">${r.totalDisparos ? `Disparou ${r.totalDisparos}x${r.ultimoDisparoEm ? ' · última ' + new Date(r.ultimoDisparoEm).toLocaleString('pt-BR') : ''}` : 'Ainda não disparou'}</div>
+                </div>
+                <div style="white-space:nowrap;">
+                    <button onclick="eaTestarEnvio('${r.id}')" title="Enviar teste" style="border:0;background:none;cursor:pointer;font-size:1rem;">📨</button>
+                    <button onclick="eaExcluirRegra('${r.id}')" title="Excluir" style="border:0;background:none;cursor:pointer;font-size:1rem;">🗑</button>
+                </div>
+            </div>`;
         }
 
-        // Na edição: marca os contatos que batem com o CSV salvo; o resto (número avulso) vira "outros números"
-        function hidratarDestinoNumeros(csv) {
-            const tokens = String(csv || '').split(',').map(s => s.trim()).filter(Boolean);
-            const contatos = _contatosDestinoDisponiveis();
-            const chavesContato = new Set(contatos.map(c => _chaveDestino(c.destino)));
-            const selecionados = new Set(tokens.map(_chaveDestino).filter(k => chavesContato.has(k)));
-            renderContatosDestino(selecionados);
-            const outros = tokens.filter(t => !chavesContato.has(_chaveDestino(t)) && !t.includes('@')).map(_telDigitos).filter(Boolean);
-            document.getElementById('regraDestinoNumeros').value = outros.join(', ');
+        // ── Conectar email / trocar senha ──────────────────────────────────
+        function eaFaseConta(fase) {
+            ea.conta.fase = fase;
+            eaMostrar('eaContaForm', fase === 'form');
+            eaMostrar('eaContaVerificando', fase === 'verificando');
+            eaMostrar('eaContaSucesso', fase === 'sucesso');
+            eaMostrar('eaContaSalvar', fase === 'form', 'inline-block');
+            eaMostrar('eaContaCriarPrimeira', fase === 'sucesso' && !!ea.conta.id, 'inline-block');
         }
-
-        function abrirModalRegraEmail() {
-            document.getElementById('modalRegraEmailTitle').textContent = 'Nova Regra';
-            document.getElementById('regraEmailId').value = '';
-            document.getElementById('regraNome').value = '';
-            document.getElementById('regraRemetente').value = '';
-            document.getElementById('regraAssunto').value = '';
-            document.getElementById('regraRegex').value = '\\d{6}';
-            document.getElementById('regraTemplate').value = '';
-            document.getElementById('regraDestinoTipo').value = 'NUMEROS';
-            document.getElementById('regraDestinoNumeros').value = '';
-            renderContatosDestino(new Set());
-            document.getElementById('regraDestinoGrupo').innerHTML = '<option value="">— selecione —</option>';
-            onRegraDestinoTipoChange();
-            document.getElementById('modalRegraEmail').style.display = 'flex';
+        function eaAbrirAdicionar() {
+            ea.conta = { id: null, fase: 'form' };
+            eaEl('eaContaTitulo').textContent = 'Adicionar email';
+            eaEl('eaContaEmail').value = ''; eaEl('eaContaEmail').disabled = false;
+            eaEl('eaContaSenha').value = ''; eaEl('eaContaErro').style.display = 'none';
+            eaContarSenha(); eaFaseConta('form');
+            eaEl('eaModalConta').style.display = 'flex';
         }
-
-        function editarRegraEmail(id) {
-            const r = (window._regrasEmail || []).find(x => x.id === id);
-            if (!r) return;
-            document.getElementById('modalRegraEmailTitle').textContent = 'Editar Regra';
-            document.getElementById('regraEmailId').value = r.id;
-            document.getElementById('regraNome').value = r.nome;
-            document.getElementById('regraRemetente').value = r.remetenteContem;
-            document.getElementById('regraAssunto').value = r.assuntoContem || '';
-            document.getElementById('regraRegex').value = r.regexExtracao;
-            document.getElementById('regraTemplate').value = r.template;
-            document.getElementById('regraDestinoTipo').value = r.destinoTipo;
-            if (r.destinoTipo === 'GRUPO') {
-                document.getElementById('regraDestinoNumeros').value = '';
-                renderContatosDestino(new Set());
-                // Mostra o JID salvo já selecionado (o "Listar grupos" repopula com nomes)
-                document.getElementById('regraDestinoGrupo').innerHTML =
-                    `<option value="${escHtml(r.destinoValor)}" selected>${escHtml(r.destinoValor)}</option>`;
-            } else {
-                hidratarDestinoNumeros(r.destinoValor);
-                document.getElementById('regraDestinoGrupo').innerHTML = '<option value="">— selecione —</option>';
-            }
-            onRegraDestinoTipoChange();
-            document.getElementById('modalRegraEmail').style.display = 'flex';
+        function eaAbrirTrocarSenha(id) {
+            const conta = ea.contas.find(c => c.id === id);
+            ea.conta = { id, fase: 'form' };
+            eaEl('eaContaTitulo').textContent = 'Trocar senha de app';
+            eaEl('eaContaEmail').value = conta ? conta.email : ''; eaEl('eaContaEmail').disabled = true;
+            eaEl('eaContaSenha').value = ''; eaEl('eaContaErro').style.display = 'none';
+            eaContarSenha(); eaFaseConta('form');
+            eaEl('eaModalConta').style.display = 'flex';
         }
-
-        function fecharModalRegraEmail() {
-            document.getElementById('modalRegraEmail').style.display = 'none';
+        function eaFecharConta() {
+            if (ea.conta.fase === 'verificando') return;
+            eaEl('eaContaSenha').value = ''; // senha não fica na memória da tela
+            eaEl('eaModalConta').style.display = 'none';
         }
+        function eaContarSenha() {
+            const campo = eaEl('eaContaSenha');
+            campo.value = campo.value.replace(/\s+/g, '');
+            const n = campo.value.length;
+            const el = eaEl('eaContaContador');
+            el.textContent = n + '/16 letras';
+            el.style.color = n === 16 ? '#059669' : '#999';
+        }
+        function eaErroConta(msg) {
+            const el = eaEl('eaContaErro');
+            el.textContent = msg; el.style.display = 'block';
+        }
+        async function eaSalvarConta() {
+            const email = eaEl('eaContaEmail').value.trim().toLowerCase();
+            const senha = eaEl('eaContaSenha').value.replace(/\s+/g, '');
+            eaEl('eaContaErro').style.display = 'none';
+            if (!ea.conta.id && !/^[^\s@]+@gmail\.com$/.test(email)) return eaErroConta('Por enquanto só aceitamos contas do Gmail (@gmail.com).');
+            if (senha.length !== 16) return eaErroConta('A senha de app tem exatamente 16 letras. Confira se copiou tudo.');
 
-        async function listarGruposBot() {
-            const sel = document.getElementById('regraDestinoGrupo');
-            const anterior = sel.value;
-            sel.innerHTML = '<option value="">Carregando...</option>';
+            eaEl('eaContaVerificandoEmail').textContent = email;
+            eaFaseConta('verificando');
             try {
-                const data = await window.api.botGrupos();
-                const grupos = data.grupos || [];
-                if (!grupos.length) {
-                    sel.innerHTML = '<option value="">Nenhum grupo encontrado</option>';
-                    return;
+                if (ea.conta.id) {
+                    await window.api.emailAutomacao.trocarSenha(ea.conta.id, senha);
+                } else {
+                    const r = await window.api.emailAutomacao.criarConta({ email, senha });
+                    ea.conta.id = r.conta && r.conta.id;
                 }
-                sel.innerHTML = '<option value="">— selecione —</option>' +
-                    grupos.map(g => `<option value="${escHtml(g.jid)}"${g.jid===anterior?' selected':''}>${escHtml(g.subject)}</option>`).join('');
-            } catch {
-                sel.innerHTML = '<option value="">Erro (bot offline?)</option>';
-                showAlert('Não foi possível listar os grupos. O bot está conectado?', 'error');
+                eaEl('eaContaSenha').value = '';
+                eaEl('eaContaSucessoEmail').textContent = email;
+                eaFaseConta('sucesso');
+                await eaCarregar();
+            } catch (err) {
+                eaFaseConta('form');
+                eaErroConta((err && (err.error || err.message)) || 'Não foi possível conectar agora.');
             }
         }
-
-        async function salvarRegraEmail() {
-            const id          = document.getElementById('regraEmailId').value;
-            const nome        = document.getElementById('regraNome').value.trim();
-            const remetente   = document.getElementById('regraRemetente').value.trim();
-            const assunto     = document.getElementById('regraAssunto').value.trim();
-            const regex       = document.getElementById('regraRegex').value.trim();
-            const template    = document.getElementById('regraTemplate').value.trim();
-            const destinoTipo = document.getElementById('regraDestinoTipo').value;
-            const destinoValor = destinoTipo === 'GRUPO'
-                ? document.getElementById('regraDestinoGrupo').value
-                : coletarNumerosDestino();
-
-            if (!nome || !remetente || !regex || !template) { showAlert('Preencha nome, remetente, regex e mensagem.', 'error'); return; }
-            if (!destinoValor) { showAlert('Informe o destino (grupo ou números).', 'error'); return; }
-            try { new RegExp(regex); } catch { showAlert('Regex inválida.', 'error'); return; }
-
-            const payload = { nome, remetenteContem: remetente, assuntoContem: assunto || null, regexExtracao: regex, template, destinoTipo, destinoValor };
+        function eaCriarPrimeiraAutomacao() {
+            const id = ea.conta.id;
+            eaEl('eaModalConta').style.display = 'none';
+            if (id) eaNovaAutomacao(id);
+        }
+        async function eaVerificar(id) {
             try {
-                if (id) await window.api.emailRegras.update(id, payload);
-                else    await window.api.emailRegras.create(payload);
-                fecharModalRegraEmail();
-                await carregarRegrasEmail();
-                showAlert('Regra salva!', 'success');
-            } catch (e) { showAlert(e?.error || 'Erro ao salvar regra.', 'error'); }
+                await window.api.emailAutomacao.verificar(id);
+                showAlert('Conexão funcionando.', 'success');
+            } catch (err) {
+                showAlert((err && err.error) || 'Não foi possível verificar agora.', 'error');
+            }
+            eaCarregar();
         }
 
-        async function toggleRegraEmail(id, ativo) {
+        // ── Remover conta ─────────────────────────────────────────────────
+        function eaPedirRemocao(id) {
+            const conta = ea.contas.find(c => c.id === id);
+            const qtd = ea.regras.filter(r => r.contaId === id).length;
+            ea.removerId = id;
+            eaEl('eaRemoverTexto').innerHTML = `
+                <p style="margin-top:0;">Remover <b>${escHtml(conta ? conta.email : '')}</b>?</p>
+                <ul style="font-size:.88rem;padding-left:1.1rem;margin-bottom:0;">
+                    <li>${qtd === 0 ? 'Esse email não tem automações.' : (qtd === 1 ? 'A automação desse email será excluída.' : `As ${qtd} automações desse email serão excluídas.`)}</li>
+                    <li>A senha de app é apagada na hora do nosso sistema.</li>
+                    <li style="color:#777;">Dica: apague também a senha "Lina" no Google, em Senhas de app.</li>
+                </ul>`;
+            eaEl('eaModalRemover').style.display = 'flex';
+        }
+        function eaFecharRemover() { eaEl('eaModalRemover').style.display = 'none'; ea.removerId = null; }
+        async function eaConfirmarRemocao() {
             try {
-                await window.api.emailRegras.update(id, { ativo });
-                await carregarRegrasEmail();
-            } catch { showAlert('Erro ao atualizar regra.', 'error'); }
+                await window.api.emailAutomacao.removerConta(ea.removerId);
+                showAlert('Email removido e senha apagada.', 'success');
+            } catch (err) { showAlert((err && err.error) || 'Erro ao remover.', 'error'); }
+            eaFecharRemover();
+            eaCarregar();
         }
 
-        async function excluirRegraEmail(id) {
-            if (!confirm('Excluir esta regra?')) return;
+        // ── Geração da regra a partir do clique (mesma lógica do protótipo) ─
+        function eaEscapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        function eaTokenizar(texto) {
+            const padroes = [
+                { tipo: 'link', re: /https?:\/\/[^\s\]]+/g },
+                { tipo: 'valor', re: /R\$\s?\d{1,3}(?:\.\d{3})*,\d{2}/g },
+                { tipo: 'alfa', re: /\b(?=[A-Z0-9]*[0-9])(?=[A-Z0-9]*[A-Z])[A-Z0-9]{5,10}\b/g },
+                // Pontuação só bloqueia colada em outro dígito (data, CPF, telefone);
+                // ponto final de frase ("é 48213.") continua valendo
+                { tipo: 'codigo', re: /(?<![0-9])(?<![0-9][.,\/-])[0-9]{4,8}(?![0-9])(?![.,\/-][0-9])/g },
+            ];
+            const achados = [];
+            for (const p of padroes) {
+                for (const m of texto.matchAll(p.re)) {
+                    const start = m.index, end = start + m[0].length;
+                    if (achados.some(a => start < a.end && end > a.start)) continue;
+                    achados.push({ tipo: p.tipo, valor: m[0], start, end });
+                }
+            }
+            return achados.sort((a, b) => a.start - b.start);
+        }
+        function eaPadraoDoTipo(tok) {
+            if (tok.tipo === 'codigo') return { grupo: `[0-9]{${tok.valor.length}}`, depois: '(?![0-9])' };
+            if (tok.tipo === 'alfa') return { grupo: `[A-Z0-9]{${tok.valor.length}}`, depois: '' };
+            if (tok.tipo === 'valor') return { grupo: 'R\\$\\s?[0-9.]+,[0-9]{2}', depois: '' };
+            return { grupo: 'https?://[^\\s\\]]+', depois: '' };
+        }
+        function eaGerarRegra(texto, tok) {
+            const { grupo, depois } = eaPadraoDoTipo(tok);
+            const trecho = texto.slice(Math.max(0, tok.start - 80), tok.start).split(/[0-9]/).pop();
+            const palavras = trecho.split(/\s+/).filter(Boolean);
+            for (let n = Math.min(2, palavras.length); n <= Math.min(6, palavras.length); n++) {
+                if (n === 0) break;
+                const ancora = palavras.slice(-n).join(' ');
+                const regex = eaEscapeRe(ancora).replace(/\s+/g, '\\s+') + `[^0-9A-Za-z]{0,40}(${grupo})${depois}`;
+                const m = new RegExp(regex, 'i').exec(texto);
+                if (m && m[1] === tok.valor && m.index + m[0].indexOf(m[1]) === tok.start) return { regex, ancora, teste: m[1] };
+            }
+            const regex = `(${grupo})${depois}`;
+            const m = new RegExp(regex, 'i').exec(texto);
+            return { regex, ancora: null, teste: m ? m[1] : null };
+        }
+        function eaRotulo(tipo, valor) {
+            return { codigo: `código de ${valor.length} dígitos`, alfa: 'código com letras', valor: 'valor em R$', link: 'link' }[tipo] || 'valor';
+        }
+        function eaTipoValor(tipo) {
+            return { codigo: 'CODIGO', alfa: 'ALFANUMERICO', valor: 'VALOR', link: 'LINK' }[tipo] || 'AVANCADO';
+        }
+
+        // ── Assistente ────────────────────────────────────────────────────
+        function eaNovaAutomacao(contaId) {
+            const conta = ea.contas.find(c => c.id === contaId);
+            ea.wiz = { contaId, passo: 1, colar: false, email: null, exemplo: null, tok: null, regra: null, destinos: [] };
+            eaEl('eaAssTitulo').textContent = 'Nova automação';
+            eaEl('eaAssConta').textContent = conta ? 'Email: ' + conta.email : '';
+            eaEl('eaColarBloco').style.display = 'none';
+            eaEl('eaColarDe').value = ''; eaEl('eaColarAssunto').value = ''; eaEl('eaColarTexto').value = '';
+            eaEl('eaEmailsLista').innerHTML = '<div style="padding:.8rem;color:#888;font-size:.85rem;">Carregando emails…</div>';
+            eaEl('eaModalAssistente').style.display = 'flex';
+            eaPasso(1);
+            eaCarregarEmails(contaId);
+        }
+        function eaFecharAssistente() { eaEl('eaModalAssistente').style.display = 'none'; ea.wiz = null; }
+        function eaPasso(n) {
+            ea.wiz.passo = n;
+            eaMostrar('eaPasso1', n === 1); eaMostrar('eaPasso2', n === 2); eaMostrar('eaPasso3', n === 3);
+            eaEl('eaAssPassos').textContent = `Passo ${n} de 3 — ` + ['Email de exemplo', 'O que enviar', 'Pra quem'][n - 1];
+            eaEl('eaBtnVoltar').textContent = n === 1 ? 'Cancelar' : '← Voltar';
+            eaEl('eaBtnAvancar').textContent = n === 3 ? 'Salvar automação' : 'Continuar →';
+        }
+        async function eaCarregarEmails(contaId) {
             try {
-                await window.api.emailRegras.delete(id);
-                await carregarRegrasEmail();
-            } catch { showAlert('Erro ao excluir regra.', 'error'); }
+                const r = await window.api.emailAutomacao.emails(contaId);
+                const emails = r.emails || [];
+                eaEl('eaEmailsLista').innerHTML = emails.length ? emails.map(e => `
+                    <div onclick="eaEscolherEmail(${e.uid})" style="padding:.65rem .8rem;border-top:1px solid #f0f0f0;cursor:pointer;">
+                        <div style="display:flex;justify-content:space-between;gap:.8rem;">
+                            <b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(e.deNome || e.de)}</b>
+                            <span style="color:#888;font-size:.8rem;white-space:nowrap;">${e.data ? new Date(e.data).toLocaleString('pt-BR') : ''}</span>
+                        </div>
+                        <div style="color:#666;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(e.assunto)}</div>
+                    </div>`).join('') : '<div style="padding:.8rem;color:#888;font-size:.85rem;">Nenhum email nos últimos 7 dias.</div>';
+            } catch (err) {
+                eaEl('eaEmailsLista').innerHTML = `<div style="padding:.8rem;color:#b45309;font-size:.85rem;">${escHtml((err && err.error) || 'Não foi possível ler a caixa agora.')} Você pode colar o texto do email.</div>`;
+            }
+        }
+        function eaAlternarColar() {
+            ea.wiz.colar = !ea.wiz.colar;
+            eaMostrar('eaColarBloco', ea.wiz.colar);
+            eaMostrar('eaEmailsLista', !ea.wiz.colar);
+        }
+        async function eaEscolherEmail(uid) {
+            try {
+                const r = await window.api.emailAutomacao.email(ea.wiz.contaId, uid);
+                ea.wiz.exemplo = r.email;
+                eaIrPasso2();
+            } catch (err) { showAlert((err && err.error) || 'Erro ao abrir o email.', 'error'); }
+        }
+        function eaIrPasso2() {
+            const ex = ea.wiz.exemplo;
+            eaEl('eaPasso2De').textContent = `De: ${ex.de} · ${ex.assunto}`;
+            eaEl('eaFiltroRemetente').value = ex.de || '';
+            eaEl('eaFiltroAssunto').value = (ex.assunto || '').replace(/[0-9]+/g, ' ').replace(/\s{2,}/g, ' ').trim().split(' - ')[0];
+            ea.wiz.tok = null; ea.wiz.regra = null;
+            eaEl('eaResultadoRegra').innerHTML = '';
+            eaRenderCorpo();
+            eaPasso(2);
+        }
+        function eaRenderCorpo() {
+            const texto = (ea.wiz.exemplo && ea.wiz.exemplo.texto) || '';
+            const tokens = eaTokenizar(texto);
+            ea.wiz.tokens = tokens;
+            const cores = { codigo: '#dbeafe', alfa: '#ede9fe', valor: '#dcfce7', link: '#fef3c7' };
+            const alvo = eaEl('eaCorpoEmail');
+            alvo.textContent = '';
+            let pos = 0;
+            tokens.forEach((t, idx) => {
+                if (t.start > pos) alvo.appendChild(document.createTextNode(texto.slice(pos, t.start)));
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = t.valor;               // conteúdo de email é texto, nunca HTML
+                b.style.cssText = `background:${cores[t.tipo]};border:1px solid transparent;border-radius:6px;padding:.05rem .35rem;font:inherit;font-weight:700;cursor:pointer;`;
+                b.onclick = () => eaEscolherToken(idx);
+                alvo.appendChild(b);
+                pos = t.end;
+            });
+            if (pos < texto.length) alvo.appendChild(document.createTextNode(texto.slice(pos)));
+        }
+        function eaEscolherToken(idx) {
+            const tok = ea.wiz.tokens[idx];
+            ea.wiz.tok = tok;
+            ea.wiz.regra = eaGerarRegra(ea.wiz.exemplo.texto, tok);
+            const r = ea.wiz.regra;
+            eaEl('eaResultadoRegra').innerHTML = r.ancora
+                ? `<div style="background:#ecfdf5;color:#065f46;border-radius:10px;padding:.75rem .9rem;">✅ A Lina vai pegar: <b>${escHtml(r.teste)}</b><br><span style="font-size:.85rem;">Pega o ${escHtml(eaRotulo(tok.tipo, tok.valor))} que vem depois de "${escHtml(r.ancora)}".</span></div>`
+                : `<div style="background:#fffbeb;color:#b45309;border-radius:10px;padding:.75rem .9rem;">⚠️ Não achamos um texto fixo antes desse valor. A Lina vai pegar o primeiro ${escHtml(eaRotulo(tok.tipo, tok.valor))} do email — pode ser outro parecido.</div>`;
+            eaRenderCorpo();
+        }
+        function eaIrPasso3() {
+            const ex = ea.wiz.exemplo;
+            const nomeRemetente = (ex.de || '').split('@')[0];
+            if (!eaEl('eaRegraNome').value) {
+                const tipo = ea.wiz.tok ? { codigo: 'Código', alfa: 'Código', valor: 'Valor', link: 'Link' }[ea.wiz.tok.tipo] : 'Aviso';
+                eaEl('eaRegraNome').value = `${tipo} ${nomeRemetente}`.slice(0, 60);
+            }
+            if (!eaEl('eaRegraMensagem').value) {
+                const emoji = ea.wiz.tok && ea.wiz.tok.tipo === 'valor' ? '💰' : '🔑';
+                eaEl('eaRegraMensagem').value = `${emoji} ${eaEl('eaRegraNome').value}: {{valor}}`;
+            }
+            eaEl('eaContatosLista').innerHTML = ['Admins', 'Funcionários', 'Lavadores'].map(grupo => {
+                const doGrupo = ea.contatos.filter(c => c.grupo === grupo);
+                if (!doGrupo.length) return '';
+                return `<div style="font-size:.7rem;font-weight:700;color:#999;text-transform:uppercase;margin:.45rem .2rem .15rem;">${grupo}</div>` +
+                    doGrupo.map(c => `
+                        <label style="display:flex;gap:.5rem;align-items:center;padding:.35rem .25rem;cursor:pointer;">
+                            <input type="checkbox" value="${c.tipo}:${c.id}" onchange="eaMarcarDestino(this)">
+                            <span style="font-size:.88rem;">${escHtml(c.nome)}</span>
+                            <span style="margin-left:auto;color:#aaa;font-size:.78rem;font-family:monospace;">${escHtml(c.telefoneMascarado)}</span>
+                        </label>`).join('');
+            }).join('') || '<div style="padding:.5rem;color:#888;font-size:.85rem;">Nenhum contato cadastrado. Cadastre na aba Usuários &amp; Acesso.</div>';
+            eaAtualizarPrevia();
+            eaPasso(3);
+        }
+        function eaMarcarDestino(chk) {
+            const [tipo, id] = chk.value.split(':');
+            if (chk.checked) ea.wiz.destinos.push({ tipo, id });
+            else ea.wiz.destinos = ea.wiz.destinos.filter(d => !(d.tipo === tipo && d.id === id));
+        }
+        function eaAtualizarPrevia() {
+            const valor = (ea.wiz && ea.wiz.regra && ea.wiz.regra.teste) || '123456';
+            eaEl('eaPrevia').textContent = (eaEl('eaRegraMensagem').value || '').replace(/\{\{valor\}\}/g, valor);
+        }
+        function eaVoltarPasso() {
+            if (!ea.wiz || ea.wiz.passo === 1) return eaFecharAssistente();
+            eaPasso(ea.wiz.passo - 1);
+        }
+        async function eaAvancarPasso() {
+            const w = ea.wiz;
+            if (w.passo === 1) {
+                if (w.colar) {
+                    const texto = eaEl('eaColarTexto').value.trim();
+                    if (texto.length < 10) return showAlert('Cole o texto do email.', 'error');
+                    w.exemplo = { de: eaEl('eaColarDe').value.trim(), assunto: eaEl('eaColarAssunto').value.trim(), texto };
+                    return eaIrPasso2();
+                }
+                return showAlert('Escolha um email da lista.', 'error');
+            }
+            if (w.passo === 2) {
+                if (!w.regra || !w.regra.teste) return showAlert('Clique no valor que a Lina deve enviar.', 'error');
+                return eaIrPasso3();
+            }
+            return eaSalvarRegra();
+        }
+        async function eaSalvarRegra() {
+            const w = ea.wiz;
+            const mensagem = eaEl('eaRegraMensagem').value;
+            if (!mensagem.includes('{{valor}}')) return showAlert('A mensagem precisa conter {{valor}}.', 'error');
+            if (!w.destinos.length) return showAlert('Escolha pelo menos um destinatário.', 'error');
+            try {
+                await window.api.emailAutomacao.criarRegra({
+                    contaId: w.contaId,
+                    nome: eaEl('eaRegraNome').value.trim(),
+                    remetenteContem: eaEl('eaFiltroRemetente').value.trim(),
+                    assuntoContem: eaEl('eaFiltroAssunto').value.trim() || null,
+                    regexExtracao: w.regra.regex,
+                    tipoValor: eaTipoValor(w.tok ? w.tok.tipo : ''),
+                    ancora: w.regra.ancora,
+                    template: mensagem,
+                    destinos: w.destinos,
+                });
+                showAlert('Automação salva.', 'success');
+                eaFecharAssistente();
+                eaCarregar();
+            } catch (err) { showAlert((err && err.error) || 'Erro ao salvar a automação.', 'error'); }
+        }
+
+        // ── Ações nas automações ──────────────────────────────────────────
+        async function eaToggleRegra(id, ativo) {
+            try { await window.api.emailAutomacao.atualizarRegra(id, { ativo }); eaCarregar(); }
+            catch (err) { showAlert((err && err.error) || 'Erro ao atualizar.', 'error'); eaCarregar(); }
+        }
+        async function eaExcluirRegra(id) {
+            if (!confirm('Excluir esta automação?')) return;
+            try { await window.api.emailAutomacao.removerRegra(id); eaCarregar(); }
+            catch (err) { showAlert((err && err.error) || 'Erro ao excluir.', 'error'); }
+        }
+        async function eaTestarEnvio(id) {
+            if (!confirm('Enviar uma mensagem de teste agora para os destinatários dessa automação?')) return;
+            try {
+                const r = await window.api.emailAutomacao.testarEnvio(id, '123456');
+                showAlert(`Teste enviado para ${r.enfileirados} destinatário(s).`, 'success');
+            } catch (err) { showAlert((err && err.error) || 'Erro ao enviar o teste.', 'error'); }
         }
     </script>
 </body>

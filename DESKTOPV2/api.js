@@ -93,6 +93,10 @@ async function fetchApi(endpoint, options = {}) {
     const errorBody = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
     console.error('Erro do backend:', errorBody);
 
+    // Quem passa semRedirect trata o erro na própria tela (ex.: a aba de automação
+    // de email mostra o convite de upgrade em vez de jogar o usuário pro hub).
+    if (options.semRedirect) throw errorBody;
+
     // Tratamento de erros específicos de assinatura
     if (errorBody.code === 'NO_ACTIVE_SUBSCRIPTION') {
       alert('Você precisa de uma assinatura ativa para acessar este recurso.\n\nRedireccionando para seleção de plano...');
@@ -674,6 +678,24 @@ const api = {
     delete: (id)       => fetchApi(`/email-regras/${id}`, { method: 'DELETE' }),
   },
   botGrupos: () => fetchApi('/email-regras/grupos'),
+
+  // ── Automação de Email por empresa (Premium) ──────────────────────────────
+  // semRedirect: sem o plano, a aba mostra o upsell em vez de redirecionar.
+  emailAutomacao: {
+    contas:        ()           => fetchApi('/email-automacao/contas', { semRedirect: true }),
+    criarConta:    (dados)      => fetchApi('/email-automacao/contas', { method: 'POST', body: JSON.stringify(dados), semRedirect: true }),
+    trocarSenha:   (id, senha)  => fetchApi(`/email-automacao/contas/${id}/senha`, { method: 'PUT', body: JSON.stringify({ senha }), semRedirect: true }),
+    verificar:     (id)         => fetchApi(`/email-automacao/contas/${id}/verificar`, { method: 'POST', semRedirect: true }),
+    removerConta:  (id)         => fetchApi(`/email-automacao/contas/${id}`, { method: 'DELETE', semRedirect: true }),
+    emails:        (id)         => fetchApi(`/email-automacao/contas/${id}/emails`, { semRedirect: true }),
+    email:         (id, uid)    => fetchApi(`/email-automacao/contas/${id}/emails/${uid}`, { semRedirect: true }),
+    contatos:      ()           => fetchApi('/email-automacao/contatos', { semRedirect: true }),
+    regras:        ()           => fetchApi('/email-automacao/regras', { semRedirect: true }),
+    criarRegra:    (dados)      => fetchApi('/email-automacao/regras', { method: 'POST', body: JSON.stringify(dados), semRedirect: true }),
+    atualizarRegra:(id, dados)  => fetchApi(`/email-automacao/regras/${id}`, { method: 'PUT', body: JSON.stringify(dados), semRedirect: true }),
+    removerRegra:  (id)         => fetchApi(`/email-automacao/regras/${id}`, { method: 'DELETE', semRedirect: true }),
+    testarEnvio:   (id, valor)  => fetchApi(`/email-automacao/regras/${id}/testar-envio`, { method: 'POST', body: JSON.stringify({ valorExemplo: valor }), semRedirect: true }),
+  },
 
   // ── Gorjetas ──────────────────────────────────────────────────────────────
   createGorjeta: (data)    => fetchApi('/gorjeta', { method: 'POST', body: JSON.stringify(data) }),
