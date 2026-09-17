@@ -89,6 +89,7 @@ model Empresa {
   whatsappEnvios             WhatsappEnvio[]
   emailAutomacaoAuditoria    EmailAutomacaoAuditoria[]
   emailDestinatarios         EmailDestinatario[]
+  notificacoesEnviadas       NotificacaoEnviada[]
 
   @@map("empresas")
 }
@@ -1376,6 +1377,24 @@ model EmailConta {
 
   @@unique([empresaId, email])
   @@map("email_contas")
+}
+
+// Trava de dedup DURÁVEL pros crons de resumo (diário/semanal), que têm retry
+// automático se o bot estiver offline no horário principal (ver whatsappNotificationService.ts).
+// Precisa ser persistida no banco (não em memória) porque um deploy do backend no
+// meio da janela de retry reinicia o processo e apagaria uma trava em memória —
+// foi exatamente isso que causou o resumo diário duplicado em 16/09/2026 (deploy
+// às 21:45, entre o envio das 20h e o retry das 22h).
+model NotificacaoEnviada {
+  id        String   @id @default(cuid())
+  empresaId String
+  tipo      String   // 'RESUMO_DIARIO' | 'RESUMO_SEMANAL'
+  chave     String   // data (YYYY-MM-DD) do dia ou do sábado da semana
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, tipo, chave])
+  @@map("notificacoes_enviadas")
 }
 
 // Quem recebe as automações de email. NÃO é admin do bot: não entra na lista de

@@ -8,13 +8,24 @@ import { botSend, botGetStatus } from './botServiceClient';
 import { getTodayFixedRangeBRT, getTodayRangeBRT, getTodayStrBRT, getWeekRangeBRT } from '../utils/dateUtils';
 import { faturamentoBrutoPorLavador } from '../utils/faturamentoLavador';
 
-// Evita reenvio do resumo se o bot estava offline e o cron de retry disparou
-const resumoEnviadoHoje = new Set<string>(); // key: `${empresaId}_${YYYY-MM-DD}`
-function resumoKey(empresaId: string) { return `${empresaId}_${getTodayStrBRT()}`; }
-
-// Evita reenvio do resumo semanal (cron roda só aos sábados, então a data de hoje já é única por semana)
-const resumoSemanalEnviado = new Set<string>(); // key: `${empresaId}_semana_${YYYY-MM-DD do sábado}`
-function resumoSemanalKey(empresaId: string) { return `${empresaId}_semana_${getTodayStrBRT()}`; }
+// Evita reenvio do resumo se o bot estava offline e o cron de retry disparou (20h/20h30/22h).
+// PRECISA ser durável (banco, não memória): um deploy do backend nessa janela reinicia o
+// processo e apagaria uma trava em memória — foi o que causou o resumo diário duplicado em
+// 16/09/2026 (deploy 21:45, retry 22h). Ver NotificacaoEnviada no schema.
+async function jaFoiEnviado(empresaId: string, tipo: 'RESUMO_DIARIO' | 'RESUMO_SEMANAL', chave: string): Promise<boolean> {
+  const existe = await (prisma as any).notificacaoEnviada.findUnique({
+    where: { empresaId_tipo_chave: { empresaId, tipo, chave } },
+    select: { id: true },
+  });
+  return !!existe;
+}
+async function marcarEnviado(empresaId: string, tipo: 'RESUMO_DIARIO' | 'RESUMO_SEMANAL', chave: string): Promise<void> {
+  await (prisma as any).notificacaoEnviada.upsert({
+    where: { empresaId_tipo_chave: { empresaId, tipo, chave } },
+    create: { empresaId, tipo, chave },
+    update: {},
+  });
+}
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -468,7 +479,7 @@ export async function cronResumoDiario(): Promise<void> {
 
   for (const empresa of empresas) {
     if (!prefs(empresa).resumoDiario) continue;
-    if (resumoEnviadoHoje.has(resumoKey(empresa.id))) continue;
+    if (await jaFoiEnviado(empresa.id, 'RESUMO_DIARIO', getTodayStrBRT())) continue;
     try {
       const { start: hoje, end: fimHoje } = getTodayFixedRangeBRT();
 
@@ -534,7 +545,7 @@ export async function cronResumoDiario(): Promise<void> {
         const msgFuncionario = `📊 *Resumo do dia — ${dataStr}*\n━━━━━━━━━━━━━━━\n${corpo}\n\n💡 _Detalhes completos: responda *mais detalhes*_`;
         await notifyByPermission(empresa.id, 'ver_financeiro', msgFuncionario);
       }
-      resumoEnviadoHoje.add(resumoKey(empresa.id));
+      await marcarEnviado(empresa.id, 'RESUMO_DIARIO', getTodayStrBRT());
     } catch (e) {
       console.error(`[Notif Resumo] empresa ${empresa.id}:`, e);
     }
@@ -555,7 +566,7 @@ export async function cronResumoSemanal(): Promise<void> {
 
   for (const empresa of empresas) {
     if (!prefs(empresa).resumoSemanal) continue;
-    if (resumoSemanalEnviado.has(resumoSemanalKey(empresa.id))) continue;
+    if (await jaFoiEnviado(empresa.id, 'RESUMO_SEMANAL', getTodayStrBRT())) continue;
     try {
       const { start, end } = getWeekRangeBRT();
 
@@ -633,7 +644,7 @@ export async function cronResumoSemanal(): Promise<void> {
         const msgFuncionario = `📅 *Resumo da semana — ${dataInicioStr} a ${dataFimStr}*\n━━━━━━━━━━━━━━━\n${corpo}`;
         await notifyByPermission(empresa.id, 'ver_financeiro', msgFuncionario);
       }
-      resumoSemanalEnviado.add(resumoSemanalKey(empresa.id));
+      await marcarEnviado(empresa.id, 'RESUMO_SEMANAL', getTodayStrBRT());
     } catch (e) {
       console.error(`[Notif Resumo Semanal] empresa ${empresa.id}:`, e);
     }
