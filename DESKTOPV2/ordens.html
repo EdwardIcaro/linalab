@@ -1524,7 +1524,9 @@
                 },
 
                 async submitPayments() {
-                    if (this.paymentModal.payments.length === 0) {
+                    // Se ja nao resta nada a pagar (ordem ja tinha pagamento(s) cobrindo o
+                    // total), nao ha o que adicionar — so falta fechar a ordem.
+                    if (this.paymentModal.payments.length === 0 && this.paymentModal.remaining > 0.01) {
                         showToast('Adicione pelo menos um pagamento', 'error');
                         return;
                     }

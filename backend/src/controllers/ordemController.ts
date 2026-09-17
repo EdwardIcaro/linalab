@@ -1632,6 +1632,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
         },
         ordemLavadores: {
           include: { lavador: { select: { id: true, nome: true, comissao: true, baseComissao: true, tipoRemuneracao: true } } }
+        },
+        pagamentos: {
+          where: { status: 'PAGO' },
+          select: { valor: true }
         }
       }
     });
@@ -1683,13 +1687,18 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
 
     const valorFinal = Math.max(0, ordem.valorTotal - desconto);
 
-    // Calcular valor total dos pagamentos
+    // Pagamentos já registrados para essa ordem antes desta chamada (ex: ordem que
+    // ficou "presa" em AGUARDANDO_PAGAMENTO já totalmente paga) — os novos pagamentos
+    // só precisam cobrir o que ainda falta, podendo ser um array vazio.
+    const valorJaPago = ordem.pagamentos.reduce((sum: number, pag: { valor: number }) => sum + pag.valor, 0);
+    const valorRestanteParaPagar = Math.max(0, valorFinal - valorJaPago);
+
+    // Calcular valor total dos NOVOS pagamentos enviados nesta chamada
     const valorTotalPagamentos = pagamentos.reduce((sum: number, pag: any) => sum + pag.valor, 0);
 
-    // Verificar se o valor total dos pagamentos corresponde ao valor final (com desconto)
-    if (Math.abs(valorTotalPagamentos - valorFinal) > 0.01) {
+    if (Math.abs(valorTotalPagamentos - valorRestanteParaPagar) > 0.01) {
       return res.status(400).json({
-        error: `Valor total dos pagamentos (R$ ${valorTotalPagamentos.toFixed(2)}) não corresponde ao valor da ordem (R$ ${valorFinal.toFixed(2)})`,
+        error: `Valor total dos pagamentos (R$ ${valorTotalPagamentos.toFixed(2)}) não corresponde ao valor restante da ordem (R$ ${valorRestanteParaPagar.toFixed(2)})`,
         code: 'PAYMENT_VALUE_MISMATCH'
       });
     }

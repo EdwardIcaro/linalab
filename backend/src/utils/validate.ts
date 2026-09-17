@@ -240,10 +240,11 @@ export function validateCreateOrder(data: any): ValidationResult {
 export function validateFinalizarOrdem(data: any): ValidationResult {
   const errors: string[] = [];
 
-  // Validate pagamentos array
-  const pagamentosError = validators.isNonEmptyArray(data.pagamentos, 'pagamentos');
-  if (pagamentosError) {
-    errors.push(pagamentosError);
+  // Validate pagamentos array — pode ser vazio quando a ordem já está totalmente
+  // paga por pagamentos anteriores (ex: registrados fora do fluxo normal de
+  // finalização); o controller valida a soma contra o valor ainda em aberto.
+  if (!Array.isArray(data.pagamentos)) {
+    errors.push('pagamentos deve ser um array');
     return { isValid: false, errors };
   }
 
