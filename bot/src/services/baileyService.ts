@@ -194,7 +194,11 @@ export async function initBaileys(): Promise<void> {
       browser: Browsers.macOS('Safari'),
       generateHighQualityLinkPreview: false,
       keepAliveIntervalMs: 15000,
-      getMessage: async (_key: any) => ({ conversation: 'Mensagem de contexto' }),
+      // undefined = "não tenho essa mensagem pra reenviar". Antes devolvia um texto
+      // fixo ({ conversation: 'Mensagem de contexto' }) que o WhatsApp chegou a exibir
+      // como se fosse uma mensagem real nossa durante retries de sessão (visto em
+      // produção em 21/09 durante instabilidade de rede).
+      getMessage: async (_key: any) => undefined,
     });
 
     let credsJustUpdated = false;
