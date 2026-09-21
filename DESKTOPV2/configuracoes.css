@@ -12,6 +12,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+
 #config-page .tab-button {
     flex: 1;
     padding: 14px 20px;
@@ -797,13 +798,11 @@
 
 /* --- Responsividade --- */
 @media (max-width: 768px) {
-    #config-page .tabs {
-        flex-wrap: wrap;
-    }
-    
-    #config-page .tab-button {
-        min-width: calc(50% - 4px);
-    }
+    /* A regra que punha as abas em duas colunas (flex-wrap: wrap +
+       min-width de 50%) saiu daqui: vinha DEPOIS do bloco de abas
+       rolaveis no topo deste arquivo e vencia por ordem de cascata,
+       quebrando os rotulos longos ("Usuarios e Permisso..." cortado).
+       As abas agora rolam na horizontal, com uma altura so. */
     
     #config-page .modal-content {
         width: 95%;
@@ -1145,4 +1144,29 @@ input:checked + .slider:before {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+/* No celular as abas rolam na horizontal em vez de se espremerem em duas
+   colunas com alturas desiguais. A barra de rolagem fica oculta: o gesto
+   basta, e a barra cinza de desktop no meio da tela era o que mais
+   denunciava "site adaptado". */
+@media (max-width: 768px) {
+    #config-page .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    #config-page .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    #config-page .tab-button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        min-height: 44px;
+    }
 }
