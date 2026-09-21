@@ -193,7 +193,10 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
       // Cada QR vive 60s (default do Baileys é 60s só no 1º e 20s nos seguintes).
       // Sem isso os QRs trocavam a cada 20s e o usuário não conseguia escanear a tempo.
       qrTimeout: 60000,
-      getMessage: async () => ({ conversation: '' }),
+      // undefined = "não tenho essa mensagem pra reenviar" (mesmo fix de baileyService.ts:
+      // devolver conteúdo fixo aqui pode ser exibido pelo WhatsApp como mensagem real
+      // durante retries de sessão).
+      getMessage: async () => undefined,
     });
 
     st.socket = sock;
