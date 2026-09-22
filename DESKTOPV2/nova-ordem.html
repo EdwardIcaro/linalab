@@ -1357,11 +1357,24 @@
 
                 <!-- Quick Register (Inline) -->
                 <div class="card" style="margin-top: 20px; padding: 20px;">
-                    <div class="section-title" style="margin-bottom: 12px;">
+                    <button
+                        type="button"
+                        class="section-title"
+                        style="margin-bottom: 0; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: inherit; text-align: left;"
+                        @click="mostrarCadastro = !mostrarCadastro"
+                        :aria-expanded="mostrarCadastro"
+                    >
                         <i class="fas fa-user-plus"></i>
                         <span>Cadastro Rápido</span>
-                    </div>
-                    <p class="text-sm text-secondary" style="margin-bottom: 16px;">
+                        <i
+                            class="fas"
+                            :class="mostrarCadastro ? 'fa-chevron-up' : 'fa-chevron-down'"
+                            style="margin-left: auto; font-size: 13px; opacity: .6;"
+                        ></i>
+                    </button>
+
+                    <div x-show="mostrarCadastro">
+                    <p class="text-sm text-secondary" style="margin: 12px 0 16px;">
                         Use esta opção quando o cliente/veículo ainda não existem.
                     </p>
 
@@ -1435,6 +1448,7 @@
                             x-model="quickRegister.vehicleColor"
                         >
                     </div>
+                    </div><!-- /x-show mostrarCadastro -->
                 </div>
 
                 <!-- Tipo e Categoria: chips compactos -->
@@ -1852,6 +1866,12 @@
                 // ==========================================
                 step: 1,
 
+                // Cadastro Rápido começa recolhido: na maioria das ordens o
+                // cliente já existe e a busca acima resolve. Abre no clique do
+                // próprio cabeçalho ou quando a busca não encontra e o usuário
+                // escolhe cadastrar.
+                mostrarCadastro: false,
+
                 // ==========================================
                 // SEARCH STATE
                 // ==========================================
@@ -2224,6 +2244,7 @@
                         this.client = result.client;
                         this.vehicle = null;
                         // Open quick register to add vehicle
+                        this.mostrarCadastro = true;
                         this.quickRegister.clientName = result.client.nome;
                         this.quickRegister.clientPhone = result.client.telefone || '';
                         this.$nextTick(() => {
@@ -2231,6 +2252,7 @@
                         });
                     } else if (result.type === 'new') {
                         // New registration
+                        this.mostrarCadastro = true;
                         this.quickRegister.vehiclePlate = result.plate || '';
                         this.quickRegister.clientName = result.name || '';
                         this.$nextTick(() => {
