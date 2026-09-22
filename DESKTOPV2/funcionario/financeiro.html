@@ -141,7 +141,26 @@
       background: var(--white); border: 1px solid var(--border); border-radius: 12px;
       padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow);
       display: flex; align-items: center; gap: 12px;
+      cursor: pointer;
     }
+    .mov-card:active { background: var(--bg, #f6f7fb); }
+
+    /* --- detalhe da movimentação --- */
+    .det-topo {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 12px;
+    }
+    .det-valor { font-size: 20px; font-weight: 800; }
+    .det-valor.pos { color: var(--success); }
+    .det-valor.neg { color: var(--danger); }
+    .det-desc { font-size: 15px; line-height: 1.4; margin: 0 0 18px; }
+    .det-lista { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    .det-lista > div {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--border);
+    }
+    .det-lista dt { margin: 0; font-size: 12px; color: var(--muted); }
+    .det-lista dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
     .mov-ico {
       width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center; font-size: 15px;
@@ -618,6 +637,25 @@
   </div>
 </div>
 
+<!-- ==================== MODAL: DETALHE DA MOVIMENTAÇÃO ==================== -->
+<div class="modal-overlay" id="movDetalheModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h2><i class="fas fa-receipt"></i> Detalhes</h2>
+      <button class="modal-close-btn" onclick="fecharDetalheMov()">×</button>
+    </div>
+    <div class="det-topo">
+      <span class="type-chip" id="detChip"></span>
+      <span class="det-valor" id="detValor"></span>
+    </div>
+    <p class="det-desc" id="detDesc"></p>
+    <dl class="det-lista" id="detLista"></dl>
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="fecharDetalheMov()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== MODAL: ABERTURA ==================== -->
 <div class="modal-overlay" id="aberturaModal">
   <div class="modal-box">
@@ -834,13 +872,37 @@ async function loadMovimentacoes() {
       container.innerHTML = createEmptyHtml('fa-inbox', 'Sem movimentações', 'Nenhuma movimentação no período.');
       return;
     }
+    movsAtuais = movs;
     container.innerHTML = movs.map(m => buildMovCard(m)).join('');
   } catch(e) {
     container.innerHTML = createEmptyHtml('fa-exclamation-triangle', 'Erro ao carregar', 'Tente novamente.');
   }
 }
 
-function buildMovCard(m) {
+// Movimentações da listagem atual, para o detalhe achar a que foi tocada.
+let movsAtuais = [];
+
+// A descrição é texto digitado pelo usuário e vai para dentro de template
+// string de HTML — sem escapar, uma descrição com "<" quebra (ou pior) o cartão.
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
+// Mesma limpeza da tela de financeiro do painel: tira o prefixo entre
+// colchetes (o chip ao lado já diz o tipo) e troca a palavra genérica
+// "funcionário" pelo nome de quem pegou o vale.
+function descricaoExibidaMov(m) {
+  let d = String((m && m.descricao) || '').replace(/^\[[^\]]+\]\s*/, '');
+  const nome = m && m.lavador && m.lavador.nome;
+  if (nome) d = d.replace(/^funcion[áa]rio\b/i, nome);
+  return d;
+}
+
+// Cor, ícone e rótulo por tipo — usado pelo cartão e pelo detalhe, para os
+// dois não saírem do compasso.
+function estiloMov(m) {
   const tipo = m.tipo;
   const isAdiant = tipo === 'SAIDA' && m.descricao?.includes('[Adiantamento]');
   let icoClass = 'saida', chipClass = 'chip-saida', chipLabel = 'Saída', valClass = 'neg', valPre = '– ';
@@ -851,25 +913,102 @@ function buildMovCard(m) {
   if (isAdiant)              { icoClass='adiant';   chipClass='chip-adiant';   chipLabel='Vale'; }
 
   const icoMap = { entrada:'fa-arrow-down', saida:'fa-arrow-up', adiant:'fa-hand-holding-usd', sangria:'fa-money-bill-wave', fecham:'fa-lock', pendente:'fa-clock' };
-  const ico = icoMap[icoClass] || 'fa-circle';
+  return { icoClass, chipClass, chipLabel, valClass, valPre, ico: icoMap[icoClass] || 'fa-circle' };
+}
 
-  const desc = m.descricao || m.lavador?.nome || m.fornecedor?.nome || '—';
+function ehPagamentoMov(m) {
+  return !!m && (m.tipo === 'PAGAMENTO' || m.tipo === 'PENDENTE');
+}
+
+function buildMovCard(m) {
+  const e = estiloMov(m);
+
+  const desc = descricaoExibidaMov(m) || m.lavador?.nome || m.fornecedor?.nome || '—';
+  // O veículo/placa sai em negrito, como no painel
+  const partes = desc.match(/^(.*?OS:\s*)(.+)$/i);
+  const descHtml = partes
+    ? escHtml(partes[1]) + '<strong>' + escHtml(partes[2]) + '</strong>'
+    : escHtml(desc);
+
   const hora = m.data ? new Date(m.data).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
   const data = m.data ? new Date(m.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
   const meta = [data, hora, m.formaPagamento, m.lavador?.nome || m.fornecedor?.nome].filter(Boolean).join(' · ');
 
   return `
-    <div class="mov-card">
-      <div class="mov-ico ${icoClass}"><i class="fas ${ico}"></i></div>
+    <div class="mov-card" onclick="abrirDetalheMov('${escHtml(m.id)}')">
+      <div class="mov-ico ${e.icoClass}"><i class="fas ${e.ico}"></i></div>
       <div class="mov-info">
-        <div class="mov-desc">${desc}</div>
+        <div class="mov-desc">${descHtml}</div>
         <div class="mov-meta">
-          <span class="type-chip ${chipClass}">${chipLabel}</span>
-          ${meta ? `<span style="margin-left:6px">${meta}</span>` : ''}
+          <span class="type-chip ${e.chipClass}">${e.chipLabel}</span>
+          ${meta ? `<span style="margin-left:6px">${escHtml(meta)}</span>` : ''}
         </div>
       </div>
-      <div class="mov-val ${valClass}">${valPre}${formatCurrency(m.valor)}</div>
+      <div class="mov-val ${e.valClass}">${e.valPre}${formatCurrency(m.valor)}</div>
     </div>`;
+}
+
+function abrirDetalheMov(id) {
+  const m = movsAtuais.find(x => String(x.id) === String(id));
+  if (!m) return;
+  const e = estiloMov(m);
+
+  const chip = document.getElementById('detChip');
+  chip.className = 'type-chip ' + e.chipClass;
+  chip.textContent = e.chipLabel;
+
+  const valor = document.getElementById('detValor');
+  valor.className = 'det-valor ' + e.valClass;
+  valor.textContent = e.valPre + formatCurrency(m.valor);
+
+  // Descrição montada por DOM (e não por innerHTML) para o negrito não abrir
+  // porta para texto digitado pelo usuário virar marcação.
+  const desc = descricaoExibidaMov(m) || '—';
+  const alvo = document.getElementById('detDesc');
+  alvo.textContent = '';
+  const partes = desc.match(/^(.*?OS:\s*)(.+)$/i);
+  if (partes) {
+    alvo.appendChild(document.createTextNode(partes[1]));
+    const forte = document.createElement('strong');
+    forte.textContent = partes[2];
+    alvo.appendChild(forte);
+  } else {
+    alvo.textContent = desc;
+  }
+
+  const dataCompleta = m.data
+    ? new Date(m.data).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    : '—';
+
+  const linhas = [
+    ['Data', dataCompleta],
+    ['Forma de pagamento', m.formaPagamento || 'Não informada'],
+    ['Cliente', m.cliente && m.cliente.nome],
+    [ehPagamentoMov(m) ? 'Lavador' : 'Funcionário', m.lavador && m.lavador.nome],
+    ['Fornecedor', m.fornecedor && m.fornecedor.nome],
+    ['Finalizado por', m.finalizadoPor],
+    ['Registrado por', m.lancadoPor],
+    ['Origem', m.origem === 'WHATSAPP' ? 'WhatsApp' : null],
+  ].filter(([, v]) => v);
+
+  const lista = document.getElementById('detLista');
+  lista.textContent = '';
+  for (const [rotulo, valorLinha] of linhas) {
+    const linha = document.createElement('div');
+    const dt = document.createElement('dt');
+    dt.textContent = rotulo;
+    const dd = document.createElement('dd');
+    dd.textContent = valorLinha;
+    linha.appendChild(dt);
+    linha.appendChild(dd);
+    lista.appendChild(linha);
+  }
+
+  document.getElementById('movDetalheModal').classList.add('active');
+}
+
+function fecharDetalheMov() {
+  document.getElementById('movDetalheModal').classList.remove('active');
 }
 
 // ===================== FILTROS =====================
