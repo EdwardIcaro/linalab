@@ -1960,7 +1960,7 @@
                                                      normal e o veículo/placa fica em negrito. Dois x-text em
                                                      vez de x-html de propósito — a descrição de uma saída é
                                                      texto digitado pelo usuário e não pode virar HTML. -->
-                                                <span x-text="descPrefixo(tx.descricao)"></span><strong x-text="descDestaque(tx.descricao)"></strong>
+                                                <span x-text="descPrefixo(descricaoExibida(tx))"></span><strong x-text="descDestaque(descricaoExibida(tx))"></strong>
                                                 <template x-if="tx.origem === 'WHATSAPP'">
                                                     <span
                                                         class="whatsapp-badge"
@@ -2592,7 +2592,7 @@
                             </div>
 
                             <p class="tx-detail-desc">
-                                <span x-text="descPrefixo(txDetail.tx.descricao)"></span><strong x-text="descDestaque(txDetail.tx.descricao)"></strong>
+                                <span x-text="descPrefixo(descricaoExibida(txDetail.tx))"></span><strong x-text="descDestaque(descricaoExibida(txDetail.tx))"></strong>
                             </p>
 
                             <dl class="tx-detail-lista">
@@ -2604,6 +2604,18 @@
                                     <dt>Forma de pagamento</dt>
                                     <dd x-text="txDetail.tx.formaPagamento || 'Nao informada'"></dd>
                                 </div>
+                                <template x-if="txDetail.tx.lavador && txDetail.tx.lavador.nome">
+                                    <div>
+                                        <dt>Funcionario</dt>
+                                        <dd x-text="txDetail.tx.lavador.nome"></dd>
+                                    </div>
+                                </template>
+                                <template x-if="txDetail.tx.fornecedor && txDetail.tx.fornecedor.nome">
+                                    <div>
+                                        <dt>Fornecedor</dt>
+                                        <dd x-text="txDetail.tx.fornecedor.nome"></dd>
+                                    </div>
+                                </template>
                                 <template x-if="txDetail.tx.lancadoPor">
                                     <div>
                                         <dt>Lancado por</dt>
@@ -3800,6 +3812,20 @@
 
                 // Divide a descricao em "antes do OS:" e "veiculo/placa", para
                 // destacar o carro sem injetar HTML vindo do banco.
+                // Descrição como ela deve aparecer na tela:
+                // - tira o prefixo entre colchetes ([Adiantamento], [Despesa]),
+                //   que só repete o que o selo de tipo já diz;
+                // - troca a palavra genérica "funcionário" pelo nome de quem
+                //   pegou o vale. Registros antigos guardaram o literal, mas
+                //   o lavador continua vinculado ao lançamento, então dá para
+                //   mostrar o nome certo sem mexer no que está no banco.
+                descricaoExibida(tx) {
+                    let d = String((tx && tx.descricao) || '').replace(/^\[[^\]]+\]\s*/, '');
+                    const nome = tx && tx.lavador && tx.lavador.nome;
+                    if (nome) d = d.replace(/^funcion[áa]rio\b/i, nome);
+                    return d;
+                },
+
                 descPrefixo(desc) {
                     const m = String(desc || '').match(/^(.*?OS:s*)(.+)$/i);
                     return m ? m[1] : String(desc || '');

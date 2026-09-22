@@ -438,8 +438,21 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                 fornecedorId = fornecedor.id;
             }
 
+            // Adiantamento é de funcionário, não de fornecedor: o nome tem que
+            // vir do lavador vinculado. Antes caía no literal "funcionário"
+            // porque fornecedorNome chega vazio neste fluxo — e essa descrição
+            // não fica só na tela, vai também no aviso de WhatsApp.
+            let nomeAdiantamento = fornecedorNome as string | undefined;
+            if (tipo === 'Adiantamento' && lavadorId) {
+                const lav = await tx.lavador.findFirst({
+                    where: { id: lavadorId, empresaId },
+                    select: { nome: true },
+                });
+                if (lav?.nome) nomeAdiantamento = lav.nome;
+            }
+
             const finalDescricao = tipo === 'Adiantamento'
-                ? `[Adiantamento] ${fornecedorNome || 'funcionário'}${descricao ? ` — ${descricao}` : ''}`
+                ? `[Adiantamento] ${nomeAdiantamento || 'funcionário'}${descricao ? ` — ${descricao}` : ''}`
                 : `[${tipo}] ${descricao}`;
 
             // Adiantamento sempre é "Vale/Adiantamento" pra análise financeira —
@@ -1057,8 +1070,21 @@ export const updateCaixaRegistro = async (req: EmpresaRequest, res: Response) =>
             fornecedorId = fornecedor.id;
         }
 
+        // Mesmo motivo do fluxo de criação: o nome vem do lavador.
+        let nomeAdiantamento = fornecedorNome as string | undefined;
+        if (tipo === 'Adiantamento' && lavadorId) {
+            const lav = await prisma.lavador.findFirst({
+                where: { id: lavadorId, empresaId },
+                select: { nome: true },
+            });
+            if (lav?.nome) nomeAdiantamento = lav.nome;
+        }
+
+        // A descrição do vale também é preservada aqui. Antes a edição
+        // reescrevia só "[Adiantamento] nome" e apagava a observação que o
+        // lançamento já tinha ("— Vale fiado tia" virava nada).
         const finalDescricao = tipo === 'Adiantamento'
-            ? `[Adiantamento] ${fornecedorNome || 'funcionário'}`
+            ? `[Adiantamento] ${nomeAdiantamento || 'funcionário'}${descricao ? ` — ${descricao}` : ''}`
             : `[${tipo}] ${descricao}`;
 
         const updateData: any = {
