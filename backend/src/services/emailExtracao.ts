@@ -22,6 +22,24 @@ export interface CampoRegra {
   opcional?: boolean;
 }
 
+/**
+ * Campo calculado a partir de outro, por tabela de correspondência.
+ *
+ * Existe porque o fornecedor pode parar de mandar uma informação que ainda dá pra
+ * deduzir: a Localiza deixou de preencher "Tipo de Lavagem" em 01/2026, mas o preço
+ * continua dizendo qual serviço é (R$ 30 = simples, R$ 130 = especial).
+ */
+export interface DerivadoRegra {
+  /** Nome do campo novo: `{{servico}}`. */
+  chave: string;
+  /** Campo de origem (um campo da regra ou uma chave do bloco). */
+  de: string;
+  /** "30" → "Lavagem Simples". A busca ignora R$, pontuação e maiúsculas. */
+  valores: Record<string, string>;
+  /** Quando o valor não está na tabela. */
+  padrao?: string;
+}
+
 export interface BlocoRegra {
   /** Casa UMA ocorrência; aplicada repetidamente para pegar todas. */
   regex: string;
@@ -33,6 +51,8 @@ export interface BlocoRegra {
   separador?: string;
   /** Nome do conjunto no template principal. Padrão: `itens`. */
   chaveLista?: string;
+  /** Campos calculados dentro de cada ocorrência (ex: serviço a partir do preço). */
+  derivados?: DerivadoRegra[];
 }
 
 export interface RegraExtracao {
@@ -44,6 +64,7 @@ export interface RegraExtracao {
   template: string;
   campos?: CampoRegra[] | null;
   bloco?: BlocoRegra | null;
+  derivados?: DerivadoRegra[] | null;
 }
 
 export interface EmailLido {
@@ -60,6 +81,30 @@ const MAX_OCORRENCIAS = 20;
 /** Espaços e quebras de linha viram um espaço só: o texto do email quebra no meio das palavras. */
 function limpar(bruto: string | undefined): string {
   return String(bruto ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_VALOR);
+}
+
+/**
+ * Reduz um valor a uma chave comparável: "R$ 130,00", "130,00" e "130" viram "130".
+ * Texto que não tem número é comparado em minúsculas.
+ */
+function chaveDeBusca(bruto: string): string {
+  const texto = String(bruto ?? '').trim();
+  const numero = texto.replace(/[^0-9.,]/g, '');
+  if (numero) {
+    const inteiro = numero.split(',')[0].replace(/\./g, '');
+    if (inteiro) return inteiro;
+  }
+  return texto.toLowerCase();
+}
+
+/** Cria os campos calculados a partir dos já extraídos. */
+function aplicarDerivados(valores: Record<string, string>, derivados: DerivadoRegra[] | null | undefined): void {
+  for (const d of derivados ?? []) {
+    const origem = chaveDeBusca(valores[d.de] ?? '');
+    const tabela = Object.entries(d.valores ?? {});
+    const achado = tabela.find(([k]) => chaveDeBusca(k) === origem);
+    valores[d.chave] = achado ? achado[1] : (d.padrao ?? '');
+  }
 }
 
 function aplicar(template: string, valores: Record<string, string>): string {
@@ -89,6 +134,7 @@ function extrairBloco(texto: string, bloco: BlocoRegra): string[] {
   for (const m of texto.matchAll(re)) {
     const valores: Record<string, string> = {};
     bloco.chaves.forEach((chave, i) => { valores[chave] = limpar(m[i + 1]); });
+    aplicarDerivados(valores, bloco.derivados);
     linhas.push(aplicar(bloco.template, valores));
     if (linhas.length >= MAX_OCORRENCIAS) break;
   }
@@ -122,6 +168,8 @@ export function montarMensagem(regra: RegraExtracao, email: EmailLido): string |
     if (!m && !campo.opcional) return null;
     valores[campo.chave] = m ? limpar(m[1] ?? m[0]) : '';
   }
+
+  aplicarDerivados(valores, regra.derivados);
 
   if (regra.bloco) {
     const linhas = extrairBloco(texto, regra.bloco);

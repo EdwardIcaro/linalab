@@ -323,7 +323,41 @@ const CHAVE_VALIDA = /^[a-z][a-z0-9_]{0,19}$/;
  * campo com esse nome sobrescreveria um deles em silêncio — por isso as chaves são
  * reservadas. Devolve o que vai pro banco já limpo.
  */
-function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any } {
+const MAX_DERIVADOS = 6;
+const MAX_TABELA = 30;
+
+/**
+ * Campos deduzidos de outro campo. `origens` são os nomes que já existem naquele
+ * escopo — um derivado apontando pra campo inexistente sairia sempre com o padrão,
+ * sem ninguém entender por quê.
+ */
+function validarDerivados(entrada: unknown, origens: string[]): { erro?: string; valor?: any } {
+  if (entrada == null) return { valor: null };
+  if (!Array.isArray(entrada)) return { erro: 'Campos calculados inválidos.' };
+  if (entrada.length > MAX_DERIVADOS) return { erro: `Use no máximo ${MAX_DERIVADOS} campos calculados.` };
+  const saida: any[] = [];
+  for (const d of entrada) {
+    const chave = String(d?.chave ?? '').trim().toLowerCase();
+    if (!CHAVE_VALIDA.test(chave)) return { erro: `Nome de campo calculado inválido: "${chave}".` };
+    if (CHAVES_RESERVADAS.includes(chave)) return { erro: `"${chave}" é um nome reservado. Escolha outro.` };
+    if (origens.includes(chave) || saida.some(x => x.chave === chave)) return { erro: `O campo "${chave}" está repetido.` };
+    const de = String(d?.de ?? '').trim().toLowerCase();
+    if (!origens.includes(de)) return { erro: `O campo calculado "${chave}" usa "${de}", que não existe nesta automação.` };
+    const valores = d?.valores;
+    if (!valores || typeof valores !== 'object' || Array.isArray(valores)) return { erro: `O campo "${chave}" precisa de uma tabela de correspondência.` };
+    const pares = Object.entries(valores as Record<string, unknown>);
+    if (!pares.length || pares.length > MAX_TABELA) return { erro: `A tabela de "${chave}" precisa ter de 1 a ${MAX_TABELA} linhas.` };
+    if (pares.some(([k, v]) => !String(k).trim() || String(v ?? '').length > 60)) return { erro: `Tabela de "${chave}" inválida.` };
+    saida.push({
+      chave, de,
+      valores: Object.fromEntries(pares.map(([k, v]) => [String(k).trim(), String(v ?? '')])),
+      padrao: d?.padrao != null ? String(d.padrao).slice(0, 60) : undefined,
+    });
+  }
+  return { valor: saida.length ? saida : null };
+}
+
+function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any; derivados?: any } {
   const entrada = body?.campos;
   const campos: { chave: string; regex: string; opcional: boolean }[] = [];
   if (entrada != null) {
@@ -351,18 +385,33 @@ function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any 
     const tpl = String(b?.template ?? '');
     if (!tpl || tpl.length > 200) return { erro: 'O texto de cada item precisa ter até 200 caracteres.' };
     if (!chaves.some((k: string) => tpl.includes(`{{${k}}}`))) return { erro: 'O texto de cada item precisa usar pelo menos um campo do bloco.' };
-    bloco = { regex: String(b.regex), chaves, template: tpl };
+    const derivBloco = validarDerivados(b?.derivados, chaves);
+    if (derivBloco.erro) return { erro: derivBloco.erro };
+    // O texto do item pode usar tanto as chaves capturadas quanto as calculadas
+    const doBloco = [...chaves, ...(derivBloco.valor ?? []).map((d: any) => d.chave)];
+    for (const [, chave] of tpl.matchAll(/\{\{(\w+)\}\}/g)) {
+      if (!doBloco.includes(chave)) return { erro: `O texto de cada item usa {{${chave}}}, que não é um campo do bloco.` };
+    }
+    bloco = { regex: String(b.regex), chaves, template: tpl, derivados: derivBloco.valor ?? undefined };
   }
+
+  const derivados = validarDerivados(body?.derivados, ['valor', ...campos.map(c => c.chave)]);
+  if (derivados.erro) return { erro: derivados.erro };
 
   // Um {{campo}} que não existe sairia cru na mensagem do WhatsApp
   const template = String(body?.template ?? '');
-  const disponiveis = new Set(['valor', ...campos.map(c => c.chave), ...(bloco ? ['itens'] : [])]);
+  const disponiveis = new Set([
+    'valor',
+    ...campos.map(c => c.chave),
+    ...((derivados.valor ?? []) as any[]).map(d => d.chave),
+    ...(bloco ? ['itens'] : []),
+  ]);
   for (const [, chave] of template.matchAll(/\{\{(\w+)\}\}/g)) {
     if (!disponiveis.has(chave)) return { erro: `A mensagem usa {{${chave}}}, que não é um campo desta automação.` };
   }
   if (bloco && !template.includes('{{itens}}')) return { erro: 'A mensagem precisa conter {{itens}} pra listar os itens do bloco.' };
 
-  return { campos: campos.length ? campos : null, bloco };
+  return { campos: campos.length ? campos : null, bloco, derivados: derivados.valor ?? null };
 }
 
 function erroNosCamposDaRegra(body: any): string | null {
@@ -371,7 +420,9 @@ function erroNosCamposDaRegra(body: any): string | null {
   if (!String(body?.remetenteContem ?? '').trim()) return 'Informe parte do remetente.';
   const template = String(body?.template ?? '');
   if (!template || template.length > MAX_TEMPLATE) return `A mensagem precisa ter até ${MAX_TEMPLATE} caracteres.`;
-  if (!template.includes('{{valor}}')) return 'A mensagem precisa conter {{valor}}.';
+  // Automação multi-campo pode não usar {{valor}} (o nº da solicitação, por exemplo,
+  // serve de filtro mas não interessa a quem recebe) — basta usar ALGUM campo.
+  if (!/\{\{\w+\}\}/.test(template)) return 'A mensagem precisa usar pelo menos um campo, como {{valor}}.';
   return erroNaRegex(String(body?.regexExtracao ?? ''));
 }
 
@@ -419,6 +470,7 @@ export async function criarRegra(req: Req, res: Response) {
         regexExtracao: String(req.body.regexExtracao),
         campos: extracao.campos ?? Prisma.DbNull,
         bloco: extracao.bloco ?? Prisma.DbNull,
+        derivados: extracao.derivados ?? Prisma.DbNull,
         tipoValor: ['CODIGO', 'ALFANUMERICO', 'VALOR', 'LINK', 'AVANCADO'].includes(req.body.tipoValor) ? req.body.tipoValor : 'AVANCADO',
         ancora: req.body.ancora ? String(req.body.ancora).slice(0, 120) : null,
         template: String(req.body.template),
@@ -462,6 +514,7 @@ export async function atualizarRegra(req: Req, res: Response) {
       ...req.body,
       campos: 'campos' in req.body ? req.body.campos : atual.campos,
       bloco: 'bloco' in req.body ? req.body.bloco : atual.bloco,
+      derivados: 'derivados' in req.body ? req.body.derivados : atual.derivados,
     });
     if (extracao.erro) return res.status(400).json({ error: extracao.erro });
 
@@ -477,6 +530,7 @@ export async function atualizarRegra(req: Req, res: Response) {
         // Só mexe no que veio: um cliente que edite só a mensagem não pode perder os campos.
         campos: 'campos' in req.body ? (extracao.campos ?? Prisma.DbNull) : undefined,
         bloco: 'bloco' in req.body ? (extracao.bloco ?? Prisma.DbNull) : undefined,
+        derivados: 'derivados' in req.body ? (extracao.derivados ?? Prisma.DbNull) : undefined,
         tipoValor: ['CODIGO', 'ALFANUMERICO', 'VALOR', 'LINK', 'AVANCADO'].includes(req.body.tipoValor) ? req.body.tipoValor : 'AVANCADO',
         ancora: req.body.ancora ? String(req.body.ancora).slice(0, 120) : null,
         template: String(req.body.template),

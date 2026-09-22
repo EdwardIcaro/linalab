@@ -2103,7 +2103,8 @@
             });
             // Automação com campos captura várias informações — dizer "enviar o valor" esconderia isso
             const chaves = (r.campos || []).map(c => c.chave);
-            if (r.bloco) chaves.unshift(...(r.bloco.chaves || []));
+            if (r.bloco) chaves.unshift(...(r.bloco.chaves || []), ...(r.bloco.derivados || []).map(d => d.chave));
+            chaves.push(...(r.derivados || []).map(d => d.chave));
             const oque = chaves.length
                 ? chaves.slice(0, 5).join(', ') + (chaves.length > 5 ? '…' : '')
                 : ({ CODIGO: 'código', ALFANUMERICO: 'código com letras', VALOR: 'valor em R$', LINK: 'link' }[r.tipoValor] || 'valor');
@@ -2411,6 +2412,7 @@
             const valor = (w.regra && w.regra.teste) || '123456';
             const campos = w.campos || [];
             const bloco = w.bloco || null;
+            const calculados = (w.derivados || []).map(d => d.chave);
             // A mensagem pode ter {{placa}}, {{itens}}... — mostrar {{placa}} cru na prévia
             // faria o cliente achar que é assim que chega no WhatsApp dele.
             const texto = (eaEl('eaRegraMensagem').value || '').replace(/\{\{(\w+)\}\}/g, (cru, chave) => {
@@ -2419,7 +2421,7 @@
                     const linha = String(bloco.template || '').replace(/\{\{(\w+)\}\}/g, (_c, k) => '[' + k + ']');
                     return [linha, linha].join('\n');
                 }
-                return campos.some(c => c.chave === chave) ? '[' + chave + ']' : cru;
+                return (campos.some(c => c.chave === chave) || calculados.includes(chave)) ? '[' + chave + ']' : cru;
             });
             eaEl('eaPrevia').textContent = texto;
         }
@@ -2447,7 +2449,7 @@
         async function eaSalvarRegra() {
             const w = ea.wiz;
             const mensagem = eaEl('eaRegraMensagem').value;
-            if (!mensagem.includes('{{valor}}')) return showAlert('A mensagem precisa conter {{valor}}.', 'error');
+            if (!/\{\{\w+\}\}/.test(mensagem)) return showAlert('A mensagem precisa usar pelo menos um campo, como {{valor}}.', 'error');
             if (!w.destinos.length) return showAlert('Escolha pelo menos um destinatário.', 'error');
             const dados = {
                 contaId: w.contaId,
@@ -2506,7 +2508,7 @@
                 email: null, exemplo: null, tok: null,
                 regra: { regex: regra.regexExtracao, ancora: regra.ancora, teste: null },
                 tipoValorSalvo: regra.tipoValor,
-                campos: regra.campos || [], bloco: regra.bloco || null,
+                campos: regra.campos || [], bloco: regra.bloco || null, derivados: regra.derivados || [],
                 destinos: (regra.destinos || []).map(d => ({ tipo: d.tipo, id: d.id })),
             };
             eaEl('eaAssTitulo').textContent = 'Editar automação';
