@@ -1184,6 +1184,44 @@
            responde ao toque; aqui ele ganha altura de dedo.
            ============================================================ */
         @media (max-width: 768px) {
+            /* O rodapé do assistente ficava em bottom: 0 com z-index 99, e a
+               barra de navegação (z-index 101, 60px de altura) cobria seus
+               últimos 60px — justamente onde ficam o total e o botão de criar
+               a ordem. Subir o rodapé resolve sem disputar z-index: empilhar
+               por cima esconderia a navegação, que é pior. */
+            .wizard-footer {
+                bottom: calc(60px + env(safe-area-inset-bottom)) !important;
+                padding: 12px 16px !important;
+            }
+
+            /* O rodapé empilhava o total sobre os botões (flex-direction:
+               column, herdado da regra de 600px) e ficava com 211px — um
+               quarto da tela. Lado a lado, como na Nova Ordem do portal do
+               funcionário, ele cabe em cerca de um terço disso. */
+            .footer-content {
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+            }
+
+            .footer-total {
+                flex: 0 0 auto !important;
+            }
+
+            .footer-buttons {
+                width: auto !important;
+                flex: 1 1 auto !important;
+                display: flex !important;
+                justify-content: flex-end !important;
+                gap: 8px !important;
+            }
+
+            /* Folga para o conteúdo não terminar embaixo do rodapé, agora
+               contando também a altura da navegação. */
+            .wizard-container {
+                padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important;
+            }
+
             .wizard-step label:has(input[type="checkbox"]) {
                 min-height: 44px;
             }
@@ -1607,7 +1645,10 @@
         <!-- Floating Footer -->
         <div class="wizard-footer">
             <div class="footer-content">
-                <div class="footer-total" x-show="step > 1">
+                <!-- Antes era x-show="step > 1": ao voltar para a identificação
+                     com serviços já escolhidos, o total sumia da tela. Agora ele
+                     aparece sempre que há o que somar, em qualquer passo. -->
+                <div class="footer-total" x-show="getItemsCount() > 0">
                     <div class="footer-total-label">Total</div>
                     <div class="footer-total-value" x-text="formatCurrency(total)"></div>
                 </div>
