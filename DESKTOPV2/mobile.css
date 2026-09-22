@@ -928,3 +928,240 @@
         display: table !important;
     }
 }
+
+/* ============================================================
+   FASE 3 — PADRÕES REUTILIZÁVEIS
+   ------------------------------------------------------------
+   Três padrões que valem para todas as telas de uma vez, em vez
+   de acerto tela a tela. Este bloco fica no FIM do arquivo de
+   propósito: regra mobile colocada antes da regra-base perde por
+   ordem de cascata, armadilha que já custou duas correções.
+   ============================================================ */
+@media (max-width: 768px) {
+
+    /* ------------------------------------------------------------
+       1. TABELA VIRA CARTÃO
+       A classe .tabela-cartao e os data-label são carimbados pelo
+       mobile-tables.js, que lê o <thead> da própria tabela. Tabela
+       sem cabeçalho não recebe a classe e continua com a rolagem
+       horizontal da fase 1.
+       ------------------------------------------------------------ */
+    table.tabela-cartao {
+        display: block !important;
+        overflow-x: visible !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        background: transparent !important;
+    }
+
+    table.tabela-cartao thead {
+        display: none !important;
+    }
+
+    table.tabela-cartao tbody {
+        display: block !important;
+    }
+
+    table.tabela-cartao tbody tr {
+        display: block !important;
+        background: var(--white) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
+        padding: 12px 14px !important;
+        margin-bottom: 10px !important;
+        box-shadow: var(--shadow) !important;
+    }
+
+    table.tabela-cartao tbody td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 12px !important;
+        padding: 6px 0 !important;
+        border: none !important;
+        text-align: right !important;
+        font-size: 14px !important;
+        /* desfaz o nowrap que a fase 1 usou para a rolagem lateral */
+        white-space: normal !important;
+    }
+
+    table.tabela-cartao tbody td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        max-width: 45%;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: .02em;
+    }
+
+    /* a primeira coluna é o que identifica a linha: vira título do cartão */
+    table.tabela-cartao tbody td:first-child {
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 6px !important;
+        border-bottom: 1px solid var(--border-color) !important;
+    }
+
+    /* célula só de botões: vira rodapé do cartão, sem rótulo */
+    table.tabela-cartao tbody td[data-acoes] {
+        justify-content: flex-end !important;
+        padding-top: 10px !important;
+        margin-top: 6px !important;
+        border-top: 1px solid var(--border-color) !important;
+    }
+
+    table.tabela-cartao tbody td[data-acoes]::before,
+    table.tabela-cartao tbody td[data-sem-rotulo]::before {
+        content: none;
+    }
+
+    /* "Nenhum registro encontrado" ocupa o cartão inteiro */
+    table.tabela-cartao tbody td[data-sem-rotulo] {
+        justify-content: center !important;
+        text-align: center !important;
+        color: var(--text-secondary) !important;
+    }
+
+    /* ------------------------------------------------------------
+       2. CABEÇALHO COMPACTO
+       Título em duas linhas + subtítulo + botão empilhados comiam
+       um quarto da primeira dobra antes de qualquer conteúdo.
+       ------------------------------------------------------------ */
+    /* Coluna, e não linha: com o título ao lado dos controles ele se
+       espremia em três linhas e encostava nos botões. Empilhado, o
+       título respira e os controles ganham a largura toda — mesmo
+       assim é mais baixo que antes, porque o subtítulo saiu. */
+    .main-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .main-header .header-title {
+        min-width: 0 !important;
+    }
+
+    .main-header .header-title h2 {
+        font-size: 20px !important;
+        line-height: 1.2 !important;
+        margin: 0 !important;
+    }
+
+    /* O subtítulo descreve o que o título já diz ("Adicione, edite e
+       gerencie seus lavadores"). No desktop é cortesia; no celular
+       custa uma faixa inteira da tela. */
+    .main-header .header-title p {
+        display: none !important;
+    }
+
+    .main-header .header-controls {
+        flex: 0 0 auto !important;
+        gap: 8px !important;
+    }
+
+    .main-header .header-controls .btn,
+    .main-header .header-controls button {
+        min-height: 40px !important;
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+    }
+
+    /* ------------------------------------------------------------
+       3. INDICADORES EM GRADE 2×2
+       Cada tela nomeia os seus de um jeito; aqui eles se comportam
+       igual. Quatro números na primeira dobra em vez de quatro
+       rolagens.
+       ------------------------------------------------------------ */
+    .kpi-grid,
+    .stats-grid,
+    .history-stats,
+    .report-summary-cards,
+    .balance-hero {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .kpi-card,
+    .stat-card-modern,
+    .history-stat-card,
+    .report-summary-card,
+    .balance-card {
+        padding: 12px !important;
+        border-radius: 12px !important;
+        gap: 8px !important;
+        min-width: 0 !important;
+    }
+
+    .stat-value,
+    .history-stat-value,
+    .balance-value {
+        font-size: 18px !important;
+        font-weight: 700 !important;
+    }
+
+    .stat-label,
+    .history-stat-label,
+    .balance-label {
+        font-size: 12px !important;
+    }
+
+    /* A linha de detalhe do cartão (Dinheiro · Cartão · PIX) é informação,
+       não enfeite: em meia largura ela quebra em vez de sumir. */
+    .balance-breakdown {
+        flex-wrap: wrap !important;
+        gap: 4px 8px !important;
+        font-size: 12px !important;
+    }
+
+    /* ------------------------------------------------------------
+       4. MODAL COMO FOLHA DESLIZANTE
+       Caixa centrada com 90% de largura é linguagem de desktop; no
+       celular a folha sobe da base, que é onde o polegar alcança.
+       ------------------------------------------------------------ */
+    .modal-overlay {
+        align-items: flex-end !important;
+        justify-content: center !important;
+        padding: 0 !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        padding: 20px 16px calc(16px + env(safe-area-inset-bottom)) !important;
+        max-height: 88vh !important;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18) !important;
+        animation: linaFolhaSobe .22s ease-out;
+    }
+
+    /* alça de arraste: sinaliza que a folha é deslizável */
+    .modal-content::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--border-color);
+        margin: -6px auto 12px;
+        flex: 0 0 auto;
+    }
+
+    @keyframes linaFolhaSobe {
+        from { transform: translateY(14%); }
+        to   { transform: translateY(0); }
+    }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+    .modal-content {
+        animation: none;
+    }
+}
