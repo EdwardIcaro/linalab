@@ -1377,6 +1377,76 @@
             }
         }
     
+        /* --- Folha de detalhes da movimentação ---
+           Só abre no celular: no desktop a linha da tabela já mostra tudo. */
+        .tx-detail-topo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tx-detail-valor {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .tx-detail-desc {
+            font-size: 15px;
+            line-height: 1.4;
+            margin: 0 0 18px;
+        }
+
+        .tx-detail-lista {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tx-detail-lista > div {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 9px;
+            border-bottom: 1px solid var(--finance-border);
+        }
+
+        .tx-detail-lista dt {
+            margin: 0;
+            font-size: 12px;
+            color: var(--finance-text-secondary);
+        }
+
+        .tx-detail-lista dd {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .tx-detail-aviso {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 14px 0 0;
+            font-size: 13px;
+            color: #b45309;
+        }
+
+        .tx-detail-acoes {
+            display: flex;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        .tx-detail-acoes .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
         /* ============================================================
            MOBILE — FINANCEIRO
            Refino da tela no celular. Fica no fim do <style> da página de
@@ -1397,6 +1467,12 @@
 
             .tabs-content {
                 padding: 12px !important;
+            }
+
+            /* o cartão inteiro é tocável; os botões de ação seguem funcionando
+               porque abrirDetalheTx ignora o toque que veio de um .action-btn */
+            table.tx-mov.tabela-cartao tbody tr {
+                cursor: pointer;
             }
 
             /* --- 1. abas ---
@@ -1870,7 +1946,7 @@
                                 </thead>
                                 <tbody>
                                     <template x-for="tx in transactions" :key="tx.id">
-                                        <tr>
+                                        <tr @click="abrirDetalheTx(tx, $event)">
                                             <td x-text="formatDateTime(tx.data)"></td>
                                             <td>
                                                 <span
@@ -1880,7 +1956,11 @@
                                                 ></span>
                                             </td>
                                             <td>
-                                                <span x-text="tx.descricao"></span>
+                                                <!-- Descrição em duas partes: o que vem antes de "OS:" fica
+                                                     normal e o veículo/placa fica em negrito. Dois x-text em
+                                                     vez de x-html de propósito — a descrição de uma saída é
+                                                     texto digitado pelo usuário e não pode virar HTML. -->
+                                                <span x-text="descPrefixo(tx.descricao)"></span><strong x-text="descDestaque(tx.descricao)"></strong>
                                                 <template x-if="tx.origem === 'WHATSAPP'">
                                                     <span
                                                         class="whatsapp-badge"
@@ -2484,6 +2564,80 @@
                         <i class="fas fa-check"></i>
                         <span x-text="gorjetaModal.isSaving ? 'Salvando...' : 'Confirmar'"></span>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalhe da movimentacao — abre ao tocar no cartao, so no celular -->
+        <div class="modal-overlay tx-detail-overlay"
+             :class="{ active: txDetail.isOpen }"
+             x-show="txDetail.isOpen"
+             style="display:none;"
+             @click.self="fecharDetalheTx()">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Detalhes da movimentacao</h2>
+                    <button class="modal-close" @click="fecharDetalheTx()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <template x-if="txDetail.tx">
+                        <div>
+                            <div class="tx-detail-topo">
+                                <span class="type-badge"
+                                      :class="getTypeBadgeClass(txDetail.tx.tipo, txDetail.tx)"
+                                      x-text="getTypeLabel(txDetail.tx.tipo, txDetail.tx.formaPagamento, txDetail.tx)"></span>
+                                <span class="tx-detail-valor"
+                                      :class="getValueClass(txDetail.tx.tipo)"
+                                      x-text="(txDetail.tx.tipo === 'PAGAMENTO' ? '+ ' : txDetail.tx.tipo === 'PENDENTE' ? '' : '- ') + formatCurrency(txDetail.tx.valor)"></span>
+                            </div>
+
+                            <p class="tx-detail-desc">
+                                <span x-text="descPrefixo(txDetail.tx.descricao)"></span><strong x-text="descDestaque(txDetail.tx.descricao)"></strong>
+                            </p>
+
+                            <dl class="tx-detail-lista">
+                                <div>
+                                    <dt>Data</dt>
+                                    <dd x-text="formatDateTime(txDetail.tx.data)"></dd>
+                                </div>
+                                <div>
+                                    <dt>Forma de pagamento</dt>
+                                    <dd x-text="txDetail.tx.formaPagamento || 'Nao informada'"></dd>
+                                </div>
+                                <template x-if="txDetail.tx.lancadoPor">
+                                    <div>
+                                        <dt>Lancado por</dt>
+                                        <dd x-text="txDetail.tx.lancadoPor"></dd>
+                                    </div>
+                                </template>
+                                <template x-if="txDetail.tx.origem === 'WHATSAPP'">
+                                    <div>
+                                        <dt>Origem</dt>
+                                        <dd>WhatsApp</dd>
+                                    </div>
+                                </template>
+                            </dl>
+
+                            <template x-if="isAdiantamentoTx(txDetail.tx)">
+                                <p class="tx-detail-aviso">
+                                    <i class="fas fa-rotate-left"></i> Sera descontado da comissao
+                                </p>
+                            </template>
+
+                            <div class="tx-detail-acoes">
+                                <template x-if="txDetail.tx.ordemId">
+                                    <a :href="'ordens.html?id=' + txDetail.tx.ordemId" class="btn btn-secondary">
+                                        <i class="fas fa-eye"></i> Ver ordem
+                                    </a>
+                                </template>
+                                <template x-if="txDetail.tx.tipo === 'FECHAMENTO'">
+                                    <button class="btn btn-secondary" @click="openFechamentoRelatorio(txDetail.tx); fecharDetalheTx()">
+                                        <i class="fas fa-file-alt"></i> Ver relatorio
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -3154,6 +3308,9 @@
                 // Gorjeta Modal
                 gorjetaModal: { isOpen: false, isSaving: false, lavadorId: '', valor: '', observacao: '' },
 
+                // Folha de detalhes da movimentacao (abre ao tocar no cartao, no celular)
+                txDetail: { isOpen: false, tx: null },
+
                 // Abertura Modal
                 aberturaModal: {
                     isOpen: false,
@@ -3625,6 +3782,32 @@
                     };
                     reader.readAsDataURL(file);
                     event.target.value = '';
+                },
+
+                // --- Detalhe da movimentacao ---
+                // No desktop a linha da tabela ja mostra tudo e os botoes de
+                // acao ficam a vista; no celular o cartao e resumido, entao o
+                // toque abre a folha com os detalhes completos.
+                abrirDetalheTx(tx, evento) {
+                    if (!window.matchMedia('(max-width: 768px)').matches) return;
+                    if (evento && evento.target.closest('.action-btn')) return;
+                    this.txDetail = { isOpen: true, tx };
+                },
+
+                fecharDetalheTx() {
+                    this.txDetail = { isOpen: false, tx: null };
+                },
+
+                // Divide a descricao em "antes do OS:" e "veiculo/placa", para
+                // destacar o carro sem injetar HTML vindo do banco.
+                descPrefixo(desc) {
+                    const m = String(desc || '').match(/^(.*?OS:s*)(.+)$/i);
+                    return m ? m[1] : String(desc || '');
+                },
+
+                descDestaque(desc) {
+                    const m = String(desc || '').match(/^(.*?OS:s*)(.+)$/i);
+                    return m ? m[2] : '';
                 },
 
                 openGorjetaModal() {
