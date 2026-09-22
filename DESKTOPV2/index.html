@@ -3457,6 +3457,67 @@
                botao "Menu" da navegacao inferior. */
             .floating-menu { display: none; }
         }
+
+        /* ==========================================
+           FASE 4 — RÉGUA DE INDICADORES NO CELULAR
+           Medido em 430px: a régua tinha 340px de conteúdo numa caixa de
+           297px e o bloco do faturamento ficava espremido em 54px, com o
+           valor saindo cortado pela direita. Duas causas somadas: 40px de
+           respiro entre os três blocos (medida de desktop) e 24px de recuo
+           lateral em cada contêiner aninhado acima dela.
+           ========================================== */
+        @media (max-width: 768px) {
+            /* O .app-main reservava 70px de recuo à esquerda para a barra
+               lateral do desktop — que no celular nem existe. Era a maior
+               fatia dos 133px que faltavam: a tela inteira ficava estreita,
+               não só a régua. */
+            .app-main {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .app-content {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            .kpi-stats-header {
+                gap: 12px;
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            /* sem isto, cada bloco se recusa a encolher abaixo do próprio
+               texto e a régua estoura de novo */
+            .kpi-stat-small,
+            .kpi-stat {
+                min-width: 0;
+            }
+
+            .kpi-rev-wrap {
+                min-width: 96px;
+            }
+
+            .kpi-nav-btn {
+                flex: 0 0 auto;
+            }
+
+            /* Os atalhos ficavam um por linha com 220px de altura: sete deles
+               exigiam cerca de 1.500px de rolagem e a primeira tela mostrava
+               um e meio. Em duas colunas e mais baixos, cabem quatro na
+               primeira dobra — continuam grandes o bastante para o dedo. */
+            .quick-actions-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px !important;
+            }
+
+            .action-card {
+                min-height: 116px !important;
+                padding: 16px 12px !important;
+                gap: 10px !important;
+                border-radius: 18px !important;
+            }
+        }
 </style>
 </head>
 <body data-permission="ver_dashboard">
