@@ -1338,7 +1338,15 @@ model EmailRegra {
   ativo           Boolean  @default(true)
   remetenteContem String   // filtro por remetente (ex: "localiza")
   assuntoContem   String?  // filtro por assunto (opcional)
+  // Corta email parecido do mesmo remetente: "Solicitação de Lavagem" casa dentro de
+  // "Cancelamento Solicitação de Lavagem", e avisar lavagem de um serviço cancelado
+  // mandaria alguém buscar um carro à toa.
+  assuntoNaoContem String?
   regexExtracao   String   // ex: "seguir:[^0-9]{0,40}([0-9]{6})" — o 1º grupo vira {{valor}}
+  // Informações além do valor principal: [{ chave, regex, opcional }] → {{chave}} no template
+  campos          Json?
+  // Linha que se repete (tabela de veículos): { regex, chaves, template } → {{itens}}
+  bloco           Json?
   tipoValor       String   @default("AVANCADO") // CODIGO | ALFANUMERICO | VALOR | LINK | AVANCADO
   ancora          String?  // texto antes do valor — usado na explicação em português e na edição
   template        String   // ex: "🔑 Código Localiza: {{valor}}"

@@ -2,6 +2,7 @@ import prisma from '../db';
 import { descriptografar, aadDaConta, chaveConfigurada } from '../utils/credCrypto';
 import { buscarNovos, ErroImap } from './emailImapService';
 import { resolverDestinos, enfileirarEnvios, DestinoRegra } from './emailAutomacaoFila';
+import { montarMensagem, CampoRegra, BlocoRegra } from './emailExtracao';
 import { subscriptionService } from './subscriptionService';
 
 /**
@@ -16,30 +17,9 @@ import { subscriptionService } from './subscriptionService';
 
 const INTERVALO_MS = 30_000;
 const MAX_CONTAS_POR_CICLO = 3;   // conexões IMAP simultâneas
-const MAX_VALOR = 100;            // corta o valor capturado: regex ampla não vira vazamento do email
 
+/** Um ciclo por vez: o anterior pode ainda estar em I/O. */
 let rodando = false;
-
-/** Aplica a regra no texto e devolve a mensagem pronta, ou null se não casar. */
-function montarMensagem(
-  regra: { remetenteContem: string; assuntoContem: string | null; regexExtracao: string; template: string },
-  email: { de: string; assunto: string; texto: string }
-): string | null {
-  const de = (email.de || '').toLowerCase();
-  if (!de.includes(regra.remetenteContem.toLowerCase())) return null;
-  if (regra.assuntoContem && !(email.assunto || '').toLowerCase().includes(regra.assuntoContem.toLowerCase())) return null;
-
-  let match: RegExpMatchArray | null = null;
-  try {
-    match = (email.texto || '').match(new RegExp(regra.regexExtracao, 'i'));
-  } catch {
-    return null; // regex inválida: a validação da rota já impede, mas nunca derruba o ciclo
-  }
-  if (!match) return null;
-
-  const valor = String(match[1] ?? match[0]).slice(0, MAX_VALOR);
-  return regra.template.replace(/\{\{valor\}\}/g, valor);
-}
 
 async function processarConta(conta: {
   id: string; empresaId: string; email: string; senhaCriptografada: string;
@@ -79,7 +59,15 @@ async function processarConta(conta: {
     for (const msg of mensagens) {
       try {
         for (const regra of regras) {
-          const texto = montarMensagem(regra, msg);
+          const texto = montarMensagem({
+            remetenteContem: regra.remetenteContem,
+            assuntoContem: regra.assuntoContem,
+            assuntoNaoContem: regra.assuntoNaoContem,
+            regexExtracao: regra.regexExtracao,
+            template: regra.template,
+            campos: (regra.campos ?? null) as unknown as CampoRegra[] | null,
+            bloco: (regra.bloco ?? null) as unknown as BlocoRegra | null,
+          }, msg);
           if (!texto) continue;
 
           const alvos = await resolverDestinos(conta.empresaId, (regra.destinos ?? []) as unknown as DestinoRegra[]);

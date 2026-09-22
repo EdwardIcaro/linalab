@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
+import { Prisma } from '@prisma/client';
 import { criptografar, descriptografar, aadDaConta, chaveConfigurada } from '../utils/credCrypto';
 import { verificarRateLimit } from '../utils/rateLimiter';
 import { testarLogin, listarRecentes, lerEmail as lerEmailImap, ErroImap } from '../services/emailImapService';
@@ -311,6 +312,59 @@ async function validarDestinos(empresaId: string, destinos: unknown): Promise<{ 
   return { valor: limpos };
 }
 
+const MAX_CAMPOS = 8;
+const CHAVES_RESERVADAS = ['valor', 'itens'];
+const CHAVE_VALIDA = /^[a-z][a-z0-9_]{0,19}$/;
+
+/**
+ * Campos extras e bloco repetível da regra.
+ *
+ * `{{valor}}` e `{{itens}}` são do motor (valor principal e lista do bloco), então um
+ * campo com esse nome sobrescreveria um deles em silêncio — por isso as chaves são
+ * reservadas. Devolve o que vai pro banco já limpo.
+ */
+function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any } {
+  const entrada = body?.campos;
+  const campos: { chave: string; regex: string; opcional: boolean }[] = [];
+  if (entrada != null) {
+    if (!Array.isArray(entrada)) return { erro: 'Campos inválidos.' };
+    if (entrada.length > MAX_CAMPOS) return { erro: `Use no máximo ${MAX_CAMPOS} campos.` };
+    for (const c of entrada) {
+      const chave = String(c?.chave ?? '').trim().toLowerCase();
+      if (!CHAVE_VALIDA.test(chave)) return { erro: `Nome de campo inválido: "${chave}". Use letras minúsculas, sem espaço.` };
+      if (CHAVES_RESERVADAS.includes(chave)) return { erro: `"${chave}" é um nome reservado. Escolha outro nome pro campo.` };
+      if (campos.some(x => x.chave === chave)) return { erro: `O campo "${chave}" está repetido.` };
+      const erroRegex = erroNaRegex(String(c?.regex ?? ''));
+      if (erroRegex) return { erro: `Campo "${chave}": ${erroRegex.charAt(0).toLowerCase()}${erroRegex.slice(1)}` };
+      campos.push({ chave, regex: String(c.regex), opcional: c?.opcional === true });
+    }
+  }
+
+  let bloco: any = null;
+  if (body?.bloco != null) {
+    const b = body.bloco;
+    const erroRegex = erroNaRegex(String(b?.regex ?? ''));
+    if (erroRegex) return { erro: `Bloco: ${erroRegex.charAt(0).toLowerCase()}${erroRegex.slice(1)}` };
+    const chaves = Array.isArray(b?.chaves) ? b.chaves.map((k: unknown) => String(k ?? '').trim().toLowerCase()) : [];
+    if (!chaves.length || chaves.length > 6) return { erro: 'O bloco precisa de 1 a 6 campos.' };
+    if (chaves.some((k: string) => !CHAVE_VALIDA.test(k))) return { erro: 'Nome de campo do bloco inválido.' };
+    const tpl = String(b?.template ?? '');
+    if (!tpl || tpl.length > 200) return { erro: 'O texto de cada item precisa ter até 200 caracteres.' };
+    if (!chaves.some((k: string) => tpl.includes(`{{${k}}}`))) return { erro: 'O texto de cada item precisa usar pelo menos um campo do bloco.' };
+    bloco = { regex: String(b.regex), chaves, template: tpl };
+  }
+
+  // Um {{campo}} que não existe sairia cru na mensagem do WhatsApp
+  const template = String(body?.template ?? '');
+  const disponiveis = new Set(['valor', ...campos.map(c => c.chave), ...(bloco ? ['itens'] : [])]);
+  for (const [, chave] of template.matchAll(/\{\{(\w+)\}\}/g)) {
+    if (!disponiveis.has(chave)) return { erro: `A mensagem usa {{${chave}}}, que não é um campo desta automação.` };
+  }
+  if (bloco && !template.includes('{{itens}}')) return { erro: 'A mensagem precisa conter {{itens}} pra listar os itens do bloco.' };
+
+  return { campos: campos.length ? campos : null, bloco };
+}
+
 function erroNosCamposDaRegra(body: any): string | null {
   const nome = String(body?.nome ?? '').trim();
   if (!nome || nome.length > MAX_NOME) return `O nome precisa ter até ${MAX_NOME} caracteres.`;
@@ -351,6 +405,9 @@ export async function criarRegra(req: Req, res: Response) {
     const destinos = await validarDestinos(empresaId, req.body?.destinos);
     if (destinos.erro) return res.status(400).json({ error: destinos.erro });
 
+    const extracao = validarExtracao(req.body);
+    if (extracao.erro) return res.status(400).json({ error: extracao.erro });
+
     const regra = await prisma.emailRegra.create({
       data: {
         empresaId, contaId: conta.id,
@@ -358,7 +415,10 @@ export async function criarRegra(req: Req, res: Response) {
         ativo: req.body.ativo !== false,
         remetenteContem: String(req.body.remetenteContem).trim(),
         assuntoContem: req.body.assuntoContem ? String(req.body.assuntoContem).trim() : null,
+        assuntoNaoContem: req.body.assuntoNaoContem ? String(req.body.assuntoNaoContem).trim().slice(0, 120) : null,
         regexExtracao: String(req.body.regexExtracao),
+        campos: extracao.campos ?? Prisma.DbNull,
+        bloco: extracao.bloco ?? Prisma.DbNull,
         tipoValor: ['CODIGO', 'ALFANUMERICO', 'VALOR', 'LINK', 'AVANCADO'].includes(req.body.tipoValor) ? req.body.tipoValor : 'AVANCADO',
         ancora: req.body.ancora ? String(req.body.ancora).slice(0, 120) : null,
         template: String(req.body.template),
@@ -398,6 +458,13 @@ export async function atualizarRegra(req: Req, res: Response) {
     const destinos = await validarDestinos(empresaId, req.body?.destinos);
     if (destinos.erro) return res.status(400).json({ error: destinos.erro });
 
+    const extracao = validarExtracao({
+      ...req.body,
+      campos: 'campos' in req.body ? req.body.campos : atual.campos,
+      bloco: 'bloco' in req.body ? req.body.bloco : atual.bloco,
+    });
+    if (extracao.erro) return res.status(400).json({ error: extracao.erro });
+
     const regra = await prisma.emailRegra.update({
       where: { id },
       data: {
@@ -405,7 +472,11 @@ export async function atualizarRegra(req: Req, res: Response) {
         ativo: req.body.ativo !== false,
         remetenteContem: String(req.body.remetenteContem).trim(),
         assuntoContem: req.body.assuntoContem ? String(req.body.assuntoContem).trim() : null,
+        assuntoNaoContem: req.body.assuntoNaoContem ? String(req.body.assuntoNaoContem).trim().slice(0, 120) : null,
         regexExtracao: String(req.body.regexExtracao),
+        // Só mexe no que veio: um cliente que edite só a mensagem não pode perder os campos.
+        campos: 'campos' in req.body ? (extracao.campos ?? Prisma.DbNull) : undefined,
+        bloco: 'bloco' in req.body ? (extracao.bloco ?? Prisma.DbNull) : undefined,
         tipoValor: ['CODIGO', 'ALFANUMERICO', 'VALOR', 'LINK', 'AVANCADO'].includes(req.body.tipoValor) ? req.body.tipoValor : 'AVANCADO',
         ancora: req.body.ancora ? String(req.body.ancora).slice(0, 120) : null,
         template: String(req.body.template),
@@ -543,8 +614,19 @@ export async function testarEnvio(req: Req, res: Response) {
     const alvos = await resolverDestinos(empresaId, destinos);
     if (!alvos.length) return res.status(400).json({ error: 'Essa automação não tem destinatário válido.' });
 
+    // O teste preenche TODO placeholder da mensagem: com campos novos ({{placa}}, {{itens}}...)
+    // trocar só {{valor}} mandaria o resto cru pro WhatsApp de quem recebe.
     const exemplo = String(req.body?.valorExemplo ?? '123456').slice(0, 100);
-    const texto = regra.template.replace(/\{\{valor\}\}/g, exemplo);
+    const campos = Array.isArray(regra.campos) ? (regra.campos as any[]) : [];
+    const bloco = regra.bloco as any;
+    const texto = regra.template.replace(/\{\{(\w+)\}\}/g, (cru, chave) => {
+      if (chave === 'valor') return exemplo;
+      if (chave === 'itens' && bloco) {
+        const linha = String(bloco.template ?? '').replace(/\{\{(\w+)\}\}/g, (_c: string, k: string) => `[${k} de exemplo]`);
+        return [linha, linha].join('\n');
+      }
+      return campos.some(c => c?.chave === chave) ? `[${chave} de exemplo]` : cru;
+    });
     const enfileirados = await enfileirarEnvios(empresaId, alvos, texto);
 
     await auditar(empresaId, autorDo(req), 'TESTE_ENVIO', regra.contaId);

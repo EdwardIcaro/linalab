@@ -2101,7 +2101,12 @@
                 const ct = ea.contatos.find(c => c.id === d.id && c.tipo === d.tipo);
                 return ct ? ct.nome : 'contato removido';
             });
-            const oque = { CODIGO: 'código', ALFANUMERICO: 'código com letras', VALOR: 'valor em R$', LINK: 'link' }[r.tipoValor] || 'valor';
+            // Automação com campos captura várias informações — dizer "enviar o valor" esconderia isso
+            const chaves = (r.campos || []).map(c => c.chave);
+            if (r.bloco) chaves.unshift(...(r.bloco.chaves || []));
+            const oque = chaves.length
+                ? chaves.slice(0, 5).join(', ') + (chaves.length > 5 ? '…' : '')
+                : ({ CODIGO: 'código', ALFANUMERICO: 'código com letras', VALOR: 'valor em R$', LINK: 'link' }[r.tipoValor] || 'valor');
             const apagado = !r.ativo || conta.status !== 'CONECTADO';
             return `
             <div style="display:flex;gap:.9rem;align-items:flex-start;padding:.9rem 0;border-top:1px solid #f0f0f0;${apagado ? 'opacity:.55;' : ''}">
@@ -2111,7 +2116,7 @@
                 </label>
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:700;">${escHtml(r.nome)}</div>
-                    <div style="line-height:1.5;">Quando chegar email de <b>${escHtml(r.remetenteContem)}</b>${r.assuntoContem ? ` com assunto <b>"${escHtml(r.assuntoContem)}"</b>` : ''}, enviar o <b>${oque}</b> para <b>${escHtml(nomes.join(', ') || 'ninguém')}</b>.</div>
+                    <div style="line-height:1.5;">Quando chegar email de <b>${escHtml(r.remetenteContem)}</b>${r.assuntoContem ? ` com assunto <b>"${escHtml(r.assuntoContem)}"</b>` : ''}${r.assuntoNaoContem ? ` <span style="color:#b45309;">(e sem "${escHtml(r.assuntoNaoContem)}")</span>` : ''}, enviar <b>${escHtml(oque)}</b> para <b>${escHtml(nomes.join(', ') || 'ninguém')}</b>.</div>
                     <div style="color:#888;font-size:.8rem;">${r.totalDisparos ? `Disparou ${r.totalDisparos}x${r.ultimoDisparoEm ? ' · última ' + new Date(r.ultimoDisparoEm).toLocaleString('pt-BR') : ''}` : 'Ainda não disparou'}</div>
                 </div>
                 <div style="white-space:nowrap;">
@@ -2402,8 +2407,21 @@
             else ea.wiz.destinos = ea.wiz.destinos.filter(d => !(d.tipo === tipo && d.id === id));
         }
         function eaAtualizarPrevia() {
-            const valor = (ea.wiz && ea.wiz.regra && ea.wiz.regra.teste) || '123456';
-            eaEl('eaPrevia').textContent = (eaEl('eaRegraMensagem').value || '').replace(/\{\{valor\}\}/g, valor);
+            const w = ea.wiz || {};
+            const valor = (w.regra && w.regra.teste) || '123456';
+            const campos = w.campos || [];
+            const bloco = w.bloco || null;
+            // A mensagem pode ter {{placa}}, {{itens}}... — mostrar {{placa}} cru na prévia
+            // faria o cliente achar que é assim que chega no WhatsApp dele.
+            const texto = (eaEl('eaRegraMensagem').value || '').replace(/\{\{(\w+)\}\}/g, (cru, chave) => {
+                if (chave === 'valor') return valor;
+                if (chave === 'itens' && bloco) {
+                    const linha = String(bloco.template || '').replace(/\{\{(\w+)\}\}/g, (_c, k) => '[' + k + ']');
+                    return [linha, linha].join('\n');
+                }
+                return campos.some(c => c.chave === chave) ? '[' + chave + ']' : cru;
+            });
+            eaEl('eaPrevia').textContent = texto;
         }
         function eaVoltarPasso() {
             if (!ea.wiz || ea.wiz.passo === 1) return eaFecharAssistente();
@@ -2488,6 +2506,7 @@
                 email: null, exemplo: null, tok: null,
                 regra: { regex: regra.regexExtracao, ancora: regra.ancora, teste: null },
                 tipoValorSalvo: regra.tipoValor,
+                campos: regra.campos || [], bloco: regra.bloco || null,
                 destinos: (regra.destinos || []).map(d => ({ tipo: d.tipo, id: d.id })),
             };
             eaEl('eaAssTitulo').textContent = 'Editar automação';
