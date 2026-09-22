@@ -2233,6 +2233,20 @@
                         this.searchQuery = result.vehicle.placa;
                         this.closeSearchResults();
 
+                        // Quem manda no tipo é o veículo já cadastrado, não os
+                        // chips da tela. Antes isto não era lido: a busca pulava
+                        // direto para os serviços usando o que estivesse
+                        // selecionado (padrão Carro/Hatch), então escolher uma
+                        // moto já cadastrada carregava a lista e os preços de
+                        // carro. Veículos sem o tipo gravado mantêm a seleção
+                        // atual, para não trocar um palpite por outro.
+                        if (result.vehicle.tipoVeiculo) {
+                            this.vehicleType = result.vehicle.tipoVeiculo;
+                            this.vehicleCategory = result.vehicle.tipoVeiculo === 'MOTO'
+                                ? null
+                                : (result.vehicle.subtipoVeiculo || this.vehicleCategory || 'HATCH');
+                        }
+
                         // Usar serviços do preload se já carregados para a combinação atual
                         const key = `${this.vehicleType}-${this.vehicleCategory}`;
                         if (this._lastServicesKey !== key || this.services.length === 0) {
