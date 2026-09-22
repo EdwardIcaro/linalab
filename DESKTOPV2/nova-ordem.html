@@ -1451,8 +1451,18 @@
                     </div><!-- /x-show mostrarCadastro -->
                 </div>
 
-                <!-- Tipo e Categoria: chips compactos -->
-                <div class="vehicle-type-section" style="margin-top: 16px;">
+                <!-- Tipo e Categoria: chips compactos.
+                     Só aparecem quando há o que decidir: nenhum veículo
+                     escolhido ainda (cadastro novo), ou veículo escolhido sem
+                     o tipo gravado — 27% da base, de cadastros anteriores a
+                     essa coluna. Com veículo que já tem tipo, quem manda é o
+                     cadastro, e os chips seriam um palpite competindo com o
+                     dado real. -->
+                <div
+                    class="vehicle-type-section"
+                    x-show="!vehicle || !vehicle.tipoVeiculo"
+                    style="margin-top: 16px;"
+                >
                     <div class="section-title" style="margin-bottom: 10px;">
                         <i class="fas fa-car"></i>
                         <span>Tipo de Veículo</span>
@@ -2266,6 +2276,11 @@
                         });
                     } else if (result.type === 'new') {
                         // New registration
+                        // Limpa o veículo de uma seleção anterior: sem isto, quem
+                        // escolhesse um carro existente, voltasse e partisse para
+                        // cadastrar uma placa nova ficaria sem os chips de tipo,
+                        // que se escondem quando há veículo com tipo definido.
+                        this.vehicle = null;
                         this.mostrarCadastro = true;
                         this.quickRegister.vehiclePlate = result.plate || '';
                         this.quickRegister.clientName = result.name || '';
