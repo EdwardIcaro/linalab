@@ -1376,7 +1376,207 @@
                 padding: 8px;
             }
         }
-    </style>
+    
+        /* ============================================================
+           MOBILE — FINANCEIRO
+           Refino da tela no celular. Fica no fim do <style> da página de
+           propósito: precisa vencer o mobile.css, que usa !important.
+           ============================================================ */
+        @media (max-width: 768px) {
+
+            /* --- 0. largura útil ---
+               Três contêineres aninhados somavam 120px de recuo lateral
+               (.main-content 12, .finance-container 24, .tabs-content 24,
+               cada um dos dois lados): de 430px de tela sobravam 304px de
+               conteúdo. No celular quem dá o respiro lateral é só o
+               .main-content. */
+            .finance-container {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .tabs-content {
+                padding: 12px !important;
+            }
+
+            /* --- 1. abas ---
+               A aba "Controle de Caixa" media 155px e empurrava a página
+               107px além da tela: era ela que cortava os cartões de saldo
+               na lateral direita. Agora a régua rola por gesto. */
+            .tabs-header {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .tabs-header::-webkit-scrollbar { display: none; }
+
+            .tab-btn {
+                flex: 0 0 auto;
+                white-space: nowrap;
+                padding: 12px 14px;
+                font-size: 13px;
+                gap: 6px;
+                min-height: 44px;
+            }
+
+            /* --- 2. ações da aba: os dois botões vinham colados --- */
+            .tabs-extra-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 12px;
+            }
+            .tabs-extra-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* --- 3. filtros ---
+               Grade de três colunas: tudo ocupa a linha inteira, menos as
+               duas datas e o "ate", que dividem uma linha só. */
+            .filters-bar {
+                display: grid !important;
+                grid-template-columns: 1fr auto 1fr;
+                align-items: center;
+                gap: 10px;
+            }
+            .filters-bar > .filter-presets,
+            .filters-bar > .filter-select,
+            .filters-bar > .filter-actions {
+                grid-column: 1 / -1;
+            }
+            .filters-bar > span {
+                font-size: 12px;
+                text-align: center;
+            }
+
+            .filter-presets {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .filter-presets::-webkit-scrollbar { display: none; }
+
+            .preset-btn {
+                flex: 0 0 auto;
+                white-space: nowrap;
+                min-height: 40px;
+            }
+
+            .filter-select,
+            .filter-input { width: 100%; }
+
+            .filter-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .filter-actions .btn { width: 100%; justify-content: center; }
+
+            /* --- 4. cartões de saldo ---
+               O detalhe (Dinheiro/Cartão/PIX, Despesas/Sangrias) era uma
+               linha horizontal que não cabia em meia largura e saía
+               cortada pelo overflow:hidden do cartão. Vira coluna. */
+            .balance-card { padding: 14px !important; }
+            .balance-header { margin-bottom: 6px; }
+            .balance-icon { width: 34px; height: 34px; font-size: 14px; }
+
+            .balance-breakdown {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
+                margin-top: 10px !important;
+                padding-top: 10px !important;
+            }
+            .breakdown-item {
+                min-width: 0;
+                white-space: normal;
+            }
+
+            /* --- 5. movimentações: cartão de transação de verdade ---
+               O padrão genérico (rótulo à esquerda, valor à direita) vira
+               seis linhas por transação, com DESCRICAO e ACOES gritando em
+               caixa alta. Aqui cada campo tem seu lugar: tipo e valor no
+               topo, descrição no meio, data/forma/ação no rodapé. */
+            table.tx-mov.tabela-cartao tbody tr {
+                display: grid !important;
+                grid-template-columns: auto 1fr auto;
+                grid-template-areas:
+                    "tipo  .      valor"
+                    "desc  desc   desc"
+                    "data  forma  acoes";
+                gap: 4px 8px;
+                align-items: center;
+                padding: 12px 14px !important;
+            }
+
+            table.tx-mov.tabela-cartao tbody td {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                text-align: left !important;
+                font-size: 12px !important;
+                font-weight: 400 !important;
+                /* Item de grid tem min-width: auto por padrão e se recusa a
+                   encolher abaixo do próprio texto — era isso que empurrava
+                   a descrição longa para fora do cartão. */
+                min-width: 0 !important;
+            }
+
+            table.tx-mov.tabela-cartao tbody td::before { content: none !important; }
+
+            /* Data e forma de pagamento nunca quebram no meio da palavra —
+               sem isto o "anywhere" da descrição virava "PI/X" e "D/INH". */
+            table.tx-mov.tabela-cartao tbody td:nth-child(1) {
+                grid-area: data;
+                color: var(--finance-text-secondary);
+                white-space: nowrap !important;
+            }
+
+            table.tx-mov.tabela-cartao tbody td:nth-child(2) { grid-area: tipo; }
+
+            table.tx-mov.tabela-cartao tbody td:nth-child(3) {
+                grid-area: desc;
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                line-height: 1.35;
+                margin: 2px 0 6px !important;
+                /* só a descrição pode quebrar em qualquer ponto: é o único
+                   campo com texto longo e imprevisível */
+                overflow-wrap: anywhere;
+            }
+
+            table.tx-mov.tabela-cartao tbody td:nth-child(4) {
+                grid-area: forma;
+                color: var(--finance-text-secondary);
+                white-space: nowrap !important;
+            }
+            table.tx-mov.tabela-cartao tbody td:nth-child(4)::before {
+                content: '·' !important;
+                margin-right: 6px;
+            }
+
+            table.tx-mov.tabela-cartao tbody td:nth-child(5) {
+                grid-area: valor;
+                text-align: right !important;
+                font-size: 17px !important;
+                font-weight: 700 !important;
+            }
+
+            table.tx-mov.tabela-cartao tbody td:nth-child(6) {
+                grid-area: acoes;
+                text-align: right !important;
+            }
+
+            /* linha de "nenhum registro" continua ocupando o cartão todo */
+            table.tx-mov.tabela-cartao tbody td[data-sem-rotulo] {
+                grid-column: 1 / -1 !important;
+                text-align: center !important;
+            }
+        }
+
+</style>
 <link rel="stylesheet" href="mobile.css">
 </head>
 <body id="financeiro-page" data-permission="ver_financeiro">
@@ -1657,7 +1857,7 @@
                             </template>
 
                             <!-- Table -->
-                            <table class="transactions-table" x-show="!isLoadingTransactions && transactions.length > 0">
+                            <table class="transactions-table tx-mov" x-show="!isLoadingTransactions && transactions.length > 0">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
