@@ -1396,7 +1396,9 @@
                             type="tel"
                             class="form-input"
                             placeholder="(00) 00000-0000"
+                            inputmode="numeric"
                             x-model="quickRegister.clientPhone"
+                            @input="maskPhone($event)"
                         >
                     </div>
 
@@ -1541,12 +1543,35 @@
                         </template>
                     </div>
 
+                    <!-- Busca: só aparece quando a lista é grande o bastante
+                         para valer a pena procurar em vez de rolar. -->
+                    <div class="search-wrapper" x-show="!isLoadingServices && services.length > 8" style="margin-bottom: 12px; position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); opacity: .5;"></i>
+                        <input
+                            type="text"
+                            class="form-input"
+                            placeholder="Buscar serviço"
+                            x-model="servicoBusca"
+                            style="padding-left: 40px;"
+                        >
+                        <button
+                            type="button"
+                            x-show="servicoBusca"
+                            @click="servicoBusca = ''"
+                            aria-label="Limpar busca"
+                            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: none; background: none; cursor: pointer; opacity: .6;"
+                        >
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
                     <!-- Services Grid -->
                     <div class="services-grid" x-show="!isLoadingServices">
                         <template x-if="filteredServices.length === 0">
                             <div class="empty-state" style="grid-column: 1 / -1;">
                                 <i class="fas fa-inbox"></i>
-                                <p>Nenhum servico disponivel para esta categoria</p>
+                                <p x-show="!servicoBusca">Nenhum servico disponivel para esta categoria</p>
+                                <p x-show="servicoBusca">Nenhum servico encontrado para "<span x-text="servicoBusca"></span>"</p>
                             </div>
                         </template>
 
@@ -1882,6 +1907,12 @@
                 // escolhe cadastrar.
                 mostrarCadastro: false,
 
+                // Busca na lista de serviços. Em produção uma empresa chega a
+                // 29 serviços — rolar a grade inteira para achar um custa mais
+                // que digitar duas letras. Adicionais não ganharam busca: o
+                // maior catálogo tem 11, onde ela só atrapalharia.
+                servicoBusca: '',
+
                 // ==========================================
                 // SEARCH STATE
                 // ==========================================
@@ -1963,10 +1994,13 @@
                 // COMPUTED: Filtered Services by Category
                 // ==========================================
                 get filteredServices() {
-                    // Services are already filtered by the API based on
-                    // vehicleType and vehicleCategory, but we keep this
-                    // getter for potential client-side filtering needs
-                    return this.services;
+                    // A API já devolve filtrado por tipo e categoria do veículo;
+                    // aqui entra só a busca por nome digitada na tela.
+                    const q = (this.servicoBusca || '').trim().toLowerCase();
+                    if (!q) return this.services;
+                    return this.services.filter(s =>
+                        (s.nome || '').toLowerCase().includes(q)
+                    );
                 },
 
                 // ==========================================
@@ -2435,6 +2469,19 @@
 
                 selectService(service) {
                     this.selectedService = service;
+                },
+
+                // Telefone sai formatado já na digitação. Sem isto cada um
+                // grava de um jeito e a base de clientes fica com formatos
+                // misturados, o que atrapalha busca e envio de WhatsApp.
+                maskPhone(e) {
+                    let v = e.target.value.replace(/\D/g, '');
+                    if (v.length > 11) v = v.slice(0, 11);
+                    if (v.length >= 11)      v = v.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
+                    else if (v.length >= 7)  v = v.replace(/^(\d{2})(\d{4})(\d+)$/, '($1) $2-$3');
+                    else if (v.length >= 3)  v = v.replace(/^(\d{2})(\d+)$/, '($1) $2');
+                    this.quickRegister.clientPhone = v;
+                    this.syncQuickRegister();
                 },
 
                 toggleAdicional(adicional) {
