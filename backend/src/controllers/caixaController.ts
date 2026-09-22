@@ -404,6 +404,11 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
     const empresaId = req.empresaId!;
     const { valor, formaPagamento, descricao, fornecedorNome, tipo, categoriaGasto, lavadorId, dataRetroativo, comprovante, origem, lancadoPor } = req.body;
 
+    // Quem está logado, vindo do token (authMiddleware) — não do corpo da
+    // requisição. O bot manda lancadoPor explicitamente porque lá quem lança
+    // é um número de WhatsApp; pela web o nome sai do próprio login.
+    const usuarioNome = (req as any).usuarioNome as string | undefined;
+
     if (!valor || !formaPagamento || !tipo) {
         return res.status(400).json({ error: 'Valor, forma de pagamento e categoria são obrigatórios.' });
     }
@@ -472,7 +477,7 @@ export const createSaida = async (req: EmpresaRequest, res: Response) => {
                     data: dataRegistro,
                     comprovante: comprovante || null,
                     origem: origem || null,
-                    lancadoPor: lancadoPor || null,
+                    lancadoPor: lancadoPor || usuarioNome || null,
                 },
             });
         });
@@ -586,7 +591,15 @@ async function getPagamentosDoPeriodoOptimizado(
                 valor: true,
                 metodo: true,
                 pagoEm: true,
-                ordem: { select: { itemAvulso: true, veiculo: { select: { placa: true, modelo: true } } } }
+                ordem: {
+                    select: {
+                        itemAvulso: true,
+                        finalizadoPor: true,
+                        veiculo: { select: { placa: true, modelo: true } },
+                        cliente: { select: { nome: true } },
+                        lavador: { select: { nome: true } },
+                    },
+                },
             },
         }) : Promise.resolve([]),
 
@@ -601,7 +614,15 @@ async function getPagamentosDoPeriodoOptimizado(
                 valor: true,
                 metodo: true,
                 createdAt: true,
-                ordem: { select: { itemAvulso: true, veiculo: { select: { placa: true, modelo: true } } } }
+                ordem: {
+                    select: {
+                        itemAvulso: true,
+                        finalizadoPor: true,
+                        veiculo: { select: { placa: true, modelo: true } },
+                        cliente: { select: { nome: true } },
+                        lavador: { select: { nome: true } },
+                    },
+                },
             },
         }) : Promise.resolve([]),
     ]);
@@ -615,6 +636,11 @@ async function getPagamentosDoPeriodoOptimizado(
         descricao: p.ordem.veiculo
             ? `Pagamento OS: ${p.ordem.veiculo.modelo} (${p.ordem.veiculo.placa})`
             : `Pagamento OS: ${p.ordem.itemAvulso ?? 'Avulso'}`,
+        // Contexto do pagamento para a tela de detalhes: quem fechou a ordem,
+        // quem lavou e de quem é o carro.
+        finalizadoPor: p.ordem.finalizadoPor ?? null,
+        cliente: p.ordem.cliente ?? null,
+        lavador: p.ordem.lavador ?? null,
     }));
 }
 

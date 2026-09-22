@@ -2604,9 +2604,18 @@
                                     <dt>Forma de pagamento</dt>
                                     <dd x-text="txDetail.tx.formaPagamento || 'Nao informada'"></dd>
                                 </div>
+                                <template x-if="txDetail.tx.cliente && txDetail.tx.cliente.nome">
+                                    <div>
+                                        <dt>Cliente</dt>
+                                        <dd x-text="txDetail.tx.cliente.nome"></dd>
+                                    </div>
+                                </template>
+                                <!-- Mesmo campo, papel diferente: num pagamento é o
+                                     lavador da ordem; numa saída é o funcionário que
+                                     pegou o vale. -->
                                 <template x-if="txDetail.tx.lavador && txDetail.tx.lavador.nome">
                                     <div>
-                                        <dt>Funcionario</dt>
+                                        <dt x-text="ehPagamento(txDetail.tx) ? 'Lavador' : 'Funcionario'"></dt>
                                         <dd x-text="txDetail.tx.lavador.nome"></dd>
                                     </div>
                                 </template>
@@ -2616,9 +2625,15 @@
                                         <dd x-text="txDetail.tx.fornecedor.nome"></dd>
                                     </div>
                                 </template>
+                                <template x-if="txDetail.tx.finalizadoPor">
+                                    <div>
+                                        <dt>Finalizado por</dt>
+                                        <dd x-text="txDetail.tx.finalizadoPor"></dd>
+                                    </div>
+                                </template>
                                 <template x-if="txDetail.tx.lancadoPor">
                                     <div>
-                                        <dt>Lancado por</dt>
+                                        <dt>Registrado por</dt>
                                         <dd x-text="txDetail.tx.lancadoPor"></dd>
                                     </div>
                                 </template>
@@ -3819,6 +3834,12 @@
                 //   pegou o vale. Registros antigos guardaram o literal, mas
                 //   o lavador continua vinculado ao lançamento, então dá para
                 //   mostrar o nome certo sem mexer no que está no banco.
+                // Entradas vêm da tabela de pagamentos; o resto (saída, sangria,
+                // fechamento) vem do caixa. Muda o papel de alguns campos.
+                ehPagamento(tx) {
+                    return !!tx && (tx.tipo === 'PAGAMENTO' || tx.tipo === 'PENDENTE');
+                },
+
                 descricaoExibida(tx) {
                     let d = String((tx && tx.descricao) || '').replace(/^\[[^\]]+\]\s*/, '');
                     const nome = tx && tx.lavador && tx.lavador.nome;

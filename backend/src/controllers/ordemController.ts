@@ -1760,7 +1760,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
           desconto,
           comissao: comissaoCalculada,
           comissaoPaga: false,
-          pago: true
+          pago: true,
+          // Nome de quem fechou, vindo do token — serve para o extrato do
+          // financeiro mostrar "Finalizado por" no detalhe do pagamento.
+          finalizadoPor: (req as any).usuarioNome || null
         },
         include: {
           cliente: true,
