@@ -4,7 +4,7 @@
  * Duas coisas que o sistema não fazia e o gestor vinha cobrindo na mão (12 marcações
  * MANUAIS até 09/2026, quase todas "saída 18:00"):
  *
- *  1. Lembrar o funcionário, com jeito, quando o ponto do dia está faltando ou aberto.
+ *  1. Lembrar o funcionário, com jeito, quando ele entrou e esqueceu de bater a saída.
  *  2. Fechar o turno que ninguém fechou, em vez de deixar o dia correr até a meia-noite.
  *
  * A ordem importa: o lembrete vem primeiro e dá chance da pessoa resolver sozinha; o
@@ -99,14 +99,13 @@ export async function rodarPontoPendente(): Promise<void> {
       });
       if (resolveFeriadoDia(dia, feriados)) continue;
 
-      const entradaMin = horaParaMin(cfg.jornadaEntrada || '08:00');
-      const saidaMin   = horaParaMin(cfg.jornadaSaida   || '17:00');
+      const saidaMin = horaParaMin(cfg.jornadaSaida || '17:00');
       const fechaSozinho = (cfg.modoEncerramento ?? 'AUTOMATICO') === 'AUTOMATICO';
 
       const funcionarios = await prisma.dpFuncionario.findMany({
         where: { empresaId: emp.empresaId, status: 'ATIVO' },
         select: {
-          id: true, nome: true, jornadaEntrada: true,
+          id: true, nome: true,
           marcacoes: {
             where: { timestamp: { gte: inicioDia, lte: fimDia } },
             select: { tipo: true, timestamp: true },
@@ -116,15 +115,6 @@ export async function rodarPontoPendente(): Promise<void> {
         orderBy: { nome: 'asc' },
       });
       if (funcionarios.length === 0) continue;
-
-      // Quem bateu ponto nos últimos 14 dias. Sem isso, um cadastro que nunca usou o
-      // sistema (ou quem está fora sem afastamento lançado) receberia cobrança diária.
-      const desde14 = new Date(inicioDia.getTime() - 14 * 86400000);
-      const recentes = await prisma.dpMarcacao.groupBy({
-        by: ['funcionarioId'],
-        where: { empresaId: emp.empresaId, timestamp: { gte: desde14, lt: inicioDia } },
-      });
-      const usaOPonto = new Set(recentes.map(r => r.funcionarioId));
 
       const afastamentos = await prisma.dpAfastamento.findMany({
         where: { empresaId: emp.empresaId, funcionarioId: { in: funcionarios.map(f => f.id) } },
@@ -137,8 +127,6 @@ export async function rodarPontoPendente(): Promise<void> {
       for (const func of funcionarios) {
         if (resolveAfastamentoDia(func.id, dia, afastamentos)) continue;
 
-        // Horário de entrada individual manda sobre o da empresa (jornada diferente)
-        const entradaFunc = func.jornadaEntrada ? horaParaMin(func.jornadaEntrada) : entradaMin;
         const nome = primeiroNome(func.nome);
         const aberta = func.marcacoes[func.marcacoes.length - 1];
 
@@ -146,21 +134,10 @@ export async function rodarPontoPendente(): Promise<void> {
           marcacoes: func.marcacoes,
           inicioDiaMs: inicioDia.getTime(),
           agoraMin,
-          entradaMin: entradaFunc,
           saidaMin,
           fechaSozinho,
-          usaOPonto: usaOPonto.has(func.id),
         });
         if (acao === 'NADA') continue;
-
-        if (acao === 'LEMBRAR_ENTRADA') {
-          await avisarFuncionario(
-            emp.empresaId, func.id, `${func.id}:${dia}:ENTRADA`,
-            `⏰ Oi, ${nome}! Ainda não chegou sua entrada de hoje aqui. ` +
-            `Não esquece de bater seu ponto, viu? 🙂`,
-          ).catch(e => console.error('[dp-ponto] aviso entrada:', e));
-          continue;
-        }
 
         if (acao === 'LEMBRAR_SAIDA') {
           await avisarFuncionario(

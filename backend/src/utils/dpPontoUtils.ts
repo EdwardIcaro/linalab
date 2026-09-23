@@ -117,9 +117,13 @@ export function calcMinutosTrabalhados(
   return total;
 }
 
-// Minutos depois do horário da jornada. Folga generosa de propósito: cobrar cedo demais
-// transforma trânsito em cobrança, e o lembrete perde o tom de lembrete.
-export const LEMBRETE_ENTRADA_MIN = 30;  // sem nenhuma batida, depois da hora de entrar
+// Minutos depois do horário de saída. Folga generosa de propósito: cobrar cedo demais
+// transforma atraso em cobrança, e o lembrete perde o tom de lembrete.
+//
+// Não existe lembrete de ENTRADA de propósito: ninguém consegue distinguir quem esqueceu
+// de bater de quem simplesmente não veio, e mandar "não esqueça de bater seu ponto" pra
+// quem está de atestado é constrangimento gratuito. O turno aberto é o oposto disso — a
+// pessoa provadamente está lá, porque bateu a entrada.
 export const LEMBRETE_SAIDA_MIN   = 15;  // turno aberto, depois da hora de sair
 export const ENCERRA_APOS_MIN     = 120; // turno aberto: encerra e avisa o gestor
 
@@ -130,7 +134,6 @@ export const MAX_TURNO_AUTO_MIN = 12 * 60;
 
 export type AcaoPonto =
   | 'NADA'
-  | 'LEMBRAR_ENTRADA'
   | 'LEMBRAR_SAIDA'
   | 'ENCERRAR'
   | 'CORRIGIR_MANUAL';
@@ -146,21 +149,13 @@ export function decidirAcaoPonto(params: {
   marcacoes: DpMarcacaoMinima[];
   inicioDiaMs: number; // 00:00 BRT do dia, em epoch — âncora de todos os minutos abaixo
   agoraMin: number;
-  entradaMin: number;
   saidaMin: number;
   fechaSozinho: boolean;
-  /** Bateu ponto em algum dia recente. Quem nunca usa o sistema não é cobrado. */
-  usaOPonto: boolean;
 }): AcaoPonto {
-  const { marcacoes, inicioDiaMs, agoraMin, entradaMin, saidaMin, fechaSozinho, usaOPonto } = params;
+  const { marcacoes, inicioDiaMs, agoraMin, saidaMin, fechaSozinho } = params;
 
-  if (marcacoes.length === 0) {
-    if (!usaOPonto) return 'NADA';
-    const atrasado = agoraMin >= entradaMin + LEMBRETE_ENTRADA_MIN;
-    // Perto do fim do expediente o lembrete não ajuda mais ninguém: quem não veio, não veio
-    return atrasado && agoraMin < saidaMin ? 'LEMBRAR_ENTRADA' : 'NADA';
-  }
-
+  // Dia sem nenhuma batida pode ser falta, folga ou esquecimento: o sistema não sabe,
+  // então não fala nada com o funcionário.
   if (!temTurnoAberto(marcacoes)) return 'NADA';
 
   const aberta = marcacoes[marcacoes.length - 1];
