@@ -7,7 +7,8 @@ import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado,
-         calcMinutosTrabalhados, temTurnoAberto } from '../utils/dpPontoUtils';
+         calcMinutosTrabalhados, temTurnoAberto, resolverCargaHorariaDia,
+         cargaDaJornada } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
@@ -76,6 +77,7 @@ async function buscarLcFuncionarioPorToken(token: string) {
 
 const DP_FUNC_SELECT = {
   id: true, nome: true, cargo: true, cargaHorariaDia: true, jornadaEntrada: true, faceEmbedding: true,
+  cargoRef: { select: { cargaHorariaDia: true } },
 } as const;
 
 async function buscarDpFuncPorSessao(
@@ -904,7 +906,11 @@ export const getPontoHoje = async (req: Request, res: Response) => {
       orderBy: { timestamp: 'asc' },
     });
 
-    const cargaEsperadaMin = (funcionario.cargaHorariaDia ?? 8) * 60;
+    const cargaEsperadaMin = resolverCargaHorariaDia(
+      funcionario.cargaHorariaDia,
+      funcionario.cargoRef?.cargaHorariaDia,
+      cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin),
+    ) * 60;
     const jornadaSaida = cfg.jornadaSaida || '17:00';
     const [jsH, jsM] = jornadaSaida.split(':').map(Number);
     const jornadaSaidaMin = (jsH || 0) * 60 + (jsM || 0);
@@ -1107,7 +1113,11 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
     const toleranciaMin: number = cfg.toleranciaMin ?? 10;
     const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
-    const cargaEsperadaMin = (funcionario.cargaHorariaDia ?? 8) * 60;
+    const cargaEsperadaMin = resolverCargaHorariaDia(
+      funcionario.cargaHorariaDia,
+      funcionario.cargoRef?.cargaHorariaDia,
+      cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin),
+    ) * 60;
 
     // Dias do mês
     const diasNoMes = new Date(ano, m, 0).getDate();

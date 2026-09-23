@@ -5,6 +5,7 @@ import {
   resolveAfastamentoDia,
   isDiaFechado,
   resolverCargaHorariaDia,
+  cargaDaJornada,
   calcMinutosTrabalhados,
 } from '../utils/dpPontoUtils';
 
@@ -151,7 +152,11 @@ export async function fecharBancoHorasDiario(): Promise<void> {
 
       const cfg = configPorEmpresa.get(func.empresaId) || {};
       const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
-      const cargaHorariaDiaMin = resolverCargaHorariaDia(func.cargaHorariaDia, func.cargoRef?.cargaHorariaDia) * 60;
+      const cargaHorariaDiaMin = resolverCargaHorariaDia(
+        func.cargaHorariaDia,
+        func.cargoRef?.cargaHorariaDia,
+        cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin),
+      ) * 60;
 
       const resultado = calcularFechamentoPeriodo({
         dias, marcacoesPorDia, diasFuncionamento, feriados,
@@ -183,7 +188,11 @@ export async function fecharBancoHorasDiario(): Promise<void> {
       });
 
       console.log(`[banco-horas] ${func.id}: período ${baseStr}→${proximoFechamentoStr}, saldo do período ${resultado.saldoPeriodo.toFixed(2)}h, acumulado ${saldoAcumulado.toFixed(2)}h`);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        console.log(`[banco-horas] ${func.id}: ciclo já fechado, nada a fazer`);
+        continue;
+      }
       console.error(`[banco-horas] Erro ao fechar ciclo do funcionário ${func.id}:`, error);
     }
   }

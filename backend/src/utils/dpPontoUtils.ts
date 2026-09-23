@@ -65,12 +65,41 @@ export function isDiaFechado(diaSemana: number, diasFuncionamento: number[]): bo
   return !diasFuncionamento.includes(diaSemana);
 }
 
-// Hierarquia de carga horária esperada: override individual > cargo > padrão fixo (8h).
+/** "08:30" → 510. Fora do formato vira 0, nunca NaN. */
+export function horaParaMin(horaStr: string | null | undefined): number {
+  const [h, m] = String(horaStr || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+/**
+ * Carga diária que a jornada da empresa descreve: saída − entrada − intervalo.
+ *
+ * É o que o contrato diz, e vale mais que o 8h fixo que estava no código: uma empresa
+ * 08:00–18:00 com 2h de almoço dá 8h por coincidência, mas 08:00–16:00 com 1h dá 7h e
+ * o sistema continuaria cobrando 8h — falta de meia hora todo dia, no papel.
+ * `null` quando a configuração não descreve uma jornada plausível.
+ */
+export function cargaDaJornada(
+  entrada: string | null | undefined,
+  saida: string | null | undefined,
+  intervaloMin: number | null | undefined,
+): number | null {
+  if (!entrada || !saida) return null;
+  let bruto = horaParaMin(saida) - horaParaMin(entrada);
+  if (bruto <= 0) bruto += 24 * 60; // jornada que atravessa a meia-noite
+  const liquido = bruto - (intervaloMin ?? 0);
+  if (liquido <= 0 || liquido > 16 * 60) return null;
+  return liquido / 60;
+}
+
+// Hierarquia da carga esperada, do mais específico pro mais geral:
+// override individual > cargo > jornada da empresa > 8h.
 export function resolverCargaHorariaDia(
   cargaIndividual: number | null | undefined,
   cargaCargo: number | null | undefined,
+  cargaJornada?: number | null,
 ): number {
-  return cargaIndividual ?? cargaCargo ?? 8;
+  return cargaIndividual ?? cargaCargo ?? cargaJornada ?? 8;
 }
 
 /** Última marcação é ENTRADA — ou seja, o turno nunca foi fechado. */

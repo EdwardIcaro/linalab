@@ -1119,6 +1119,10 @@ model DpFechamentoBanco {
   empresa                Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   funcionario            DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
 
+  // Um fechamento por ciclo, e só. Sem isso, duas execuções do cron (duas instâncias
+  // do backend, ou uma re-execução manual) gravariam o mesmo período duas vezes e
+  // dobrariam o saldo acumulado do funcionário — erro silencioso e difícil de desfazer.
+  @@unique([funcionarioId, periodoInicio])
   @@index([funcionarioId, periodoFim])
   @@map("dp_fechamentos_banco")
 }

@@ -4,7 +4,7 @@ import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
-         temTurnoAberto } from '../utils/dpPontoUtils';
+         temTurnoAberto, resolverCargaHorariaDia, cargaDaJornada } from '../utils/dpPontoUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -366,7 +366,8 @@ export async function buildDpDashboardData(empresaId: string) {
     const jornadaEntradaCfg: string = cfg.jornadaEntrada || '08:00';
     const jornadaSaidaCfg: string  = cfg.jornadaSaida  || '17:00';
     const intervaloMin: number     = cfg.intervaloMin  || 60;
-    const cargaHorariaDiaCfg       = 8; // padrão 8h quando não definido por funcionário
+    // Carga que a jornada da empresa descreve — só vale para quem não tem a própria
+    const cargaDaEmpresa = cargaDaJornada(jornadaEntradaCfg, jornadaSaidaCfg, intervaloMin);
 
     const now = new Date();
     const { start: diaStart, end: diaEnd } = getTodayRangeBRT();
@@ -379,6 +380,7 @@ export async function buildDpDashboardData(empresaId: string) {
     const funcionarios = await prisma.dpFuncionario.findMany({
       where: { empresaId, status: 'ATIVO' },
       include: {
+        cargoRef: { select: { cargaHorariaDia: true } },
         marcacoes: {
           where: { timestamp: { gte: semanaStart, lte: diaEnd } },
           orderBy: { timestamp: 'asc' },
@@ -398,8 +400,10 @@ export async function buildDpDashboardData(empresaId: string) {
       );
       const marcacoesSemana = f.marcacoes;
 
-      // Carga horária efetiva (override individual ou padrão da empresa)
-      const cargaEsperadaMin = (f.cargaHorariaDia ?? cargaHorariaDiaCfg) * 60;
+      // Carga efetiva: individual > cargo > jornada da empresa > 8h
+      const cargaEsperadaMin = resolverCargaHorariaDia(
+        f.cargaHorariaDia, f.cargoRef?.cargaHorariaDia, cargaDaEmpresa,
+      ) * 60;
 
       // Minutos trabalhados hoje
       const minutosHoje = calcMinutosTrabalhados(marcacoesHoje, now);
@@ -561,7 +565,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
 
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
     const toleranciaMin: number = cfg.toleranciaMin ?? 10;
-    const cargaHorariaDiaCfg: number = 8;
+    const cargaDaEmpresa = cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin);
     // Dias da semana (0=dom...6=sáb) em que a empresa funciona — configurável,
     // default replica o comportamento antigo (fixo sáb+dom = folga)
     const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
@@ -591,6 +595,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       select: {
         id: true, nome: true, cargo: true,
         cargaHorariaDia: true, jornadaEntrada: true,
+        cargoRef: { select: { cargaHorariaDia: true } },
       },
       orderBy: { nome: 'asc' },
     });
@@ -623,7 +628,9 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
     const now = new Date();
 
     const resultado = funcionarios.map(f => {
-      const cargaEsperadaMin = (f.cargaHorariaDia ?? cargaHorariaDiaCfg) * 60;
+      const cargaEsperadaMin = resolverCargaHorariaDia(
+        f.cargaHorariaDia, f.cargoRef?.cargaHorariaDia, cargaDaEmpresa,
+      ) * 60;
       const marcacoesFuncionario = todasMarcacoes.filter(m => m.funcionarioId === f.id);
 
       let totalMinutosTrabalhou = 0;
@@ -759,7 +766,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
     res.json({
       periodo: { inicio: dataInicio, fim: dataFim },
       dias,
-      config: { toleranciaMin, cargaHorariaDia: cargaHorariaDiaCfg, diasFuncionamento },
+      config: { toleranciaMin, cargaHorariaDia: cargaDaEmpresa ?? 8, diasFuncionamento },
       funcionarios: resultado,
     });
   } catch (error) {
