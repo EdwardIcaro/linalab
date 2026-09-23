@@ -45,7 +45,9 @@ const DOIS_NOMES = '(\\S+(?:\\s+(?:d[aeo]s?|e)\\b)*\\s+\\S+)';
 const SERVICO_POR_PRECO: DerivadoRegra = {
   chave: 'servico',
   de: 'preco',
-  valores: { '30': 'Lavagem Simples', '130': 'Lavagem Especial' },
+  // Sigla do jeito que a equipe fala no dia a dia — "Lavagem" inteiro em cada linha
+  // só ocupa espaço numa mensagem que vai ser lida de relance
+  valores: { '30': 'Simples (LS)', '130': 'Especial (LE)' },
   padrao: 'Lavagem',
 };
 
@@ -73,7 +75,7 @@ export const MODELOS: ModeloAutomacao[] = [
       regex: '([0-9]{4,})\\s+([A-Z0-9]{7})\\s+([\\s\\S]*?)(R\\$\\s?[0-9.,]+)',
       chaves: ['numero', 'placa', 'tipo', 'preco'],
       derivados: [SERVICO_POR_PRECO],
-      template: '🚗 *{{placa}}* — {{veiculo}}{{servico}} — {{preco}}',
+      template: '🚗 *{{placa}}* — {{veiculo}}{{servico}} — *{{preco}}*',
     },
     derivados: null,
     // Modelo e cor de quem já passou pela casa; carro novo sai sem isso (o sufixo some junto)
@@ -100,7 +102,7 @@ export const MODELOS: ModeloAutomacao[] = [
     bloco: null,
     derivados: [SERVICO_POR_PRECO],
     enriquecer: { de: 'placa', chave: 'veiculo', em: 'regra', sufixo: ' — ' },
-    template: '❌ *Lavagem cancelada*\n\n🚗 *{{placa}}* — {{veiculo}}{{servico}} — {{preco}}\n👤 Cancelou: {{cancelou}}',
+    template: '❌ *Lavagem cancelada*\n\n🚗 *{{placa}}* — {{veiculo}}{{servico}} — *{{preco}}*\n👤 Cancelou: {{cancelou}}',
     tabelaEditavel: { em: 'regra', chave: 'servico', rotulo: 'Seu preço por tipo de lavagem' },
   },
   {
