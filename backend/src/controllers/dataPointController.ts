@@ -3,7 +3,8 @@ import prisma from '../db';
 import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
-import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado } from '../utils/dpPontoUtils';
+import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
+         temTurnoAberto } from '../utils/dpPontoUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -412,7 +413,8 @@ export async function buildDpDashboardData(empresaId: string) {
       for (const dia of diasSemana) {
         const { start, end } = getDateRangeBRT(dia);
         const marcsDia = marcacoesSemana.filter(m => m.timestamp >= start && m.timestamp <= end);
-        const nowDia = dia === todayStr ? now : end;
+        // Dia fechado sem saída batida não conta o trecho aberto (null) — ver dpPontoUtils
+        const nowDia = dia === todayStr ? now : null;
         minutosSemana += calcMinutosTrabalhados(marcsDia, nowDia);
       }
 
@@ -631,6 +633,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       let diasFolga = 0;
       let diasFeriado = 0;
       let diasAfastamento = 0;
+      let diasIncompleto = 0;
 
       const diasMap: Record<string, {
         status: string;
@@ -650,11 +653,12 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
           m => m.timestamp >= start && m.timestamp <= end,
         );
 
-        const fimCalculo = dia === hoje ? now : end;
-        const minutosTrabalhou = calcMinutosTrabalhados(
-          marcacoesDia.map(m => ({ tipo: m.tipo, timestamp: m.timestamp })),
-          fimCalculo,
-        );
+        // Hoje o turno aberto conta até agora; dia já fechado sem saída não conta nada
+        // do trecho aberto e vira INCOMPLETO, pra ninguém ler 16h como jornada real.
+        const fimCalculo = dia === hoje ? now : null;
+        const marcacoesSimples = marcacoesDia.map(m => ({ tipo: m.tipo, timestamp: m.timestamp }));
+        const minutosTrabalhou = calcMinutosTrabalhados(marcacoesSimples, fimCalculo);
+        const turnoAberto = temTurnoAberto(marcacoesSimples) && dia !== hoje;
 
         const primeiraEntrada = marcacoesDia.find(m => m.tipo === 'ENTRADA');
         const ultimaSaida = [...marcacoesDia].reverse().find(m => m.tipo === 'SAIDA');
@@ -702,7 +706,11 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         }
 
         let status: string;
-        if (minutosTrabalhou === 0) {
+        if (turnoAberto) {
+          // Entrou e ninguém bateu a saída: o total do dia é desconhecido, não zero nem 16h
+          status = 'INCOMPLETO';
+          diasIncompleto++;
+        } else if (minutosTrabalhou === 0) {
           status = 'FALTA';
           diasFalta++;
         } else if (minutosTrabalhou >= cargaEsperadaMin - toleranciaMin) {
@@ -740,6 +748,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
           diasFolga,
           diasFeriado,
           diasAfastamento,
+          diasIncompleto,
           minutosTotal: totalMinutosTrabalhou,
           minutosEsperadoTotal,
           saldoMin: totalMinutosTrabalhou - minutosEsperadoTotal,
@@ -1201,7 +1210,10 @@ export const criarMarcacaoManual = async (req: EmpresaRequest, res: Response) =>
     });
 
     res.status(201).json({ marcacao });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(409).json({ error: 'Já existe uma marcação desse funcionário nesse minuto.' });
+    }
     console.error('[dp] criarMarcacaoManual:', error);
     res.status(500).json({ error: 'Erro ao criar marcação' });
   }

@@ -48,6 +48,7 @@ import { chaveConfigurada } from './utils/credCrypto';
 import { subscriptionService } from './services/subscriptionService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
+import { rodarPontoPendente } from './services/dpEncerramentoService';
 import { iniciarEmailAutomacaoPoller } from './services/emailAutomacaoPoller';
 
 // Importar middleware
@@ -270,6 +271,13 @@ cron.schedule('0 21 * * *', () => {
 // WhatsApp: Ordens paradas há 1h+ (a cada 2 horas)
 cron.schedule('0 */2 * * *', () => {
   cronOrdensParadas();
+}, { timezone: "America/Sao_Paulo" });
+
+// Data Point: lembrete gentil de ponto + encerramento do turno que ficou aberto.
+// A cada 30 min porque os horários são relativos à jornada de cada empresa; a janela
+// 6h-22h evita acordar o banco de madrugada à toa.
+cron.schedule('*/30 6-22 * * *', () => {
+  rodarPontoPendente().catch(e => console.error('[dp-ponto] cron:', e));
 }, { timezone: "America/Sao_Paulo" });
 
 // Data Point: fecha o ciclo de 30 dias do banco de horas de quem venceu hoje (1x ao dia às 02:00)

@@ -6,7 +6,8 @@ import { verificarRateLimit, resetarRateLimit } from '../utils/rateLimiter';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { botSend } from '../services/botServiceClient';
-import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado } from '../utils/dpPontoUtils';
+import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado,
+         calcMinutosTrabalhados, temTurnoAberto } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
@@ -877,24 +878,6 @@ export function horaFormatadaBRT(d: Date): string {
   });
 }
 
-function calcMinHoje(marcacoes: Array<{ tipo: string; timestamp: Date }>, now: Date): number {
-  let total = 0; let i = 0;
-  while (i < marcacoes.length) {
-    if (marcacoes[i].tipo === 'ENTRADA') {
-      let j = i + 1;
-      while (j < marcacoes.length && marcacoes[j].tipo !== 'SAIDA') j++;
-      if (j < marcacoes.length) {
-        total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
-        i = j + 1;
-      } else {
-        total += Math.round((now.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
-        i++;
-      }
-    } else { i++; }
-  }
-  return total;
-}
-
 // ─── GET /api/p/me/ponto/hoje ─────────────────────────────────────────────────
 export const getPontoHoje = async (req: Request, res: Response) => {
   const lavadorId = (req as any).lavadorId as string | undefined;
@@ -926,7 +909,7 @@ export const getPontoHoje = async (req: Request, res: Response) => {
     const [jsH, jsM] = jornadaSaida.split(':').map(Number);
     const jornadaSaidaMin = (jsH || 0) * 60 + (jsM || 0);
     const nowBrtMin = Math.floor(((now.getTime() - 3 * 3600000) % 86400000) / 60000);
-    const minutosHoje = calcMinHoje(marcacoes, now);
+    const minutosHoje = calcMinutosTrabalhados(marcacoes, now);
 
     let estado = 'AUSENTE';
     if (marcacoes.length > 0) {
@@ -1086,7 +1069,11 @@ export const registrarPonto = async (req: Request, res: Response) => {
       horaFormatada,
       gpsPrecisaoSuspeita,
     });
-  } catch (error) {
+  } catch (error: any) {
+    // P2002 = índice único por minuto: duas batidas simultâneas do mesmo funcionário
+    if (error?.code === 'P2002') {
+      return res.status(429).json({ erro: 'Seu ponto já foi registrado agora há pouco.' });
+    }
     console.error('[portal] registrarPonto:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
@@ -1188,14 +1175,12 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
         }
       }
 
-      const fimCalculo     = isHoje ? now : end;
-      const minutosTrabalhou = calcMinHoje(
-        marcacoesDia.map(mc => ({ tipo: mc.tipo, timestamp: mc.timestamp })),
-        fimCalculo,
-      );
+      // Dia fechado com turno aberto não conta o trecho aberto — ver dpPontoUtils
+      const fimCalculo       = isHoje ? now : null;
+      const marcacoesSimples = marcacoesDia.map(mc => ({ tipo: mc.tipo, timestamp: mc.timestamp }));
+      const minutosTrabalhou = calcMinutosTrabalhados(marcacoesSimples, fimCalculo);
 
-      const ultima     = marcacoesDia[marcacoesDia.length - 1];
-      const incompleto = ultima?.tipo === 'ENTRADA' && !isHoje;
+      const incompleto = temTurnoAberto(marcacoesSimples) && !isHoje;
 
       const horaEntrada = marcacoesDia.find(mc => mc.tipo === 'ENTRADA');
       const ultimaSaida = [...marcacoesDia].reverse().find(mc => mc.tipo === 'SAIDA');
@@ -1583,7 +1568,10 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     }
 
     res.json({ ok: true, tipo, horaFormatada, gpsPrecisaoSuspeita, redirectUrl });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(429).json({ erro: 'Seu ponto já foi registrado agora há pouco.' });
+    }
     console.error('[portal] confirmarPonto:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }

@@ -3,10 +3,20 @@ interface DpMarcacaoMinima {
   timestamp: Date;
 }
 
-const COOLDOWN_MIN = 5;
+// Janela curta contra duplo toque. Não é "intervalo mínimo entre turnos": é o tempo
+// que o aparelho leva pra dar retorno visual. Dados reais mostraram batidas do mesmo
+// funcionário com 11s e até 0s de diferença (03/09 e 21/09/2026), sempre acidentais.
+const COOLDOWN_SEG = 90;
 
-// Decide ENTRADA/SAIDA pela última marcação do dia e bloqueia repetição do
-// mesmo tipo dentro do cooldown (evita duplo toque acidental).
+// Decide ENTRADA/SAIDA pela última marcação do dia e bloqueia qualquer batida logo
+// na sequência da anterior.
+//
+// ⚠️ A checagem antiga comparava o tipo calculado com o tipo da última marcação — só que
+// o tipo calculado é SEMPRE o oposto do último, então a condição nunca era verdadeira e
+// o cooldown nunca disparou. O efeito no mundo real era pior que uma batida a mais: o
+// segundo toque virava ENTRADA logo depois da SAIDA e deixava o turno aberto, o que
+// inflava o dia inteiro no espelho. Por isso a comparação agora é com a própria última
+// marcação, qualquer que seja o tipo dela.
 export function determinarTipoEValidarCooldown(marcacoesHoje: DpMarcacaoMinima[]): {
   tipo: 'ENTRADA' | 'SAIDA';
   cooldownErro: string | null;
@@ -14,11 +24,13 @@ export function determinarTipoEValidarCooldown(marcacoesHoje: DpMarcacaoMinima[]
   const ultima = marcacoesHoje[marcacoesHoje.length - 1];
   const tipo: 'ENTRADA' | 'SAIDA' = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
 
-  if (ultima && ultima.tipo === tipo) {
-    const diffMin = (Date.now() - new Date(ultima.timestamp).getTime()) / 60000;
-    if (diffMin < COOLDOWN_MIN) {
-      const wait = Math.ceil(COOLDOWN_MIN - diffMin);
-      return { tipo, cooldownErro: `Aguarde ${wait} minuto${wait !== 1 ? 's' : ''} para bater ponto novamente.` };
+  if (ultima) {
+    const diffSeg = (Date.now() - new Date(ultima.timestamp).getTime()) / 1000;
+    if (diffSeg >= 0 && diffSeg < COOLDOWN_SEG) {
+      return {
+        tipo,
+        cooldownErro: `Seu ponto de ${ultima.tipo.toLowerCase()} já foi registrado agora há pouco. Aguarde um instante antes de bater de novo.`,
+      };
     }
   }
   return { tipo, cooldownErro: null };
@@ -61,11 +73,29 @@ export function resolverCargaHorariaDia(
   return cargaIndividual ?? cargaCargo ?? 8;
 }
 
-// Soma minutos trabalhados a partir de pares ENTRADA/SAÍDA. ENTRADA sem SAÍDA correspondente
-// conta até `now` (turno em andamento).
+/** Última marcação é ENTRADA — ou seja, o turno nunca foi fechado. */
+export function temTurnoAberto(marcacoes: DpMarcacaoMinima[]): boolean {
+  const ultima = marcacoes[marcacoes.length - 1];
+  return !!ultima && ultima.tipo === 'ENTRADA';
+}
+
+/**
+ * Soma minutos trabalhados a partir de pares ENTRADA/SAÍDA.
+ *
+ * `fim` é o que fecha uma ENTRADA sem SAÍDA correspondente:
+ *  - `Date`  → turno em andamento (hoje): conta até esse instante;
+ *  - `null`  → dia já encerrado sem ninguém bater a saída: **não conta nada** do trecho
+ *    aberto, e o dia é sinalizado como INCOMPLETO pra quem for corrigir.
+ *
+ * O `null` existe porque o comportamento antigo era fechar o trecho aberto no fim do dia
+ * (23:59). Quem esquecia a saída ganhava o dia inteiro: em 09/2026 isso somava 158,9h
+ * fantasmas em 15 dias-funcionário, e viraria crédito permanente de hora extra assim que o
+ * banco de horas fosse ligado. Não contar é o único padrão seguro — o valor verdadeiro
+ * entra quando o gestor corrigir ou o encerramento automático fechar o turno.
+ */
 export function calcMinutosTrabalhados(
   marcacoes: Array<{ tipo: string; timestamp: Date }>,
-  now: Date,
+  fim: Date | null,
 ): number {
   let total = 0;
   let i = 0;
@@ -77,7 +107,7 @@ export function calcMinutosTrabalhados(
         total += Math.round((marcacoes[j].timestamp.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
         i = j + 1;
       } else {
-        total += Math.round((now.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
+        if (fim) total += Math.round((fim.getTime() - marcacoes[i].timestamp.getTime()) / 60000);
         i++;
       }
     } else {
@@ -85,4 +115,61 @@ export function calcMinutosTrabalhados(
     }
   }
   return total;
+}
+
+// Minutos depois do horário da jornada. Folga generosa de propósito: cobrar cedo demais
+// transforma trânsito em cobrança, e o lembrete perde o tom de lembrete.
+export const LEMBRETE_ENTRADA_MIN = 30;  // sem nenhuma batida, depois da hora de entrar
+export const LEMBRETE_SAIDA_MIN   = 15;  // turno aberto, depois da hora de sair
+export const ENCERRA_APOS_MIN     = 120; // turno aberto: encerra e avisa o gestor
+
+// Teto do que o sistema aceita fechar sozinho. Acima disso a entrada quase certamente
+// não é uma entrada de verdade — é a saída da véspera que caiu do outro lado da
+// meia-noite, ou uma batida errada — e fechar daria uma jornada que ninguém cumpriu.
+export const MAX_TURNO_AUTO_MIN = 12 * 60;
+
+export type AcaoPonto =
+  | 'NADA'
+  | 'LEMBRAR_ENTRADA'
+  | 'LEMBRAR_SAIDA'
+  | 'ENCERRAR'
+  | 'CORRIGIR_MANUAL';
+
+/**
+ * O que fazer com o ponto de alguém, agora, olhando só para o dia de hoje.
+ *
+ * Tudo em minutos desde 00:00 BRT. `CORRIGIR_MANUAL` é o caso sem resposta honesta:
+ * turno aberto que começou depois do fim da jornada (ou empresa que pediu encerramento
+ * manual) não tem horário de saída plausível pra inventar — quem decide é o gestor.
+ */
+export function decidirAcaoPonto(params: {
+  marcacoes: DpMarcacaoMinima[];
+  inicioDiaMs: number; // 00:00 BRT do dia, em epoch — âncora de todos os minutos abaixo
+  agoraMin: number;
+  entradaMin: number;
+  saidaMin: number;
+  fechaSozinho: boolean;
+  /** Bateu ponto em algum dia recente. Quem nunca usa o sistema não é cobrado. */
+  usaOPonto: boolean;
+}): AcaoPonto {
+  const { marcacoes, inicioDiaMs, agoraMin, entradaMin, saidaMin, fechaSozinho, usaOPonto } = params;
+
+  if (marcacoes.length === 0) {
+    if (!usaOPonto) return 'NADA';
+    const atrasado = agoraMin >= entradaMin + LEMBRETE_ENTRADA_MIN;
+    // Perto do fim do expediente o lembrete não ajuda mais ninguém: quem não veio, não veio
+    return atrasado && agoraMin < saidaMin ? 'LEMBRAR_ENTRADA' : 'NADA';
+  }
+
+  if (!temTurnoAberto(marcacoes)) return 'NADA';
+
+  const aberta = marcacoes[marcacoes.length - 1];
+  const abertaMin = Math.floor((aberta.timestamp.getTime() - inicioDiaMs) / 60000);
+
+  if (agoraMin >= saidaMin + ENCERRA_APOS_MIN) {
+    const cabeNoTeto = saidaMin - abertaMin <= MAX_TURNO_AUTO_MIN;
+    return fechaSozinho && abertaMin < saidaMin && cabeNoTeto ? 'ENCERRAR' : 'CORRIGIR_MANUAL';
+  }
+  if (agoraMin >= saidaMin + LEMBRETE_SAIDA_MIN) return 'LEMBRAR_SAIDA';
+  return 'NADA';
 }

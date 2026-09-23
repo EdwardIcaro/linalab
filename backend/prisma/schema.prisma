@@ -1019,6 +1019,12 @@ model DpMarcacao {
   funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
   totem               DpTotem?      @relation(fields: [totemId], references: [id], onDelete: SetNull)
 
+  // Índice único que o Prisma não sabe declarar (usa expressão) e por isso vive só no SQL:
+  //   UNIQUE ("funcionarioId", date_trunc('minute', "timestamp")) WHERE "timestamp" >= 2026-09-24
+  // Barra duas batidas do mesmo funcionário no mesmo minuto — o duplo toque que o
+  // cooldown da aplicação não pega quando os dois requests chegam juntos. É parcial
+  // porque o histórico anterior tem 10 casos reais e apagar ponto passado seria pior.
+  // Ver Features/sql-dp-marcacao-minuto.sql.
   @@map("dp_marcacoes")
 }
 

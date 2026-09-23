@@ -36,8 +36,10 @@ export function calcularFechamentoPeriodo(params: {
   for (const dia of dias) {
     const diaSemana = new Date(dia + 'T12:00:00').getDay();
     const marcacoesDia = marcacoesPorDia.get(dia) || [];
-    const fimDia = getDateRangeBRT(dia).end;
-    const minutosTrabalhou = calcMinutosTrabalhados(marcacoesDia, fimDia);
+    // null = turno aberto não vira hora trabalhada. Sem isso, um dia em que a pessoa
+    // esqueceu a saída entrava no fechamento como jornada até 23:59 e virava crédito
+    // permanente de hora extra no saldo acumulado.
+    const minutosTrabalhou = calcMinutosTrabalhados(marcacoesDia, null);
 
     const tipoAfastamento = resolveAfastamentoDia(funcionarioId, dia, afastamentos);
     if (tipoAfastamento) {

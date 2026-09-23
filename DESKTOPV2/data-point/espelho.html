@@ -170,6 +170,7 @@
     .chip-folga{background:var(--gray100);color:var(--gray400)}
     .chip-feriado{background:#fef9c3;color:#ca8a04}
     .chip-afastamento{background:var(--blue-bg);color:var(--blue)}
+    .chip-incompleto{background:#ede9fe;color:#6d28d9;border:1px dashed #a78bfa}
     .chip-hoje{outline:2px solid var(--teal500);outline-offset:1px}
 
     /* Totais col */
@@ -227,6 +228,7 @@
     .batida-hora{font-size:15px;font-weight:800;color:#111827;flex:1}
     .batida-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}
     .tag-manual{background:#ede9fe;color:#7c3aed}
+    .tag-auto{background:#fef3c7;color:#b45309}
     .tag-gps{background:#fee2e2;color:#dc2626}
     .tag-face{background:#ccfbf1;color:#0f766e}
     .tag-noface{background:#fef3c7;color:#d97706}
@@ -328,6 +330,7 @@
           <div class="leg-item"><div class="leg-dot" style="background:var(--gray300)"></div> Folga</div>
           <div class="leg-item"><div class="leg-dot" style="background:#ca8a04"></div> Feriado</div>
           <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div> Afastamento</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#7c3aed"></div> Em aberto</div>
         </div>
       </div>
       <div class="tabela-wrap">
@@ -481,12 +484,13 @@ function renderTudo() {
 
 function renderStats(d) {
   // Consolida totais de todos os funcionários
-  let totalPresente = 0, totalFalta = 0, totalParcial = 0, totalMin = 0;
+  let totalPresente = 0, totalFalta = 0, totalParcial = 0, totalMin = 0, totalAberto = 0;
   d.funcionarios.forEach(f => {
     totalPresente += f.totais.diasPresente;
     totalFalta    += f.totais.diasFalta;
     totalParcial  += f.totais.diasParcial;
     totalMin      += f.totais.minutosTotal;
+    totalAberto   += f.totais.diasIncompleto || 0;
   });
 
   const stats = [
@@ -495,6 +499,13 @@ function renderStats(d) {
     { label:'Faltas parciais',   val: totalParcial,          icon:'fa-user-clock', cor:'rgba(217,119,6,.3)',   iconCor:'#fcd34d' },
     { label:'Faltas',            val: totalFalta,            icon:'fa-user-times', cor:'rgba(220,38,38,.3)',   iconCor:'#fca5a5' },
   ];
+
+  // Dias em que ninguém bateu a saída: as horas desses dias não entram no total
+  // acima até alguém corrigir, então o gestor precisa ver que existem.
+  if (totalAberto > 0) {
+    stats.push({ label:'Pontos em aberto', val: totalAberto, icon:'fa-triangle-exclamation',
+                 cor:'rgba(124,58,237,.3)', iconCor:'#c4b5fd' });
+  }
 
   document.getElementById('statsRow').innerHTML = stats.map(s => `
     <div class="stat-card">
@@ -580,6 +591,7 @@ function buildChip(cell, isHoje) {
     FOLGA:       { cls:'chip-folga',   ico:'—',  label:'' },
     FERIADO:     { cls:'chip-feriado',     ico:'★', label:'' },
     AFASTAMENTO: { cls:'chip-afastamento', ico:'✈', label:'' },
+    INCOMPLETO:  { cls:'chip-incompleto',  ico:'!', label:'' },
   };
   const tipoAfastamentoLabel = { FERIAS:'Férias', ATESTADO:'Atestado', LICENCA:'Licença', FOLGA_COMP:'Folga comp.', OUTRO:'Outro' };
   const s = map[cell.status] || map.FOLGA;
@@ -587,6 +599,7 @@ function buildChip(cell, isHoje) {
   const tip = cell.status === 'FOLGA' ? 'Folga'
     : cell.status === 'FERIADO' ? `Feriado: ${cell.label || ''}`
     : cell.status === 'AFASTAMENTO' ? (tipoAfastamentoLabel[cell.label] || cell.label || 'Afastamento')
+    : cell.status === 'INCOMPLETO' ? `Entrou ${cell.horaEntrada || '—'} e não bateu a saída — clique para corrigir`
     : cell.horaEntrada ? `${cell.horaEntrada}${cell.horaSaida ? ' → ' + cell.horaSaida : ' (aberto)'}` : '';
   return `<div class="chip ${s.cls}${isHoje ? ' chip-hoje' : ''}" data-tip="${tip.replace(/"/g, '&quot;')}">
     <span>${s.ico}</span>${horas}
@@ -649,8 +662,11 @@ function renderMarcacoesDia() {
   } else {
     _marcacoesDia.forEach(m => {
       const isEntrada = m.tipo === 'ENTRADA';
-      const icoCls = m.canal === 'MANUAL' ? 'manual' : isEntrada ? 'entrada' : 'saida';
-      const ico = m.canal === 'MANUAL' ? 'fa-pencil-alt' : isEntrada ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket';
+      const doSistema = m.canal === 'MANUAL' || m.canal === 'AUTO';
+      const icoCls = doSistema ? 'manual' : isEntrada ? 'entrada' : 'saida';
+      const ico = m.canal === 'MANUAL' ? 'fa-pencil-alt'
+        : m.canal === 'AUTO' ? 'fa-lock'
+        : isEntrada ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket';
       // Facial: confirma que quem bateu é o dono do cadastro.
       // "Sem rosto" só aparece em batidas feitas depois do cadastro facial —
       // o histórico anterior não vira alerta retroativo.
@@ -662,6 +678,7 @@ function renderMarcacoesDia() {
 
       const tags = [
         m.canal === 'MANUAL' ? '<span class="batida-tag tag-manual">Manual</span>' : '',
+        m.canal === 'AUTO' ? '<span class="batida-tag tag-auto" title="O funcionário não bateu a saída; o sistema encerrou o turno no horário da jornada. Confira e ajuste se precisar.">Automática</span>' : '',
         m.gpsPrecisaoSuspeita ? '<span class="batida-tag tag-gps">GPS suspeito</span>' : '',
         face,
       ].filter(Boolean).join(' ');

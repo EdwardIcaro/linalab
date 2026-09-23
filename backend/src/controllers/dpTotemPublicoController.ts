@@ -159,7 +159,11 @@ export const confirmarTotem = async (req: Request, res: Response) => {
     notificarPontoRegistrado(funcionario.id, tipo, horaFormatada).catch(() => {});
 
     res.json({ ok: true, tipo, horaFormatada });
-  } catch (error) {
+  } catch (error: any) {
+    // P2002 = índice único por minuto: duplo toque no totem, dois requests em paralelo
+    if (error?.code === 'P2002') {
+      return res.status(429).json({ erro: 'Seu ponto já foi registrado agora há pouco.' });
+    }
     console.error('[totem] confirmar:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }

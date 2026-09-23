@@ -40,7 +40,8 @@ type NotifKey =
   | 'saidaRegistrada'
   | 'comissaoFechada'
   | 'clienteVip'
-  | 'fechamentoCaixa';
+  | 'fechamentoCaixa'
+  | 'pontoPendente';
 
 interface NotifPrefs extends Record<NotifKey, boolean> {
   ordemParadaHoras: number;
@@ -59,6 +60,7 @@ const DEFAULTS: NotifPrefs = {
   comissaoFechada:    false,
   clienteVip:         true,
   fechamentoCaixa:    true,
+  pontoPendente:      true,
 };
 
 // Tolera dados antigos onde notificationPreferences foi salvo como string JSON
