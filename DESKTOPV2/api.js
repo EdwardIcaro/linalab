@@ -697,6 +697,9 @@ const api = {
     atualizarRegra:(id, dados)  => fetchApi(`/email-automacao/regras/${id}`, { method: 'PUT', body: JSON.stringify(dados), semRedirect: true }),
     removerRegra:  (id)         => fetchApi(`/email-automacao/regras/${id}`, { method: 'DELETE', semRedirect: true }),
     testarEnvio:   (id, valor)  => fetchApi(`/email-automacao/regras/${id}/testar-envio`, { method: 'POST', body: JSON.stringify({ valorExemplo: valor }), semRedirect: true }),
+    modelos:       ()           => fetchApi('/email-automacao/modelos', { semRedirect: true }),
+    testarModelo:  (id, dados)  => fetchApi(`/email-automacao/contas/${id}/testar-modelo`, { method: 'POST', body: JSON.stringify(dados), semRedirect: true }),
+    prepararModelo:(dados)      => fetchApi('/email-automacao/modelos/preparar', { method: 'POST', body: JSON.stringify(dados), semRedirect: true }),
   },
 
   // ── Gorjetas ──────────────────────────────────────────────────────────────

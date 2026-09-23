@@ -767,7 +767,14 @@
 
             <!-- Passo 1 -->
             <div id="eaPasso1" style="padding:1.1rem 1.2rem;">
-                <div style="font-weight:700;">Escolha um email de exemplo</div>
+                <div id="eaModelosBloco" style="margin-bottom:1.1rem;">
+                    <div style="font-weight:700;">Comece de um modelo pronto</div>
+                    <div style="color:#777;font-size:.85rem;margin-bottom:.6rem;">Automa&ccedil;&otilde;es j&aacute; prontas pros emails que esse fornecedor manda.</div>
+                    <div id="eaModelosLista" style="display:grid;gap:.5rem;"></div>
+                    <div id="eaModeloTeste" style="display:none;margin-top:.7rem;"></div>
+                    <div style="border-top:1px solid #eee;margin:1rem 0 .6rem;"></div>
+                </div>
+                <div style="font-weight:700;">Ou monte a partir de um email seu</div>
                 <div style="color:#777;font-size:.85rem;margin-bottom:.6rem;">Emails dos últimos 7 dias dessa conta. Nada daqui fica salvo.</div>
                 <div id="eaEmailsLista" style="border:1px solid #eee;border-radius:10px;max-height:320px;overflow-y:auto;"></div>
                 <button style="margin-top:.6rem;background:none;border:0;color:#7f56d9;cursor:pointer;font-weight:600;" onclick="eaAlternarColar()">Prefiro colar o texto do email</button>
@@ -2294,7 +2301,7 @@
         // ── Assistente ────────────────────────────────────────────────────
         function eaNovaAutomacao(contaId) {
             const conta = ea.contas.find(c => c.id === contaId);
-            ea.wiz = { contaId, passo: 1, colar: false, email: null, exemplo: null, tok: null, regra: null, destinos: [] };
+            ea.wiz = { contaId, passo: 1, colar: false, email: null, exemplo: null, tok: null, regra: null, destinos: [], modelo: null };
             eaEl('eaAssTitulo').textContent = 'Nova automação';
             eaEl('eaAssConta').textContent = conta ? 'Email: ' + conta.email : '';
             eaEl('eaColarBloco').style.display = 'none';
@@ -2302,6 +2309,7 @@
             eaEl('eaEmailsLista').innerHTML = '<div style="padding:.8rem;color:#888;font-size:.85rem;">Carregando emails…</div>';
             eaEl('eaModalAssistente').style.display = 'flex';
             eaPasso(1);
+            eaCarregarModelos();
             eaCarregarEmails(contaId);
         }
         function eaFecharAssistente() { eaEl('eaModalAssistente').style.display = 'none'; ea.wiz = null; }
@@ -2328,6 +2336,102 @@
                 eaEl('eaEmailsLista').innerHTML = `<div style="padding:.8rem;color:#b45309;font-size:.85rem;">${escHtml((err && err.error) || 'Não foi possível ler a caixa agora.')} Você pode colar o texto do email.</div>`;
             }
         }
+        async function eaCarregarModelos() {
+            const alvo = eaEl('eaModelosLista');
+            eaEl('eaModeloTeste').style.display = 'none';
+            try {
+                const r = await window.api.emailAutomacao.modelos();
+                ea.modelos = r.modelos || [];
+                // Modelo que a conta já usa não ajuda — esconde pra não duplicar automação
+                const jaTem = (ea.regras || []).filter(x => x.contaId === ea.wiz.contaId)
+                    .map(x => x.remetenteContem + '|' + (x.assuntoContem || ''));
+                const uteis = ea.modelos.filter(m => !jaTem.includes(m.remetenteContem + '|' + (m.assuntoContem || '')));
+                eaEl('eaModelosBloco').style.display = uteis.length ? 'block' : 'none';
+                alvo.innerHTML = uteis.map(m => `
+                    <button type="button" onclick="eaEscolherModelo('${m.id}')" style="display:flex;gap:.7rem;align-items:flex-start;text-align:left;width:100%;background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:.7rem .8rem;cursor:pointer;">
+                        <span style="font-size:1.3rem;line-height:1.2;">${m.emoji}</span>
+                        <span style="flex:1;min-width:0;">
+                            <span style="display:block;font-weight:700;">${escHtml(m.nome)} <span style="color:#999;font-weight:400;">· ${escHtml(m.fornecedor)}</span></span>
+                            <span style="display:block;color:#666;font-size:.84rem;">${escHtml(m.descricao)}</span>
+                        </span>
+                    </button>`).join('');
+            } catch (err) {
+                eaEl('eaModelosBloco').style.display = 'none';   // sem catálogo, o assistente normal continua valendo
+            }
+        }
+
+        /** Roda o modelo na caixa do cliente: melhor descobrir agora que o email não chega aqui. */
+        async function eaEscolherModelo(modeloId) {
+            const m = (ea.modelos || []).find(x => x.id === modeloId);
+            if (!m) return;
+            ea.wiz.modelo = m;
+            const painel = eaEl('eaModeloTeste');
+            painel.style.display = 'block';
+            painel.innerHTML = '<div style="color:#777;font-size:.85rem;padding:.6rem;">Procurando um email desse tipo na sua caixa…</div>';
+            try {
+                const r = await window.api.emailAutomacao.testarModelo(ea.wiz.contaId, { modeloId, tabela: m.tabela });
+                painel.innerHTML = r.ok
+                    ? '<div style="background:#efeae2;border-radius:10px;padding:.8rem;">'
+                        + '<div style="font-size:.78rem;color:#555;margin-bottom:.4rem;">Assim ficaria, usando um email de verdade da sua caixa:</div>'
+                        + '<div style="background:#d9fdd3;border-radius:10px 10px 10px 2px;padding:.6rem .8rem;white-space:pre-wrap;word-break:break-word;">' + escHtml(r.mensagem) + '</div>'
+                        + '</div>' + eaTabelaHtml(m)
+                        + '<button type="button" onclick="eaUsarModelo()" style="margin-top:.7rem;width:100%;background:#7f56d9;color:#fff;border:0;border-radius:10px;padding:.7rem;font-weight:700;cursor:pointer;">Usar este modelo →</button>'
+                    : '<div style="background:#fffbeb;color:#b45309;border-radius:10px;padding:.75rem .9rem;font-size:.88rem;">⚠️ ' + escHtml(r.motivo) + '</div>'
+                        + '<button type="button" onclick="eaUsarModelo()" style="margin-top:.6rem;width:100%;background:none;border:1px solid #ddd;border-radius:10px;padding:.6rem;font-weight:600;cursor:pointer;">Usar mesmo assim →</button>';
+            } catch (err) {
+                painel.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:10px;padding:.75rem .9rem;font-size:.88rem;">' + escHtml((err && err.error) || 'Não foi possível testar agora.') + '</div>';
+            }
+        }
+
+        /** A tabela de preço é do contrato do cliente, não do modelo — ele confirma antes. */
+        function eaTabelaHtml(m) {
+            if (!m.tabela) return '';
+            const linhas = Object.entries(m.tabela.valores || {}).map(([valor, nome]) => ''
+                + '<div style="display:flex;gap:.4rem;align-items:center;margin-top:.3rem;">'
+                + '<span style="color:#777;font-size:.85rem;">R$</span>'
+                + '<input value="' + escHtml(valor) + '" onchange="eaEditarTabela(this, \'valor\', \'' + escHtml(valor) + '\')" style="width:70px;padding:.35rem;border:1px solid #ddd;border-radius:6px;">'
+                + '<span style="color:#777;">=</span>'
+                + '<input value="' + escHtml(nome) + '" onchange="eaEditarTabela(this, \'nome\', \'' + escHtml(valor) + '\')" style="flex:1;padding:.35rem;border:1px solid #ddd;border-radius:6px;">'
+                + '</div>').join('');
+            return '<div style="margin-top:.7rem;padding:.7rem;background:#faf9ff;border:1px solid #eee7ff;border-radius:10px;">'
+                + '<div style="font-weight:700;font-size:.88rem;">' + escHtml(m.tabela.rotulo) + '</div>'
+                + '<div style="color:#777;font-size:.8rem;">Confira: seu contrato pode ter outro preço.</div>'
+                + linhas
+                + '<div style="display:flex;gap:.4rem;align-items:center;margin-top:.4rem;">'
+                + '<span style="color:#777;font-size:.85rem;">Outros valores:</span>'
+                + '<input value="' + escHtml(m.tabela.padrao || '') + '" onchange="eaEditarTabela(this, \'padrao\')" style="flex:1;padding:.35rem;border:1px solid #ddd;border-radius:6px;">'
+                + '</div></div>';
+        }
+        function eaEditarTabela(input, campo, chave) {
+            const t = ea.wiz.modelo.tabela;
+            if (campo === 'padrao') { t.padrao = input.value; return; }
+            const nome = campo === 'nome' ? input.value : t.valores[chave];
+            delete t.valores[chave];
+            t.valores[campo === 'valor' ? input.value.trim() : chave] = nome;
+        }
+
+        async function eaUsarModelo() {
+            const m = ea.wiz.modelo;
+            try {
+                const r = await window.api.emailAutomacao.prepararModelo({ modeloId: m.id, tabela: m.tabela });
+                const g = r.regra;
+                ea.wiz.regra = { regex: g.regexExtracao, ancora: null, teste: null };
+                ea.wiz.campos = g.campos || [];
+                ea.wiz.bloco = g.bloco || null;
+                ea.wiz.derivados = g.derivados || [];
+                ea.wiz.tipoValorSalvo = g.tipoValor;
+                ea.wiz.assuntoNaoContem = g.assuntoNaoContem || null;
+                eaEl('eaRegraNome').value = g.nome;
+                eaEl('eaRegraMensagem').value = g.template;
+                eaEl('eaFiltroRemetente').value = g.remetenteContem;
+                eaEl('eaFiltroAssunto').value = g.assuntoContem || '';
+                eaRenderContatos();
+                eaRenderCamposDisponiveis();
+                eaAtualizarPrevia();
+                eaPasso(3);
+            } catch (err) { showAlert((err && err.error) || 'Erro ao preparar o modelo.', 'error'); }
+        }
+
         function eaAlternarColar() {
             ea.wiz.colar = !ea.wiz.colar;
             eaMostrar('eaColarBloco', ea.wiz.colar);
@@ -2504,6 +2608,7 @@
                 nome: eaEl('eaRegraNome').value.trim(),
                 remetenteContem: eaEl('eaFiltroRemetente').value.trim(),
                 assuntoContem: eaEl('eaFiltroAssunto').value.trim() || null,
+                assuntoNaoContem: w.assuntoNaoContem || null,
                 regexExtracao: w.regra.regex,
                 tipoValor: w.tok ? eaTipoValor(w.tok.tipo) : (w.tipoValorSalvo || 'AVANCADO'),
                 ancora: w.regra.ancora,
@@ -2512,6 +2617,8 @@
             };
             // Só manda o bloco quando existe: ausente, o backend preserva o que está gravado
             if (w.bloco) dados.bloco = { ...w.bloco, template: eaEl('eaBlocoTemplate').value.trim() };
+            // Veio de modelo: manda os campos junto (numa edição comum eles não vão, e o backend preserva)
+            if (w.modelo) { dados.campos = w.campos || null; dados.derivados = w.derivados || null; }
             try {
                 if (w.editandoId) await window.api.emailAutomacao.atualizarRegra(w.editandoId, dados);
                 else await window.api.emailAutomacao.criarRegra(dados);

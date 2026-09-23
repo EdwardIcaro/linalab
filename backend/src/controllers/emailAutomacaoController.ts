@@ -6,6 +6,8 @@ import { verificarRateLimit } from '../utils/rateLimiter';
 import { testarLogin, listarRecentes, lerEmail as lerEmailImap, ErroImap } from '../services/emailImapService';
 import { botSendCaptureJid } from '../services/botServiceClient';
 import { resolverDestinos, enfileirarEnvios, DestinoRegra } from '../services/emailAutomacaoFila';
+import { MODELOS, modeloPorId, ModeloAutomacao } from '../services/emailModelos';
+import { montarMensagem } from '../services/emailExtracao';
 
 /**
  * Automação de Email por empresa (Features/automacao-email.md).
@@ -689,4 +691,122 @@ export async function testarEnvio(req: Req, res: Response) {
     console.error('[EmailAutomacao] Erro no teste de envio:', err);
     return res.status(500).json({ error: 'Erro ao enviar o teste' });
   }
+}
+
+
+// ── Modelos prontos ──────────────────────────────────────────────────────────
+
+/** Catálogo, sem as regex: o cliente escolhe pelo que a automação faz, não por como. */
+export async function listarModelos(_req: Req, res: Response) {
+  const modelos = MODELOS.map((m) => ({
+    id: m.id, nome: m.nome, descricao: m.descricao, fornecedor: m.fornecedor, emoji: m.emoji,
+    remetenteContem: m.remetenteContem,
+    captura: [
+      ...(m.bloco?.chaves ?? []),
+      ...(m.bloco?.derivados ?? []).map((d) => d.chave),
+      ...m.campos.map((c) => c.chave),
+      ...(m.derivados ?? []).map((d) => d.chave),
+    ],
+    tabela: m.tabelaEditavel
+      ? {
+          ...m.tabelaEditavel,
+          valores: (m.tabelaEditavel.em === 'bloco' ? m.bloco?.derivados : m.derivados)
+            ?.find((d) => d.chave === m.tabelaEditavel!.chave)?.valores ?? {},
+          padrao: (m.tabelaEditavel.em === 'bloco' ? m.bloco?.derivados : m.derivados)
+            ?.find((d) => d.chave === m.tabelaEditavel!.chave)?.padrao ?? '',
+        }
+      : null,
+    template: m.template,
+    itemTemplate: m.bloco?.template ?? null,
+  }));
+  return res.json({ modelos });
+}
+
+/** Troca a tabela de preços sugerida pela que o cliente confirmou. */
+function comTabelaDoCliente(modelo: ModeloAutomacao, tabela: unknown): ModeloAutomacao {
+  const alvo = modelo.tabelaEditavel;
+  if (!alvo || !tabela || typeof tabela !== 'object') return modelo;
+  const entrada = tabela as { valores?: Record<string, unknown>; padrao?: unknown };
+  const valores = entrada.valores && typeof entrada.valores === 'object'
+    ? Object.fromEntries(Object.entries(entrada.valores).slice(0, 30).map(([k, v]) => [String(k).trim(), String(v ?? '')]))
+    : null;
+  if (!valores || !Object.keys(valores).length) return modelo;
+  const padrao = entrada.padrao != null ? String(entrada.padrao).slice(0, 60) : undefined;
+  const troca = (lista: typeof modelo.derivados) =>
+    (lista ?? []).map((d) => (d.chave === alvo.chave ? { ...d, valores, padrao: padrao ?? d.padrao } : d));
+  return alvo.em === 'bloco'
+    ? { ...modelo, bloco: modelo.bloco ? { ...modelo.bloco, derivados: troca(modelo.bloco.derivados ?? null) } : null }
+    : { ...modelo, derivados: troca(modelo.derivados) };
+}
+
+/**
+ * Roda o modelo na caixa do cliente e devolve a mensagem que sairia.
+ *
+ * É o passo que evita ativar no escuro: se o email desse fornecedor não chega nessa
+ * conta (ou mudou de layout), o cliente descobre agora, não quando o serviço atrasar.
+ */
+export async function testarModelo(req: Req, res: Response) {
+  const empresaId = empresaDo(req);
+  const id = req.params.id as string;
+  if (!verificarRateLimit(`email-inbox:${empresaId}`, 30, 60 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Muitas consultas seguidas. Tente de novo mais tarde.' });
+  }
+  const modelo = modeloPorId(String(req.body?.modeloId ?? ''));
+  if (!modelo) return res.status(404).json({ error: 'Modelo não encontrado' });
+
+  try {
+    const conta = await contaDaEmpresa(id, empresaId);
+    if (!conta) return res.status(404).json({ error: 'Conta de email não encontrada' });
+
+    const senha = descriptografar(conta.senhaCriptografada, aadDaConta(empresaId, conta.id));
+    const dias = 30;
+    const recentes = await listarRecentes(conta.email, senha, { dias, max: 40 });
+    const candidatos = recentes.filter((e) => (e.de || '').toLowerCase().includes(modelo.remetenteContem.toLowerCase()));
+
+    const regra = comTabelaDoCliente(modelo, req.body?.tabela);
+    // Do mais novo pro mais antigo: para no primeiro que casar de verdade
+    for (const resumo of candidatos) {
+      const email = await lerEmailImap(conta.email, senha, resumo.uid);
+      const mensagem = montarMensagem(regra, { de: email.de, assunto: email.assunto, texto: email.texto });
+      if (mensagem) {
+        await auditar(empresaId, autorDo(req), 'MODELO_TESTADO', conta.id);
+        return res.json({ ok: true, mensagem, exemplo: { assunto: email.assunto, data: email.data } });
+      }
+    }
+
+    return res.json({
+      ok: false,
+      motivo: candidatos.length
+        ? `Achamos ${candidatos.length} email(s) desse remetente nos últimos ${dias} dias, mas nenhum no formato esperado. O fornecedor pode ter mudado o layout.`
+        : `Nenhum email de ${modelo.remetenteContem} chegou nesta caixa nos últimos ${dias} dias. Confira se é o email certo.`,
+    });
+  } catch (err) {
+    if (err instanceof ErroImap) {
+      const { status, mensagem } = mensagemDeErroImap(err);
+      return res.status(status).json({ error: mensagem });
+    }
+    console.error('[EmailAutomacao] Erro ao testar modelo:', err);
+    return res.status(500).json({ error: 'Erro ao testar o modelo' });
+  }
+}
+
+/** Monta o corpo de criação a partir do modelo — o cliente só escolhe destinatários. */
+export async function regraDoModelo(req: Req, res: Response) {
+  const modelo = modeloPorId(String(req.body?.modeloId ?? ''));
+  if (!modelo) return res.status(404).json({ error: 'Modelo não encontrado' });
+  const m = comTabelaDoCliente(modelo, req.body?.tabela);
+  return res.json({
+    regra: {
+      nome: `${m.nome} — ${m.fornecedor}`,
+      remetenteContem: m.remetenteContem,
+      assuntoContem: m.assuntoContem,
+      assuntoNaoContem: m.assuntoNaoContem,
+      regexExtracao: m.regexExtracao,
+      tipoValor: m.tipoValor,
+      campos: m.campos.length ? m.campos : null,
+      bloco: m.bloco,
+      derivados: m.derivados,
+      template: m.template,
+    },
+  });
 }

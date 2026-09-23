@@ -24,6 +24,9 @@ import {
   criarDestinatario,
   removerDestinatario,
   testarEnvio,
+  listarModelos,
+  testarModelo,
+  regraDoModelo,
 } from '../controllers/emailAutomacaoController';
 
 const router: Router = Router();
@@ -46,6 +49,11 @@ router.get('/contatos', listarContatos);
 // Destinatário só de automação — não vira admin do bot
 router.post('/destinatarios', criarDestinatario);
 router.delete('/destinatarios/:id', removerDestinatario);
+
+// Modelos prontos por fornecedor — o cliente escolhe em vez de montar a regra
+router.get('/modelos', listarModelos);
+router.post('/contas/:id/testar-modelo', testarModelo);
+router.post('/modelos/preparar', regraDoModelo);
 
 // Automações
 router.get('/regras', listarRegras);
