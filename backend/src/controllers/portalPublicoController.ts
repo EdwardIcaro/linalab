@@ -902,7 +902,7 @@ export const getPontoHoje = async (req: Request, res: Response) => {
     const now = new Date();
 
     const marcacoes = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end } },
+      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
 
@@ -1011,7 +1011,7 @@ export const registrarPonto = async (req: Request, res: Response) => {
     const { start, end } = getTodayRangeBRT();
 
     const marcacoesHoje = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end } },
+      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
 
@@ -1133,7 +1133,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
     const { end: mesEnd }     = getDateRangeBRT(diasDoMes[diasDoMes.length - 1]);
 
     const todasMarcacoes = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: mesStart, lte: mesEnd } },
+      where: { funcionarioId: funcionario.id, timestamp: { gte: mesStart, lte: mesEnd }, excluidaEm: null },
       select: { tipo: true, timestamp: true },
       orderBy: { timestamp: 'asc' },
     });
@@ -1359,7 +1359,7 @@ export const validarTokenPonto = async (req: Request, res: Response) => {
 
     const { start, end } = getTodayRangeBRT();
     const marcacoes = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end } },
+      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
       select: { tipo: true },
     });
@@ -1503,7 +1503,7 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     const { start, end } = getTodayRangeBRT();
 
     const marcacoesHoje = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end } },
+      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
 

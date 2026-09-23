@@ -21,6 +21,7 @@ import {
   criarMarcacaoManual,
   editarMarcacao,
   excluirMarcacao,
+  restaurarMarcacao,
   getDpAjustes,
   responderAjuste,
   getDpAfastamentos,
@@ -70,6 +71,7 @@ router.get('/marcacoes',           authMiddleware, getMarcacoesDia);
 router.post('/marcacoes',          authMiddleware, criarMarcacaoManual);
 router.patch('/marcacoes/:id',     authMiddleware, editarMarcacao);
 router.delete('/marcacoes/:id',    authMiddleware, excluirMarcacao);
+router.post('/marcacoes/:id/restaurar', authMiddleware, restaurarMarcacao);
 
 // Ajustes
 router.get('/ajustes',         authMiddleware, getDpAjustes);

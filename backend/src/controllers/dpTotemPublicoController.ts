@@ -129,7 +129,7 @@ export const confirmarTotem = async (req: Request, res: Response) => {
 
     const { start, end } = getTodayRangeBRT();
     const marcacoesHoje = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end } },
+      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
 

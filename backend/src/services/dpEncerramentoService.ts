@@ -24,6 +24,7 @@ import {
 import { destinoWppFuncionario } from './dpPontoNotifier';
 import { botSend } from './botServiceClient';
 import { notifyAdmins } from './whatsappNotificationService';
+import { logarMarcacao, SISTEMA } from './dpAuditoriaService';
 
 function horaParaMin(horaStr: string): number {
   const [h, m] = (horaStr || '00:00').split(':').map(Number);
@@ -107,7 +108,7 @@ export async function rodarPontoPendente(): Promise<void> {
         select: {
           id: true, nome: true,
           marcacoes: {
-            where: { timestamp: { gte: inicioDia, lte: fimDia } },
+            where: { timestamp: { gte: inicioDia, lte: fimDia }, excluidaEm: null },
             select: { tipo: true, timestamp: true },
             orderBy: { timestamp: 'asc' },
           },
@@ -156,7 +157,7 @@ export async function rodarPontoPendente(): Promise<void> {
         // ENCERRAR: lança a saída no horário da jornada, marcada como automática
         const timestamp = new Date(inicioDia.getTime() + saidaMin * 60000);
         try {
-          await prisma.dpMarcacao.create({
+          const criada = await prisma.dpMarcacao.create({
             data: {
               empresaId: emp.empresaId,
               funcionarioId: func.id,
@@ -165,6 +166,13 @@ export async function rodarPontoPendente(): Promise<void> {
               timestamp,
               ajustado: true,
             },
+          });
+          await logarMarcacao({
+            empresaId: emp.empresaId, marcacaoId: criada.id, funcionarioId: func.id,
+            acao: 'CRIADA_AUTO',
+            autor: SISTEMA,
+            depois: { tipo: 'SAIDA', timestamp },
+            motivo: `Turno aberto desde ${horaBRT(aberta.timestamp)}, encerrado no horário da jornada`,
           });
         } catch (e: any) {
           // Já existe batida nesse minuto (o gestor acabou de corrigir): nada a fazer

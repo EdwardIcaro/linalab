@@ -6,6 +6,7 @@ import { gerarTokenCurto } from '../utils/tokenUtils';
 import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
          temTurnoAberto, resolverCargaHorariaDia, cargaDaJornada,
          ajustarIntervaloPresumido } from '../utils/dpPontoUtils';
+import { logarMarcacao, autorDaRequest, historicoDasMarcacoes } from '../services/dpAuditoriaService';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -383,7 +384,7 @@ export async function buildDpDashboardData(empresaId: string) {
       include: {
         cargoRef: { select: { cargaHorariaDia: true } },
         marcacoes: {
-          where: { timestamp: { gte: semanaStart, lte: diaEnd } },
+          where: { timestamp: { gte: semanaStart, lte: diaEnd }, excluidaEm: null },
           orderBy: { timestamp: 'asc' },
         },
       },
@@ -615,6 +616,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         empresaId,
         funcionarioId: { in: funcionarios.map(f => f.id) },
         timestamp: { gte: periodoStart, lte: periodoEnd },
+        excluidaEm: null,
       },
       select: { funcionarioId: true, tipo: true, timestamp: true },
       orderBy: { timestamp: 'asc' },
@@ -1164,12 +1166,16 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
   try {
     const { start, end } = getDateRangeBRT(data);
 
+    // Aqui, diferente do espelho, a marcação excluída continua aparecendo: é a tela em
+    // que o gestor corrige o dia, e esconder o que foi tirado esconderia justamente o
+    // que precisa ser auditável.
     const [marcacoes, func] = await Promise.all([
       prisma.dpMarcacao.findMany({
         where: { empresaId, funcionarioId, timestamp: { gte: start, lte: end } },
         select: {
           id: true, tipo: true, timestamp: true, canal: true,
           ajustado: true, gpsPrecisaoSuspeita: true, faceScore: true,
+          excluidaEm: true, excluidaPor: true,
         },
         orderBy: { timestamp: 'asc' },
       }),
@@ -1183,6 +1189,8 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
     // rosto — o histórico anterior não vira alerta retroativo.
     const rostoDesde = func?.faceCapturadoEm ?? null;
 
+    const historico = await historicoDasMarcacoes(marcacoes.map(m => m.id));
+
     res.json({
       marcacoes: marcacoes.map(m => ({
         id: m.id,
@@ -1193,6 +1201,19 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
         gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
         faceScore: m.faceScore,
         faceEsperado: !!rostoDesde && m.canal !== 'MANUAL' && m.timestamp >= rostoDesde,
+        excluida: !!m.excluidaEm,
+        excluidaPor: m.excluidaPor,
+        excluidaEm: m.excluidaEm,
+      })),
+      historico: historico.map(h => ({
+        id: h.id,
+        marcacaoId: h.marcacaoId,
+        acao: h.acao,
+        autorNome: h.autorNome,
+        motivo: h.motivo,
+        quando: h.createdAt,
+        de: h.timestampAntes ? `${h.tipoAntes === 'ENTRADA' ? 'Entrada' : 'Saída'} ${formatHoraBRT(h.timestampAntes)}` : null,
+        para: h.timestampDepois ? `${h.tipoDepois === 'ENTRADA' ? 'Entrada' : 'Saída'} ${formatHoraBRT(h.timestampDepois)}` : null,
       })),
     });
   } catch (error) {
@@ -1225,6 +1246,14 @@ export const criarMarcacaoManual = async (req: EmpresaRequest, res: Response) =>
 
     const marcacao = await prisma.dpMarcacao.create({
       data: { empresaId, funcionarioId, tipo, canal: 'MANUAL', timestamp, ajustado: true },
+    });
+
+    await logarMarcacao({
+      empresaId, marcacaoId: marcacao.id, funcionarioId,
+      acao: 'CRIADA_MANUAL',
+      autor: autorDaRequest(req),
+      depois: { tipo, timestamp },
+      motivo: typeof req.body?.motivo === 'string' ? req.body.motivo.trim() || null : null,
     });
 
     res.status(201).json({ marcacao });
@@ -1261,6 +1290,16 @@ export const editarMarcacao = async (req: EmpresaRequest, res: Response) => {
     if (tipo) updateData.tipo = tipo;
 
     const marcacao = await prisma.dpMarcacao.update({ where: { id }, data: updateData });
+
+    await logarMarcacao({
+      empresaId, marcacaoId: id, funcionarioId: existente.funcionarioId,
+      acao: 'EDITADA',
+      autor: autorDaRequest(req),
+      antes: { tipo: existente.tipo, timestamp: existente.timestamp },
+      depois: { tipo: marcacao.tipo, timestamp: marcacao.timestamp },
+      motivo: typeof req.body?.motivo === 'string' ? req.body.motivo.trim() || null : null,
+    });
+
     res.json({ marcacao });
   } catch (error) {
     console.error('[dp] editarMarcacao:', error);
@@ -1269,19 +1308,67 @@ export const editarMarcacao = async (req: EmpresaRequest, res: Response) => {
 };
 
 // ─── DELETE /api/dp/marcacoes/:id ────────────────────────────────────────────
+// Exclusão lógica: a batida sai da conta de horas e continua existindo, com quem tirou
+// e quando. Registro de ponto apagado de verdade é prova destruída.
 export const excluirMarcacao = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;
   const { id } = req.params as { id: string };
+  const autor = autorDaRequest(req);
 
   try {
     const existente = await prisma.dpMarcacao.findFirst({ where: { id, empresaId } });
     if (!existente) return res.status(404).json({ error: 'Marcação não encontrada' });
+    if (existente.excluidaEm) return res.json({ ok: true, jaExcluida: true });
 
-    await prisma.dpMarcacao.delete({ where: { id } });
+    await prisma.dpMarcacao.update({
+      where: { id },
+      data: { excluidaEm: new Date(), excluidaPor: autor.nome },
+    });
+
+    await logarMarcacao({
+      empresaId, marcacaoId: id, funcionarioId: existente.funcionarioId,
+      acao: 'EXCLUIDA',
+      autor,
+      antes: { tipo: existente.tipo, timestamp: existente.timestamp },
+      motivo: typeof req.body?.motivo === 'string' ? req.body.motivo.trim() || null : null,
+    });
+
     res.json({ ok: true });
   } catch (error) {
     console.error('[dp] excluirMarcacao:', error);
     res.status(500).json({ error: 'Erro ao excluir marcação' });
+  }
+};
+
+// ─── POST /api/dp/marcacoes/:id/restaurar ────────────────────────────────────
+// Desfaz a exclusão. Existe porque exclusão errada acontece, e a correção precisa
+// aparecer no histórico como correção — não como se nada tivesse ocorrido.
+export const restaurarMarcacao = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { id } = req.params as { id: string };
+  const autor = autorDaRequest(req);
+
+  try {
+    const existente = await prisma.dpMarcacao.findFirst({ where: { id, empresaId } });
+    if (!existente) return res.status(404).json({ error: 'Marcação não encontrada' });
+    if (!existente.excluidaEm) return res.json({ ok: true, jaAtiva: true });
+
+    await prisma.dpMarcacao.update({
+      where: { id },
+      data: { excluidaEm: null, excluidaPor: null },
+    });
+
+    await logarMarcacao({
+      empresaId, marcacaoId: id, funcionarioId: existente.funcionarioId,
+      acao: 'RESTAURADA',
+      autor,
+      depois: { tipo: existente.tipo, timestamp: existente.timestamp },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[dp] restaurarMarcacao:', error);
+    res.status(500).json({ error: 'Erro ao restaurar marcação' });
   }
 };
 

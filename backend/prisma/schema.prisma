@@ -1015,9 +1015,15 @@ model DpMarcacao {
   ip                  String?
   ajustado            Boolean       @default(false)
   totemId             String?       // aparelho de onde veio a marcação (canal TOTEM)
+  // Exclusão é lógica, nunca física: a batida sai da conta de horas mas continua
+  // existindo, com quem tirou e quando. Registro de ponto apagado de verdade é prova
+  // destruída — e o que sobra é a palavra do gestor contra a do funcionário.
+  excluidaEm          DateTime?
+  excluidaPor         String?
   createdAt           DateTime      @default(now())
   funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
   totem               DpTotem?      @relation(fields: [totemId], references: [id], onDelete: SetNull)
+  logs                DpMarcacaoLog[]
 
   // Índice único que o Prisma não sabe declarar (usa expressão) e por isso vive só no SQL:
   //   UNIQUE ("funcionarioId", date_trunc('minute', "timestamp")) WHERE "timestamp" >= 2026-09-24
@@ -1026,6 +1032,30 @@ model DpMarcacao {
   // porque o histórico anterior tem 10 casos reais e apagar ponto passado seria pior.
   // Ver Features/sql-dp-marcacao-minuto.sql.
   @@map("dp_marcacoes")
+}
+
+// Histórico de toda intervenção humana ou automática numa marcação. Batida normal do
+// funcionário não entra aqui — ela é o próprio registro. O que se guarda é o que foi
+// mexido depois: lançamento manual do gestor, encerramento automático, edição, exclusão.
+model DpMarcacaoLog {
+  id              String     @id @default(cuid())
+  empresaId       String
+  marcacaoId      String
+  funcionarioId   String
+  acao            String     // CRIADA_MANUAL | CRIADA_AUTO | EDITADA | EXCLUIDA | RESTAURADA
+  tipoAntes       String?
+  timestampAntes  DateTime?
+  tipoDepois      String?
+  timestampDepois DateTime?
+  autorNome       String     // nome de quem fez, ou "Sistema"
+  autorId         String?    // subaccount ou usuário; nulo quando é o sistema
+  motivo          String?
+  createdAt       DateTime   @default(now())
+  marcacao        DpMarcacao @relation(fields: [marcacaoId], references: [id], onDelete: Cascade)
+
+  @@index([marcacaoId])
+  @@index([empresaId, createdAt])
+  @@map("dp_marcacoes_log")
 }
 
 model DpTotem {

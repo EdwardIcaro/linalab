@@ -241,7 +241,8 @@ const api = {
   getDpMarcacoesDia: (funcionarioId, data) => fetchApi(`/dp/marcacoes?funcionarioId=${funcionarioId}&data=${data}`),
   criarDpMarcacaoManual: (data) => fetchApi('/dp/marcacoes', { method: 'POST', body: JSON.stringify(data) }),
   editarDpMarcacao: (id, data) => fetchApi(`/dp/marcacoes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  excluirDpMarcacao: (id) => fetchApi(`/dp/marcacoes/${id}`, { method: 'DELETE' }),
+  excluirDpMarcacao: (id, motivo) => fetchApi(`/dp/marcacoes/${id}`, { method: 'DELETE', body: JSON.stringify({ motivo }) }),
+  restaurarDpMarcacao: (id) => fetchApi(`/dp/marcacoes/${id}/restaurar`, { method: 'POST' }),
 
   // Ajustes
   getDpAjustes: (status) => fetchApi(`/dp/ajustes${status && status !== 'TODOS' ? `?status=${status}` : ''}`),

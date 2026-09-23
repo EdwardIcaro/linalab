@@ -137,6 +137,7 @@ export async function fecharBancoHorasDiario(): Promise<void> {
           where: {
             funcionarioId: func.id,
             timestamp: { gte: getDateRangeBRT(dias[0]).start, lte: getDateRangeBRT(dias[dias.length - 1]).end },
+            excluidaEm: null,
           },
           select: { tipo: true, timestamp: true },
           orderBy: { timestamp: 'asc' },
