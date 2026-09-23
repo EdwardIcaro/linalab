@@ -808,7 +808,14 @@
                 <input id="eaRegraNome" maxlength="60" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;">
                 <label class="form-label" style="margin-top:.6rem;">Mensagem</label>
                 <textarea id="eaRegraMensagem" rows="3" maxlength="300" oninput="eaAtualizarPrevia()" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:8px;"></textarea>
-                <div style="font-size:.78rem;color:#777;margin-top:.2rem;">Use <b>{{valor}}</b> onde entra o que a Lina encontrou.</div>
+                <div style="font-size:.78rem;color:#777;margin-top:.2rem;">Clique pra inserir na mensagem:</div>
+                <div id="eaCamposDisponiveis" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.35rem;"></div>
+                <div id="eaBlocoEditor" style="display:none;margin-top:.7rem;padding:.7rem;background:#faf9ff;border:1px solid #eee7ff;border-radius:10px;">
+                    <label class="form-label" style="margin:0;">Texto de cada item <span style="font-weight:400;color:#888;">(repete por veículo)</span></label>
+                    <input id="eaBlocoTemplate" maxlength="200" oninput="eaAtualizarPrevia()" style="width:100%;padding:.5rem;border:1px solid #ddd;border-radius:8px;margin-top:.3rem;">
+                    <div style="font-size:.78rem;color:#777;margin-top:.25rem;">Clique pra inserir no item:</div>
+                    <div id="eaBlocoCampos" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem;"></div>
+                </div>
                 <div style="background:#efeae2;border-radius:10px;padding:1rem;margin-top:.6rem;">
                     <div style="background:#d9fdd3;border-radius:10px 10px 10px 2px;padding:.6rem .8rem;white-space:pre-wrap;word-break:break-word;">
                         <div style="font-size:.72rem;font-weight:700;color:#128c7e;">Lina 🤖</div>
@@ -2385,6 +2392,7 @@
                 eaEl('eaRegraMensagem').value = `${emoji} ${eaEl('eaRegraNome').value}: {{valor}}`;
             }
             eaRenderContatos();
+            eaRenderCamposDisponiveis();
             eaAtualizarPrevia();
             eaPasso(3);
         }
@@ -2407,6 +2415,45 @@
             if (chk.checked) ea.wiz.destinos.push({ tipo, id });
             else ea.wiz.destinos = ea.wiz.destinos.filter(d => !(d.tipo === tipo && d.id === id));
         }
+        /** Campos que esta automação sabe preencher — sem isso o cliente chuta o nome e o salvar recusa. */
+        function eaCamposDaRegra() {
+            const w = ea.wiz || {};
+            const lista = [{ chave: 'valor', ajuda: 'o que a Lina encontrou no email' }];
+            (w.campos || []).forEach(c => lista.push({ chave: c.chave, ajuda: c.opcional ? 'pode vir vazio' : '' }));
+            (w.derivados || []).forEach(d => lista.push({ chave: d.chave, ajuda: 'calculado a partir de ' + d.de }));
+            if (w.bloco) lista.push({ chave: 'itens', ajuda: 'a lista (ex: um por veículo)' });
+            return lista;
+        }
+        function eaChip(chave, ajuda, destino) {
+            return `<button type="button" onclick="eaInserirCampo('${chave}', '${destino}')" title="${escHtml(ajuda || '')}"
+                style="background:#f3efff;color:#5b3bb5;border:1px solid #e3dbff;border-radius:999px;padding:.15rem .55rem;font-size:.76rem;font-weight:600;cursor:pointer;">{{${chave}}}</button>`;
+        }
+        /** O bloco tem campos próprios: valem no texto do item, não na mensagem de fora. */
+        function eaRenderBlocoEditor() {
+            const w = ea.wiz || {};
+            eaMostrar('eaBlocoEditor', !!w.bloco);
+            if (!w.bloco) return;
+            eaEl('eaBlocoTemplate').value = w.bloco.template || '';
+            const chaves = [...(w.bloco.chaves || []).map(k => ({ chave: k, ajuda: 'capturado do email' })),
+                            ...(w.bloco.derivados || []).map(d => ({ chave: d.chave, ajuda: 'calculado a partir de ' + d.de }))];
+            eaEl('eaBlocoCampos').innerHTML = chaves.map(c => eaChip(c.chave, c.ajuda, 'eaBlocoTemplate')).join('');
+        }
+        function eaRenderCamposDisponiveis() {
+            eaRenderBlocoEditor();
+            const alvo = eaEl('eaCamposDisponiveis');
+            if (!alvo) return;
+            alvo.innerHTML = eaCamposDaRegra().map(c => eaChip(c.chave, c.ajuda, 'eaRegraMensagem')).join('');
+        }
+        function eaInserirCampo(chave, destino) {
+            const campo = eaEl(destino || 'eaRegraMensagem');
+            const marca = '{{' + chave + '}}';
+            const ini = campo.selectionStart ?? campo.value.length;
+            const fim = campo.selectionEnd ?? ini;
+            campo.value = campo.value.slice(0, ini) + marca + campo.value.slice(fim);
+            campo.focus();
+            campo.selectionStart = campo.selectionEnd = ini + marca.length;  // cursor depois do que foi inserido
+            eaAtualizarPrevia();
+        }
         function eaAtualizarPrevia() {
             const w = ea.wiz || {};
             const valor = (w.regra && w.regra.teste) || '123456';
@@ -2418,7 +2465,8 @@
             const texto = (eaEl('eaRegraMensagem').value || '').replace(/\{\{(\w+)\}\}/g, (cru, chave) => {
                 if (chave === 'valor') return valor;
                 if (chave === 'itens' && bloco) {
-                    const linha = String(bloco.template || '').replace(/\{\{(\w+)\}\}/g, (_c, k) => '[' + k + ']');
+                    const emEdicao = eaEl('eaBlocoTemplate') && eaEl('eaBlocoTemplate').value;
+                    const linha = String(emEdicao || bloco.template || '').replace(/\{\{(\w+)\}\}/g, (_c, k) => '[' + k + ']');
                     return [linha, linha].join('\n');
                 }
                 return (campos.some(c => c.chave === chave) || calculados.includes(chave)) ? '[' + chave + ']' : cru;
@@ -2462,6 +2510,8 @@
                 template: mensagem,
                 destinos: w.destinos,
             };
+            // Só manda o bloco quando existe: ausente, o backend preserva o que está gravado
+            if (w.bloco) dados.bloco = { ...w.bloco, template: eaEl('eaBlocoTemplate').value.trim() };
             try {
                 if (w.editandoId) await window.api.emailAutomacao.atualizarRegra(w.editandoId, dados);
                 else await window.api.emailAutomacao.criarRegra(dados);
@@ -2520,6 +2570,7 @@
             eaEl('eaNovoContato').style.display = 'none';
             eaEl('eaModalAssistente').style.display = 'flex';
             eaRenderContatos();
+            eaRenderCamposDisponiveis();
             eaAtualizarPrevia();
             eaPasso(3);
         }
