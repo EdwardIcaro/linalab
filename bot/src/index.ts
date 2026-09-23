@@ -26,7 +26,6 @@ import {
   listGroups,
 } from './services/baileyService';
 
-import { startEmailPoller } from './services/emailPoller';
 import { processarFilaEnvios, limparEnviosAntigos } from './services/filaEnvioService';
 
 import {
@@ -353,9 +352,6 @@ async function startBot() {
       // Fila de envio da automação de email (backend enfileira aqui, bot envia)
       await processarFilaEnvios();
     }, 5000);
-
-    // Poller de leitura de email → WhatsApp (regras cadastradas na config)
-    startEmailPoller();
 
     // Fila de envio: remove os já enviados/com erro depois de 7 dias
     limparEnviosAntigos().catch(() => {});
