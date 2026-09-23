@@ -2119,6 +2119,7 @@
             const chaves = (r.campos || []).map(c => c.chave);
             if (r.bloco) chaves.unshift(...(r.bloco.chaves || []), ...(r.bloco.derivados || []).map(d => d.chave));
             chaves.push(...(r.derivados || []).map(d => d.chave));
+            if (r.enriquecer) chaves.push(r.enriquecer.chave);
             const oque = chaves.length
                 ? chaves.slice(0, 5).join(', ') + (chaves.length > 5 ? '…' : '')
                 : ({ CODIGO: 'código', ALFANUMERICO: 'código com letras', VALOR: 'valor em R$', LINK: 'link' }[r.tipoValor] || 'valor');
@@ -2419,6 +2420,7 @@
                 ea.wiz.campos = g.campos || [];
                 ea.wiz.bloco = g.bloco || null;
                 ea.wiz.derivados = g.derivados || [];
+                ea.wiz.enriquecer = g.enriquecer || null;
                 ea.wiz.tipoValorSalvo = g.tipoValor;
                 ea.wiz.assuntoNaoContem = g.assuntoNaoContem || null;
                 eaEl('eaRegraNome').value = g.nome;
@@ -2525,6 +2527,9 @@
             const lista = [{ chave: 'valor', ajuda: 'o que a Lina encontrou no email' }];
             (w.campos || []).forEach(c => lista.push({ chave: c.chave, ajuda: c.opcional ? 'pode vir vazio' : '' }));
             (w.derivados || []).forEach(d => lista.push({ chave: d.chave, ajuda: 'calculado a partir de ' + d.de }));
+            if (w.enriquecer && w.enriquecer.em === 'regra') {
+                lista.push({ chave: w.enriquecer.chave, ajuda: 'buscado no cadastro pela ' + w.enriquecer.de });
+            }
             if (w.bloco) lista.push({ chave: 'itens', ajuda: 'a lista (ex: um por veículo)' });
             return lista;
         }
@@ -2540,6 +2545,9 @@
             eaEl('eaBlocoTemplate').value = w.bloco.template || '';
             const chaves = [...(w.bloco.chaves || []).map(k => ({ chave: k, ajuda: 'capturado do email' })),
                             ...(w.bloco.derivados || []).map(d => ({ chave: d.chave, ajuda: 'calculado a partir de ' + d.de }))];
+            if (w.enriquecer && w.enriquecer.em === 'bloco') {
+                chaves.push({ chave: w.enriquecer.chave, ajuda: 'buscado no cadastro pela ' + w.enriquecer.de });
+            }
             eaEl('eaBlocoCampos').innerHTML = chaves.map(c => eaChip(c.chave, c.ajuda, 'eaBlocoTemplate')).join('');
         }
         function eaRenderCamposDisponiveis() {
@@ -2570,9 +2578,13 @@
                 if (chave === 'valor') return valor;
                 if (chave === 'itens' && bloco) {
                     const emEdicao = eaEl('eaBlocoTemplate') && eaEl('eaBlocoTemplate').value;
-                    const linha = String(emEdicao || bloco.template || '').replace(/\{\{(\w+)\}\}/g, (_c, k) => '[' + k + ']');
+                    const ext = w.enriquecer;
+                    const linha = String(emEdicao || bloco.template || '').replace(/\{\{(\w+)\}\}/g,
+                        (_c, k) => '[' + k + ']' + (ext && ext.chave === k ? (ext.sufixo || '') : ''));
                     return [linha, linha].join('\n');
                 }
+                const ext = w.enriquecer;
+                if (ext && ext.chave === chave) return '[' + chave + ']' + (ext.sufixo || '');
                 return (campos.some(c => c.chave === chave) || calculados.includes(chave)) ? '[' + chave + ']' : cru;
             });
             eaEl('eaPrevia').textContent = texto;
@@ -2618,7 +2630,11 @@
             // Só manda o bloco quando existe: ausente, o backend preserva o que está gravado
             if (w.bloco) dados.bloco = { ...w.bloco, template: eaEl('eaBlocoTemplate').value.trim() };
             // Veio de modelo: manda os campos junto (numa edição comum eles não vão, e o backend preserva)
-            if (w.modelo) { dados.campos = w.campos || null; dados.derivados = w.derivados || null; }
+            if (w.modelo) {
+                dados.campos = w.campos || null;
+                dados.derivados = w.derivados || null;
+                dados.enriquecer = w.enriquecer || null;
+            }
             try {
                 if (w.editandoId) await window.api.emailAutomacao.atualizarRegra(w.editandoId, dados);
                 else await window.api.emailAutomacao.criarRegra(dados);
@@ -2666,6 +2682,7 @@
                 regra: { regex: regra.regexExtracao, ancora: regra.ancora, teste: null },
                 tipoValorSalvo: regra.tipoValor,
                 campos: regra.campos || [], bloco: regra.bloco || null, derivados: regra.derivados || [],
+                enriquecer: regra.enriquecer || null,
                 destinos: (regra.destinos || []).map(d => ({ tipo: d.tipo, id: d.id })),
             };
             eaEl('eaAssTitulo').textContent = 'Editar automação';

@@ -2,7 +2,11 @@ import prisma from '../db';
 import { descriptografar, aadDaConta, chaveConfigurada } from '../utils/credCrypto';
 import { buscarNovos, ErroImap } from './emailImapService';
 import { resolverDestinos, enfileirarEnvios, DestinoRegra } from './emailAutomacaoFila';
-import { montarMensagem, CampoRegra, BlocoRegra } from './emailExtracao';
+import {
+  extrair, renderizar,
+  CampoRegra, BlocoRegra, DerivadoRegra, EnriquecerRegra, RegraExtracao,
+} from './emailExtracao';
+import { enriquecer, empresasIrmas } from './emailEnriquecimento';
 import { subscriptionService } from './subscriptionService';
 
 /**
@@ -29,6 +33,8 @@ async function processarConta(conta: {
     where: { contaId: conta.id, empresaId: conta.empresaId, ativo: true },
   });
   if (!regras.length) return;
+
+  const irmas = regras.some((r) => r.enriquecer) ? await empresasIrmas(conta.empresaId) : [];
 
   let senha: string;
   try {
@@ -59,7 +65,7 @@ async function processarConta(conta: {
     for (const msg of mensagens) {
       try {
         for (const regra of regras) {
-          const texto = montarMensagem({
+          const extracao: RegraExtracao = {
             remetenteContem: regra.remetenteContem,
             assuntoContem: regra.assuntoContem,
             assuntoNaoContem: regra.assuntoNaoContem,
@@ -67,7 +73,16 @@ async function processarConta(conta: {
             template: regra.template,
             campos: (regra.campos ?? null) as unknown as CampoRegra[] | null,
             bloco: (regra.bloco ?? null) as unknown as BlocoRegra | null,
-          }, msg);
+            derivados: (regra.derivados ?? null) as unknown as DerivadoRegra[] | null,
+            enriquecer: (regra.enriquecer ?? null) as unknown as EnriquecerRegra | null,
+          };
+          const lido = extrair(extracao, msg);
+          if (!lido) continue;
+
+          // Modelo e cor do que já passou pela casa; carro novo sai sem isso
+          await enriquecer(conta.empresaId, extracao, lido, irmas);
+
+          const texto = renderizar(extracao, lido);
           if (!texto) continue;
 
           const alvos = await resolverDestinos(conta.empresaId, (regra.destinos ?? []) as unknown as DestinoRegra[]);

@@ -12,7 +12,7 @@
  * varia por contrato — o modelo traz uma sugestão e o cliente confirma na tela.
  */
 
-import type { CampoRegra, BlocoRegra, DerivadoRegra } from './emailExtracao';
+import type { CampoRegra, BlocoRegra, DerivadoRegra, EnriquecerRegra } from './emailExtracao';
 
 export interface ModeloAutomacao {
   id: string;
@@ -29,6 +29,8 @@ export interface ModeloAutomacao {
   campos: CampoRegra[];
   bloco: BlocoRegra | null;
   derivados: DerivadoRegra[] | null;
+  /** Campo buscado fora do email (modelo/cor do veículo pela placa). */
+  enriquecer: EnriquecerRegra | null;
   template: string;
   /**
    * Tabela que o cliente deve conferir antes de ativar (o contrato dele pode ter outro
@@ -71,9 +73,11 @@ export const MODELOS: ModeloAutomacao[] = [
       regex: '([0-9]{4,})\\s+([A-Z0-9]{7})\\s+([\\s\\S]*?)(R\\$\\s?[0-9.,]+)',
       chaves: ['numero', 'placa', 'tipo', 'preco'],
       derivados: [SERVICO_POR_PRECO],
-      template: '🚗 *{{placa}}* — {{servico}} — {{preco}}',
+      template: '🚗 *{{placa}}* — {{veiculo}}{{servico}} — {{preco}}',
     },
     derivados: null,
+    // Modelo e cor de quem já passou pela casa; carro novo sai sem isso (o sufixo some junto)
+    enriquecer: { de: 'placa', chave: 'veiculo', em: 'bloco', sufixo: ' — ' },
     template: '🧼 *Nova solicitação de lavagem*\n\n{{itens}}\n\n👤 {{solicitante}} · 🏢 {{agencia}} · 🗓 {{dia}}',
     tabelaEditavel: { em: 'bloco', chave: 'servico', rotulo: 'Seu preço por tipo de lavagem' },
   },
@@ -95,7 +99,8 @@ export const MODELOS: ModeloAutomacao[] = [
     ],
     bloco: null,
     derivados: [SERVICO_POR_PRECO],
-    template: '❌ *Lavagem cancelada*\n\n🚗 *{{placa}}* — {{servico}} — {{preco}}\n👤 Cancelou: {{cancelou}}',
+    enriquecer: { de: 'placa', chave: 'veiculo', em: 'regra', sufixo: ' — ' },
+    template: '❌ *Lavagem cancelada*\n\n🚗 *{{placa}}* — {{veiculo}}{{servico}} — {{preco}}\n👤 Cancelou: {{cancelou}}',
     tabelaEditavel: { em: 'regra', chave: 'servico', rotulo: 'Seu preço por tipo de lavagem' },
   },
   {
@@ -112,6 +117,7 @@ export const MODELOS: ModeloAutomacao[] = [
     campos: [],
     bloco: null,
     derivados: null,
+    enriquecer: null,
     template: '🔑 Código Localiza: {{valor}}',
     tabelaEditavel: null,
   },

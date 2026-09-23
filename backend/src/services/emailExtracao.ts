@@ -65,6 +65,26 @@ export interface RegraExtracao {
   campos?: CampoRegra[] | null;
   bloco?: BlocoRegra | null;
   derivados?: DerivadoRegra[] | null;
+  /** Campo que vem de fora do email (ex: modelo/cor do veículo pela placa). */
+  enriquecer?: EnriquecerRegra | null;
+}
+
+/**
+ * Campo preenchido por uma busca fora do email — quem resolve é o poller, que tem
+ * banco; aqui só fica declarado onde ele entra.
+ *
+ * `sufixo` só é aplicado quando existe valor: assim a linha fecha certo tanto com
+ * "TZS7C31 — Polo Prata — Lavagem" quanto com "TZS7C31 — Lavagem", sem traço solto.
+ */
+export interface EnriquecerRegra {
+  /** Chave que alimenta a busca (ex: `placa`). */
+  de: string;
+  /** Chave criada (ex: `veiculo`). */
+  chave: string;
+  /** Onde a origem vive: em cada item do bloco ou no corpo da regra. */
+  em: 'bloco' | 'regra';
+  prefixo?: string;
+  sufixo?: string;
 }
 
 export interface EmailLido {
@@ -122,33 +142,40 @@ function casar(texto: string, regex: string): RegExpMatchArray | null {
   }
 }
 
-/** Todas as ocorrências do bloco, já viradas em texto. */
-function extrairBloco(texto: string, bloco: BlocoRegra): string[] {
+/** Os valores de cada ocorrência do bloco — o texto só é montado em `renderizar`. */
+function extrairBloco(texto: string, bloco: BlocoRegra): Record<string, string>[] {
   let re: RegExp;
   try {
     re = new RegExp(bloco.regex, 'gi');
   } catch {
     return [];
   }
-  const linhas: string[] = [];
+  const itens: Record<string, string>[] = [];
   for (const m of texto.matchAll(re)) {
     const valores: Record<string, string> = {};
     bloco.chaves.forEach((chave, i) => { valores[chave] = limpar(m[i + 1]); });
     aplicarDerivados(valores, bloco.derivados);
-    linhas.push(aplicar(bloco.template, valores));
-    if (linhas.length >= MAX_OCORRENCIAS) break;
+    itens.push(valores);
+    if (itens.length >= MAX_OCORRENCIAS) break;
   }
-  return linhas;
+  return itens;
+}
+
+/** O que foi lido do email, antes de virar texto. */
+export interface Extracao {
+  valores: Record<string, string>;
+  /** Uma entrada por ocorrência do bloco; vazio quando a regra não tem bloco. */
+  itens: Record<string, string>[];
 }
 
 /**
- * Aplica a regra e devolve a mensagem pronta, ou null quando o email não é esse.
+ * Lê o email e devolve os valores, ou null quando o email não é esse.
  *
  * Não dispara se faltar o que identifica o email: o valor principal, um campo marcado
  * como obrigatório ou, havendo bloco, pelo menos uma ocorrência dele. Mandar a
  * mensagem pela metade seria pior que não mandar — alguém iria buscar um carro sem placa.
  */
-export function montarMensagem(regra: RegraExtracao, email: EmailLido): string | null {
+export function extrair(regra: RegraExtracao, email: EmailLido): Extracao | null {
   const de = (email.de || '').toLowerCase();
   if (!de.includes(regra.remetenteContem.toLowerCase())) return null;
 
@@ -171,11 +198,37 @@ export function montarMensagem(regra: RegraExtracao, email: EmailLido): string |
 
   aplicarDerivados(valores, regra.derivados);
 
+  let itens: Record<string, string>[] = [];
   if (regra.bloco) {
-    const linhas = extrairBloco(texto, regra.bloco);
-    if (!linhas.length) return null;
-    valores[regra.bloco.chaveLista || 'itens'] = linhas.join(regra.bloco.separador ?? '\n');
+    itens = extrairBloco(texto, regra.bloco);
+    if (!itens.length) return null;
   }
 
+  return { valores, itens };
+}
+
+/** Escreve o campo enriquecido, com o sufixo só quando veio valor. */
+export function aplicarEnriquecimento(
+  alvo: Record<string, string>,
+  regra: EnriquecerRegra,
+  valor: string
+): void {
+  const limpo = limpar(valor);
+  alvo[regra.chave] = limpo ? `${regra.prefixo ?? ''}${limpo}${regra.sufixo ?? ''}` : '';
+}
+
+/** Monta o texto final a partir do que foi extraído (e, se for o caso, enriquecido). */
+export function renderizar(regra: RegraExtracao, ex: Extracao): string {
+  const valores = { ...ex.valores };
+  if (regra.bloco) {
+    const linhas = ex.itens.map((item) => aplicar(regra.bloco!.template, item));
+    valores[regra.bloco.chaveLista || 'itens'] = linhas.join(regra.bloco.separador ?? '\n');
+  }
   return aplicar(regra.template, valores);
+}
+
+/** Atalho pra quem não precisa enriquecer nada no meio do caminho. */
+export function montarMensagem(regra: RegraExtracao, email: EmailLido): string | null {
+  const ex = extrair(regra, email);
+  return ex ? renderizar(regra, ex) : null;
 }

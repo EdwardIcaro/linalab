@@ -7,7 +7,8 @@ import { testarLogin, listarRecentes, lerEmail as lerEmailImap, ErroImap } from 
 import { botSendCaptureJid } from '../services/botServiceClient';
 import { resolverDestinos, enfileirarEnvios, DestinoRegra } from '../services/emailAutomacaoFila';
 import { MODELOS, modeloPorId, ModeloAutomacao } from '../services/emailModelos';
-import { montarMensagem } from '../services/emailExtracao';
+import { extrair, renderizar } from '../services/emailExtracao';
+import { enriquecer as enriquecerCampos, empresasIrmas } from '../services/emailEnriquecimento';
 
 /**
  * Automação de Email por empresa (Features/automacao-email.md).
@@ -359,7 +360,34 @@ function validarDerivados(entrada: unknown, origens: string[]): { erro?: string;
   return { valor: saida.length ? saida : null };
 }
 
-function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any; derivados?: any } {
+/**
+ * Campo que o poller preenche buscando fora do email (hoje: modelo/cor pela placa).
+ * `origens` são as chaves já existentes no mesmo escopo — apontar pra uma que não
+ * existe daria sempre vazio, sem ninguém entender por quê.
+ */
+function validarEnriquecer(entrada: unknown, doBloco: string[], daRegra: string[]): { erro?: string; valor?: any } {
+  if (entrada == null) return { valor: null };
+  if (typeof entrada !== 'object') return { erro: 'Campo externo inválido.' };
+  const e = entrada as any;
+  const em = String(e.em ?? '');
+  if (em !== 'bloco' && em !== 'regra') return { erro: 'Campo externo: informe se ele vem do bloco ou da regra.' };
+  const chave = String(e.chave ?? '').trim().toLowerCase();
+  if (!CHAVE_VALIDA.test(chave)) return { erro: `Nome de campo externo inválido: "${chave}".` };
+  if (CHAVES_RESERVADAS.includes(chave)) return { erro: `"${chave}" é um nome reservado. Escolha outro.` };
+  const origens = em === 'bloco' ? doBloco : daRegra;
+  if (origens.includes(chave)) return { erro: `O campo "${chave}" já existe nesta automação.` };
+  const de = String(e.de ?? '').trim().toLowerCase();
+  if (!origens.includes(de)) return { erro: `O campo externo "${chave}" usa "${de}", que não existe nesta automação.` };
+  return {
+    valor: {
+      de, chave, em,
+      prefixo: e.prefixo != null ? String(e.prefixo).slice(0, 20) : undefined,
+      sufixo: e.sufixo != null ? String(e.sufixo).slice(0, 20) : undefined,
+    },
+  };
+}
+
+function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any; derivados?: any; enriquecer?: any } {
   const entrada = body?.campos;
   const campos: { chave: string; regex: string; opcional: boolean }[] = [];
   if (entrada != null) {
@@ -377,6 +405,7 @@ function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any;
   }
 
   let bloco: any = null;
+  let chavesDoBloco: string[] = [];
   if (body?.bloco != null) {
     const b = body.bloco;
     const erroRegex = erroNaRegex(String(b?.regex ?? ''));
@@ -391,21 +420,30 @@ function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any;
     if (derivBloco.erro) return { erro: derivBloco.erro };
     // O texto do item pode usar tanto as chaves capturadas quanto as calculadas
     const doBloco = [...chaves, ...(derivBloco.valor ?? []).map((d: any) => d.chave)];
+    const extraDoBloco = body?.enriquecer && String(body.enriquecer.em) === 'bloco'
+      ? [String(body.enriquecer.chave ?? '').trim().toLowerCase()]
+      : [];
     for (const [, chave] of tpl.matchAll(/\{\{(\w+)\}\}/g)) {
-      if (!doBloco.includes(chave)) return { erro: `O texto de cada item usa {{${chave}}}, que não é um campo do bloco.` };
+      if (!doBloco.includes(chave) && !extraDoBloco.includes(chave)) {
+        return { erro: `O texto de cada item usa {{${chave}}}, que não é um campo do bloco.` };
+      }
     }
+    chavesDoBloco = doBloco;
     bloco = { regex: String(b.regex), chaves, template: tpl, derivados: derivBloco.valor ?? undefined };
   }
 
   const derivados = validarDerivados(body?.derivados, ['valor', ...campos.map(c => c.chave)]);
   if (derivados.erro) return { erro: derivados.erro };
 
+  const daRegra = ['valor', ...campos.map(c => c.chave), ...((derivados.valor ?? []) as any[]).map(d => d.chave)];
+  const enriquecer = validarEnriquecer(body?.enriquecer, chavesDoBloco, daRegra);
+  if (enriquecer.erro) return { erro: enriquecer.erro };
+
   // Um {{campo}} que não existe sairia cru na mensagem do WhatsApp
   const template = String(body?.template ?? '');
   const disponiveis = new Set([
-    'valor',
-    ...campos.map(c => c.chave),
-    ...((derivados.valor ?? []) as any[]).map(d => d.chave),
+    ...daRegra,
+    ...(enriquecer.valor && enriquecer.valor.em === 'regra' ? [enriquecer.valor.chave] : []),
     ...(bloco ? ['itens'] : []),
   ]);
   for (const [, chave] of template.matchAll(/\{\{(\w+)\}\}/g)) {
@@ -413,7 +451,7 @@ function validarExtracao(body: any): { erro?: string; campos?: any; bloco?: any;
   }
   if (bloco && !template.includes('{{itens}}')) return { erro: 'A mensagem precisa conter {{itens}} pra listar os itens do bloco.' };
 
-  return { campos: campos.length ? campos : null, bloco, derivados: derivados.valor ?? null };
+  return { campos: campos.length ? campos : null, bloco, derivados: derivados.valor ?? null, enriquecer: enriquecer.valor ?? null };
 }
 
 function erroNosCamposDaRegra(body: any): string | null {
@@ -473,6 +511,7 @@ export async function criarRegra(req: Req, res: Response) {
         campos: extracao.campos ?? Prisma.DbNull,
         bloco: extracao.bloco ?? Prisma.DbNull,
         derivados: extracao.derivados ?? Prisma.DbNull,
+        enriquecer: extracao.enriquecer ?? Prisma.DbNull,
         tipoValor: ['CODIGO', 'ALFANUMERICO', 'VALOR', 'LINK', 'AVANCADO'].includes(req.body.tipoValor) ? req.body.tipoValor : 'AVANCADO',
         ancora: req.body.ancora ? String(req.body.ancora).slice(0, 120) : null,
         template: String(req.body.template),
@@ -517,6 +556,7 @@ export async function atualizarRegra(req: Req, res: Response) {
       campos: 'campos' in req.body ? req.body.campos : atual.campos,
       bloco: 'bloco' in req.body ? req.body.bloco : atual.bloco,
       derivados: 'derivados' in req.body ? req.body.derivados : atual.derivados,
+      enriquecer: 'enriquecer' in req.body ? req.body.enriquecer : atual.enriquecer,
     });
     if (extracao.erro) return res.status(400).json({ error: extracao.erro });
 
@@ -533,6 +573,7 @@ export async function atualizarRegra(req: Req, res: Response) {
         campos: 'campos' in req.body ? (extracao.campos ?? Prisma.DbNull) : undefined,
         bloco: 'bloco' in req.body ? (extracao.bloco ?? Prisma.DbNull) : undefined,
         derivados: 'derivados' in req.body ? (extracao.derivados ?? Prisma.DbNull) : undefined,
+        enriquecer: 'enriquecer' in req.body ? (extracao.enriquecer ?? Prisma.DbNull) : undefined,
         tipoValor: ['CODIGO', 'ALFANUMERICO', 'VALOR', 'LINK', 'AVANCADO'].includes(req.body.tipoValor) ? req.body.tipoValor : 'AVANCADO',
         ancora: req.body.ancora ? String(req.body.ancora).slice(0, 120) : null,
         template: String(req.body.template),
@@ -681,6 +722,8 @@ export async function testarEnvio(req: Req, res: Response) {
         const linha = String(bloco.template ?? '').replace(/\{\{(\w+)\}\}/g, (_c: string, k: string) => `[${k} de exemplo]`);
         return [linha, linha].join('\n');
       }
+      const externo = regra.enriquecer as any;
+      if (externo && externo.chave === chave) return `[${chave} de exemplo] `;
       return campos.some(c => c?.chave === chave) ? `[${chave} de exemplo]` : cru;
     });
     const enfileirados = await enfileirarEnvios(empresaId, alvos, texto);
@@ -718,6 +761,7 @@ export async function listarModelos(_req: Req, res: Response) {
       : null,
     template: m.template,
     itemTemplate: m.bloco?.template ?? null,
+    enriquecer: m.enriquecer,
   }));
   return res.json({ modelos });
 }
@@ -764,11 +808,15 @@ export async function testarModelo(req: Req, res: Response) {
     const candidatos = recentes.filter((e) => (e.de || '').toLowerCase().includes(modelo.remetenteContem.toLowerCase()));
 
     const regra = comTabelaDoCliente(modelo, req.body?.tabela);
+    const escopo = regra.enriquecer ? await empresasIrmas(empresaId) : [];
     // Do mais novo pro mais antigo: para no primeiro que casar de verdade
     for (const resumo of candidatos) {
       const email = await lerEmailImap(conta.email, senha, resumo.uid);
-      const mensagem = montarMensagem(regra, { de: email.de, assunto: email.assunto, texto: email.texto });
-      if (mensagem) {
+      const lido = extrair(regra, { de: email.de, assunto: email.assunto, texto: email.texto });
+      if (lido) {
+        // A prévia precisa sair igual à mensagem real, modelo do carro incluído
+        await enriquecerCampos(empresaId, regra, lido, escopo);
+        const mensagem = renderizar(regra, lido);
         await auditar(empresaId, autorDo(req), 'MODELO_TESTADO', conta.id);
         return res.json({ ok: true, mensagem, exemplo: { assunto: email.assunto, data: email.data } });
       }
@@ -806,6 +854,7 @@ export async function regraDoModelo(req: Req, res: Response) {
       campos: m.campos.length ? m.campos : null,
       bloco: m.bloco,
       derivados: m.derivados,
+      enriquecer: m.enriquecer,
       template: m.template,
     },
   });
