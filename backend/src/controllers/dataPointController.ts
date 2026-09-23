@@ -4,7 +4,8 @@ import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
-         temTurnoAberto, resolverCargaHorariaDia, cargaDaJornada } from '../utils/dpPontoUtils';
+         temTurnoAberto, resolverCargaHorariaDia, cargaDaJornada,
+         ajustarIntervaloPresumido } from '../utils/dpPontoUtils';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -405,8 +406,10 @@ export async function buildDpDashboardData(empresaId: string) {
         f.cargaHorariaDia, f.cargoRef?.cargaHorariaDia, cargaDaEmpresa,
       ) * 60;
 
-      // Minutos trabalhados hoje
-      const minutosHoje = calcMinutosTrabalhados(marcacoesHoje, now);
+      // Minutos trabalhados hoje (com o almoço presumido depois que o turno fecha)
+      const minutosHoje = ajustarIntervaloPresumido(
+        marcacoesHoje, calcMinutosTrabalhados(marcacoesHoje, now), cargaEsperadaMin, intervaloMin,
+      ).minutos;
 
       // Minutos trabalhados na semana (agrupa por dia)
       const diasSemana = new Set(marcacoesSemana.map(m => {
@@ -419,7 +422,9 @@ export async function buildDpDashboardData(empresaId: string) {
         const marcsDia = marcacoesSemana.filter(m => m.timestamp >= start && m.timestamp <= end);
         // Dia fechado sem saída batida não conta o trecho aberto (null) — ver dpPontoUtils
         const nowDia = dia === todayStr ? now : null;
-        minutosSemana += calcMinutosTrabalhados(marcsDia, nowDia);
+        minutosSemana += ajustarIntervaloPresumido(
+          marcsDia, calcMinutosTrabalhados(marcsDia, nowDia), cargaEsperadaMin, intervaloMin,
+        ).minutos;
       }
 
       // Estado
@@ -566,6 +571,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
     const toleranciaMin: number = cfg.toleranciaMin ?? 10;
     const cargaDaEmpresa = cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin);
+    const intervaloMin: number = cfg.intervaloMin ?? 0;
     // Dias da semana (0=dom...6=sáb) em que a empresa funciona — configurável,
     // default replica o comportamento antigo (fixo sáb+dom = folga)
     const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
@@ -648,6 +654,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         marcacoes: number;
         horaEntrada: string | null;
         horaSaida: string | null;
+        intervaloPresumido?: number;
         label?: string;
       }> = {};
 
@@ -664,8 +671,11 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         // do trecho aberto e vira INCOMPLETO, pra ninguém ler 16h como jornada real.
         const fimCalculo = dia === hoje ? now : null;
         const marcacoesSimples = marcacoesDia.map(m => ({ tipo: m.tipo, timestamp: m.timestamp }));
-        const minutosTrabalhou = calcMinutosTrabalhados(marcacoesSimples, fimCalculo);
+        const bruto = calcMinutosTrabalhados(marcacoesSimples, fimCalculo);
         const turnoAberto = temTurnoAberto(marcacoesSimples) && dia !== hoje;
+        // Ninguém bateu a pausa: desconta o intervalo contratado (ver dpPontoUtils)
+        const { minutos: minutosTrabalhou, intervaloPresumido } =
+          ajustarIntervaloPresumido(marcacoesSimples, bruto, cargaEsperadaMin, intervaloMin);
 
         const primeiraEntrada = marcacoesDia.find(m => m.tipo === 'ENTRADA');
         const ultimaSaida = [...marcacoesDia].reverse().find(m => m.tipo === 'SAIDA');
@@ -736,6 +746,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
           marcacoes: marcacoesDia.length,
           horaEntrada: primeiraEntrada ? formatHoraBRT(primeiraEntrada.timestamp) : null,
           horaSaida: ultimaSaida ? formatHoraBRT(ultimaSaida.timestamp) : null,
+          intervaloPresumido,
         };
       }
 

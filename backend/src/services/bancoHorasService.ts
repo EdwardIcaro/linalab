@@ -7,6 +7,7 @@ import {
   resolverCargaHorariaDia,
   cargaDaJornada,
   calcMinutosTrabalhados,
+  ajustarIntervaloPresumido,
 } from '../utils/dpPontoUtils';
 
 interface ResultadoFechamento {
@@ -26,9 +27,11 @@ export function calcularFechamentoPeriodo(params: {
   feriados: { data: string; nome: string; recorrente: boolean }[];
   funcionarioId: string;
   afastamentos: { funcionarioId: string; tipo: string; dataInicio: string; dataFim: string }[];
-  cargaHorariaDiaMin: number; // já resolvida (individual ?? cargo ?? 8h) em minutos
+  cargaHorariaDiaMin: number; // já resolvida (individual ?? cargo ?? jornada ?? 8h) em minutos
+  intervaloMin: number; // pausa contratada, descontada quando ninguém registrou a dele
 }): ResultadoFechamento {
-  const { dias, marcacoesPorDia, diasFuncionamento, feriados, funcionarioId, afastamentos, cargaHorariaDiaMin } = params;
+  const { dias, marcacoesPorDia, diasFuncionamento, feriados, funcionarioId, afastamentos,
+          cargaHorariaDiaMin, intervaloMin } = params;
 
   let horasEsperadasMin = 0;
   let horasTrabalhadasMin = 0;
@@ -40,7 +43,12 @@ export function calcularFechamentoPeriodo(params: {
     // null = turno aberto não vira hora trabalhada. Sem isso, um dia em que a pessoa
     // esqueceu a saída entrava no fechamento como jornada até 23:59 e virava crédito
     // permanente de hora extra no saldo acumulado.
-    const minutosTrabalhou = calcMinutosTrabalhados(marcacoesDia, null);
+    const minutosTrabalhou = ajustarIntervaloPresumido(
+      marcacoesDia,
+      calcMinutosTrabalhados(marcacoesDia, null),
+      cargaHorariaDiaMin,
+      intervaloMin,
+    ).minutos;
 
     const tipoAfastamento = resolveAfastamentoDia(funcionarioId, dia, afastamentos);
     if (tipoAfastamento) {
@@ -161,6 +169,7 @@ export async function fecharBancoHorasDiario(): Promise<void> {
       const resultado = calcularFechamentoPeriodo({
         dias, marcacoesPorDia, diasFuncionamento, feriados,
         funcionarioId: func.id, afastamentos, cargaHorariaDiaMin,
+        intervaloMin: cfg.intervaloMin ?? 0,
       });
 
       const periodoInicio = getDateRangeBRT(baseStr).start;

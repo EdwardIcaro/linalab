@@ -8,7 +8,7 @@ import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/date
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado,
          calcMinutosTrabalhados, temTurnoAberto, resolverCargaHorariaDia,
-         cargaDaJornada } from '../utils/dpPontoUtils';
+         cargaDaJornada, ajustarIntervaloPresumido } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
@@ -915,7 +915,9 @@ export const getPontoHoje = async (req: Request, res: Response) => {
     const [jsH, jsM] = jornadaSaida.split(':').map(Number);
     const jornadaSaidaMin = (jsH || 0) * 60 + (jsM || 0);
     const nowBrtMin = Math.floor(((now.getTime() - 3 * 3600000) % 86400000) / 60000);
-    const minutosHoje = calcMinutosTrabalhados(marcacoes, now);
+    const minutosHoje = ajustarIntervaloPresumido(
+      marcacoes, calcMinutosTrabalhados(marcacoes, now), cargaEsperadaMin, cfg.intervaloMin,
+    ).minutos;
 
     let estado = 'AUSENTE';
     if (marcacoes.length > 0) {
@@ -1188,7 +1190,12 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
       // Dia fechado com turno aberto não conta o trecho aberto — ver dpPontoUtils
       const fimCalculo       = isHoje ? now : null;
       const marcacoesSimples = marcacoesDia.map(mc => ({ tipo: mc.tipo, timestamp: mc.timestamp }));
-      const minutosTrabalhou = calcMinutosTrabalhados(marcacoesSimples, fimCalculo);
+      const { minutos: minutosTrabalhou, intervaloPresumido } = ajustarIntervaloPresumido(
+        marcacoesSimples,
+        calcMinutosTrabalhados(marcacoesSimples, fimCalculo),
+        cargaEsperadaMin,
+        cfg.intervaloMin,
+      );
 
       const incompleto = temTurnoAberto(marcacoesSimples) && !isHoje;
 
@@ -1221,6 +1228,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
         diaSemana,
         status,
         minutosTrabalhou,
+        intervaloPresumido,
         marcacoes: marcacoesDia.map(mc => ({
           tipo: mc.tipo,
           hora: horaFormatadaBRT(mc.timestamp),

@@ -197,3 +197,36 @@ export function decidirAcaoPonto(params: {
   if (agoraMin >= saidaMin + LEMBRETE_SAIDA_MIN) return 'LEMBRAR_SAIDA';
   return 'NADA';
 }
+
+/**
+ * Desconta o intervalo quando a pausa não foi registrada.
+ *
+ * Quem bate as quatro vezes já tem o almoço fora da conta — o par SAÍDA/ENTRADA do
+ * meio do dia cuida disso sozinho. O problema é quem bate só duas: em 09/2026, 10 dos
+ * 30 dias de um dos funcionários vieram assim, entrando 08:04 e saindo 18:26, e o
+ * sistema lia 10h21 de trabalho e 2h21 de hora extra que não existiram.
+ *
+ * A dedução é uma presunção, e por isso tem dois limites: só vale para o dia já fechado
+ * (turno aberto ainda pode receber a pausa) e nunca empurra o total abaixo da carga
+ * contratada — quem ficou 8h30 sem pausa fica com 8h, não com 6h30. O espelho mostra
+ * que o desconto foi presumido, para o gestor poder lançar a pausa real por cima.
+ */
+export function ajustarIntervaloPresumido(
+  marcacoes: DpMarcacaoMinima[],
+  minutosTrabalhados: number,
+  cargaMin: number,
+  intervaloMin: number | null | undefined,
+): { minutos: number; intervaloPresumido: number } {
+  const semDesconto = { minutos: minutosTrabalhados, intervaloPresumido: 0 };
+  if (!intervaloMin || intervaloMin <= 0) return semDesconto;
+  if (temTurnoAberto(marcacoes)) return semDesconto;
+  if (minutosTrabalhados <= cargaMin) return semDesconto;
+
+  const registrouPausa = marcacoes.some(
+    (m, i) => i > 0 && marcacoes[i - 1].tipo === 'SAIDA' && m.tipo === 'ENTRADA',
+  );
+  if (registrouPausa) return semDesconto;
+
+  const minutos = Math.max(cargaMin, minutosTrabalhados - intervaloMin);
+  return { minutos, intervaloPresumido: minutosTrabalhados - minutos };
+}
