@@ -6,7 +6,7 @@ import { getTodayRangeBRT } from '../utils/dateUtils';
 import { distanciaEuclidiana, embeddingValido } from '../utils/faceMatch';
 import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
-import { horaFormatadaBRT } from './portalPublicoController';
+import { horaFormatadaBRT, haversine } from './portalPublicoController';
 import { getTodayStrBRT } from '../utils/dateUtils';
 import {
   resolverCargaHorariaDia, cargaDaJornada, calcMinutosTrabalhados,
@@ -244,6 +244,21 @@ export const confirmarTotem = async (req: Request, res: Response) => {
     const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesRecentes);
     if (cooldownErro) return res.status(429).json({ erro: cooldownErro });
 
+    // O totem é um aparelho pareado à empresa e por isso não bloqueia por distância —
+    // mas mede e guarda: se um dia o tablet sair de lá, o histórico mostra.
+    const cfgEmpresa = await prisma.empresaSistema.findFirst({
+      where: { empresaId, sistema: 'data-point', ativo: true },
+      select: { config: true },
+    });
+    const cfgTotem = cfgEmpresa?.config ? JSON.parse(cfgEmpresa.config as string) : {};
+    const empLat = parseFloat(cfgTotem.lat);
+    const empLng = parseFloat(cfgTotem.lng);
+    const raioGps: number = cfgTotem.raioGps || 80;
+    let distanciaM: number | null = null;
+    if (lat != null && lng != null && !isNaN(empLat) && !isNaN(empLng)) {
+      distanciaM = Math.round(haversine(empLat, empLng, lat, lng));
+    }
+
     const [marcacao] = await prisma.$transaction([
       prisma.dpMarcacao.create({
         data: {
@@ -255,6 +270,8 @@ export const confirmarTotem = async (req: Request, res: Response) => {
           lat: lat ?? null,
           lng: lng ?? null,
           gpsPrecisao: gpsPrecisao ?? null,
+          distanciaM,
+          foraDoRaio: distanciaM != null && distanciaM > raioGps,
           faceScore: score,
         },
       }),

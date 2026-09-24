@@ -870,7 +870,7 @@ export const removerPinPortal = async (req: Request, res: Response) => {
 
 // ─── helpers ponto ───────────────────────────────────────────────────────────
 
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -1087,6 +1087,7 @@ export const registrarPonto = async (req: Request, res: Response) => {
     // GPS: validação baseada em nivelGps (BASICO | MEDIO | RIGIDO | MAXIMO)
     let gpsPrecisaoSuspeita = false;
     let gpsForaRaio = false;
+    let distanciaM: number | null = null;
     const empLat = parseFloat(cfg.lat);
     const empLng = parseFloat(cfg.lng);
     const raioGps: number = cfg.raioGps || 80;
@@ -1094,9 +1095,9 @@ export const registrarPonto = async (req: Request, res: Response) => {
     const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
 
     if (!gpsNegado && lat != null && lng != null && temLocEmpresa) {
-      const dist = haversine(empLat, empLng, parseFloat(lat), parseFloat(lng));
-      if (dist > raioGps)     gpsForaRaio = true;
-      if (dist > raioGps * 3) gpsPrecisaoSuspeita = true; // muito longe = suspeito
+      distanciaM = Math.round(haversine(empLat, empLng, parseFloat(lat), parseFloat(lng)));
+      if (distanciaM > raioGps)     gpsForaRaio = true;
+      if (distanciaM > raioGps * 3) gpsPrecisaoSuspeita = true; // muito longe = suspeito
     }
     // Precisão sub-metro é impossível em GPS real — indica mock GPS app
     if (gpsPrecisao != null && gpsPrecisao < 1) gpsPrecisaoSuspeita = true;
@@ -1127,6 +1128,8 @@ export const registrarPonto = async (req: Request, res: Response) => {
         gpsPrecisao: gpsPrecisao != null ? parseFloat(gpsPrecisao) : null,
         gpsPrecisaoSuspeita,
         gpsNegado: Boolean(gpsNegado),
+        distanciaM,
+        foraDoRaio: gpsForaRaio,
         ip: req.ip || null,
       },
     });
@@ -1482,7 +1485,8 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     // GPS — só valida ENTRADA
     let gpsPrecisaoSuspeita = false;
     let gpsForaRaio = false;
-    let distanciaM = 0;
+    // null = não deu para medir (sem GPS ou sem endereço da empresa); 0 é distância real
+    let distanciaM: number | null = null;
     const gpsNegado = tipo === 'ENTRADA' && (lat == null || lng == null);
     const empLat = parseFloat(cfg.lat);
     const empLng = parseFloat(cfg.lng);
@@ -1490,8 +1494,10 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     const nivelGps: string = cfg.nivelGps || 'BASICO';
     const temLocEmpresa = !isNaN(empLat) && !isNaN(empLng);
 
-    if (tipo === 'ENTRADA' && !gpsNegado && temLocEmpresa) {
-      distanciaM = Math.round(haversine(empLat, empLng, lat!, lng!));
+    // A medição acontece em qualquer tipo de batida; o bloqueio é que continua só na
+    // entrada, como antes — a saída nunca deve prender ninguém dentro do estabelecimento.
+    if (!gpsNegado && temLocEmpresa && lat != null && lng != null) {
+      distanciaM = Math.round(haversine(empLat, empLng, lat, lng));
       if (distanciaM > raioGps)     gpsForaRaio = true;
       if (distanciaM > raioGps * 3) gpsPrecisaoSuspeita = true;
     }
@@ -1526,6 +1532,8 @@ export const confirmarPonto = async (req: Request, res: Response) => {
           gpsPrecisao: accuracy ?? null,
           gpsPrecisaoSuspeita,
           gpsNegado,
+          distanciaM,
+          foraDoRaio: gpsForaRaio,
           faceScore: typeof faceScore === 'number' && isFinite(faceScore) ? faceScore : null,
           ip: req.ip || null,
         },

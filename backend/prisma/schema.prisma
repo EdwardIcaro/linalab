@@ -1012,6 +1012,12 @@ model DpMarcacao {
   gpsPrecisao         Float?
   gpsPrecisaoSuspeita Boolean       @default(false)
   gpsNegado           Boolean       @default(false)
+  // Distância até a empresa no momento da batida, e se passou do raio permitido.
+  // Gravadas SEMPRE que houver coordenada e endereço da empresa, inclusive nos níveis
+  // que não bloqueiam: sem isso, uma batida feita longe não deixava rastro nenhum —
+  // o cálculo existia, era usado para decidir o bloqueio e depois jogado fora.
+  distanciaM          Int?
+  foraDoRaio          Boolean       @default(false)
   faceScore           Float?        // confiança da verificação facial (null = não usou facial)
   ip                  String?
   ajustado            Boolean       @default(false)

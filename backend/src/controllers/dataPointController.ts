@@ -469,6 +469,8 @@ export async function buildDpDashboardData(empresaId: string) {
           horaFormatada: formatHoraBRT(m.timestamp),
           gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
           gpsNegado: m.gpsNegado,
+          distanciaM: m.distanciaM,
+          foraDoRaio: m.foraDoRaio,
           canal: m.canal,
         })),
       };
@@ -498,6 +500,19 @@ export async function buildDpDashboardData(empresaId: string) {
           funcionarioNome: f.nome,
           descricao: `GPS com precisão suspeita às ${suspeita.horaFormatada}. Ponto salvo com flag.`,
           horaFormatada: suspeita.horaFormatada,
+        });
+      }
+      // Fora do raio aparece em qualquer nível de GPS. Nos níveis que bloqueiam, a
+      // batida distante nem chega a existir; nos que não bloqueiam, é justamente aqui
+      // que o gestor fica sabendo.
+      const distante = f.marcacoesHoje.find((m: any) => m.foraDoRaio);
+      if (distante) {
+        alertas.push({
+          tipo: 'GPS_FORA_RAIO',
+          funcionarioId: f.id,
+          funcionarioNome: f.nome,
+          descricao: `Bateu ponto a ${distante.distanciaM}m da empresa às ${distante.horaFormatada}.`,
+          horaFormatada: distante.horaFormatada,
         });
       }
       if (f.minutosExtra > 0) {
@@ -1187,7 +1202,7 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
         select: {
           id: true, tipo: true, timestamp: true, canal: true,
           ajustado: true, gpsPrecisaoSuspeita: true, faceScore: true,
-          excluidaEm: true, excluidaPor: true,
+          excluidaEm: true, excluidaPor: true, distanciaM: true, foraDoRaio: true,
         },
         orderBy: { timestamp: 'asc' },
       }),
@@ -1220,6 +1235,8 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
         canal: m.canal,
         ajustado: m.ajustado,
         gpsPrecisaoSuspeita: m.gpsPrecisaoSuspeita,
+        distanciaM: m.distanciaM,
+        foraDoRaio: m.foraDoRaio,
         faceScore: m.faceScore,
         faceEsperado: !!rostoDesde && m.canal !== 'MANUAL' && m.timestamp >= rostoDesde,
         excluida: !!m.excluidaEm,

@@ -1058,15 +1058,20 @@ function renderAlertas(alertas) {
 
   list.innerHTML = '';
   alertas.forEach(a => {
-    const isGps = a.tipo === 'GPS_SUSPEITO';
+    // três tipos hoje: GPS suspeito, batida longe da empresa e hora extra
+    const estilo = {
+      GPS_SUSPEITO:  { cls: 'al-red',   ico: 'fa-map-marker-alt', titulo: 'GPS suspeito' },
+      GPS_FORA_RAIO: { cls: 'al-red',   ico: 'fa-location-crosshairs', titulo: 'Ponto batido longe' },
+      HORA_EXTRA:    { cls: 'al-amber', ico: 'fa-clock', titulo: 'Hora extra' },
+    }[a.tipo] || { cls: 'al-amber', ico: 'fa-circle-info', titulo: a.tipo };
     const div = document.createElement('div');
     div.className = 'alert-item';
     div.innerHTML = `
-      <div class="al-icon ${isGps ? 'al-red' : 'al-amber'}">
-        <i class="fa ${isGps ? 'fa-map-marker-alt' : 'fa-clock'}"></i>
+      <div class="al-icon ${estilo.cls}">
+        <i class="fa ${estilo.ico}"></i>
       </div>
       <div>
-        <div class="al-title">${isGps ? 'GPS suspeito' : 'Hora extra'} — ${a.funcionarioNome}</div>
+        <div class="al-title">${estilo.titulo} — ${a.funcionarioNome}</div>
         <div class="al-desc">${a.descricao}</div>
         ${a.horaFormatada ? `<div class="al-time"><i class="fa fa-clock"></i> ${a.horaFormatada}</div>` : ''}
       </div>`;
