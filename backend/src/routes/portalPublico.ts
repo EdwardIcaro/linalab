@@ -24,7 +24,9 @@ import {
   confirmarFace,
   getFaceDoPonto,
 } from '../controllers/portalPublicoController';
-import { validarTotem, reconhecerTotem, confirmarTotem } from '../controllers/dpTotemPublicoController';
+import {
+  validarTotem, reconhecerTotem, confirmarTotem, espelhoTotem, assinarEspelhoTotem,
+} from '../controllers/dpTotemPublicoController';
 
 const router: Router = Router();
 
@@ -55,6 +57,8 @@ router.post('/face/confirmar', confirmarFace);
 router.get('/totem/validar',    validarTotem);
 router.post('/totem/reconhecer', reconhecerTotem);
 router.post('/totem/confirmar',  confirmarTotem);
+router.get('/totem/espelho',     espelhoTotem);
+router.post('/totem/espelho/assinar', assinarEspelhoTotem);
 
 // Públicas (sem autenticação)
 router.get('/:token',               resolverTokenPublico);

@@ -7,6 +7,13 @@ import { distanciaEuclidiana, embeddingValido } from '../utils/faceMatch';
 import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { horaFormatadaBRT } from './portalPublicoController';
+import { getTodayStrBRT } from '../utils/dateUtils';
+import { resolverCargaHorariaDia, cargaDaJornada } from '../utils/dpPontoUtils';
+import { montarEspelhoMes, diasQuePedemAtencao } from '../services/dpEspelhoService';
+import {
+  montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
+  competenciaAnterior, nomeDaCompetencia,
+} from '../services/dpAssinaturaService';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
 
@@ -16,6 +23,53 @@ const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
 // parecidos. Números de partida — calibrar depois de uso real.
 const MATCH_THRESHOLD = 0.5;
 const MATCH_GAP_MINIMO = 0.05;
+
+/**
+ * Contexto de cálculo do funcionário: a config da empresa e a carga que vale pra ele.
+ * Vive aqui porque três handlers do totem precisam do mesmo par.
+ */
+async function contextoDoFuncionario(empresaId: string, funcionarioId: string) {
+  const [sistema, func] = await Promise.all([
+    prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true }, select: { config: true } }),
+    prisma.dpFuncionario.findUnique({
+      where: { id: funcionarioId },
+      select: { id: true, nome: true, cargaHorariaDia: true, cargoRef: { select: { cargaHorariaDia: true } } },
+    }),
+  ]);
+  if (!sistema || !func) return null;
+  const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+  const cargaEsperadaMin = resolverCargaHorariaDia(
+    func.cargaHorariaDia,
+    func.cargoRef?.cargaHorariaDia,
+    cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin),
+  ) * 60;
+  return { cfg, func, cargaEsperadaMin };
+}
+
+/**
+ * Há espelho esperando ciência? Devolve a competência e por quê (nunca assinada, ou
+ * assinada e alterada depois). Mês sem nenhuma batida não conta: não há o que conferir.
+ */
+async function espelhoPendente(empresaId: string, funcionarioId: string) {
+  const ctx = await contextoDoFuncionario(empresaId, funcionarioId);
+  if (!ctx) return null;
+
+  const competencia = competenciaAnterior(getTodayStrBRT());
+  const snapshot = await montarSnapshot(empresaId, { id: funcionarioId, cargaEsperadaMin: ctx.cargaEsperadaMin }, competencia, ctx.cfg);
+  if (snapshot.marcacoes.length === 0) return null;
+
+  const hash = hashDoSnapshot(snapshot);
+  const estado = await estadoDaAssinatura(funcionarioId, competencia, hash);
+  if (estado?.atual) return null;
+
+  return {
+    competencia,
+    mes: nomeDaCompetencia(competencia),
+    motivo: estado ? 'ALTERADO' : 'PENDENTE',
+    assinadoAntesEm: estado?.assinadoEm ?? null,
+    ctx,
+  };
+}
 
 // GET /api/p/totem/validar?t=TOKEN
 export const validarTotem = async (req: Request, res: Response) => {
@@ -158,13 +212,123 @@ export const confirmarTotem = async (req: Request, res: Response) => {
     // Confirmação no WhatsApp do funcionário (fire-and-forget)
     notificarPontoRegistrado(funcionario.id, tipo, horaFormatada).catch(() => {});
 
-    res.json({ ok: true, tipo, horaFormatada });
+    // Depois de bater o ponto é o momento em que a pessoa está aqui, com tempo de olhar.
+    // Falha nessa consulta não pode atrapalhar o registro que já aconteceu.
+    let espelho: any = null;
+    try {
+      const pendente = await espelhoPendente(empresaId, funcionario.id);
+      if (pendente) {
+        espelho = {
+          competencia: pendente.competencia,
+          mes: pendente.mes,
+          motivo: pendente.motivo,
+          // vale 5 min: tempo de conferir os dias sem deixar a sessão aberta no tablet
+          token: jwt.sign(
+            { tipo: 'totem_espelho', funcionarioId: funcionario.id, empresaId, competencia: pendente.competencia, score },
+            JWT_SECRET,
+            { expiresIn: '5m' },
+          ),
+        };
+      }
+    } catch (e) {
+      console.error('[totem] espelho pendente:', e);
+    }
+
+    res.json({ ok: true, tipo, horaFormatada, espelho });
   } catch (error: any) {
     // P2002 = índice único por minuto: duplo toque no totem, dois requests em paralelo
     if (error?.code === 'P2002') {
       return res.status(429).json({ erro: 'Seu ponto já foi registrado agora há pouco.' });
     }
     console.error('[totem] confirmar:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+/** Valida o token curto emitido depois do reconhecimento facial. */
+function lerTokenEspelho(t?: string) {
+  if (!t) return null;
+  try {
+    const payload: any = jwt.verify(t, JWT_SECRET);
+    if (payload.tipo !== 'totem_espelho') return null;
+    return payload as { funcionarioId: string; empresaId: string; competencia: string; score: number };
+  } catch {
+    return null;
+  }
+}
+
+// GET /api/p/totem/espelho?t=TOKEN — o que a pessoa precisa conferir antes de assinar
+export const espelhoTotem = async (req: Request, res: Response) => {
+  const payload = lerTokenEspelho(req.query.t as string | undefined);
+  if (!payload) return res.status(401).json({ erro: 'Sessão expirada. Escaneie novamente.' });
+
+  try {
+    const ctx = await contextoDoFuncionario(payload.empresaId, payload.funcionarioId);
+    if (!ctx) return res.status(404).json({ erro: 'Funcionário não encontrado' });
+
+    const [ano, mes] = payload.competencia.split('-').map(Number);
+    const espelho = await montarEspelhoMes({
+      empresaId: payload.empresaId,
+      funcionarioId: payload.funcionarioId,
+      cargaEsperadaMin: ctx.cargaEsperadaMin,
+      ano, mes, cfg: ctx.cfg,
+    });
+
+    // Numa tela de totem, com gente esperando, a lista inteira do mês não ajuda: o que
+    // precisa de conferência são os dias fora do normal.
+    const atencao = diasQuePedemAtencao(espelho);
+
+    res.json({
+      nome: ctx.func.nome,
+      competencia: payload.competencia,
+      mes: nomeDaCompetencia(payload.competencia),
+      resumo: espelho.resumo,
+      cargaEsperadaMin: espelho.cargaEsperadaMin,
+      diasAtencao: atencao.slice(0, 12),
+      totalAtencao: atencao.length,
+    });
+  } catch (error) {
+    console.error('[totem] espelho:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// POST /api/p/totem/espelho/assinar — { t }
+export const assinarEspelhoTotem = async (req: Request, res: Response) => {
+  const payload = lerTokenEspelho(req.body?.t as string | undefined);
+  if (!payload) return res.status(401).json({ erro: 'Sessão expirada. Escaneie novamente.' });
+
+  try {
+    const ctx = await contextoDoFuncionario(payload.empresaId, payload.funcionarioId);
+    if (!ctx) return res.status(404).json({ erro: 'Funcionário não encontrado' });
+
+    const snapshot = await montarSnapshot(
+      payload.empresaId,
+      { id: payload.funcionarioId, cargaEsperadaMin: ctx.cargaEsperadaMin },
+      payload.competencia,
+      ctx.cfg,
+    );
+    const hashConteudo = hashDoSnapshot(snapshot);
+
+    const jaAssinado = await estadoDaAssinatura(payload.funcionarioId, payload.competencia, hashConteudo);
+    if (jaAssinado?.atual) return res.json({ ok: true, jaAssinado: true });
+
+    await prisma.dpEspelhoAssinatura.create({
+      data: {
+        empresaId: payload.empresaId,
+        funcionarioId: payload.funcionarioId,
+        competencia: payload.competencia,
+        hashConteudo,
+        conteudo: JSON.stringify(snapshot),
+        origem: 'TOTEM',
+        faceScore: payload.score ?? null,
+        ip: req.ip || null,
+      },
+    });
+
+    res.json({ ok: true, mes: nomeDaCompetencia(payload.competencia) });
+  } catch (error) {
+    console.error('[totem] assinarEspelho:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };

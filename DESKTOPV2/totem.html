@@ -98,6 +98,32 @@ body{
   display:flex;align-items:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;
 }
 .pwa-balao.hidden{display:none}
+
+/* Conferência do espelho — some sozinha se ninguém tocar */
+.esp-sheet{
+  position:fixed;inset:0;z-index:9;background:rgba(6,10,20,.96);
+  display:flex;flex-direction:column;padding:22px 20px max(20px,env(safe-area-inset-bottom));
+  overflow-y:auto;
+}
+.esp-tit{font-size:20px;font-weight:800;margin-bottom:3px}
+.esp-sub{font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.esp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.esp-card{background:rgba(255,255,255,.07);border-radius:12px;padding:11px 8px;text-align:center}
+.esp-card-val{font-size:17px;font-weight:800}
+.esp-card-lab{font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+.esp-lista-tit{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.esp-dia{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px}
+.esp-dia-data{font-weight:800;min-width:46px}
+.esp-dia-info{flex:1;color:#cbd5e1;font-size:12px;line-height:1.4}
+.esp-dia-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
+.tg-falta{background:rgba(220,38,38,.22);color:#fca5a5}
+.tg-parcial{background:rgba(217,119,6,.22);color:#fcd34d}
+.tg-aberto{background:rgba(124,58,237,.25);color:#c4b5fd}
+.tg-auto{background:rgba(180,83,9,.25);color:#fcd34d}
+.esp-mais{font-size:12px;color:var(--muted);padding:10px 0;text-align:center}
+.esp-acoes{display:flex;gap:10px;margin-top:18px;position:sticky;bottom:0;padding-top:10px;
+  background:linear-gradient(180deg,transparent,rgba(6,10,20,.96) 35%)}
+.esp-erro{font-size:12.5px;color:#fca5a5;text-align:center;padding:8px 0}
 </style>
 </head>
 <body>
@@ -145,6 +171,19 @@ body{
       <button class="btn btn-sim" id="btnSim" onclick="confirmarMatch()"><i class="fa-solid fa-check"></i> Sou eu</button>
     </div>
     <div class="timeout-bar"><div class="timeout-fill" id="timeoutFill"></div></div>
+  </div>
+
+  <div class="esp-sheet" id="espSheet" style="display:none">
+    <div class="esp-tit" id="espTit">Seu espelho de ponto</div>
+    <div class="esp-sub" id="espSub"></div>
+    <div class="esp-cards" id="espCards"></div>
+    <div id="espLista"></div>
+    <div class="esp-acoes">
+      <button class="btn btn-nao" onclick="fecharEspelho()">Depois</button>
+      <button class="btn btn-sim" id="btnAssinar" onclick="assinarNoTotem()">
+        <i class="fa-solid fa-pen-nib"></i> Conferi, assinar
+      </button>
+    </div>
   </div>
 
   <div class="sucesso-flash" id="sucessoFlash" style="display:none">
@@ -376,6 +415,13 @@ async function confirmarMatch() {
     document.getElementById('sucessoFlash').style.display = 'flex';
     await esperar(1800);
     document.getElementById('sucessoFlash').style.display = 'none';
+
+    // Ponto batido; se houver mês esperando ciência, é agora que a pessoa está aqui
+    if (json.espelho) {
+      await abrirEspelho(json.espelho);
+      return; // a câmera volta a escanear quando essa tela fechar
+    }
+
     mostrarOval('scan');
     pausado = false;
   } catch {
@@ -383,6 +429,108 @@ async function confirmarMatch() {
     fecharSheet();
     mostrarOval('scan');
     pausado = false;
+  }
+}
+
+// ── Conferência e assinatura do espelho ─────────────────────────────────────
+let espelhoToken = null;
+let timeoutEspelho = null;
+
+const fmtMin = m => {
+  const h = Math.floor((m || 0) / 60), mm = (m || 0) % 60;
+  return mm === 0 ? `${h}h` : `${h}h${String(mm).padStart(2, '0')}`;
+};
+
+const TAGS = {
+  FALTA:        { cls: 'tg-falta',   txt: 'sem registro' },
+  FALTA_PARCIAL:{ cls: 'tg-parcial', txt: 'abaixo da jornada' },
+  INCOMPLETO:   { cls: 'tg-aberto',  txt: 'saída não batida' },
+};
+
+async function abrirEspelho(info) {
+  espelhoToken = info.token;
+  try {
+    const r = await fetch(`${API}/p/totem/espelho?t=${encodeURIComponent(espelhoToken)}`);
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+
+    const primeiro = (d.nome || '').trim().split(/\s+/)[0];
+    document.getElementById('espTit').textContent =
+      `${primeiro}, confira seu ponto de ${d.mes}`;
+    document.getElementById('espSub').textContent = info.motivo === 'ALTERADO'
+      ? 'Um registro deste mês mudou depois que você assinou. Confira e assine de novo.'
+      : 'Veja se está tudo certo. Se algo estiver errado, fale com o gestor antes de assinar.';
+
+    document.getElementById('espCards').innerHTML = `
+      <div class="esp-card"><div class="esp-card-val">${fmtMin(d.resumo.totalMinutos)}</div><div class="esp-card-lab">trabalhadas</div></div>
+      <div class="esp-card"><div class="esp-card-val">${d.resumo.totalPresente}</div><div class="esp-card-lab">dias ok</div></div>
+      <div class="esp-card"><div class="esp-card-val">${d.resumo.totalFalta + d.resumo.pendencias}</div><div class="esp-card-lab">a conferir</div></div>`;
+
+    const linhas = (d.diasAtencao || []).map(dia => {
+      const tag = TAGS[dia.status];
+      const dd = dia.dia.slice(8) + '/' + dia.dia.slice(5, 7);
+      const partes = [];
+      if (dia.horaEntrada) partes.push(`${dia.horaEntrada}${dia.horaSaida ? ' → ' + dia.horaSaida : ''}`);
+      if (dia.minutosTrabalhou > 0) partes.push(fmtMin(dia.minutosTrabalhou));
+      if (dia.intervaloPresumido > 0) partes.push(`almoço descontado ${fmtMin(dia.intervaloPresumido)}`);
+      return `<div class="esp-dia">
+        <span class="esp-dia-data">${dd}</span>
+        <span class="esp-dia-info">${partes.join(' · ') || '—'}</span>
+        ${tag ? `<span class="esp-dia-tag ${tag.cls}">${tag.txt}</span>` : ''}
+        ${dia.automatica ? '<span class="esp-dia-tag tg-auto">lançado pelo sistema</span>' : ''}
+      </div>`;
+    }).join('');
+
+    const sobra = (d.totalAtencao || 0) - (d.diasAtencao || []).length;
+    document.getElementById('espLista').innerHTML = linhas
+      ? `<div class="esp-lista-tit">Dias que pedem atenção</div>${linhas}` +
+        (sobra > 0 ? `<div class="esp-mais">e mais ${sobra} dia(s) — veja o mês inteiro no seu portal</div>` : '')
+      : '<div class="esp-mais">Nenhum dia fora do normal neste mês.</div>';
+
+    document.getElementById('espSheet').style.display = 'flex';
+    // Ninguém fica com a tela de outro aberta: 90s sem toque e o totem volta a escanear
+    clearTimeout(timeoutEspelho);
+    timeoutEspelho = setTimeout(fecharEspelho, 90000);
+  } catch {
+    fecharEspelho();
+  }
+}
+
+function fecharEspelho() {
+  clearTimeout(timeoutEspelho);
+  document.getElementById('espSheet').style.display = 'none';
+  espelhoToken = null;
+  mostrarOval('scan');
+  mostrarHint(null);
+  pausado = false;
+}
+
+async function assinarNoTotem() {
+  if (!espelhoToken) return;
+  const btn = document.getElementById('btnAssinar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Assinando...';
+  try {
+    const r = await fetch(`${API}/p/totem/espelho/assinar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: espelhoToken }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.erro || 'Não foi possível assinar');
+
+    document.getElementById('espSheet').style.display = 'none';
+    document.getElementById('sucessoTipo').textContent = 'Espelho assinado';
+    document.getElementById('sucessoHora').textContent = d.mes || '';
+    document.getElementById('sucessoFlash').style.display = 'flex';
+    await esperar(1900);
+    document.getElementById('sucessoFlash').style.display = 'none';
+    fecharEspelho();
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-pen-nib"></i> Conferi, assinar';
+    const alvo = document.getElementById('espLista');
+    alvo.insertAdjacentHTML('afterend', `<div class="esp-erro">${e.message}</div>`);
   }
 }
 </script>

@@ -49,6 +49,7 @@ import { subscriptionService } from './services/subscriptionService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
 import { rodarPontoPendente } from './services/dpEncerramentoService';
+import { rodarLembretesAssinatura } from './services/dpLembreteAssinaturaService';
 import { iniciarEmailAutomacaoPoller } from './services/emailAutomacaoPoller';
 
 // Importar middleware
@@ -278,6 +279,13 @@ cron.schedule('0 */2 * * *', () => {
 // 6h-22h evita acordar o banco de madrugada à toa.
 cron.schedule('*/30 6-22 * * *', () => {
   rodarPontoPendente().catch(e => console.error('[dp-ponto] cron:', e));
+}, { timezone: "America/Sao_Paulo" });
+
+// Data Point: lembra o funcionário de conferir e assinar o espelho do mês anterior.
+// 10h da manhã: cedo o bastante pra ver no começo do expediente, tarde o bastante
+// pra não chegar junto com o despertador.
+cron.schedule('0 10 * * *', () => {
+  rodarLembretesAssinatura().catch(e => console.error('[dp-assinatura] cron:', e));
 }, { timezone: "America/Sao_Paulo" });
 
 // Data Point: fecha o ciclo de 30 dias do banco de horas de quem venceu hoje (1x ao dia às 02:00)

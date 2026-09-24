@@ -133,3 +133,17 @@ export async function estadoDaAssinatura(
   const atual = ultima.hashConteudo === hashAtual;
   return { assinadoEm: ultima.assinadoEm, atual, alteradoDepois: !atual };
 }
+
+/** Competência fechada mais recente. É a única que faz sentido cobrar assinatura. */
+export function competenciaAnterior(hojeStr: string): string {
+  const [ano, mes] = hojeStr.split('-').map(Number);
+  const d = new Date(Date.UTC(ano, mes - 2, 1)); // mês anterior
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** "2026-08" → "agosto". */
+export function nomeDaCompetencia(competencia: string): string {
+  const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  return meses[Number(competencia.slice(5)) - 1] ?? competencia;
+}

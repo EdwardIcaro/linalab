@@ -230,3 +230,10 @@ export function ajustarIntervaloPresumido(
   const minutos = Math.max(cargaMin, minutosTrabalhados - intervaloMin);
   return { minutos, intervaloPresumido: minutosTrabalhados - minutos };
 }
+
+/** Hora local de Brasília, no formato que aparece na tela: "08:04". */
+export function horaFormatadaBRT(d: Date): string {
+  return new Date(d).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+  });
+}

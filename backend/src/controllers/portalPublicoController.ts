@@ -8,7 +8,8 @@ import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/date
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado,
          calcMinutosTrabalhados, temTurnoAberto, resolverCargaHorariaDia,
-         cargaDaJornada, ajustarIntervaloPresumido } from '../utils/dpPontoUtils';
+         cargaDaJornada, ajustarIntervaloPresumido, horaFormatadaBRT } from '../utils/dpPontoUtils';
+import { montarEspelhoMes } from '../services/dpEspelhoService';
 import {
   montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
   competenciaValida, competenciaEncerrada,
@@ -878,11 +879,8 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function horaFormatadaBRT(d: Date): string {
-  return new Date(d).toLocaleTimeString('pt-BR', {
-    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
-  });
-}
+// Reexportado porque o totem importa daqui desde antes de a função virar util
+export { horaFormatadaBRT };
 
 // ─── GET /api/p/me/ponto/hoje ─────────────────────────────────────────────────
 export const getPontoHoje = async (req: Request, res: Response) => {
@@ -1179,134 +1177,27 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
     if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
     if (!sistema)     return res.status(404).json({ erro: 'Data Point não ativo' });
 
+    // tolerância e dias de funcionamento agora são lidos dentro do service
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
-    const toleranciaMin: number = cfg.toleranciaMin ?? 10;
-    const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
     const cargaEsperadaMin = resolverCargaHorariaDia(
       funcionario.cargaHorariaDia,
       funcionario.cargoRef?.cargaHorariaDia,
       cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin),
     ) * 60;
 
-    // Dias do mês
-    const diasNoMes = new Date(ano, m, 0).getDate();
-    const diasDoMes: string[] = [];
-    for (let d = 1; d <= diasNoMes; d++) {
-      diasDoMes.push(`${ano}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
-    }
-
-    // Busca marcações do mês inteiro de uma vez
-    const { start: mesStart } = getDateRangeBRT(diasDoMes[0]);
-    const { end: mesEnd }     = getDateRangeBRT(diasDoMes[diasDoMes.length - 1]);
-
-    const todasMarcacoes = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: mesStart, lte: mesEnd }, excluidaEm: null },
-      select: { tipo: true, timestamp: true },
-      orderBy: { timestamp: 'asc' },
+    const espelho = await montarEspelhoMes({
+      empresaId,
+      funcionarioId: funcionario.id,
+      cargaEsperadaMin,
+      ano,
+      mes: m,
+      cfg,
     });
-
-    const [feriados, afastamentos] = await Promise.all([
-      prisma.dpFeriado.findMany({
-        where: { empresaId },
-        select: { data: true, nome: true, recorrente: true },
-      }),
-      prisma.dpAfastamento.findMany({
-        where: { funcionarioId: funcionario.id },
-        select: { funcionarioId: true, tipo: true, dataInicio: true, dataFim: true },
-      }),
-    ]);
-
-    const hoje = getTodayStrBRT();
-    const now  = new Date();
-
-    let totalMinutos = 0;
-    let totalPresente = 0;
-    let totalFalta = 0;
-    let pendencias = 0; // incompletas + parciais
-
-    const dias = diasDoMes.map(dia => {
-      const diaSemana  = new Date(dia + 'T12:00:00').getDay(); // 0=dom
-      const diaFechado = isDiaFechado(diaSemana, diasFuncionamento);
-      const isHoje     = dia === hoje;
-      const isFuturo   = dia > hoje;
-
-      const { start, end } = getDateRangeBRT(dia);
-      const marcacoesDia   = todasMarcacoes.filter(
-        mc => mc.timestamp >= start && mc.timestamp <= end,
-      );
-
-      if (isFuturo) {
-        return { dia, diaSemana, status: 'FUTURO', minutosTrabalhou: 0, marcacoes: [] };
-      }
-
-      if (diaFechado && marcacoesDia.length === 0) {
-        return { dia, diaSemana, status: 'FOLGA', minutosTrabalhou: 0, marcacoes: [] };
-      }
-
-      if (marcacoesDia.length === 0) {
-        const nomeFeriado = resolveFeriadoDia(dia, feriados);
-        if (nomeFeriado) {
-          return { dia, diaSemana, status: 'FERIADO', minutosTrabalhou: 0, marcacoes: [], label: nomeFeriado };
-        }
-        const tipoAfastamento = resolveAfastamentoDia(funcionario.id, dia, afastamentos);
-        if (tipoAfastamento) {
-          return { dia, diaSemana, status: 'AFASTAMENTO', minutosTrabalhou: 0, marcacoes: [], label: tipoAfastamento };
-        }
-      }
-
-      // Dia fechado com turno aberto não conta o trecho aberto — ver dpPontoUtils
-      const fimCalculo       = isHoje ? now : null;
-      const marcacoesSimples = marcacoesDia.map(mc => ({ tipo: mc.tipo, timestamp: mc.timestamp }));
-      const { minutos: minutosTrabalhou, intervaloPresumido } = ajustarIntervaloPresumido(
-        marcacoesSimples,
-        calcMinutosTrabalhados(marcacoesSimples, fimCalculo),
-        cargaEsperadaMin,
-        cfg.intervaloMin,
-      );
-
-      const incompleto = temTurnoAberto(marcacoesSimples) && !isHoje;
-
-      const horaEntrada = marcacoesDia.find(mc => mc.tipo === 'ENTRADA');
-      const ultimaSaida = [...marcacoesDia].reverse().find(mc => mc.tipo === 'SAIDA');
-
-      let status: string;
-      if (marcacoesDia.length === 0) {
-        status = 'FALTA';
-        totalFalta++;
-      } else if (isHoje) {
-        status = 'HOJE';
-        totalMinutos += minutosTrabalhou;
-      } else if (incompleto) {
-        status = 'INCOMPLETO';
-        pendencias++;
-        totalMinutos += minutosTrabalhou;
-      } else if (minutosTrabalhou >= cargaEsperadaMin - toleranciaMin) {
-        status = 'PRESENTE';
-        totalPresente++;
-        totalMinutos += minutosTrabalhou;
-      } else {
-        status = 'FALTA_PARCIAL';
-        pendencias++;
-        totalMinutos += minutosTrabalhou;
-      }
-
-      return {
-        dia,
-        diaSemana,
-        status,
-        minutosTrabalhou,
-        intervaloPresumido,
-        marcacoes: marcacoesDia.map(mc => ({
-          tipo: mc.tipo,
-          hora: horaFormatadaBRT(mc.timestamp),
-        })),
-        horaEntrada: horaEntrada ? horaFormatadaBRT(horaEntrada.timestamp) : null,
-        horaSaida:   ultimaSaida ? horaFormatadaBRT(ultimaSaida.timestamp) : null,
-      };
-    });
+    const { dias, resumo } = espelho;
 
     // Estado da ciência deste mês: nunca assinado, assinado e válido, ou assinado e
     // desatualizado porque alguém mexeu no ponto depois.
+    const hoje = getTodayStrBRT();
     const competencia = `${ano}-${String(m).padStart(2, '0')}`;
     const snapshot = await montarSnapshot(empresaId, { id: funcionario.id, cargaEsperadaMin }, competencia, cfg);
     const assinatura = await estadoDaAssinatura(funcionario.id, competencia, hashDoSnapshot(snapshot));
@@ -1314,7 +1205,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
     res.json({
       mes: { ano, mes: m },
       funcionario: { nome: funcionario.nome, cargo: funcionario.cargo, cargaEsperadaMin },
-      resumo: { totalMinutos, totalPresente, totalFalta, pendencias },
+      resumo,
       dias,
       competencia,
       podeAssinar: competenciaEncerrada(competencia, hoje),
