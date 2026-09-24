@@ -995,6 +995,7 @@ model DpFuncionario {
   afastamentos      DpAfastamento[]
   cargoRef          DpCargo?       @relation(fields: [cargoId], references: [id], onDelete: SetNull)
   fechamentosBanco  DpFechamentoBanco[]
+  assinaturas       DpEspelhoAssinatura[]
 
   @@map("dp_funcionarios")
 }
@@ -1056,6 +1057,28 @@ model DpMarcacaoLog {
   @@index([marcacaoId])
   @@index([empresaId, createdAt])
   @@map("dp_marcacoes_log")
+}
+
+// Ciência do funcionário sobre o espelho de um mês.
+//
+// Guarda o snapshot do que foi assinado e o hash dele: se qualquer batida daquele mês
+// mudar depois, o hash do espelho atual deixa de bater com o assinado e o sistema pede
+// nova assinatura. Sem unique por competência de propósito — cada assinatura é um
+// evento, e a sequência delas é a prova de que houve mudança e nova ciência.
+model DpEspelhoAssinatura {
+  id            String        @id @default(cuid())
+  empresaId     String
+  funcionarioId String
+  competencia   String        // "2026-09"
+  hashConteudo  String        // SHA-256 do snapshot canônico
+  conteudo      String        // o snapshot inteiro, como estava na hora da assinatura
+  assinadoEm    DateTime      @default(now())
+  ip            String?
+  userAgent     String?
+  funcionario   DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@index([funcionarioId, competencia])
+  @@map("dp_espelho_assinaturas")
 }
 
 model DpTotem {

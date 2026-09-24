@@ -9,6 +9,10 @@ import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado,
          calcMinutosTrabalhados, temTurnoAberto, resolverCargaHorariaDia,
          cargaDaJornada, ajustarIntervaloPresumido } from '../utils/dpPontoUtils';
+import {
+  montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
+  competenciaValida, competenciaEncerrada,
+} from '../services/dpAssinaturaService';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { embeddingValido } from '../utils/faceMatch';
 
@@ -989,6 +993,69 @@ export const gerarFaceTokenPortal = async (req: Request, res: Response) => {
   }
 };
 
+// ─── POST /api/p/me/ponto/espelho/assinar ────────────────────────────────────
+// Ciência do funcionário sobre o mês. Guarda o snapshot inteiro e o hash dele: é o que
+// permite provar depois *o que* foi assinado, e detectar alteração posterior.
+export const assinarEspelhoPortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
+  const empresaId = (req as any).empresaId as string;
+  const { competencia } = req.body as { competencia?: string };
+
+  if (!competencia || !competenciaValida(competencia)) {
+    return res.status(400).json({ erro: 'Competência inválida. Use AAAA-MM.' });
+  }
+
+  try {
+    const [funcionario, sistema] = await Promise.all([
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true } }),
+    ]);
+    if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
+    if (!sistema)     return res.status(404).json({ erro: 'Data Point não ativo' });
+
+    // Mês em curso ainda vai receber batidas: assinar agora seria dar ciência de um
+    // documento que muda amanhã.
+    if (!competenciaEncerrada(competencia, getTodayStrBRT())) {
+      return res.status(400).json({ erro: 'Este mês ainda não terminou. O espelho poderá ser assinado a partir do primeiro dia do mês seguinte.' });
+    }
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    const cargaEsperadaMin = resolverCargaHorariaDia(
+      funcionario.cargaHorariaDia,
+      funcionario.cargoRef?.cargaHorariaDia,
+      cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin),
+    ) * 60;
+
+    const snapshot = await montarSnapshot(empresaId, { id: funcionario.id, cargaEsperadaMin }, competencia, cfg);
+    const hashConteudo = hashDoSnapshot(snapshot);
+
+    // Assinar de novo o mesmo conteúdo não acrescenta nada — e evita fila de cliques
+    const jaAssinado = await estadoDaAssinatura(funcionario.id, competencia, hashConteudo);
+    if (jaAssinado?.atual) {
+      return res.json({ ok: true, jaAssinado: true, assinadoEm: jaAssinado.assinadoEm });
+    }
+
+    const assinatura = await prisma.dpEspelhoAssinatura.create({
+      data: {
+        empresaId,
+        funcionarioId: funcionario.id,
+        competencia,
+        hashConteudo,
+        conteudo: JSON.stringify(snapshot),
+        ip: req.ip || null,
+        userAgent: (req.headers['user-agent'] as string | undefined)?.slice(0, 255) || null,
+      },
+      select: { assinadoEm: true },
+    });
+
+    res.json({ ok: true, assinadoEm: assinatura.assinadoEm, reassinatura: !!jaAssinado });
+  } catch (error) {
+    console.error('[portal] assinarEspelho:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
 // ─── POST /api/p/me/ponto ─────────────────────────────────────────────────────
 export const registrarPonto = async (req: Request, res: Response) => {
   const lavadorId = (req as any).lavadorId as string | undefined;
@@ -1238,11 +1305,20 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
       };
     });
 
+    // Estado da ciência deste mês: nunca assinado, assinado e válido, ou assinado e
+    // desatualizado porque alguém mexeu no ponto depois.
+    const competencia = `${ano}-${String(m).padStart(2, '0')}`;
+    const snapshot = await montarSnapshot(empresaId, { id: funcionario.id, cargaEsperadaMin }, competencia, cfg);
+    const assinatura = await estadoDaAssinatura(funcionario.id, competencia, hashDoSnapshot(snapshot));
+
     res.json({
       mes: { ano, mes: m },
       funcionario: { nome: funcionario.nome, cargo: funcionario.cargo, cargaEsperadaMin },
       resumo: { totalMinutos, totalPresente, totalFalta, pendencias },
       dias,
+      competencia,
+      podeAssinar: competenciaEncerrada(competencia, hoje),
+      assinatura,
     });
   } catch (error) {
     console.error('[portal] espelhoPortal:', error);

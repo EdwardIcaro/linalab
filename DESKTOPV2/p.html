@@ -477,6 +477,13 @@
 
     /* Seção de assinatura */
     .ep-sig-section { padding:20px 16px 44px; display:flex; flex-direction:column; gap:10px; }
+    .ep-sig-feito { background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:14px; }
+    .ep-sig-feito-tit { font-size:14px; font-weight:800; color:#047857; display:flex; align-items:center; gap:7px; }
+    .ep-sig-feito-sub { font-size:12px; color:#059669; margin-top:5px; line-height:1.5; }
+    .ep-sig-alerta { background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:14px; }
+    .ep-sig-alerta-tit { font-size:14px; font-weight:800; color:#b45309; display:flex; align-items:center; gap:7px; }
+    .ep-sig-alerta-sub { font-size:12px; color:#92400e; margin-top:5px; line-height:1.5; }
+    .ep-sig-espera { font-size:12px; color:#94a3b8; text-align:center; line-height:1.5; padding:4px 0; }
     .ep-sig-disclaimer { font-size:12px; color:var(--muted); line-height:1.6; text-align:center; padding:0 4px; }
     .ep-sig-disclaimer strong { color:var(--text); }
     .ep-sig-btn {
@@ -897,15 +904,7 @@
     </div>
 
     <!-- Seção de assinatura -->
-    <div class="ep-sig-section" id="epSigSection" style="display:none">
-      <p class="ep-sig-disclaimer">
-        Ao assinar, você declara que concorda com os registros do período e está ciente do seu saldo de horas.
-        <strong>Esta ação não pode ser desfeita.</strong>
-      </p>
-      <button class="ep-sig-btn" onclick="assinarEspelho()">
-        <i class="fas fa-pen-nib"></i> Assinar Espelho de Ponto
-      </button>
-    </div>
+    <div class="ep-sig-section" id="epSigSection" style="display:none"></div>
 
   </div>
 </div>
@@ -2146,19 +2145,91 @@ function renderEspelho(data) {
 
   lista.innerHTML = html || '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-calendar"></i><span>Nenhum dado para este mês</span></div>';
 
-  // Seção de assinatura
-  const sigSection = document.getElementById('epSigSection');
-  if (sigSection) sigSection.style.display = data.dias.some(d => d.status !== 'FUTURO') ? 'flex' : 'none';
+  renderAssinatura(data);
 }
 
-function assinarEspelho() {
+// Quatro estados: mês ainda em curso, nunca assinado, assinado e válido, assinado mas
+// alterado depois. O último é o que justifica a existência do hash — sem ele, uma
+// correção feita após a assinatura passaria despercebida por quem assinou.
+function renderAssinatura(data) {
+  const sec = document.getElementById('epSigSection');
+  if (!sec) return;
+
+  if (!data.dias.some(d => d.status !== 'FUTURO')) { sec.style.display = 'none'; return; }
+  sec.style.display = 'flex';
+  espelhoCompetencia = data.competencia;
+
+  const a = data.assinatura;
+  const quando = a ? new Date(a.assinadoEm).toLocaleString('pt-BR',
+    { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+  if (a && a.atual) {
+    sec.innerHTML = `
+      <div class="ep-sig-feito">
+        <div class="ep-sig-feito-tit"><i class="fas fa-circle-check"></i> Espelho assinado</div>
+        <div class="ep-sig-feito-sub">
+          Você deu ciência deste mês em ${quando}.
+          Se algum registro for alterado depois disso, avisamos aqui para você conferir de novo.
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (a && !a.atual) {
+    sec.innerHTML = `
+      <div class="ep-sig-alerta">
+        <div class="ep-sig-alerta-tit"><i class="fas fa-triangle-exclamation"></i> O espelho mudou</div>
+        <div class="ep-sig-alerta-sub">
+          Você assinou este mês em ${quando}, mas algum registro foi alterado depois.
+          Confira os dias acima e assine de novo — a assinatura anterior fica guardada.
+        </div>
+      </div>
+      <button class="ep-sig-btn" onclick="assinarEspelho()">
+        <i class="fas fa-pen-nib"></i> Conferi, assinar de novo
+      </button>`;
+    return;
+  }
+
+  if (!data.podeAssinar) {
+    sec.innerHTML = `<div class="ep-sig-espera">
+      <i class="far fa-clock"></i> Este mês ainda está em andamento.
+      Você poderá assinar o espelho a partir do dia 1º do mês que vem.
+    </div>`;
+    return;
+  }
+
+  sec.innerHTML = `
+    <p class="ep-sig-disclaimer">
+      Ao assinar, você declara que conferiu os registros deste mês e concorda com eles.
+      A assinatura fica registrada com data e hora.
+    </p>
+    <button class="ep-sig-btn" onclick="assinarEspelho()">
+      <i class="fas fa-pen-nib"></i> Assinar Espelho de Ponto
+    </button>`;
+}
+
+let espelhoCompetencia = null;
+
+async function assinarEspelho() {
   const mes = `${MESES_PT[espelhoMes-1]} / ${espelhoAno}`;
   if (!confirm(`Confirma a assinatura do espelho de ${mes}?\n\nAo confirmar, você declara estar ciente dos registros do período.`)) return;
+
   const btn = document.querySelector('.ep-sig-btn');
-  if (btn) {
-    btn.innerHTML = '<i class="fas fa-check"></i> Espelho assinado';
-    btn.disabled = true;
-    btn.style.background = 'linear-gradient(135deg,#047857,#059669)';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assinando...'; }
+
+  try {
+    const r = await fetch(`${API}/p/me/ponto/espelho/assinar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionJwt}` },
+      body: JSON.stringify({ competencia: espelhoCompetencia }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.erro || 'Não foi possível assinar agora.');
+    // Recarrega em vez de só pintar o botão: o estado vem do servidor, não da tela
+    await carregarEspelho();
+  } catch (e) {
+    alert(e.message || 'Não foi possível assinar agora.');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-pen-nib"></i> Assinar Espelho de Ponto'; }
   }
 }
 
