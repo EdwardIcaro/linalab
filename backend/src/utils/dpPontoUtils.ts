@@ -17,15 +17,18 @@ const COOLDOWN_SEG = 90;
 // segundo toque virava ENTRADA logo depois da SAIDA e deixava o turno aberto, o que
 // inflava o dia inteiro no espelho. Por isso a comparação agora é com a própria última
 // marcação, qualquer que seja o tipo dela.
-export function determinarTipoEValidarCooldown(marcacoesHoje: DpMarcacaoMinima[]): {
+export function determinarTipoEValidarCooldown(
+  marcacoesRecentes: DpMarcacaoMinima[],
+  agora: Date = new Date(),
+): {
   tipo: 'ENTRADA' | 'SAIDA';
   cooldownErro: string | null;
 } {
-  const ultima = marcacoesHoje[marcacoesHoje.length - 1];
-  const tipo: 'ENTRADA' | 'SAIDA' = (!ultima || ultima.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA';
+  const ultima = marcacoesRecentes[marcacoesRecentes.length - 1];
+  const tipo = tipoDaBatida(ultima, agora);
 
   if (ultima) {
-    const diffSeg = (Date.now() - new Date(ultima.timestamp).getTime()) / 1000;
+    const diffSeg = (agora.getTime() - new Date(ultima.timestamp).getTime()) / 1000;
     if (diffSeg >= 0 && diffSeg < COOLDOWN_SEG) {
       return {
         tipo,
@@ -34,6 +37,94 @@ export function determinarTipoEValidarCooldown(marcacoesHoje: DpMarcacaoMinima[]
     }
   }
   return { tipo, cooldownErro: null };
+}
+
+/** Data no fuso de Brasília, no formato YYYY-MM-DD. */
+function diaBRT(d: Date): string {
+  return new Date(d.getTime() - 3 * 3600000).toISOString().slice(0, 10);
+}
+
+/** Hora cheia em Brasília (0-23). */
+function horaBRT(d: Date): number {
+  return new Date(d.getTime() - 3 * 3600000).getUTCHours();
+}
+
+// Limites da regra da virada. Estreitos de propósito: a madrugada é o único momento em
+// que "entrada de ontem ainda aberta" significa turno em curso, e não esquecimento.
+const VIRADA_ATE_HORA = 6;      // batidas antes das 06h podem fechar o turno da véspera
+const VIRADA_MAX_HORAS = 12;    // e só se a entrada tiver menos que isso
+
+/**
+ * Entrada ou saída? Dentro do mesmo dia é simples: alterna. A dúvida real é na virada da
+ * meia-noite, quando a última marcação é de ontem.
+ */
+function tipoDaBatida(ultima: DpMarcacaoMinima | undefined, agora: Date): 'ENTRADA' | 'SAIDA' {
+  if (!ultima) return 'ENTRADA';
+
+  if (diaBRT(new Date(ultima.timestamp)) === diaBRT(agora)) {
+    return ultima.tipo === 'SAIDA' ? 'ENTRADA' : 'SAIDA';
+  }
+
+  // Marcação de outro dia: só fecha turno se for madrugada e a entrada for recente
+  if (ultima.tipo !== 'ENTRADA') return 'ENTRADA';
+  const horasDesde = (agora.getTime() - new Date(ultima.timestamp).getTime()) / 3600000;
+  const madrugada = horaBRT(agora) < VIRADA_ATE_HORA;
+  return madrugada && horasDesde <= VIRADA_MAX_HORAS ? 'SAIDA' : 'ENTRADA';
+}
+
+/**
+ * A saída do dia seguinte que fecha um turno aberto na véspera — ou null quando não há.
+ *
+ * Usada no cálculo: sem ela, quem entra 22h e sai 02h não tem hora nenhuma contada,
+ * porque a entrada fica órfã num dia e a saída no outro.
+ */
+export function fimDoTurnoVirado(
+  marcacoesDia: DpMarcacaoMinima[],
+  marcacoesDiaSeguinte: DpMarcacaoMinima[],
+): Date | null {
+  if (!temTurnoAberto(marcacoesDia)) return null;
+  const primeira = marcacoesDiaSeguinte[0];
+  if (!primeira || primeira.tipo !== 'SAIDA') return null;
+
+  const entrada = new Date(marcacoesDia[marcacoesDia.length - 1].timestamp);
+  const saida = new Date(primeira.timestamp);
+  if (horaBRT(saida) >= VIRADA_ATE_HORA) return null;
+  if ((saida.getTime() - entrada.getTime()) / 3600000 > VIRADA_MAX_HORAS) return null;
+  return saida;
+}
+
+/**
+ * Tudo o que se precisa saber sobre um dia, num lugar só: minutos trabalhados, se o
+ * almoço foi presumido e se o dia ficou incompleto.
+ *
+ * Existe porque quatro telas faziam essa mesma sequência de chamadas por conta própria
+ * (espelho do gestor, espelho do portal, dashboard e banco de horas) — e bastava uma
+ * esquecer um passo para o mesmo dia valer coisas diferentes em lugares diferentes.
+ */
+export function resolverDia(params: {
+  marcacoesDia: DpMarcacaoMinima[];
+  marcacoesDiaSeguinte?: DpMarcacaoMinima[];
+  /** Instante atual, quando o dia é hoje e o turno ainda pode estar em curso. */
+  agora?: Date | null;
+  cargaMin: number;
+  intervaloMin?: number | null;
+}): { minutos: number; intervaloPresumido: number; incompleto: boolean; viradaFechada: boolean } {
+  const { marcacoesDia, marcacoesDiaSeguinte = [], agora = null, cargaMin, intervaloMin } = params;
+
+  const fimVirada = agora ? null : fimDoTurnoVirado(marcacoesDia, marcacoesDiaSeguinte);
+  const fim = agora ?? fimVirada;
+  const bruto = calcMinutosTrabalhados(marcacoesDia, fim);
+  const { minutos, intervaloPresumido } = ajustarIntervaloPresumido(
+    marcacoesDia, bruto, cargaMin, intervaloMin,
+  );
+
+  return {
+    minutos,
+    intervaloPresumido,
+    // Turno fechado do outro lado da meia-noite não é dia incompleto
+    incompleto: !agora && !fimVirada && temTurnoAberto(marcacoesDia),
+    viradaFechada: !!fimVirada,
+  };
 }
 
 // Feriado exato (data igual) ou recorrente (mesmo mês/dia, ano ignorado).
@@ -222,8 +313,13 @@ export function ajustarIntervaloPresumido(
   if (temTurnoAberto(marcacoes)) return semDesconto;
   if (minutosTrabalhados <= cargaMin) return semDesconto;
 
+  // A busca começa na primeira ENTRADA do dia: uma SAÍDA solta no início pertence ao
+  // turno da véspera (virada da meia-noite) e o intervalo entre ela e a entrada de hoje
+  // é a noite da pessoa, não a pausa do almoço.
+  const primeiraEntrada = marcacoes.findIndex((m) => m.tipo === 'ENTRADA');
+  if (primeiraEntrada === -1) return semDesconto;
   const registrouPausa = marcacoes.some(
-    (m, i) => i > 0 && marcacoes[i - 1].tipo === 'SAIDA' && m.tipo === 'ENTRADA',
+    (m, i) => i > primeiraEntrada && marcacoes[i - 1].tipo === 'SAIDA' && m.tipo === 'ENTRADA',
   );
   if (registrouPausa) return semDesconto;
 

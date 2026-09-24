@@ -1073,14 +1073,15 @@ export const registrarPonto = async (req: Request, res: Response) => {
     if (!sistema) return res.status(404).json({ erro: 'Data Point não ativo' });
 
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
-    const { start, end } = getTodayRangeBRT();
-
-    const marcacoesHoje = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
+    // 18h para trás: cobre o dia inteiro em qualquer horário e ainda alcança o turno
+    // da véspera, para a batida da madrugada ser reconhecida como saída
+    const desde = new Date(Date.now() - 18 * 3600000);
+    const marcacoesRecentes = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: funcionario.id, timestamp: { gte: desde }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
 
-    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesHoje);
+    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesRecentes);
     if (cooldownErro) return res.status(429).json({ erro: cooldownErro });
 
     // GPS: validação baseada em nivelGps (BASICO | MEDIO | RIGIDO | MAXIMO)
@@ -1467,14 +1468,15 @@ export const confirmarPonto = async (req: Request, res: Response) => {
     if (!sistema) return res.status(404).json({ erro: 'Data Point não ativo' });
 
     const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
-    const { start, end } = getTodayRangeBRT();
-
-    const marcacoesHoje = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: func.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
+    // 18h para trás: cobre o dia inteiro em qualquer horário e ainda alcança o turno
+    // da véspera, para a batida da madrugada ser reconhecida como saída
+    const desde = new Date(Date.now() - 18 * 3600000);
+    const marcacoesRecentes = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: func.id, timestamp: { gte: desde }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
 
-    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesHoje);
+    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesRecentes);
     if (cooldownErro) return res.status(429).json({ erro: cooldownErro });
 
     // GPS — só valida ENTRADA

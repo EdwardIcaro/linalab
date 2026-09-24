@@ -6,8 +6,7 @@ import {
   isDiaFechado,
   resolverCargaHorariaDia,
   cargaDaJornada,
-  calcMinutosTrabalhados,
-  ajustarIntervaloPresumido,
+  resolverDia,
 } from '../utils/dpPontoUtils';
 
 interface ResultadoFechamento {
@@ -43,12 +42,12 @@ export function calcularFechamentoPeriodo(params: {
     // null = turno aberto não vira hora trabalhada. Sem isso, um dia em que a pessoa
     // esqueceu a saída entrava no fechamento como jornada até 23:59 e virava crédito
     // permanente de hora extra no saldo acumulado.
-    const minutosTrabalhou = ajustarIntervaloPresumido(
+    const { minutos: minutosTrabalhou } = resolverDia({
       marcacoesDia,
-      calcMinutosTrabalhados(marcacoesDia, null),
-      cargaHorariaDiaMin,
+      marcacoesDiaSeguinte: marcacoesPorDia.get(addDiasStrBRT(dia, 1)) || [],
+      cargaMin: cargaHorariaDiaMin,
       intervaloMin,
-    ).minutos;
+    });
 
     const tipoAfastamento = resolveAfastamentoDia(funcionarioId, dia, afastamentos);
     if (tipoAfastamento) {

@@ -231,13 +231,17 @@ export const confirmarTotem = async (req: Request, res: Response) => {
     });
     if (!funcionario) return res.status(404).json({ erro: 'Funcionário não encontrado' });
 
-    const { start, end } = getTodayRangeBRT();
-    const marcacoesHoje = await prisma.dpMarcacao.findMany({
-      where: { funcionarioId: funcionario.id, timestamp: { gte: start, lte: end }, excluidaEm: null },
+    // 18h para trás: cobre o dia inteiro em qualquer horário e ainda alcança o turno
+    // da véspera, para a batida da madrugada ser reconhecida como saída
+    const { start } = getTodayRangeBRT();
+    const desde = new Date(Date.now() - 18 * 3600000);
+    const marcacoesRecentes = await prisma.dpMarcacao.findMany({
+      where: { funcionarioId: funcionario.id, timestamp: { gte: desde }, excluidaEm: null },
       orderBy: { timestamp: 'asc' },
     });
+    const marcacoesHoje = marcacoesRecentes.filter(m => m.timestamp >= start);
 
-    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesHoje);
+    const { tipo, cooldownErro } = determinarTipoEValidarCooldown(marcacoesRecentes);
     if (cooldownErro) return res.status(429).json({ erro: cooldownErro });
 
     const [marcacao] = await prisma.$transaction([

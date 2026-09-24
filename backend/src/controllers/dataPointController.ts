@@ -4,8 +4,7 @@ import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
-         temTurnoAberto, resolverCargaHorariaDia, cargaDaJornada,
-         ajustarIntervaloPresumido } from '../utils/dpPontoUtils';
+         resolverCargaHorariaDia, cargaDaJornada, resolverDia } from '../utils/dpPontoUtils';
 import { logarMarcacao, autorDaRequest, historicoDasMarcacoes } from '../services/dpAuditoriaService';
 
 interface UserRequest extends Request { usuarioId?: string; }
@@ -408,9 +407,9 @@ export async function buildDpDashboardData(empresaId: string) {
       ) * 60;
 
       // Minutos trabalhados hoje (com o almoço presumido depois que o turno fecha)
-      const minutosHoje = ajustarIntervaloPresumido(
-        marcacoesHoje, calcMinutosTrabalhados(marcacoesHoje, now), cargaEsperadaMin, intervaloMin,
-      ).minutos;
+      const minutosHoje = resolverDia({
+        marcacoesDia: marcacoesHoje, agora: now, cargaMin: cargaEsperadaMin, intervaloMin,
+      }).minutos;
 
       // Minutos trabalhados na semana (agrupa por dia)
       const diasSemana = new Set(marcacoesSemana.map(m => {
@@ -422,10 +421,16 @@ export async function buildDpDashboardData(empresaId: string) {
         const { start, end } = getDateRangeBRT(dia);
         const marcsDia = marcacoesSemana.filter(m => m.timestamp >= start && m.timestamp <= end);
         // Dia fechado sem saída batida não conta o trecho aberto (null) — ver dpPontoUtils
-        const nowDia = dia === todayStr ? now : null;
-        minutosSemana += ajustarIntervaloPresumido(
-          marcsDia, calcMinutosTrabalhados(marcsDia, nowDia), cargaEsperadaMin, intervaloMin,
-        ).minutos;
+        const seguintes = marcacoesSemana
+          .filter(m => m.timestamp > end && m.timestamp <= new Date(end.getTime() + 86400000))
+          .map(m => ({ tipo: m.tipo, timestamp: m.timestamp }));
+        minutosSemana += resolverDia({
+          marcacoesDia: marcsDia,
+          marcacoesDiaSeguinte: seguintes,
+          agora: dia === todayStr ? now : null,
+          cargaMin: cargaEsperadaMin,
+          intervaloMin,
+        }).minutos;
       }
 
       // Estado
@@ -615,7 +620,8 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       where: {
         empresaId,
         funcionarioId: { in: funcionarios.map(f => f.id) },
-        timestamp: { gte: periodoStart, lte: periodoEnd },
+        // +1 dia: turno que começa no último dia do período fecha depois da meia-noite
+        timestamp: { gte: periodoStart, lte: new Date(periodoEnd.getTime() + 86400000) },
         excluidaEm: null,
       },
       select: { funcionarioId: true, tipo: true, timestamp: true },
@@ -671,13 +677,19 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
 
         // Hoje o turno aberto conta até agora; dia já fechado sem saída não conta nada
         // do trecho aberto e vira INCOMPLETO, pra ninguém ler 16h como jornada real.
-        const fimCalculo = dia === hoje ? now : null;
         const marcacoesSimples = marcacoesDia.map(m => ({ tipo: m.tipo, timestamp: m.timestamp }));
-        const bruto = calcMinutosTrabalhados(marcacoesSimples, fimCalculo);
-        const turnoAberto = temTurnoAberto(marcacoesSimples) && dia !== hoje;
-        // Ninguém bateu a pausa: desconta o intervalo contratado (ver dpPontoUtils)
-        const { minutos: minutosTrabalhou, intervaloPresumido } =
-          ajustarIntervaloPresumido(marcacoesSimples, bruto, cargaEsperadaMin, intervaloMin);
+        const doDiaSeguinte = marcacoesFuncionario
+          .filter(m => m.timestamp > end && m.timestamp <= new Date(end.getTime() + 86400000))
+          .map(m => ({ tipo: m.tipo, timestamp: m.timestamp }));
+
+        const { minutos: minutosTrabalhou, intervaloPresumido, incompleto: turnoAberto } =
+          resolverDia({
+            marcacoesDia: marcacoesSimples,
+            marcacoesDiaSeguinte: doDiaSeguinte,
+            agora: dia === hoje ? now : null,
+            cargaMin: cargaEsperadaMin,
+            intervaloMin,
+          });
 
         const primeiraEntrada = marcacoesDia.find(m => m.tipo === 'ENTRADA');
         const ultimaSaida = [...marcacoesDia].reverse().find(m => m.tipo === 'SAIDA');

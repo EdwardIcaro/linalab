@@ -13,9 +13,7 @@ import {
   resolveFeriadoDia,
   resolveAfastamentoDia,
   isDiaFechado,
-  calcMinutosTrabalhados,
-  temTurnoAberto,
-  ajustarIntervaloPresumido,
+  resolverDia,
   horaFormatadaBRT,
 } from '../utils/dpPontoUtils';
 
@@ -57,11 +55,13 @@ export async function montarEspelhoMes(params: {
   }
 
   const { start: mesStart } = getDateRangeBRT(diasDoMes[0]);
+  // +1 dia: o turno que começa no último dia do mês fecha no primeiro do mês seguinte
   const { end: mesEnd } = getDateRangeBRT(diasDoMes[diasDoMes.length - 1]);
+  const limiteBusca = new Date(mesEnd.getTime() + 86400000);
 
   const [todasMarcacoes, feriados, afastamentos] = await Promise.all([
     prisma.dpMarcacao.findMany({
-      where: { funcionarioId, timestamp: { gte: mesStart, lte: mesEnd }, excluidaEm: null },
+      where: { funcionarioId, timestamp: { gte: mesStart, lte: limiteBusca }, excluidaEm: null },
       select: { tipo: true, timestamp: true, canal: true },
       orderBy: { timestamp: 'asc' },
     }),
@@ -111,16 +111,18 @@ export async function montarEspelhoMes(params: {
       }
     }
 
-    const fimCalculo = isHoje ? now : null;
     const marcacoesSimples = marcacoesDia.map((mc) => ({ tipo: mc.tipo, timestamp: mc.timestamp }));
-    const { minutos: minutosTrabalhou, intervaloPresumido } = ajustarIntervaloPresumido(
-      marcacoesSimples,
-      calcMinutosTrabalhados(marcacoesSimples, fimCalculo),
-      cargaEsperadaMin,
-      cfg.intervaloMin,
-    );
+    const doDiaSeguinte = todasMarcacoes
+      .filter((mc) => mc.timestamp > end && mc.timestamp <= new Date(end.getTime() + 86400000))
+      .map((mc) => ({ tipo: mc.tipo, timestamp: mc.timestamp }));
 
-    const incompleto = temTurnoAberto(marcacoesSimples) && !isHoje;
+    const { minutos: minutosTrabalhou, intervaloPresumido, incompleto } = resolverDia({
+      marcacoesDia: marcacoesSimples,
+      marcacoesDiaSeguinte: doDiaSeguinte,
+      agora: isHoje ? now : null,
+      cargaMin: cargaEsperadaMin,
+      intervaloMin: cfg.intervaloMin,
+    });
     const horaEntrada = marcacoesDia.find((mc) => mc.tipo === 'ENTRADA');
     const ultimaSaida = [...marcacoesDia].reverse().find((mc) => mc.tipo === 'SAIDA');
 
