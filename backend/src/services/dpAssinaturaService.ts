@@ -147,3 +147,14 @@ export function nomeDaCompetencia(competencia: string): string {
                  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   return meses[Number(competencia.slice(5)) - 1] ?? competencia;
 }
+
+// Dias do mês em que o totem pode interromper alguém para conferir o espelho.
+// Começa no 3 para dar folga ao gestor revisar o fechamento, e termina no 17 —
+// mesma janela dos lembretes de WhatsApp, para o funcionário não receber cobrança
+// por dois canais em momentos diferentes.
+export const JANELA_CONFERENCIA = { primeiro: 3, ultimo: 17 };
+
+export function dentroDaJanelaDeConferencia(hojeStr: string): boolean {
+  const dia = Number(hojeStr.slice(8));
+  return dia >= JANELA_CONFERENCIA.primeiro && dia <= JANELA_CONFERENCIA.ultimo;
+}

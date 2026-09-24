@@ -12,7 +12,7 @@ import { resolverCargaHorariaDia, cargaDaJornada } from '../utils/dpPontoUtils';
 import { montarEspelhoMes, diasQuePedemAtencao } from '../services/dpEspelhoService';
 import {
   montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
-  competenciaAnterior, nomeDaCompetencia,
+  competenciaAnterior, nomeDaCompetencia, dentroDaJanelaDeConferencia,
 } from '../services/dpAssinaturaService';
 
 const JWT_SECRET = process.env.SECRET_KEY || 'seu_segredo_jwt_aqui';
@@ -46,21 +46,51 @@ async function contextoDoFuncionario(empresaId: string, funcionarioId: string) {
   return { cfg, func, cargaEsperadaMin };
 }
 
+/** Já mostramos a conferência para essa pessoa hoje? Uma vez por dia basta. */
+async function jaMostrouHoje(empresaId: string, funcionarioId: string, hoje: string): Promise<boolean> {
+  const existe = await (prisma as any).notificacaoEnviada.findUnique({
+    where: { empresaId_tipo_chave: { empresaId, tipo: 'DP_ESPELHO_TOTEM', chave: `${funcionarioId}:${hoje}` } },
+    select: { id: true },
+  });
+  return !!existe;
+}
+
+async function registrarQueMostrou(empresaId: string, funcionarioId: string, hoje: string): Promise<void> {
+  await (prisma as any).notificacaoEnviada.upsert({
+    where: { empresaId_tipo_chave: { empresaId, tipo: 'DP_ESPELHO_TOTEM', chave: `${funcionarioId}:${hoje}` } },
+    create: { empresaId, tipo: 'DP_ESPELHO_TOTEM', chave: `${funcionarioId}:${hoje}` },
+    update: {},
+  });
+}
+
 /**
  * Há espelho esperando ciência? Devolve a competência e por quê (nunca assinada, ou
  * assinada e alterada depois). Mês sem nenhuma batida não conta: não há o que conferir.
  */
-async function espelhoPendente(empresaId: string, funcionarioId: string) {
+async function espelhoPendente(empresaId: string, funcionarioId: string, tipoBatida: string) {
+  // Na entrada, não: a pessoa está indo trabalhar
+  if (tipoBatida !== 'SAIDA') return null;
+
+  const hoje = getTodayStrBRT();
+  if (await jaMostrouHoje(empresaId, funcionarioId, hoje)) return null;
+
   const ctx = await contextoDoFuncionario(empresaId, funcionarioId);
   if (!ctx) return null;
 
-  const competencia = competenciaAnterior(getTodayStrBRT());
+  const competencia = competenciaAnterior(hoje);
   const snapshot = await montarSnapshot(empresaId, { id: funcionarioId, cargaEsperadaMin: ctx.cargaEsperadaMin }, competencia, ctx.cfg);
   if (snapshot.marcacoes.length === 0) return null;
 
   const hash = hashDoSnapshot(snapshot);
   const estado = await estadoDaAssinatura(funcionarioId, competencia, hash);
   if (estado?.atual) return null;
+
+  // Fora da janela só passa quem já assinou e teve o espelho alterado depois — esse
+  // aviso é pontual e não pode esperar o mês que vem.
+  const alterado = !!estado;
+  if (!alterado && !dentroDaJanelaDeConferencia(hoje)) return null;
+
+  await registrarQueMostrou(empresaId, funcionarioId, hoje);
 
   return {
     competencia,
@@ -216,7 +246,7 @@ export const confirmarTotem = async (req: Request, res: Response) => {
     // Falha nessa consulta não pode atrapalhar o registro que já aconteceu.
     let espelho: any = null;
     try {
-      const pendente = await espelhoPendente(empresaId, funcionario.id);
+      const pendente = await espelhoPendente(empresaId, funcionario.id, tipo);
       if (pendente) {
         espelho = {
           competencia: pendente.competencia,
