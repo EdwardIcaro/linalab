@@ -237,3 +237,27 @@ export function horaFormatadaBRT(d: Date): string {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
   });
 }
+
+// Quanto antes do fim da jornada uma saída já conta como saída do dia. Uma hora é
+// folgado de propósito: quem sai 17:00 numa jornada até 18:00 está indo embora, não
+// almoçar — e errar para menos só adia a conferência para o dia seguinte.
+const ANTECIPACAO_SAIDA_MIN = 60;
+
+/**
+ * Esta saída parece ser a última do dia?
+ *
+ * Usado para decidir se o totem pode interromper a pessoa com a conferência do espelho.
+ * Não precisa acertar sempre: um falso negativo apenas adia, e a janela de conferência
+ * tem duas semanas.
+ */
+export function ehSaidaFinalProvavel(params: {
+  minutosTrabalhados: number;
+  agoraMin: number;   // minutos desde 00:00 BRT
+  saidaMin: number;   // fim da jornada da empresa, em minutos
+  cargaMin: number;
+  toleranciaMin: number;
+}): boolean {
+  const { minutosTrabalhados, agoraMin, saidaMin, cargaMin, toleranciaMin } = params;
+  if (agoraMin >= saidaMin - ANTECIPACAO_SAIDA_MIN) return true;
+  return minutosTrabalhados >= cargaMin - toleranciaMin;
+}

@@ -8,7 +8,11 @@ import { determinarTipoEValidarCooldown } from '../utils/dpPontoUtils';
 import { notificarPontoRegistrado } from '../services/dpPontoNotifier';
 import { horaFormatadaBRT } from './portalPublicoController';
 import { getTodayStrBRT } from '../utils/dateUtils';
-import { resolverCargaHorariaDia, cargaDaJornada } from '../utils/dpPontoUtils';
+import {
+  resolverCargaHorariaDia, cargaDaJornada, calcMinutosTrabalhados,
+  ehSaidaFinalProvavel, horaParaMin,
+} from '../utils/dpPontoUtils';
+import { getDateRangeBRT } from '../utils/dateUtils';
 import { montarEspelhoMes, diasQuePedemAtencao } from '../services/dpEspelhoService';
 import {
   montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
@@ -67,7 +71,12 @@ async function registrarQueMostrou(empresaId: string, funcionarioId: string, hoj
  * Há espelho esperando ciência? Devolve a competência e por quê (nunca assinada, ou
  * assinada e alterada depois). Mês sem nenhuma batida não conta: não há o que conferir.
  */
-async function espelhoPendente(empresaId: string, funcionarioId: string, tipoBatida: string) {
+async function espelhoPendente(
+  empresaId: string,
+  funcionarioId: string,
+  tipoBatida: string,
+  marcacoesDoDia: { tipo: string; timestamp: Date }[],
+) {
   // Na entrada, não: a pessoa está indo trabalhar
   if (tipoBatida !== 'SAIDA') return null;
 
@@ -76,6 +85,17 @@ async function espelhoPendente(empresaId: string, funcionarioId: string, tipoBat
 
   const ctx = await contextoDoFuncionario(empresaId, funcionarioId);
   if (!ctx) return null;
+
+  // Saída do almoço tem a mesma pressa da entrada — só a última do dia interrompe
+  const inicioDia = getDateRangeBRT(hoje).start;
+  const ehFinal = ehSaidaFinalProvavel({
+    minutosTrabalhados: calcMinutosTrabalhados(marcacoesDoDia, null),
+    agoraMin: Math.floor((Date.now() - inicioDia.getTime()) / 60000),
+    saidaMin: horaParaMin(ctx.cfg.jornadaSaida || '17:00'),
+    cargaMin: ctx.cargaEsperadaMin,
+    toleranciaMin: ctx.cfg.toleranciaMin ?? 10,
+  });
+  if (!ehFinal) return null;
 
   const competencia = competenciaAnterior(hoje);
   const snapshot = await montarSnapshot(empresaId, { id: funcionarioId, cargaEsperadaMin: ctx.cargaEsperadaMin }, competencia, ctx.cfg);
@@ -246,7 +266,9 @@ export const confirmarTotem = async (req: Request, res: Response) => {
     // Falha nessa consulta não pode atrapalhar o registro que já aconteceu.
     let espelho: any = null;
     try {
-      const pendente = await espelhoPendente(empresaId, funcionario.id, tipo);
+      // inclui a batida que acabou de ser criada, senão o dia fica um turno atrás
+      const doDia = [...marcacoesHoje, { tipo: marcacao.tipo, timestamp: marcacao.timestamp }];
+      const pendente = await espelhoPendente(empresaId, funcionario.id, tipo, doDia);
       if (pendente) {
         espelho = {
           competencia: pendente.competencia,
