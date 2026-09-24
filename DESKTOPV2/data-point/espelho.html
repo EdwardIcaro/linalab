@@ -640,6 +640,7 @@ function formatarData(isoStr) {
 let _diaFuncId = null, _diaFuncNome = '', _diaDia = '';
 let _marcacoesDia = [];
 let _historicoDia = [];
+let _assinaturaDia = null;
 let _editandoId = null;
 let _diaModificado = false;
 
@@ -662,6 +663,7 @@ async function recarregarMarcacoesDia() {
     const data = await window.api.getDpMarcacoesDia(_diaFuncId, _diaDia);
     _marcacoesDia = data.marcacoes || [];
     _historicoDia = data.historico || [];
+    _assinaturaDia = data.assinatura || null;
     renderMarcacoesDia();
   } catch {
     document.getElementById('dmConteudo').innerHTML = '<p style="color:#dc2626;font-size:13px;text-align:center;padding:20px">Erro ao carregar marcações.</p>';
@@ -701,6 +703,17 @@ function renderMarcacoesDia() {
 
   // O dia pode ter menos horas do que a diferença entre a primeira e a última batida:
   // quando ninguém registra a pausa, o sistema desconta o intervalo contratado.
+  // Mexer num mês assinado é corriqueiro — inclusive a pedido do funcionário. Mas o
+  // gestor precisa saber que aquela ciência cai e que a pessoa será chamada de novo.
+  if (_assinaturaDia) {
+    const quando = new Date(_assinaturaDia.assinadoEm).toLocaleDateString('pt-BR');
+    const onde = _assinaturaDia.origem === 'TOTEM' ? 'no totem' : 'no portal';
+    html += `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#1e40af;line-height:1.5">
+      <i class="fa fa-file-signature"></i> <b>Mês já assinado</b> pelo funcionário em ${quando}, ${onde}.
+      Qualquer alteração aqui vai pedir que ele confira e assine de novo — a assinatura atual fica guardada.
+    </div>`;
+  }
+
   const diaEspelho = (((dadosAtual?.funcionarios || []).find(f => f.id === _diaFuncId) || {}).dias || {})[_diaDia];
   if (diaEspelho && diaEspelho.intervaloPresumido > 0) {
     html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#92400e;line-height:1.5">

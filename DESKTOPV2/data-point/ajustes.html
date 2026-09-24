@@ -250,6 +250,22 @@
       </div>
       <div class="modal-body">
         <div id="modalRespostaInfo" style="background:var(--gray50);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--gray700);line-height:1.5"></div>
+        <div class="form-group" id="grupoCorrecao">
+          <label class="form-label">Lançar a marcação corrigida <span style="color:var(--gray400);font-weight:500">(opcional)</span></label>
+          <div style="display:flex;gap:8px">
+            <select class="form-select" id="corrTipo" style="flex:1">
+              <option value="">— não mexer no ponto —</option>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+            </select>
+            <input class="form-input" type="time" id="corrHora" style="width:130px">
+          </div>
+          <div style="font-size:11.5px;color:var(--gray500);margin-top:6px;line-height:1.5">
+            Preenchendo aqui, a marcação é lançada no dia do pedido e o histórico registra
+            que a mudança veio deste ajuste. Deixe vazio quando a aprovação não mexe no
+            ponto — justificar falta, por exemplo.
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-label">Observação para o funcionário <span style="color:var(--gray400);font-weight:500">(opcional)</span></label>
           <textarea class="form-textarea" id="obsGestor" placeholder="Ex: Marcação corrigida conforme registro físico..."></textarea>
@@ -454,6 +470,11 @@ function abrirModalResposta(id, tipoDefault) {
     <span class="aj-tipo-badge ${tipoCls}" style="margin-top:6px;display:inline-flex">${ajuste.tipo}</span><br><br>
     <em>${escapeHtml(ajuste.descricao)}</em>`;
   document.getElementById('obsGestor').value = '';
+  document.getElementById('corrTipo').value = ajuste.tipo === 'CORRIGIR_HORA' ? 'ENTRADA' : '';
+  document.getElementById('corrHora').value = '';
+  // Justificar falta quase nunca vira marcação; corrigir hora quase sempre vira
+  document.getElementById('grupoCorrecao').style.display =
+    ajuste.tipo === 'JUSTIFICAR_FALTA' ? 'none' : '';
   document.getElementById('modalResposta').classList.remove('hidden');
 }
 
@@ -465,11 +486,24 @@ function fecharModalResposta() {
 async function responder(status) {
   if (!ajusteRespondendoId) return;
   const obsGestor = document.getElementById('obsGestor').value.trim();
+  const tipo = document.getElementById('corrTipo').value;
+  const hora = document.getElementById('corrHora').value;
   const btn = document.getElementById(status === 'APROVADO' ? 'btnAprovar' : 'btnRejeitar');
+
+  if (status === 'APROVADO' && tipo && !hora) {
+    mostrarToast('Informe o horário da marcação, ou escolha "não mexer no ponto".', 'error');
+    return;
+  }
+
+  const correcao = status === 'APROVADO' && tipo && hora ? { tipo, hora } : undefined;
   btn.disabled = true;
   try {
-    await window.api.responderAjuste(ajusteRespondendoId, { status, obsGestor });
-    mostrarToast(`Ajuste ${status === 'APROVADO' ? 'aprovado' : 'rejeitado'}.`, 'success');
+    const r = await window.api.responderAjuste(ajusteRespondendoId, { status, obsGestor, correcao });
+    mostrarToast(
+      status !== 'APROVADO' ? 'Ajuste rejeitado.'
+        : r?.marcacaoCorrigida ? 'Ajuste aprovado e marcação lançada.'
+        : 'Ajuste aprovado.',
+      'success');
     fecharModalResposta();
     await carregarAjustes();
   } catch { mostrarToast('Erro ao responder ajuste.', 'error'); }

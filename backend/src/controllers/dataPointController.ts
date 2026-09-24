@@ -1191,6 +1191,15 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
 
     const historico = await historicoDasMarcacoes(marcacoes.map(m => m.id));
 
+    // Mexer num mês já assinado não é proibido — é corriqueiro, inclusive a pedido do
+    // próprio funcionário. Mas o gestor precisa saber que aquela ciência vai cair e que
+    // o funcionário será chamado a assinar de novo.
+    const assinatura = await prisma.dpEspelhoAssinatura.findFirst({
+      where: { funcionarioId, competencia: (data as string).slice(0, 7) },
+      orderBy: { assinadoEm: 'desc' },
+      select: { assinadoEm: true, origem: true },
+    });
+
     res.json({
       marcacoes: marcacoes.map(m => ({
         id: m.id,
@@ -1205,6 +1214,9 @@ export const getMarcacoesDia = async (req: EmpresaRequest, res: Response) => {
         excluidaPor: m.excluidaPor,
         excluidaEm: m.excluidaEm,
       })),
+      assinatura: assinatura
+        ? { assinadoEm: assinatura.assinadoEm, origem: assinatura.origem }
+        : null,
       historico: historico.map(h => ({
         id: h.id,
         marcacaoId: h.marcacaoId,
@@ -1402,7 +1414,13 @@ export const responderAjuste = async (req: EmpresaRequest, res: Response) => {
   const empresaId  = (req as any).empresaId as string;
   const usuarioNome = (req as any).usuarioNome as string;
   const { id } = req.params as { id: string };
-  const { status, obsGestor } = req.body;
+  const { status, obsGestor, correcao } = req.body as {
+    status: string;
+    obsGestor?: string;
+    // Correção que o gestor aceitou junto com o pedido. Opcional: nem todo ajuste
+    // aprovado mexe no ponto (justificar falta, por exemplo, só registra o motivo).
+    correcao?: { acao?: 'CRIAR' | 'EDITAR'; marcacaoId?: string; tipo?: string; hora?: string };
+  };
 
   if (!['APROVADO', 'REJEITADO'].includes(status))
     return res.status(400).json({ error: 'status deve ser APROVADO ou REJEITADO' });
@@ -1412,6 +1430,68 @@ export const responderAjuste = async (req: EmpresaRequest, res: Response) => {
     if (!ajuste) return res.status(404).json({ error: 'Ajuste não encontrado' });
     if (ajuste.status !== 'PENDENTE')
       return res.status(400).json({ error: 'Ajuste já respondido' });
+
+    // ── A correção, quando existe, acontece junto da aprovação ────────────────
+    let marcacaoCorrigida: string | null = null;
+    if (status === 'APROVADO' && correcao?.hora) {
+      if (!/^\d{2}:\d{2}$/.test(correcao.hora))
+        return res.status(400).json({ error: 'Horário inválido. Use HH:MM.' });
+      if (correcao.tipo && !['ENTRADA', 'SAIDA'].includes(correcao.tipo))
+        return res.status(400).json({ error: 'tipo deve ser ENTRADA ou SAIDA' });
+
+      const [h, min] = correcao.hora.split(':').map(Number);
+      const [y, mo, d] = ajuste.data.split('-').map(Number);
+      const timestamp = new Date(Date.UTC(y, mo - 1, d, h + 3, min, 0)); // BRT = UTC-3
+      const autor = autorDaRequest(req);
+      // O motivo vem do pedido do funcionário: meses depois, o histórico mostra que a
+      // mudança foi pedida por ele e deferida, não imposta pelo gestor.
+      const motivo = `Ajuste aprovado: ${ajuste.descricao}`.slice(0, 400);
+
+      try {
+        if (correcao.marcacaoId) {
+          const existente = await prisma.dpMarcacao.findFirst({
+            where: { id: correcao.marcacaoId, empresaId, funcionarioId: ajuste.funcionarioId },
+          });
+          if (!existente) return res.status(404).json({ error: 'Marcação a corrigir não encontrada' });
+
+          const atualizada = await prisma.dpMarcacao.update({
+            where: { id: existente.id },
+            data: { timestamp, tipo: correcao.tipo || existente.tipo, ajustado: true },
+          });
+          marcacaoCorrigida = atualizada.id;
+          await logarMarcacao({
+            empresaId, marcacaoId: atualizada.id, funcionarioId: ajuste.funcionarioId,
+            acao: 'EDITADA', autor,
+            antes: { tipo: existente.tipo, timestamp: existente.timestamp },
+            depois: { tipo: atualizada.tipo, timestamp: atualizada.timestamp },
+            motivo,
+          });
+        } else {
+          const criada = await prisma.dpMarcacao.create({
+            data: {
+              empresaId,
+              funcionarioId: ajuste.funcionarioId,
+              tipo: correcao.tipo || 'ENTRADA',
+              canal: 'MANUAL',
+              timestamp,
+              ajustado: true,
+            },
+          });
+          marcacaoCorrigida = criada.id;
+          await logarMarcacao({
+            empresaId, marcacaoId: criada.id, funcionarioId: ajuste.funcionarioId,
+            acao: 'CRIADA_MANUAL', autor,
+            depois: { tipo: criada.tipo, timestamp: criada.timestamp },
+            motivo,
+          });
+        }
+      } catch (e: any) {
+        if (e?.code === 'P2002') {
+          return res.status(409).json({ error: 'Já existe uma marcação desse funcionário nesse minuto.' });
+        }
+        throw e;
+      }
+    }
 
     const updated = await prisma.dpAjuste.update({
       where: { id },
@@ -1424,7 +1504,7 @@ export const responderAjuste = async (req: EmpresaRequest, res: Response) => {
       },
     });
 
-    res.json({ ajuste: updated });
+    res.json({ ajuste: updated, marcacaoCorrigida });
   } catch (error) {
     console.error('[dp] responderAjuste:', error);
     res.status(500).json({ error: 'Erro ao responder ajuste' });
