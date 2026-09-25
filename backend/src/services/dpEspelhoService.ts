@@ -42,7 +42,10 @@ export async function montarEspelhoMes(params: {
   cargaEsperadaMin: number;
   ano: number;
   mes: number;
-  cfg: { toleranciaMin?: number; diasFuncionamento?: number[]; intervaloMin?: number };
+  cfg: {
+    toleranciaMin?: number; diasFuncionamento?: number[]; intervaloMin?: number;
+    pontoValidoDesde?: string | null;
+  };
 }): Promise<EspelhoMes> {
   const { empresaId, funcionarioId, cargaEsperadaMin, ano, mes, cfg } = params;
   const toleranciaMin: number = cfg.toleranciaMin ?? 10;
@@ -91,6 +94,11 @@ export async function montarEspelhoMes(params: {
 
     const { start, end } = getDateRangeBRT(dia);
     const marcacoesDia = todasMarcacoes.filter((mc) => mc.timestamp >= start && mc.timestamp <= end);
+
+    // Antes da vigência não havia controle, e ausência de controle não é falta
+    if (cfg.pontoValidoDesde && dia < cfg.pontoValidoDesde) {
+      return { dia, diaSemana, status: 'SEM_CONTROLE', minutosTrabalhou: 0, marcacoes: [] };
+    }
 
     if (isFuturo) {
       return { dia, diaSemana, status: 'FUTURO', minutosTrabalhou: 0, marcacoes: [] };
@@ -176,10 +184,11 @@ export async function montarEspelhoMes(params: {
 export function diasQuePedemAtencao(espelho: EspelhoMes): DiaEspelho[] {
   return espelho.dias.filter(
     (d) =>
+      d.status !== 'SEM_CONTROLE' && (
       d.status === 'FALTA' ||
       d.status === 'FALTA_PARCIAL' ||
       d.status === 'INCOMPLETO' ||
       (d.intervaloPresumido ?? 0) > 0 ||
-      d.automatica,
+      d.automatica),
   );
 }

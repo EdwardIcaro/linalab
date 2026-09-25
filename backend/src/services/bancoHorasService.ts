@@ -119,7 +119,12 @@ export async function fecharBancoHorasDiario(): Promise<void> {
         select: { periodoFim: true },
       });
 
-      const baseStr = dateToStrBRT(ultimoFechamento?.periodoFim ?? func.dataAdmissao ?? func.createdAt);
+      // A âncora nunca é anterior à vigência do ponto na empresa: cobrar jornada de um
+      // período em que ninguém batia transformaria a implantação em dívida do funcionário.
+      const cfgEmpresa = configPorEmpresa.get(func.empresaId) || {};
+      const validoDesde: string | null = cfgEmpresa.pontoValidoDesde || null;
+      let baseStr = dateToStrBRT(ultimoFechamento?.periodoFim ?? func.dataAdmissao ?? func.createdAt);
+      if (validoDesde && baseStr < validoDesde) baseStr = validoDesde;
       const proximoFechamentoStr = addDiasStrBRT(baseStr, 30);
       if (hojeStr < proximoFechamentoStr) continue; // ciclo ainda não venceu
 
@@ -158,7 +163,7 @@ export async function fecharBancoHorasDiario(): Promise<void> {
         marcacoesPorDia.get(diaStr)!.push(m);
       }
 
-      const cfg = configPorEmpresa.get(func.empresaId) || {};
+      const cfg = cfgEmpresa;
       const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
       const cargaHorariaDiaMin = resolverCargaHorariaDia(
         func.cargaHorariaDia,

@@ -593,6 +593,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
     const toleranciaMin: number = cfg.toleranciaMin ?? 10;
     const cargaDaEmpresa = cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin);
     const intervaloMin: number = cfg.intervaloMin ?? 0;
+    const validoDesde: string | null = cfg.pontoValidoDesde || null;
     // Dias da semana (0=dom...6=sáb) em que a empresa funciona — configurável,
     // default replica o comportamento antigo (fixo sáb+dom = folga)
     const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
@@ -670,6 +671,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       let diasFeriado = 0;
       let diasAfastamento = 0;
       let diasIncompleto = 0;
+      let diasSemControle = 0;
 
       const diasMap: Record<string, {
         status: string;
@@ -682,6 +684,17 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
       }> = {};
 
       for (const dia of dias) {
+        // Antes do sistema entrar em vigor não havia controle — e ausência de controle
+        // não é falta de ninguém.
+        if (validoDesde && dia < validoDesde) {
+          diasMap[dia] = {
+            status: 'SEM_CONTROLE', minutosTrabalhou: 0, marcacoes: 0,
+            horaEntrada: null, horaSaida: null,
+          };
+          diasSemControle++;
+          continue;
+        }
+
         const diaSemana = new Date(dia + 'T12:00:00').getDay(); // 0=dom, 6=sab
         const diaFechado = isDiaFechado(diaSemana, diasFuncionamento); // dia da semana sem expediente pra empresa
 
@@ -779,7 +792,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
         };
       }
 
-      const diasUteis = dias.length - diasFolga - diasFeriado - diasAfastamento;
+      const diasUteis = dias.length - diasFolga - diasFeriado - diasAfastamento - diasSemControle;
       const minutosEsperadoTotal = cargaEsperadaMin * diasUteis;
 
       return {
@@ -796,6 +809,7 @@ export const getDpEspelho = async (req: EmpresaRequest, res: Response) => {
           diasFeriado,
           diasAfastamento,
           diasIncompleto,
+          diasSemControle,
           minutosTotal: totalMinutosTrabalhou,
           minutosEsperadoTotal,
           saldoMin: totalMinutosTrabalhou - minutosEsperadoTotal,
@@ -1120,7 +1134,7 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
     nomeEmpresa, cnpj, setor, endereco,
     lat, lng, raioGps, nivelGps,
     jornadaEntrada, jornadaSaida, intervaloMin, toleranciaMin,
-    modoEncerramento, modoAutenticacao, diasFuncionamento, bancoHorasAtivo,
+    modoEncerramento, modoAutenticacao, diasFuncionamento, bancoHorasAtivo, pontoValidoDesde,
   } = req.body;
 
   try {
@@ -1160,6 +1174,10 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
       // Opt-in explícito pro cron do banco de horas — ver bancoHorasService.ts. Sem UI dedicada
       // ainda; liga/desliga direto por essa rota até a tela existir.
       ...(bancoHorasAtivo !== undefined && { bancoHorasAtivo: bancoHorasAtivo === true || bancoHorasAtivo === 'true' }),
+      // Dias anteriores a esta data não contam como falta nem entram no banco de horas
+      ...(pontoValidoDesde !== undefined && {
+        pontoValidoDesde: /^\d{4}-\d{2}-\d{2}$/.test(String(pontoValidoDesde)) ? pontoValidoDesde : null,
+      }),
     };
 
     await prisma.empresaSistema.update({

@@ -172,6 +172,7 @@
     .chip-afastamento{background:var(--blue-bg);color:var(--blue)}
     .chip-incompleto{background:#ede9fe;color:#6d28d9;border:1px dashed #a78bfa}
     .chip-almoco{box-shadow:inset 0 -3px 0 -1px rgba(180,83,9,.55)}
+    .chip-sem-controle{background:transparent;color:var(--gray300);border:1px dotted var(--gray300)}
     .chip-hoje{outline:2px solid var(--teal500);outline-offset:1px}
 
     /* Totais col */
@@ -344,6 +345,7 @@
           <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div> Afastamento</div>
           <div class="leg-item"><div class="leg-dot" style="background:#7c3aed"></div> Em aberto</div>
           <div class="leg-item"><div class="leg-dot" style="background:#b45309"></div> Almoço presumido</div>
+          <div class="leg-item"><div class="leg-dot" style="background:transparent;border:1px dotted var(--gray300)"></div> Antes do sistema</div>
         </div>
       </div>
       <div class="tabela-wrap">
@@ -605,12 +607,14 @@ function buildChip(cell, isHoje) {
     FERIADO:     { cls:'chip-feriado',     ico:'★', label:'' },
     AFASTAMENTO: { cls:'chip-afastamento', ico:'✈', label:'' },
     INCOMPLETO:  { cls:'chip-incompleto',  ico:'!', label:'' },
+    SEM_CONTROLE:{ cls:'chip-sem-controle', ico:'·', label:'' },
   };
   const tipoAfastamentoLabel = { FERIAS:'Férias', ATESTADO:'Atestado', LICENCA:'Licença', FOLGA_COMP:'Folga comp.', OUTRO:'Outro' };
   const s = map[cell.status] || map.FOLGA;
   const horas = cell.minutosTrabalhou > 0 ? `<span class="chip-horas">${formatMin(cell.minutosTrabalhou)}</span>` : '';
   const almoco = cell.intervaloPresumido > 0 ? ` · almoço presumido −${formatMin(cell.intervaloPresumido)}` : '';
-  const tip = cell.status === 'FOLGA' ? 'Folga'
+  const tip = cell.status === 'SEM_CONTROLE' ? 'Antes do ponto entrar em vigor nesta empresa'
+    : cell.status === 'FOLGA' ? 'Folga'
     : cell.status === 'FERIADO' ? `Feriado: ${cell.label || ''}`
     : cell.status === 'AFASTAMENTO' ? (tipoAfastamentoLabel[cell.label] || cell.label || 'Afastamento')
     : cell.status === 'INCOMPLETO' ? `Entrou ${cell.horaEntrada || '—'} e não bateu a saída — clique para corrigir`
