@@ -13,6 +13,7 @@ import {
   registrarPonto,
   getEspelhoPortal,
   assinarEspelhoPortal,
+  getSaldoPortal,
   criarAjustePortal,
   getAjustesPortal,
   getExtratoLcPortal,
@@ -41,6 +42,7 @@ router.post('/me/pin/remover',  portalSessionMiddleware, removerPinPortal);
 router.post('/me/ponto',        portalSessionMiddleware, registrarPonto);
 router.get('/me/ponto/espelho', portalSessionMiddleware, getEspelhoPortal);
 router.post('/me/ponto/espelho/assinar', portalSessionMiddleware, assinarEspelhoPortal);
+router.get('/me/ponto/saldo', portalSessionMiddleware, getSaldoPortal);
 router.post('/me/ajuste',       portalSessionMiddleware, criarAjustePortal);
 router.get('/me/ajustes',       portalSessionMiddleware, getAjustesPortal);
 

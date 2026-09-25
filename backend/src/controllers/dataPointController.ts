@@ -7,6 +7,7 @@ import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDia
          resolverCargaHorariaDia, cargaDaJornada, resolverDia } from '../utils/dpPontoUtils';
 import { logarMarcacao, autorDaRequest, historicoDasMarcacoes } from '../services/dpAuditoriaService';
 import { feriadosNacionaisEntre } from '../utils/feriadosNacionais';
+import { saldosDaEquipe, saldoDoFuncionario } from '../services/dpSaldoService';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -1673,6 +1674,52 @@ export const excluirDpAfastamento = async (req: EmpresaRequest, res: Response) =
   } catch (error) {
     console.error('[dp] excluirAfastamento:', error);
     res.status(500).json({ error: 'Erro ao excluir afastamento' });
+  }
+};
+
+// ─── GET /api/dp/saldos ──────────────────────────────────────────────────────
+// Banco de horas da equipe: o acumulado dos ciclos fechados e o ciclo em andamento,
+// recalculado ao vivo. Ninguém deveria descobrir no dia 30 que estava devendo 12 horas.
+export const getSaldosDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  try {
+    const sistema = await prisma.empresaSistema.findFirst({
+      where: { empresaId, sistema: 'data-point', ativo: true },
+      select: { config: true },
+    });
+    if (!sistema) return res.status(403).json({ error: 'Data Point não ativo' });
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+
+    const saldos = await saldosDaEquipe(empresaId, cfg);
+    res.json({
+      ativo: cfg.bancoHorasAtivo === true,
+      validoDesde: cfg.pontoValidoDesde || null,
+      saldos,
+    });
+  } catch (error) {
+    console.error('[dp] getSaldos:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── GET /api/dp/saldos/:funcionarioId ───────────────────────────────────────
+export const getSaldoFuncionarioDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { funcionarioId } = req.params as { funcionarioId: string };
+  try {
+    const sistema = await prisma.empresaSistema.findFirst({
+      where: { empresaId, sistema: 'data-point', ativo: true },
+      select: { config: true },
+    });
+    if (!sistema) return res.status(403).json({ error: 'Data Point não ativo' });
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+
+    const saldo = await saldoDoFuncionario(empresaId, funcionarioId, cfg);
+    if (!saldo) return res.status(404).json({ error: 'Funcionário não encontrado' });
+    res.json({ ativo: cfg.bancoHorasAtivo === true, saldo });
+  } catch (error) {
+    console.error('[dp] getSaldoFuncionario:', error);
+    res.status(500).json({ error: 'Erro interno' });
   }
 };
 

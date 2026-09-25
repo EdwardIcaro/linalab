@@ -11,6 +11,7 @@ import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDi
          cargaDaJornada, ajustarIntervaloPresumido, horaFormatadaBRT,
          resolverFeriado } from '../utils/dpPontoUtils';
 import { feriadoNacionalDo } from '../utils/feriadosNacionais';
+import { saldoDoFuncionario } from '../services/dpSaldoService';
 import { montarEspelhoMes } from '../services/dpEspelhoService';
 import {
   montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
@@ -998,6 +999,33 @@ export const gerarFaceTokenPortal = async (req: Request, res: Response) => {
     res.json({ token });
   } catch (error) {
     console.error('[portal] gerarFaceTokenPortal:', error);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+};
+
+// ─── GET /api/p/me/ponto/saldo ───────────────────────────────────────────────
+// O funcionário vê o próprio banco de horas. Saldo que a pessoa não consegue conferir
+// não é saldo, é recado — e recado ninguém contesta antes de virar folha de pagamento.
+export const getSaldoPortal = async (req: Request, res: Response) => {
+  const lavadorId = (req as any).lavadorId as string | undefined;
+  const dpFuncionarioId = (req as any).dpFuncionarioId as string | undefined;
+  const empresaId = (req as any).empresaId as string;
+
+  try {
+    const [funcionario, sistema] = await Promise.all([
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true }, select: { config: true } }),
+    ]);
+    if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
+    if (!sistema)     return res.status(404).json({ erro: 'Data Point não ativo' });
+
+    const cfg = sistema.config ? JSON.parse(sistema.config as string) : {};
+    if (cfg.bancoHorasAtivo !== true) return res.json({ ativo: false, saldo: null });
+
+    const saldo = await saldoDoFuncionario(empresaId, funcionario.id, cfg);
+    res.json({ ativo: true, saldo });
+  } catch (error) {
+    console.error('[portal] getSaldo:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
 };

@@ -475,6 +475,19 @@
     .ep-leg-item  { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--text); }
     .ep-leg-dot   { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
+    /* Banco de horas do funcionário */
+    .bh-card{background:linear-gradient(135deg,#0f766e,#115e59);border-radius:16px;padding:16px 18px;margin:0 16px 14px}
+    .bh-topo{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px}
+    .bh-lab{font-size:11.5px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+    .bh-val{font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff}
+    .bh-val.neg{color:#fca5a5}
+    .bh-val.pos{color:#6ee7b7}
+    .bh-sub{font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.5}
+    .bh-ciclo{margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.16)}
+    .bh-linha{display:flex;justify-content:space-between;font-size:12.5px;color:rgba(255,255,255,.9);padding:2px 0}
+    .bh-barra{height:5px;background:rgba(255,255,255,.18);border-radius:99px;overflow:hidden;margin:9px 0}
+    .bh-barra div{height:100%;background:#5eead4;border-radius:99px}
+
     /* Aviso de feriado — aparece só no dia */
     .pf-feriado{display:flex;align-items:center;gap:11px;background:rgba(251,191,36,.16);
       border:1px solid rgba(251,191,36,.45);border-radius:12px;padding:11px 13px;margin:0 0 10px;
@@ -911,6 +924,8 @@
     </div>
 
     <!-- Seção de assinatura -->
+    <div id="epBancoHoras"></div>
+
     <div class="ep-sig-section" id="epSigSection" style="display:none"></div>
 
   </div>
@@ -2153,6 +2168,46 @@ function renderEspelho(data) {
   lista.innerHTML = html || '<div class="ponto-registros-empty" style="padding:40px 0"><i class="fas fa-calendar"></i><span>Nenhum dado para este mês</span></div>';
 
   renderAssinatura(data);
+  carregarBancoHoras();
+}
+
+// Saldo que a pessoa não consegue conferir não é saldo, é recado. Só aparece quando a
+// empresa ligou o banco de horas — antes disso não existe saldo nenhum para mostrar.
+async function carregarBancoHoras() {
+  const alvo = document.getElementById('epBancoHoras');
+  if (!alvo) return;
+  try {
+    const r = await fetch(`${API}/p/me/ponto/saldo`, { headers: { Authorization: `Bearer ${sessionJwt}` } });
+    if (!r.ok) { alvo.innerHTML = ''; return; }
+    const d = await r.json();
+    if (!d.ativo || !d.saldo) { alvo.innerHTML = ''; return; }
+
+    const fmt = x => {
+      const neg = x < 0, abs = Math.abs(x);
+      return (neg ? '−' : '+') + Math.floor(abs) + 'h' + String(Math.round((abs - Math.floor(abs)) * 60)).padStart(2, '0');
+    };
+    const dataBR = s2 => s2 ? s2.slice(8) + '/' + s2.slice(5, 7) : '—';
+    const s3 = d.saldo, c = s3.ciclo;
+    const cls = s3.saldoAcumulado > 0.01 ? 'pos' : s3.saldoAcumulado < -0.01 ? 'neg' : '';
+    const pct = c && c.diasTotais ? Math.round(c.diasDecorridos / c.diasTotais * 100) : 0;
+
+    alvo.innerHTML = `<div class="bh-card">
+      <div class="bh-topo">
+        <span class="bh-lab">Banco de horas</span>
+        <span class="bh-val ${cls}">${fmt(s3.saldoAcumulado)}</span>
+      </div>
+      <div class="bh-sub">Soma dos períodos já fechados</div>
+      ${c ? `<div class="bh-ciclo">
+        <div class="bh-linha"><span>Período atual</span><span>${dataBR(c.inicio)} a ${dataBR(c.fim)}</span></div>
+        <div class="bh-barra"><div style="width:${pct}%"></div></div>
+        <div class="bh-linha"><span>Você trabalhou</span><span><b>${c.horasTrabalhadas.toFixed(1)}h</b> de ${c.horasEsperadas.toFixed(0)}h</span></div>
+        <div class="bh-linha"><span>Parcial do período</span><span><b>${fmt(c.saldoParcial)}</b></span></div>
+        ${c.diasFalta ? `<div class="bh-linha" style="color:#fca5a5"><span>Faltas no período</span><span>${c.diasFalta} dia${c.diasFalta > 1 ? 's' : ''}</span></div>` : ''}
+      </div>` : ''}
+    </div>`;
+  } catch {
+    alvo.innerHTML = '';
+  }
 }
 
 // Quatro estados: mês ainda em curso, nunca assinado, assinado e válido, assinado mas

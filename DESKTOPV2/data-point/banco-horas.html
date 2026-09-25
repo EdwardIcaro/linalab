@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Point — Banco de Horas</title>
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="/api.js"></script>
+  <style>
+    :root {
+      --teal800:#064e3b;--teal700:#0f766e;--teal600:#0d9488;
+      --teal500:#14b8a6;--teal400:#2dd4bf;--teal200:#99f6e4;
+      --teal100:#ccfbf1;--teal50:#f0fdfa;
+      --p800:#5b21b6;--p700:#6d28d9;--p600:#7c3aed;
+      --p500:#8b5cf6;--p100:#ede9fe;
+      --gray900:#111827;--gray800:#1f2937;--gray700:#374151;
+      --gray600:#4b5563;--gray500:#6b7280;--gray400:#9ca3af;
+      --gray300:#d1d5db;--gray200:#e5e7eb;--gray100:#f3f4f6;--gray50:#f9fafb;
+      --white:#ffffff;
+      --green:#059669;--green-bg:#d1fae5;
+      --amber:#d97706;--amber-bg:#fef3c7;
+      --red:#dc2626;--red-bg:#fee2e2;
+      --blue:#2563eb;--blue-bg:#dbeafe;
+    }
+    *{font-family:'Inter',sans-serif;box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;
+      background:linear-gradient(145deg,var(--teal800) 0%,var(--teal700) 30%,var(--p700) 70%,var(--p800) 100%);
+      color:var(--gray900);overflow-x:hidden;position:relative;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    body::after{
+      content:'';position:fixed;inset:0;
+      background:radial-gradient(ellipse 60% 40% at 85% 5%,rgba(255,255,255,.1) 0%,transparent 60%),
+        radial-gradient(ellipse 40% 35% at 5% 85%,rgba(91,33,182,.3) 0%,transparent 55%);
+      pointer-events:none;z-index:0;
+    }
+
+    /* TOPBAR */
+    .topbar{
+      position:sticky;top:0;z-index:100;
+      background:rgba(6,78,59,.92);backdrop-filter:blur(14px);
+      border-bottom:1px solid rgba(255,255,255,.12);
+      padding:0 28px;display:flex;align-items:center;height:58px;
+    }
+    .tb-brand{display:flex;align-items:center;gap:10px;padding-right:20px;border-right:1px solid rgba(255,255,255,.14)}
+    .tb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,var(--p600),var(--p800));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:white}
+    .tb-lina{font-size:15px;font-weight:800;color:white}
+    .tb-sys{display:flex;align-items:center;gap:8px;margin-left:20px;padding-right:20px;border-right:1px solid rgba(255,255,255,.14)}
+    .tb-sys-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(145deg,var(--teal600),var(--teal800));display:flex;align-items:center;justify-content:center;font-size:15px;border:1px solid rgba(255,255,255,.15)}
+    .tb-sys-name{font-size:14px;font-weight:700;color:var(--teal200)}
+    .tb-company{margin-left:20px;display:flex;align-items:center;gap:7px;font-size:13px;color:rgba(255,255,255,.65)}
+    .tb-company strong{color:rgba(255,255,255,.9);font-weight:700}
+    .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+    .tb-icon-btn{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .18s;font-family:inherit}
+    .tb-icon-btn:hover{background:rgba(255,255,255,.15);color:white}
+    .tb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,var(--p500),var(--p800));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white}
+
+    /* LOADER */
+    .loader-wrap{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,78,59,.95)}
+    .loader-spin{width:44px;height:44px;border:3px solid rgba(45,212,191,.3);border-top-color:var(--teal400);border-radius:50%;animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loader-text{margin-top:16px;font-size:14px;color:var(--teal200);font-weight:500}
+    .hidden{display:none!important}
+
+    /* LAYOUT */
+    .main{padding:28px 28px 60px;max-width:1400px;margin:0 auto;position:relative;z-index:1}
+    .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:14px}
+    .ph-title{font-size:26px;font-weight:800;background:linear-gradient(135deg,#ffffff,var(--teal200));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .ph-sub{font-size:13px;color:rgba(255,255,255,.55);margin-top:3px}
+
+    /* PERÍODO SELECTOR */
+    .periodo-bar{
+      display:flex;align-items:center;gap:10px;
+      background:rgba(255,255,255,.1);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.15);border-radius:14px;
+      padding:12px 18px;margin-bottom:20px;flex-wrap:wrap;
+    }
+    .periodo-presets{display:flex;gap:7px;flex-wrap:wrap}
+    .preset-btn{
+      padding:5px 13px;border-radius:8px;
+      border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
+      color:rgba(255,255,255,.8);font-size:12px;font-weight:600;
+      cursor:pointer;font-family:inherit;transition:all .15s;
+    }
+    .preset-btn:hover,.preset-btn.on{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:white}
+    .periodo-sep{color:rgba(255,255,255,.3);font-size:12px}
+    .periodo-inputs{display:flex;align-items:center;gap:8px}
+    .periodo-input{
+      padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);
+      background:rgba(255,255,255,.08);color:white;font-size:12px;font-family:inherit;
+      outline:none;
+    }
+    .periodo-input:focus{border-color:var(--teal400);background:rgba(255,255,255,.12)}
+    .periodo-input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
+    .btn-buscar{
+      padding:6px 16px;border-radius:9px;
+      background:linear-gradient(135deg,var(--teal500),var(--teal700));
+      border:none;color:white;font-size:12px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;
+    }
+
+    /* STATS */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+    .stat-card{
+      background:rgba(255,255,255,.12);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.15);border-radius:16px;
+      padding:18px 20px;display:flex;align-items:center;gap:14px;
+    }
+    .sc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .sc-val{font-size:24px;font-weight:900;color:white;line-height:1}
+    .sc-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.7px;margin-top:2px}
+
+    /* CARD */
+    .card{background:rgba(255,255,255,.97);border:1px solid var(--gray200);border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden}
+
+    .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+    .ph-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:-.5px}
+    .ph-sub{font-size:13px;color:rgba(255,255,255,.75);margin-top:3px}
+
+    .aviso{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:14px;
+      padding:14px 16px;margin-bottom:20px;color:#fff;font-size:13px;line-height:1.55;display:flex;gap:11px;align-items:flex-start}
+    .aviso i{font-size:16px;opacity:.85;margin-top:1px}
+    .aviso b{font-weight:800}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+    .pessoa{padding:18px 20px 16px}
+    .pes-topo{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .pes-ini{width:40px;height:40px;border-radius:12px;background:var(--teal600);color:#fff;
+      display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+    .pes-nome{font-size:15px;font-weight:800;color:var(--gray900)}
+    .pes-cargo{font-size:11.5px;color:var(--gray500);margin-top:1px}
+
+    .saldo{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+    .saldo-val{font-size:30px;font-weight:900;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+    .pos{color:var(--green)} .neg{color:var(--red)} .zero{color:var(--gray400)}
+    .saldo-lab{font-size:11.5px;color:var(--gray500);font-weight:600}
+    .saldo-sub{font-size:11.5px;color:var(--gray500);margin-bottom:14px}
+
+    .ciclo{background:var(--gray50);border-radius:12px;padding:12px 14px}
+    .ciclo-topo{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;
+      color:var(--gray600);font-weight:600;margin-bottom:9px}
+    .barra{height:6px;background:var(--gray200);border-radius:99px;overflow:hidden;margin-bottom:10px}
+    .barra-fill{height:100%;background:linear-gradient(90deg,var(--teal500),var(--teal600));border-radius:99px}
+    .ciclo-nums{display:flex;gap:16px;font-size:12px;color:var(--gray700)}
+    .ciclo-nums b{font-variant-numeric:tabular-nums}
+    .falta-tag{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;font-weight:700;
+      padding:3px 9px;border-radius:7px;background:var(--red-bg);color:var(--red)}
+
+    .hist{margin-top:14px;border-top:1px solid var(--gray200);padding-top:11px}
+    .hist-tit{font-size:10.5px;font-weight:700;color:var(--gray500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+    .hist-l{display:flex;justify-content:space-between;font-size:12px;color:var(--gray600);padding:3px 0}
+    .vazio{text-align:center;padding:48px 20px;color:rgba(255,255,255,.75);font-size:14px}
+    .vazio i{font-size:34px;display:block;margin-bottom:12px;opacity:.5}
+
+    @media(max-width:768px){
+      .topbar{padding:0 16px}
+      .tb-sys,.tb-company{display:none}
+      .main{padding:16px 14px 48px}
+      .stats-row{grid-template-columns:1fr 1fr}
+      .page-header{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader" class="loader-wrap">
+    <div class="loader-spin"></div>
+    <div class="loader-text">Somando as horas...</div>
+  </div>
+
+  <header class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">L</div>
+      <span class="tb-lina">Lina</span>
+    </div>
+    <div class="tb-sys">
+      <div class="tb-sys-icon">⏰</div>
+      <span class="tb-sys-name">Data Point</span>
+    </div>
+    <div class="tb-company">
+      <i class="fa fa-building" style="font-size:11px;color:rgba(255,255,255,.35)"></i>
+      <strong id="tbEmpresaNome">—</strong>
+    </div>
+    <div class="tb-right">
+      <button class="tb-icon-btn" onclick="location.href='index.html'" title="Voltar ao dashboard"><i class="fa fa-arrow-left"></i></button>
+      <div class="tb-avatar" id="tbAvatar">?</div>
+    </div>
+  </header>
+
+  <main id="mainContent" class="main hidden">
+    <div class="page-header">
+      <div>
+        <div class="ph-title">Banco de Horas</div>
+        <div class="ph-sub" id="phSub">—</div>
+      </div>
+    </div>
+
+    <div id="avisoEstado"></div>
+    <div class="grid" id="grid"></div>
+  </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return (location.href = '/login.html');
+  const nome = localStorage.getItem('usuarioNome') || '';
+  document.getElementById('tbAvatar').textContent = nome.charAt(0).toUpperCase() || '?';
+  document.getElementById('tbEmpresaNome').textContent = localStorage.getItem('empresaNome') || '—';
+  await carregar();
+});
+
+const fmtH = x => {
+  const neg = x < 0, abs = Math.abs(x);
+  const h = Math.floor(abs), m = Math.round((abs - h) * 60);
+  return (neg ? '−' : '+') + h + 'h' + String(m).padStart(2, '0');
+};
+const cls = x => x > 0.01 ? 'pos' : x < -0.01 ? 'neg' : 'zero';
+const dataBR = s => s ? s.slice(8) + '/' + s.slice(5, 7) : '—';
+
+async function carregar() {
+  try {
+    const d = await window.api.getDpSaldos();
+    render(d);
+  } catch (e) {
+    document.getElementById('loader').innerHTML =
+      '<div style="color:#fca5a5;font-size:14px;padding:20px;text-align:center">' +
+      '<i class="fa fa-exclamation-circle" style="font-size:30px;display:block;margin-bottom:12px"></i>' +
+      'Erro ao carregar. Verifique se o Data Point está ativo.</div>';
+    return;
+  }
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+}
+
+function render(d) {
+  const saldos = d.saldos || [];
+  document.getElementById('phSub').textContent =
+    saldos.length + ' funcionário' + (saldos.length !== 1 ? 's' : '') +
+    (d.validoDesde ? ' · ponto válido desde ' + dataBR(d.validoDesde) : '');
+
+  // O gestor precisa saber em que pé está: enquanto desligado, nada é gravado nem cobrado
+  document.getElementById('avisoEstado').innerHTML = d.ativo
+    ? ''
+    : `<div class="aviso"><i class="fa fa-circle-info"></i><div>
+        <b>Banco de horas desligado.</b> Os números abaixo são uma prévia calculada ao vivo —
+        nenhum ciclo é fechado e nenhum saldo fica gravado enquanto não for ativado nas configurações.
+       </div></div>`;
+
+  if (!saldos.length) {
+    document.getElementById('grid').innerHTML =
+      '<div class="vazio"><i class="fa fa-user-clock"></i>Nenhum funcionário ativo no Data Point.</div>';
+    return;
+  }
+
+  document.getElementById('grid').innerHTML = saldos.map(s => {
+    const c = s.ciclo;
+    const pct = c && c.diasTotais ? Math.round(c.diasDecorridos / c.diasTotais * 100) : 0;
+    const parcial = c ? c.saldoParcial : 0;
+
+    const ciclo = c ? `
+      <div class="ciclo">
+        <div class="ciclo-topo">
+          <span>Ciclo ${dataBR(c.inicio)} a ${dataBR(c.fim)}</span>
+          <span>dia ${c.diasDecorridos} de ${c.diasTotais}</span>
+        </div>
+        <div class="barra"><div class="barra-fill" style="width:${pct}%"></div></div>
+        <div class="ciclo-nums">
+          <span>trabalhadas <b>${c.horasTrabalhadas.toFixed(1)}h</b></span>
+          <span>previstas <b>${c.horasEsperadas.toFixed(0)}h</b></span>
+          <span class="${cls(parcial)}">parcial <b>${fmtH(parcial)}</b></span>
+        </div>
+        ${c.diasFalta ? `<div class="falta-tag"><i class="fa fa-user-xmark"></i>
+           ${c.diasFalta} falta${c.diasFalta > 1 ? 's' : ''} no período — desconto em folha, fora do saldo</div>` : ''}
+      </div>` : '';
+
+    const hist = (s.fechamentos || []).length ? `
+      <div class="hist">
+        <div class="hist-tit">Ciclos fechados</div>
+        ${s.fechamentos.map(f => `<div class="hist-l">
+          <span>${dataBR(f.periodoInicio.slice(0,10))} a ${dataBR(f.periodoFim.slice(0,10))}</span>
+          <span class="${cls(f.saldoPeriodo)}"><b>${fmtH(f.saldoPeriodo)}</b></span>
+        </div>`).join('')}
+      </div>` : '';
+
+    return `<div class="card pessoa">
+      <div class="pes-topo">
+        <div class="pes-ini">${(s.nome || '?').charAt(0).toUpperCase()}</div>
+        <div>
+          <div class="pes-nome">${s.nome}</div>
+          <div class="pes-cargo">${s.cargo || 'Sem cargo definido'}</div>
+        </div>
+      </div>
+      <div class="saldo">
+        <span class="saldo-val ${cls(s.saldoAcumulado)}">${fmtH(s.saldoAcumulado)}</span>
+        <span class="saldo-lab">acumulado</span>
+      </div>
+      <div class="saldo-sub">soma dos ciclos já fechados</div>
+      ${ciclo}
+      ${hist}
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
