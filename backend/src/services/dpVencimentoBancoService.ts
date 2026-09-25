@@ -12,7 +12,7 @@ import prisma from '../db';
 import { getTodayStrBRT } from '../utils/dateUtils';
 import { situacaoDoBanco, prazoDeCompensacao } from './dpBancoMovimentoService';
 import { formatarHoras } from '../utils/bancoHorasFifo';
-import { notifyAdmins } from './whatsappNotificationService';
+import { notifyAdmins, notifyByPermission, permissaoRecebe } from './whatsappNotificationService';
 
 const DIAS_DE_ALERTA = 45;
 
@@ -58,8 +58,13 @@ export async function rodarAvisoVencimentoBanco(): Promise<void> {
       }
       partes.push('', 'Dá para compensar com folga ou pagar em folha. Veja em Data Point → Banco de horas.');
 
-      await notifyAdmins(emp.empresaId, partes.join('\n'), 'bancoHorasVencendo')
+      const texto = partes.join('\n');
+      await notifyAdmins(emp.empresaId, texto, 'bancoHorasVencendo')
         .catch((e) => console.error('[dp-banco] aviso:', e));
+      if (await permissaoRecebe(emp.empresaId, 'ver_data_point_equipe', 'bancoHorasVencendo')) {
+        await notifyByPermission(emp.empresaId, 'ver_data_point_equipe', texto)
+          .catch((e) => console.error('[dp-banco] aviso equipe:', e));
+      }
     } catch (error) {
       console.error(`[dp-banco] empresa ${emp.empresaId}:`, error);
     }

@@ -23,7 +23,7 @@ import {
 } from '../utils/dpPontoUtils';
 import { destinoWppFuncionario } from './dpPontoNotifier';
 import { botSend } from './botServiceClient';
-import { notifyAdmins } from './whatsappNotificationService';
+import { notifyAdmins, notifyByPermission, permissaoRecebe } from './whatsappNotificationService';
 import { logarMarcacao, SISTEMA } from './dpAuditoriaService';
 
 function horaParaMin(horaStr: string): number {
@@ -203,8 +203,15 @@ export async function rodarPontoPendente(): Promise<void> {
           partes.push('', '✏️ Precisam de correção manual:', ...paraCorrigir);
         }
         partes.push('', 'Confira em Data Point → Espelho.');
-        await notifyAdmins(emp.empresaId, partes.join('\n'), 'pontoPendente')
+        const texto = partes.join('\n');
+        await notifyAdmins(emp.empresaId, texto, 'pontoPendente')
           .catch(e => console.error('[dp-ponto] aviso gestor:', e));
+        // Quem acompanha a equipe no dia a dia costuma não ser quem está na lista de
+        // admins do bot — é quem tem a permissão de ver o Data Point.
+        if (await permissaoRecebe(emp.empresaId, 'ver_data_point_equipe', 'pontoPendente')) {
+          await notifyByPermission(emp.empresaId, 'ver_data_point_equipe', texto)
+            .catch(e => console.error('[dp-ponto] aviso equipe:', e));
+        }
       }
     } catch (error) {
       console.error(`[dp-ponto] empresa ${emp.empresaId}:`, error);

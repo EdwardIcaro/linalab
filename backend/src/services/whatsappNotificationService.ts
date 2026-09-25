@@ -72,7 +72,15 @@ function getNotifPrefsObj(empresa: { notificationPreferences: any }): any {
   if (typeof np === 'string') {
     try { np = JSON.parse(np); } catch { np = {}; }
   }
-  return np ?? {};
+  if (!np || typeof np !== 'object') return {};
+
+  // Preferência espalhada em chaves numéricas é resíduo de um `{...string}` antigo:
+  // descartamos o lixo e ficamos com as chaves de verdade.
+  const limpo: any = {};
+  for (const chave of Object.keys(np)) {
+    if (!/^\d+$/.test(chave)) limpo[chave] = np[chave];
+  }
+  return limpo;
 }
 
 function prefs(empresa: { notificationPreferences: any }): NotifPrefs {
@@ -90,6 +98,26 @@ function permissionNotifEnabled(empresa: { notificationPreferences: any }, permi
 }
 
 export function getDefaultPrefs(): NotifPrefs { return { ...DEFAULTS }; }
+
+/**
+ * Esse cargo recebe esse aviso?
+ *
+ * Existe porque quem dispara notificação por permissão precisa da resposta antes de
+ * montar a mensagem — e a checagem morava dentro de funções que já tinham a empresa
+ * carregada. Ausência de configuração significa sim, como no resto do arquivo.
+ */
+export async function permissaoRecebe(
+  empresaId: string,
+  permission: string,
+  notifKey: string,
+): Promise<boolean> {
+  const empresa = await prisma.empresa.findUnique({
+    where: { id: empresaId },
+    select: { notificationPreferences: true },
+  });
+  if (!empresa) return false;
+  return permissionNotifEnabled(empresa, permission, notifKey);
+}
 
 // ─── Core: enviar para admins da empresa, respeitando prefs individuais ───────
 

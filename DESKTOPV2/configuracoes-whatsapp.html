@@ -499,6 +499,39 @@
                     </div>
                 </div>
 
+                <!-- Grupo: Data Point -->
+                <div class="notif-group">
+                    <div class="notif-group-label">Ponto e banco de horas</div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                ⏰ Ponto pendente
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Avisa quando alguém não bateu a saída e o sistema encerrou o turno, ou quando um dia precisa de correção manual.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_pontoPendente">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notif-row">
+                        <div class="notif-info">
+                            <div class="notif-title">
+                                ⏳ Horas perto de vencer
+                                <span class="notif-badge-default">padrão: ativo</span>
+                            </div>
+                            <div class="notif-desc">Toda segunda às 9h, quem tem horas no banco chegando no prazo de compensação — ou já vencidas, que viram hora extra a pagar.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif_bancoHorasVencendo">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Grupo: Relatórios -->
                 <div class="notif-group">
                     <div class="notif-group-label">Relatórios automáticos</div>
@@ -1333,6 +1366,8 @@
             comissaoFechada:   false,
             clienteVip:        true,
             reportAvaria:      true,
+            pontoPendente:      true,
+            bancoHorasVencendo: true,
         };
 
         async function openNotifModal() {
@@ -1531,6 +1566,14 @@
                 commands: ['equipe / funcionários / lavadores'],
                 notifs: [],
             },
+            {
+                key: 'ver_data_point_equipe', label: '⏰ Data Point',
+                commands: [],
+                notifs: [
+                    { key: 'pontoPendente',      label: '⏰ Ponto pendente (turno aberto, correção)' },
+                    { key: 'bancoHorasVencendo', label: '⏳ Horas perto de vencer (seg 9h)' },
+                ],
+            },
         ];
 
         // Comandos do bot disponíveis para lavadores (independente das permissões do painel)
@@ -1650,7 +1693,7 @@
                 const checked = enabled.has(def.key) ? 'checked' : '';
                 html += `<label class="perm-item">
                     <input type="checkbox" data-bot-feature="${def.key}" ${checked} onchange="onBotFeatureToggle('${cargoId}')">
-                    ${def.label}: ${def.commands.join(', ')}
+                    ${def.label}${def.commands.length ? ': ' + def.commands.join(', ') : ' — só notificações, sem comando'}
                 </label>`;
             }
             html += `</div>`;
