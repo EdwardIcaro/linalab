@@ -996,6 +996,7 @@ model DpFuncionario {
   cargoRef          DpCargo?       @relation(fields: [cargoId], references: [id], onDelete: SetNull)
   fechamentosBanco  DpFechamentoBanco[]
   assinaturas       DpEspelhoAssinatura[]
+  movimentosBanco   DpBancoMovimento[]
 
   @@map("dp_funcionarios")
 }
@@ -1087,6 +1088,35 @@ model DpEspelhoAssinatura {
 
   @@index([funcionarioId, competencia])
   @@map("dp_espelho_assinaturas")
+}
+
+// Cada fato que mexe no banco de horas de alguém. O saldo é a soma disto.
+//
+// Existe porque saldo sem extrato não se defende: na hora da rescisão ou da fiscalização,
+// a pergunta não é "quanto ele tem", é "de onde veio e o que foi feito com cada hora".
+model DpBancoMovimento {
+  id            String        @id @default(cuid())
+  empresaId     String
+  funcionarioId String
+  // CICLO      — fechamento de período (credita ou debita)
+  // FOLGA_COMP — folga compensatória: o funcionário usou horas do banco
+  // PAGAMENTO  — a empresa pagou as horas em dinheiro
+  // VENCIMENTO — passou do prazo de compensação e virou hora extra devida
+  // AJUSTE     — correção manual do gestor, sempre com motivo
+  tipo          String
+  horas         Float         // positivo credita, negativo debita
+  data          String        // YYYY-MM-DD do fato
+  descricao     String?
+  fechamentoId  String?
+  afastamentoId String?
+  autorNome     String?
+  saldoApos     Float
+  createdAt     DateTime      @default(now())
+  funcionario   DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@index([funcionarioId, data])
+  @@index([empresaId, createdAt])
+  @@map("dp_banco_movimentos")
 }
 
 model DpTotem {

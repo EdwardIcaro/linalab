@@ -487,6 +487,8 @@
     .bh-linha{display:flex;justify-content:space-between;font-size:12.5px;color:rgba(255,255,255,.9);padding:2px 0}
     .bh-barra{height:5px;background:rgba(255,255,255,.18);border-radius:99px;overflow:hidden;margin:9px 0}
     .bh-barra div{height:100%;background:#5eead4;border-radius:99px}
+    .bh-aviso{margin-top:9px;background:rgba(251,191,36,.18);border:1px solid rgba(251,191,36,.4);
+      border-radius:9px;padding:8px 10px;font-size:11.5px;color:#fde68a;line-height:1.45}
 
     /* Aviso de feriado — aparece só no dia */
     .pf-feriado{display:flex;align-items:center;gap:11px;background:rgba(251,191,36,.16);
@@ -2188,6 +2190,19 @@ async function carregarBancoHoras() {
     };
     const dataBR = s2 => s2 ? s2.slice(8) + '/' + s2.slice(5, 7) : '—';
     const s3 = d.saldo, c = s3.ciclo;
+
+    // Hora trabalhada tem prazo para ser compensada. Quem mais precisa saber disso é
+    // quem trabalhou: se vencer, vira hora extra a receber, não folga a tirar.
+    const prazoDoBanco = pz => {
+      if (!pz) return '';
+      if (pz.horasVencidas > 0.01) {
+        return `<div class="bh-aviso">${fmt(pz.horasVencidas).slice(1)} passaram do prazo de compensação — fale com o gestor sobre o pagamento.</div>`;
+      }
+      if (pz.horasAVencer > 0.01 && pz.proximoVencimento) {
+        return `<div class="bh-aviso">${fmt(pz.horasAVencer).slice(1)} precisam ser usadas até ${dataBR(pz.proximoVencimento)}.</div>`;
+      }
+      return '';
+    };
     const cls = s3.saldoAcumulado > 0.01 ? 'pos' : s3.saldoAcumulado < -0.01 ? 'neg' : '';
     const pct = c && c.diasTotais ? Math.round(c.diasDecorridos / c.diasTotais * 100) : 0;
 
@@ -2197,6 +2212,7 @@ async function carregarBancoHoras() {
         <span class="bh-val ${cls}">${fmt(s3.saldoAcumulado)}</span>
       </div>
       <div class="bh-sub">Soma dos períodos já fechados</div>
+      ${prazoDoBanco(s3.prazo)}
       ${c ? `<div class="bh-ciclo">
         <div class="bh-linha"><span>Período atual</span><span>${dataBR(c.inicio)} a ${dataBR(c.fim)}</span></div>
         <div class="bh-barra"><div style="width:${pct}%"></div></div>

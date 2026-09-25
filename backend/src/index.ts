@@ -50,6 +50,7 @@ import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoS
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
 import { rodarPontoPendente } from './services/dpEncerramentoService';
 import { rodarLembretesAssinatura } from './services/dpLembreteAssinaturaService';
+import { rodarAvisoVencimentoBanco } from './services/dpVencimentoBancoService';
 import { iniciarEmailAutomacaoPoller } from './services/emailAutomacaoPoller';
 
 // Importar middleware
@@ -286,6 +287,12 @@ cron.schedule('*/30 6-22 * * *', () => {
 // pra não chegar junto com o despertador.
 cron.schedule('0 10 * * *', () => {
   rodarLembretesAssinatura().catch(e => console.error('[dp-assinatura] cron:', e));
+}, { timezone: "America/Sao_Paulo" });
+
+// Data Point: horas do banco perto de vencer (segunda, 9h). Semanal porque o prazo é
+// de meses — alerta diário sobre isso vira ruído e some.
+cron.schedule('0 9 * * 1', () => {
+  rodarAvisoVencimentoBanco().catch(e => console.error('[dp-banco] cron:', e));
 }, { timezone: "America/Sao_Paulo" });
 
 // Data Point: fecha o ciclo de 30 dias do banco de horas de quem venceu hoje (1x ao dia às 02:00)

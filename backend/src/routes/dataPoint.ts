@@ -31,6 +31,8 @@ import {
   getDpFeriados,
   getProximosFeriados,
   getSaldosDp,
+  getExtratoBanco,
+  registrarPagamentoBanco,
   getSaldoFuncionarioDp,
   decidirFeriado,
   criarDpFeriado,
@@ -89,6 +91,8 @@ router.delete('/afastamentos/:id',  authMiddleware, excluirDpAfastamento);
 
 // Feriados / fechamentos coletivos
 router.get('/saldos',            authMiddleware, getSaldosDp);
+router.get('/banco/:funcionarioId/extrato',    authMiddleware, getExtratoBanco);
+router.post('/banco/:funcionarioId/pagamento', authMiddleware, registrarPagamentoBanco);
 router.get('/saldos/:funcionarioId', authMiddleware, getSaldoFuncionarioDp);
 router.get('/feriados/proximos', authMiddleware, getProximosFeriados);
 router.put('/feriados/decisao',  authMiddleware, decidirFeriado);

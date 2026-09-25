@@ -13,6 +13,8 @@ import prisma from '../db';
 import { getTodayStrBRT, getDateRangeBRT, dateToStrBRT, addDiasStrBRT } from '../utils/dateUtils';
 import { resolverCargaHorariaDia, cargaDaJornada } from '../utils/dpPontoUtils';
 import { calcularFechamentoPeriodo } from './bancoHorasService';
+import { situacaoDoBanco, prazoDeCompensacao } from './dpBancoMovimentoService';
+import { EstadoBanco } from '../utils/bancoHorasFifo';
 
 export interface CicloEmAndamento {
   inicio: string;
@@ -30,6 +32,8 @@ export interface SaldoFuncionario {
   nome: string;
   cargo: string | null;
   saldoAcumulado: number;
+  /** Situação do prazo de compensação: o que venceu e o que está para vencer. */
+  prazo: EstadoBanco | null;
   ciclo: CicloEmAndamento | null;
   fechamentos: {
     periodoInicio: Date;
@@ -50,6 +54,7 @@ interface Cfg {
   diasFuncionamento?: number[];
   pontoValidoDesde?: string | null;
   bancoHorasAtivo?: boolean;
+  bancoHorasPrazoMeses?: number;
 }
 
 /** Saldo de um funcionário: acumulado, ciclo corrente e histórico. */
@@ -95,11 +100,14 @@ export async function saldoDoFuncionario(
 
   const ciclo = inicio <= hoje ? await montarCicloParcial(empresaId, func, cfg, inicio, fim, hoje) : null;
 
+  const prazo = await situacaoDoBanco(funcionarioId, prazoDeCompensacao(cfg));
+
   return {
     funcionarioId: func.id,
     nome: func.nome,
     cargo: func.cargo,
     saldoAcumulado: func.saldoBancoHorasAtual,
+    prazo,
     ciclo,
     fechamentos,
   };

@@ -190,12 +190,14 @@ export async function fecharBancoHorasDiario(): Promise<void> {
         intervaloMin: cfg.intervaloMin ?? 0,
       });
 
+      // O saldo do ciclo entra no extrato com a data do fim do período: é dali que
+      // conta o prazo de compensação dessas horas.
       const periodoInicio = getDateRangeBRT(baseStr).start;
       const periodoFim = getDateRangeBRT(proximoFechamentoStr).start; // início do próximo ciclo (limite exclusivo)
       const saldoAcumulado = func.saldoBancoHorasAtual + resultado.saldoPeriodo;
 
       await prisma.$transaction(async (tx) => {
-        await tx.dpFechamentoBanco.create({
+        const fechamento = await tx.dpFechamentoBanco.create({
           data: {
             empresaId: func.empresaId,
             funcionarioId: func.id,
@@ -209,6 +211,21 @@ export async function fecharBancoHorasDiario(): Promise<void> {
             saldoAcumulado,
           },
         });
+        if (Math.abs(resultado.saldoPeriodo) > 0.0001) {
+          await tx.dpBancoMovimento.create({
+            data: {
+              empresaId: func.empresaId,
+              funcionarioId: func.id,
+              tipo: 'CICLO',
+              horas: Math.round(resultado.saldoPeriodo * 100) / 100,
+              data: proximoFechamentoStr,
+              descricao: `Fechamento do período ${baseStr} a ${proximoFechamentoStr}`,
+              fechamentoId: fechamento.id,
+              saldoApos: Math.round(saldoAcumulado * 100) / 100,
+            },
+          });
+        }
+
         await tx.dpFuncionario.update({
           where: { id: func.id },
           data: { saldoBancoHorasAtual: saldoAcumulado },

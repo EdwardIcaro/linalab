@@ -540,6 +540,18 @@
             </span>
           </label>
           <div style="margin-top:13px;padding-top:12px;border-top:1px dashed #e5e7eb">
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Prazo para compensar</label>
+            <select id="cfg-prazo-banco"
+              style="width:100%;max-width:280px;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;background:#fff">
+              <option value="6">6 meses — acordo individual escrito</option>
+              <option value="12">12 meses — acordo ou convenção coletiva</option>
+            </select>
+            <div style="font-size:11px;color:#6b7280;margin-top:5px;line-height:1.45">
+              Passado o prazo sem compensar, a hora vira extra e tem que ser paga com adicional.
+              O sistema avisa antes de vencer.
+            </div>
+          </div>
+          <div style="margin-top:13px;padding-top:12px;border-top:1px dashed #e5e7eb">
             <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Ponto vale a partir de</label>
             <input id="cfg-valido-desde" type="date"
               style="width:100%;max-width:220px;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;" />
@@ -1495,6 +1507,7 @@ function abrirConfigEmpresa() {
   document.getElementById('cfg-tolerancia').value= cfg.toleranciaMin ?? 10;
   document.getElementById('cfg-banco').checked  = cfg.bancoHorasAtivo === true;
   document.getElementById('cfg-valido-desde').value = cfg.pontoValidoDesde || '';
+  document.getElementById('cfg-prazo-banco').value = String(cfg.bancoHorasPrazoMeses ?? 6);
   cfgDiasSelecionados = new Set(cfg.diasFuncionamento ?? [1, 2, 3, 4, 5]);
   renderDiasFuncionamento();
   document.getElementById('cfg-erro').style.display = 'none';
@@ -1654,6 +1667,7 @@ async function salvarConfigEmpresa() {
       toleranciaMin:  document.getElementById('cfg-tolerancia').value,
       bancoHorasAtivo: document.getElementById('cfg-banco').checked,
       pontoValidoDesde: document.getElementById('cfg-valido-desde').value || null,
+      bancoHorasPrazoMeses: parseInt(document.getElementById('cfg-prazo-banco').value, 10),
       diasFuncionamento: [...cfgDiasSelecionados].sort((a, b) => a - b),
     };
 

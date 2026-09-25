@@ -256,6 +256,8 @@ const api = {
 
   // Feriados / fechamentos coletivos
   getDpSaldos: () => fetchApi('/dp/saldos'),
+  getDpExtratoBanco: (id) => fetchApi(`/dp/banco/${id}/extrato`),
+  pagarHorasBanco: (id, dados) => fetchApi(`/dp/banco/${id}/pagamento`, { method: 'POST', body: JSON.stringify(dados) }),
   getDpSaldoFuncionario: (id) => fetchApi(`/dp/saldos/${id}`),
   getDpProximosFeriados: (dias) => fetchApi(`/dp/feriados/proximos?dias=${dias || 60}`),
   decidirFeriadoDp: (dados) => fetchApi('/dp/feriados/decisao', { method: 'PUT', body: JSON.stringify(dados) }),

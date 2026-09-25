@@ -4,10 +4,15 @@ import { subscriptionService } from '../services/subscriptionService';
 import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
-         resolverCargaHorariaDia, cargaDaJornada, resolverDia } from '../utils/dpPontoUtils';
+         resolverCargaHorariaDia, cargaDaJornada, resolverDia,
+         resolverFeriado } from '../utils/dpPontoUtils';
 import { logarMarcacao, autorDaRequest, historicoDasMarcacoes } from '../services/dpAuditoriaService';
-import { feriadosNacionaisEntre } from '../utils/feriadosNacionais';
+import { feriadosNacionaisEntre, feriadoNacionalDo } from '../utils/feriadosNacionais';
 import { saldosDaEquipe, saldoDoFuncionario } from '../services/dpSaldoService';
+import {
+  lancarMovimento, removerMovimentosDoAfastamento, extratoDoFuncionario,
+  situacaoDoBanco, prazoDeCompensacao,
+} from '../services/dpBancoMovimentoService';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -1144,6 +1149,7 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
     lat, lng, raioGps, nivelGps,
     jornadaEntrada, jornadaSaida, intervaloMin, toleranciaMin,
     modoEncerramento, modoAutenticacao, diasFuncionamento, bancoHorasAtivo, pontoValidoDesde,
+    bancoHorasPrazoMeses,
   } = req.body;
 
   try {
@@ -1184,6 +1190,10 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
       // fica na tela de configurações, junto da data a partir da qual o ponto vale.
       ...(bancoHorasAtivo !== undefined && { bancoHorasAtivo: bancoHorasAtivo === true || bancoHorasAtivo === 'true' }),
       // Dias anteriores a esta data não contam como falta nem entram no banco de horas
+      // 6 meses é o teto do acordo individual; 12, o do coletivo (art. 59 da CLT)
+      ...(bancoHorasPrazoMeses !== undefined && {
+        bancoHorasPrazoMeses: Number(bancoHorasPrazoMeses) === 12 ? 12 : 6,
+      }),
       ...(pontoValidoDesde !== undefined && {
         pontoValidoDesde: /^\d{4}-\d{2}-\d{2}$/.test(String(pontoValidoDesde)) ? pontoValidoDesde : null,
       }),
@@ -1631,6 +1641,12 @@ export const criarDpAfastamento = async (req: EmpresaRequest, res: Response) => 
       ),
     );
 
+    // Folga compensatória é uso do banco de horas: sem o débito, a pessoa recebia a
+    // folga E continuava com as horas no saldo.
+    if (tipo === 'FOLGA_COMP') {
+      await debitarFolgaCompensatoria(empresaId, afastamentos, dataInicio, dataFim, autorDaRequest(req).nome);
+    }
+
     res.status(201).json({ afastamentos });
   } catch (error) {
     console.error('[dp] criarAfastamento:', error);
@@ -1676,6 +1692,8 @@ export const excluirDpAfastamento = async (req: EmpresaRequest, res: Response) =
     const existente = await prisma.dpAfastamento.findFirst({ where: { id, empresaId } });
     if (!existente) return res.status(404).json({ error: 'Afastamento não encontrado' });
 
+    // Folga cancelada devolve as horas ao banco
+    await removerMovimentosDoAfastamento(id);
     await prisma.dpAfastamento.delete({ where: { id } });
     res.json({ ok: true });
   } catch (error) {
@@ -1836,6 +1854,133 @@ function diasEntre(de: string, ate: string): string[] {
   while (c <= ate) { out.push(c); c = addDiasStr(c, 1); }
   return out;
 }
+
+/**
+ * Quantas horas do banco uma folga consome: a jornada de cada dia útil do período.
+ *
+ * Dia que já não teria expediente (fim de semana, feriado) não desconta nada — dar folga
+ * em cima de folga não gasta banco de horas de ninguém.
+ */
+async function debitarFolgaCompensatoria(
+  empresaId: string,
+  afastamentos: { id: string; funcionarioId: string }[],
+  dataInicio: string,
+  dataFim: string,
+  autorNome: string,
+): Promise<void> {
+  try {
+    const sistema = await prisma.empresaSistema.findFirst({
+      where: { empresaId, sistema: 'data-point', ativo: true },
+      select: { config: true },
+    });
+    const cfg = sistema?.config ? JSON.parse(sistema.config as string) : {};
+    const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
+    const cargaDaEmpresa = cargaDaJornada(cfg.jornadaEntrada, cfg.jornadaSaida, cfg.intervaloMin);
+
+    const feriados = await prisma.dpFeriado.findMany({
+      where: { empresaId },
+      select: { data: true, nome: true, recorrente: true, expediente: true },
+    });
+
+    // dias úteis do período
+    const dias: string[] = [];
+    let cursor = dataInicio;
+    while (cursor <= dataFim) {
+      const diaSemana = new Date(cursor + 'T12:00:00').getDay();
+      const feriado = resolverFeriado(cursor, feriados, feriadoNacionalDo(cursor));
+      if (diasFuncionamento.includes(diaSemana) && !feriado?.fecha) dias.push(cursor);
+      const d = new Date(cursor + 'T12:00:00Z');
+      d.setUTCDate(d.getUTCDate() + 1);
+      cursor = d.toISOString().slice(0, 10);
+    }
+    if (dias.length === 0) return;
+
+    for (const af of afastamentos) {
+      const func = await prisma.dpFuncionario.findUnique({
+        where: { id: af.funcionarioId },
+        select: { cargaHorariaDia: true, cargoRef: { select: { cargaHorariaDia: true } } },
+      });
+      const cargaDia = resolverCargaHorariaDia(
+        func?.cargaHorariaDia, func?.cargoRef?.cargaHorariaDia, cargaDaEmpresa,
+      );
+      await lancarMovimento({
+        empresaId,
+        funcionarioId: af.funcionarioId,
+        tipo: 'FOLGA_COMP',
+        horas: -(cargaDia * dias.length),
+        data: dataInicio,
+        descricao: dias.length === 1
+          ? `Folga compensatória em ${dataInicio.slice(8)}/${dataInicio.slice(5, 7)}`
+          : `Folga compensatória: ${dias.length} dias úteis (${dataInicio} a ${dataFim})`,
+        afastamentoId: af.id,
+        autorNome,
+      });
+    }
+  } catch (error) {
+    console.error('[dp] debitarFolgaCompensatoria:', error);
+  }
+}
+
+// ─── GET /api/dp/banco/:funcionarioId/extrato ────────────────────────────────
+// Extrato do banco de horas: de onde veio cada hora e o que foi feito com ela.
+export const getExtratoBanco = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { funcionarioId } = req.params as { funcionarioId: string };
+
+  try {
+    const [func, sistema] = await Promise.all([
+      prisma.dpFuncionario.findFirst({ where: { id: funcionarioId, empresaId }, select: { id: true, nome: true } }),
+      prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true }, select: { config: true } }),
+    ]);
+    if (!func) return res.status(404).json({ error: 'Funcionário não encontrado' });
+    const cfg = sistema?.config ? JSON.parse(sistema.config as string) : {};
+    const prazoMeses = prazoDeCompensacao(cfg);
+
+    const [extrato, situacao] = await Promise.all([
+      extratoDoFuncionario(funcionarioId),
+      situacaoDoBanco(funcionarioId, prazoMeses),
+    ]);
+
+    res.json({ funcionario: func, prazoMeses, situacao, extrato });
+  } catch (error) {
+    console.error('[dp] getExtratoBanco:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── POST /api/dp/banco/:funcionarioId/pagamento ─────────────────────────────
+// A empresa pagou horas em dinheiro: o saldo cai e o extrato registra.
+export const registrarPagamentoBanco = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { funcionarioId } = req.params as { funcionarioId: string };
+  const { horas, data, descricao } = req.body as { horas?: number; data?: string; descricao?: string };
+
+  const qtd = Number(horas);
+  if (!isFinite(qtd) || qtd <= 0)
+    return res.status(400).json({ error: 'Informe quantas horas foram pagas.' });
+  if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data))
+    return res.status(400).json({ error: 'Data inválida. Use AAAA-MM-DD.' });
+
+  try {
+    const func = await prisma.dpFuncionario.findFirst({ where: { id: funcionarioId, empresaId }, select: { id: true } });
+    if (!func) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const { saldo } = await lancarMovimento({
+      empresaId,
+      funcionarioId,
+      tipo: 'PAGAMENTO',
+      horas: -Math.abs(qtd),
+      data,
+      descricao: descricao?.trim() || 'Horas pagas em folha',
+      autorNome: autorDaRequest(req).nome,
+    });
+
+    res.json({ ok: true, saldo });
+  } catch (error) {
+    console.error('[dp] registrarPagamentoBanco:', error);
+    res.status(500).json({ error: 'Erro ao registrar pagamento' });
+  }
+};
 
 // ─── GET /api/dp/feriados ──────────────────────────────────────────────────────
 // Calendário de feriados/fechamentos por empresa — afeta o espelho de todos os funcionários.
