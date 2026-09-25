@@ -19,6 +19,8 @@ import { EstadoBanco } from '../utils/bancoHorasFifo';
 export interface CicloEmAndamento {
   inicio: string;
   fim: string;
+  /** Dias que desviaram da jornada e formaram o saldo do período. */
+  detalhe?: { dia: string; esperado: number; trabalhado: number; saldo: number; motivo: string }[];
   diasDecorridos: number;
   diasTotais: number;
   horasEsperadas: number;
@@ -199,6 +201,7 @@ async function montarCicloParcial(
     horasTrabalhadas: r.horasTrabalhadas,
     saldoParcial: r.saldoPeriodo,
     diasFalta: r.diasFalta,
+    detalhe: r.detalhe,
   };
 }
 

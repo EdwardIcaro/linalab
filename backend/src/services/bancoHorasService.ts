@@ -10,11 +10,22 @@ import {
   resolverDia,
 } from '../utils/dpPontoUtils';
 
+/** Um dia que puxou o saldo para cima ou para baixo. */
+export interface DiaDoPeriodo {
+  dia: string;
+  esperado: number;    // horas que o dia pedia
+  trabalhado: number;  // horas efetivamente cumpridas
+  saldo: number;       // diferença, o que entra ou sai do banco
+  motivo: 'ATRASO_OU_SAIDA' | 'EXTRA' | 'FERIADO_TRABALHADO' | 'FALTA' | 'INCOMPLETO';
+}
+
 interface ResultadoFechamento {
   horasEsperadas: number;
   horasTrabalhadas: number;
   horasFeriadoTrabalhado: number;
   saldoPeriodo: number;
+  /** Só os dias que desviaram da jornada — é o que explica o saldo. */
+  detalhe: DiaDoPeriodo[];
   /** Dias úteis sem nenhuma batida. Ficam FORA do saldo: vão para a folha, não para o banco. */
   diasFalta: number;
 }
@@ -39,6 +50,7 @@ export function calcularFechamentoPeriodo(params: {
   let horasTrabalhadasMin = 0;
   let horasFeriadoTrabalhadoMin = 0;
   let diasFalta = 0;
+  const detalhe: DiaDoPeriodo[] = [];
 
   for (const dia of dias) {
     const diaSemana = new Date(dia + 'T12:00:00').getDay();
@@ -67,6 +79,10 @@ export function calcularFechamentoPeriodo(params: {
       if (minutosTrabalhou > 0) {
         horasTrabalhadasMin += minutosTrabalhou * 2;
         horasFeriadoTrabalhadoMin += minutosTrabalhou * 2;
+        detalhe.push({
+          dia, esperado: 0, trabalhado: (minutosTrabalhou * 2) / 60,
+          saldo: (minutosTrabalhou * 2) / 60, motivo: 'FERIADO_TRABALHADO',
+        });
       }
       continue;
     }
@@ -76,11 +92,28 @@ export function calcularFechamentoPeriodo(params: {
     // dívida de compensação que a CLT não prevê sem acordo específico.
     if (marcacoesDia.length === 0) {
       diasFalta++;
+      detalhe.push({
+        dia, esperado: cargaHorariaDiaMin / 60, trabalhado: 0, saldo: 0, motivo: 'FALTA',
+      });
       continue;
     }
 
     horasEsperadasMin += cargaHorariaDiaMin;
     horasTrabalhadasMin += minutosTrabalhou;
+
+    // O dia que fecha diferente da jornada é o que move o banco de horas: sair uma hora
+    // antes consome saldo, ficar uma hora a mais credita. Guardamos para o extrato
+    // conseguir dizer de onde veio o número.
+    const desvioMin = minutosTrabalhou - cargaHorariaDiaMin;
+    if (Math.abs(desvioMin) >= 5) {
+      detalhe.push({
+        dia,
+        esperado: cargaHorariaDiaMin / 60,
+        trabalhado: minutosTrabalhou / 60,
+        saldo: desvioMin / 60,
+        motivo: minutosTrabalhou === 0 ? 'INCOMPLETO' : desvioMin < 0 ? 'ATRASO_OU_SAIDA' : 'EXTRA',
+      });
+    }
   }
 
   const horasEsperadas = horasEsperadasMin / 60;
@@ -92,6 +125,7 @@ export function calcularFechamentoPeriodo(params: {
     horasFeriadoTrabalhado: horasFeriadoTrabalhadoMin / 60,
     saldoPeriodo: horasTrabalhadas - horasEsperadas,
     diasFalta,
+    detalhe,
   };
 }
 

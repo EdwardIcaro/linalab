@@ -371,6 +371,33 @@ async function verExtrato(id) {
     const d = await window.api.getDpExtratoBanco(id);
     document.getElementById('extNome').textContent = d.funcionario.nome;
 
+    // O período corrente ainda não virou lançamento — mas é onde o atraso de ontem está
+    const MOTIVO = {
+      ATRASO_OU_SAIDA: 'chegou mais tarde ou saiu antes',
+      EXTRA: 'ficou além da jornada',
+      FERIADO_TRABALHADO: 'trabalhou em feriado (conta em dobro)',
+      INCOMPLETO: 'dia sem saída batida',
+      FALTA: 'falta — desconto em folha, fora do banco',
+    };
+    const c = d.cicloAtual;
+    const detalhe = c && (c.detalhe || []).length
+      ? `<div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">
+            Período em andamento · ${dataBR(c.inicio)} a ${dataBR(c.fim)}</div>
+          <div style="font-size:11.5px;color:#9ca3af;margin-bottom:9px;line-height:1.5">
+            Ainda não virou lançamento. Estes são os dias que estão formando o saldo do período:
+            sair uma hora antes consome banco, ficar além credita.</div>
+          ${c.detalhe.map(x => `<div class="lote">
+            <span>${dataBR(x.dia)} · <span style="color:#9ca3af">${MOTIVO[x.motivo] || x.motivo}</span></span>
+            <span class="${cls(x.saldo)}" style="font-weight:800">${x.motivo === 'FALTA' ? '—' : fmtH(x.saldo)}</span>
+          </div>`).join('')}
+          <div class="lote" style="border-bottom:none;padding-top:9px;font-weight:800">
+            <span>Parcial do período</span>
+            <span class="${cls(c.saldoParcial)}">${fmtH(c.saldoParcial)}</span>
+          </div>
+         </div>`
+      : '';
+
     const lotes = (d.situacao.lotes || []).length
       ? `<div style="margin-bottom:16px">
           <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">
@@ -390,7 +417,8 @@ async function verExtrato(id) {
         </div>`).join('')
       : '<div style="text-align:center;padding:26px;color:#9ca3af;font-size:13px">Nenhum lançamento ainda.</div>';
 
-    corpo.innerHTML = lotes + `<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Lançamentos</div>` + linhas;
+    corpo.innerHTML = detalhe + lotes +
+      `<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Lançamentos</div>` + linhas;
   } catch {
     corpo.innerHTML = '<div style="color:#dc2626;font-size:13px;text-align:center;padding:20px">Erro ao carregar o extrato.</div>';
   }

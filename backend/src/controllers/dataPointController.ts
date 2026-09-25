@@ -1936,12 +1936,20 @@ export const getExtratoBanco = async (req: EmpresaRequest, res: Response) => {
     const cfg = sistema?.config ? JSON.parse(sistema.config as string) : {};
     const prazoMeses = prazoDeCompensacao(cfg);
 
-    const [extrato, situacao] = await Promise.all([
+    const [extrato, situacao, saldo] = await Promise.all([
       extratoDoFuncionario(funcionarioId),
       situacaoDoBanco(funcionarioId, prazoMeses),
+      saldoDoFuncionario(empresaId, funcionarioId, cfg, false),
     ]);
 
-    res.json({ funcionario: func, prazoMeses, situacao, extrato });
+    res.json({
+      funcionario: func,
+      prazoMeses,
+      situacao,
+      extrato,
+      // O período corrente ainda não virou lançamento: mostramos o que está se formando
+      cicloAtual: saldo?.ciclo ?? null,
+    });
   } catch (error) {
     console.error('[dp] getExtratoBanco:', error);
     res.status(500).json({ error: 'Erro interno' });
