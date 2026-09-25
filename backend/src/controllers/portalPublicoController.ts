@@ -8,7 +8,9 @@ import { getTodayRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/date
 import { botSend } from '../services/botServiceClient';
 import { determinarTipoEValidarCooldown, resolveFeriadoDia, resolveAfastamentoDia, isDiaFechado,
          calcMinutosTrabalhados, temTurnoAberto, resolverCargaHorariaDia,
-         cargaDaJornada, ajustarIntervaloPresumido, horaFormatadaBRT } from '../utils/dpPontoUtils';
+         cargaDaJornada, ajustarIntervaloPresumido, horaFormatadaBRT,
+         resolverFeriado } from '../utils/dpPontoUtils';
+import { feriadoNacionalDo } from '../utils/feriadosNacionais';
 import { montarEspelhoMes } from '../services/dpEspelhoService';
 import {
   montarSnapshot, hashDoSnapshot, estadoDaAssinatura,
@@ -932,7 +934,16 @@ export const getPontoHoje = async (req: Request, res: Response) => {
       }
     }
 
+    // Hoje é feriado? O funcionário precisa saber ao abrir a tela — e só no dia.
+    const hojeStr = getTodayStrBRT();
+    const feriadosEmpresa = await prisma.dpFeriado.findMany({
+      where: { empresaId },
+      select: { data: true, nome: true, recorrente: true, expediente: true },
+    });
+    const feriadoResolvido = resolverFeriado(hojeStr, feriadosEmpresa, feriadoNacionalDo(hojeStr));
+
     res.json({
+      feriadoHoje: feriadoResolvido?.fecha ? { nome: feriadoResolvido.nome } : null,
       funcionario: { id: funcionario.id, nome: funcionario.nome, cargo: funcionario.cargo },
       config: {
         jornadaEntrada: cfg.jornadaEntrada || '08:00',

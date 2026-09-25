@@ -475,6 +475,12 @@
     .ep-leg-item  { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--text); }
     .ep-leg-dot   { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
+    /* Aviso de feriado — aparece só no dia */
+    .pf-feriado{display:flex;align-items:center;gap:11px;background:rgba(251,191,36,.16);
+      border:1px solid rgba(251,191,36,.45);border-radius:12px;padding:11px 13px;margin:0 0 10px;
+      font-size:12.5px;line-height:1.45;color:#fde68a}
+    .pf-feriado i{font-size:17px;color:#fbbf24}
+
     /* Seção de assinatura */
     .ep-sig-section { padding:20px 16px 44px; display:flex; flex-direction:column; gap:10px; }
     .ep-sig-feito { background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:14px; }
@@ -725,6 +731,7 @@
       </div>
       <div class="ponto-date-label" id="pontoDateLabel">—</div>
     </div>
+    <div id="pontoFeriadoAviso"></div>
     <div class="ponto-clock" id="pontoClock">--:--</div>
     <div class="ponto-contador" id="pontoContador">Carregando...</div>
     <div class="ponto-saldo-card" id="pontoSaldoCard">
@@ -2396,6 +2403,18 @@ function setPontoGpsEstado(estado) {
   if (pontoHojeData) atualizarBotaoPonto(pontoHojeData.proximoTipo);
 }
 
+// No dia do feriado o funcionário vê o aviso ao abrir o ponto. Só no dia: antes disso a
+// informação não muda nada para ele, e essa tela não é mural de recados.
+function renderAvisoFeriado(feriado) {
+  const alvo = document.getElementById('pontoFeriadoAviso');
+  if (!alvo) return;
+  alvo.innerHTML = feriado
+    ? `<div class="pf-feriado"><i class="fas fa-calendar-day"></i>
+         <div><b>Hoje é feriado — ${feriado.nome}</b><br>A empresa não abre. Bom descanso!</div>
+       </div>`
+    : '';
+}
+
 // ── Dados do backend ───────────────────────────────────────────────────────────
 async function carregarPontoHoje() {
   try {
@@ -2408,6 +2427,7 @@ async function carregarPontoHoje() {
       return;
     }
     pontoHojeData = await r.json();
+    renderAvisoFeriado(pontoHojeData.feriadoHoje);
     renderPontoMarcacoes(pontoHojeData.marcacoes, pontoHojeData.proximoTipo);
     atualizarSaldoCard(pontoHojeData.marcacoes, pontoHojeData.config, pontoHojeData.minutosHoje, pontoHojeData.cargaEsperadaMin);
     if (pontoGpsEstado !== 'denied') {

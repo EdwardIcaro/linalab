@@ -255,6 +255,8 @@ const api = {
   excluirDpAfastamento: (id) => fetchApi(`/dp/afastamentos/${id}`, { method: 'DELETE' }),
 
   // Feriados / fechamentos coletivos
+  getDpProximosFeriados: (dias) => fetchApi(`/dp/feriados/proximos?dias=${dias || 60}`),
+  decidirFeriadoDp: (dados) => fetchApi('/dp/feriados/decisao', { method: 'PUT', body: JSON.stringify(dados) }),
   getDpFeriados: () => fetchApi('/dp/feriados'),
   criarDpFeriado: (data) => fetchApi('/dp/feriados', { method: 'POST', body: JSON.stringify(data) }),
   excluirDpFeriado: (id) => fetchApi(`/dp/feriados/${id}`, { method: 'DELETE' }),

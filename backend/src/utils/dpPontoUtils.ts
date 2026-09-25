@@ -127,7 +127,48 @@ export function resolverDia(params: {
   };
 }
 
+export interface FeriadoDaEmpresa {
+  data: string;
+  nome: string;
+  recorrente: boolean;
+  expediente?: string; // FECHADO (padrão) | ABERTO
+}
+
+/** O registro que a empresa tem para o dia — exato ou recorrente. */
+function feriadoCadastrado(dia: string, feriados: FeriadoDaEmpresa[]): FeriadoDaEmpresa | null {
+  for (const f of feriados) {
+    if (f.data === dia) return f;
+    if (f.recorrente && f.data.slice(5) === dia.slice(5)) return f;
+  }
+  return null;
+}
+
+/**
+ * O que este dia é, considerando o calendário nacional e a decisão da empresa.
+ *
+ * `fecha: false` significa dia normal de trabalho — é o caso do feriado em que a empresa
+ * decidiu abrir, e o do ponto facultativo sem decisão (que legalmente é dia útil).
+ */
+export function resolverFeriado(
+  dia: string,
+  feriados: FeriadoDaEmpresa[],
+  nacional?: { nome: string; facultativo?: boolean } | null,
+): { nome: string; fecha: boolean; facultativo: boolean } | null {
+  const cadastrado = feriadoCadastrado(dia, feriados);
+  if (cadastrado) {
+    return {
+      nome: cadastrado.nome,
+      fecha: (cadastrado.expediente ?? 'FECHADO') !== 'ABERTO',
+      facultativo: false,
+    };
+  }
+  if (!nacional) return null;
+  // Sem decisão da empresa: obrigatório fecha, facultativo segue dia útil
+  return { nome: nacional.nome, fecha: !nacional.facultativo, facultativo: !!nacional.facultativo };
+}
+
 // Feriado exato (data igual) ou recorrente (mesmo mês/dia, ano ignorado).
+// Mantida para quem só precisa do nome; o motor usa resolverFeriado.
 export function resolveFeriadoDia(
   dia: string,
   feriados: { data: string; nome: string; recorrente: boolean }[],

@@ -6,6 +6,7 @@ import { gerarTokenCurto } from '../utils/tokenUtils';
 import { resolveFeriadoDia, resolveAfastamentoDia, calcMinutosTrabalhados, isDiaFechado,
          resolverCargaHorariaDia, cargaDaJornada, resolverDia } from '../utils/dpPontoUtils';
 import { logarMarcacao, autorDaRequest, historicoDasMarcacoes } from '../services/dpAuditoriaService';
+import { feriadosNacionaisEntre } from '../utils/feriadosNacionais';
 
 interface UserRequest extends Request { usuarioId?: string; }
 interface EmpresaRequest extends Request { empresaId?: string; usuarioId?: string; }
@@ -1674,6 +1675,113 @@ export const excluirDpAfastamento = async (req: EmpresaRequest, res: Response) =
     res.status(500).json({ error: 'Erro ao excluir afastamento' });
   }
 };
+
+// ─── GET /api/dp/feriados/proximos ───────────────────────────────────────────
+// Os feriados que vêm por aí e o que a empresa decidiu sobre cada um. Alimenta o aviso
+// do painel: sem isso, o gestor só descobre que era feriado quando o espelho já passou.
+export const getProximosFeriados = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const dias = Math.min(Number(req.query.dias) || 60, 365);
+
+  try {
+    const hoje = getTodayStrBRT();
+    const ate = addDiasStr(hoje, dias);
+
+    const [cadastrados, sistema] = await Promise.all([
+      prisma.dpFeriado.findMany({
+        where: { empresaId },
+        select: { id: true, data: true, nome: true, recorrente: true, expediente: true },
+      }),
+      prisma.empresaSistema.findFirst({
+        where: { empresaId, sistema: 'data-point', ativo: true },
+        select: { config: true },
+      }),
+    ]);
+    const cfg = sistema?.config ? JSON.parse(sistema.config as string) : {};
+    const diasFuncionamento: number[] = cfg.diasFuncionamento ?? [1, 2, 3, 4, 5];
+
+    const nacionais = feriadosNacionaisEntre(hoje, ate);
+    const janela = diasEntre(hoje, ate);
+    const doPeriodo = cadastrados.filter(f =>
+      (f.data >= hoje && f.data <= ate) ||
+      // recorrente (aniversário da cidade, por exemplo): compara só mês/dia
+      (f.recorrente && janela.some(d => d.slice(5) === f.data.slice(5))),
+    );
+
+    const mapa = new Map<string, any>();
+    for (const n of nacionais) {
+      mapa.set(n.data, {
+        data: n.data, nome: n.nome, nacional: true, facultativo: !!n.facultativo,
+        // obrigatório fecha sozinho; facultativo é dia útil até alguém decidir
+        expediente: n.facultativo ? 'ABERTO' : 'FECHADO',
+        decidido: false, id: null,
+      });
+    }
+    for (const c of doPeriodo) {
+      const data = c.recorrente
+        ? janela.find(d => d.slice(5) === c.data.slice(5)) || c.data
+        : c.data;
+      mapa.set(data, {
+        data, nome: c.nome, nacional: mapa.has(data), facultativo: false,
+        expediente: c.expediente || 'FECHADO', decidido: true, id: c.id,
+      });
+    }
+
+    const lista = [...mapa.values()]
+      .filter(f => f.data >= hoje && f.data <= ate)
+      .sort((a, b) => a.data.localeCompare(b.data))
+      .map(f => ({
+        ...f,
+        diaSemana: new Date(f.data + 'T12:00:00').getDay(),
+        // feriado que cai em dia sem expediente não precisa de decisão nenhuma
+        jaEraFolga: !diasFuncionamento.includes(new Date(f.data + 'T12:00:00').getDay()),
+      }));
+
+    res.json({ feriados: lista });
+  } catch (error) {
+    console.error('[dp] getProximosFeriados:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+};
+
+// ─── PUT /api/dp/feriados/decisao ────────────────────────────────────────────
+// "Nesse feriado a gente abre" / "a gente fecha". Grava a decisão para o dia.
+export const decidirFeriado = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { data, nome, expediente } = req.body as { data?: string; nome?: string; expediente?: string };
+
+  if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data))
+    return res.status(400).json({ error: 'Data inválida. Use AAAA-MM-DD.' });
+  if (!['ABERTO', 'FECHADO'].includes(String(expediente)))
+    return res.status(400).json({ error: 'expediente deve ser ABERTO ou FECHADO' });
+
+  try {
+    const existente = await prisma.dpFeriado.findFirst({ where: { empresaId, data } });
+    const feriado = existente
+      ? await prisma.dpFeriado.update({ where: { id: existente.id }, data: { expediente } })
+      : await prisma.dpFeriado.create({
+          data: { empresaId, data, nome: (nome || 'Feriado').slice(0, 120), recorrente: false, expediente },
+        });
+
+    res.json({ feriado });
+  } catch (error) {
+    console.error('[dp] decidirFeriado:', error);
+    res.status(500).json({ error: 'Erro ao salvar decisão' });
+  }
+};
+
+function addDiasStr(dia: string, n: number): string {
+  const d = new Date(dia + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function diasEntre(de: string, ate: string): string[] {
+  const out: string[] = [];
+  let c = de;
+  while (c <= ate) { out.push(c); c = addDiasStr(c, 1); }
+  return out;
+}
 
 // ─── GET /api/dp/feriados ──────────────────────────────────────────────────────
 // Calendário de feriados/fechamentos por empresa — afeta o espelho de todos os funcionários.

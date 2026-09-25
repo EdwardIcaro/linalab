@@ -1143,6 +1143,9 @@ model DpFeriado {
   empresaId  String
   data       String   // YYYY-MM-DD (se recorrente, só mês/dia importam pro match)
   nome       String
+  // FECHADO = sem expediente (padrão). ABERTO = a empresa decidiu trabalhar no feriado,
+  // e o dia volta a cobrar jornada normalmente.
+  expediente  String   @default("FECHADO")
   recorrente Boolean  @default(false)
   createdAt  DateTime @default(now())
   empresa    Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -1174,6 +1177,7 @@ model DpFechamentoBanco {
   horasEsperadas         Float
   horasTrabalhadas       Float
   horasFeriadoTrabalhado Float         @default(0) // já incluso em horasTrabalhadas, peso ×2 (seção 7 da spec) — separado só pra auditoria
+  diasFalta              Int           @default(0) // dias úteis sem batida — desconto em folha, fora do saldo
   saldoPeriodo           Float         // horasTrabalhadas - horasEsperadas (pode ser negativo)
   saldoAcumulado         Float         // saldo total do funcionário após esse fechamento
   fechadoEm              DateTime      @default(now())

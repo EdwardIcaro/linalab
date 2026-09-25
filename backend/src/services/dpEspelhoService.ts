@@ -9,8 +9,9 @@
 
 import prisma from '../db';
 import { getDateRangeBRT, getTodayStrBRT } from '../utils/dateUtils';
+import { feriadoNacionalDo } from '../utils/feriadosNacionais';
 import {
-  resolveFeriadoDia,
+  resolverFeriado,
   resolveAfastamentoDia,
   isDiaFechado,
   resolverDia,
@@ -70,7 +71,7 @@ export async function montarEspelhoMes(params: {
     }),
     prisma.dpFeriado.findMany({
       where: { empresaId },
-      select: { data: true, nome: true, recorrente: true },
+      select: { data: true, nome: true, recorrente: true, expediente: true },
     }),
     prisma.dpAfastamento.findMany({
       where: { funcionarioId },
@@ -88,7 +89,8 @@ export async function montarEspelhoMes(params: {
 
   const dias = diasDoMes.map((dia): DiaEspelho => {
     const diaSemana = new Date(dia + 'T12:00:00').getDay();
-    const diaFechado = isDiaFechado(diaSemana, diasFuncionamento);
+    const feriado = resolverFeriado(dia, feriados, feriadoNacionalDo(dia));
+    const diaFechado = isDiaFechado(diaSemana, diasFuncionamento) || !!feriado?.fecha;
     const isHoje = dia === hoje;
     const isFuturo = dia > hoje;
 
@@ -104,14 +106,13 @@ export async function montarEspelhoMes(params: {
       return { dia, diaSemana, status: 'FUTURO', minutosTrabalhou: 0, marcacoes: [] };
     }
 
-    if (diaFechado && marcacoesDia.length === 0) {
+    if (diaFechado && marcacoesDia.length === 0 && !feriado?.fecha) {
       return { dia, diaSemana, status: 'FOLGA', minutosTrabalhou: 0, marcacoes: [] };
     }
 
     if (marcacoesDia.length === 0) {
-      const nomeFeriado = resolveFeriadoDia(dia, feriados);
-      if (nomeFeriado) {
-        return { dia, diaSemana, status: 'FERIADO', minutosTrabalhou: 0, marcacoes: [], label: nomeFeriado };
+      if (feriado?.fecha) {
+        return { dia, diaSemana, status: 'FERIADO', minutosTrabalhou: 0, marcacoes: [], label: feriado.nome };
       }
       const tipoAfastamento = resolveAfastamentoDia(funcionarioId, dia, afastamentos);
       if (tipoAfastamento) {

@@ -1,7 +1,8 @@
 import prisma from '../db';
 import { getTodayStrBRT, getDateRangeBRT, dateToStrBRT, addDiasStrBRT } from '../utils/dateUtils';
+import { feriadoNacionalDo } from '../utils/feriadosNacionais';
 import {
-  resolveFeriadoDia,
+  resolverFeriado,
   resolveAfastamentoDia,
   isDiaFechado,
   resolverCargaHorariaDia,
@@ -14,6 +15,8 @@ interface ResultadoFechamento {
   horasTrabalhadas: number;
   horasFeriadoTrabalhado: number;
   saldoPeriodo: number;
+  /** Dias úteis sem nenhuma batida. Ficam FORA do saldo: vão para a folha, não para o banco. */
+  diasFalta: number;
 }
 
 // Motor de cálculo puro — mesma classificação de dia do getDpEspelho (fechado > feriado > afastamento
@@ -23,7 +26,7 @@ export function calcularFechamentoPeriodo(params: {
   dias: string[]; // YYYY-MM-DD, período completo já fechado (sem "hoje em andamento")
   marcacoesPorDia: Map<string, { tipo: string; timestamp: Date }[]>;
   diasFuncionamento: number[];
-  feriados: { data: string; nome: string; recorrente: boolean }[];
+  feriados: { data: string; nome: string; recorrente: boolean; expediente?: string }[];
   funcionarioId: string;
   afastamentos: { funcionarioId: string; tipo: string; dataInicio: string; dataFim: string }[];
   cargaHorariaDiaMin: number; // já resolvida (individual ?? cargo ?? jornada ?? 8h) em minutos
@@ -35,6 +38,7 @@ export function calcularFechamentoPeriodo(params: {
   let horasEsperadasMin = 0;
   let horasTrabalhadasMin = 0;
   let horasFeriadoTrabalhadoMin = 0;
+  let diasFalta = 0;
 
   for (const dia of dias) {
     const diaSemana = new Date(dia + 'T12:00:00').getDay();
@@ -57,13 +61,21 @@ export function calcularFechamentoPeriodo(params: {
     }
 
     const fechado = isDiaFechado(diaSemana, diasFuncionamento);
-    const nomeFeriado = resolveFeriadoDia(dia, feriados);
-    if (fechado || nomeFeriado) {
+    const feriado = resolverFeriado(dia, feriados, feriadoNacionalDo(dia));
+    if (fechado || feriado?.fecha) {
       // Dia sem expediente da empresa: não soma esperado; se trabalhou, conta em dobro (CLT — seção 7)
       if (minutosTrabalhou > 0) {
         horasTrabalhadasMin += minutosTrabalhou * 2;
         horasFeriadoTrabalhadoMin += minutosTrabalhou * 2;
       }
+      continue;
+    }
+
+    // Dia útil sem nenhuma batida é falta, e falta não entra no banco de horas: o
+    // caminho dela é o desconto em folha. Somar a jornada ao esperado aqui criaria uma
+    // dívida de compensação que a CLT não prevê sem acordo específico.
+    if (marcacoesDia.length === 0) {
+      diasFalta++;
       continue;
     }
 
@@ -79,6 +91,7 @@ export function calcularFechamentoPeriodo(params: {
     horasTrabalhadas,
     horasFeriadoTrabalhado: horasFeriadoTrabalhadoMin / 60,
     saldoPeriodo: horasTrabalhadas - horasEsperadas,
+    diasFalta,
   };
 }
 
@@ -148,7 +161,7 @@ export async function fecharBancoHorasDiario(): Promise<void> {
         }),
         prisma.dpFeriado.findMany({
           where: { empresaId: func.empresaId },
-          select: { data: true, nome: true, recorrente: true },
+          select: { data: true, nome: true, recorrente: true, expediente: true },
         }),
         prisma.dpAfastamento.findMany({
           where: { funcionarioId: func.id },
@@ -191,6 +204,7 @@ export async function fecharBancoHorasDiario(): Promise<void> {
             horasEsperadas: resultado.horasEsperadas,
             horasTrabalhadas: resultado.horasTrabalhadas,
             horasFeriadoTrabalhado: resultado.horasFeriadoTrabalhado,
+            diasFalta: resultado.diasFalta,
             saldoPeriodo: resultado.saldoPeriodo,
             saldoAcumulado,
           },
@@ -201,7 +215,7 @@ export async function fecharBancoHorasDiario(): Promise<void> {
         });
       });
 
-      console.log(`[banco-horas] ${func.id}: período ${baseStr}→${proximoFechamentoStr}, saldo do período ${resultado.saldoPeriodo.toFixed(2)}h, acumulado ${saldoAcumulado.toFixed(2)}h`);
+      console.log(`[banco-horas] ${func.id}: período ${baseStr}→${proximoFechamentoStr}, saldo do período ${resultado.saldoPeriodo.toFixed(2)}h, acumulado ${saldoAcumulado.toFixed(2)}h, faltas ${resultado.diasFalta}`);
     } catch (error: any) {
       if (error?.code === 'P2002') {
         console.log(`[banco-horas] ${func.id}: ciclo já fechado, nada a fazer`);
