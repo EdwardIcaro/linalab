@@ -526,6 +526,30 @@
           </div>
         </div>
 
+        <!-- Banco de horas -->
+        <div style="border:1.5px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:16px;background:#fafafa">
+          <label style="display:flex;align-items:flex-start;gap:11px;cursor:pointer">
+            <input id="cfg-banco" type="checkbox" style="width:18px;height:18px;margin-top:2px;accent-color:#0d9488;cursor:pointer">
+            <span>
+              <span style="font-size:13.5px;font-weight:800;color:#111827;display:block">Ativar banco de horas</span>
+              <span style="font-size:11.5px;color:#6b7280;line-height:1.5;display:block;margin-top:3px">
+                A cada 30 dias o sistema fecha o período de cada funcionário e grava o saldo.
+                Horas a mais viram crédito, jornada não cumprida vira débito. Faltas ficam de
+                fora do saldo — elas são desconto em folha.
+              </span>
+            </span>
+          </label>
+          <div style="margin-top:13px;padding-top:12px;border-top:1px dashed #e5e7eb">
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Ponto vale a partir de</label>
+            <input id="cfg-valido-desde" type="date"
+              style="width:100%;max-width:220px;border:1.5px solid #d1d5db;border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;outline:none;" />
+            <div style="font-size:11px;color:#6b7280;margin-top:5px;line-height:1.45">
+              Dias anteriores a esta data não contam como falta nem entram no banco de horas.
+              Use o dia em que a equipe realmente começou a bater ponto.
+            </div>
+          </div>
+        </div>
+
         <!-- Divisor -->
         <div style="border-top:1px solid #e5e7eb;margin-bottom:20px;"></div>
 
@@ -1469,6 +1493,8 @@ function abrirConfigEmpresa() {
   document.getElementById('cfg-saida').value     = cfg.jornadaSaida || '17:00';
   document.getElementById('cfg-intervalo').value = cfg.intervaloMin ?? 60;
   document.getElementById('cfg-tolerancia').value= cfg.toleranciaMin ?? 10;
+  document.getElementById('cfg-banco').checked  = cfg.bancoHorasAtivo === true;
+  document.getElementById('cfg-valido-desde').value = cfg.pontoValidoDesde || '';
   cfgDiasSelecionados = new Set(cfg.diasFuncionamento ?? [1, 2, 3, 4, 5]);
   renderDiasFuncionamento();
   document.getElementById('cfg-erro').style.display = 'none';
@@ -1626,6 +1652,8 @@ async function salvarConfigEmpresa() {
       jornadaSaida:   document.getElementById('cfg-saida').value,
       intervaloMin:   document.getElementById('cfg-intervalo').value,
       toleranciaMin:  document.getElementById('cfg-tolerancia').value,
+      bancoHorasAtivo: document.getElementById('cfg-banco').checked,
+      pontoValidoDesde: document.getElementById('cfg-valido-desde').value || null,
       diasFuncionamento: [...cfgDiasSelecionados].sort((a, b) => a - b),
     };
 

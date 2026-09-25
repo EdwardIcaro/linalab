@@ -486,6 +486,17 @@
               <input class="form-input" id="fTelefone" type="text" placeholder="(99) 99999-9999">
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Data de admissão</label>
+              <input class="form-input" id="fAdmissao" type="date">
+              <div style="font-size:11px;color:var(--gray500);margin-top:5px;line-height:1.45">
+                Define quando começa o ciclo de 30 dias do banco de horas desta pessoa.
+                Em branco, vale a data em que o ponto passou a valer na empresa.
+              </div>
+            </div>
+            <div class="form-group"></div>
+          </div>
         </div>
 
         <!-- Jornada -->
@@ -818,6 +829,7 @@ function abrirModalEditar(id) {
   document.getElementById('fCargo').value     = f.cargo || '';
   document.getElementById('fSalario').value   = f.salarioBase ?? '';
   document.getElementById('fTelefone').value  = f.telefone || '';
+  document.getElementById('fAdmissao').value  = f.dataAdmissao ? f.dataAdmissao.slice(0, 10) : '';
   document.getElementById('fCargaSemanal').value = f.cargaHoraria ?? '';
   document.getElementById('fStatus').value    = f.status || 'ATIVO';
 
@@ -841,7 +853,7 @@ function fecharModal() {
 }
 
 function limparForm() {
-  ['fNome','fCpf','fCargo','fSalario','fTelefone','fCargaSemanal','fJornadaEntrada','fCargaDia'].forEach(id => {
+  ['fNome','fCpf','fCargo','fSalario','fTelefone','fCargaSemanal','fJornadaEntrada','fCargaDia','fAdmissao'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('jornadaOverride').checked = false;
@@ -871,6 +883,7 @@ async function salvarFuncionario() {
     salarioBase:   document.getElementById('fSalario').value || null,
     cargaHoraria:  document.getElementById('fCargaSemanal').value || null,
     telefone:      document.getElementById('fTelefone').value.trim() || null,
+    dataAdmissao:  document.getElementById('fAdmissao').value || null,
     jornadaEntrada:override ? document.getElementById('fJornadaEntrada').value || null : null,
     cargaHorariaDia:override ? document.getElementById('fCargaDia').value || null : null,
   };

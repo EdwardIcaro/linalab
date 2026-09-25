@@ -848,7 +848,7 @@ export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
         salarioBase: true, cargaHoraria: true, telefone: true,
         status: true, lavadorId: true, jornadaEntrada: true,
         cargaHorariaDia: true, pinDefinido: true, linkToken: true,
-        faceCapturadoEm: true,
+        faceCapturadoEm: true, dataAdmissao: true,
         createdAt: true,
       },
       orderBy: { nome: 'asc' },
@@ -889,7 +889,8 @@ export const criarDpFuncionario = async (req: EmpresaRequest, res: Response) => 
   const empresaId = (req as any).empresaId as string;
   if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
 
-  const { nome, cpf, cargo, salarioBase, cargaHoraria, telefone, jornadaEntrada, cargaHorariaDia } = req.body;
+  const { nome, cpf, cargo, salarioBase, cargaHoraria, telefone, jornadaEntrada, cargaHorariaDia,
+          dataAdmissao } = req.body;
   if (!nome?.trim()) return res.status(400).json({ error: 'Nome é obrigatório' });
 
   try {
@@ -905,6 +906,7 @@ export const criarDpFuncionario = async (req: EmpresaRequest, res: Response) => 
         cargaHoraria: cargaHoraria !== undefined && cargaHoraria !== '' ? parseInt(cargaHoraria) : null,
         telefone: telefone?.trim() || null,
         jornadaEntrada: jornadaEntrada?.trim() || null,
+        dataAdmissao: dataAdmissao ? new Date(dataAdmissao + 'T12:00:00Z') : null,
         cargaHorariaDia: cargaHorariaDia !== undefined && cargaHorariaDia !== '' ? parseFloat(cargaHorariaDia) : null,
         status: 'ATIVO',
         linkToken,
@@ -961,7 +963,8 @@ export const atualizarDpFuncionario = async (req: EmpresaRequest, res: Response)
     const existente = await prisma.dpFuncionario.findFirst({ where: { id, empresaId } });
     if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
 
-    const { nome, cpf, cargo, salarioBase, cargaHoraria, telefone, jornadaEntrada, cargaHorariaDia, status } = req.body;
+    const { nome, cpf, cargo, salarioBase, cargaHoraria, telefone, jornadaEntrada, cargaHorariaDia,
+            status, dataAdmissao } = req.body;
 
     const statusValidos = ['ATIVO', 'AFASTADO', 'FERIAS', 'DESLIGADO'];
     if (status !== undefined && !statusValidos.includes(status))
@@ -978,6 +981,10 @@ export const atualizarDpFuncionario = async (req: EmpresaRequest, res: Response)
         ...(telefone !== undefined && { telefone: telefone?.trim() || null }),
         ...(jornadaEntrada !== undefined && { jornadaEntrada: jornadaEntrada?.trim() || null }),
         ...(cargaHorariaDia !== undefined && { cargaHorariaDia: cargaHorariaDia !== '' ? parseFloat(cargaHorariaDia) : null }),
+        // Âncora do ciclo de 30 dias. Meio-dia UTC para o dia não escorregar de fuso.
+        ...(dataAdmissao !== undefined && {
+          dataAdmissao: dataAdmissao ? new Date(dataAdmissao + 'T12:00:00Z') : null,
+        }),
         ...(status !== undefined && { status }),
         updatedAt: new Date(),
       },
@@ -1173,8 +1180,8 @@ export const atualizarConfigDp = async (req: EmpresaRequest, res: Response) => {
       ...(modoEncerramento !== undefined && { modoEncerramento }),
       ...(modoAutenticacao !== undefined && { modoAutenticacao }),
       ...(diasFuncionamentoValido !== undefined && { diasFuncionamento: diasFuncionamentoValido }),
-      // Opt-in explícito pro cron do banco de horas — ver bancoHorasService.ts. Sem UI dedicada
-      // ainda; liga/desliga direto por essa rota até a tela existir.
+      // Opt-in explícito pro cron do banco de horas — ver bancoHorasService.ts. O toggle
+      // fica na tela de configurações, junto da data a partir da qual o ponto vale.
       ...(bancoHorasAtivo !== undefined && { bancoHorasAtivo: bancoHorasAtivo === true || bancoHorasAtivo === 'true' }),
       // Dias anteriores a esta data não contam como falta nem entram no banco de horas
       ...(pontoValidoDesde !== undefined && {
