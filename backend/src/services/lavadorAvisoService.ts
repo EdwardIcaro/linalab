@@ -68,13 +68,22 @@ function linkDoPortal(token: string | null): string {
   return base ? `${base}/p/${token}` : '';
 }
 
-function textoDoAviso(nome: string, ordens: number, link: string): string {
+function textoDoAviso(nome: string, ordens: number, comObs: number, link: string): string {
   const primeiroNome = nome.trim().split(/\s+/)[0];
   const quantas = ordens === 1
     ? '1 ordem nova foi atribuída a você.'
     : `${ordens} ordens novas foram atribuídas a você.`;
 
   let msg = `👋 Oi, ${primeiroNome}! Houve alterações na sua página.\n${quantas}`;
+
+  // Observação é instrução de um carro específico: o aviso não repete o texto (ele está na
+  // página, em cada ordem), mas precisa dizer que existe — senão ninguém vai procurar.
+  if (comObs > 0) {
+    msg += comObs === 1
+      ? '\n📋 Uma delas tem observação para ler.'
+      : `\n📋 ${comObs} delas têm observação para ler.`;
+  }
+
   if (link) msg += `\n\nAbra para conferir:\n${link}`;
   return msg;
 }
@@ -88,12 +97,16 @@ function textoDoAviso(nome: string, ordens: number, link: string): string {
 async function enviarAviso(pendencia: {
   id: string;
   ordens: number;
+  comObs: number;
   lavador: { nome: string; telefone: string | null; linkTokenCurto: string | null };
 }): Promise<void> {
   const destino = pendencia.lavador.telefone;
   if (!destino) return; // sem WhatsApp vinculado não há para onde mandar
 
-  const texto = textoDoAviso(pendencia.lavador.nome, pendencia.ordens, linkDoPortal(pendencia.lavador.linkTokenCurto));
+  const texto = textoDoAviso(
+    pendencia.lavador.nome, pendencia.ordens, pendencia.comObs,
+    linkDoPortal(pendencia.lavador.linkTokenCurto),
+  );
   await botSend(destino, texto);
   await (prisma as any).lavadorAvisoPendente.deleteMany({ where: { id: pendencia.id } });
 }
@@ -108,6 +121,7 @@ export async function registrarAlteracaoPagina(
   empresaId: string,
   lavadorIds: string[],
   limiteOrdens: number,
+  temObservacao = false,
 ): Promise<void> {
   if (lavadorIds.length === 0) return;
 
@@ -118,15 +132,16 @@ export async function registrarAlteracaoPagina(
 
   for (const lav of lavadores) {
     try {
+      const umaObs = temObservacao ? 1 : 0;
       const pendencia = await (prisma as any).lavadorAvisoPendente.upsert({
         where: { lavadorId: lav.id },
-        create: { empresaId, lavadorId: lav.id, ordens: 1 },
-        update: { ordens: { increment: 1 } },
-        select: { id: true, ordens: true },
+        create: { empresaId, lavadorId: lav.id, ordens: 1, comObs: umaObs },
+        update: { ordens: { increment: 1 }, comObs: { increment: umaObs } },
+        select: { id: true, ordens: true, comObs: true },
       });
 
       if (pendencia.ordens >= limiteOrdens) {
-        await enviarAviso({ id: pendencia.id, ordens: pendencia.ordens, lavador: lav })
+        await enviarAviso({ id: pendencia.id, ordens: pendencia.ordens, comObs: pendencia.comObs, lavador: lav })
           .catch(e => console.error('[LavAviso] envio por volume:', e));
       }
     } catch (e) {
@@ -151,11 +166,11 @@ export async function flushAvisosPendentes(): Promise<void> {
 
   const pendencias = await (prisma as any).lavadorAvisoPendente.findMany({
     select: {
-      id: true, ordens: true, desdeEm: true, empresaId: true,
+      id: true, ordens: true, comObs: true, desdeEm: true, empresaId: true,
       lavador: { select: { nome: true, telefone: true, linkTokenCurto: true } },
     },
   }) as Array<{
-    id: string; ordens: number; desdeEm: Date; empresaId: string;
+    id: string; ordens: number; comObs: number; desdeEm: Date; empresaId: string;
     lavador: { nome: string; telefone: string | null; linkTokenCurto: string | null };
   }>;
   if (pendencias.length === 0) return;

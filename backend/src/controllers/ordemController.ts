@@ -4,7 +4,6 @@ import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
 import { createNotification } from '../services/notificationService';
 import { notifyNovaOrdem, notifyOrdemFinalizada, notifyOrdemCancelada, notifyClienteVip, notifyLavadorNovaOrdem } from '../services/whatsappNotificationService';
-import { botSend } from '../services/botServiceClient';
 import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from '../utils/validate';
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
@@ -36,29 +35,6 @@ function formatOrderWithLavadores(order: any) {
   };
   delete formatted.ordemLavadores;
   return formatted;
-}
-
-async function notifyObservacaoLavadores(
-  empresaId: string,
-  numeroOrdem: number,
-  placa: string,
-  observacao: string,
-  lavadorIds: string[]
-): Promise<void> {
-  if (!observacao.trim() || lavadorIds.length === 0) return;
-  try {
-    // Lavador.telefone é preenchido quando o lavador envia "conectar CODIGO" ao bot
-    const lavadores = await prisma.lavador.findMany({
-      where: { id: { in: lavadorIds }, empresaId, telefone: { not: null }, ativo: true },
-      select: { telefone: true }
-    });
-    for (const lav of lavadores) {
-      if (lav.telefone) {
-        const msg = `📋 *Obs. — Ordem #${numeroOrdem}*${placa ? `\nPlaca: *${placa}*` : ''}\n${observacao.trim()}`;
-        await botSend(lav.telefone, msg).catch(() => {});
-      }
-    }
-  } catch { /* fire-and-forget */ }
 }
 
 /**
@@ -436,25 +412,17 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         lavadorNome: ordemFinal.lavador?.nome ?? null,
       }).catch(() => {});
 
-      // WA: notificar lavador(es) atribuídos que uma nova ordem é deles (desativado por padrão)
+      // WA: notificar lavador(es) atribuídos que uma nova ordem é deles (desativado por padrão).
+      // A observação vai junto — quem decide se isso vira mensagem por ordem, aviso agrupado
+      // ou silêncio é a configuração da empresa, dentro da função.
       notifyLavadorNovaOrdem(empresaId, normalizedLavadorIds, {
         numeroOrdem: ordemFinal.numeroOrdem,
         clienteNome: ordemFinal.cliente.nome,
         placa: ordemFinal.veiculo?.placa ?? '',
         servico: servicoNome,
         valor: ordemFinal.valorTotal,
+        observacao: ordemFinal.observacoes,
       }).catch(() => {});
-
-      // WA: observação para lavadores atribuídos na criação
-      if (ordemFinal.observacoes && normalizedLavadorIds.length > 0) {
-        notifyObservacaoLavadores(
-          empresaId,
-          ordemFinal.numeroOrdem,
-          ordemFinal.veiculo?.placa ?? '',
-          ordemFinal.observacoes,
-          normalizedLavadorIds
-        ).catch(() => {});
-      }
 
       // WhatsApp: notificar cliente VIP (10ª visita em diante)
       try {
@@ -1130,18 +1098,8 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
           placa: (ordemFinal as any).veiculo?.placa ?? '',
           servico: servicoNomeEdit,
           valor: ordemFinal.valorTotal,
+          observacao: ordemFinal.observacoes,
         }).catch(() => {});
-      }
-
-      // WA: observação para lavadores recém-atribuídos
-      if (ordemFinal.observacoes && newlyAddedLavadorIds.length > 0) {
-        notifyObservacaoLavadores(
-          req.empresaId!,
-          ordemFinal.numeroOrdem,
-          (ordemFinal as any).veiculo?.placa ?? '',
-          ordemFinal.observacoes,
-          newlyAddedLavadorIds
-        ).catch(() => {});
       }
     });
   } catch (error: any) {

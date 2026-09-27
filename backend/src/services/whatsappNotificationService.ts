@@ -191,6 +191,7 @@ export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: stri
   placa: string;
   servico: string;
   valor: number;
+  observacao?: string | null;
 }): Promise<void> {
   if (lavadorIds.length === 0) return;
   try {
@@ -211,7 +212,10 @@ export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: stri
     // No modo agrupado o bot não conta a ordem: guarda que a página mudou e avisa uma vez
     // só, quando a leva fecha. Ver lavadorAvisoService.
     if (modo === 'AGRUPADO') {
-      await registrarAlteracaoPagina(empresaId, lavadorIds, configDoAgrupamento(empresa).ordens);
+      await registrarAlteracaoPagina(
+        empresaId, lavadorIds, configDoAgrupamento(empresa).ordens,
+        !!dados.observacao?.trim(),
+      );
       return;
     }
 
@@ -222,9 +226,13 @@ export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: stri
     });
     if (lavadores.length === 0) return;
 
-    const msg = `🆕 *Nova ordem atribuída a você — #${dados.numeroOrdem}*\n` +
+    // A observação vai na mesma mensagem: duas notificações sobre o mesmo carro, uma atrás
+    // da outra, era ruído — e a segunda chegava sem contexto de qual ordem era.
+    let msg = `🆕 *Nova ordem atribuída a você — #${dados.numeroOrdem}*\n` +
       `🚗 ${dados.placa} · ${dados.clienteNome}\n` +
       `🧹 ${dados.servico} · *R$ ${dados.valor.toFixed(2)}*`;
+    const obs = dados.observacao?.trim();
+    if (obs) msg += `\n📋 ${obs}`;
 
     for (const lav of lavadores) {
       if (lav.telefone) await botSend(lav.telefone, msg).catch(() => {});
