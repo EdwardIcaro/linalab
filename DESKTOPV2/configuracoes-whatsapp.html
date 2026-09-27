@@ -1583,10 +1583,23 @@
         ];
         const DEFAULT_LAVADOR_FEATURES = LAVADOR_COMMAND_DEFS.map(d => d.key);
 
-        // Notificações proativas (o bot avisa sem o lavador perguntar) — desativadas por padrão
+        // Notificações proativas (o bot avisa sem o lavador perguntar) — desativadas por padrão.
+        // As duas são o mesmo aviso em ritmos diferentes: uma mensagem por ordem, ou uma
+        // mensagem por leva de ordens. Escolher as duas dobraria o volume, então a tela
+        // trata como escolha única.
         const LAVADOR_NOTIF_DEFS = [
-            { key: 'novaOrdemAtribuida', label: '🆕 Nova ordem atribuída a mim' },
+            {
+                key: 'novaOrdemAtribuida',
+                label: '🆕 Uma mensagem por ordem',
+                hint: 'Cada ordem atribuída vira uma mensagem com placa, serviço e valor.',
+            },
+            {
+                key: 'paginaAtualizada',
+                label: '📄 Avisar que a página mudou',
+                hint: 'Agrupa as ordens e manda uma mensagem só, com o link da página.',
+            },
         ];
+        const AGRUPAMENTO_PADRAO = { ordens: 3, minutos: 30 };
 
         let rolesConfig = {};
         let cargos = [];
@@ -1642,18 +1655,51 @@
             `).join('');
             html += `</div>`;
 
-            html += `<div class="perm-section-label">Notificações</div>`;
-            html += `<p style="font-size:.75rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Desativada por padrão — o lavador só recebe se você ativar aqui.</p>`;
+            html += `<div class="perm-section-label">Nova ordem atribuída</div>`;
+            html += `<p style="font-size:.75rem;color:#9ca3af;margin:-.25rem 0 .5rem;">Desativado por padrão — o lavador só recebe se você ativar aqui.</p>`;
             html += `<div class="perm-grid">`;
             html += LAVADOR_NOTIF_DEFS.map(def => `
-                <label class="perm-item">
-                    <input type="checkbox" data-lavador-notif="${def.key}" ${enabledNotifs.has(def.key) ? 'checked' : ''}>
-                    ${def.label}
+                <label class="perm-item" style="align-items:flex-start;">
+                    <input type="checkbox" data-lavador-notif="${def.key}" ${enabledNotifs.has(def.key) ? 'checked' : ''} onchange="onLavadorNotifToggle('${def.key}')">
+                    <span>${def.label}<br><span style="font-size:.7rem;color:#9ca3af;font-weight:400;">${def.hint}</span></span>
                 </label>
             `).join('');
             html += `</div>`;
 
+            const ag = { ...AGRUPAMENTO_PADRAO, ...(rolesConfig.lavador?.agrupamento || {}) };
+            const mostraAg = enabledNotifs.has('paginaAtualizada') ? '' : 'display:none;';
+            html += `<div id="lavadorAgrupamento" style="${mostraAg}margin-top:.75rem;padding:.75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+                <div style="font-size:.78rem;font-weight:600;color:#475569;margin-bottom:.5rem;">Quando mandar o aviso</div>
+                <p style="font-size:.72rem;color:#9ca3af;margin:0 0 .6rem;">O que acontecer primeiro. Fora do expediente (22h às 7h) o aviso espera o dia começar.</p>
+                <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                    <label style="font-size:.78rem;color:#475569;display:flex;align-items:center;gap:.4rem;">
+                        ao juntar
+                        <input type="number" id="lavAgOrdens" min="1" max="20" value="${ag.ordens}" style="width:60px;padding:.3rem .4rem;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;">
+                        ordens
+                    </label>
+                    <label style="font-size:.78rem;color:#475569;display:flex;align-items:center;gap:.4rem;">
+                        ou depois de
+                        <input type="number" id="lavAgMinutos" min="5" max="480" step="5" value="${ag.minutos}" style="width:70px;padding:.3rem .4rem;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;">
+                        minutos
+                    </label>
+                </div>
+            </div>`;
+
             content.innerHTML = html;
+        }
+
+        // Escolha única: ligar uma desliga a outra. Mandar as duas dobraria o volume que a
+        // opção agrupada existe para cortar.
+        function onLavadorNotifToggle(key) {
+            const alvo = document.querySelector(`#lavadorPermContent [data-lavador-notif="${key}"]`);
+            if (alvo?.checked) {
+                document.querySelectorAll('#lavadorPermContent [data-lavador-notif]').forEach(el => {
+                    if (el.dataset.lavadorNotif !== key) el.checked = false;
+                });
+            }
+            const agrupado = document.querySelector('#lavadorPermContent [data-lavador-notif="paginaAtualizada"]')?.checked;
+            const box = document.getElementById('lavadorAgrupamento');
+            if (box) box.style.display = agrupado ? '' : 'none';
         }
 
         function collectLavador() {
@@ -1665,7 +1711,13 @@
             document.querySelectorAll('#lavadorPermContent [data-lavador-notif]').forEach(el => {
                 if (el.checked) notifs.push(el.dataset.lavadorNotif);
             });
-            rolesConfig.lavador = { ...(rolesConfig.lavador || {}), botFeatures: features, notifs };
+            const ordens  = parseInt(document.getElementById('lavAgOrdens')?.value, 10);
+            const minutos = parseInt(document.getElementById('lavAgMinutos')?.value, 10);
+            const agrupamento = {
+                ordens:  Number.isFinite(ordens)  && ordens  >= 1 ? ordens  : AGRUPAMENTO_PADRAO.ordens,
+                minutos: Number.isFinite(minutos) && minutos >= 5 ? minutos : AGRUPAMENTO_PADRAO.minutos,
+            };
+            rolesConfig.lavador = { ...(rolesConfig.lavador || {}), botFeatures: features, notifs, agrupamento };
         }
 
         function closeRolesModal() {

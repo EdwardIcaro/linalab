@@ -90,6 +90,7 @@ model Empresa {
   emailAutomacaoAuditoria    EmailAutomacaoAuditoria[]
   emailDestinatarios         EmailDestinatario[]
   notificacoesEnviadas       NotificacaoEnviada[]
+  lavadorAvisosPendentes     LavadorAvisoPendente[]
 
   @@map("empresas")
 }
@@ -172,6 +173,7 @@ model Lavador {
   whatsappBotUsers    WhatsappBotUser[]
   reports             OrdemReport[]
   gorjetas            Gorjeta[]
+  avisoPendente       LavadorAvisoPendente?
 
   @@unique([nome, empresaId])
   @@map("lavadores")
@@ -1505,6 +1507,22 @@ model EmailConta {
 // meio da janela de retry reinicia o processo e apagaria uma trava em memória —
 // foi exatamente isso que causou o resumo diário duplicado em 16/09/2026 (deploy
 // às 21:45, entre o envio das 20h e o retry das 22h).
+/// Alterações na página do lavador que ainda não foram avisadas no WhatsApp.
+/// A linha existir significa "tem coisa nova para contar"; ela é apagada no envio.
+model LavadorAvisoPendente {
+  id        String   @id @default(cuid())
+  empresaId String
+  lavadorId String   @unique
+  ordens    Int      @default(0) // quantas OS entraram desde o último aviso
+  desdeEm   DateTime @default(now()) // a primeira alteração da leva — conta o tempo de espera
+  updatedAt DateTime @updatedAt
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lavador   Lavador  @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("lavador_avisos_pendentes")
+}
+
 model NotificacaoEnviada {
   id        String   @id @default(cuid())
   empresaId String

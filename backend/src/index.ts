@@ -50,6 +50,7 @@ import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoS
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
 import { rodarPontoPendente } from './services/dpEncerramentoService';
 import { rodarLembretesAssinatura } from './services/dpLembreteAssinaturaService';
+import { flushAvisosPendentes } from './services/lavadorAvisoService';
 import { rodarAvisoVencimentoBanco } from './services/dpVencimentoBancoService';
 import { iniciarEmailAutomacaoPoller } from './services/emailAutomacaoPoller';
 
@@ -273,6 +274,14 @@ cron.schedule('0 21 * * *', () => {
 // WhatsApp: Ordens paradas há 1h+ (a cada 2 horas)
 cron.schedule('0 */2 * * *', () => {
   cronOrdensParadas();
+}, { timezone: "America/Sao_Paulo" });
+
+// Fecha as levas de aviso da página do lavador que já esperaram o tempo configurado.
+// De 10 em 10 min porque a janela padrão é de 30: um passo maior faria a "meia hora"
+// virar uma hora na prática. A faixa 7h-22h é o expediente — ordem lançada de madrugada
+// espera o dia começar em vez de acordar alguém.
+cron.schedule('*/10 7-22 * * *', () => {
+  flushAvisosPendentes().catch(e => console.error('[lav-aviso] cron:', e));
 }, { timezone: "America/Sao_Paulo" });
 
 // Data Point: lembrete gentil de ponto + encerramento do turno que ficou aberto.

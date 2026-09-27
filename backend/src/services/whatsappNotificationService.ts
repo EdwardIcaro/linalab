@@ -7,6 +7,7 @@ import prisma from '../db';
 import { botSend, botGetStatus } from './botServiceClient';
 import { getTodayFixedRangeBRT, getTodayRangeBRT, getTodayStrBRT, getWeekRangeBRT } from '../utils/dateUtils';
 import { faturamentoBrutoPorLavador } from '../utils/faturamentoLavador';
+import { modoDeAviso, configDoAgrupamento, registrarAlteracaoPagina } from './lavadorAvisoService';
 
 // Evita reenvio do resumo se o bot estava offline e o cron de retry disparou (20h/20h30/22h).
 // PRECISA ser durável (banco, não memória): um deploy do backend nessa janela reinicia o
@@ -184,11 +185,6 @@ export async function notifyByPermission(empresaId: string, permission: string, 
 // ─── Notificar lavadores atribuídos a uma ordem (config em whatsappRoles.lavador.notifs) ──
 // Desativada por padrão — diferente de permissionNotifEnabled, aqui a ausência de config = desligado.
 
-function lavadorNotifEnabled(empresa: { notificationPreferences: any }, notifKey: string): boolean {
-  const notifs = getNotifPrefsObj(empresa).whatsappRoles?.lavador?.notifs;
-  return Array.isArray(notifs) && notifs.includes(notifKey);
-}
-
 export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: string[], dados: {
   numeroOrdem: number;
   clienteNome: string;
@@ -207,7 +203,17 @@ export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: stri
       where: { id: empresaId },
       select: { notificationPreferences: true },
     });
-    if (!empresa || !lavadorNotifEnabled(empresa, 'novaOrdemAtribuida')) return;
+    if (!empresa) return;
+
+    const modo = modoDeAviso(empresa);
+    if (modo === 'DESLIGADO') return;
+
+    // No modo agrupado o bot não conta a ordem: guarda que a página mudou e avisa uma vez
+    // só, quando a leva fecha. Ver lavadorAvisoService.
+    if (modo === 'AGRUPADO') {
+      await registrarAlteracaoPagina(empresaId, lavadorIds, configDoAgrupamento(empresa).ordens);
+      return;
+    }
 
     // Lavador.telefone é preenchido quando o lavador envia "conectar CODIGO" ao bot
     const lavadores = await prisma.lavador.findMany({
