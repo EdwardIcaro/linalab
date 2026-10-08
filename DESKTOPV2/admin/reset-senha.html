@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resets de Senha - LINA OWNER</title>
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1.5rem 1rem;
+        }
+
+        .wrap { max-width: 560px; margin: 0 auto; }
+
+        .header {
+            color: #fff;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .header h1 { font-size: 1.35rem; font-weight: 700; }
+        .header a { color: #fff; opacity: 0.85; margin-left: auto; font-size: 0.85rem; text-decoration: none; }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.25rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            margin-bottom: 0.9rem;
+        }
+        .card.destaque { outline: 3px solid #FBBF24; }
+
+        .linha { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
+        .nome { font-weight: 700; color: #1E293B; font-size: 1rem; }
+        .email { color: #475569; font-size: 0.9rem; word-break: break-all; }
+        .meta { color: #94A3B8; font-size: 0.8rem; margin-top: 0.5rem; line-height: 1.5; }
+
+        .badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .badge.pending_approval { background: #FEF3C7; color: #92400E; }
+        .badge.approved { background: #D1FAE5; color: #065F46; }
+        .badge.rejected { background: #FEE2E2; color: #991B1B; }
+        .badge.expired { background: #F1F5F9; color: #64748B; }
+
+        .acoes { display: flex; gap: 0.6rem; margin-top: 1rem; }
+        .btn {
+            flex: 1;
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        .btn:disabled { opacity: 0.6; cursor: wait; }
+        .btn-aprovar { background: #10B981; color: #fff; }
+        .btn-rejeitar { background: #F1F5F9; color: #B91C1C; }
+        .btn-copiar { background: #EEF2FF; color: #4338CA; }
+
+        .resultado {
+            margin-top: 1rem;
+            padding: 0.85rem;
+            border-radius: 10px;
+            background: #F0FDF4;
+            color: #166534;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        .resultado.erro { background: #FEF2F2; color: #991B1B; }
+        .link-box {
+            margin-top: 0.6rem;
+            padding: 0.6rem;
+            background: #fff;
+            border: 1px dashed #86EFAC;
+            border-radius: 8px;
+            font-family: ui-monospace, monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            color: #1E293B;
+        }
+
+        .estado { text-align: center; color: #fff; padding: 2.5rem 1rem; }
+        .estado i { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+        .estado a { color: #fff; font-weight: 700; }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="header">
+            <i class="fas fa-key"></i>
+            <h1>Resets de senha</h1>
+            <a href="/admin/settings.html"><i class="fas fa-cog"></i> Configurações</a>
+        </div>
+
+        <div id="estado" class="estado">
+            <i class="fas fa-circle-notch spinner"></i>
+            Carregando solicitações...
+        </div>
+
+        <div id="lista"></div>
+    </div>
+
+    <script>
+        const STATUS_LABEL = {
+            pending_approval: 'Pendente',
+            approved: 'Aprovado',
+            rejected: 'Rejeitado',
+            expired: 'Expirado',
+        };
+        const destaqueId = new URLSearchParams(window.location.search).get('id');
+
+        // fetch direto (não fetchApi): o redirect de 401 do api.js é relativo e
+        // quebraria dentro de /admin/. Aqui mostramos o aviso de login na própria página.
+        async function chamar(endpoint, options = {}) {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api${endpoint}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const err = new Error(data.error || data.message || 'Erro na requisição');
+                err.status = res.status;
+                throw err;
+            }
+            return data;
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function dataHora(iso) {
+            return iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+        }
+
+        function mostrarEstado(html) {
+            const el = document.getElementById('estado');
+            el.innerHTML = html;
+            el.hidden = !html;
+        }
+
+        function renderCard(t) {
+            const pendente = t.status === 'pending_approval';
+            return `
+                <div class="card ${t.id === destaqueId ? 'destaque' : ''}" id="t-${esc(t.id)}">
+                    <div class="linha">
+                        <div>
+                            <div class="nome">${esc(t.usuarioNome)}</div>
+                            <div class="email">${esc(t.usuarioEmail)}</div>
+                        </div>
+                        <span class="badge ${esc(t.status)}">${STATUS_LABEL[t.status] || esc(t.status)}</span>
+                    </div>
+                    <div class="meta">
+                        Pedido em ${dataHora(t.createdAt)} · IP ${esc(t.ip || '—')}
+                        ${pendente ? `<br>Expira em ${dataHora(t.expiresAt)}` : ''}
+                        ${t.status === 'rejected' && t.motivo ? `<br>Motivo: ${esc(t.motivo)}` : ''}
+                    </div>
+                    ${pendente ? `
+                        <div class="acoes">
+                            <button class="btn btn-rejeitar" onclick="rejeitar('${esc(t.id)}', this)"><i class="fas fa-times"></i> Rejeitar</button>
+                            <button class="btn btn-aprovar" onclick="aprovar('${esc(t.id)}', this)"><i class="fas fa-check"></i> Aprovar</button>
+                        </div>` : ''}
+                    <div class="resultado-slot"></div>
+                </div>`;
+        }
+
+        async function carregar() {
+            try {
+                const tentativas = await chamar('/admin/resetar-senha/tentativas');
+                if (!tentativas.length) {
+                    mostrarEstado('<i class="fas fa-inbox"></i>Nenhuma solicitação de reset por enquanto.');
+                    return;
+                }
+                mostrarEstado('');
+                document.getElementById('lista').innerHTML = tentativas.map(renderCard).join('');
+                if (destaqueId) document.getElementById(`t-${destaqueId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (err) {
+                if (err.status === 401 || err.status === 403) {
+                    mostrarEstado('<i class="fas fa-lock"></i>Faça login com a conta <strong>LINA OWNER</strong> neste navegador e abra o link de novo.<br><br><a href="/login.html">Ir para o login</a>');
+                } else {
+                    mostrarEstado(`<i class="fas fa-exclamation-triangle"></i>${esc(err.message)}`);
+                }
+            }
+        }
+
+        function resultado(card, html, erro = false) {
+            card.querySelector('.resultado-slot').innerHTML = `<div class="resultado ${erro ? 'erro' : ''}">${html}</div>`;
+        }
+
+        async function aprovar(id, btn) {
+            const card = document.getElementById(`t-${id}`);
+            card.querySelectorAll('.acoes .btn').forEach(b => b.disabled = true);
+            try {
+                const r = await chamar('/admin/resetar-senha/aprovar', { method: 'POST', body: JSON.stringify({ notificationId: id }) });
+                card.querySelector('.acoes')?.remove();
+                card.querySelector('.badge').className = 'badge approved';
+                card.querySelector('.badge').textContent = 'Aprovado';
+                resultado(card, `
+                    <strong>${esc(r.message)}</strong>
+                    ${r.whatsappOwner ? '<br>O link também foi enviado para o seu WhatsApp.' : ''}
+                    <br>Se precisar repassar manualmente (expira em 15 min, uso único):
+                    <div class="link-box">${esc(r.linkReset)}</div>
+                    <div class="acoes"><button class="btn btn-copiar" onclick="copiar(this, '${esc(r.linkReset)}')"><i class="fas fa-copy"></i> Copiar link</button></div>`);
+            } catch (err) {
+                card.querySelectorAll('.acoes .btn').forEach(b => b.disabled = false);
+                resultado(card, esc(err.message), true);
+            }
+        }
+
+        async function rejeitar(id, btn) {
+            const card = document.getElementById(`t-${id}`);
+            card.querySelectorAll('.acoes .btn').forEach(b => b.disabled = true);
+            try {
+                await chamar('/admin/resetar-senha/rejeitar', { method: 'POST', body: JSON.stringify({ notificationId: id }) });
+                card.querySelector('.acoes')?.remove();
+                card.querySelector('.badge').className = 'badge rejected';
+                card.querySelector('.badge').textContent = 'Rejeitado';
+                resultado(card, 'Solicitação rejeitada. Nada foi enviado ao usuário.');
+            } catch (err) {
+                card.querySelectorAll('.acoes .btn').forEach(b => b.disabled = false);
+                resultado(card, esc(err.message), true);
+            }
+        }
+
+        async function copiar(btn, texto) {
+            try {
+                await navigator.clipboard.writeText(texto);
+                btn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+            } catch {
+                btn.innerHTML = 'Selecione e copie o link acima';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', carregar);
+    </script>
+</body>
+</html>

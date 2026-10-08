@@ -14,6 +14,7 @@ import {
   removerTelefoneAdmin,
   aprovarReset,
   rejeitarReset,
+  listarTentativasReset,
 } from '../controllers/recuperacaoSenhaController';
 
 const router: Router = Router();
@@ -49,6 +50,7 @@ router.get('/config/whatsapp', obterConfigWhatsapp);
 router.delete('/whatsapp-telefone', removerTelefoneAdmin);
 
 // Aprovação/rejeição de reset de senha
+router.get('/resetar-senha/tentativas', listarTentativasReset);
 router.post('/resetar-senha/aprovar', aprovarReset);
 router.post('/resetar-senha/rejeitar', rejeitarReset);
 

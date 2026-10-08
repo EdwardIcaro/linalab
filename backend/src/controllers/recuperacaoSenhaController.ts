@@ -1,9 +1,14 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 import { botSend } from '../services/botServiceClient';
+import { emailService } from '../services/emailService';
 
 const prisma = new PrismaClient();
+
+// Base do FRONT (Vercel) — Railway não serve as páginas estáticas
+const frontendUrl = (): string => (process.env.FRONTEND_URL || 'http://localhost').replace(/\/$/, '');
 
 // Função auxiliar: validar formato telefone (11) 99999-8888
 const validarTelefone = (telefone: string): boolean => {
@@ -238,13 +243,14 @@ export const recuperarSenha = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'E-mail é obrigatório' });
     }
 
-    // Buscar usuário
-    const usuario = await prisma.usuario.findUnique({
-      where: { email },
+    // Buscar usuário (e-mail sem diferenciar maiúsculas/espaços)
+    const usuario = await prisma.usuario.findFirst({
+      where: { email: { equals: String(email).trim(), mode: 'insensitive' } },
     });
 
     if (!usuario) {
       // Não revelar que email não existe (segurança)
+      console.warn(`[recuperar-senha] e-mail não encontrado: ${String(email).trim()}`);
       return res.json({
         status: 'pending_admin_approval',
         message: 'Verifique seu e-mail para continuar',
@@ -284,22 +290,25 @@ export const recuperarSenha = async (req: Request, res: Response) => {
       },
     });
 
-    // Notificar admin via WhatsApp
+    if (adminConfigs.length === 0) {
+      console.warn('[recuperar-senha] nenhum LINA_OWNER com WhatsApp confirmado — tentativa só aparece no painel admin');
+    }
+
+    // Notificar admin via WhatsApp — o link abre a página de revisão (exige login de owner)
+    const linkRevisar = `${frontendUrl()}/admin/reset-senha.html?id=${tentativa.id}`;
+    const horario = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     for (const config of adminConfigs) {
       try {
         const telefoneSemFormatacao = removerFormatacaoTelefone(config.whatsappNotificationPhone!);
-        const linkAprovar = `${process.env.FRONTEND_URL || 'http://localhost'}/admin/approveReset?notificationId=${tentativa.id}`;
-        const linkRejeitar = `${process.env.FRONTEND_URL || 'http://localhost'}/admin/rejectReset?notificationId=${tentativa.id}`;
-
-        await botSend(telefoneSemFormatacao, `⚠️ Tentativa de reset de senha\n\nUsuário: ${usuario.nome}\nE-mail: ${usuario.email}\nIP: ${ip}\nHorário: ${new Date().toLocaleString('pt-BR')}\n\n✅ Aprovar: ${linkAprovar}\n❌ Rejeitar: ${linkRejeitar}`);
+        await botSend(telefoneSemFormatacao, `⚠️ Tentativa de reset de senha\n\nUsuário: ${usuario.nome}\nE-mail: ${usuario.email}\nIP: ${ip}\nHorário: ${horario}\n\nAprovar ou rejeitar: ${linkRevisar}\n(expira em 1 hora)`);
       } catch (error) {
         console.error('Erro ao notificar admin:', error);
       }
     }
 
+    // Mesma resposta do e-mail inexistente (não revelar quais e-mails existem)
     res.json({
       status: 'pending_admin_approval',
-      notificationId: tentativa.id,
       message: 'Verifique seu e-mail para continuar',
     });
   } catch (error) {
@@ -345,6 +354,9 @@ export const aprovarReset = async (req: Request, res: Response) => {
     const token = gerarToken();
     const expiresAt = new Date(Date.now() + 900000); // 15 minutos
 
+    // Só o link mais recente vale — invalida tokens anteriores do mesmo usuário
+    await prisma.recuperacaoSenha.deleteMany({ where: { usuarioId: tentativa.usuarioId } });
+
     // Salvar token
     await prisma.recuperacaoSenha.create({
       data: {
@@ -364,20 +376,80 @@ export const aprovarReset = async (req: Request, res: Response) => {
       },
     });
 
-    // Enviar link ao user (WhatsApp ou email)
-    const linkReset = `${process.env.FRONTEND_URL || 'http://localhost'}/redefinir-senha?token=${token}`;
+    const linkReset = `${frontendUrl()}/redefinir-senha?token=${token}`;
 
-    // TODO: Enviar por email também (SendGrid)
-    // Por enquanto, retornar sucesso para admin
+    // Usuario não tem telefone cadastrado → o canal direto é o e-mail (SendGrid).
+    // O link também volta para o owner (resposta + WhatsApp) pra ele repassar
+    // manualmente caso o e-mail não chegue.
+    const emailConfigurado = !!process.env.SENDGRID_API_KEY;
+    await emailService.sendPasswordResetEmail(tentativa.usuario, linkReset);
+
+    let whatsappOwner = false;
+    const adminConfig = await prisma.adminConfig.findUnique({ where: { liniaOwnerId: adminId } });
+    if (adminConfig?.phoneConfirmed && adminConfig.whatsappNotificationPhone) {
+      try {
+        await botSend(
+          removerFormatacaoTelefone(adminConfig.whatsappNotificationPhone),
+          `✅ Reset aprovado para ${tentativa.usuario.nome} (${tentativa.usuario.email}).\n\nSe o e-mail não chegar, repasse este link (expira em 15 min, uso único):\n${linkReset}`
+        );
+        whatsappOwner = true;
+      } catch (error) {
+        console.error('Erro ao enviar link ao owner via WhatsApp:', error);
+      }
+    }
 
     res.json({
       approved: true,
-      linkSent: true,
-      message: 'Reset aprovado. Link enviado ao usuário.',
+      emailEnviado: emailConfigurado,
+      whatsappOwner,
+      linkReset,
+      expiresAt,
+      message: emailConfigurado
+        ? `Reset aprovado. Link enviado para ${tentativa.usuario.email}.`
+        : 'Reset aprovado, mas o e-mail não está configurado (SENDGRID_API_KEY). Repasse o link manualmente.',
     });
   } catch (error) {
     console.error('Erro ao aprovar reset:', error);
     res.status(500).json({ error: 'Erro ao aprovar' });
+  }
+};
+
+/**
+ * GET /api/admin/resetar-senha/tentativas
+ * Lista as tentativas recentes (pendentes primeiro) pra página de revisão do owner
+ */
+export const listarTentativasReset = async (req: Request, res: Response) => {
+  try {
+    const adminId = (req as any).usuarioId;
+    const usuario = await prisma.usuario.findUnique({ where: { id: adminId } });
+    if (usuario?.role !== 'LINA_OWNER') {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const tentativas = await prisma.tentativaResetSenha.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      include: { usuario: { select: { nome: true, email: true } } },
+    });
+
+    const agora = new Date();
+    res.json(tentativas.map(t => ({
+      id: t.id,
+      usuarioNome: t.usuario.nome,
+      usuarioEmail: t.usuario.email,
+      ip: t.ip,
+      userAgent: t.userAgent,
+      // Pendente vencida aparece como "expired" (o banco não atualiza sozinho)
+      status: t.status === 'pending_approval' && t.expiresAt < agora ? 'expired' : t.status,
+      motivo: t.motivo,
+      createdAt: t.createdAt,
+      expiresAt: t.expiresAt,
+      approvedAt: t.approvedAt,
+      rejectedAt: t.rejectedAt,
+    })));
+  } catch (error) {
+    console.error('Erro ao listar tentativas de reset:', error);
+    res.status(500).json({ error: 'Erro ao listar tentativas' });
   }
 };
 
@@ -491,15 +563,17 @@ export const resetarSenha = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Token expirado' });
     }
 
-    // Atualizar senha (TODO: usar bcrypt)
+    // Hash igual ao cadastro/alterar senha — o login usa bcrypt.compare, então
+    // gravar texto puro deixava a senha nova impossível de usar.
+    const senhaHash = await bcrypt.hash(novaSenha, 12);
     await prisma.usuario.update({
       where: { id: recuperacao.usuarioId },
-      data: { senha: novaSenha },
+      data: { senha: senhaHash },
     });
 
-    // Deletar token (single-use)
-    await prisma.recuperacaoSenha.delete({
-      where: { id: recuperacao.id },
+    // Single-use: apaga este e qualquer outro token pendente do usuário
+    await prisma.recuperacaoSenha.deleteMany({
+      where: { usuarioId: recuperacao.usuarioId },
     });
 
     res.json({

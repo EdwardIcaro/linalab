@@ -1032,6 +1032,32 @@ class EmailService {
 
     return methods[method] || method;
   }
+
+  /**
+   * Link de redefinição de senha (enviado quando o LINA_OWNER aprova o reset)
+   */
+  async sendPasswordResetEmail(usuario: Pick<Usuario, 'nome' | 'email'>, link: string): Promise<void> {
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; background: #f9f9f9; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px;">
+          <h2 style="margin-top: 0;">🔐 Redefinição de senha</h2>
+          <p>Oi <strong>${usuario.nome}</strong>,</p>
+          <p>Sua solicitação para redefinir a senha do LinaX foi aprovada. Clique no botão abaixo para criar uma nova senha:</p>
+          <p style="text-align: center;">
+            <a href="${link}" style="display: inline-block; background: #00BCD4; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px;">Redefinir senha</a>
+          </p>
+          <p style="font-size: 13px; color: #666;">Este link expira em <strong>15 minutos</strong> e só pode ser usado uma vez.</p>
+          <p style="font-size: 13px; color: #666;">Se não foi você que pediu, ignore este e-mail — sua senha atual continua valendo.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await this.sendEmail({ to: usuario.email, subject: '🔐 Redefina sua senha do LinaX', html });
+  }
 }
 
 // Exportar instância única (singleton)
