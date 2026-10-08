@@ -161,8 +161,9 @@ app.get('/api/promotions/active', async (_req, _res) => {
   }
 });
 
-// Admin setup routes (para inicialização do banco de dados - sem proteção por enquanto)
-app.use('/api/admin-setup', adminSetupRoutes); // Setup routes (database initialization)
+// Admin setup routes (seed/init/debug do banco) — só LINA_OWNER. Ficaram abertas
+// sem login até 07/10/2026; qualquer pessoa conseguia chamar seed/init em produção.
+app.use('/api/admin-setup', adminMiddleware, adminSetupRoutes);
 
 // Confirmação de WhatsApp do admin — PÚBLICA: o admin clica no link recebido no
 // celular (sem JWT); o token na query string é a própria credencial. Registrada

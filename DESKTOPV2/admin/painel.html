@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Lina Owner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+body { margin: 0; }
+
+/* Layout: trilho lateral fixo (desktop) / barra inferior (celular) + área de trabalho; detalhes da conta abrem numa gaveta à direita */
+:root {
+  --acento: #3cc6d4;
+  --acento-forte: #0b7f8e;
+  --acento-suave: #e0f6f8;
+  --sobre-acento: #06343b;
+  --fundo: #f2f9fb;
+  --superficie: #ffffff;
+  --superficie-2: #f6fbfc;
+  --linha: #d9eaee;
+  --texto: #14262b;
+  --texto-2: #4f6870;
+  --texto-3: #83a0a7;
+  --ok: #138a5b;   --ok-bg: #e3f6ee;
+  --aviso: #a8630a; --aviso-bg: #fdf1dd;
+  --erro: #c0352b; --erro-bg: #fde8e6;
+  --info: #2f66c4; --info-bg: #e6eefb;
+  --wash: #0aa5c0; --dp: #7a45c2; --lc: #d9467c; --forge: #c27a12;
+  --f-titulo: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-corpo: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --raio: 12px;
+  --sombra: 0 1px 2px rgba(15, 60, 70, .06), 0 8px 24px rgba(15, 60, 70, .07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --acento: #5fd6e3; --acento-forte: #8fe6ef; --acento-suave: #12333a; --sobre-acento: #04282e;
+    --fundo: #0c1619; --superficie: #122024; --superficie-2: #16292e; --linha: #21393f;
+    --texto: #e5f4f6; --texto-2: #a2c0c6; --texto-3: #6e8f96;
+    --ok: #4fd29b; --ok-bg: #12301f; --aviso: #f0b45a; --aviso-bg: #33250e;
+    --erro: #ff7d72; --erro-bg: #3a1714; --info: #7fa8f5; --info-bg: #15243f;
+    --sombra: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --acento: #5fd6e3; --acento-forte: #8fe6ef; --acento-suave: #12333a; --sobre-acento: #04282e;
+  --fundo: #0c1619; --superficie: #122024; --superficie-2: #16292e; --linha: #21393f;
+  --texto: #e5f4f6; --texto-2: #a2c0c6; --texto-3: #6e8f96;
+  --ok: #4fd29b; --ok-bg: #12301f; --aviso: #f0b45a; --aviso-bg: #33250e;
+  --erro: #ff7d72; --erro-bg: #3a1714; --info: #7fa8f5; --info-bg: #15243f;
+  --sombra: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--fundo); color: var(--texto); font: 15px/1.5 var(--f-corpo); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; border-radius: 6px; }
+.mono { font-family: var(--f-mono); font-size: .85em; }
+.num { font-variant-numeric: tabular-nums; }
+
+.app { display: grid; grid-template-columns: 232px 1fr; min-height: 100%; }
+.trilho { background: var(--superficie); border-right: 1px solid var(--linha); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
+.marca { font-family: var(--f-titulo); font-weight: 700; font-size: 20px; display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; }
+.marca i { width: 30px; height: 30px; border-radius: 9px; background: var(--acento); color: var(--sobre-acento); display: grid; place-items: center; font-style: normal; font-size: 15px; }
+.marca small { display: block; font: 500 11px var(--f-corpo); color: var(--texto-3); letter-spacing: .08em; text-transform: uppercase; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 0; background: none; text-align: left; color: var(--texto-2); font-weight: 500; }
+.nav-item svg { width: 19px; height: 19px; flex: none; }
+.nav-item:hover { background: var(--superficie-2); color: var(--texto); }
+.nav-item[aria-current="page"] { background: var(--acento-suave); color: var(--acento-forte); font-weight: 600; }
+.nav-item .cont { margin-left: auto; background: var(--erro); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 1px 7px; }
+.trilho .rodape { margin-top: auto; padding: 12px; font-size: 12px; color: var(--texto-3); }
+
+main { padding: 28px 32px 48px; min-width: 0; }
+.topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+h1 { font: 700 28px/1.15 var(--f-titulo); margin: 0; text-wrap: balance; }
+.sub { color: var(--texto-2); margin: 4px 0 0; }
+h2 { font: 600 17px var(--f-titulo); margin: 0 0 12px; }
+
+.painel { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 18px; }
+.grade { display: grid; gap: 16px; }
+.g-kpi { grid-template-columns: repeat(4, 1fr); }
+.g-2 { grid-template-columns: 1.4fr 1fr; }
+.kpi .rot { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--texto-3); font-weight: 600; }
+.kpi .val { font: 700 30px/1.1 var(--f-titulo); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+.kpi .det { font-size: 13px; color: var(--texto-2); }
+.kpi .det b { color: var(--ok); font-weight: 600; }
+.kpi .det b.neg { color: var(--erro); }
+
+.pilula { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+.pilula::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.p-ok { color: var(--ok); background: var(--ok-bg); }
+.p-aviso { color: var(--aviso); background: var(--aviso-bg); }
+.p-erro { color: var(--erro); background: var(--erro-bg); }
+.p-info { color: var(--info); background: var(--info-bg); }
+.p-neutro { color: var(--texto-2); background: var(--superficie-2); }
+.sis { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--texto-2); }
+.sis i { width: 8px; height: 8px; border-radius: 3px; display: inline-block; }
+
+.alerta { display: grid; grid-template-columns: 4px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--linha); }
+.alerta:first-of-type { border-top: 0; }
+.alerta .faixa { align-self: stretch; border-radius: 4px; }
+.alerta b { display: block; font-weight: 600; }
+.alerta span { font-size: 13px; color: var(--texto-2); }
+
+.btn { border: 1px solid var(--linha); background: var(--superficie); padding: 8px 14px; border-radius: 9px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.btn:hover { border-color: var(--acento); color: var(--acento-forte); }
+.btn-pri { background: var(--acento); border-color: var(--acento); color: var(--sobre-acento); }
+.btn-pri:hover { background: #2fb3c1; border-color: #2fb3c1; color: var(--sobre-acento); }
+.btn-perigo { color: var(--erro); }
+.btn-perigo:hover { border-color: var(--erro); color: var(--erro); }
+.btn-sm { padding: 5px 10px; font-size: 13px; }
+
+.barra-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.busca { flex: 1 1 240px; display: flex; align-items: center; gap: 8px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 10px; padding: 0 12px; }
+.busca input { border: 0; background: none; padding: 9px 0; width: 100%; outline: none; }
+.chip { border: 1px solid var(--linha); background: var(--superficie); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.chip[aria-pressed="true"] { background: var(--acento-suave); border-color: transparent; color: var(--acento-forte); }
+
+.tabela-wrap { overflow-x: auto; background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-3); font-weight: 600; padding: 11px 14px; border-bottom: 1px solid var(--linha); background: var(--superficie-2); white-space: nowrap; }
+td { padding: 12px 14px; border-bottom: 1px solid var(--linha); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tbody tr.clicavel { cursor: pointer; }
+tbody tr.clicavel:hover td { background: var(--superficie-2); }
+.quem b { display: block; font-weight: 600; }
+.quem span { font-size: 13px; color: var(--texto-2); }
+
+/* Cartões de conta no celular */
+.lista-cards { display: none; gap: 10px; }
+.card-conta { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 14px; display: grid; gap: 8px; text-align: left; width: 100%; }
+.card-conta .linha1 { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+
+/* Gaveta */
+.veu { position: fixed; inset: 0; background: rgba(8, 30, 36, .45); z-index: 40; }
+.gaveta { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--fundo); z-index: 41; display: flex; flex-direction: column; box-shadow: -12px 0 40px rgba(0,0,0,.18); }
+.gaveta header { background: var(--superficie); border-bottom: 1px solid var(--linha); padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 0; }
+.gaveta .cab { display: flex; gap: 12px; align-items: flex-start; }
+.avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--acento-suave); color: var(--acento-forte); display: grid; place-items: center; font: 700 17px var(--f-titulo); flex: none; }
+.gaveta .cab h3 { font: 700 19px var(--f-titulo); margin: 0; }
+.gaveta .cab p { margin: 2px 0 0; font-size: 13px; color: var(--texto-2); word-break: break-all; }
+.fechar { margin-left: auto; border: 0; background: var(--superficie-2); width: 34px; height: 34px; border-radius: 9px; font-size: 18px; flex: none; }
+.abas { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; }
+.aba { border: 0; background: none; padding: 10px 12px; font-weight: 600; color: var(--texto-3); border-bottom: 2px solid transparent; white-space: nowrap; }
+.aba[aria-selected="true"] { color: var(--acento-forte); border-color: var(--acento); }
+.gaveta .corpo { padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; display: grid; gap: 14px; align-content: start; }
+.campo { display: grid; gap: 6px; }
+.campo label { font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.campo input, .campo select { border: 1px solid var(--linha); background: var(--superficie); border-radius: 9px; padding: 9px 12px; width: 100%; }
+.campo .ajuda { font-size: 12px; color: var(--texto-3); }
+.lado { display: flex; gap: 8px; }
+.lado input { flex: 1; min-width: 0; }
+.secao-titulo { font: 600 13px var(--f-corpo); text-transform: uppercase; letter-spacing: .07em; color: var(--texto-3); margin: 6px 0 -4px; }
+.acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.item-linha { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--linha); }
+.item-linha:first-child { border-top: 0; padding-top: 0; }
+.item-linha b { font-weight: 600; }
+.item-linha small { display: block; color: var(--texto-2); font-size: 13px; }
+.linha-tempo { display: grid; gap: 12px; }
+.evento { display: grid; grid-template-columns: 74px 1fr; gap: 10px; font-size: 14px; }
+.evento time { color: var(--texto-3); font-size: 12px; padding-top: 2px; }
+
+.plano { display: grid; gap: 6px; }
+.plano .preco { font: 700 24px var(--f-titulo); }
+.plano .preco small { font: 500 13px var(--f-corpo); color: var(--texto-3); }
+.plano ul { margin: 4px 0 0; padding-left: 18px; color: var(--texto-2); font-size: 13px; }
+.g-planos { grid-template-columns: repeat(3, 1fr); }
+.grupo-sis { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; }
+.grupo-sis:first-child { margin-top: 0; }
+
+.saude { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; }
+.ponto { width: 12px; height: 12px; border-radius: 50%; }
+.ponto.ok { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-bg); }
+.ponto.aviso { background: var(--aviso); box-shadow: 0 0 0 4px var(--aviso-bg); }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--texto); color: var(--fundo); padding: 11px 18px; border-radius: 10px; font-weight: 600; font-size: 14px; z-index: 60; box-shadow: var(--sombra); max-width: calc(100% - 32px); }
+
+.barra-inferior { display: none; }
+
+@media (max-width: 1000px) {
+  .g-kpi { grid-template-columns: repeat(2, 1fr); }
+  .g-2, .g-planos { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  .trilho { display: none; }
+  main { padding: 18px 16px calc(92px + env(safe-area-inset-bottom, 0px)); }
+  h1 { font-size: 24px; }
+  .kpi .val { font-size: 25px; }
+  .painel { padding: 14px; }
+  .tabela-contas { display: none; }
+  .lista-cards { display: grid; }
+  .barra-inferior { display: flex; position: fixed; left: 0; right: 0; bottom: 0; background: var(--superficie); border-top: 1px solid var(--linha); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 30; justify-content: space-around; }
+  .barra-inferior button { border: 0; background: none; display: grid; justify-items: center; gap: 2px; font-size: 11px; font-weight: 600; color: var(--texto-3); padding: 6px 4px; position: relative; flex: 1; }
+  .barra-inferior button svg { width: 21px; height: 21px; }
+  .barra-inferior button[aria-current="page"] { color: var(--acento-forte); }
+  .barra-inferior .cont { position: absolute; top: 2px; right: calc(50% - 18px); background: var(--erro); color: #fff; font-size: 10px; border-radius: 99px; padding: 0 5px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gaveta { animation: entra .22s ease-out; }
+  @keyframes entra { from { transform: translateX(30px); opacity: .6; } }
+}
+.estado { color: var(--texto-2); padding: 40px 0; }
+a.btn { text-decoration: none; color: inherit; }
+.campo select { appearance: auto; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="trilho" aria-label="Seções">
+    <div class="marca"><i>L</i><div>Lina<small>Painel owner</small></div></div>
+    <div id="navLateral"></div>
+    <div class="rodape"><button class="nav-item" id="btnSair" style="width:100%">Sair</button></div>
+  </nav>
+  <main id="conteudo"><div class="estado">Carregando…</div></main>
+</div>
+<nav class="barra-inferior" id="navInferior" aria-label="Seções"></nav>
+<div id="camadaGaveta"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const ICONES = {
+  geral: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+  contas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M16 4.5a4 4 0 0 1 0 7M22 21c0-3-1.8-5.6-4.5-6.6"/></svg>',
+  assinaturas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>',
+  ofertas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="8" cy="8" r="1.5"/></svg>',
+  seguranca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  sistema: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+};
+const SECOES = [
+  { id: 'geral', nome: 'Visão geral', curto: 'Geral' },
+  { id: 'contas', nome: 'Contas', curto: 'Contas' },
+  { id: 'assinaturas', nome: 'Assinaturas', curto: 'Assinat.' },
+  { id: 'ofertas', nome: 'Planos e convites', curto: 'Planos' },
+  { id: 'seguranca', nome: 'Segurança', curto: 'Segurança' },
+  { id: 'sistema', nome: 'Sistema', curto: 'Sistema' },
+];
+const SISTEMAS = {
+  'lina-wash': { nome: 'Lina Wash', cor: 'var(--wash)' },
+  'data-point': { nome: 'Data Point', cor: 'var(--dp)' },
+  'lina-center': { nome: 'Lina Center', cor: 'var(--lc)' },
+  'lina-forge': { nome: 'Lina Forge', cor: 'var(--forge)' },
+};
+const SISTEMAS_OPCIONAIS = ['data-point', 'lina-center', 'lina-forge'];
+const STATUS = {
+  ACTIVE: ['Ativa', 'p-ok'], TRIAL: ['Trial', 'p-info'], PAST_DUE: ['Em atraso', 'p-aviso'],
+  CANCELED: ['Cancelada', 'p-neutro'], EXPIRED: ['Expirada', 'p-erro'], SUSPENDED: ['Suspensa', 'p-erro'],
+  LIFETIME: ['Vitalícia', 'p-ok'], PENDING: ['Pendente', 'p-aviso'], SEM: ['Sem assinatura', 'p-neutro'],
+};
+
+const estado = { secao: 'geral', contas: [], resets: [], planos: null, saude: {}, filtroSis: 'todos', busca: '', conta: null, aba: 'conta' };
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const dataBR = iso => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—';
+const dataHora = iso => iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+const diasAte = iso => iso ? Math.ceil((new Date(iso) - Date.now()) / 86400000) : null;
+const iniciais = n => String(n).split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase();
+const pil = s => `<span class="pilula ${(STATUS[s] || STATUS.SEM)[1]}">${(STATUS[s] || STATUS.SEM)[0]}</span>`;
+const sisTag = s => `<span class="sis"><i style="background:${(SISTEMAS[s] || {}).cor || 'var(--texto-3)'}"></i>${esc((SISTEMAS[s] || {}).nome || s)}</span>`;
+const pendentes = () => estado.resets.filter(r => r.status === 'pending_approval').length;
+const sistemasDaConta = c => [...new Set(c.empresas.flatMap(e => e.sistemas))];
+
+// fetch direto: o api.js redireciona 401 para um login.html relativo, que quebra dentro de /admin/
+async function api(caminho, opcoes = {}) {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`/api${caminho}`, {
+    ...opcoes,
+    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || data.message || `Erro ${res.status} ao falar com o servidor`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function toast(msg, ms = 2800) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, ms);
+}
+
+function renderNav() {
+  const cont = id => id === 'seguranca' && pendentes() ? `<span class="cont">${pendentes()}</span>` : '';
+  $('#navLateral').innerHTML = SECOES.map(s =>
+    `<button class="nav-item" data-sec="${s.id}" ${s.id === estado.secao ? 'aria-current="page"' : ''}>${ICONES[s.id]}${s.nome}${cont(s.id)}</button>`).join('');
+  $('#navInferior').innerHTML = SECOES.map(s =>
+    `<button data-sec="${s.id}" ${s.id === estado.secao ? 'aria-current="page"' : ''}>${ICONES[s.id]}${s.curto}${cont(s.id)}</button>`).join('');
+}
+
+function ir(sec) {
+  estado.secao = sec;
+  history.replaceState(null, '', `#${sec}`);
+  renderNav();
+  VIEWS[sec]();
+  window.scrollTo(0, 0);
+}
+
+function topo(titulo, sub, extra = '') {
+  return `<div class="topo"><div><h1>${titulo}</h1><p class="sub">${sub}</p></div>${extra ? `<div class="acoes">${extra}</div>` : ''}</div>`;
+}
+
+function todasAssinaturas() {
+  return estado.contas.flatMap(c => c.assinaturas.map(a => ({ ...a, conta: c })));
+}
+
+// ---------- Visão geral ----------
+function viewGeral() {
+  const assin = todasAssinaturas();
+  const mrr = assin.filter(a => a.status === 'ACTIVE').reduce((s, a) => s + a.preco, 0);
+  const trials = assin.filter(a => a.status === 'TRIAL');
+  const trialsVencendo = trials.filter(a => { const d = diasAte(a.vence); return d !== null && d <= 3; });
+  const inadimplentes = assin.filter(a => ['PAST_DUE', 'EXPIRED'].includes(a.status));
+
+  const alertas = [
+    ...assin.filter(a => a.status === 'PAST_DUE').map(a => ({ cor: 'var(--erro)', t: 'Pagamento em atraso', d: `${a.conta.nome} · ${a.plano}${a.vence ? ` venceu em ${dataBR(a.vence)}` : ''}`, conta: a.conta.id, aba: 'assinaturas' })),
+    ...trialsVencendo.map(a => {
+      const d = diasAte(a.vence);
+      return { cor: 'var(--aviso)', t: d < 0 ? 'Trial vencido sem conversão' : d === 0 ? 'Trial vence hoje' : `Trial vence em ${d} dia${d > 1 ? 's' : ''}`, d: `${a.conta.nome} · ${a.plano}`, conta: a.conta.id, aba: 'assinaturas' };
+    }),
+    ...(pendentes() ? [{ cor: 'var(--info)', t: `${pendentes()} pedido${pendentes() > 1 ? 's' : ''} de nova senha aguardando você`, d: 'Aprove ou rejeite em Segurança', sec: 'seguranca' }] : []),
+    ...estado.contas.flatMap(c => c.empresas.filter(e => !e.ativa).map(e => ({ cor: 'var(--texto-3)', t: 'Empresa desativada', d: `${e.nome} · ${c.nome}`, conta: c.id, aba: 'empresas' }))),
+  ];
+
+  const s = estado.saude;
+  $('#conteudo').innerHTML = topo('Visão geral', 'O que pede sua atenção hoje, em todos os sistemas.') + `
+    <div class="grade g-kpi">
+      <div class="painel kpi"><div class="rot">Receita mensal</div><div class="val">${brl(mrr)}</div><div class="det">${assin.filter(a => a.status === 'ACTIVE').length} assinaturas pagas</div></div>
+      <div class="painel kpi"><div class="rot">Contas ativas</div><div class="val num">${estado.contas.filter(c => c.empresas.some(e => e.ativa)).length}</div><div class="det">${estado.contas.reduce((t, c) => t + c.empresas.length, 0)} empresas no total</div></div>
+      <div class="painel kpi"><div class="rot">Em trial</div><div class="val num">${trials.length}</div><div class="det">${trialsVencendo.length} vence${trialsVencendo.length === 1 ? '' : 'm'} em até 3 dias</div></div>
+      <div class="painel kpi"><div class="rot">Inadimplência</div><div class="val num">${inadimplentes.length}</div><div class="det">${inadimplentes.length ? `<b class="neg">${brl(inadimplentes.reduce((t, a) => t + a.preco, 0))}</b> em risco` : 'Nenhuma pendência'}</div></div>
+    </div>
+    <div class="grade g-2" style="margin-top:16px">
+      <section class="painel"><h2>Precisa de atenção</h2>
+        ${alertas.length ? alertas.map(a => `<div class="alerta"><div class="faixa" style="background:${a.cor}"></div><div><b>${esc(a.t)}</b><span>${esc(a.d)}</span></div>
+          <button class="btn btn-sm" ${a.conta ? `data-abrir="${a.conta}" data-aba-ini="${a.aba}"` : `data-sec="${a.sec}"`}>Ver</button></div>`).join('')
+          : '<p class="sub" style="margin:0">Nada pendente. Tudo em dia.</p>'}
+      </section>
+      <div class="grade" style="align-content:start">
+        <section class="painel"><h2>Por sistema</h2>
+          ${Object.keys(SISTEMAS).map(k => {
+            const n = estado.contas.filter(c => sistemasDaConta(c).includes(k)).length;
+            const r = assin.filter(a => a.sistema === k && a.status === 'ACTIVE').reduce((t, a) => t + a.preco, 0);
+            return `<div class="item-linha">${sisTag(k)}<span class="num">${n} conta${n === 1 ? '' : 's'} · ${brl(r)}/mês</span></div>`;
+          }).join('')}
+        </section>
+        <section class="painel"><h2>Saúde do sistema</h2>
+          <div class="item-linha"><span><span class="ponto ${s.backend ? 'ok' : 'aviso'}" style="display:inline-block;margin-right:10px"></span>Backend</span><span class="mono">${esc(s.backend || 'sem resposta')}</span></div>
+          <div class="item-linha"><span><span class="ponto ${s.bot === 'connected' ? 'ok' : 'aviso'}" style="display:inline-block;margin-right:10px"></span>Bot WhatsApp</span><span>${s.bot === 'connected' ? 'conectado' : esc(s.bot || 'sem resposta')}</span></div>
+        </section>
+      </div>
+    </div>`;
+}
+
+// ---------- Contas ----------
+function statusConta(c) {
+  const ordem = ['PAST_DUE', 'EXPIRED', 'SUSPENDED', 'TRIAL', 'ACTIVE', 'LIFETIME', 'PENDING', 'CANCELED'];
+  return c.assinaturas.map(a => a.status).sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b))[0] || 'SEM';
+}
+function contasFiltradas() {
+  const t = estado.busca.toLowerCase().trim();
+  return estado.contas.filter(c => {
+    if (estado.filtroSis !== 'todos' && !sistemasDaConta(c).includes(estado.filtroSis)) return false;
+    return !t || c.nome.toLowerCase().includes(t) || c.email.toLowerCase().includes(t) || c.empresas.some(e => e.nome.toLowerCase().includes(t));
+  });
+}
+function viewContas() {
+  $('#conteudo').innerHTML = topo('Contas', `${estado.contas.length} donos de empresa em todos os sistemas. Toque numa conta para editar.`) + `
+    <div class="barra-filtros">
+      <label class="busca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="buscaContas" placeholder="Buscar por nome, e-mail ou empresa" value="${esc(estado.busca)}"></label>
+      ${['todos', ...Object.keys(SISTEMAS)].map(k => `<button class="chip" data-filtro="${k}" aria-pressed="${estado.filtroSis === k}">${k === 'todos' ? 'Todos' : SISTEMAS[k].nome}</button>`).join('')}
+    </div>
+    <div id="resultadoContas"></div>`;
+  renderListaContas();
+  $('#buscaContas').addEventListener('input', e => { estado.busca = e.target.value; renderListaContas(); });
+}
+function renderListaContas() {
+  const lista = contasFiltradas();
+  if (!lista.length) { $('#resultadoContas').innerHTML = '<div class="painel" style="text-align:center;color:var(--texto-2)">Nenhuma conta com esse filtro.</div>'; return; }
+  $('#resultadoContas').innerHTML = `
+    <div class="tabela-wrap tabela-contas"><table>
+      <thead><tr><th>Conta</th><th>Empresas</th><th>Sistemas</th><th>Situação</th><th>Desde</th></tr></thead>
+      <tbody>${lista.map(c => `<tr class="clicavel" data-abrir="${c.id}">
+        <td class="quem"><b>${esc(c.nome)}</b><span>${esc(c.email)}</span></td>
+        <td>${c.empresas.map(e => esc(e.nome) + (e.ativa ? '' : ' <span class="pilula p-erro">desativada</span>')).join('<br>') || '<span style="color:var(--texto-3)">Nenhuma</span>'}</td>
+        <td>${sistemasDaConta(c).map(sisTag).join('<br>')}</td>
+        <td>${pil(statusConta(c))}</td>
+        <td class="num" style="color:var(--texto-2)">${dataBR(c.criadoEm)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="lista-cards">${lista.map(c => `<button class="card-conta" data-abrir="${c.id}">
+      <div class="linha1"><div class="quem"><b>${esc(c.nome)}</b><span>${esc(c.email)}</span></div>${pil(statusConta(c))}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">${sistemasDaConta(c).map(sisTag).join('')}</div>
+      <div style="font-size:13px;color:var(--texto-3)">${c.empresas.length} empresa${c.empresas.length === 1 ? '' : 's'} · desde ${dataBR(c.criadoEm)}</div></button>`).join('')}</div>`;
+}
+
+// ---------- Gaveta da conta ----------
+async function abrirConta(id, aba = 'conta') {
+  const base = estado.contas.find(c => c.id === id);
+  estado.aba = aba;
+  estado.conta = base;
+  $('#camadaGaveta').innerHTML = `<div class="veu" data-fechar></div>
+    <aside class="gaveta" role="dialog" aria-label="Conta ${esc(base.nome)}">
+      <header>
+        <div class="cab"><div class="avatar">${esc(iniciais(base.nome))}</div><div><h3 id="gavNome">${esc(base.nome)}</h3><p id="gavEmail">${esc(base.email)}</p></div>
+          <button class="fechar" data-fechar aria-label="Fechar">×</button></div>
+        <div class="abas" role="tablist">
+          ${[['conta', 'Acesso'], ['empresas', 'Empresas'], ['assinaturas', 'Assinaturas'], ['atividade', 'Atividade']].map(([k, n]) =>
+            `<button class="aba" role="tab" data-aba="${k}" aria-selected="${k === aba}">${n}</button>`).join('')}
+        </div>
+      </header>
+      <div class="corpo" id="corpoGaveta"></div>
+    </aside>`;
+  document.body.style.overflow = 'hidden';
+  renderAba();
+  try {
+    estado.conta = await api(`/admin/contas/${id}`);
+    if (estado.aba === 'atividade') renderAba();
+  } catch (err) { toast(err.message); }
+}
+function fecharGaveta() { $('#camadaGaveta').innerHTML = ''; document.body.style.overflow = ''; estado.conta = null; }
+
+async function recarregarConta() {
+  const id = estado.conta.id;
+  const [lista, det] = await Promise.all([api('/admin/contas'), api(`/admin/contas/${id}`)]);
+  estado.contas = lista;
+  estado.conta = det;
+  $('#gavNome').textContent = det.nome;
+  $('#gavEmail').textContent = det.email;
+  renderAba();
+  VIEWS[estado.secao]();
+}
+
+async function garantirPlanos() {
+  if (!estado.planos) estado.planos = await api('/admin/subscriptions/plans');
+  return estado.planos;
+}
+
+function renderAba() {
+  const c = estado.conta;
+  const corpo = $('#corpoGaveta');
+  if (!corpo) return;
+  if (estado.aba === 'conta') {
+    corpo.innerHTML = `
+      <section class="painel grade">
+        <div class="campo"><label for="fNome">Nome de usuário (login)</label><input id="fNome" value="${esc(c.nome)}" autocomplete="off"></div>
+        <div class="campo"><label for="fEmail">E-mail de login</label><input id="fEmail" type="email" value="${esc(c.email)}" autocomplete="off"></div>
+        <div class="acoes"><button class="btn btn-pri" data-acao="salvarDados">Salvar dados</button></div>
+      </section>
+      <div class="secao-titulo">Senha</div>
+      <section class="painel grade">
+        <div class="campo"><label for="fSenha">Definir nova senha agora</label>
+          <div class="lado"><input id="fSenha" type="text" placeholder="Mínimo 6 caracteres" autocomplete="off"><button class="btn" data-acao="gerarSenha">Gerar</button></div>
+          <span class="ajuda">Troca na hora, sem confirmação por e-mail. Links de redefinição pendentes deixam de valer.</span></div>
+        <div class="acoes"><button class="btn btn-pri" data-acao="trocarSenha">Trocar senha</button>
+          <button class="btn" data-acao="linkReset">Gerar link de redefinição</button></div>
+        <div id="slotLink"></div>
+      </section>
+      <div class="secao-titulo">Suporte</div>
+      <section class="painel grade">
+        <div class="item-linha"><div><b>Entrar como ${esc(c.nome.split(' ')[0])}</b><small>Abre o sistema como essa conta vê. Uma faixa avisa e tem o botão para voltar ao painel. Vale por 1 hora.</small></div>
+          <button class="btn" data-acao="impersonar">Entrar</button></div>
+      </section>`;
+  } else if (estado.aba === 'empresas') {
+    corpo.innerHTML = c.empresas.length ? c.empresas.map(e => `
+      <section class="painel grade">
+        <div class="campo"><label for="emp-${e.id}">Nome da empresa</label><div class="lado"><input id="emp-${e.id}" value="${esc(e.nome)}"><button class="btn" data-acao="renomear" data-emp="${e.id}">Salvar</button></div></div>
+        <div class="item-linha"><div><b>Situação</b><small>${e.ativa ? 'Funcionando normalmente' : 'Bloqueada: ninguém da empresa consegue entrar'}</small></div>
+          <button class="btn ${e.ativa ? 'btn-perigo' : ''}" data-acao="alternarEmpresa" data-emp="${e.id}">${e.ativa ? 'Desativar' : 'Reativar'}</button></div>
+        <div class="secao-titulo">Sistemas liberados</div>
+        <div class="item-linha">${sisTag('lina-wash')}<small>${e.sistemas.includes('lina-wash') ? 'Padrão (sem Lina Center)' : 'Desligado pelo Lina Center'}</small></div>
+        ${SISTEMAS_OPCIONAIS.map(k => `<label class="item-linha" style="cursor:pointer">${sisTag(k)}<input type="checkbox" id="sis-${e.id}-${k}" data-sis="${k}" data-emp="${e.id}" ${e.sistemas.includes(k) ? 'checked' : ''}></label>`).join('')}
+        <small style="color:var(--texto-3)">${e.subcontas} subconta${e.subcontas === 1 ? '' : 's'} de funcionário · criada em ${dataBR(e.criadaEm)}</small>
+      </section>`).join('') : '<div class="painel" style="color:var(--texto-2)">Essa conta ainda não criou nenhuma empresa.</div>';
+  } else if (estado.aba === 'assinaturas') {
+    corpo.innerHTML = c.assinaturas.map(a => `
+      <section class="painel grade">
+        <div class="item-linha"><div>${sisTag(a.sistema)}<b style="display:block;margin-top:4px">${esc(a.plano)}</b><small>${a.status === 'LIFETIME' ? 'Sem vencimento' : a.vence ? `${a.status === 'TRIAL' ? 'Trial até' : 'Vence em'} ${dataBR(a.vence)}` : 'Sem data de vencimento'}${a.preco ? ` · ${brl(a.preco)}/mês` : ''}</small></div>${pil(a.status)}</div>
+        <div class="acoes">
+          ${a.status !== 'LIFETIME' ? `<button class="btn btn-sm" data-acao="estender" data-sub="${a.id}">+30 dias</button>` : ''}
+          ${a.status !== 'LIFETIME' ? `<button class="btn btn-sm" data-acao="vitalicia" data-sub="${a.id}">Tornar vitalícia</button>` : ''}
+          ${!['CANCELED', 'EXPIRED'].includes(a.status) ? `<button class="btn btn-sm btn-perigo" data-acao="cancelar" data-sub="${a.id}">Cancelar</button>` : ''}
+        </div>
+      </section>`).join('') + `
+      <section class="painel grade">
+        <div class="campo"><label for="fPlano">${c.assinaturas.length ? 'Trocar plano ou liberar outro sistema' : 'Atribuir um plano'}</label>
+          <div class="lado"><select id="fPlano"><option value="">Carregando planos…</option></select><button class="btn btn-pri" data-acao="atribuir">Atribuir</button></div>
+          <span class="ajuda">Se a conta já tem assinatura no mesmo sistema, ela é cancelada e substituída por esta.</span></div>
+      </section>`;
+    garantirPlanos().then(planos => {
+      const sel = $('#fPlano');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Escolha o plano</option>' + planos.filter(p => p.ativo).map(p =>
+        `<option value="${p.id}">${esc((SISTEMAS[p.sistema] || {}).nome || p.sistema)} · ${esc(p.nome)} (${brl(p.preco)})</option>`).join('');
+    }).catch(err => toast(err.message));
+  } else {
+    const eventos = c.eventos;
+    corpo.innerHTML = `<section class="painel">${eventos ? `<div class="linha-tempo">
+      ${eventos.map(ev => `<div class="evento"><time>${dataBR(ev.quando)}</time><span>${esc(ev.texto)}</span></div>`).join('') || '<span class="sub">Sem eventos.</span>'}
+    </div>` : '<span class="sub">Carregando…</span>'}</section>`;
+  }
+}
+
+async function acaoGaveta(acao, btn) {
+  const c = estado.conta;
+  if (acao === 'gerarSenha') {
+    const letras = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const rnd = crypto.getRandomValues(new Uint32Array(8));
+    $('#fSenha').value = 'lina-' + Array.from(rnd, n => letras[n % letras.length]).join('');
+    return;
+  }
+  if (acao === 'cancelar' && btn.dataset.confirmar !== '1') {
+    btn.dataset.confirmar = '1'; btn.textContent = 'Toque de novo para cancelar'; return;
+  }
+  btn.disabled = true;
+  try {
+    if (acao === 'salvarDados') {
+      await api(`/admin/usuarios/${c.id}`, { method: 'PATCH', body: JSON.stringify({ nome: $('#fNome').value, email: $('#fEmail').value }) });
+      toast('Dados de acesso salvos');
+      await recarregarConta();
+    } else if (acao === 'trocarSenha') {
+      const senha = $('#fSenha').value.trim();
+      if (senha.length < 6) { toast('A senha precisa ter pelo menos 6 caracteres'); return; }
+      await api(`/admin/usuarios/${c.id}`, { method: 'PATCH', body: JSON.stringify({ novaSenha: senha }) });
+      $('#fSenha').value = '';
+      toast(`Senha de ${c.nome} trocada. Mande a nova senha para a pessoa.`, 4000);
+    } else if (acao === 'linkReset') {
+      const r = await api(`/admin/usuarios/${c.id}/link-reset`, { method: 'POST' });
+      $('#slotLink').innerHTML = `<div class="campo"><label for="fLink">Link (vale até ${dataHora(r.expiresAt)}, uso único)</label>
+        <div class="lado"><input id="fLink" readonly value="${esc(r.link)}"><button class="btn" data-acao="copiarLink">Copiar</button></div></div>`;
+    } else if (acao === 'copiarLink') {
+      const campo = $('#fLink');
+      try { await navigator.clipboard.writeText(campo.value); toast('Link copiado'); }
+      catch { campo.select(); toast('Selecione e copie o link'); }
+    } else if (acao === 'impersonar') {
+      const r = await api(`/admin/impersonate/${c.id}`, { method: 'POST' });
+      localStorage.setItem('original_admin_session', JSON.stringify({
+        token: localStorage.getItem('token'), usuarioNome: localStorage.getItem('usuarioNome'), userRole: localStorage.getItem('userRole'),
+      }));
+      ['empresaId', 'empresaNome'].forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('token', r.token);
+      localStorage.setItem('usuarioNome', r.usuario.nome);
+      localStorage.setItem('userRole', r.usuario.role);
+      localStorage.setItem('permissoes', '[]');
+      try { for (let i = sessionStorage.length - 1; i >= 0; i--) { const k = sessionStorage.key(i); if (k && k.startsWith('lx_cache:')) sessionStorage.removeItem(k); } } catch {}
+      window.location.href = r.usuario.temEmpresas ? '/hub.html' : '/escolher-sistema.html';
+      return;
+    } else if (acao === 'renomear') {
+      await api(`/admin/empresas/${btn.dataset.emp}`, { method: 'PATCH', body: JSON.stringify({ nome: $(`#emp-${btn.dataset.emp}`).value }) });
+      toast('Nome da empresa salvo');
+      await recarregarConta();
+    } else if (acao === 'alternarEmpresa') {
+      const r = await api(`/admin/empresas/${btn.dataset.emp}/toggle-status`, { method: 'PATCH' });
+      toast(r.message || 'Situação da empresa alterada');
+      await recarregarConta();
+    } else if (acao === 'estender') {
+      const r = await api(`/admin/contas/assinaturas/${btn.dataset.sub}/estender`, { method: 'POST', body: JSON.stringify({ dias: 30 }) });
+      toast(r.message);
+      await recarregarConta();
+    } else if (acao === 'vitalicia' || acao === 'cancelar') {
+      await api(`/admin/subscriptions/subscriptions/${btn.dataset.sub}/status`, { method: 'PATCH', body: JSON.stringify({ status: acao === 'vitalicia' ? 'LIFETIME' : 'CANCELED' }) });
+      toast(acao === 'vitalicia' ? 'Assinatura agora é vitalícia' : 'Assinatura cancelada');
+      await recarregarConta();
+    } else if (acao === 'atribuir') {
+      const planId = $('#fPlano').value;
+      if (!planId) { toast('Escolha um plano'); return; }
+      await api('/admin/subscriptions/create-assignment', { method: 'POST', body: JSON.stringify({ usuarioId: c.id, planId }) });
+      toast('Plano atribuído');
+      await recarregarConta();
+    }
+  } catch (err) {
+    toast(err.message, 4000);
+  } finally {
+    if (document.body.contains(btn)) btn.disabled = false;
+  }
+}
+
+async function alternarSistema(input) {
+  input.disabled = true;
+  try {
+    await api(`/admin/empresas/${input.dataset.emp}/sistemas/${input.dataset.sis}`, { method: 'PUT', body: JSON.stringify({ ativo: input.checked }) });
+    toast(`${SISTEMAS[input.dataset.sis].nome} ${input.checked ? 'liberado' : 'bloqueado'}`);
+    await recarregarConta();
+  } catch (err) {
+    input.checked = !input.checked;
+    toast(err.message, 4000);
+  } finally { input.disabled = false; }
+}
+
+// ---------- Assinaturas ----------
+function viewAssinaturas() {
+  const linhas = todasAssinaturas().sort((a, b) => (new Date(a.vence || 8.64e15)) - (new Date(b.vence || 8.64e15)));
+  const resumo = Object.keys(STATUS).map(k => [k, linhas.filter(l => l.status === k).length]).filter(([, n]) => n);
+  $('#conteudo').innerHTML = topo('Assinaturas', 'A assinatura atual de cada conta em cada sistema, por vencimento.') + `
+    <div class="barra-filtros">${resumo.map(([k, n]) => `<span class="pilula ${STATUS[k][1]}">${STATUS[k][0]} · ${n}</span>`).join('')}</div>
+    ${linhas.length ? `<div class="tabela-wrap"><table>
+      <thead><tr><th>Conta</th><th>Sistema</th><th>Plano</th><th>Situação</th><th>Vencimento</th><th class="num">Valor</th><th></th></tr></thead>
+      <tbody>${linhas.map(l => `<tr>
+        <td class="quem"><b>${esc(l.conta.nome)}</b><span>${esc(l.conta.empresas[0]?.nome || l.conta.email)}</span></td>
+        <td>${sisTag(l.sistema)}</td><td>${esc(l.plano)}</td><td>${pil(l.status)}</td>
+        <td class="num">${l.status === 'LIFETIME' ? '—' : dataBR(l.vence)}</td>
+        <td class="num">${l.preco ? brl(l.preco) : '—'}</td>
+        <td><button class="btn btn-sm" data-abrir="${l.conta.id}" data-aba-ini="assinaturas">Gerenciar</button></td></tr>`).join('')}</tbody>
+    </table></div>` : '<div class="painel sub">Nenhuma assinatura ainda.</div>'}`;
+}
+
+// ---------- Seções ainda nas telas antigas ----------
+function atalhos(titulo, sub, itens) {
+  $('#conteudo').innerHTML = topo(titulo, sub) + `<section class="painel">
+    ${itens.map(([nome, desc, href]) => `<div class="item-linha"><div><b>${nome}</b><small>${desc}</small></div><a class="btn btn-sm" href="${href}">Abrir</a></div>`).join('')}
+    <p class="sub" style="margin:14px 0 0;font-size:13px">Essas telas ainda são as antigas. Vão ganhar o visual novo nas próximas etapas.</p>
+  </section>`;
+}
+function viewOfertas() {
+  atalhos('Planos e convites', 'Preços, trial e links de cadastro de cada sistema.', [
+    ['Planos', 'Preço, trial e limites de cada plano', '/admin/plans.html'],
+    ['Add-ons', 'Extras que podem ser somados ao plano', '/admin/addons.html'],
+    ['Convites de cadastro', 'Links que já entram com plano e duração', '/admin/signup-links.html'],
+  ]);
+}
+function viewSeguranca() {
+  atalhos('Segurança', 'Pedidos de senha e o seu WhatsApp de alertas.', [
+    [`Pedidos de nova senha${pendentes() ? ` · ${pendentes()} aguardando` : ''}`, 'Aprovar ou rejeitar o "Esqueci minha senha"', '/admin/reset-senha.html'],
+    ['WhatsApp de alertas', 'Número que recebe os avisos de segurança', '/admin/settings.html'],
+  ]);
+}
+function viewSistema() {
+  atalhos('Sistema', 'Infraestrutura e ferramentas que só você controla.', [
+    ['Painel antigo', 'Bot WhatsApp, estatísticas e lista de empresas da versão anterior', '/admin/dashboard.html'],
+  ]);
+}
+
+const VIEWS = { geral: viewGeral, contas: viewContas, assinaturas: viewAssinaturas, ofertas: viewOfertas, seguranca: viewSeguranca, sistema: viewSistema };
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-sec],[data-abrir],[data-fechar],[data-aba],[data-acao],[data-filtro]');
+  if (!t) return;
+  if (t.dataset.fechar !== undefined) return fecharGaveta();
+  if (t.dataset.abrir) return abrirConta(t.dataset.abrir, t.dataset.abaIni || 'conta');
+  if (t.dataset.sec) return ir(t.dataset.sec);
+  if (t.dataset.aba) {
+    estado.aba = t.dataset.aba;
+    document.querySelectorAll('.aba').forEach(a => a.setAttribute('aria-selected', a === t));
+    return renderAba();
+  }
+  if (t.dataset.filtro) { estado.filtroSis = t.dataset.filtro; return viewContas(); }
+  if (t.dataset.acao) return acaoGaveta(t.dataset.acao, t);
+});
+document.addEventListener('change', e => { if (e.target.matches('input[data-sis]')) alternarSistema(e.target); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharGaveta(); });
+$('#btnSair').addEventListener('click', () => {
+  const salvas = localStorage.getItem('lx_saved_accounts');
+  localStorage.clear();
+  if (salvas !== null) localStorage.setItem('lx_saved_accounts', salvas);
+  window.location.href = '/login.html';
+});
+
+async function iniciar() {
+  if (!localStorage.getItem('token')) { window.location.href = '/login.html'; return; }
+  try {
+    const [contas, resets] = await Promise.all([api('/admin/contas'), api('/admin/resetar-senha/tentativas').catch(() => [])]);
+    estado.contas = contas;
+    estado.resets = resets;
+  } catch (err) {
+    $('#conteudo').innerHTML = err.status === 401 || err.status === 403
+      ? '<div class="painel" style="max-width:420px">Faça login com a conta <b>LINA OWNER</b> para usar o painel.<div class="acoes" style="margin-top:12px"><a class="btn btn-pri" href="/login.html">Ir para o login</a></div></div>'
+      : `<div class="painel" style="max-width:420px">Não foi possível carregar o painel: ${esc(err.message)}</div>`;
+    return;
+  }
+  const secInicial = location.hash.slice(1);
+  ir(VIEWS[secInicial] ? secInicial : 'geral');
+
+  // Saúde em segundo plano (não trava a tela)
+  fetch('https://linacraft.up.railway.app/health').then(r => r.json()).then(h => { estado.saude.backend = h.commit; }).catch(() => {})
+    .finally(() => api('/whatsapp/status').then(r => { estado.saude.bot = r.status; }).catch(() => {}).finally(() => { if (estado.secao === 'geral') viewGeral(); }));
+}
+iniciar();
+</script>
+</body>
+</html>

@@ -364,7 +364,7 @@ function exitImpersonation() {
     localStorage.setItem('usuarioNome', adminSession.usuarioNome);
     localStorage.setItem('userRole', adminSession.userRole);
 
-    window.location.href = 'admin/dashboard.html'; // Volta para o painel do admin
+    window.location.href = '/admin/painel.html#contas'; // Volta para o painel do owner
 }
 
 /**
