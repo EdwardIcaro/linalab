@@ -16,7 +16,6 @@ import {
   getSaldoPortal,
   criarAjustePortal,
   getAjustesPortal,
-  getExtratoLcPortal,
   gerarCodigoWpp,
   desvincularWpp,
   validarTokenPonto,
@@ -34,7 +33,6 @@ const router: Router = Router();
 // Autenticadas — devem vir ANTES das rotas com :token para não colidir
 router.get('/me/dados',        portalSessionMiddleware, getDadosPortal);
 router.get('/me/extrato',      portalSessionMiddleware, getExtratoPortal);
-router.get('/me/lc/extrato',   portalSessionMiddleware, getExtratoLcPortal);
 router.get('/me/ponto/hoje',    portalSessionMiddleware, getPontoHoje);
 router.post('/me/face-token',   portalSessionMiddleware, gerarFaceTokenPortal);
 router.post('/me/pin/alterar',  portalSessionMiddleware, alterarPinPortal);

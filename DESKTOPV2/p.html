@@ -618,18 +618,6 @@
     .com-sec-hdr { font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:4px 2px 12px; }
 
     /* Lista de ordens — Lina Center */
-    .lc-ord-row { display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:14px; margin-bottom:8px; box-shadow:var(--shadow-sm); }
-    .lc-ord-info { flex:1; min-width:0; }
-    .lc-ord-cliente { font-size:13px; font-weight:800; color:var(--text); }
-    .lc-ord-det { font-size:11px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .lc-ord-right { text-align:right; flex-shrink:0; }
-    .lc-ord-val { font-size:13px; font-weight:800; color:#c2410c; }
-    .lc-ord-status { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; margin-top:3px; padding:2px 8px; border-radius:99px; display:inline-block; }
-    .lc-status-finalizado { background:#ecfdf5; color:#047857; }
-    .lc-status-em_andamento { background:#fffbeb; color:#b45309; }
-    .lc-status-aguardando_pagamento { background:#eff6ff; color:#1d4ed8; }
-    .lc-status-pendente { background:var(--bg); color:var(--muted); }
-    .lc-status-cancelado { background:var(--bg); color:var(--faint); }
 
     /* Banner modo adicionais */
     .com-note { background:#ede9fe; border:1px solid #ddd6fe; border-radius:12px; padding:10px 13px; display:flex; gap:9px; align-items:flex-start; margin-bottom:14px; }
@@ -949,13 +937,6 @@
 </div>
 
 <!-- ══ COMISSÕES — LINA CENTER (mais simples: 1 funcionário por ordem, sem fechamento) ══ -->
-<div id="tela-comissoes-lc" class="tela">
-  <div class="com-page">
-    <div class="com-hero" id="comLcHero" style="background:linear-gradient(148deg,#0f172a 0%,#7c2d12 120%)"></div>
-    <div class="com-pane" id="comLcLista"></div>
-  </div>
-</div>
-
 <!-- ══ MODAL DETALHE DE PAGAMENTO ══ -->
 <div class="modal-bg" id="comPagModal" onclick="fecharComPagModal(event)">
   <div class="modal-box">
@@ -1259,17 +1240,50 @@ async function carregarDados() {
     });
     if (r.status === 401) return false;
     if (!r.ok) return false;
-    portalDados = await r.json();
+    portalDados = adaptarDadosLcLegado(await r.json());
     renderHub();
     lembrarConectarWpp();
     return true;
   } catch { return false; }
 }
 
+// TRANSIÇÃO (out/2026): backend antigo mandava o funcionário do Lina Center em
+// `lc` com tipoRemuneracao nulo. O front sobe na hora (Vercel) e o backend só à
+// noite (Railway), então converte para o formato novo enquanto os dois convivem.
+// Pode sair quando o backend com `sistema: 'lina-center'` estiver no ar.
+function adaptarDadosLcLegado(d) {
+  if (!d || d.sistema || !d.linaCenterAtivo || !d.lc) return d;
+  return {
+    ...d,
+    sistema: 'lina-center',
+    lcLegado: true,
+    lavador: { ...d.lavador, tipoRemuneracao: 'COMISSAO' },
+    hoje: { ganho: d.lc.hoje?.ganho || 0, totalOrdens: d.lc.hoje?.totalOrdens || 0, ordens: [] },
+    mes: d.lc.mes || d.mes,
+    linaCenterAtivo: false,
+    lc: null,
+  };
+}
+// Mesma transição para o extrato: o endpoint antigo do LC vira o formato do lavador
+async function buscarExtratoLcLegado() {
+  const r = await fetch(`${API}/p/me/lc/extrato`, { headers:{ Authorization:`Bearer ${sessionJwt}` } });
+  if (!r.ok) throw new Error('extrato-lc');
+  const d = await r.json();
+  const ref = { id: d.lcFuncionarioId, nome: d.nome, comissao: d.comissao };
+  return {
+    ...d, sistema: 'lina-center', lavadorId: d.lcFuncionarioId, baseComissao: null,
+    ordens: (d.ordens || []).map(o => ({ ...o, lavadorId: ref.id, lavador: ref, ordemLavadores: [] })),
+    gorjetas: [], fechamentos: [], adiantamentosNaoQuitados: [],
+  };
+}
+
 // Lembrete de WhatsApp — só pra quem é do Lina Wash (tipoRemuneracao definido) e ainda
 // não conectou. Dispara toda vez que o portal carrega (não uma vez só) até a pessoa
 // conectar; quem já tem WhatsApp vinculado nunca vê isso.
+// Funcionário do Lina Center também tem tipoRemuneracao, mas o vínculo de WhatsApp
+// dele ainda não existe — por isso o corte explícito por sistema.
 function lembrarConectarWpp() {
+  if (portalDados?.sistema === 'lina-center') return;
   const temLinaWash = portalDados?.lavador?.tipoRemuneracao !== null && portalDados?.lavador?.tipoRemuneracao !== undefined;
   const telefone = portalDados?.lavador?.telefone ?? null;
   if (temLinaWash && !telefone) {
@@ -1279,7 +1293,9 @@ function lembrarConectarWpp() {
 
 // ── Hub ───────────────────────────────────────────────────────────────────────
 function renderHub() {
-  const { lavador, dataPointAtivo, hoje, linaCenterAtivo, lc } = portalDados;
+  const { lavador, dataPointAtivo, hoje } = portalDados;
+  // Funcionário do Lina Center usa o mesmo hub do lavador (dados no mesmo formato)
+  const ehLinaCenter = portalDados.sistema === 'lina-center';
 
   document.getElementById('hub-av').textContent       = lavador.nome.charAt(0).toUpperCase();
   document.getElementById('hub-name').textContent     = lavador.nome;
@@ -1298,16 +1314,6 @@ function renderHub() {
       <div>
         <div class="mod-label">${isSalarioFixo ? 'Extrato' : 'Comissões'}</div>
         <div class="mod-stat">${isSalarioFixo ? 'Serviços, vales e débitos' : 'R$ ' + ganhoHoje + ' hoje'}</div>
-      </div>
-    </div>` : ''}
-
-    ${linaCenterAtivo ? `
-    <div class="mod-card mod-amber" onclick="abrirComissoesLc()">
-      <div class="mod-ico"><i class="fas fa-wrench"></i></div>
-      <div class="mod-badge pulse">${lc.hoje.totalOrdens} hoje</div>
-      <div>
-        <div class="mod-label">Comissões</div>
-        <div class="mod-stat">R$ ${(lc.hoje.ganho || 0).toFixed(2).replace('.', ',')} hoje · Lina Center</div>
       </div>
     </div>` : ''}
 
@@ -1346,10 +1352,11 @@ function renderHub() {
     </div>` : ''}
   `;
 
-  // Linha de status (WhatsApp — só para usuários Lina Wash com lavador vinculado)
+  // Linha de status (WhatsApp — só para lavador do Lina Wash; o vínculo do
+  // funcionário do Lina Center ainda não existe no bot)
   const telefone = lavador.telefone ?? null;
   const rows = document.getElementById('hub-rows');
-  rows.innerHTML = temLinaWash ? `
+  rows.innerHTML = (temLinaWash && !ehLinaCenter) ? `
     <div class="status-row" onclick="abrirModalWpp()">
       <div class="status-ico ${telefone ? 'ico-wpp-on' : 'ico-wpp-off'}"><i class="fab fa-whatsapp"></i></div>
       <div class="status-info">
@@ -1370,85 +1377,6 @@ function abrirComissoes() {
 }
 function voltarDeComissoes() {
   mostrarTela('tela-hub');
-}
-
-// ── Navegar para comissões do Lina Center (tela própria, mais simples) ─────────
-function abrirComissoesLc() {
-  mostrarTela('tela-comissoes-lc');
-  iniciarComissoesLc();
-}
-function voltarDeComissoesLc() {
-  mostrarTela('tela-hub');
-}
-
-async function iniciarComissoesLc() {
-  document.getElementById('comLcHero').innerHTML =
-    '<div style="padding:40px 0;text-align:center;color:rgba(255,255,255,.6)"><i class="fas fa-spinner fa-spin"></i></div>';
-  document.getElementById('comLcLista').innerHTML = '';
-  try {
-    const r = await fetch(`${API}/p/me/lc/extrato`, { headers: { Authorization: `Bearer ${sessionJwt}` } });
-    if (!r.ok) throw new Error('extrato-lc');
-    renderComissoesLc(await r.json());
-  } catch {
-    document.getElementById('comLcHero').innerHTML =
-      '<div style="padding:30px 0;text-align:center;color:#fca5a5"><i class="fas fa-triangle-exclamation"></i> Erro ao carregar. Tente novamente.</div>';
-  }
-}
-
-function renderComissoesLc(data) {
-  const ordensFinalizadas = (data.ordens || []).filter(o => o.status === 'FINALIZADO');
-  const totalComissao = ordensFinalizadas.reduce((s, o) => s + (o.comissao || 0), 0);
-  const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
-  const comissaoMes = ordensFinalizadas
-    .filter(o => new Date(o.dataFim || o.createdAt) >= inicioMes)
-    .reduce((s, o) => s + (o.comissao || 0), 0);
-
-  document.getElementById('comLcHero').innerHTML = `
-    <div class="com-hero-top">
-      <button class="com-back" onclick="voltarDeComissoesLc()"><i class="fas fa-arrow-left"></i> Portal</button>
-    </div>
-    <div class="com-prof">
-      <div class="com-av">${(data.nome || '?').charAt(0).toUpperCase()}</div>
-      <div>
-        <div class="com-nm">${data.nome}</div>
-        <div class="com-emp"><i class="fas fa-wrench" style="font-size:9px"></i> ${data.empresa} · Lina Center</div>
-      </div>
-    </div>
-    <div class="com-bal-lbl">Comissão do mês</div>
-    <div class="com-bal">R$ ${comissaoMes.toFixed(2).replace('.', ',')}</div>
-    <div class="com-rows">
-      <div class="com-chip">
-        <div class="com-chip-lbl">Total (30 dias)</div>
-        <div class="com-chip-val">R$ ${totalComissao.toFixed(2).replace('.', ',')}</div>
-      </div>
-      <div class="com-chip">
-        <div class="com-chip-lbl">Ordens finalizadas</div>
-        <div class="com-chip-val">${ordensFinalizadas.length}</div>
-      </div>
-    </div>
-  `;
-
-  const lista = data.ordens || [];
-  document.getElementById('comLcLista').innerHTML = lista.length === 0
-    ? '<div class="com-sec-hdr">Nenhuma ordem nos últimos 30 dias</div>'
-    : `
-    <div class="com-sec-hdr">Últimas ordens</div>
-    ${lista.map(o => `
-      <div class="lc-ord-row">
-        <div class="lc-ord-info">
-          <div class="lc-ord-cliente">${o.cliente?.nome || '—'}</div>
-          <div class="lc-ord-det">${(o.veiculo?.modelo || '—')}${o.veiculo?.placa ? ' · ' + o.veiculo.placa : ''} · ${(o.items || []).map(i => i.servico?.nome || i.nomeCustom).filter(Boolean).join(', ')}</div>
-        </div>
-        <div class="lc-ord-right">
-          <div class="lc-ord-val">R$ ${(o.comissao || 0).toFixed(2).replace('.', ',')}</div>
-          <div class="lc-ord-status lc-status-${(o.status || '').toLowerCase()}">${{
-            PENDENTE: 'Pendente', EM_ANDAMENTO: 'Em andamento',
-            AGUARDANDO_PAGAMENTO: 'Aguardando pag.', FINALIZADO: 'Finalizado', CANCELADO: 'Cancelado',
-          }[o.status] || o.status}</div>
-        </div>
-      </div>
-    `).join('')}
-  `;
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -1521,6 +1449,12 @@ function comWasherShare(order, washerId, lavadorComissao){
   washers.forEach(w=>{ let c=basePct; if(remPct>0){c++;remPct--;} mapPct[w.id]=c/100; });
   return mapPct[washerId]||0;
 }
+// Vocabulário da tela: Lina Wash fala em lavagem; Lina Center, em serviço
+function comTermo(){
+  return comData?.sistema === 'lina-center'
+    ? { um:'serviço', varios:'serviços', Varios:'Serviços', icone:'fa-wrench' }
+    : { um:'lavagem', varios:'lavagens', Varios:'Lavagens', icone:'fa-soap' };
+}
 function comIsMulti(order){ return Array.isArray(order.ordemLavadores) && order.ordemLavadores.length>1; }
 
 // ── Modo de exibição ──
@@ -1538,9 +1472,13 @@ async function iniciarComissoes(){
   document.getElementById('comPaneGanhos').innerHTML = '';
   document.getElementById('comPanePagamentos').innerHTML = '';
   try {
-    const r = await fetch(`${API}/p/me/extrato`, { headers:{ Authorization:`Bearer ${sessionJwt}` } });
-    if(!r.ok) throw new Error('extrato');
-    comData = await r.json();
+    if(portalDados?.lcLegado){
+      comData = await buscarExtratoLcLegado();
+    } else {
+      const r = await fetch(`${API}/p/me/extrato`, { headers:{ Authorization:`Bearer ${sessionJwt}` } });
+      if(!r.ok) throw new Error('extrato');
+      comData = await r.json();
+    }
     comLavadorId = comData.lavadorId;
     comModo = comGetModo();
     comDiaAtivo = comISO();
@@ -1615,8 +1553,8 @@ function renderComHero(){
       <div class="com-bal-lbl"><span>Vales e débitos em aberto</span></div>
       <div class="com-bal${s.divida>0?' neg':''}${blur}">${s.divida>0?'-'+comBRL(s.divida):comBRL(0)}</div>
       <div class="com-rows">
-        <div class="com-chip"><div class="com-chip-lbl">Lavagens na semana</div><div class="com-chip-val green">${s.semanaOrdens} OS</div></div>
-        <div class="com-chip"><div class="com-chip-lbl">Lavagens no mês</div><div class="com-chip-val green">${s.mesOrdens} OS</div></div>
+        <div class="com-chip"><div class="com-chip-lbl">${comTermo().Varios} na semana</div><div class="com-chip-val green">${s.semanaOrdens} OS</div></div>
+        <div class="com-chip"><div class="com-chip-lbl">${comTermo().Varios} no mês</div><div class="com-chip-val green">${s.mesOrdens} OS</div></div>
       </div>`;
   } else {
     const tagAdd = s.modo==='ADICIONAL' ? '<span class="com-tag-add">só adicionais</span>' : '';
@@ -1718,7 +1656,7 @@ function renderComGanhos(){
   const blur = comOculto ? ' blurred' : '';
   let lista = '';
   if(ordens.length===0){
-    lista = `<div class="com-empty"><i class="fas fa-soap"></i><span>Nenhuma lavagem neste dia</span></div>`;
+    lista = `<div class="com-empty"><i class="fas ${comTermo().icone}"></i><span>Nenhum${comData?.sistema === 'lina-center' ? '' : 'a'} ${comTermo().um} neste dia</span></div>`;
   } else {
     // Salário puro nunca mostra valor por carro (é só a lista de serviços feitos)
     const mostrarValor = comData.tipoRemuneracao !== 'SALARIO';
@@ -1748,7 +1686,7 @@ function renderComGanhos(){
       const totalDia = ordens.reduce((s,o)=>s+comWasherShare(o,comLavadorId,comData.comissao),0);
       lista += `<div class="com-day-total"><span>Total do dia</span><b class="${comOculto?'blurred':''}">${comBRL(totalDia)}</b></div>`;
     } else {
-      lista += `<div class="com-day-total"><span>Lavagens no dia</span><b>${ordens.length}</b></div>`;
+      lista += `<div class="com-day-total"><span>${comTermo().Varios} no dia</span><b>${ordens.length}</b></div>`;
     }
   }
 
@@ -1811,7 +1749,7 @@ function renderComPagamentos(){
         const totalOrdens = (f.ordensPagas?.length||0)+(f.ordemLavadoresPagos?.length||0);
         pagHtml += `<div class="com-pg click" onclick="openComPagModal(${idx})">
           <div class="com-pg-ico pago"><i class="fas fa-check"></i></div>
-          <div class="com-pg-info"><div class="com-pg-title">Pago em ${comFormatDate(comISO(f.data))}</div><div class="com-pg-sub">${totalOrdens} lavagem${totalOrdens!==1?'s':''}</div></div>
+          <div class="com-pg-info"><div class="com-pg-title">Pago em ${comFormatDate(comISO(f.data))}</div><div class="com-pg-sub">${totalOrdens} ${totalOrdens!==1?comTermo().varios:comTermo().um}</div></div>
           <div class="com-pg-val pos${blur}">${comBRL(f.valorPago)}</div>
         </div>`;
       });
@@ -1848,10 +1786,10 @@ function openComPagModal(idx){
   });
 
   document.getElementById('comPagModalBody').innerHTML = `
-    <div class="com-pg" style="box-shadow:none;border:none;padding:0 0 8px"><div class="com-pg-info"><div class="com-pg-sub">Lavagens pagas</div></div><div class="com-pg-val">${totalOrdens}</div></div>
+    <div class="com-pg" style="box-shadow:none;border:none;padding:0 0 8px"><div class="com-pg-info"><div class="com-pg-sub">${comTermo().Varios} pag${comData?.sistema === 'lina-center' ? 'os' : 'as'}</div></div><div class="com-pg-val">${totalOrdens}</div></div>
     <div class="com-pg" style="box-shadow:none;border:none;padding:0 0 8px"><div class="com-pg-info"><div class="com-pg-sub">Vales descontados</div></div><div class="com-pg-val neg">-${comBRL(totalAdiant)}</div></div>
     <div class="com-pg" style="box-shadow:none;border:none;padding:0 0 12px;border-bottom:1px solid var(--border)"><div class="com-pg-info"><div class="com-pg-title">Valor pago</div></div><div class="com-pg-val pos">${comBRL(f.valorPago)}</div></div>
-    <div class="com-block-lbl">Lavagens deste pagamento</div>
+    <div class="com-block-lbl">${comTermo().Varios} deste pagamento</div>
     ${ordensHtml || '<div class="com-empty" style="padding:16px 0"><span>—</span></div>'}`;
   document.getElementById('comPagModal').classList.add('open');
 }

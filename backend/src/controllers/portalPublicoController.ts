@@ -363,12 +363,16 @@ export const getDadosPortal = async (req: Request, res: Response) => {
     }
   }
 
-  // Sessão lcFuncionario (Lina Center)
+  // Sessão lcFuncionario (Lina Center) — mesmo formato do lavador, pra o portal
+  // usar o mesmo hub e a mesma tela de comissões
   if (!lavadorId && !dpFuncionarioId && lcFuncionarioId) {
     try {
       const lcFunc = await prisma.lcFuncionario.findUnique({
         where: { id: lcFuncionarioId },
-        select: { nome: true, empresa: { select: { nome: true } } },
+        select: {
+          nome: true, tipoRemuneracao: true, comissao: true, salario: true, telefone: true,
+          empresa: { select: { nome: true } },
+        },
       });
       if (!lcFunc) return res.status(404).json({ erro: 'Funcionário não encontrado' });
 
@@ -400,39 +404,37 @@ export const getDadosPortal = async (req: Request, res: Response) => {
       const ganhoHojeLc = ordensHojeLc.reduce((s, o) => s + (o.comissao ?? 0), 0);
 
       return res.json({
+        sistema: 'lina-center',
         lavador: {
           nome: lcFunc.nome,
           empresa: lcFunc.empresa.nome,
-          tipoRemuneracao: null,
+          tipoRemuneracao: lcFunc.tipoRemuneracao,
           baseComissao: null,
-          comissao: null,
-          salario: null,
-          telefone: null,
+          comissao: lcFunc.comissao,
+          salario: lcFunc.salario,
+          telefone: lcFunc.telefone ?? null,
         },
+        // Ponto do Data Point para funcionário LC chega na etapa de integração
         dataPointAtivo: false,
-        hoje: { ganho: 0, totalOrdens: 0, ordens: [] },
-        mes: { ganho: 0, totalOrdens: 0 },
-        linaCenterAtivo: true,
-        lc: {
-          nome: lcFunc.nome,
-          empresa: lcFunc.empresa.nome,
-          hoje: {
-            ganho: ganhoHojeLc,
-            totalOrdens: ordensHojeLc.length,
-            ordens: ordensHojeLc.map((o) => ({
-              cliente: o.cliente?.nome ?? '—',
-              veiculo: o.veiculo ? `${o.veiculo.modelo}${o.veiculo.placa ? ' · ' + o.veiculo.placa : ''}` : '—',
-              servicos: o.items.map((i) => i.servico?.nome ?? i.nomeCustom).filter(Boolean).join(', '),
-              valorTotal: o.valorTotal,
-              comissao: o.comissao ?? 0,
-              status: o.status,
-            })),
-          },
-          mes: {
-            ganho: mesAggLc._sum.comissao ?? 0,
-            totalOrdens: mesAggLc._count ?? 0,
-          },
+        hoje: {
+          ganho: ganhoHojeLc,
+          totalOrdens: ordensHojeLc.length,
+          ordens: ordensHojeLc.map((o) => ({
+            cliente: o.cliente?.nome ?? '—',
+            placa: o.veiculo?.placa ?? '—',
+            modelo: o.veiculo?.modelo ?? '',
+            servicos: o.items.map((i) => i.servico?.nome ?? i.nomeCustom).filter(Boolean).join(', '),
+            valorTotal: o.valorTotal,
+            ganho: o.comissao ?? 0,
+            status: o.status,
+          })),
         },
+        mes: {
+          ganho: mesAggLc._sum.comissao ?? 0,
+          totalOrdens: mesAggLc._count ?? 0,
+        },
+        linaCenterAtivo: false,
+        lc: null,
       });
     } catch (error) {
       console.error('[portal] getDadosPortal (lc):', error);
@@ -552,6 +554,9 @@ export const getDadosPortal = async (req: Request, res: Response) => {
 // mas autenticado pelo session JWT do portal.
 export const getExtratoPortal = async (req: Request, res: Response) => {
   const lavadorId = (req as any).lavadorId as string;
+  const lcFuncionarioId = (req as any).lcFuncionarioId as string | undefined;
+
+  if (!lavadorId && lcFuncionarioId) return getExtratoLc(req, res, lcFuncionarioId);
 
   try {
     const trintaDiasAtras = new Date();
@@ -661,13 +666,11 @@ export const getExtratoPortal = async (req: Request, res: Response) => {
   }
 };
 
-// ─── GET /api/p/me/lc/extrato — extrato do funcionário do Lina Center ────────
-// Mais simples que o extrato do Lina Wash: um funcionário por ordem, sem
-// fechamento de comissão, sem gorjetas — a comissão já vem calculada e
-// guardada em LcOrdemServico.comissao no momento da criação/finalização.
-export const getExtratoLcPortal = async (req: Request, res: Response) => {
-  const lcFuncionarioId = (req as any).lcFuncionarioId as string;
-
+// ─── Extrato do funcionário do Lina Center (via GET /api/p/me/extrato) ───────
+// Mesmo formato do extrato do lavador, pra o portal usar a mesma tela de
+// comissões. O LC tem um funcionário por ordem e a comissão já vem calculada
+// em LcOrdemServico.comissao; não tem gorjetas, vales nem fechamento.
+async function getExtratoLc(req: Request, res: Response, lcFuncionarioId: string) {
   try {
     const trintaDiasAtras = new Date();
     trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
@@ -697,21 +700,36 @@ export const getExtratoLcPortal = async (req: Request, res: Response) => {
       take: 100,
     });
 
+    // A tela de comissões identifica "quem é o funcionário" por lavadorId/lavador
+    const funcRef = { id: funcionario.id, nome: funcionario.nome, comissao: funcionario.comissao };
+
     res.json({
-      lcFuncionarioId: funcionario.id,
+      sistema: 'lina-center',
+      lavadorId: funcionario.id,
       nome: funcionario.nome,
       comissao: funcionario.comissao,
       tipoRemuneracao: funcionario.tipoRemuneracao,
+      baseComissao: null,
       salario: funcionario.salario,
       empresa: funcionario.empresa.nome,
-      ordens,
+      dataPointAtivo: false,
+      ordens: ordens.map(o => ({
+        ...o,
+        lavadorId: funcionario.id,
+        lavador: funcRef,
+        ordemLavadores: [],
+        items: o.items.map(i => ({ ...i, tipo: 'SERVICO' })),
+      })),
+      gorjetas: [],
+      fechamentos: [],
+      adiantamentosNaoQuitados: [],
       tokenExpiresAt: null,
     });
   } catch (error) {
     console.error('[portal] extrato Lina Center:', error);
     res.status(500).json({ erro: 'Erro interno' });
   }
-};
+}
 
 // ─── POST /api/p/:token/wpp/codigo ───────────────────────────────────────────
 export const gerarCodigoWpp = async (req: Request, res: Response) => {
