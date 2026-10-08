@@ -1240,41 +1240,11 @@ async function carregarDados() {
     });
     if (r.status === 401) return false;
     if (!r.ok) return false;
-    portalDados = adaptarDadosLcLegado(await r.json());
+    portalDados = await r.json();
     renderHub();
     lembrarConectarWpp();
     return true;
   } catch { return false; }
-}
-
-// TRANSIÇÃO (out/2026): backend antigo mandava o funcionário do Lina Center em
-// `lc` com tipoRemuneracao nulo. O front sobe na hora (Vercel) e o backend só à
-// noite (Railway), então converte para o formato novo enquanto os dois convivem.
-// Pode sair quando o backend com `sistema: 'lina-center'` estiver no ar.
-function adaptarDadosLcLegado(d) {
-  if (!d || d.sistema || !d.linaCenterAtivo || !d.lc) return d;
-  return {
-    ...d,
-    sistema: 'lina-center',
-    lcLegado: true,
-    lavador: { ...d.lavador, tipoRemuneracao: 'COMISSAO' },
-    hoje: { ganho: d.lc.hoje?.ganho || 0, totalOrdens: d.lc.hoje?.totalOrdens || 0, ordens: [] },
-    mes: d.lc.mes || d.mes,
-    linaCenterAtivo: false,
-    lc: null,
-  };
-}
-// Mesma transição para o extrato: o endpoint antigo do LC vira o formato do lavador
-async function buscarExtratoLcLegado() {
-  const r = await fetch(`${API}/p/me/lc/extrato`, { headers:{ Authorization:`Bearer ${sessionJwt}` } });
-  if (!r.ok) throw new Error('extrato-lc');
-  const d = await r.json();
-  const ref = { id: d.lcFuncionarioId, nome: d.nome, comissao: d.comissao };
-  return {
-    ...d, sistema: 'lina-center', lavadorId: d.lcFuncionarioId, baseComissao: null,
-    ordens: (d.ordens || []).map(o => ({ ...o, lavadorId: ref.id, lavador: ref, ordemLavadores: [] })),
-    gorjetas: [], fechamentos: [], adiantamentosNaoQuitados: [],
-  };
 }
 
 // Lembrete de WhatsApp — só pra quem é do Lina Wash (tipoRemuneracao definido) e ainda
@@ -1472,13 +1442,9 @@ async function iniciarComissoes(){
   document.getElementById('comPaneGanhos').innerHTML = '';
   document.getElementById('comPanePagamentos').innerHTML = '';
   try {
-    if(portalDados?.lcLegado){
-      comData = await buscarExtratoLcLegado();
-    } else {
-      const r = await fetch(`${API}/p/me/extrato`, { headers:{ Authorization:`Bearer ${sessionJwt}` } });
-      if(!r.ok) throw new Error('extrato');
-      comData = await r.json();
-    }
+    const r = await fetch(`${API}/p/me/extrato`, { headers:{ Authorization:`Bearer ${sessionJwt}` } });
+    if(!r.ok) throw new Error('extrato');
+    comData = await r.json();
     comLavadorId = comData.lavadorId;
     comModo = comGetModo();
     comDiaAtivo = comISO();
