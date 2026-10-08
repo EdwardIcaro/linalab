@@ -265,7 +265,14 @@ const iniciais = n => String(n).split(/\s+/).slice(0, 2).map(p => p[0] || '').jo
 const pil = s => `<span class="pilula ${(STATUS[s] || STATUS.SEM)[1]}">${(STATUS[s] || STATUS.SEM)[0]}</span>`;
 const sisTag = s => `<span class="sis"><i style="background:${(SISTEMAS[s] || {}).cor || 'var(--texto-3)'}"></i>${esc((SISTEMAS[s] || {}).nome || s)}</span>`;
 const pendentes = () => estado.resets.filter(r => r.status === 'pending_approval').length;
-const sistemasDaConta = c => [...new Set(c.empresas.flatMap(e => e.sistemas))];
+// Só empresas ativas contam; se a conta não tem nenhuma ativa, mostra o que existir
+const empresasVivas = c => (c.empresas.some(e => e.ativa) ? c.empresas.filter(e => e.ativa) : c.empresas);
+const sistemasDaConta = c => [...new Set(empresasVivas(c).flatMap(e => e.sistemas))];
+const VIGENTES = ['ACTIVE', 'TRIAL', 'LIFETIME'];
+// Empresa ativa usando um sistema que a conta não assina (ex.: empresa antiga caindo no Lina Wash implícito)
+const semAssinatura = c => c.empresas.filter(e => e.ativa).flatMap(e => e.sistemas
+  .filter(k => !c.assinaturas.some(a => a.sistema === k && VIGENTES.includes(a.status)))
+  .map(k => ({ empresa: e, sistema: k })));
 
 // fetch direto: o api.js redireciona 401 para um login.html relativo, que quebra dentro de /admin/
 async function api(caminho, opcoes = {}) {
@@ -328,7 +335,7 @@ function viewGeral() {
       return { cor: 'var(--aviso)', t: d < 0 ? 'Trial vencido sem conversão' : d === 0 ? 'Trial vence hoje' : `Trial vence em ${d} dia${d > 1 ? 's' : ''}`, d: `${a.conta.nome} · ${a.plano}`, conta: a.conta.id, aba: 'assinaturas' };
     }),
     ...(pendentes() ? [{ cor: 'var(--info)', t: `${pendentes()} pedido${pendentes() > 1 ? 's' : ''} de nova senha aguardando você`, d: 'Aprove ou rejeite em Segurança', sec: 'seguranca' }] : []),
-    ...estado.contas.flatMap(c => c.empresas.filter(e => !e.ativa).map(e => ({ cor: 'var(--texto-3)', t: 'Empresa desativada', d: `${e.nome} · ${c.nome}`, conta: c.id, aba: 'empresas' }))),
+    ...estado.contas.flatMap(c => semAssinatura(c).map(x => ({ cor: 'var(--aviso)', t: `Usando ${SISTEMAS[x.sistema]?.nome || x.sistema} sem assinatura`, d: `${x.empresa.nome} · ${c.nome}`, conta: c.id, aba: 'empresas' }))),
   ];
 
   const s = estado.saude;
@@ -477,7 +484,9 @@ function renderAba() {
         <div class="item-linha"><div><b>Situação</b><small>${e.ativa ? 'Funcionando normalmente' : 'Bloqueada: ninguém da empresa consegue entrar'}</small></div>
           <button class="btn ${e.ativa ? 'btn-perigo' : ''}" data-acao="alternarEmpresa" data-emp="${e.id}">${e.ativa ? 'Desativar' : 'Reativar'}</button></div>
         <div class="secao-titulo">Sistemas liberados</div>
-        <div class="item-linha">${sisTag('lina-wash')}<small>${e.sistemas.includes('lina-wash') ? 'Padrão (sem Lina Center)' : 'Desligado pelo Lina Center'}</small></div>
+        <div class="item-linha">${sisTag('lina-wash')}<small>${!e.sistemas.includes('lina-wash') ? 'Desligado pelo Lina Center'
+          : c.assinaturas.some(a => a.sistema === 'lina-wash' && VIGENTES.includes(a.status)) ? 'Padrão (sem Lina Center)'
+          : '<span style="color:var(--aviso)">Sem assinatura do Lina Wash: libere o Lina Center ou desative a empresa</span>'}</small></div>
         ${SISTEMAS_OPCIONAIS.map(k => `<label class="item-linha" style="cursor:pointer">${sisTag(k)}<input type="checkbox" id="sis-${e.id}-${k}" data-sis="${k}" data-emp="${e.id}" ${e.sistemas.includes(k) ? 'checked' : ''}></label>`).join('')}
         <small style="color:var(--texto-3)">${e.subcontas} subconta${e.subcontas === 1 ? '' : 's'} de funcionário · criada em ${dataBR(e.criadaEm)}</small>
       </section>`).join('') : '<div class="painel" style="color:var(--texto-2)">Essa conta ainda não criou nenhuma empresa.</div>';
