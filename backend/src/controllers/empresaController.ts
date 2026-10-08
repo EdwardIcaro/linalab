@@ -127,6 +127,17 @@ export const createEmpresa = async (req: EmpresaRequest, res: Response) => {
       data: tiposVeiculoData,
     });
 
+    // Empresa criada para o Lina Center já nasce marcada. Antes dependia só do
+    // POST /lc/ativar que o front chama depois — se falhasse, a empresa ficava
+    // sem marca e caía no Lina Wash implícito (caso GM PNEUS, 25/08/2026).
+    if (sistema === 'lina-center') {
+      await prisma.empresaSistema.upsert({
+        where: { empresaId_sistema: { empresaId: empresa.id, sistema: 'lina-center' } },
+        update: { ativo: true },
+        create: { empresaId: empresa.id, sistema: 'lina-center', ativo: true },
+      });
+    }
+
     res.status(201).json({
       message: 'Empresa criada com sucesso',
       empresa: parseEmpresaConfig(empresa)

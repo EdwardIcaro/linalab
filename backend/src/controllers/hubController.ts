@@ -15,9 +15,11 @@ export const getHub = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    // Busca empresas + sistemas ativos
+    // Busca empresas + sistemas ativos. Empresa desativada (pelo owner) some do hub:
+    // ninguém consegue entrar nela mesmo, e ela fazia aparecer seção de sistema
+    // "Expirado" que a conta nem usa.
     const empresas = await prisma.empresa.findMany({
-      where: { usuarioId },
+      where: { usuarioId, ativo: true },
       select: {
         id: true,
         nome: true,
