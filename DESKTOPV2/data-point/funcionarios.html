@@ -416,7 +416,7 @@
       </div>
       <div style="display:flex;gap:10px">
         <button class="btn-ghost" onclick="abrirModalVincular()">
-          <i class="fa fa-link"></i> Vincular Lavador
+          <i class="fa fa-link"></i> Vincular funcionário
         </button>
         <button class="btn-primary" onclick="abrirModalNovo()">
           <i class="fa fa-plus"></i> Adicionar Funcionário
@@ -568,14 +568,14 @@
       <div class="modal-header">
         <div class="modal-title">
           <div class="ct-icon ct-teal" style="width:32px;height:32px"><i class="fa fa-link"></i></div>
-          <span>Vincular Lavador</span>
+          <span>Vincular funcionário</span>
         </div>
         <button class="modal-close" onclick="fecharModalVincular()"><i class="fa fa-times"></i></button>
       </div>
 
       <div class="modal-body">
         <p style="font-size:13px;color:var(--gray600);margin-bottom:16px">
-          Lavadores cadastrados no Lina Wash que ainda não têm registro no Data Point. Vincular cria o funcionário do DP usando o nome e telefone do lavador — sem alterar a configuração do sistema.
+          Lavadores do Lina Wash e funcionários do Lina Center que ainda não têm registro no Data Point. Vincular cria o funcionário do DP usando o nome e telefone dele — sem alterar a configuração do sistema.
         </p>
         <div id="vincularList"></div>
       </div>
@@ -756,7 +756,9 @@ function buildFuncRow(f, idx) {
     : '<span class="badge badge-nopin"><i class="fa fa-unlock"></i> Sem PIN</span>';
   const linaBadge = f.lavadorId
     ? '<span class="badge badge-linawash"><i class="fa fa-link"></i> Lina Wash</span>'
-    : '';
+    : f.lcFuncionarioId
+      ? '<span class="badge badge-linawash"><i class="fa fa-link"></i> Lina Center</span>'
+      : '';
   const faceBadge = f.faceCadastrado
     ? '<span class="badge badge-face"><i class="fa fa-smile"></i> Rosto ok</span>'
     : '';
@@ -785,7 +787,7 @@ function buildFuncRow(f, idx) {
         <i class="fa fa-pencil-alt"></i>
       </button>
       <button class="act-btn teal" title="${portalLink ? 'Copiar link do portal' : 'Link do portal (não disponível)'}"
-        onclick="${portalLink ? `copiarLink('${portalLink}')` : "mostrarToast('Portal disponível apenas para funcionários vinculados ao Lina Wash por enquanto.','info')"}">
+        onclick="${portalLink ? `copiarLink('${portalLink}')` : "mostrarToast('Portal disponível apenas para funcionários vinculados ao Lina Wash ou ao Lina Center por enquanto.','info')"}">
         <i class="fa fa-link"></i>
       </button>
       <button class="act-btn amber" title="Redefinir PIN" onclick="confirmarResetPin('${f.id}', '${escapar(f.nome)}')">
@@ -1080,11 +1082,15 @@ async function abrirModalVincular() {
   list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray500);font-size:13px">Carregando...</div>';
 
   try {
-    const { lavadores } = await window.api.getImportaveisDp();
-    const disponiveis = (lavadores || []).filter(l => !l.jaImportado);
+    const { lavadores, lcFuncionarios } = await window.api.getImportaveisDp();
+    // Lavadores do Lina Wash e funcionários do Lina Center entram do mesmo jeito
+    const disponiveis = [
+      ...(lavadores || []).filter(l => !l.jaImportado).map(l => ({ ...l, tipo: 'lavador' })),
+      ...(lcFuncionarios || []).filter(f => !f.jaImportado).map(f => ({ ...f, tipo: 'lc' })),
+    ];
 
     if (disponiveis.length === 0) {
-      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray500);font-size:13px">Todos os lavadores já estão vinculados ao Data Point.</div>';
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray500);font-size:13px">Todos os funcionários já estão vinculados ao Data Point.</div>';
       return;
     }
 
@@ -1093,16 +1099,16 @@ async function abrirModalVincular() {
         <div class="func-avatar" style="background:var(--teal500)">${iniciaisNome(l.nome)}</div>
         <div>
           <div class="func-name">${escapar(l.nome)}</div>
-          <div class="func-meta">${l.telefone ? escapar(l.telefone) : 'Sem telefone'}</div>
+          <div class="func-meta">${l.tipo === 'lc' ? 'Lina Center' : 'Lina Wash'} · ${l.telefone ? escapar(l.telefone) : 'Sem telefone'}</div>
         </div>
-        <button class="btn-save" onclick="vincularLavador('${l.id}', '${escapar(l.nome)}')">
+        <button class="btn-save" onclick="vincularLavador('${l.id}', '${escapar(l.nome)}', '${l.tipo}')">
           <i class="fa fa-link"></i> Vincular
         </button>
       </div>
     `).join('');
   } catch (e) {
     console.error(e);
-    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Erro ao carregar lavadores.</div>';
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Erro ao carregar funcionários.</div>';
   }
 }
 
@@ -1110,15 +1116,16 @@ function fecharModalVincular() {
   document.getElementById('modalVincular').classList.add('hidden');
 }
 
-async function vincularLavador(lavadorId, nome) {
+async function vincularLavador(id, nome, tipo = 'lavador') {
   try {
-    await window.api.vincularLavadorDp(lavadorId);
+    if (tipo === 'lc') await window.api.vincularLcFuncionarioDp(id);
+    else await window.api.vincularLavadorDp(id);
     mostrarToast(`${nome} vinculado ao Data Point.`, 'success');
     fecharModalVincular();
     await carregarFuncionarios();
   } catch (e) {
     console.error(e);
-    mostrarToast('Erro ao vincular lavador.', 'error');
+    mostrarToast('Erro ao vincular funcionário.', 'error');
   }
 }
 

@@ -298,8 +298,8 @@
         <div class="integ-card sel" id="ic-lina" onclick="selInteg('lina-wash',this)">
           <div class="integ-check"><i class="fa fa-check"></i></div>
           <div class="integ-ico">🔗</div>
-          <div class="integ-title">Integrado ao Lina Wash</div>
-          <div class="integ-desc">Importa empresa e funcionários automaticamente. Ideal para quem já usa o Lina Wash.</div>
+          <div class="integ-title">Integrado ao Lina Wash / Lina Center</div>
+          <div class="integ-desc">Importa empresa e funcionários automaticamente. Ideal para quem já usa o Lina Wash ou o Lina Center.</div>
           <span class="integ-badge ib-teal"><i class="fa fa-bolt"></i> Configuração rápida</span>
         </div>
         <div class="integ-card" id="ic-standalone" onclick="selInteg('standalone',this)">
@@ -313,7 +313,7 @@
 
       <!-- Selector de empresa (modo integrado) -->
       <div id="empresaSel">
-        <label style="margin-bottom:8px;display:block">Empresa do Lina Wash para ativar</label>
+        <label style="margin-bottom:8px;display:block">Empresa para ativar</label>
         <select id="empresaSelect" style="margin-bottom:16px">
           <option value="">Carregando...</option>
         </select>
@@ -552,7 +552,7 @@
       <div class="source-tabs" id="sourceTabs">
         <button class="source-btn on" id="tabImport" onclick="mudarSource('import')">
           <div class="source-btn-icon">🔗</div>
-          <div class="source-btn-label">Importar do Lina Wash</div>
+          <div class="source-btn-label">Importar funcionários</div>
           <div class="source-btn-sub" id="importSubLabel">Carregando...</div>
         </button>
         <button class="source-btn" id="tabManual" onclick="mudarSource('manual')">
@@ -879,10 +879,10 @@ async function carregarImportaveis() {
     return;
   }
   try {
-    const { lavadores, subaccounts } = await window.api.getImportaveisDp(empresaIdSel);
+    const { lavadores, subaccounts, lcFuncionarios = [] } = await window.api.getImportaveisDp(empresaIdSel);
     lavadoresDisp = lavadores;
-    document.getElementById('importSubLabel').textContent = `${lavadores.length} disponíveis`;
-    renderImportList(lavadores, subaccounts);
+    document.getElementById('importSubLabel').textContent = `${lavadores.length + lcFuncionarios.length} disponíveis`;
+    renderImportList(lavadores, subaccounts, lcFuncionarios);
     importaveisCarregados = true;
   } catch {
     document.getElementById('importList').innerHTML = '<p style="color:#ef4444;font-size:13px;padding:16px">Erro ao carregar. Tente novamente.</p>';
@@ -895,12 +895,14 @@ function buildImportRow(l, i, cor, tipo) {
   const isSel = !!importadosSel.find(x => x.id === l.id);
   const jm = jornadasMap[l.id] || {};
   const isOpen = isSel;
-  const badge = tipo === 'lavador'
-    ? (l.jaImportado ? '<span class="ir-badge" style="background:var(--green-bg);color:var(--green)">Já importado</span>' : '<span class="ir-badge">Lavador</span>')
+  const comoLavador = tipo === 'lavador' || tipo === 'lc';
+  const badge = comoLavador
+    ? (l.jaImportado ? '<span class="ir-badge" style="background:var(--green-bg);color:var(--green)">Já importado</span>'
+        : `<span class="ir-badge">${tipo === 'lc' ? 'Lina Center' : 'Lavador'}</span>`)
     : '<span class="ir-badge" style="background:var(--p100);color:var(--p700)">Usuário</span>';
-  const role = tipo === 'lavador' ? (l.telefone || 'Lavador') : l.email;
+  const role = comoLavador ? (l.telefone || (tipo === 'lc' ? 'Funcionário' : 'Lavador')) : l.email;
   const nome = l.nome.replace(/'/g, "\\'");
-  const contato = (tipo === 'lavador' ? l.telefone : l.email) || '';
+  const contato = (comoLavador ? l.telefone : l.email) || '';
   return `
     <div class="import-item${isOpen ? ' open' : ''}" id="ii-${l.id}">
       <div class="import-row${isSel ? ' checked' : ''}${l.jaImportado ? ' disabled' : ''}"
@@ -935,13 +937,16 @@ function buildImportRow(l, i, cor, tipo) {
     </div>`;
 }
 
-function renderImportList(lavadores, subaccounts) {
+function renderImportList(lavadores, subaccounts, lcFuncionarios = []) {
   const cores = ['#0d9488','#7c3aed','#4f46e5','#e11d48','#ea580c','#0891b2','#059669','#d97706'];
   const cor = i => cores[i % cores.length];
   const rowsLav = lavadores.map((l, i) => buildImportRow(l, i, cor(i), 'lavador')).join('');
-  const rowsSub = subaccounts.map((s, i) => buildImportRow(s, i + lavadores.length, cor(i + lavadores.length), 'subaccount')).join('');
+  const offLc = lavadores.length;
+  const rowsLc = lcFuncionarios.map((f, i) => buildImportRow(f, i + offLc, cor(i + offLc), 'lc')).join('');
+  const offSub = offLc + lcFuncionarios.length;
+  const rowsSub = subaccounts.map((s, i) => buildImportRow(s, i + offSub, cor(i + offSub), 'subaccount')).join('');
 
-  const total = lavadores.length + subaccounts.length;
+  const total = lavadores.length + lcFuncionarios.length + subaccounts.length;
   document.getElementById('importList').innerHTML = `
     ${total === 0 ? '<p style="text-align:center;font-size:13px;color:var(--gray400);padding:20px">Nenhum funcionário encontrado.</p>' : ''}
     ${lavadores.length ? `
@@ -950,6 +955,13 @@ function renderImportList(lavadores, subaccounts) {
         <span class="ir-marcar-todos" onclick="marcarTodos(${JSON.stringify(lavadores.map(l=>({id:l.id,nome:l.nome,telefone:l.telefone||'',tipo:'lavador'})))})">Marcar todos</span>
       </div>
       <div class="import-list">${rowsLav}</div>` : ''}
+    ${lcFuncionarios.length ? `
+      ${lavadores.length ? '<hr class="divider" style="margin:14px 0">' : ''}
+      <div class="ir-list-header">
+        <span class="ir-list-label">Funcionários · Lina Center</span>
+        <span class="ir-marcar-todos" onclick="marcarTodos(${JSON.stringify(lcFuncionarios.map(f=>({id:f.id,nome:f.nome,telefone:f.telefone||'',tipo:'lc'})))})">Marcar todos</span>
+      </div>
+      <div class="import-list">${rowsLc}</div>` : ''}
     ${subaccounts.length ? `
       <hr class="divider" style="margin:14px 0">
       <div class="ir-list-header"><span class="ir-list-label">Usuários do sistema</span></div>
@@ -992,7 +1004,7 @@ function toggleImport(id, nome, contato, tipo) {
 function marcarTodos(arr) {
   arr.forEach(l => {
     if (!importadosSel.find(x => x.id === l.id)) {
-      importadosSel.push({ id: l.id, nome: l.nome, contato: l.telefone || '', tipo: 'lavador' });
+      importadosSel.push({ id: l.id, nome: l.nome, contato: l.telefone || '', tipo: l.tipo || 'lavador' });
       const itemEl = document.getElementById(`ii-${l.id}`);
       itemEl?.querySelector('.import-row')?.classList.add('checked');
       itemEl?.classList.add('open');
@@ -1171,6 +1183,8 @@ async function ativar() {
         };
         if (x.tipo === 'lavador') {
           return { lavadorId: x.id, nome: x.nome, telefone: x.contato, ...jornada };
+        } else if (x.tipo === 'lc') {
+          return { lcFuncionarioId: x.id, nome: x.nome, telefone: x.contato, ...jornada };
         } else {
           return { usuarioId: x.id, nome: x.nome, email: x.contato, ...jornada };
         }

@@ -146,7 +146,7 @@ export const getImportaveis = async (req: EmpresaRequest, res: Response) => {
   if (!empresaId) return res.status(400).json({ error: 'empresaId obrigatório' });
 
   try {
-    const [lavadores, subaccounts] = await Promise.all([
+    const [lavadores, subaccounts, lcFuncionarios] = await Promise.all([
       prisma.lavador.findMany({
         where: { empresaId, ativo: true },
         select: { id: true, nome: true, telefone: true },
@@ -157,10 +157,15 @@ export const getImportaveis = async (req: EmpresaRequest, res: Response) => {
         select: { id: true, nome: true, email: true },
         orderBy: { nome: 'asc' },
       }),
+      prisma.lcFuncionario.findMany({
+        where: { empresaId, ativo: true },
+        select: { id: true, nome: true, telefone: true },
+        orderBy: { nome: 'asc' },
+      }),
     ]);
 
-    // Lavadores que já têm dp_funcionario vinculado
-    const [vinculadosLav, vinculadosSub] = await Promise.all([
+    // Lavadores / funcionários LC que já têm dp_funcionario vinculado
+    const [vinculadosLav, vinculadosSub, vinculadosLc] = await Promise.all([
       prisma.dpFuncionario.findMany({
         where: { empresaId, lavadorId: { not: null } },
         select: { lavadorId: true },
@@ -169,9 +174,14 @@ export const getImportaveis = async (req: EmpresaRequest, res: Response) => {
         where: { empresaId, usuarioId: { not: null } },
         select: { usuarioId: true },
       }),
+      prisma.dpFuncionario.findMany({
+        where: { empresaId, lcFuncionarioId: { not: null } },
+        select: { lcFuncionarioId: true },
+      }),
     ]);
     const idsVinculadosLav = new Set(vinculadosLav.map(v => v.lavadorId));
     const idsVinculadosSub = new Set(vinculadosSub.map(v => v.usuarioId));
+    const idsVinculadosLc = new Set(vinculadosLc.map(v => v.lcFuncionarioId));
 
     res.json({
       lavadores: lavadores.map(l => ({
@@ -181,6 +191,10 @@ export const getImportaveis = async (req: EmpresaRequest, res: Response) => {
       subaccounts: subaccounts.map(s => ({
         ...s,
         jaImportado: idsVinculadosSub.has(s.id),
+      })),
+      lcFuncionarios: lcFuncionarios.map(f => ({
+        ...f,
+        jaImportado: idsVinculadosLc.has(f.id),
       })),
     });
   } catch (error) {
@@ -262,6 +276,25 @@ export const salvarOnboarding = async (req: EmpresaRequest, res: Response) => {
                 cargo: l.cargo ?? null,
                 telefone: l.telefone ?? null,
                 lavadorId: l.lavadorId,
+                jornadaEntrada: l.jornadaEntrada ?? null,
+                cargaHorariaDia: l.cargaHorariaDia ? parseFloat(l.cargaHorariaDia) : null,
+                status: 'ATIVO',
+                updatedAt: new Date(),
+              },
+            });
+          }
+        } else if (l.lcFuncionarioId) {
+          const jaExiste = await tx.dpFuncionario.findFirst({
+            where: { empresaId, lcFuncionarioId: l.lcFuncionarioId },
+          });
+          if (!jaExiste) {
+            await tx.dpFuncionario.create({
+              data: {
+                empresaId,
+                nome: l.nome,
+                cargo: l.cargo ?? null,
+                telefone: l.telefone ?? null,
+                lcFuncionarioId: l.lcFuncionarioId,
                 jornadaEntrada: l.jornadaEntrada ?? null,
                 cargaHorariaDia: l.cargaHorariaDia ? parseFloat(l.cargaHorariaDia) : null,
                 status: 'ATIVO',
@@ -851,7 +884,7 @@ export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
       select: {
         id: true, nome: true, cpf: true, cargo: true,
         salarioBase: true, cargaHoraria: true, telefone: true,
-        status: true, lavadorId: true, jornadaEntrada: true,
+        status: true, lavadorId: true, lcFuncionarioId: true, jornadaEntrada: true,
         cargaHorariaDia: true, pinDefinido: true, linkToken: true,
         faceCapturadoEm: true, dataAdmissao: true,
         createdAt: true,
@@ -873,12 +906,25 @@ export const getDpFuncionarios = async (req: EmpresaRequest, res: Response) => {
       lavadores.forEach(l => linksPorLavador.set(l.id, l.linkTokenCurto));
     }
 
+    // Mesmo esquema para quem está vinculado ao funcionário do Lina Center
+    const lcIds = funcionarios.map(f => f.lcFuncionarioId).filter((id): id is string => !!id);
+    const linksPorLc = new Map<string, string | null>();
+    if (lcIds.length > 0) {
+      const lcs = await prisma.lcFuncionario.findMany({
+        where: { id: { in: lcIds } },
+        select: { id: true, linkToken: true },
+      });
+      lcs.forEach(l => linksPorLc.set(l.id, l.linkToken));
+    }
+
     const result = funcionarios.map(f => ({
       ...f,
       portalToken: f.lavadorId
         ? (linksPorLavador.get(f.lavadorId) ?? null)
-        : f.linkToken,
-      portalSuportado: !!f.lavadorId,
+        : f.lcFuncionarioId
+          ? (linksPorLc.get(f.lcFuncionarioId) ?? null)
+          : f.linkToken,
+      portalSuportado: !!f.lavadorId || !!f.lcFuncionarioId,
       faceCadastrado: !!f.faceCapturadoEm,
     }));
 
@@ -959,6 +1005,38 @@ export const vincularLavadorDp = async (req: EmpresaRequest, res: Response) => {
   }
 };
 
+// ─── POST /api/dp/funcionarios/vincular-lc ───────────────────────────────────
+// Mesma coisa que vincular-lavador, para o funcionário do Lina Center
+export const vincularLcFuncionarioDp = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = (req as any).empresaId as string;
+  const { lcFuncionarioId } = req.body;
+  if (!lcFuncionarioId) return res.status(400).json({ error: 'lcFuncionarioId obrigatório' });
+
+  try {
+    const lcFunc = await prisma.lcFuncionario.findFirst({ where: { id: lcFuncionarioId, empresaId } });
+    if (!lcFunc) return res.status(404).json({ error: 'Funcionário do Lina Center não encontrado nesta empresa' });
+
+    const jaExiste = await prisma.dpFuncionario.findFirst({ where: { empresaId, lcFuncionarioId } });
+    if (jaExiste) return res.status(400).json({ error: 'Este funcionário já está vinculado ao Data Point' });
+
+    const funcionario = await prisma.dpFuncionario.create({
+      data: {
+        empresaId,
+        nome: lcFunc.nome,
+        telefone: lcFunc.telefone,
+        lcFuncionarioId: lcFunc.id,
+        status: 'ATIVO',
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json({ funcionario });
+  } catch (error) {
+    console.error('[dp] vincularLcFuncionario:', error);
+    res.status(500).json({ error: 'Erro ao vincular funcionário' });
+  }
+};
+
 // ─── PUT /api/dp/funcionarios/:id ─────────────────────────────────────────────
 export const atualizarDpFuncionario = async (req: EmpresaRequest, res: Response) => {
   const empresaId = (req as any).empresaId as string;
@@ -1012,13 +1090,18 @@ export const resetarPinDpFuncionario = async (req: EmpresaRequest, res: Response
   try {
     const existente = await prisma.dpFuncionario.findFirst({
       where: { id, empresaId },
-      select: { id: true, lavadorId: true },
+      select: { id: true, lavadorId: true, lcFuncionarioId: true },
     });
     if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
 
     if (existente.lavadorId) {
       await prisma.lavador.update({
         where: { id: existente.lavadorId },
+        data: { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
+      });
+    } else if (existente.lcFuncionarioId) {
+      await prisma.lcFuncionario.update({
+        where: { id: existente.lcFuncionarioId },
         data: { pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
       });
     } else {
@@ -1045,11 +1128,19 @@ export const regenerarLinkDpFuncionario = async (req: EmpresaRequest, res: Respo
   try {
     const existente = await prisma.dpFuncionario.findFirst({
       where: { id, empresaId },
-      select: { id: true, lavadorId: true },
+      select: { id: true, lavadorId: true, lcFuncionarioId: true },
     });
     if (!existente) return res.status(404).json({ error: 'Funcionário não encontrado' });
 
     const novoToken = gerarTokenCurto(8);
+
+    if (existente.lcFuncionarioId) {
+      await prisma.lcFuncionario.update({
+        where: { id: existente.lcFuncionarioId },
+        data: { linkToken: novoToken, pin: null, pinDefinido: false, sessionVersion: { increment: 1 } },
+      });
+      return res.json({ linkToken: novoToken });
+    }
 
     if (existente.lavadorId) {
       await prisma.lavador.update({

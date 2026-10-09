@@ -92,6 +92,7 @@ async function buscarDpFuncPorSessao(
   lavadorId: string | undefined,
   dpFuncionarioId: string | undefined,
   empresaId: string,
+  lcFuncionarioId?: string,
 ) {
   if (lavadorId) {
     return prisma.dpFuncionario.findFirst({
@@ -102,6 +103,13 @@ async function buscarDpFuncPorSessao(
   if (dpFuncionarioId) {
     return prisma.dpFuncionario.findFirst({
       where: { id: dpFuncionarioId, empresaId, status: 'ATIVO' },
+      select: DP_FUNC_SELECT,
+    });
+  }
+  // Funcionário do Lina Center vinculado ao Data Point (mesmo papel do lavadorId)
+  if (lcFuncionarioId) {
+    return prisma.dpFuncionario.findFirst({
+      where: { empresaId, lcFuncionarioId, status: 'ATIVO' },
       select: DP_FUNC_SELECT,
     });
   }
@@ -403,6 +411,13 @@ export const getDadosPortal = async (req: Request, res: Response) => {
 
       const ganhoHojeLc = ordensHojeLc.reduce((s, o) => s + (o.comissao ?? 0), 0);
 
+      // Ponto aparece se a empresa usa o Data Point e este funcionário está vinculado nele
+      const [sistemaDpLc, dpVinculadoLc] = await Promise.all([
+        prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true } }),
+        prisma.dpFuncionario.findFirst({ where: { empresaId, lcFuncionarioId, status: 'ATIVO' }, select: { id: true } }),
+      ]);
+      const lcComPonto = !!sistemaDpLc && !!dpVinculadoLc;
+
       return res.json({
         sistema: 'lina-center',
         lavador: {
@@ -414,8 +429,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
           salario: lcFunc.salario,
           telefone: lcFunc.telefone ?? null,
         },
-        // Ponto do Data Point para funcionário LC chega na etapa de integração
-        dataPointAtivo: false,
+        dataPointAtivo: lcComPonto,
         hoje: {
           ganho: ganhoHojeLc,
           totalOrdens: ordensHojeLc.length,
@@ -934,7 +948,7 @@ export const getPontoHoje = async (req: Request, res: Response) => {
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId),
       prisma.empresaSistema.findFirst({
         where: { empresaId, sistema: 'data-point', ativo: true },
       }),
@@ -1024,7 +1038,7 @@ export const gerarFaceTokenPortal = async (req: Request, res: Response) => {
   const empresaId = (req as any).empresaId as string;
 
   try {
-    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId);
+    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId);
     if (!funcionario) {
       return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
     }
@@ -1054,7 +1068,7 @@ export const getSaldoPortal = async (req: Request, res: Response) => {
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId),
       prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true }, select: { config: true } }),
     ]);
     if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
@@ -1086,7 +1100,7 @@ export const assinarEspelhoPortal = async (req: Request, res: Response) => {
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId),
       prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'data-point', ativo: true } }),
     ]);
     if (!funcionario) return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
@@ -1143,7 +1157,7 @@ export const registrarPonto = async (req: Request, res: Response) => {
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId),
       prisma.empresaSistema.findFirst({
         where: { empresaId, sistema: 'data-point', ativo: true },
       }),
@@ -1252,7 +1266,7 @@ export const getEspelhoPortal = async (req: Request, res: Response) => {
 
   try {
     const [funcionario, sistema] = await Promise.all([
-      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId),
+      buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId),
       prisma.empresaSistema.findFirst({
         where: { empresaId, sistema: 'data-point', ativo: true },
       }),
@@ -1316,7 +1330,7 @@ export const criarAjustePortal = async (req: Request, res: Response) => {
     return res.status(400).json({ erro: 'Tipo inválido' });
 
   try {
-    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId);
+    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId);
     if (!funcionario)
       return res.status(404).json({ erro: 'Você não está cadastrado no Data Point desta empresa.' });
 
@@ -1351,7 +1365,7 @@ export const getAjustesPortal = async (req: Request, res: Response) => {
   const empresaId = (req as any).empresaId as string;
 
   try {
-    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId);
+    const funcionario = await buscarDpFuncPorSessao(lavadorId, dpFuncionarioId, empresaId, (req as any).lcFuncionarioId);
     if (!funcionario) return res.status(404).json({ erro: 'Não cadastrado no Data Point.' });
 
     const ajustes = await prisma.dpAjuste.findMany({

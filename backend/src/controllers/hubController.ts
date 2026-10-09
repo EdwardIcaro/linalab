@@ -125,7 +125,8 @@ export const getHub = async (req: Request, res: Response) => {
           statusLabel: statusInfoWash.label,
           statusTipo: statusInfoWash.tipo,
           stat: `${funcPorEmpresa.get(e.id) ?? 0} funcionários`,
-          integradoCom: 'lina-wash'
+          // Data Point roda junto do sistema principal da empresa
+          integradoCom: idsComLinaCenter.includes(e.id) ? 'lina-center' : 'lina-wash'
         }));
     }
 
