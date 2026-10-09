@@ -29,6 +29,8 @@ import {
   getLcDashboardResumo,
   getLcFaturamentoPorMetodo,
   getLcComissoesPorFuncionario,
+  getLcComissoesFuncionario,
+  fecharLcComissao,
   getLcFaturamentoUltimos7Dias,
 } from '../controllers/lcController';
 
@@ -76,6 +78,10 @@ router.patch('/ordens/:id/cancel', cancelLcOrdem);
 router.get('/dashboard-resumo', getLcDashboardResumo);
 router.get('/financeiro/metodos', getLcFaturamentoPorMetodo);
 router.get('/financeiro/comissoes-funcionario', getLcComissoesPorFuncionario);
+
+// Pagamento de comissão (fechamento) — espelha o fechamento do Lina Wash
+router.get('/comissoes/:funcionarioId', getLcComissoesFuncionario);
+router.post('/comissoes/fechar', fecharLcComissao);
 router.get('/financeiro/semana', getLcFaturamentoUltimos7Dias);
 
 export default router;

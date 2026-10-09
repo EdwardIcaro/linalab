@@ -700,8 +700,29 @@ async function getExtratoLc(req: Request, res: Response, lcFuncionarioId: string
       take: 100,
     });
 
+    const fechamentos = await prisma.lcFechamentoComissao.findMany({
+      where: { funcionarioId: lcFuncionarioId, data: { gte: trintaDiasAtras } },
+      include: {
+        ordensPagas: {
+          include: {
+            cliente: { select: { nome: true } },
+            veiculo: { select: { modelo: true, placa: true } },
+            items: { include: { servico: { select: { nome: true } } } },
+          },
+        },
+      },
+      orderBy: { data: 'desc' },
+    });
+
     // A tela de comissões identifica "quem é o funcionário" por lavadorId/lavador
     const funcRef = { id: funcionario.id, nome: funcionario.nome, comissao: funcionario.comissao };
+    const noFormatoLavador = (o: typeof ordens[number]) => ({
+      ...o,
+      lavadorId: funcionario.id,
+      lavador: funcRef,
+      ordemLavadores: [],
+      items: o.items.map(i => ({ ...i, tipo: 'SERVICO' })),
+    });
 
     res.json({
       sistema: 'lina-center',
@@ -713,15 +734,17 @@ async function getExtratoLc(req: Request, res: Response, lcFuncionarioId: string
       salario: funcionario.salario,
       empresa: funcionario.empresa.nome,
       dataPointAtivo: false,
-      ordens: ordens.map(o => ({
-        ...o,
-        lavadorId: funcionario.id,
-        lavador: funcRef,
-        ordemLavadores: [],
-        items: o.items.map(i => ({ ...i, tipo: 'SERVICO' })),
-      })),
+      ordens: ordens.map(noFormatoLavador),
       gorjetas: [],
-      fechamentos: [],
+      fechamentos: fechamentos.map(f => ({
+        id: f.id,
+        data: f.data,
+        valorPago: f.valorPago,
+        formaPagamento: f.formaPagamento,
+        ordensPagas: f.ordensPagas.map(noFormatoLavador),
+        ordemLavadoresPagos: [],
+        adiantamentosQuitados: [],
+      })),
       adiantamentosNaoQuitados: [],
       tokenExpiresAt: null,
     });

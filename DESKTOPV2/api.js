@@ -303,6 +303,8 @@ const api = {
   getLcDashboardResumo: () => fetchApi('/lc/dashboard-resumo'),
   getLcFaturamentoPorMetodo: (mes = '') => fetchApi(`/lc/financeiro/metodos${mes ? `?mes=${mes}` : ''}`),
   getLcComissoesPorFuncionario: (mes = '') => fetchApi(`/lc/financeiro/comissoes-funcionario${mes ? `?mes=${mes}` : ''}`),
+  getLcComissoesFuncionario: (funcionarioId) => fetchApi(`/lc/comissoes/${funcionarioId}`),
+  fecharLcComissao: (dados) => fetchApi('/lc/comissoes/fechar', { method: 'POST', body: JSON.stringify(dados) }),
   getLcFaturamentoSemana: () => fetchApi('/lc/financeiro/semana'),
 
   // ===== EMPRESAS =====

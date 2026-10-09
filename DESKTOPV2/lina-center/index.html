@@ -202,7 +202,7 @@
     .tbl-row.head{background:var(--bg);font-size:10.5px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.4px;padding:10px 18px;}
     .tbl-row.ordens{grid-template-columns:70px 1.3fr 1fr .9fr 90px 130px 150px;}
     .tbl-row.clientes{grid-template-columns:1.3fr 1fr 1fr 90px 90px;}
-    .tbl-row.func{grid-template-columns:1.1fr .9fr .8fr .9fr 80px 190px;}
+    .tbl-row.func{grid-template-columns:1.1fr .9fr .8fr .9fr 80px 260px;}
     .tbl-row.servicos{grid-template-columns:1.4fr 1fr 1fr 90px 90px;}
     .tbl-name{font-weight:700;}
     .tbl-sub{color:var(--light);font-size:11px;}
@@ -453,6 +453,25 @@
     }
     @keyframes sobe{from{transform:translateY(40px);opacity:.5;}to{transform:none;opacity:1;}}
     @media (prefers-reduced-motion: reduce){.sub-sheet{animation:none;}}
+    /* ═══ PAGAR COMISSÃO ═══ */
+    .pg-resumo{display:flex;justify-content:space-between;align-items:center;background:var(--accent-l);border:1px solid var(--accent-m);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;}
+    .pg-resumo b{font-size:20px;color:var(--accent-d);}
+    .pg-resumo span{font-size:12px;color:var(--mid);font-weight:600;}
+    .pg-lista{border:1px solid var(--border);border-radius:var(--r);max-height:240px;overflow-y:auto;margin-bottom:12px;}
+    .pg-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;}
+    .pg-item:last-child{border-bottom:none;}
+    .pg-item input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;}
+    .pg-item-info{flex:1;min-width:0;}
+    .pg-item-nome{font-size:12.5px;font-weight:700;}
+    .pg-item-det{font-size:11px;color:var(--light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pg-item-val{font-size:13px;font-weight:800;color:var(--accent-d);}
+    .pg-sel{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mid);margin:-4px 0 12px;}
+    .pg-sel button{background:none;border:none;color:var(--accent-d);font-weight:700;font-size:11.5px;cursor:pointer;padding:0;}
+    .pg-hist{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
+    .pg-hist-row{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;color:var(--mid);}
+    .pg-hist-row b{color:var(--text);}
+    .metodo-chip-row.quatro{flex-wrap:wrap;}
+    .metodo-chip-row.quatro .metodo-chip{flex:1 1 calc(50% - 8px);}
   </style>
 </head>
 <body x-data="app()" x-init="init()">
@@ -707,6 +726,7 @@
                   <div class="tbl-name" x-text="'R$ '+fmt(rankingDe(f.id).comissao)"></div>
                   <div><span class="pill" :class="f.ativo?'ativo':'inativo'" @click="toggleAtivoFunc(f)" x-text="f.ativo?'Ativo':'Inativo'"></span></div>
                   <div class="tbl-actions">
+                    <button class="act-btn act-btn-txt" @click="abrirPagarComissao(f)" title="Pagar comissão" style="background:var(--accent-l);color:var(--accent-d);border-color:var(--accent-m)">💰 Pagar</button>
                     <button class="act-btn" @click="abrirFormFunc(f)" title="Editar">✏️</button>
                     <button class="act-btn" @click="copiarLink(f)" title="Copiar link do portal" x-text="linkCopiadoId===f.id?'✓':'🔗'"></button>
                     <button class="act-btn" @click="resetarPin(f)" title="Resetar PIN">🔁</button>
@@ -1027,6 +1047,75 @@
     </div>
   </div>
 
+  <!-- ═══ MODAL: PAGAR COMISSÃO (fechamento — mesmo fluxo do Lina Wash) ═══ -->
+  <div class="sub-backdrop" x-show="showPagarCom" x-cloak @click.self="showPagarCom=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title" x-text="'Pagar comissão · '+(pagarCom.funcionario?.nome||'')"></div><div class="sheet-sub">Ordens finalizadas ainda não pagas</div></div>
+        <button class="sheet-close" @click="showPagarCom=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <template x-if="pagarCom.carregando"><div class="empty">Carregando…</div></template>
+        <template x-if="!pagarCom.carregando && pagarCom.pendentes.length===0">
+          <div class="empty">Nenhuma comissão a pagar. Tudo em dia.</div>
+        </template>
+        <template x-if="!pagarCom.carregando && pagarCom.pendentes.length>0">
+          <div>
+            <div class="pg-resumo">
+              <div><span x-text="pagarCom.selecionadas.length+' de '+pagarCom.pendentes.length+' ordens'"></span></div>
+              <b x-text="'R$ '+fmt(totalSelecionadoCom())"></b>
+            </div>
+            <div class="pg-sel">
+              <span>Desmarque o que não vai pagar agora</span>
+              <button @click="alternarTodasCom()" x-text="pagarCom.selecionadas.length===pagarCom.pendentes.length?'Desmarcar todas':'Marcar todas'"></button>
+            </div>
+            <div class="pg-lista">
+              <template x-for="o in pagarCom.pendentes" :key="o.id">
+                <label class="pg-item">
+                  <input type="checkbox" :value="o.id" x-model="pagarCom.selecionadas" @change="pagarCom.valor=totalSelecionadoCom()">
+                  <div class="pg-item-info">
+                    <div class="pg-item-nome" x-text="'#'+o.numeroOrdem+' · '+(o.cliente?.nome||'—')"></div>
+                    <div class="pg-item-det" x-text="(o.veiculo?.modelo||'—')+(o.veiculo?.placa?' · '+o.veiculo.placa:'')+' · '+dataCurta(o.dataFim)"></div>
+                  </div>
+                  <div class="pg-item-val" x-text="'R$ '+fmt(o.comissao)"></div>
+                </label>
+              </template>
+            </div>
+            <div class="form-row cols2">
+              <div class="fld"><label>Valor pago (R$)</label><input type="number" min="0" step="0.01" x-model.number="pagarCom.valor"></div>
+              <div class="fld"><label>Observação <em>(opcional)</em></label><input type="text" maxlength="500" placeholder="Ex: semana 1 de outubro" x-model="pagarCom.observacao"></div>
+            </div>
+            <div class="fld" x-show="Number(pagarCom.valor)>0">
+              <label>Forma de pagamento</label>
+              <div class="metodo-chip-row quatro">
+                <template x-for="m in [['DINHEIRO','Dinheiro'],['PIX','Pix'],['TRANSFERENCIA','Transferência'],['CARTAO','Cartão']]" :key="m[0]">
+                  <div class="metodo-chip" :class="{on:pagarCom.forma===m[0]}" @click="pagarCom.forma=m[0]" x-text="m[1]"></div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template x-if="!pagarCom.carregando && pagarCom.fechamentos.length>0">
+          <div class="pg-hist">
+            <div class="sec-lbl">Últimos pagamentos</div>
+            <template x-for="f in pagarCom.fechamentos" :key="f.id">
+              <div class="pg-hist-row">
+                <span x-text="dataCurta(f.data)+' · '+f.ordens+' ordem'+(f.ordens===1?'':'s')+(f.formaPagamento?' · '+rotuloMetodo(f.formaPagamento):'')"></span>
+                <b x-text="'R$ '+fmt(f.valorPago)"></b>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showPagarCom=false">Fechar</button>
+        <button class="btn-confirm" x-show="pagarCom.pendentes.length>0" @click="confirmarPagarCom()"
+          :disabled="pagarCom.salvando || pagarCom.selecionadas.length===0"
+          x-text="pagarCom.salvando?'Registrando…':'✓ Registrar pagamento'"></button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ SUCESSO ═══ -->
   <div class="sub-backdrop" x-show="sucesso" x-cloak style="z-index:260;">
     <div class="sub-sheet success-box" @click.stop>
@@ -1090,6 +1179,51 @@
         showFormServ: false, formServ: {}, erroServ: {}, salvandoServ: false,
         showPagamento: false, ordemPagamento: null, metodoPagamento: 'DINHEIRO', finalizando: false,
         linkCopiadoId: null,
+        showPagarCom: false,
+        pagarCom: { funcionario: null, pendentes: [], fechamentos: [], selecionadas: [], valor: 0, forma: 'PIX', observacao: '', carregando: false, salvando: false },
+
+        async abrirPagarComissao(f) {
+          this.pagarCom = { funcionario: f, pendentes: [], fechamentos: [], selecionadas: [], valor: 0, forma: 'PIX', observacao: '', carregando: true, salvando: false };
+          this.showPagarCom = true;
+          try {
+            const r = await window.api.getLcComissoesFuncionario(f.id);
+            this.pagarCom.pendentes = r.pendentes || [];
+            this.pagarCom.fechamentos = r.fechamentos || [];
+            this.pagarCom.selecionadas = this.pagarCom.pendentes.map(o => o.id);
+            this.pagarCom.valor = this.totalSelecionadoCom();
+          } catch (e) {
+            alert(e?.error || e?.message || 'Erro ao carregar as comissões');
+            this.showPagarCom = false;
+          } finally { this.pagarCom.carregando = false; }
+        },
+        totalSelecionadoCom() {
+          const sel = new Set(this.pagarCom.selecionadas);
+          return Math.round(this.pagarCom.pendentes.filter(o => sel.has(o.id)).reduce((s, o) => s + (o.comissao || 0), 0) * 100) / 100;
+        },
+        alternarTodasCom() {
+          this.pagarCom.selecionadas = this.pagarCom.selecionadas.length === this.pagarCom.pendentes.length ? [] : this.pagarCom.pendentes.map(o => o.id);
+          this.pagarCom.valor = this.totalSelecionadoCom();
+        },
+        async confirmarPagarCom() {
+          const valor = Number(this.pagarCom.valor) || 0;
+          if (valor < 0) { alert('Valor inválido'); return; }
+          this.pagarCom.salvando = true;
+          try {
+            await window.api.fecharLcComissao({
+              funcionarioId: this.pagarCom.funcionario.id,
+              ordemIds: this.pagarCom.selecionadas,
+              valorPago: valor,
+              formaPagamento: valor > 0 ? this.pagarCom.forma : undefined,
+              observacao: this.pagarCom.observacao || undefined,
+            });
+            const f = this.pagarCom.funcionario;
+            await this.abrirPagarComissao(f);
+          } catch (e) {
+            alert(e?.error || e?.message || 'Erro ao registrar o pagamento');
+            this.pagarCom.salvando = false;
+          }
+        },
+        dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'; },
         menuMobile: false,
         impersonando: !!localStorage.getItem('original_admin_session'),
 
@@ -1179,7 +1313,7 @@
           if (f.tipoRemuneracao === 'SALARIO_COMISSAO') return `Salário + ${f.comissao || 0}%`;
           return `${f.comissao || 0}% por ordem`;
         },
-        rotuloMetodo(m) { return { DINHEIRO:'Dinheiro', PIX:'Pix', CARTAO:'Cartão', CARTAO_CREDITO:'Cartão Crédito', CARTAO_DEBITO:'Cartão Débito', NFE:'NFE', OUTRO:'Outro' }[m] || m; },
+        rotuloMetodo(m) { return { DINHEIRO:'Dinheiro', PIX:'Pix', CARTAO:'Cartão', CARTAO_CREDITO:'Cartão Crédito', CARTAO_DEBITO:'Cartão Débito', TRANSFERENCIA:'Transferência', NFE:'NFE', OUTRO:'Outro' }[m] || m; },
         corMetodo(m) { return { DINHEIRO:'#10b981', PIX:'#f97316', CARTAO:'#3b82f6', CARTAO_CREDITO:'#3b82f6', CARTAO_DEBITO:'#60a5fa', NFE:'#7c3aed' }[m] || '#94a3b8'; },
         pctMetodo(v) {
           const max = Math.max(...this.metodos.map(m => m.valor), 1);

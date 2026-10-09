@@ -83,6 +83,7 @@ model Empresa {
   lcServicos                 LcServico[]
   lcOrdens                   LcOrdemServico[]
   lcPagamentos               LcPagamento[]
+  lcFechamentosComissao      LcFechamentoComissao[]
   relatoriosFinanceiroLinks  RelatorioFinanceiroLink[]
   emailContas                EmailConta[]
   emailRegras                EmailRegra[]
@@ -1280,6 +1281,7 @@ model LcFuncionario {
   updatedAt       DateTime         @updatedAt
   empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   ordens          LcOrdemServico[]
+  fechamentos     LcFechamentoComissao[]
 
   @@unique([nome, empresaId])
   @@map("lc_funcionarios")
@@ -1313,6 +1315,7 @@ model LcOrdemServico {
   desconto      Float                @default(0)
   comissao      Float                @default(0)
   comissaoPaga  Boolean              @default(false)
+  fechamentoComissaoId String?
   observacoes   String?
   dataInicio    DateTime?
   dataFim       DateTime?
@@ -1323,13 +1326,34 @@ model LcOrdemServico {
   cliente       LcCliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   veiculo       LcVeiculo?           @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
   funcionario   LcFuncionario?       @relation(fields: [funcionarioId], references: [id])
+  fechamentoComissao LcFechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id], onDelete: SetNull)
   items         LcOrdemServicoItem[]
   pagamentos    LcPagamento[]
 
   @@unique([empresaId, numeroOrdem])
   @@index([empresaId, status])
   @@index([empresaId, dataFim])
+  @@index([fechamentoComissaoId])
   @@map("lc_ordens_servico")
+}
+
+// Pagamento de comissão ao funcionário do Lina Center — espelha FechamentoComissao
+// do Lina Wash. O LC não tem caixa de despesas, então a forma de pagamento e a
+// observação ficam aqui mesmo.
+model LcFechamentoComissao {
+  id             String           @id @default(cuid())
+  data           DateTime         @default(now())
+  valorPago      Float
+  formaPagamento String?
+  observacao     String?
+  empresaId      String
+  funcionarioId  String
+  empresa        Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  funcionario    LcFuncionario    @relation(fields: [funcionarioId], references: [id])
+  ordensPagas    LcOrdemServico[]
+
+  @@index([empresaId, funcionarioId])
+  @@map("lc_fechamentos_comissao")
 }
 
 model LcOrdemServicoItem {

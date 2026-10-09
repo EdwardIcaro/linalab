@@ -1086,3 +1086,113 @@ export const getLcFaturamentoUltimos7Dias = async (req: EmpresaRequest, res: Res
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
+
+// ─── Fechamento (pagamento) de comissão ──────────────────────────────────────
+// Espelha caixaController.fecharComissao do Lina Wash. Diferenças do LC: um
+// funcionário por ordem (sem divisão), sem vales/adiantamentos e sem caixa de
+// despesas — a forma de pagamento fica no próprio fechamento.
+
+const FORMAS_PAGAMENTO_COMISSAO = ['DINHEIRO', 'PIX', 'CARTAO', 'TRANSFERENCIA'];
+
+/**
+ * GET /api/lc/comissoes/:funcionarioId
+ * Comissões a pagar (ordens finalizadas ainda não pagas) + últimos pagamentos
+ */
+export const getLcComissoesFuncionario = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const empresaId = req.empresaId!;
+    const funcionarioId = req.params.funcionarioId as string;
+
+    const funcionario = await prisma.lcFuncionario.findFirst({
+      where: { id: funcionarioId, empresaId },
+      select: { id: true, nome: true, comissao: true, tipoRemuneracao: true },
+    });
+    if (!funcionario) return res.status(404).json({ error: 'Funcionário não encontrado' });
+
+    const [pendentes, fechamentos] = await Promise.all([
+      prisma.lcOrdemServico.findMany({
+        where: { empresaId, funcionarioId, status: 'FINALIZADO', comissaoPaga: false, comissao: { gt: 0 } },
+        select: {
+          id: true, numeroOrdem: true, valorTotal: true, comissao: true, dataFim: true,
+          cliente: { select: { nome: true } },
+          veiculo: { select: { modelo: true, placa: true } },
+        },
+        orderBy: { dataFim: 'asc' },
+      }),
+      prisma.lcFechamentoComissao.findMany({
+        where: { empresaId, funcionarioId },
+        select: { id: true, data: true, valorPago: true, formaPagamento: true, observacao: true, _count: { select: { ordensPagas: true } } },
+        orderBy: { data: 'desc' },
+        take: 10,
+      }),
+    ]);
+
+    res.json({
+      funcionario,
+      pendentes,
+      totalPendente: pendentes.reduce((s, o) => s + (o.comissao || 0), 0),
+      fechamentos: fechamentos.map(f => ({ ...f, ordens: f._count.ordensPagas, _count: undefined })),
+    });
+  } catch (error) {
+    console.error('Erro ao buscar comissões do funcionário (Lina Center):', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * POST /api/lc/comissoes/fechar
+ * body: { funcionarioId, ordemIds[], valorPago, formaPagamento?, observacao? }
+ */
+export const fecharLcComissao = async (req: EmpresaRequest, res: Response) => {
+  const empresaId = req.empresaId!;
+  const { funcionarioId, ordemIds, valorPago, formaPagamento, observacao } = req.body || {};
+
+  if (!funcionarioId || !Array.isArray(ordemIds) || valorPago === undefined) {
+    return res.status(400).json({ error: 'Dados insuficientes para pagar a comissão.' });
+  }
+  if (ordemIds.length === 0) {
+    return res.status(400).json({ error: 'Selecione pelo menos uma ordem para pagar.' });
+  }
+  const valor = Number(valorPago);
+  if (!isFinite(valor) || valor < 0) {
+    return res.status(400).json({ error: 'Valor pago inválido.' });
+  }
+  if (valor > 0 && !FORMAS_PAGAMENTO_COMISSAO.includes(formaPagamento)) {
+    return res.status(400).json({ error: 'A forma de pagamento é obrigatória quando há valor a pagar.' });
+  }
+
+  try {
+    const funcionario = await prisma.lcFuncionario.findFirst({ where: { id: funcionarioId, empresaId }, select: { id: true, nome: true } });
+    if (!funcionario) return res.status(404).json({ error: 'Funcionário não encontrado.' });
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      const fechamento = await tx.lcFechamentoComissao.create({
+        data: {
+          valorPago: valor,
+          formaPagamento: valor > 0 ? formaPagamento : null,
+          observacao: observacao ? String(observacao).trim().slice(0, 500) : null,
+          empresaId,
+          funcionarioId,
+        },
+      });
+
+      // Só marca o que é desse funcionário, finalizado e ainda não pago — evita
+      // pagar duas vezes se duas abas mandarem o mesmo fechamento
+      const marcadas = await tx.lcOrdemServico.updateMany({
+        where: { id: { in: ordemIds }, empresaId, funcionarioId, status: 'FINALIZADO', comissaoPaga: false },
+        data: { comissaoPaga: true, fechamentoComissaoId: fechamento.id },
+      });
+      if (marcadas.count === 0) throw new Error('NADA_A_PAGAR');
+
+      return { fechamentoId: fechamento.id, ordensPagas: marcadas.count };
+    }, { timeout: 30000 });
+
+    res.json({ message: `Comissão de ${funcionario.nome} paga.`, ...resultado });
+  } catch (error: any) {
+    if (error?.message === 'NADA_A_PAGAR') {
+      return res.status(409).json({ error: 'Essas ordens já foram pagas ou não estão finalizadas. Atualize a tela.' });
+    }
+    console.error('Erro ao pagar comissão (Lina Center):', error);
+    res.status(500).json({ error: 'Erro interno ao processar o pagamento da comissão.' });
+  }
+};
