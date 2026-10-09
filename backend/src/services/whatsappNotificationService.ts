@@ -242,6 +242,47 @@ export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: stri
   }
 }
 
+// ─── Funcionário do Lina Center: ordem nova atribuída ────────────────────────
+// Mesma regra do lavador: desligado por padrão, o dono liga em whatsappRoles.lavador.notifs.
+// O LC não tem a página de ordens do lavador, então o modo "agrupado" vira um aviso por ordem.
+export async function notifyLcFuncionarioNovaOrdem(empresaId: string, funcionarioId: string, dados: {
+  numeroOrdem: number;
+  clienteNome: string;
+  veiculo: string;
+  servico: string;
+  valor: number;
+  observacao?: string | null;
+}): Promise<void> {
+  try {
+    const bot = await botGetStatus();
+    if (bot.status !== 'connected') return;
+  } catch { return; }
+
+  try {
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { notificationPreferences: true },
+    });
+    if (!empresa || modoDeAviso(empresa) === 'DESLIGADO') return;
+
+    const func = await prisma.lcFuncionario.findFirst({
+      where: { id: funcionarioId, empresaId, ativo: true, wppJid: { not: null } },
+      select: { wppJid: true },
+    });
+    if (!func?.wppJid) return;
+
+    let msg = `🆕 *Nova ordem atribuída a você — #${dados.numeroOrdem}*\n` +
+      `🚗 ${dados.veiculo} · ${dados.clienteNome}\n` +
+      `🔧 ${dados.servico} · *R$ ${dados.valor.toFixed(2)}*`;
+    const obs = dados.observacao?.trim();
+    if (obs) msg += `\n📋 ${obs}`;
+
+    await botSend(func.wppJid, msg).catch(() => {});
+  } catch (e) {
+    console.error('[Notif] notifyLcFuncionarioNovaOrdem:', e);
+  }
+}
+
 // ─── Hooks (chamados pelos controllers) ──────────────────────────────────────
 
 export async function notifyNovaOrdem(empresaId: string, dados: {

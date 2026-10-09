@@ -1,3 +1,6 @@
+// ⚠️ CÓPIA de backend/prisma/schema.prisma (sincronizada em 09/10/2026).
+// Só o bloco datasource difere (o bot não usa directUrl). Ao mudar o schema do
+// backend, copie de novo — schema velho aqui = bug intermitente só no bot.
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,16 +11,21 @@ datasource db {
 }
 
 model Usuario {
-  id            String         @id @default(cuid())
-  nome          String         @unique
-  email         String         @unique
-  senha         String
-  role            UserRole       @default(USER)
-  recebeNovidades Boolean        @default(false)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  empresas        Empresa[]
-  subscriptions   Subscription[]
+  id                    String                 @id @default(cuid())
+  nome                  String                 @unique
+  email                 String                 @unique
+  senha                 String
+  role                  UserRole               @default(USER)
+  recebeNovidades       Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  empresas              Empresa[]
+  subscriptions         Subscription[]
+  adminConfig           AdminConfig?
+  tentativasResetSenha  TentativaResetSenha[]
+  recuperacoesSenha     RecuperacaoSenha[]
+  signupLinksCriados    SignupLink[]           @relation("SignupLinksCriados")
+  signupLinksResgatados SignupLink[]           @relation("SignupLinksResgatados")
 
   @@map("usuarios")
 }
@@ -64,9 +72,28 @@ model Empresa {
   reports                    OrdemReport[]
   whatsappEmpresaSession     WhatsappEmpresaSession?
   mensagensTemplate          MensagemTemplate[]
+  sistemasAtivos             EmpresaSistema[]
+  dpFuncionarios             DpFuncionario[]
+  dpTotens                   DpTotem[]
+  dpFeriados                 DpFeriado[]
+  dpCargos                   DpCargo[]
+  dpFechamentosBanco         DpFechamentoBanco[]
   gorjetas                   Gorjeta[]
+  subaccountAcessos          SubaccountEmpresaAcesso[]
+  lcClientes                 LcCliente[]
+  lcFuncionarios             LcFuncionario[]
+  lcServicos                 LcServico[]
+  lcOrdens                   LcOrdemServico[]
+  lcPagamentos               LcPagamento[]
+  lcFechamentosComissao      LcFechamentoComissao[]
   relatoriosFinanceiroLinks  RelatorioFinanceiroLink[]
+  emailContas                EmailConta[]
+  emailRegras                EmailRegra[]
   whatsappEnvios             WhatsappEnvio[]
+  emailAutomacaoAuditoria    EmailAutomacaoAuditoria[]
+  emailDestinatarios         EmailDestinatario[]
+  notificacoesEnviadas       NotificacaoEnviada[]
+  lavadorAvisosPendentes     LavadorAvisoPendente[]
 
   @@map("empresas")
 }
@@ -81,21 +108,24 @@ model Notificacao {
   createdAt DateTime @default(now())
   empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
+  @@index([empresaId])
+  @@index([empresaId, lida])
   @@map("notificacoes")
 }
 
 model Cliente {
-  id        String         @id @default(cuid())
-  empresaId String
-  nome      String
-  telefone  String?
-  email     String?        @unique
-  ativo     Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  empresa   Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  ordens    OrdemServico[]
-  veiculos  Veiculo[]
+  id                     String         @id @default(cuid())
+  empresaId              String
+  nome                   String
+  telefone               String?
+  email                  String?        @unique
+  ativo                  Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  notificacaoIgnoradaAte DateTime?
+  empresa                Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens                 OrdemServico[]
+  veiculos               Veiculo[]
 
   @@map("clientes")
 }
@@ -123,7 +153,15 @@ model Lavador {
   nome                String
   telefone            String?
   comissao            Float
+  tipoRemuneracao     TipoRemuneracao       @default(COMISSAO)
+  baseComissao        BaseComissao          @default(OS)
+  salario             Float?
   ativo               Boolean               @default(true)
+  // Portal do funcionário (link curto + PIN + sessão diária)
+  pin                 String?
+  pinDefinido         Boolean               @default(false)
+  sessionVersion      Int                   @default(0)
+  linkTokenCurto      String?               @unique
   codigoWpp           String?
   codigoWppExpiraEm   DateTime?
   createdAt           DateTime              @default(now())
@@ -138,6 +176,7 @@ model Lavador {
   whatsappBotUsers    WhatsappBotUser[]
   reports             OrdemReport[]
   gorjetas            Gorjeta[]
+  avisoPendente       LavadorAvisoPendente?
 
   @@unique([nome, empresaId])
   @@map("lavadores")
@@ -230,6 +269,7 @@ model TipoVeiculo {
   categoria String?
   descricao String?
   ativo     Boolean   @default(true)
+  ordem     Int?      // ordem de exibição das categorias na Nova Ordem
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -279,6 +319,8 @@ model OrdemServico {
   clienteId            String
   veiculoId            String?
   lavadorId            String?
+  tipoOrdem            TipoOrdem             @default(VEICULO)  // VEICULO (com placa) ou AVULSO (tapete, banco...)
+  itemAvulso           String?               // descrição do item avulso (ex: "Tapete", "Banco", "Outros")
   status               OrdemStatus           @default(PENDENTE)
   valorTotal           Float
   observacoes          String?
@@ -298,6 +340,7 @@ model OrdemServico {
   pixValor             Float?
   pixQrCode            String?               // payload do QR Code (salvo para reenvio)
   pixExpiraEm          DateTime?             // quando o QR expira
+  finalizadoPor        String?               // nome de quem fechou a ordem — texto, não relação, para o registro continuar legível se a subconta for removida
   cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
@@ -309,6 +352,9 @@ model OrdemServico {
   reports              OrdemReport[]
 
   @@unique([empresaId, numeroOrdem])
+  @@index([empresaId, status])
+  @@index([empresaId, dataFim])
+  @@index([empresaId, createdAt])
   @@map("ordens_servico")
 }
 
@@ -333,6 +379,7 @@ model OrdemServicoItem {
   tipo        OrdemItemType
   servicoId   String?
   adicionalId String?
+  nomeCustom  String?       // nome do serviço avulso digitado na hora (quando não há servicoId)
   quantidade  Int           @default(1)
   precoUnit   Float
   subtotal    Float
@@ -341,6 +388,7 @@ model OrdemServicoItem {
   ordem       OrdemServico  @relation(fields: [ordemId], references: [id], onDelete: Cascade)
   servico     Servico?      @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
+  @@index([ordemId])
   @@map("ordens_servico_items")
 }
 
@@ -358,6 +406,8 @@ model Pagamento {
   empresa     Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   ordem       OrdemServico    @relation(fields: [ordemId], references: [id], onDelete: Cascade)
 
+  @@index([ordemId])
+  @@index([empresaId])
   @@map("pagamentos")
 }
 
@@ -372,6 +422,7 @@ model Role {
   botFeatures Json?
   empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuarios    Subaccount[]
+  subaccountAcessos SubaccountEmpresaAcesso[]
 
   @@unique([empresaId, nome])
   @@map("roles")
@@ -402,8 +453,26 @@ model Subaccount {
 
   whatsappBotUsers WhatsappBotUser[]
   reports          OrdemReport[]
+  empresaAcessos   SubaccountEmpresaAcesso[]
 
   @@map("subaccounts")
+}
+
+// Acessos multi-empresa de um Subaccount. A empresa/role PRIMÁRIA continua em
+// Subaccount.empresaId/roleId; esta tabela guarda apenas os acessos ADICIONAIS.
+model SubaccountEmpresaAcesso {
+  id           String     @id @default(cuid())
+  subaccountId String
+  empresaId    String
+  roleId       String
+  createdAt    DateTime   @default(now())
+
+  subaccount   Subaccount @relation(fields: [subaccountId], references: [id], onDelete: Cascade)
+  empresa      Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([subaccountId, empresaId])
+  @@map("subaccount_empresa_acessos")
 }
 
 model Adiantamento {
@@ -535,6 +604,7 @@ model SubscriptionPlan {
   intervalo     String         @default("MONTHLY")
   ativo         Boolean        @default(true)
   ordem         Int            @default(0)
+  sistema       String         @default("lina-wash") // 'lina-wash' | 'data-point' | ...
   maxEmpresas   Int            @default(1)
   maxUsuarios   Int?
   features      Json
@@ -545,6 +615,7 @@ model SubscriptionPlan {
   priceHistory  PriceHistory[]
   promotions    Promotion[]
   subscriptions Subscription[]
+  signupLinks   SignupLink[]
 
   @@map("subscription_plans")
 }
@@ -597,6 +668,36 @@ model SubscriptionPayment {
   @@index([subscriptionId])
   @@index([mercadoPagoPaymentId])
   @@map("subscription_payments")
+}
+
+// ─── LINKS DE CADASTRO COM ASSINATURA PRÉ-CONFIGURADA (LINA_OWNER) ────────────
+// Owner gera um link (sistema + plano + duração) para um usuário ainda não
+// cadastrado. Ao se cadastrar por esse link, a assinatura é criada automaticamente,
+// sem cobrança (ver subscriptionService.grantFromSignupLink). Uso único: o link
+// desativa sozinho assim que é resgatado (usadoPorId preenchido).
+
+enum SignupLinkDuracao {
+  DIAS_7
+  MES_1
+  MESES_6
+  VITALICIO
+}
+
+model SignupLink {
+  id          String            @id @default(cuid())
+  token       String            @unique
+  planId      String
+  duracaoTipo SignupLinkDuracao
+  ativo       Boolean           @default(true)
+  criadoPorId String
+  usadoPorId  String?
+  usadoEm     DateTime?
+  createdAt   DateTime          @default(now())
+  plan        SubscriptionPlan  @relation(fields: [planId], references: [id])
+  criadoPor   Usuario           @relation("SignupLinksCriados", fields: [criadoPorId], references: [id])
+  usadoPor    Usuario?          @relation("SignupLinksResgatados", fields: [usadoPorId], references: [id])
+
+  @@map("signup_links")
 }
 
 model Addon {
@@ -709,6 +810,22 @@ enum OrdemItemType {
   ADICIONAL
 }
 
+enum TipoOrdem {
+  VEICULO
+  AVULSO
+}
+
+enum TipoRemuneracao {
+  COMISSAO
+  SALARIO
+  SALARIO_COMISSAO
+}
+
+enum BaseComissao {
+  OS
+  ADICIONAL
+}
+
 enum MetodoPagamento {
   DINHEIRO
   CARTAO
@@ -816,7 +933,7 @@ model OrdemReport {
   subaccountId String?
   empresaId    String
   descricao    String
-  fotos        String       @default("[]")  // JSON array: ["reports/2026-04-28/ord42-1.jpg", ...]
+  fotos        String       @default("[]")
   visto        Boolean      @default(false)
   createdAt    DateTime     @default(now())
   ordem        OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
@@ -825,6 +942,460 @@ model OrdemReport {
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("ordem_reports")
+}
+
+// ─── ECOSSISTEMA ─────────────────────────────────────────────────────────────
+
+model EmpresaSistema {
+  id           String   @id @default(cuid())
+  empresaId    String
+  sistema      String   // 'lina-wash' | 'data-point' | ...
+  ativo        Boolean  @default(true)
+  config       String?  // JSON com configurações do sistema (raio GPS, horário abertura, etc.)
+  autorizadoEm DateTime @default(now())
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, sistema])
+  @@map("empresa_sistemas")
+}
+
+// ─── DATA POINT ──────────────────────────────────────────────────────────────
+
+model DpFuncionario {
+  id                String       @id @default(cuid())
+  empresaId         String
+  nome              String
+  cpf               String?
+  cargo             String?
+  salarioBase       Float?
+  cargaHoraria      Int?         // horas por semana
+  telefone          String?
+  status            String       @default("ATIVO") // ATIVO | AFASTADO | FERIAS | DESLIGADO
+  lavadorId         String?      // vínculo opcional com Lavador do Lina Wash
+  lcFuncionarioId   String?      // vínculo opcional com funcionário do Lina Center (mesmo papel do lavadorId)
+  usuarioId         String?      // vínculo opcional com Subaccount role USER
+  jornadaEntrada    String?      // override individual: "08:00" (null = usa padrão da empresa)
+  cargaHorariaDia   Float?       // override individual: 6.0 h/dia (null = usa padrão da empresa)
+  dataAdmissao      DateTime?    // âncora do ciclo de 30 dias do banco de horas; null = usa createdAt como fallback
+  cargoId           String?
+  saldoBancoHorasAtual Float     @default(0) // cache do saldoAcumulado mais recente em DpFechamentoBanco
+  pin               String?
+  pinDefinido       Boolean      @default(false)
+  sessionVersion    Int          @default(0)
+  linkToken         String?      @unique
+  wppJid            String?      @unique
+  codigoWpp         String?
+  codigoWppExpiraEm DateTime?
+  pontoToken        String?      @unique
+  pontoTokenExpiraEm DateTime?
+  pontoTokenUsadoEm  DateTime?
+  faceEmbedding     String?      // vetor 128D em JSON (null = facial não cadastrada)
+  faceCapturadoEm   DateTime?    // data do enrollment — base para re-captura periódica
+  faceToken         String?      @unique // token pessoal de cadastro do rosto (uso único)
+  faceTokenExpiraEm DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  empresa           Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  marcacoes         DpMarcacao[]
+  ajustes           DpAjuste[]
+  afastamentos      DpAfastamento[]
+  cargoRef          DpCargo?       @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+  fechamentosBanco  DpFechamentoBanco[]
+  assinaturas       DpEspelhoAssinatura[]
+  movimentosBanco   DpBancoMovimento[]
+
+  @@map("dp_funcionarios")
+}
+
+model DpMarcacao {
+  id                  String        @id @default(cuid())
+  empresaId           String
+  funcionarioId       String
+  tipo                String        // ENTRADA | SAIDA
+  canal               String        // PWA | QR_CODE | WHATSAPP
+  timestamp           DateTime      @default(now())
+  lat                 Float?
+  lng                 Float?
+  gpsPrecisao         Float?
+  gpsPrecisaoSuspeita Boolean       @default(false)
+  gpsNegado           Boolean       @default(false)
+  // Distância até a empresa no momento da batida, e se passou do raio permitido.
+  // Gravadas SEMPRE que houver coordenada e endereço da empresa, inclusive nos níveis
+  // que não bloqueiam: sem isso, uma batida feita longe não deixava rastro nenhum —
+  // o cálculo existia, era usado para decidir o bloqueio e depois jogado fora.
+  distanciaM          Int?
+  foraDoRaio          Boolean       @default(false)
+  faceScore           Float?        // confiança da verificação facial (null = não usou facial)
+  ip                  String?
+  ajustado            Boolean       @default(false)
+  totemId             String?       // aparelho de onde veio a marcação (canal TOTEM)
+  // Exclusão é lógica, nunca física: a batida sai da conta de horas mas continua
+  // existindo, com quem tirou e quando. Registro de ponto apagado de verdade é prova
+  // destruída — e o que sobra é a palavra do gestor contra a do funcionário.
+  excluidaEm          DateTime?
+  excluidaPor         String?
+  createdAt           DateTime      @default(now())
+  funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+  totem               DpTotem?      @relation(fields: [totemId], references: [id], onDelete: SetNull)
+  logs                DpMarcacaoLog[]
+
+  // Índice único que o Prisma não sabe declarar (usa expressão) e por isso vive só no SQL:
+  //   UNIQUE ("funcionarioId", date_trunc('minute', "timestamp")) WHERE "timestamp" >= 2026-09-24
+  // Barra duas batidas do mesmo funcionário no mesmo minuto — o duplo toque que o
+  // cooldown da aplicação não pega quando os dois requests chegam juntos. É parcial
+  // porque o histórico anterior tem 10 casos reais e apagar ponto passado seria pior.
+  // Ver Features/sql-dp-marcacao-minuto.sql.
+  @@map("dp_marcacoes")
+}
+
+// Histórico de toda intervenção humana ou automática numa marcação. Batida normal do
+// funcionário não entra aqui — ela é o próprio registro. O que se guarda é o que foi
+// mexido depois: lançamento manual do gestor, encerramento automático, edição, exclusão.
+model DpMarcacaoLog {
+  id              String     @id @default(cuid())
+  empresaId       String
+  marcacaoId      String
+  funcionarioId   String
+  acao            String     // CRIADA_MANUAL | CRIADA_AUTO | EDITADA | EXCLUIDA | RESTAURADA
+  tipoAntes       String?
+  timestampAntes  DateTime?
+  tipoDepois      String?
+  timestampDepois DateTime?
+  autorNome       String     // nome de quem fez, ou "Sistema"
+  autorId         String?    // subaccount ou usuário; nulo quando é o sistema
+  motivo          String?
+  createdAt       DateTime   @default(now())
+  marcacao        DpMarcacao @relation(fields: [marcacaoId], references: [id], onDelete: Cascade)
+
+  @@index([marcacaoId])
+  @@index([empresaId, createdAt])
+  @@map("dp_marcacoes_log")
+}
+
+// Ciência do funcionário sobre o espelho de um mês.
+//
+// Guarda o snapshot do que foi assinado e o hash dele: se qualquer batida daquele mês
+// mudar depois, o hash do espelho atual deixa de bater com o assinado e o sistema pede
+// nova assinatura. Sem unique por competência de propósito — cada assinatura é um
+// evento, e a sequência delas é a prova de que houve mudança e nova ciência.
+model DpEspelhoAssinatura {
+  id            String        @id @default(cuid())
+  empresaId     String
+  funcionarioId String
+  competencia   String        // "2026-09"
+  hashConteudo  String        // SHA-256 do snapshot canônico
+  conteudo      String        // o snapshot inteiro, como estava na hora da assinatura
+  assinadoEm    DateTime      @default(now())
+  origem        String        @default("PORTAL") // PORTAL | TOTEM
+  faceScore     Float?        // confiança do reconhecimento, quando assinou no totem
+  ip            String?
+  userAgent     String?
+  funcionario   DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@index([funcionarioId, competencia])
+  @@map("dp_espelho_assinaturas")
+}
+
+// Cada fato que mexe no banco de horas de alguém. O saldo é a soma disto.
+//
+// Existe porque saldo sem extrato não se defende: na hora da rescisão ou da fiscalização,
+// a pergunta não é "quanto ele tem", é "de onde veio e o que foi feito com cada hora".
+model DpBancoMovimento {
+  id            String        @id @default(cuid())
+  empresaId     String
+  funcionarioId String
+  // CICLO      — fechamento de período (credita ou debita)
+  // FOLGA_COMP — folga compensatória: o funcionário usou horas do banco
+  // PAGAMENTO  — a empresa pagou as horas em dinheiro
+  // VENCIMENTO — passou do prazo de compensação e virou hora extra devida
+  // AJUSTE     — correção manual do gestor, sempre com motivo
+  tipo          String
+  horas         Float         // positivo credita, negativo debita
+  data          String        // YYYY-MM-DD do fato
+  descricao     String?
+  fechamentoId  String?
+  afastamentoId String?
+  autorNome     String?
+  saldoApos     Float
+  createdAt     DateTime      @default(now())
+  funcionario   DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@index([funcionarioId, data])
+  @@index([empresaId, createdAt])
+  @@map("dp_banco_movimentos")
+}
+
+model DpTotem {
+  id          String       @id @default(cuid())
+  empresaId   String
+  nome        String       // rótulo dado pelo admin, ex: "Tablet recepção"
+  token       String       @unique // pareamento permanente do aparelho
+  ativo       Boolean      @default(true)
+  ultimoUsoEm DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  marcacoes   DpMarcacao[]
+
+  @@index([empresaId])
+  @@map("dp_totens")
+}
+
+model DpAjuste {
+  id               String        @id @default(cuid())
+  empresaId        String
+  funcionarioId    String
+  data             String        // YYYY-MM-DD — data a que o ajuste se refere
+  tipo             String        // JUSTIFICAR_FALTA | CORRIGIR_HORA | OUTRO
+  descricao        String        // motivo informado pelo funcionário
+  status           String        @default("PENDENTE") // PENDENTE | APROVADO | REJEITADO
+  obsGestor        String?       // resposta do gestor
+  aprovadoPor      String?       // nome do gestor
+  aprovadoEm       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  funcionario      DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@map("dp_ajustes")
+}
+
+model DpAfastamento {
+  id               String        @id @default(cuid())
+  empresaId        String
+  funcionarioId    String
+  tipo             String        // FERIAS | ATESTADO | LICENCA | FOLGA_COMP | OUTRO
+  dataInicio       String        // YYYY-MM-DD
+  dataFim          String        // YYYY-MM-DD
+  descricao        String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  funcionario      DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@map("dp_afastamentos")
+}
+
+model DpFeriado {
+  id         String   @id @default(cuid())
+  empresaId  String
+  data       String   // YYYY-MM-DD (se recorrente, só mês/dia importam pro match)
+  nome       String
+  // FECHADO = sem expediente (padrão). ABERTO = a empresa decidiu trabalhar no feriado,
+  // e o dia volta a cobrar jornada normalmente.
+  expediente  String   @default("FECHADO")
+  recorrente Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  empresa    Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, data])
+  @@map("dp_feriados")
+}
+
+model DpCargo {
+  id              String          @id @default(cuid())
+  empresaId       String
+  nome            String
+  cargaHorariaDia Float
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  empresa         Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  funcionarios    DpFuncionario[]
+
+  @@unique([nome, empresaId])
+  @@map("dp_cargos")
+}
+
+model DpFechamentoBanco {
+  id                     String        @id @default(cuid())
+  empresaId              String
+  funcionarioId          String
+  periodoInicio          DateTime
+  periodoFim             DateTime
+  horasEsperadas         Float
+  horasTrabalhadas       Float
+  horasFeriadoTrabalhado Float         @default(0) // já incluso em horasTrabalhadas, peso ×2 (seção 7 da spec) — separado só pra auditoria
+  diasFalta              Int           @default(0) // dias úteis sem batida — desconto em folha, fora do saldo
+  saldoPeriodo           Float         // horasTrabalhadas - horasEsperadas (pode ser negativo)
+  saldoAcumulado         Float         // saldo total do funcionário após esse fechamento
+  fechadoEm              DateTime      @default(now())
+  empresa                Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  funcionario            DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  // Um fechamento por ciclo, e só. Sem isso, duas execuções do cron (duas instâncias
+  // do backend, ou uma re-execução manual) gravariam o mesmo período duas vezes e
+  // dobrariam o saldo acumulado do funcionário — erro silencioso e difícil de desfazer.
+  @@unique([funcionarioId, periodoInicio])
+  @@index([funcionarioId, periodoFim])
+  @@map("dp_fechamentos_banco")
+}
+
+// ─── LINA CENTER ─────────────────────────────────────────────────────────────
+// Produto independente do ecossistema Lina (mesmo padrão do Data Point).
+// Habilitado por empresa via EmpresaSistema (sistema: 'lina-center').
+// Gestão para oficinas mecânicas / auto centers — versão simplificada do Lina Wash.
+
+model LcCliente {
+  id        String           @id @default(cuid())
+  empresaId String
+  nome      String
+  telefone  String?
+  email     String?
+  ativo     Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  empresa   Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  veiculos  LcVeiculo[]
+  ordens    LcOrdemServico[]
+
+  @@map("lc_clientes")
+}
+
+model LcVeiculo {
+  id        String           @id @default(cuid())
+  clienteId String
+  modelo    String
+  placa     String?          @unique
+  cor       String?
+  ano       Int?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  cliente   LcCliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  ordens    LcOrdemServico[]
+
+  @@map("lc_veiculos")
+}
+
+model LcFuncionario {
+  id              String           @id @default(cuid())
+  empresaId       String
+  nome            String
+  telefone        String?
+  tipoRemuneracao TipoRemuneracao  @default(COMISSAO)
+  comissao        Float?           // % comissão padrão
+  salario         Float?
+  ativo           Boolean          @default(true)
+  // Portal do funcionário (link curto + PIN, mesmo padrão do Lavador/DpFuncionario)
+  pin             String?
+  pinDefinido     Boolean          @default(false)
+  sessionVersion  Int              @default(0)
+  linkToken       String?          @unique
+  // WhatsApp — mesmo padrão do DpFuncionario: o bot grava wppJid quando o funcionário
+  // manda "conectar CODIGO". Não usar `telefone` (digitado pelo dono, sem DDI) para enviar.
+  codigoWpp         String?
+  codigoWppExpiraEm DateTime?
+  wppJid            String?
+  // Vínculo opcional com Subaccount role USER — acesso ao portal via login normal
+  usuarioId       String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordens          LcOrdemServico[]
+  fechamentos     LcFechamentoComissao[]
+
+  @@unique([nome, empresaId])
+  @@map("lc_funcionarios")
+}
+
+model LcServico {
+  id                 String               @id @default(cuid())
+  empresaId          String
+  nome               String
+  descricao          String?
+  preco              Float
+  comissaoPercentual Float?
+  ativo              Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  empresa            Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordemItems         LcOrdemServicoItem[]
+
+  @@map("lc_servicos")
+}
+
+model LcOrdemServico {
+  id            String               @id @default(cuid())
+  numeroOrdem   Int
+  empresaId     String
+  clienteId     String
+  veiculoId     String?
+  funcionarioId String?
+  status        OrdemStatus          @default(PENDENTE)
+  valorTotal    Float
+  desconto      Float                @default(0)
+  comissao      Float                @default(0)
+  comissaoPaga  Boolean              @default(false)
+  fechamentoComissaoId String?
+  observacoes   String?
+  dataInicio    DateTime?
+  dataFim       DateTime?
+  pago          Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  empresa       Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente       LcCliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  veiculo       LcVeiculo?           @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  funcionario   LcFuncionario?       @relation(fields: [funcionarioId], references: [id])
+  fechamentoComissao LcFechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id], onDelete: SetNull)
+  items         LcOrdemServicoItem[]
+  pagamentos    LcPagamento[]
+
+  @@unique([empresaId, numeroOrdem])
+  @@index([empresaId, status])
+  @@index([empresaId, dataFim])
+  @@index([fechamentoComissaoId])
+  @@map("lc_ordens_servico")
+}
+
+// Pagamento de comissão ao funcionário do Lina Center — espelha FechamentoComissao
+// do Lina Wash. O LC não tem caixa de despesas, então a forma de pagamento e a
+// observação ficam aqui mesmo.
+model LcFechamentoComissao {
+  id             String           @id @default(cuid())
+  data           DateTime         @default(now())
+  valorPago      Float
+  formaPagamento String?
+  observacao     String?
+  empresaId      String
+  funcionarioId  String
+  empresa        Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  funcionario    LcFuncionario    @relation(fields: [funcionarioId], references: [id])
+  ordensPagas    LcOrdemServico[]
+
+  @@index([empresaId, funcionarioId])
+  @@map("lc_fechamentos_comissao")
+}
+
+model LcOrdemServicoItem {
+  id         String         @id @default(cuid())
+  ordemId    String
+  servicoId  String?
+  nomeCustom String?        // nome do serviço avulso digitado na hora (quando não há servicoId)
+  quantidade Int            @default(1)
+  precoUnit  Float
+  subtotal   Float
+  createdAt  DateTime       @default(now())
+  ordem      LcOrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  servico    LcServico?     @relation(fields: [servicoId], references: [id])
+
+  @@index([ordemId])
+  @@map("lc_ordens_servico_items")
+}
+
+model LcPagamento {
+  id        String          @id @default(cuid())
+  ordemId   String
+  empresaId String
+  metodo    MetodoPagamento
+  valor     Float
+  status    StatusPagamento @default(PENDENTE)
+  pagoEm    DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  empresa   Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ordem     LcOrdemServico  @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+
+  @@index([ordemId])
+  @@index([empresaId])
+  @@map("lc_pagamentos")
 }
 
 model Gorjeta {
@@ -841,72 +1412,190 @@ model Gorjeta {
   @@map("gorjetas")
 }
 
-// ─── DATA POINT ──────────────────────────────────────────────────────────────
+model AdminConfig {
+  id                          String    @id @default(cuid())
+  liniaOwnerId                String    @unique
+  liniaOwner                  Usuario   @relation(fields: [liniaOwnerId], references: [id], onDelete: Cascade)
 
-model EmpresaSistema {
-  id        String  @id @default(cuid())
+  whatsappNotificationPhone   String?   // "(11) 99999-8888" - formato brasileiro
+  phoneConfirmed              Boolean   @default(false)
+  phoneConfirmationToken      String?   @unique
+  phoneConfirmationExpiresAt  DateTime?
+
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@index([liniaOwnerId])
+  @@map("admin_configs")
+}
+
+model TentativaResetSenha {
+  id          String   @id @default(cuid())
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  status      String   @default("pending_approval") // pending_approval | approved | rejected
+  ip          String?
+  userAgent   String?
+
+  approvedBy  String?  // adminId que aprovou
+  rejectedBy  String?  // adminId que rejeitou
+  motivo      String?  // motivo da rejeição
+
+  createdAt   DateTime @default(now())
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  expiresAt   DateTime @default(dbgenerated("now() + interval '1 hour'"))
+
+  @@index([usuarioId])
+  @@index([status])
+  @@map("tentativas_reset_senha")
+}
+
+model RecuperacaoSenha {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([token])
+  @@map("recuperacoes_senha")
+}
+
+// Regras de leitura de email → WhatsApp (motor genérico, config global do sistema).
+// O bot lê as regras ativas, detecta emails que casam com remetente/assunto,
+// extrai um valor via regex e envia o template no destino (grupo ou números).
+model EmailRegra {
+  id              String   @id @default(cuid())
+  // empresaId/contaId são opcionais só durante a migração da automação global (Features/automacao-email.md §9)
+  empresaId       String?
+  contaId         String?
+  nome            String
+  ativo           Boolean  @default(true)
+  remetenteContem String   // filtro por remetente (ex: "localiza")
+  assuntoContem   String?  // filtro por assunto (opcional)
+  // Corta email parecido do mesmo remetente: "Solicitação de Lavagem" casa dentro de
+  // "Cancelamento Solicitação de Lavagem", e avisar lavagem de um serviço cancelado
+  // mandaria alguém buscar um carro à toa.
+  assuntoNaoContem String?
+  regexExtracao   String   // ex: "seguir:[^0-9]{0,40}([0-9]{6})" — o 1º grupo vira {{valor}}
+  // Informações além do valor principal: [{ chave, regex, opcional }] → {{chave}} no template
+  campos          Json?
+  // Linha que se repete (tabela de veículos): { regex, chaves, template } → {{itens}}
+  bloco           Json?
+  // Campos deduzidos de outro campo: [{ chave, de, valores, padrao }] — ex: preço → serviço,
+  // porque o fornecedor parou de mandar o tipo de lavagem mas o preço ainda identifica qual é
+  derivados       Json?
+  // Campo que vem de fora do email: { de, chave, em, sufixo } — ex: modelo/cor do veículo
+  // buscados pela placa no cadastro. Quem resolve é o poller (o extrator não toca no banco).
+  enriquecer      Json?
+  tipoValor       String   @default("AVANCADO") // CODIGO | ALFANUMERICO | VALOR | LINK | AVANCADO
+  ancora          String?  // texto antes do valor — usado na explicação em português e na edição
+  template        String   // ex: "🔑 Código Localiza: {{valor}}"
+  destinos        Json?    // [{ "tipo": "ADMIN" | "BOT_USER", "id": "..." }] — IDs, nunca telefone
+  destinoTipo     String   // LEGADO (automação global): "GRUPO" | "NUMEROS"
+  destinoValor    String   // LEGADO: JID do grupo ou telefones separados por vírgula
+  ultimoDisparoEm DateTime?
+  totalDisparos   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  empresa         Empresa?    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  conta           EmailConta? @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([empresaId])
+  @@map("email_regras")
+}
+
+// Conta de email do cliente (até 2 por empresa). A senha de app fica criptografada
+// (AES-256-GCM, utils/credCrypto.ts) e NUNCA volta pro frontend.
+model EmailConta {
+  id                 String       @id @default(cuid())
+  empresaId          String
+  email              String
+  senhaCriptografada String       // "v1:iv:tag:dados" — AAD = empresaId:contaId
+  provedor           String       @default("GMAIL")
+  status             String       @default("CONECTADO") // CONECTADO | ERRO | PAUSADO_PLANO
+  ultimoErro         String?      // mensagem HUMANA (nunca o erro cru do IMAP)
+  ultimoUid          Int?         // checkpoint do poller — sobrevive a restart
+  uidValidity        String?
+  verificadoEm       DateTime?
+  criadoPor          String?      // usuarioId ou subaccountId
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  empresa            Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  regras             EmailRegra[]
+
+  @@unique([empresaId, email])
+  @@map("email_contas")
+}
+
+// Trava de dedup DURÁVEL pros crons de resumo (diário/semanal), que têm retry
+// automático se o bot estiver offline no horário principal (ver whatsappNotificationService.ts).
+// Precisa ser persistida no banco (não em memória) porque um deploy do backend no
+// meio da janela de retry reinicia o processo e apagaria uma trava em memória —
+// foi exatamente isso que causou o resumo diário duplicado em 16/09/2026 (deploy
+// às 21:45, entre o envio das 20h e o retry das 22h).
+/// Alterações na página do lavador que ainda não foram avisadas no WhatsApp.
+/// A linha existir significa "tem coisa nova para contar"; ela é apagada no envio.
+model LavadorAvisoPendente {
+  id        String   @id @default(cuid())
   empresaId String
-  sistema   String
-  ativo     Boolean @default(true)
-  config    String?
+  lavadorId String   @unique
+  ordens    Int      @default(0) // quantas OS entraram desde o último aviso
+  comObs    Int      @default(0) // quantas delas trazem observação — muda o texto do aviso
+  desdeEm   DateTime @default(now()) // a primeira alteração da leva — conta o tempo de espera
+  updatedAt DateTime @updatedAt
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lavador   Lavador  @relation(fields: [lavadorId], references: [id], onDelete: Cascade)
 
-  @@unique([empresaId, sistema])
-  @@map("empresa_sistemas")
+  @@index([empresaId])
+  @@map("lavador_avisos_pendentes")
 }
 
-model DpFuncionario {
-  id                String    @id @default(cuid())
-  empresaId         String
-  nome              String
-  telefone          String?
-  status            String    @default("ATIVO")
-  lavadorId         String?
-  wppJid             String?   @unique
-  codigoWpp          String?
-  codigoWppExpiraEm  DateTime?
-  pontoToken         String?   @unique
-  pontoTokenExpiraEm DateTime?
-  pontoTokenUsadoEm  DateTime?
-  cargaHorariaDia    Int?
-  jornadaEntrada     String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  marcacoes          DpMarcacao[]
+model NotificacaoEnviada {
+  id        String   @id @default(cuid())
+  empresaId String
+  tipo      String   // 'RESUMO_DIARIO' | 'RESUMO_SEMANAL'
+  chave     String   // data (YYYY-MM-DD) do dia ou do sábado da semana
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
-  @@map("dp_funcionarios")
+  @@unique([empresaId, tipo, chave])
+  @@map("notificacoes_enviadas")
 }
 
-model DpMarcacao {
-  id                  String        @id @default(cuid())
-  empresaId           String
-  funcionarioId       String
-  tipo                String
-  canal               String
-  timestamp           DateTime      @default(now())
-  lat                 Float?
-  lng                 Float?
-  gpsPrecisao         Float?
-  gpsPrecisaoSuspeita Boolean       @default(false)
-  gpsNegado           Boolean       @default(false)
-  ajustado            Boolean       @default(false)
-  createdAt           DateTime      @default(now())
-  funcionario         DpFuncionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+// Quem recebe as automações de email. NÃO é admin do bot: não entra na lista de
+// Usuários & Acesso e não recebe os avisos automáticos (resumo diário, caixa...).
+// O admin da empresa monta essa lista dentro da própria automação.
+model EmailDestinatario {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  telefone  String   // só dígitos, com DDI/DDD
+  jid       String?  // JID real do WhatsApp (pode ser @lid), resolvido no cadastro
+  ativo     Boolean  @default(true)
+  criadoPor String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
-  @@map("dp_marcacoes")
+  @@unique([empresaId, telefone])
+  @@map("email_destinatarios")
 }
 
-// Log de eventos do sistema pro dono da plataforma (restart do bot, erros não
-// tratados, perguntas que a Lina não conseguiu responder). Gravado sempre;
-// "enviadoEm" marca quando já foi entregue no WhatsApp (agrupado por tipo).
-// Fila de envio: o backend enfileira (automação de email) e o bot consome aqui.
-// Mantém a chave de criptografia fora do PC e não depende do ngrok.
+// Fila de envio: o backend enfileira e o bot (PC local) consome e envia pelo número da Lina.
+// Evita ter a chave de criptografia no PC e não depende do ngrok.
 model WhatsappEnvio {
   id         String    @id @default(cuid())
   empresaId  String
-  origem     String
-  destino    String
-  texto      String
-  status     String    @default("PENDENTE")
+  origem     String    // "EMAIL_AUTOMACAO"
+  destino    String    // telefone/JID já resolvido e validado pelo backend
+  texto      String    // zerado ("") depois de ENVIADO
+  status     String    @default("PENDENTE") // PENDENTE | ENVIADO | ERRO
   tentativas Int       @default(0)
   erro       String?
   createdAt  DateTime  @default(now())
@@ -917,6 +1606,23 @@ model WhatsappEnvio {
   @@map("whatsapp_envios")
 }
 
+// Quem conectou/removeu conta e quem abriu a caixa de entrada — exigência da revisão de segurança
+model EmailAutomacaoAuditoria {
+  id        String   @id @default(cuid())
+  empresaId String
+  contaId   String?
+  autorId   String
+  acao      String   // CONTA_CRIADA | SENHA_TROCADA | CONTA_REMOVIDA | CONTA_VERIFICADA | EMAILS_LISTADOS | EMAIL_ABERTO | TESTE_ENVIO
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, createdAt])
+  @@map("email_automacao_auditoria")
+}
+
+// Log de eventos do sistema pro dono da plataforma (restart do bot, erros não
+// tratados, perguntas que a Lina não conseguiu responder). Só o bot lê/escreve
+// nela hoje — espelhada aqui pra manter os dois schema.prisma sincronizados.
 model SystemEvent {
   id        String    @id @default(cuid())
   tipo      String // 'RESTART' | 'ERRO_USUARIO' | 'TOOL_FALHA' | ...
@@ -929,10 +1635,9 @@ model SystemEvent {
   @@map("system_events")
 }
 
-// Relatório mensal de "Saúde Financeira" — gerado pelo cron do dia 1, dados
-// congelados no momento da geração (o mês já está fechado, não precisa
-// recalcular ao vivo toda vez que o link é aberto). Expira em 7 dias; depois
-// disso o admin pode gerar um novo pelo painel.
+// Relatório mensal de "Saúde Financeira" — gerado pelo cron do bot (dia 1),
+// dados congelados no momento da geração. Espelhado aqui pro backend servir
+// a página pública via token; expira em 7 dias, admin pode gerar um novo.
 model RelatorioFinanceiroLink {
   id             String    @id @default(cuid())
   token          String    @unique

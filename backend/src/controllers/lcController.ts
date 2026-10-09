@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../db';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getMonthRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
+import { notifyLcFuncionarioNovaOrdem } from '../services/whatsappNotificationService';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -333,7 +334,13 @@ export const getLcFuncionarios = async (req: EmpresaRequest, res: Response) => {
       include: { _count: { select: { ordens: true } } },
       orderBy: { nome: 'asc' },
     });
-    res.json({ funcionarios });
+    // Sem hash do PIN, código e JID na resposta — o painel só precisa saber se vinculou
+    res.json({
+      funcionarios: funcionarios.map(({ pin, codigoWpp, codigoWppExpiraEm, wppJid, ...f }) => ({
+        ...f,
+        wppVinculado: !!wppJid,
+      })),
+    });
   } catch (error) {
     console.error('Erro ao listar funcionários (Lina Center):', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -750,6 +757,18 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
     });
 
     res.status(201).json({ message: 'Ordem criada com sucesso', ordem });
+
+    // Fire-and-forget: aviso no WhatsApp do funcionário (se o dono ligou e ele vinculou)
+    if (ordem.funcionario?.id) {
+      notifyLcFuncionarioNovaOrdem(empresaId, ordem.funcionario.id, {
+        numeroOrdem: ordem.numeroOrdem,
+        clienteNome: ordem.cliente?.nome || '—',
+        veiculo: [ordem.veiculo?.modelo, ordem.veiculo?.placa].filter(Boolean).join(' · ') || 'Veículo',
+        servico: ordem.items.map(i => i.servico?.nome || i.nomeCustom).filter(Boolean).join(', ') || 'Serviço',
+        valor: ordem.valorTotal,
+        observacao: ordem.observacoes,
+      });
+    }
   } catch (error) {
     console.error('Erro ao criar ordem (Lina Center):', error);
     res.status(500).json({ error: 'Erro interno do servidor' });

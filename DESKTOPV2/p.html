@@ -1250,10 +1250,8 @@ async function carregarDados() {
 // Lembrete de WhatsApp — só pra quem é do Lina Wash (tipoRemuneracao definido) e ainda
 // não conectou. Dispara toda vez que o portal carrega (não uma vez só) até a pessoa
 // conectar; quem já tem WhatsApp vinculado nunca vê isso.
-// Funcionário do Lina Center também tem tipoRemuneracao, mas o vínculo de WhatsApp
-// dele ainda não existe — por isso o corte explícito por sistema.
+// Vale também para o funcionário do Lina Center (mesmo vínculo, gravado em lc_funcionarios.wppJid).
 function lembrarConectarWpp() {
-  if (portalDados?.sistema === 'lina-center') return;
   const temLinaWash = portalDados?.lavador?.tipoRemuneracao !== null && portalDados?.lavador?.tipoRemuneracao !== undefined;
   const telefone = portalDados?.lavador?.telefone ?? null;
   if (temLinaWash && !telefone) {
@@ -1264,8 +1262,6 @@ function lembrarConectarWpp() {
 // ── Hub ───────────────────────────────────────────────────────────────────────
 function renderHub() {
   const { lavador, dataPointAtivo, hoje } = portalDados;
-  // Funcionário do Lina Center usa o mesmo hub do lavador (dados no mesmo formato)
-  const ehLinaCenter = portalDados.sistema === 'lina-center';
 
   document.getElementById('hub-av').textContent       = lavador.nome.charAt(0).toUpperCase();
   document.getElementById('hub-name').textContent     = lavador.nome;
@@ -1322,11 +1318,10 @@ function renderHub() {
     </div>` : ''}
   `;
 
-  // Linha de status (WhatsApp — só para lavador do Lina Wash; o vínculo do
-  // funcionário do Lina Center ainda não existe no bot)
+  // Linha de status (WhatsApp — lavador do Lina Wash e funcionário do Lina Center)
   const telefone = lavador.telefone ?? null;
   const rows = document.getElementById('hub-rows');
-  rows.innerHTML = (temLinaWash && !ehLinaCenter) ? `
+  rows.innerHTML = temLinaWash ? `
     <div class="status-row" onclick="abrirModalWpp()">
       <div class="status-ico ${telefone ? 'ico-wpp-on' : 'ico-wpp-off'}"><i class="fab fa-whatsapp"></i></div>
       <div class="status-info">

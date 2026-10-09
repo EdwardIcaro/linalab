@@ -472,6 +472,8 @@
     .pg-hist-row b{color:var(--text);}
     .metodo-chip-row.quatro{flex-wrap:wrap;}
     .metodo-chip-row.quatro .metodo-chip{flex:1 1 calc(50% - 8px);}
+    .aviso-wpp{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--mid);cursor:pointer;}
+    .aviso-wpp input{width:17px;height:17px;accent-color:var(--accent);flex-shrink:0;}
   </style>
 </head>
 <body x-data="app()" x-init="init()">
@@ -712,7 +714,10 @@
         <template x-if="tab==='funcionarios'">
           <div>
             <div class="tab-head">
-              <div></div>
+              <label class="aviso-wpp">
+                <input type="checkbox" :checked="avisoWppAtivo" @change="salvarAvisoWpp($event.target.checked)" :disabled="salvandoAvisoWpp">
+                <span>📲 Avisar no WhatsApp quando uma ordem cair para o funcionário</span>
+              </label>
               <button class="btn-nova2" @click="abrirFormFunc()">+ Novo Funcionário</button>
             </div>
             <div class="tbl">
@@ -720,7 +725,7 @@
               <template x-if="funcionarios.length===0"><div class="empty">Nenhum funcionário cadastrado</div></template>
               <template x-for="f in funcionarios" :key="f.id">
                 <div class="tbl-row func">
-                  <div class="tbl-name" x-text="f.nome"></div>
+                  <div class="tbl-name"><span x-text="f.nome"></span> <span x-show="f.wppVinculado" title="WhatsApp vinculado pelo portal">📲</span></div>
                   <div class="tbl-sub" x-text="rotuloRemuneracao(f)"></div>
                   <div x-text="rankingDe(f.id).ordens"></div>
                   <div class="tbl-name" x-text="'R$ '+fmt(rankingDe(f.id).comissao)"></div>
@@ -1225,6 +1230,33 @@
         },
         dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'; },
         menuMobile: false,
+        avisoWppAtivo: false,
+        salvandoAvisoWpp: false,
+
+        // Mesma configuração do Lina Wash: notificationPreferences.whatsappRoles.lavador.notifs
+        async carregarAvisoWpp() {
+          try {
+            const empresa = await window.api.getEmpresaById(localStorage.getItem('empresaId'));
+            const notifs = empresa?.notificationPreferences?.whatsappRoles?.lavador?.notifs;
+            this.avisoWppAtivo = Array.isArray(notifs) && (notifs.includes('novaOrdemAtribuida') || notifs.includes('paginaAtualizada'));
+          } catch (e) { /* sem empresa no token: deixa desligado */ }
+        },
+        async salvarAvisoWpp(ligar) {
+          this.salvandoAvisoWpp = true;
+          try {
+            const empresaId = localStorage.getItem('empresaId');
+            const empresa = await window.api.getEmpresaById(empresaId);
+            const prefs = empresa?.notificationPreferences || {};
+            const roles = prefs.whatsappRoles || {};
+            const lavador = roles.lavador || {};
+            await window.api.updateEmpresa(empresaId, {
+              notificationPreferences: { ...prefs, whatsappRoles: { ...roles, lavador: { ...lavador, notifs: ligar ? ['novaOrdemAtribuida'] : [] } } },
+            });
+            this.avisoWppAtivo = ligar;
+          } catch (e) {
+            alert(e?.error || e?.message || 'Erro ao salvar a configuração');
+          } finally { this.salvandoAvisoWpp = false; }
+        },
         impersonando: !!localStorage.getItem('original_admin_session'),
 
         // Volta para a sessão do owner que usou "Entrar como" no painel
@@ -1245,6 +1277,7 @@
           this.usuarioNome = localStorage.getItem('usuarioNome') || '';
           this.empresaNome = localStorage.getItem('empresaNome') || '';
           await this.carregarTudo();
+          this.carregarAvisoWpp();
         },
 
         async carregarTudo() {

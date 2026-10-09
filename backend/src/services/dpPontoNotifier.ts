@@ -19,7 +19,7 @@ import { botSend } from './botServiceClient';
 export async function destinoWppFuncionario(funcionarioId: string): Promise<string | null> {
   const func = await prisma.dpFuncionario.findUnique({
     where: { id: funcionarioId },
-    select: { wppJid: true, lavadorId: true },
+    select: { wppJid: true, lavadorId: true, lcFuncionarioId: true },
   });
   if (!func) return null;
   if (func.wppJid) return func.wppJid;
@@ -30,6 +30,14 @@ export async function destinoWppFuncionario(funcionarioId: string): Promise<stri
       select: { telefone: true },
     });
     if (lavador?.telefone) return lavador.telefone;
+  }
+
+  if (func.lcFuncionarioId) {
+    const lcFunc = await prisma.lcFuncionario.findUnique({
+      where: { id: func.lcFuncionarioId },
+      select: { wppJid: true },
+    });
+    if (lcFunc?.wppJid) return lcFunc.wppJid;
   }
   return null;
 }

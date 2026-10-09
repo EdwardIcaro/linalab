@@ -297,6 +297,27 @@ async function handleConectarPortal(from: string, message: string): Promise<stri
     return `Oi, ${lavador.nome}! 👋 Sou a Lina, tudo bem?\n\nSeu WhatsApp tá vinculado agora — a partir de agora você recebe suas notificações de comissão por aqui e pode me perguntar qualquer coisa sobre seus serviços. Manda um *ajuda* pra ver o que eu consigo fazer por você, viu?`;
   }
 
+  // Funcionário do Lina Center — mesmo fluxo do lavador, número gravado em wppJid
+  // (o `telefone` do LC é digitado pelo dono, sem DDI, e não serve para envio)
+  const lcFunc = await (prisma as any).lcFuncionario.findFirst({
+    where: { codigoWpp: codigo, codigoWppExpiraEm: { gte: agora }, ativo: true },
+    select: { id: true, nome: true },
+  }) as { id: string; nome: string } | null;
+
+  if (lcFunc) {
+    await (prisma as any).lcFuncionario.update({
+      where: { id: lcFunc.id },
+      data: { wppJid: from, codigoWpp: null, codigoWppExpiraEm: null },
+    });
+    // Mesmo cuidado do lavador: se ele também bate ponto no Data Point, o aviso de
+    // ponto sai pelo mesmo número
+    await (prisma as any).dpFuncionario.updateMany({
+      where: { lcFuncionarioId: lcFunc.id, wppJid: null },
+      data: { wppJid: from },
+    });
+    return `Oi, ${lcFunc.nome}! 👋 Sou a Lina, tudo bem?\n\nSeu WhatsApp tá vinculado agora — você passa a receber por aqui o aviso quando uma ordem cair pra você. 🔧`;
+  }
+
   // Fallback: dpFuncionario standalone (sem lavadorId)
   const dpFuncConn = await (prisma as any).dpFuncionario.findFirst({
     where: { codigoWpp: codigo, codigoWppExpiraEm: { gte: agora }, status: 'ATIVO' },

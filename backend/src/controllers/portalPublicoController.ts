@@ -378,7 +378,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
       const lcFunc = await prisma.lcFuncionario.findUnique({
         where: { id: lcFuncionarioId },
         select: {
-          nome: true, tipoRemuneracao: true, comissao: true, salario: true, telefone: true,
+          nome: true, tipoRemuneracao: true, comissao: true, salario: true, wppJid: true,
           empresa: { select: { nome: true } },
         },
       });
@@ -427,7 +427,7 @@ export const getDadosPortal = async (req: Request, res: Response) => {
           baseComissao: null,
           comissao: lcFunc.comissao,
           salario: lcFunc.salario,
-          telefone: lcFunc.telefone ?? null,
+          telefone: lcFunc.wppJid ? lcFunc.wppJid.split('@')[0] : null,
         },
         dataPointAtivo: lcComPonto,
         hoje: {
@@ -792,6 +792,21 @@ export const gerarCodigoWpp = async (req: Request, res: Response) => {
       return res.json({ codigo, expiraEm, botNumero: botInst?.ownerPhone?.replace(/\D/g, '') ?? null });
     }
 
+    // Funcionário do Lina Center (mesmo fluxo do lavador)
+    const lcFunc = await buscarLcFuncionarioPorToken(token);
+    if (lcFunc && lcFunc.ativo) {
+      const codigo = gerarCodigo();
+      await prisma.lcFuncionario.update({
+        where: { id: lcFunc.id },
+        data: { codigoWpp: codigo, codigoWppExpiraEm: expiraEm },
+      });
+      const botInst = await prisma.whatsappInstance.findFirst({
+        where: { empresaId: null },
+        select: { ownerPhone: true },
+      });
+      return res.json({ codigo, expiraEm, botNumero: botInst?.ownerPhone?.replace(/\D/g, '') ?? null });
+    }
+
     // Fallback: dpFuncionario standalone (sem lavadorId — usa linkToken próprio)
     const dpFunc = await prisma.dpFuncionario.findFirst({
       where: { linkToken: token, status: 'ATIVO', lavadorId: null },
@@ -824,6 +839,17 @@ export const desvincularWpp = async (req: Request, res: Response) => {
         where: { id: lavador.id },
         data: { telefone: null, codigoWpp: null, codigoWppExpiraEm: null },
       });
+      return res.json({ ok: true });
+    }
+
+    const lcFunc = await buscarLcFuncionarioPorToken(token);
+    if (lcFunc && lcFunc.ativo) {
+      await prisma.lcFuncionario.update({
+        where: { id: lcFunc.id },
+        data: { wppJid: null, codigoWpp: null, codigoWppExpiraEm: null },
+      });
+      // O ponto do Data Point usava o mesmo número — desvincula junto
+      await prisma.dpFuncionario.updateMany({ where: { lcFuncionarioId: lcFunc.id }, data: { wppJid: null } });
       return res.json({ ok: true });
     }
 
