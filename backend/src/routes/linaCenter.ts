@@ -30,6 +30,7 @@ import {
   getLcFaturamentoPorMetodo,
   getLcComissoesPorFuncionario,
   getLcComissoesFuncionario,
+  getLcOrdemChecklist,
   fecharLcComissao,
   getLcFaturamentoUltimos7Dias,
 } from '../controllers/lcController';
@@ -76,6 +77,7 @@ const podeOrdens = requirePermissionByMethod({ read: ['gerenciar_ordens', 'ver_d
 router.post('/ordens', podeOrdens, createLcOrdem);
 router.get('/ordens', podeOrdens, getLcOrdens);
 router.get('/ordens/:id', podeOrdens, getLcOrdemById);
+router.get('/ordens/:id/checklist', podeOrdens, getLcOrdemChecklist);
 router.patch('/ordens/:id/status', podeOrdens, updateLcOrdemStatus);
 router.post('/ordens/:id/finalizar', podeOrdens, finalizarLcOrdem);
 router.patch('/ordens/:id/cancel', podeOrdens, cancelLcOrdem);

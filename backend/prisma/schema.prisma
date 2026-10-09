@@ -1322,6 +1322,8 @@ model LcOrdemServico {
   comissao      Float                @default(0)
   comissaoPaga  Boolean              @default(false)
   fechamentoComissaoId String?
+  // Checklist de entrada (opcional): { itens: string[], observacao: string }. Fotos em lc_ordens_fotos
+  checklist     Json?
   observacoes   String?
   dataInicio    DateTime?
   dataFim       DateTime?
@@ -1335,12 +1337,27 @@ model LcOrdemServico {
   fechamentoComissao LcFechamentoComissao? @relation(fields: [fechamentoComissaoId], references: [id], onDelete: SetNull)
   items         LcOrdemServicoItem[]
   pagamentos    LcPagamento[]
+  fotos         LcOrdemFoto[]
 
   @@unique([empresaId, numeroOrdem])
   @@index([empresaId, status])
   @@index([empresaId, dataFim])
   @@index([fechamentoComissaoId])
   @@map("lc_ordens_servico")
+}
+
+// Fotos do checklist de entrada da ordem. Imagem comprimida no navegador (JPEG ~100 KB)
+// guardada como data URL — tabela separada para a listagem de ordens não carregar fotos.
+model LcOrdemFoto {
+  id        String         @id @default(cuid())
+  ordemId   String
+  empresaId String
+  imagem    String
+  createdAt DateTime       @default(now())
+  ordem     LcOrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+
+  @@index([ordemId])
+  @@map("lc_ordens_fotos")
 }
 
 // Pagamento de comissão ao funcionário do Lina Center — espelha FechamentoComissao

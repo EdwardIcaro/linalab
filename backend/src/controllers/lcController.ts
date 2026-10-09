@@ -639,7 +639,7 @@ interface ItemInput {
 export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
   try {
     const empresaId = req.empresaId!;
-    const { clienteId, novoCliente, veiculoId, novoVeiculo, funcionarioId, itens, desconto, observacoes } = req.body as {
+    const { clienteId, novoCliente, veiculoId, novoVeiculo, funcionarioId, itens, desconto, observacoes, checklist, fotos } = req.body as {
       clienteId?: string;
       novoCliente?: { nome: string; telefone?: string; email?: string };
       veiculoId?: string;
@@ -648,7 +648,23 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
       itens: ItemInput[];
       desconto?: number;
       observacoes?: string;
+      checklist?: { itens?: string[]; observacao?: string };
+      fotos?: string[];
     };
+
+    // Checklist de entrada é opcional. Fotos vêm comprimidas do navegador (data URL JPEG).
+    const fotosValidas = Array.isArray(fotos) ? fotos.filter(f => typeof f === 'string') : [];
+    if (fotosValidas.length > CHECKLIST_MAX_FOTOS) {
+      return res.status(400).json({ error: `No máximo ${CHECKLIST_MAX_FOTOS} fotos por ordem.` });
+    }
+    if (fotosValidas.some(f => !/^data:image\/(jpeg|png|webp);base64,/.test(f) || f.length > CHECKLIST_MAX_BYTES_FOTO)) {
+      return res.status(400).json({ error: 'Foto inválida ou grande demais. Tire de novo e tente.' });
+    }
+    const itensChecklist = Array.isArray(checklist?.itens)
+      ? checklist!.itens.filter(i => CHECKLIST_ITENS.includes(i))
+      : [];
+    const obsChecklist = typeof checklist?.observacao === 'string' ? checklist.observacao.trim().slice(0, 1000) : '';
+    const checklistDados = itensChecklist.length || obsChecklist ? { itens: itensChecklist, observacao: obsChecklist } : null;
 
     if (!itens || !Array.isArray(itens) || itens.length === 0) {
       return res.status(400).json({ error: 'Ao menos um serviço é obrigatório.' });
@@ -733,7 +749,7 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
       });
       const numeroOrdem = (ultimaOrdem?.numeroOrdem || 0) + 1;
 
-      return tx.lcOrdemServico.create({
+      const criada = await tx.lcOrdemServico.create({
         data: {
           numeroOrdem,
           empresaId,
@@ -746,6 +762,7 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
           observacoes: observacoes || null,
           dataInicio: new Date(),
           items: { create: itemsData },
+          ...(checklistDados && { checklist: checklistDados }),
         },
         include: {
           cliente: { select: { nome: true, telefone: true } },
@@ -754,7 +771,14 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
           items: { include: { servico: { select: { nome: true } } } },
         },
       });
-    });
+
+      if (fotosValidas.length > 0) {
+        await tx.lcOrdemFoto.createMany({
+          data: fotosValidas.map(imagem => ({ ordemId: criada.id, empresaId, imagem })),
+        });
+      }
+      return criada;
+    }, { timeout: 30000 });
 
     res.status(201).json({ message: 'Ordem criada com sucesso', ordem });
 
@@ -791,6 +815,7 @@ export const getLcOrdens = async (req: EmpresaRequest, res: Response) => {
           veiculo: { select: { modelo: true, placa: true } },
           funcionario: { select: { id: true, nome: true } },
           items: { include: { servico: { select: { nome: true } } } },
+          _count: { select: { fotos: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -1213,5 +1238,30 @@ export const fecharLcComissao = async (req: EmpresaRequest, res: Response) => {
     }
     console.error('Erro ao pagar comissão (Lina Center):', error);
     res.status(500).json({ error: 'Erro interno ao processar o pagamento da comissão.' });
+  }
+};
+
+// ─── Checklist de entrada da ordem ───────────────────────────────────────────
+export const CHECKLIST_ITENS = ['arranhoes', 'amassados', 'vidros', 'pneus_rodas', 'farois_lanternas', 'retrovisores', 'interior', 'objetos_valor'];
+const CHECKLIST_MAX_FOTOS = 8;
+const CHECKLIST_MAX_BYTES_FOTO = 600_000; // ~450 KB de JPEG em base64; o navegador manda ~100-150 KB
+
+/**
+ * GET /api/lc/ordens/:id/checklist — itens de vistoria + fotos da ordem
+ */
+export const getLcOrdemChecklist = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const ordem = await prisma.lcOrdemServico.findFirst({
+      where: { id: req.params.id as string, empresaId: req.empresaId },
+      select: {
+        numeroOrdem: true, checklist: true, createdAt: true,
+        fotos: { select: { id: true, imagem: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!ordem) return res.status(404).json({ error: 'Ordem não encontrada.' });
+    res.json(ordem);
+  } catch (error) {
+    console.error('Erro ao buscar checklist (Lina Center):', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };

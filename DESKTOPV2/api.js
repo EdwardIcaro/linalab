@@ -306,6 +306,7 @@ const api = {
   getLcComissoesPorFuncionario: (mes = '') => fetchApi(`/lc/financeiro/comissoes-funcionario${mes ? `?mes=${mes}` : ''}`),
   getLcComissoesFuncionario: (funcionarioId) => fetchApi(`/lc/comissoes/${funcionarioId}`),
   fecharLcComissao: (dados) => fetchApi('/lc/comissoes/fechar', { method: 'POST', body: JSON.stringify(dados) }),
+  getLcOrdemChecklist: (ordemId) => fetchApi(`/lc/ordens/${ordemId}/checklist`),
   getLcFaturamentoSemana: () => fetchApi('/lc/financeiro/semana'),
 
   // ===== EMPRESAS =====
