@@ -71,7 +71,13 @@
       if (res.role && res.role.permissoes) localStorage.setItem('permissoes', JSON.stringify(res.role.permissoes));
       if (res.role && res.role.nome) localStorage.setItem('cargo', res.role.nome);
       // mantém o overlay visível até o reload trocar de página
-      setTimeout(function () { location.reload(); }, 300);
+      // Cada empresa abre no seu sistema: Lina Center ou portal do funcionário do Lina Wash
+      var noLc = location.pathname.indexOf('/lina-center') === 0;
+      setTimeout(function () {
+        if (res.sistema === 'lina-center' && !noLc) location.href = '/lina-center';
+        else if (res.sistema !== 'lina-center' && noLc) location.href = '/funcionario/index.html';
+        else location.reload();
+      }, 300);
     } catch (e) {
       hideSwitchLoading();
       if (typeof showToast === 'function') showToast((e && e.message) || 'Erro ao trocar de empresa', 'error');

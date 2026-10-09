@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js"></script>
+  <script src="/funcionario/empresa-switcher.js" defer></script>
   <style>
     :root {
       --navy:      #0f172a;
@@ -504,30 +505,31 @@
         </div>
       </div>
 
-      <div class="nav-lbl">Visão Geral</div>
-      <div class="nav-item" :class="{on:tab==='dashboard'}" @click="tab='dashboard'"><span class="ic">📊</span> Dashboard</div>
+      <div class="nav-lbl" x-show="pode('ver_dashboard','ver_financeiro')">Visão Geral</div>
+      <div class="nav-item" x-show="pode('ver_dashboard','ver_financeiro')" :class="{on:tab==='dashboard'}" @click="tab='dashboard'"><span class="ic">📊</span> Dashboard</div>
 
       <div class="nav-lbl">Operação</div>
-      <div class="nav-item" :class="{on:tab==='ordens'}" @click="tab='ordens'">
+      <div class="nav-item" x-show="pode('gerenciar_ordens','ver_dashboard')" :class="{on:tab==='ordens'}" @click="tab='ordens'">
         <span class="ic">📋</span> Ordens <span class="nav-badge" x-text="ordens.filter(o=>o.status!=='FINALIZADO'&&o.status!=='CANCELADO').length"></span>
       </div>
-      <div class="nav-item" :class="{on:tab==='clientes'}" @click="tab='clientes'"><span class="ic">👥</span> Clientes</div>
-      <div class="nav-item" :class="{on:tab==='funcionarios'}" @click="tab='funcionarios'"><span class="ic">🧑‍🔧</span> Funcionários</div>
-      <div class="nav-item" :class="{on:tab==='servicos'}" @click="tab='servicos'"><span class="ic">🧾</span> Serviços</div>
+      <div class="nav-item" x-show="pode('gerenciar_clientes','gerenciar_ordens')" :class="{on:tab==='clientes'}" @click="tab='clientes'"><span class="ic">👥</span> Clientes</div>
+      <div class="nav-item" x-show="pode('gerenciar_funcionarios','gerenciar_ordens','ver_financeiro')" :class="{on:tab==='funcionarios'}" @click="tab='funcionarios'"><span class="ic">🧑‍🔧</span> Funcionários</div>
+      <div class="nav-item" x-show="pode('config_ver_servicos','gerenciar_ordens')" :class="{on:tab==='servicos'}" @click="tab='servicos'"><span class="ic">🧾</span> Serviços</div>
 
-      <div class="nav-lbl">Gestão</div>
-      <div class="nav-item" :class="{on:tab==='financeiro'}" @click="tab='financeiro';carregarFinanceiro()"><span class="ic">💰</span> Financeiro</div>
+      <div class="nav-lbl" x-show="pode('ver_financeiro') || podeUsuarios()">Gestão</div>
+      <div class="nav-item" x-show="pode('ver_financeiro')" :class="{on:tab==='financeiro'}" @click="tab='financeiro';carregarFinanceiro()"><span class="ic">💰</span> Financeiro</div>
+      <div class="nav-item" x-show="podeUsuarios()" :class="{on:tab==='usuarios'}" @click="tab='usuarios';carregarUsuarios()"><span class="ic">🔐</span> Usuários</div>
 
       <div class="sidebar-foot">
         <div class="user-chip">
           <div class="user-av" x-text="(usuarioNome||'?').charAt(0).toUpperCase()"></div>
           <div>
-            <div class="user-name" x-text="empresaNome || 'Minha oficina'"></div>
-            <div class="user-role">Admin</div>
+            <div class="user-name" id="empresaNome" x-text="empresaNome || 'Minha oficina'"></div>
+            <div class="user-role" x-text="isDono ? 'Admin' : (cargo || 'Equipe')"></div>
           </div>
         </div>
         <div class="foot-actions">
-          <button class="foot-btn" onclick="location.href='/hub.html'"><span class="ic">🔀</span> Trocar sistema</button>
+          <button class="foot-btn" x-show="isDono" onclick="location.href='/hub.html'"><span class="ic">🔀</span> Trocar sistema</button>
           <button class="foot-btn danger" onclick="fazerLogout()"><span class="ic">🚪</span> Sair</button>
         </div>
       </div>
@@ -544,11 +546,12 @@
           <div class="tb-sub" x-text="subPagina()"></div>
         </div>
         <div class="tb-actions">
-          <button class="btn-nova" @click="abrirDrawer()"><span class="lbl-full">+ &nbsp;Nova Ordem</span><span class="lbl-curto">+ Nova</span></button>
+          <button class="btn-nova" x-show="pode('gerenciar_ordens')" @click="abrirDrawer()"><span class="lbl-full">+ &nbsp;Nova Ordem</span><span class="lbl-curto">+ Nova</span></button>
           <button class="tb-menu" @click="menuMobile=!menuMobile" aria-label="Mais opções">⋯</button>
           <div class="menu-mobile" x-show="menuMobile" x-cloak @click.outside="menuMobile=false">
             <div class="mm-emp"><b x-text="empresaNome || 'Minha oficina'"></b>Lina Center</div>
-            <button onclick="location.href='/hub.html'">🔀 Trocar sistema</button>
+            <button x-show="podeUsuarios()" @click="menuMobile=false;tab='usuarios';carregarUsuarios()">🔐 Usuários</button>
+            <button x-show="isDono" onclick="location.href='/hub.html'">🔀 Trocar sistema</button>
             <button class="danger" onclick="fazerLogout()">🚪 Sair</button>
           </div>
         </div>
@@ -582,10 +585,10 @@
             </div>
 
             <div class="qa-grid">
-              <div class="qa" @click="abrirDrawer()"><div class="qa-ic">📋</div><div class="qa-lbl">Nova Ordem</div></div>
-              <div class="qa" @click="tab='clientes';abrirFormCliente()"><div class="qa-ic">👤</div><div class="qa-lbl">Novo Cliente</div></div>
-              <div class="qa" @click="tab='funcionarios';abrirFormFunc()"><div class="qa-ic">🧑‍🔧</div><div class="qa-lbl">Novo Funcionário</div></div>
-              <div class="qa" @click="tab='servicos';abrirFormServ()"><div class="qa-ic">🧾</div><div class="qa-lbl">Novo Serviço</div></div>
+              <div class="qa" x-show="pode('gerenciar_ordens')" @click="abrirDrawer()"><div class="qa-ic">📋</div><div class="qa-lbl">Nova Ordem</div></div>
+              <div class="qa" x-show="pode('gerenciar_clientes','gerenciar_ordens')" @click="tab='clientes';abrirFormCliente()"><div class="qa-ic">👤</div><div class="qa-lbl">Novo Cliente</div></div>
+              <div class="qa" x-show="pode('gerenciar_funcionarios')" @click="tab='funcionarios';abrirFormFunc()"><div class="qa-ic">🧑‍🔧</div><div class="qa-lbl">Novo Funcionário</div></div>
+              <div class="qa" x-show="pode('config_ver_servicos')" @click="tab='servicos';abrirFormServ()"><div class="qa-ic">🧾</div><div class="qa-lbl">Novo Serviço</div></div>
             </div>
 
             <div class="row2">
@@ -668,7 +671,7 @@
                   <div x-text="o.funcionario?.nome||'—'"></div>
                   <div class="tbl-name" x-text="'R$ '+fmt(o.valorTotal)"></div>
                   <div><span class="status" :class="o.status.toLowerCase()" x-text="statusLabel(o.status)"></span></div>
-                  <div class="tbl-actions">
+                  <div class="tbl-actions" x-show="pode('gerenciar_ordens')">
                     <template x-if="o.status==='PENDENTE'"><button class="act-btn act-btn-txt" @click="mudarStatus(o,'EM_ANDAMENTO')">Iniciar</button></template>
                     <template x-if="o.status==='EM_ANDAMENTO'"><button class="act-btn act-btn-txt" @click="mudarStatus(o,'AGUARDANDO_PAGAMENTO')">Aguardar pag.</button></template>
                     <template x-if="o.status==='PENDENTE'||o.status==='EM_ANDAMENTO'||o.status==='AGUARDANDO_PAGAMENTO'">
@@ -689,7 +692,7 @@
           <div>
             <div class="tab-head">
               <div class="search-box"><span class="si">🔍</span><input type="text" placeholder="Buscar cliente..." x-model="buscaCliente"></div>
-              <button class="btn-nova2" @click="abrirFormCliente()">+ Novo Cliente</button>
+              <button class="btn-nova2" x-show="pode('gerenciar_clientes','gerenciar_ordens')" @click="abrirFormCliente()">+ Novo Cliente</button>
             </div>
             <div class="tbl">
               <div class="tbl-row head clientes"><div>Nome</div><div>Veículo</div><div>Telefone</div><div>Status</div><div>Ações</div></div>
@@ -700,7 +703,7 @@
                   <div class="tbl-sub" x-text="(c.veiculos[0]?.modelo||'—')+(c.veiculos[0]?.placa?' · '+c.veiculos[0].placa:'')"></div>
                   <div x-text="c.telefone||'—'"></div>
                   <div><span class="pill" :class="c.ativo?'ativo':'inativo'" x-text="c.ativo?'Ativo':'Inativo'"></span></div>
-                  <div class="tbl-actions">
+                  <div class="tbl-actions" x-show="pode('gerenciar_clientes','gerenciar_ordens')">
                     <button class="act-btn" @click="abrirFormCliente(c)" title="Editar">✏️</button>
                     <button class="act-btn danger" @click="excluirCliente(c)" title="Excluir">🗑️</button>
                   </div>
@@ -714,11 +717,11 @@
         <template x-if="tab==='funcionarios'">
           <div>
             <div class="tab-head">
-              <label class="aviso-wpp">
+              <label class="aviso-wpp" x-show="isDono">
                 <input type="checkbox" :checked="avisoWppAtivo" @change="salvarAvisoWpp($event.target.checked)" :disabled="salvandoAvisoWpp">
                 <span>📲 Avisar no WhatsApp quando uma ordem cair para o funcionário</span>
               </label>
-              <button class="btn-nova2" @click="abrirFormFunc()">+ Novo Funcionário</button>
+              <button class="btn-nova2" x-show="pode('gerenciar_funcionarios')" @click="abrirFormFunc()">+ Novo Funcionário</button>
             </div>
             <div class="tbl">
               <div class="tbl-row head func"><div>Nome</div><div>Remuneração</div><div>Ordens (mês)</div><div>Comissão (mês)</div><div>Status</div><div>Ações</div></div>
@@ -731,11 +734,13 @@
                   <div class="tbl-name" x-text="'R$ '+fmt(rankingDe(f.id).comissao)"></div>
                   <div><span class="pill" :class="f.ativo?'ativo':'inativo'" @click="toggleAtivoFunc(f)" x-text="f.ativo?'Ativo':'Inativo'"></span></div>
                   <div class="tbl-actions">
-                    <button class="act-btn act-btn-txt" @click="abrirPagarComissao(f)" title="Pagar comissão" style="background:var(--accent-l);color:var(--accent-d);border-color:var(--accent-m)">💰 Pagar</button>
+                    <button class="act-btn act-btn-txt" x-show="pode('ver_financeiro','gerenciar_funcionarios')" @click="abrirPagarComissao(f)" title="Pagar comissão" style="background:var(--accent-l);color:var(--accent-d);border-color:var(--accent-m)">💰 Pagar</button>
+                    <template x-if="pode('gerenciar_funcionarios')"><span style="display:contents">
                     <button class="act-btn" @click="abrirFormFunc(f)" title="Editar">✏️</button>
                     <button class="act-btn" @click="copiarLink(f)" title="Copiar link do portal" x-text="linkCopiadoId===f.id?'✓':'🔗'"></button>
                     <button class="act-btn" @click="resetarPin(f)" title="Resetar PIN">🔁</button>
                     <button class="act-btn danger" @click="excluirFuncionario(f)" title="Excluir">🗑️</button>
+                    </span></template>
                   </div>
                 </div>
               </template>
@@ -748,7 +753,7 @@
           <div>
             <div class="tab-head">
               <div></div>
-              <button class="btn-nova2" @click="abrirFormServ()">+ Novo Serviço</button>
+              <button class="btn-nova2" x-show="pode('config_ver_servicos')" @click="abrirFormServ()">+ Novo Serviço</button>
             </div>
             <div class="tbl">
               <div class="tbl-row head servicos"><div>Serviço</div><div>Descrição</div><div>Preço</div><div>Status</div><div>Ações</div></div>
@@ -759,7 +764,7 @@
                   <div class="tbl-sub" x-text="s.descricao||'—'"></div>
                   <div class="tbl-name" x-text="'R$ '+fmt(s.preco)"></div>
                   <div><span class="pill" :class="s.ativo?'ativo':'inativo'" @click="toggleAtivoServ(s)" x-text="s.ativo?'Ativo':'Inativo'"></span></div>
-                  <div class="tbl-actions">
+                  <div class="tbl-actions" x-show="pode('config_ver_servicos')">
                     <button class="act-btn" @click="abrirFormServ(s)" title="Editar">✏️</button>
                     <button class="act-btn danger" @click="excluirServico(s)" title="Excluir">🗑️</button>
                   </div>
@@ -796,17 +801,61 @@
           </div>
         </template>
 
+        <!-- ══════════ USUÁRIOS ══════════ -->
+        <template x-if="tab==='usuarios'">
+          <div>
+            <div class="tab-head">
+              <div class="tb-sub" style="font-size:12.5px">Quem entra no Lina Center com login próprio e o que cada cargo pode ver.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-nova2" @click="abrirFormCargo()">+ Novo cargo</button>
+                <button class="btn-nova2" @click="abrirFormUsuario()">+ Novo usuário</button>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-head"><div class="card-title">Usuários</div></div>
+              <div class="card-body">
+                <template x-if="usuariosLc.length===0"><div class="empty">Nenhum usuário ainda. Crie um cargo e depois o usuário.</div></template>
+                <template x-for="u in usuariosLc" :key="u.id">
+                  <div class="rank-row">
+                    <div class="rank-av" style="background:linear-gradient(135deg,#334155,#475569)" x-text="(u.nome||'?').charAt(0).toUpperCase()"></div>
+                    <div class="rank-info"><div class="rank-nome" x-text="u.nome"></div><div class="rank-sub" x-text="u.email+' · '+(u.roleInt?.nome||'sem cargo')"></div></div>
+                    <div class="tbl-actions">
+                      <button class="act-btn" @click="abrirFormUsuario(u)" title="Editar">✏️</button>
+                      <button class="act-btn danger" @click="excluirUsuario(u)" title="Excluir">🗑️</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div class="card-title">Cargos</div></div>
+              <div class="card-body">
+                <template x-if="cargosLc.length===0"><div class="empty">Nenhum cargo ainda.</div></template>
+                <template x-for="c in cargosLc" :key="c.id">
+                  <div class="rank-row">
+                    <div class="rank-info"><div class="rank-nome" x-text="c.nome"></div><div class="rank-sub" x-text="rotuloPermissoes(c)"></div></div>
+                    <div class="tbl-actions">
+                      <button class="act-btn" @click="abrirFormCargo(c)" title="Editar">✏️</button>
+                      <button class="act-btn danger" @click="excluirCargo(c)" title="Excluir">🗑️</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+
       </div>
     </div>
 
     <nav class="bottom-nav" aria-label="Seções">
-      <button :class="{on:tab==='dashboard'}" @click="tab='dashboard'"><span class="ic">📊</span>Início</button>
-      <button :class="{on:tab==='ordens'}" @click="tab='ordens'"><span class="ic">📋</span>Ordens
+      <button x-show="pode('ver_dashboard','ver_financeiro')" :class="{on:tab==='dashboard'}" @click="tab='dashboard'"><span class="ic">📊</span>Início</button>
+      <button x-show="pode('gerenciar_ordens','ver_dashboard')" :class="{on:tab==='ordens'}" @click="tab='ordens'"><span class="ic">📋</span>Ordens
         <span class="bn-badge" x-show="ordens.filter(o=>o.status!=='FINALIZADO'&&o.status!=='CANCELADO').length" x-text="ordens.filter(o=>o.status!=='FINALIZADO'&&o.status!=='CANCELADO').length"></span></button>
-      <button :class="{on:tab==='clientes'}" @click="tab='clientes'"><span class="ic">👥</span>Clientes</button>
-      <button :class="{on:tab==='funcionarios'}" @click="tab='funcionarios'"><span class="ic">🧑‍🔧</span>Equipe</button>
-      <button :class="{on:tab==='servicos'}" @click="tab='servicos'"><span class="ic">🧾</span>Serviços</button>
-      <button :class="{on:tab==='financeiro'}" @click="tab='financeiro';carregarFinanceiro()"><span class="ic">💰</span>Caixa</button>
+      <button x-show="pode('gerenciar_clientes','gerenciar_ordens')" :class="{on:tab==='clientes'}" @click="tab='clientes'"><span class="ic">👥</span>Clientes</button>
+      <button x-show="pode('gerenciar_funcionarios','gerenciar_ordens','ver_financeiro')" :class="{on:tab==='funcionarios'}" @click="tab='funcionarios'"><span class="ic">🧑‍🔧</span>Equipe</button>
+      <button x-show="pode('config_ver_servicos','gerenciar_ordens')" :class="{on:tab==='servicos'}" @click="tab='servicos'"><span class="ic">🧾</span>Serviços</button>
+      <button x-show="pode('ver_financeiro')" :class="{on:tab==='financeiro'}" @click="tab='financeiro';carregarFinanceiro()"><span class="ic">💰</span>Caixa</button>
     </nav>
   </div>
   </template>
@@ -1121,6 +1170,56 @@
     </div>
   </div>
 
+  <!-- ═══ MODAL: CARGO ═══ -->
+  <div class="sub-backdrop" x-show="showFormCargo" x-cloak @click.self="showFormCargo=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title" x-text="formCargo.id?'Editar cargo':'Novo cargo'"></div><div class="sheet-sub">O que quem tem este cargo pode ver e fazer</div></div>
+        <button class="sheet-close" @click="showFormCargo=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="fld" style="margin-bottom:12px"><label>Nome do cargo <span>*</span></label><input type="text" placeholder="Ex: Recepção, Mecânico chefe" x-model="formCargo.nome"></div>
+        <div class="fld"><label>Permissões</label></div>
+        <template x-for="perm in PERMS_LC" :key="perm.chave">
+          <label class="pg-item" style="border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
+            <input type="checkbox" :value="perm.chave" x-model="formCargo.permissoes">
+            <div class="pg-item-info"><div class="pg-item-nome" x-text="perm.rotulo"></div><div class="pg-item-det" style="white-space:normal" x-text="perm.desc"></div></div>
+          </label>
+        </template>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showFormCargo=false">Cancelar</button>
+        <button class="btn-confirm" @click="salvarCargo()" :disabled="salvandoUsr || !formCargo.nome.trim()" x-text="salvandoUsr?'Salvando…':'Salvar cargo'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: USUÁRIO (subconta) ═══ -->
+  <div class="sub-backdrop" x-show="showFormUsuario" x-cloak @click.self="showFormUsuario=false" style="z-index:255">
+    <div class="sub-sheet" @click.stop>
+      <div class="sheet-header">
+        <div><div class="sheet-title" x-text="formUsuario.id?'Editar usuário':'Novo usuário'"></div><div class="sheet-sub">Login próprio para entrar no Lina Center</div></div>
+        <button class="sheet-close" @click="showFormUsuario=false">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="form-row cols2">
+          <div class="fld"><label>Nome de usuário <span>*</span></label><input type="text" placeholder="Ex: joao.recepcao" x-model="formUsuario.nome"></div>
+          <div class="fld"><label>E-mail <span>*</span></label><input type="email" placeholder="joao@oficina.com" x-model="formUsuario.email"></div>
+        </div>
+        <div class="form-row cols2">
+          <div class="fld"><label x-text="formUsuario.id?'Nova senha (opcional)':'Senha *'"></label><input type="text" autocomplete="off" placeholder="Mínimo 6 caracteres" x-model="formUsuario.senha"></div>
+          <div class="fld"><label>Cargo <span>*</span></label>
+            <select x-model="formUsuario.roleId"><option value="">Escolha o cargo</option><template x-for="c in cargosLc" :key="c.id"><option :value="c.id" x-text="c.nome"></option></template></select>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn-cancel" @click="showFormUsuario=false">Cancelar</button>
+        <button class="btn-confirm" @click="salvarUsuario()" :disabled="salvandoUsr" x-text="salvandoUsr?'Salvando…':'Salvar usuário'"></button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ SUCESSO ═══ -->
   <div class="sub-backdrop" x-show="sucesso" x-cloak style="z-index:260;">
     <div class="sub-sheet success-box" @click.stop>
@@ -1230,6 +1329,88 @@
         },
         dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'; },
         menuMobile: false,
+        // Dono (OWNER/impersonação) vê tudo; subconta (USER) vê o que o cargo libera — mesmo
+        // mapa das rotas /lc no backend (permissionMiddleware)
+        isDono: localStorage.getItem('userRole') !== 'USER',
+        perms: (() => { try { return JSON.parse(localStorage.getItem('permissoes') || '[]'); } catch { return []; } })(),
+        cargo: localStorage.getItem('cargo') || '',
+        pode(...nomes) { return this.isDono || nomes.some(n => this.perms.includes(n)); },
+        podeUsuarios() { return this.isDono || this.pode('config_ver_usuarios'); },
+        primeiraAbaPermitida() {
+          const ordem = [['dashboard', ['ver_dashboard', 'ver_financeiro']], ['ordens', ['gerenciar_ordens', 'ver_dashboard']],
+            ['clientes', ['gerenciar_clientes', 'gerenciar_ordens']], ['funcionarios', ['gerenciar_funcionarios', 'gerenciar_ordens', 'ver_financeiro']],
+            ['servicos', ['config_ver_servicos', 'gerenciar_ordens']], ['financeiro', ['ver_financeiro']]];
+          const achada = ordem.find(([, p]) => this.pode(...p));
+          return achada ? achada[0] : (this.podeUsuarios() ? 'usuarios' : 'dashboard');
+        },
+
+        // ── Usuários e cargos (mesma API /roles do Lina Wash) ──
+        PERMS_LC: [
+          { chave: 'ver_dashboard', rotulo: 'Ver o dashboard', desc: 'Faturamento do dia, ordens em andamento e ranking' },
+          { chave: 'gerenciar_ordens', rotulo: 'Ordens', desc: 'Criar, iniciar, finalizar e cancelar ordens' },
+          { chave: 'gerenciar_clientes', rotulo: 'Clientes', desc: 'Cadastrar e editar clientes e veículos' },
+          { chave: 'gerenciar_funcionarios', rotulo: 'Equipe', desc: 'Cadastrar funcionários, links do portal e pagar comissão' },
+          { chave: 'config_ver_servicos', rotulo: 'Serviços', desc: 'Editar o catálogo e os preços' },
+          { chave: 'ver_financeiro', rotulo: 'Financeiro', desc: 'Faturamento por método de pagamento e comissões' },
+          { chave: 'config_ver_usuarios', rotulo: 'Usuários', desc: 'Criar usuários e cargos (como este)' },
+        ],
+        cargosLc: [], usuariosLc: [], salvandoUsr: false,
+        showFormCargo: false, formCargo: { id: null, nome: '', permissoes: [] },
+        showFormUsuario: false, formUsuario: { id: null, nome: '', email: '', senha: '', roleId: '' },
+        async carregarUsuarios() {
+          try {
+            const r = await fetchApi('/roles');
+            this.cargosLc = r.roles || [];
+            this.usuariosLc = r.usuarios || [];
+          } catch (e) { alert(e?.error || e?.message || 'Erro ao carregar usuários'); }
+        },
+        rotuloPermissoes(c) {
+          const nomes = (c.permissoes || []).map(p => (this.PERMS_LC.find(x => x.chave === p.name) || {}).rotulo).filter(Boolean);
+          return nomes.length ? nomes.join(' · ') : 'Sem permissões';
+        },
+        abrirFormCargo(c = null) {
+          this.formCargo = c ? { id: c.id, nome: c.nome, permissoes: (c.permissoes || []).map(p => p.name) } : { id: null, nome: '', permissoes: [] };
+          this.showFormCargo = true;
+        },
+        async salvarCargo() {
+          this.salvandoUsr = true;
+          try {
+            await fetchApi('/roles', { method: 'POST', body: JSON.stringify({ id: this.formCargo.id || null, nome: this.formCargo.nome.trim(), permissoes: this.formCargo.permissoes }) });
+            this.showFormCargo = false;
+            await this.carregarUsuarios();
+          } catch (e) { alert(e?.error || e?.message || 'Erro ao salvar o cargo'); }
+          finally { this.salvandoUsr = false; }
+        },
+        async excluirCargo(c) {
+          if (!confirm(`Excluir o cargo "${c.nome}"? Só dá para excluir cargo sem usuários.`)) return;
+          try { await fetchApi(`/roles/${c.id}`, { method: 'DELETE' }); await this.carregarUsuarios(); }
+          catch (e) { alert(e?.error || e?.message || 'Erro ao excluir o cargo'); }
+        },
+        abrirFormUsuario(u = null) {
+          if (!u && this.cargosLc.length === 0) { alert('Crie um cargo antes do usuário.'); return; }
+          this.formUsuario = u ? { id: u.id, nome: u.nome, email: u.email, senha: '', roleId: u.roleInt?.id || '' } : { id: null, nome: '', email: '', senha: '', roleId: '' };
+          this.showFormUsuario = true;
+        },
+        async salvarUsuario() {
+          const f = this.formUsuario;
+          if (!f.nome.trim() || !f.email.trim() || !f.roleId) { alert('Preencha nome, e-mail e cargo.'); return; }
+          if (!f.id && (f.senha || '').length < 6) { alert('A senha precisa ter pelo menos 6 caracteres.'); return; }
+          this.salvandoUsr = true;
+          try {
+            const dados = { nome: f.nome.trim(), email: f.email.trim(), roleId: f.roleId, maxDesconto: 0 };
+            if (f.senha) dados.senha = f.senha;
+            if (f.id) await fetchApi(`/roles/subaccount/${f.id}`, { method: 'PATCH', body: JSON.stringify(dados) });
+            else await fetchApi('/roles/subaccount', { method: 'POST', body: JSON.stringify(dados) });
+            this.showFormUsuario = false;
+            await this.carregarUsuarios();
+          } catch (e) { alert(e?.error || e?.message || 'Erro ao salvar o usuário'); }
+          finally { this.salvandoUsr = false; }
+        },
+        async excluirUsuario(u) {
+          if (!confirm(`Excluir o usuário "${u.nome}"? Ele perde o acesso na hora.`)) return;
+          try { await fetchApi(`/roles/subaccount/${u.id}`, { method: 'DELETE' }); await this.carregarUsuarios(); }
+          catch (e) { alert(e?.error || e?.message || 'Erro ao excluir o usuário'); }
+        },
         avisoWppAtivo: false,
         salvandoAvisoWpp: false,
 
@@ -1277,20 +1458,27 @@
           this.usuarioNome = localStorage.getItem('usuarioNome') || '';
           this.empresaNome = localStorage.getItem('empresaNome') || '';
           await this.carregarTudo();
-          this.carregarAvisoWpp();
+          this.tab = this.primeiraAbaPermitida();
+          if (this.isDono) this.carregarAvisoWpp();
         },
 
         async carregarTudo() {
           this.carregando = true;
           try {
+            // "Lina Center não está ativo" continua derrubando (vem antes da permissão no backend);
+            // qualquer outro erro (ex.: 403 do cargo) só deixa aquele bloco vazio
+            const seguro = (pode, chamada, vazio) => !pode ? Promise.resolve(vazio) : chamada().catch(e => {
+              if (e && e.error === 'Lina Center não está ativo para esta empresa.') throw e;
+              return vazio;
+            });
             const [dash, semana, ordensResp, clientesResp, funcResp, servResp, rankingResp] = await Promise.all([
-              window.api.getLcDashboardResumo(),
-              window.api.getLcFaturamentoSemana(),
-              window.api.getLcOrdens(),
-              window.api.getLcClientes(),
-              window.api.getLcFuncionarios(),
-              window.api.getLcServicos(),
-              window.api.getLcComissoesPorFuncionario(),
+              seguro(this.pode('ver_dashboard', 'ver_financeiro'), () => window.api.getLcDashboardResumo(), {}),
+              seguro(this.pode('ver_dashboard', 'ver_financeiro'), () => window.api.getLcFaturamentoSemana(), { dias: [] }),
+              seguro(this.pode('gerenciar_ordens', 'ver_dashboard'), () => window.api.getLcOrdens(), { ordens: [] }),
+              seguro(this.pode('gerenciar_clientes', 'gerenciar_ordens'), () => window.api.getLcClientes(), { clientes: [] }),
+              seguro(this.pode('gerenciar_funcionarios', 'gerenciar_ordens', 'ver_financeiro'), () => window.api.getLcFuncionarios(), { funcionarios: [] }),
+              seguro(this.pode('config_ver_servicos', 'gerenciar_ordens'), () => window.api.getLcServicos(), { servicos: [] }),
+              seguro(this.pode('ver_financeiro', 'gerenciar_funcionarios', 'ver_dashboard'), () => window.api.getLcComissoesPorFuncionario(), { ranking: [] }),
             ]);
             this.dash = dash;
             this.semana = semana.dias || [];
@@ -1323,12 +1511,12 @@
         fmt(v) { return (v || 0).toFixed(2).replace('.', ','); },
         tituloPagina() {
           return { dashboard:'Dashboard', ordens:'Ordens de Serviço', clientes:'Clientes',
-            funcionarios:'Funcionários', servicos:'Catálogo de Serviços', financeiro:'Financeiro' }[this.tab];
+            funcionarios:'Funcionários', servicos:'Catálogo de Serviços', financeiro:'Financeiro', usuarios:'Usuários e cargos' }[this.tab];
         },
         subPagina() {
           return { dashboard:'Visão geral da oficina hoje', ordens:'Acompanhe e gerencie as ordens',
             clientes:'Clientes e veículos cadastrados', funcionarios:'Equipe e comissões',
-            servicos:'Serviços oferecidos pela oficina', financeiro:'Faturamento geral do período' }[this.tab];
+            servicos:'Serviços oferecidos pela oficina', financeiro:'Faturamento geral do período', usuarios:'Acesso da equipe ao sistema' }[this.tab];
         },
         statusLabel(s) {
           return { PENDENTE:'Pendente', EM_ANDAMENTO:'Em andamento', AGUARDANDO_PAGAMENTO:'Aguardando pag.',

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import { sistemaPrincipalDaEmpresa } from '../utils/sistemaEmpresa';
 import jwt from 'jsonwebtoken';
 import prisma from '../db';
 import { subscriptionService } from '../services/subscriptionService';
@@ -298,6 +299,8 @@ export const authenticateUsuario = async (req: Request, res: Response) => {
           email: subaccount.email,
           role: 'USER',
           empresaId: subaccount.empresaId,
+          // Define a tela de entrada: Lina Center ou portal do funcionário do Lina Wash
+          sistema: await sistemaPrincipalDaEmpresa(subaccount.empresaId),
           permissoes: subaccount.roleInt?.permissoes?.map(p => p.name) || []
         },
         token

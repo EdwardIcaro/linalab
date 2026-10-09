@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../db';
 import { clearAuthCache } from '../middlewares/authMiddleware';
 import { clearPermCache } from '../middlewares/permissionMiddleware';
+import { sistemaPrincipalDaEmpresa } from '../utils/sistemaEmpresa';
 
 /**
  * Multi-empresa para Subaccounts.
@@ -120,6 +121,7 @@ export const switchEmpresa = async (req: Request, res: Response) => {
     return res.json({
       token,
       empresa,
+      sistema: await sistemaPrincipalDaEmpresa(empresa.id),
       role: { id: roleCtx.id, nome: roleCtx.nome, permissoes: roleCtx.permissoes.map(p => p.name) },
     });
   } catch (error) {
