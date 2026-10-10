@@ -3701,6 +3701,9 @@
                 </div>
             </div>
 
+            <!-- Contas a pagar (some sozinho sem ver_financeiro ou sem contas) -->
+            <div id="cpCartao" hidden style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);margin:0 0 18px;"></div>
+
             <!-- Quick Actions Grid — Estilo App -->
             <section class="quick-actions-grid">
                 <a href="nova-ordem.html" class="action-card action-card--nova-ordem" data-permission="gerenciar_ordens" title="Nova Ordem">
@@ -4430,6 +4433,15 @@
     </div>
 
     <script src="api.js"></script>
+    <script src="/contas-pagar.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const el = document.getElementById('cpCartao');
+        if (el && window.ContasPagar && localStorage.getItem('token')) {
+          ContasPagar.montarCartao(el, { acento: '#2563eb', aoAbrir: () => { location.href = 'financeiro.html?aba=contas'; } });
+        }
+      });
+    </script>
     <script src="utils.js"></script>
 
 

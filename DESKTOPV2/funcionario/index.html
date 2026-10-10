@@ -835,6 +835,9 @@
       <i class="fas fa-chevron-right hero-arrow"></i>
     </button>
 
+    <!-- CONTAS A PAGAR (some sozinho sem ver_financeiro ou sem contas) -->
+    <div id="cpCartao" hidden style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);margin:0 0 16px;"></div>
+
     <!-- SEÇÃO NAVEGAÇÃO -->
     <div class="section-label" id="sectionLabel" style="display:none">Navegação</div>
 
@@ -1075,6 +1078,17 @@
   </div>
 
   <script src="/api.js"></script>
+  <script src="/contas-pagar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let perms = [];
+      try { perms = JSON.parse(localStorage.getItem('permissoes') || '[]'); } catch (e) {}
+      const el = document.getElementById('cpCartao');
+      if (el && window.ContasPagar && perms.includes('ver_financeiro')) {
+        ContasPagar.montarCartao(el, { acento: '#2563eb', aoAbrir: () => { location.href = '/funcionario/financeiro.html?aba=contas'; } });
+      }
+    });
+  </script>
   <script src="/funcionario/empresa-switcher.js"></script>
   <script>
     // Definição dos botões por permissão

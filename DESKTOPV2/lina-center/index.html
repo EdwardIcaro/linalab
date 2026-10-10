@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js"></script>
+  <script src="/contas-pagar.js"></script>
   <script src="/funcionario/empresa-switcher.js" defer></script>
   <style>
     :root {
@@ -550,6 +551,7 @@
 
       <div class="nav-lbl" x-show="pode('ver_financeiro') || podeUsuarios()">Gestão</div>
       <div class="nav-item" x-show="pode('ver_financeiro')" :class="{on:tab==='financeiro'}" @click="tab='financeiro';carregarFinanceiro()"><span class="ic">💰</span> Financeiro</div>
+      <div class="nav-item" x-show="pode('ver_financeiro')" :class="{on:tab==='contas'}" @click="tab='contas'"><span class="ic">🧾</span> Contas a pagar</div>
       <div class="nav-item" x-show="podeUsuarios()" :class="{on:tab==='usuarios'}" @click="tab='usuarios';carregarUsuarios()"><span class="ic">🔐</span> Usuários</div>
 
       <div class="sidebar-foot">
@@ -582,6 +584,7 @@
           <button class="tb-menu" @click="menuMobile=!menuMobile" aria-label="Mais opções">⋯</button>
           <div class="menu-mobile" x-show="menuMobile" x-cloak @click.outside="menuMobile=false">
             <div class="mm-emp"><b x-text="empresaNome || 'Minha oficina'"></b>Lina Center</div>
+            <button x-show="pode('ver_financeiro')" @click="menuMobile=false;tab='contas'">🧾 Contas a pagar</button>
             <button x-show="podeUsuarios()" @click="menuMobile=false;tab='usuarios';carregarUsuarios()">🔐 Usuários</button>
             <button x-show="isDono" onclick="location.href='/hub.html'">🔀 Trocar sistema</button>
             <button class="danger" onclick="fazerLogout()">🚪 Sair</button>
@@ -660,6 +663,9 @@
                 </div>
               </div>
 
+              <div>
+              <div class="card" style="padding:16px;margin-bottom:16px" hidden
+                   x-init="if (pode('ver_financeiro')) ContasPagar.montarCartao($el, { acento: '#ea580c', aoAbrir: () => { tab = 'contas'; } })"></div>
               <div class="card">
                 <div class="card-head"><div class="card-title">Comissões do Mês</div><div class="card-link" @click="tab='funcionarios'">Ver todos</div></div>
                 <div class="card-body">
@@ -676,6 +682,7 @@
                     </div>
                   </template>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -831,6 +838,11 @@
               </div>
             </div>
           </div>
+        </template>
+
+        <!-- ══════════ CONTAS A PAGAR (componente compartilhado /contas-pagar.js) ══════════ -->
+        <template x-if="tab==='contas'">
+          <div x-init="ContasPagar.montar($el, { acento: '#ea580c' })"></div>
         </template>
 
         <!-- ══════════ USUÁRIOS ══════════ -->
@@ -1722,12 +1734,12 @@
         fmt(v) { return (v || 0).toFixed(2).replace('.', ','); },
         tituloPagina() {
           return { dashboard:'Dashboard', ordens:'Ordens de Serviço', clientes:'Clientes',
-            funcionarios:'Funcionários', servicos:'Catálogo de Serviços', financeiro:'Financeiro', usuarios:'Usuários e cargos' }[this.tab];
+            funcionarios:'Funcionários', servicos:'Catálogo de Serviços', financeiro:'Financeiro', contas:'Contas a pagar', usuarios:'Usuários e cargos' }[this.tab];
         },
         subPagina() {
           return { dashboard:'Visão geral da oficina hoje', ordens:'Acompanhe e gerencie as ordens',
             clientes:'Clientes e veículos cadastrados', funcionarios:'Equipe e comissões',
-            servicos:'Serviços oferecidos pela oficina', financeiro:'Faturamento geral do período', usuarios:'Acesso da equipe ao sistema' }[this.tab];
+            servicos:'Serviços oferecidos pela oficina', financeiro:'Faturamento geral do período', contas:'Boletos, fornecedores e despesas', usuarios:'Acesso da equipe ao sistema' }[this.tab];
         },
         statusLabel(s) {
           return { PENDENTE:'Pendente', EM_ANDAMENTO:'Em andamento', AGUARDANDO_PAGAMENTO:'Aguardando pag.',

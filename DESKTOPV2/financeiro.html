@@ -1830,6 +1830,14 @@
                             x-text="pendenciasCount"
                         ></span>
                     </button>
+                    <button
+                        class="tab-btn"
+                        :class="{ 'active': activeTab === 'contas' }"
+                        @click="activeTab = 'contas'"
+                    >
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>Contas a pagar</span>
+                    </button>
                 </div>
 
                 <div class="tabs-extra-actions">
@@ -2074,6 +2082,12 @@
                                 <div class="value" x-text="formatCurrency(daySummary.pix)"></div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- TAB: Contas a pagar (componente compartilhado /contas-pagar.js) -->
+                    <div x-show="activeTab === 'contas'" x-transition
+                         x-effect="if (activeTab === 'contas' && !window._cpMontado) window._cpMontado = ContasPagar.montar($refs.cpHost, { acento: '#2563eb' })">
+                        <div x-ref="cpHost"></div>
                     </div>
 
                     <!-- TAB 3: Pendencias -->
@@ -3219,6 +3233,7 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script src="api.js"></script>
+    <script src="/contas-pagar.js"></script>
     <script src="utils.js"></script>
 
 
@@ -3280,7 +3295,8 @@
                 isLoadingPendencias: false,
 
                 // Tabs
-                activeTab: 'movimentacoes',
+                // ?aba=contas abre direto em Contas a pagar (cartão do dashboard)
+                activeTab: new URLSearchParams(location.search).get('aba') === 'contas' ? 'contas' : 'movimentacoes',
 
                 // Balance Summary
                 balance: {
