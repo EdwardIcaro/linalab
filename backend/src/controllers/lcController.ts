@@ -3,6 +3,7 @@ import prisma from '../db';
 import { gerarTokenCurto } from '../utils/tokenUtils';
 import { getTodayRangeBRT, getMonthRangeBRT, getTodayStrBRT, getDateRangeBRT } from '../utils/dateUtils';
 import { notifyLcFuncionarioNovaOrdem } from '../services/whatsappNotificationService';
+import { arredondarCentavos } from '../utils/dividirCentavos';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -758,7 +759,7 @@ export const createLcOrdem = async (req: EmpresaRequest, res: Response) => {
           funcionarioId: funcionario?.id ?? null,
           valorTotal: valorFinal,
           desconto: descontoValor,
-          comissao: comissaoTotal * descontoFator,
+          comissao: arredondarCentavos(comissaoTotal * descontoFator),
           observacoes: observacoes || null,
           dataInicio: new Date(),
           items: { create: itemsData },

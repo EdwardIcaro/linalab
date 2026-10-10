@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { dividirEmCentavos, arredondarCentavos } from '../utils/dividirCentavos';
 import { ErroPublico } from '../utils/erroPublico';
 import { Prisma, OrdemServico, PrismaClient } from '@prisma/client';
 import prisma from '../db';
@@ -305,7 +306,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           tipoOrdem: (isAvulso ? 'AVULSO' : 'VEICULO') as any,
           itemAvulso: isAvulso ? (itemAvulso || null) : null,
           valorTotal: calculatedValorTotal,
-          comissao: comissaoCalculada, // A comissão é calculada, mas só é "devida" ao finalizar
+          comissao: arredondarCentavos(comissaoCalculada), // A comissão é calculada, mas só é "devida" ao finalizar
           status: primaryLavadorId ? 'EM_ANDAMENTO' : 'PENDENTE' as any,
           observacoes: observacoes,
           items: { create: ordemItemsData.filter(Boolean) as any },
@@ -313,11 +314,15 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       });
 
       if (normalizedLavadorIds.length > 0) {
+        // Partes em centavos exatos: a soma bate com o total (o centavo que sobra vai para um deles)
+        const ganhosCriacao = dividirEmCentavos(normalizedLavadorIds.map(lavadorIdValue =>
+          calcGanhoPorLavador(comissaoMap.get(lavadorIdValue) || 0, baseComissaoMap.get(lavadorIdValue) || 'OS', tipoRemuneracaoMap.get(lavadorIdValue))
+        ));
         await tx.ordemServicoLavador.createMany({
-          data: normalizedLavadorIds.map(lavadorIdValue => ({
+          data: normalizedLavadorIds.map((lavadorIdValue, i) => ({
             ordemId: novaOrdem.id,
             lavadorId: lavadorIdValue,
-            ganho: calcGanhoPorLavador(comissaoMap.get(lavadorIdValue) || 0, baseComissaoMap.get(lavadorIdValue) || 'OS', tipoRemuneracaoMap.get(lavadorIdValue))
+            ganho: ganhosCriacao[i]
           }))
         });
       }
@@ -1046,11 +1051,14 @@ export const updateOrdem = async (req: EmpresaRequest, res: Response) => {
               }, 0);
           }
 
+          const ganhosUpdate = dividirEmCentavos(normalizedLavadorIds.map(lavadorIdValue =>
+            calcGanhoUpdate(updateComissaoMap.get(lavadorIdValue) || 0, updateBaseComissaoMap.get(lavadorIdValue) || 'OS', updateTipoRemuneracaoMap.get(lavadorIdValue) || 'COMISSAO')
+          ));
           await tx.ordemServicoLavador.createMany({
-            data: normalizedLavadorIds.map(lavadorIdValue => ({
+            data: normalizedLavadorIds.map((lavadorIdValue, i) => ({
               ordemId: id,
               lavadorId: lavadorIdValue,
-              ganho: calcGanhoUpdate(updateComissaoMap.get(lavadorIdValue) || 0, updateBaseComissaoMap.get(lavadorIdValue) || 'OS', updateTipoRemuneracaoMap.get(lavadorIdValue) || 'COMISSAO')
+              ganho: ganhosUpdate[i]
             }))
           });
         }
@@ -1686,7 +1694,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
         }, 0);
         ganhosPorLavador.push({ lavadorId: rel.lavadorId, ganho });
       }
-      comissaoCalculada = ganhosPorLavador.reduce((s, g) => s + g.ganho, 0);
+      // Centavos exatos: a soma das partes é exatamente a comissão da ordem
+      const ganhosArredondados = dividirEmCentavos(ganhosPorLavador.map(g => g.ganho));
+      ganhosPorLavador.forEach((g, i) => { g.ganho = ganhosArredondados[i]; });
+      comissaoCalculada = arredondarCentavos(ganhosArredondados.reduce((s, g) => s + g, 0));
     } else if (ordem.lavador && ordem.items && ordem.items.length > 0) {
       // fallback: apenas lavador primário
       const pctPadrao = ordem.lavador.comissao;
@@ -1700,10 +1711,10 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
         }
         return sum + item.subtotal * descontoFator * (pct / 100);
       }, 0);
-      comissaoCalculada = ganho;
+      comissaoCalculada = arredondarCentavos(ganho);
     } else if (ordem.lavador) {
       const base = (ordem.lavador as any).baseComissao || 'OS';
-      comissaoCalculada = base === 'ADICIONAL' ? 0 : (valorFinal * ordem.lavador.comissao) / 100;
+      comissaoCalculada = base === 'ADICIONAL' ? 0 : arredondarCentavos((valorFinal * ordem.lavador.comissao) / 100);
     }
 
     // Executar tudo em uma transação atômica
