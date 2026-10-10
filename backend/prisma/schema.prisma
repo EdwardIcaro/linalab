@@ -84,6 +84,8 @@ model Empresa {
   lcOrdens                   LcOrdemServico[]
   lcPagamentos               LcPagamento[]
   lcFechamentosComissao      LcFechamentoComissao[]
+  contasPagar                ContaPagar[]
+  contasPagarFrequentes      ContaPagarFrequente[]
   relatoriosFinanceiroLinks  RelatorioFinanceiroLink[]
   emailContas                EmailConta[]
   emailRegras                EmailRegra[]
@@ -1673,4 +1675,48 @@ model RelatorioFinanceiroLink {
 
   @@index([empresaId, mesReferencia])
   @@map("relatorio_financeiro_links")
+}
+
+// ─── Contas a pagar (Lina Wash e Lina Center) ────────────────────────────────
+// tipo: AVULSA (uma vez) | MENSAL (ao pagar, cria a do mês seguinte no diaMensal)
+//       | A_PRAZO (compra + prazoDias; pode virar ContaPagarFrequente)
+// vencimento é gravado ao meio-dia UTC da data, para o dia não escorregar de fuso.
+model ContaPagar {
+  id               String    @id @default(cuid())
+  empresaId        String
+  descricao        String
+  valor            Float
+  vencimento       DateTime
+  tipo             String    @default("AVULSA")
+  diaMensal        Int?
+  prazoDias        Int?
+  fornecedorNome   String?
+  lembrarDiasAntes Int       @default(3)
+  status           String    @default("PENDENTE") // PENDENTE | PAGA
+  pagaEm           DateTime?
+  valorPago        Float?
+  formaPagamento   String?
+  caixaRegistroId  String?
+  criadoPor        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  empresa          Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, status, vencimento])
+  @@map("contas_pagar")
+}
+
+// Item que se repete nas compras a prazo ("Shampoo 20L · 15 dias") — relançar em um toque
+model ContaPagarFrequente {
+  id             String   @id @default(cuid())
+  empresaId      String
+  descricao      String
+  valor          Float
+  prazoDias      Int
+  fornecedorNome String?
+  createdAt      DateTime @default(now())
+  empresa        Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, descricao])
+  @@map("contas_pagar_frequentes")
 }

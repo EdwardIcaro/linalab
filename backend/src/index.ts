@@ -40,6 +40,8 @@ import gorjetaRoutes from './routes/gorjeta';
 import hubRoutes from './routes/hub';
 import dataPointRoutes from './routes/dataPoint';
 import linaCenterRoutes from './routes/linaCenter';
+import contasPagarRoutes from './routes/contasPagar';
+import { cronLembreteContasPagar } from './services/contasPagarService';
 import emailRegraRoutes from './routes/emailRegra';
 import emailAutomacaoRoutes from './routes/emailAutomacao';
 
@@ -195,6 +197,7 @@ app.use('/api/gorjeta', authMiddleware, gorjetaRoutes); // Gorjetas de lavadores
 app.use('/api/hub', userAuthMiddleware, hubRoutes);
 app.use('/api/subaccount', userAuthMiddleware, subaccountRoutes);
 app.use('/api/dp', userAuthMiddleware, dataPointRoutes);
+app.use('/api/contas-pagar', authMiddleware, contasPagarRoutes); // Contas a pagar (Lina Wash e Lina Center, empresa scoped)
 app.use('/api/lc', authMiddleware, linaCenterRoutes); // Lina Center — sistema separado do ecossistema (empresa scoped)
 
 // Bot Lina — setup/disconnect apenas LINA_OWNER; status qualquer token válido
@@ -262,6 +265,11 @@ cron.schedule('0 9 * * *', () => {
 cron.schedule('0 20 * * *',  () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
 cron.schedule('30 20 * * *', () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
 cron.schedule('0 22 * * *',  () => { cronResumoDiario(); }, { timezone: "America/Sao_Paulo" });
+
+// Contas a pagar: lembrete às 08:00 (+ retries 09:30 e 11:00 se o bot estiver offline; dedup no banco)
+cron.schedule('0 8 * * *',  () => { cronLembreteContasPagar(); }, { timezone: "America/Sao_Paulo" });
+cron.schedule('30 9 * * *', () => { cronLembreteContasPagar(); }, { timezone: "America/Sao_Paulo" });
+cron.schedule('0 11 * * *', () => { cronLembreteContasPagar(); }, { timezone: "America/Sao_Paulo" });
 
 // WhatsApp: Resumo semanal aos sábados às 19h (+ retry às 19:30 caso bot esteja offline)
 cron.schedule('0 19 * * 6',  () => { cronResumoSemanal(); }, { timezone: "America/Sao_Paulo" });
