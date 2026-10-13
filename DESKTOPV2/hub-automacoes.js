@@ -91,7 +91,8 @@
     const v = e.vinculo;
     const clienteSel = v?.clienteId ?? e.sugestao.clienteId;
     const servSel = v ? v.servicos : e.sugestao.servicos;
-    const ativo = v ? v.ativo : false;
+    // Vínculo novo já nasce ligado: quem confirma o vínculo quer ver a fila
+    const ativo = v ? v.ativo : true;
     const clientes = e.clientes.map((c) => `<option value="${esc(c.id)}" ${c.id === clienteSel ? 'selected' : ''}>${esc(c.nome)} (${c.ordens} ordens)${!v && c.id === e.sugestao.clienteId ? ' · sugerido' : ''}</option>`).join('');
     const linhas = precos.map((p) => {
       const atual = servSel[chave(p)] || '';
@@ -133,8 +134,9 @@
 
     box.querySelectorAll('[data-emp]').forEach((empBox) => {
       const esw = empBox.querySelector('[data-emp-sw]');
-      esw.onclick = () => esw.classList.toggle('on');
       const btn = empBox.querySelector('[data-salvar]');
+      // O switch salva na hora — antes ele só mudava a tela e dependia do botão
+      esw.onclick = () => { esw.classList.toggle('on'); btn.onclick(); };
       btn.onclick = async () => {
         const servicos = {};
         empBox.querySelectorAll('[data-preco]').forEach((s) => { if (s.value) servicos[s.dataset.preco] = s.value; });
@@ -144,7 +146,7 @@
             method: 'PUT', semRedirect: true,
             body: JSON.stringify({ clienteId: empBox.querySelector('[data-cliente]').value || null, servicos, ativo: esw.classList.contains('on') }),
           });
-          btn.textContent = '✓ Salvo';
+          btn.textContent = esw.classList.contains('on') ? '✓ Salvo · fila ligada' : '✓ Salvo · fila desligada';
           setTimeout(() => { btn.disabled = false; btn.textContent = 'Salvar vínculo'; }, 1500);
         } catch (e) {
           alert(e?.error || 'Não foi possível salvar o vínculo.');
