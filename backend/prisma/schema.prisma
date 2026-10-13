@@ -1509,6 +1509,11 @@ model EmailRegra {
   // Campo que vem de fora do email: { de, chave, em, sufixo } — ex: modelo/cor do veículo
   // buscados pela placa no cadastro. Quem resolve é o poller (o extrator não toca no banco).
   enriquecer      Json?
+  // Regra criada de um modelo pronto (emailModelos.ts): o motor usa a definição ATUAL do
+  // catálogo — se o fornecedor mudar o layout, corrigir o catálogo vale pra todo mundo
+  modeloId        String?
+  // Alimenta a fila de solicitações do portal: SOLICITACAO | CANCELAMENTO | null
+  fila            String?
   tipoValor       String   @default("AVANCADO") // CODIGO | ALFANUMERICO | VALOR | LINK | AVANCADO
   ancora          String?  // texto antes do valor — usado na explicação em português e na edição
   template        String   // ex: "🔑 Código Localiza: {{valor}}"
@@ -1719,4 +1724,68 @@ model ContaPagarFrequente {
 
   @@unique([empresaId, descricao])
   @@map("contas_pagar_frequentes")
+}
+
+/// Carro pedido por e-mail (Localiza) esperando alguém da conta aceitar.
+/// Escopo = dono (usuarioId), não empresa: aparece em todas as empresas dele que têm vínculo,
+/// e quem aceita leva a ordem para a própria empresa. Relações só por id (FKs no SQL).
+model SolicitacaoLavagem {
+  id              String    @id @default(cuid())
+  usuarioId       String
+  origemEmpresaId String    // empresa dona da caixa de e-mail que leu
+  fornecedor      String    @default("localiza")
+  numero          String
+  placa           String
+  tipo            String?
+  preco           Float?
+  precoTexto      String?
+  solicitante     String?
+  agencia         String?
+  diaAbertura     String?
+  status          String    @default("PENDENTE") // PENDENTE | ACEITA | CANCELADA
+  aceitaEmpresaId String?
+  aceitaPorId     String?
+  aceitaPorNome   String?
+  aceitaEm        DateTime?
+  ordemId         String?
+  canceladaEm     DateTime?
+  canceladaPor    String?
+  checklist       Json?     // { itens: [{ chave, st: 'ok'|'av', obs }] }
+  checklistPor    String?
+  checklistEm     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  fotos           SolicitacaoFoto[]
+
+  @@unique([usuarioId, fornecedor, numero, placa], map: "solicitacoes_lavagem_unica")
+  @@index([usuarioId, status, createdAt], map: "solicitacoes_lavagem_fila")
+  @@map("solicitacoes_lavagem")
+}
+
+model SolicitacaoFoto {
+  id            String             @id @default(cuid())
+  solicitacaoId String
+  lado          String?
+  imagem        String             // data URL JPEG já comprimida no navegador
+  createdAt     DateTime           @default(now())
+  solicitacao   SolicitacaoLavagem @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+
+  @@index([solicitacaoId], map: "solicitacao_fotos_sol")
+  @@map("solicitacao_fotos")
+}
+
+/// O que cada empresa já usa para a Localiza: cliente e serviço por valor do e-mail.
+/// A comissão segue o % do serviço vinculado — mesma regra das ordens lançadas à mão.
+model SolicitacaoVinculo {
+  id         String   @id @default(cuid())
+  empresaId  String
+  fornecedor String   @default("localiza")
+  clienteId  String?
+  servicos   Json     @default("{}") // { "130": servicoId, "30": servicoId }
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([empresaId, fornecedor], map: "solicitacao_vinculos_empresa")
+  @@map("solicitacao_vinculos")
 }

@@ -8,6 +8,8 @@ import {
 } from './emailExtracao';
 import { enriquecer, empresasIrmas } from './emailEnriquecimento';
 import { subscriptionService } from './subscriptionService';
+import { modeloPorId } from './emailModelos';
+import { alimentarFila } from './solicitacaoFilaService';
 
 /**
  * Leitura das caixas de email dos clientes (automação de email).
@@ -76,8 +78,33 @@ async function processarConta(conta: {
             derivados: (regra.derivados ?? null) as unknown as DerivadoRegra[] | null,
             enriquecer: (regra.enriquecer ?? null) as unknown as EnriquecerRegra | null,
           };
+          // Modelo permanente: o que IDENTIFICA e LÊ o e-mail vem sempre do catálogo atual
+          // (se o fornecedor mudar o layout, corrigir o catálogo vale pra todo mundo).
+          // Mensagem, tabela de serviços e destinatários continuam sendo da regra.
+          const modelo = regra.modeloId ? modeloPorId(regra.modeloId) : undefined;
+          if (modelo) {
+            extracao.remetenteContem = modelo.remetenteContem;
+            extracao.assuntoContem = modelo.assuntoContem;
+            extracao.assuntoNaoContem = modelo.assuntoNaoContem;
+            extracao.regexExtracao = modelo.regexExtracao;
+            extracao.campos = modelo.campos;
+            if (modelo.bloco) {
+              extracao.bloco = { ...modelo.bloco, ...(extracao.bloco ?? {}), regex: modelo.bloco.regex, chaves: modelo.bloco.chaves };
+            }
+          }
+
           const lido = extrair(extracao, msg);
           if (!lido) continue;
+
+          // Fila do portal ANTES do WhatsApp: entra mesmo se a regra não tiver destinatário
+          if (regra.fila) {
+            try {
+              const n = await alimentarFila(conta.empresaId, regra.fila, lido);
+              console.log(`[EmailAutomacao] Regra ${regra.id}: fila ${regra.fila} — ${n} registro(s).`);
+            } catch (e) {
+              console.error(`[EmailAutomacao] Regra ${regra.id}: erro na fila:`, e instanceof Error ? e.message : e);
+            }
+          }
 
           // Modelo e cor do que já passou pela casa; carro novo sai sem isso
           await enriquecer(conta.empresaId, extracao, lido, irmas);
@@ -87,7 +114,7 @@ async function processarConta(conta: {
 
           const alvos = await resolverDestinos(conta.empresaId, (regra.destinos ?? []) as unknown as DestinoRegra[]);
           if (!alvos.length) {
-            console.warn(`[EmailAutomacao] Regra ${regra.id} casou mas está sem destinatário válido.`);
+            if (!regra.fila) console.warn(`[EmailAutomacao] Regra ${regra.id} casou mas está sem destinatário válido.`);
             continue;
           }
 

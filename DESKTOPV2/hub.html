@@ -672,6 +672,10 @@
       <div class="cfg-section-title">Funcionários com acesso ao painel</div>
       <p class="cfg-hint">Conceda a um funcionário acesso a mais de uma das suas empresas. Ele alterna entre elas pelo próprio painel, sem novo login. A empresa principal (★) não pode ser removida.</p>
       <div id="cfgSubaccounts"></div>
+
+      <div class="cfg-section-title" style="margin-top:26px">📧 Automações de e-mail</div>
+      <p class="cfg-hint">Valem para todas as suas empresas. Os modelos da Localiza leem a caixa escolhida e, na Solicitação de Lavagem, colocam cada carro na fila do portal para aceitar.</p>
+      <div id="cfgAutomacoes"></div>
     </div>
   </aside>
 
@@ -691,6 +695,7 @@
   </div>
 
   <script src="api.js"></script>
+  <script src="/hub-automacoes.js"></script>
   <script>
     const saudacoes = ['Bom dia', 'Boa tarde', 'Boa noite'];
     function getSaudacao() {
@@ -996,6 +1001,7 @@
       document.getElementById('cfgOverlay').classList.add('open');
       document.getElementById('cfgDrawer').classList.add('open');
       carregarSubaccounts();
+      if (window.HubAutomacoes) HubAutomacoes.montar(document.getElementById('cfgAutomacoes'));
     }
     function fecharConfigConta() {
       document.getElementById('cfgOverlay').classList.remove('open');

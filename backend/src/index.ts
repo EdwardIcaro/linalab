@@ -44,6 +44,8 @@ import contasPagarRoutes from './routes/contasPagar';
 import { cronLembreteContasPagar } from './services/contasPagarService';
 import emailRegraRoutes from './routes/emailRegra';
 import emailAutomacaoRoutes from './routes/emailAutomacao';
+import { solicitacoesPortalRoutes, solicitacoesHubRoutes } from './routes/solicitacoes';
+import { apenasDono } from './controllers/solicitacaoController';
 
 import prisma from './db'; // Importa a instância do Prisma
 import { chaveConfigurada } from './utils/credCrypto';
@@ -194,6 +196,7 @@ app.use('/api/tipos-veiculo', authMiddleware, tipoVeiculoRoutes); // Usa middlew
 app.use('/api/notificacoes', authMiddleware, notificacaoRoutes); // Usa middleware de empresa
 app.use('/api/roles', authMiddleware, roleRoutes); // Usa middleware de empresa
 app.use('/api/gorjeta', authMiddleware, gorjetaRoutes); // Gorjetas de lavadores
+app.use('/api/hub/solicitacoes', userAuthMiddleware, apenasDono, solicitacoesHubRoutes); // fila Localiza — config da conta (só o dono)
 app.use('/api/hub', userAuthMiddleware, hubRoutes);
 app.use('/api/subaccount', userAuthMiddleware, subaccountRoutes);
 app.use('/api/dp', userAuthMiddleware, dataPointRoutes);
@@ -212,6 +215,7 @@ app.use('/api/ocr', userAuthMiddleware, ocrRoutes); // OCR de placa (apenas aute
 app.use('/api/email-regras', userAuthMiddleware, emailRegraRoutes); // Regras de leitura de email (config global)
 // Automação de email por empresa: plano Premium (lina_whatsapp) + permissão de cargo nas rotas
 app.use('/api/email-automacao', authMiddleware, requireFeatureEmpresa('lina_whatsapp'), emailAutomacaoRoutes);
+app.use('/api/solicitacoes', authMiddleware, solicitacoesPortalRoutes); // fila Localiza — portal
 
 // Rota de saúde
 // `commit` vem das variáveis que o Railway injeta no build — serve para conferir
