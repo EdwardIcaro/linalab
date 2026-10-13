@@ -26,7 +26,7 @@ export class ErroImap extends Error {
 }
 
 function novoCliente(email: string, senha: string): ImapFlow {
-  return new ImapFlow({
+  const c = new ImapFlow({
     host: HOST,
     port: PORT,
     secure: true,
@@ -36,11 +36,19 @@ function novoCliente(email: string, senha: string): ImapFlow {
     greetingTimeout: TIMEOUT_MS,
     socketTimeout: TIMEOUT_MS * 3,
   });
+  // OBRIGATÓRIO: o ImapFlow emite 'error' quando o Gmail corta/recusa a conexão. Sem
+  // ouvinte, o Node trata como exceção não capturada e DERRUBA O BACKEND INTEIRO
+  // (crashes de 05–11/10/2026). A falha real já chega pela promise de connect/fetch.
+  c.on('error', () => { /* tratado pela promise que falhou */ });
+  return c;
 }
 
 function classificar(err: any): ErroImap {
   // imapflow marca authenticationFailed quando o servidor recusa usuário/senha
-  if (err?.authenticationFailed || /AUTHENTICATIONFAILED|Invalid credentials/i.test(String(err?.message))) {
+  // response === false = a conexão caiu antes de o servidor responder: é queda, não senha errada
+  // (senão uma oscilação do Gmail pausaria a conta como "senha recusada")
+  const recusouDeVerdade = err?.authenticationFailed && err?.response !== false;
+  if (recusouDeVerdade || /AUTHENTICATIONFAILED|Invalid credentials/i.test(String(err?.message))) {
     return new ErroImap('CREDENCIAL_INVALIDA', err);
   }
   return new ErroImap('INDISPONIVEL', err);
