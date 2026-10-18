@@ -27,6 +27,7 @@ import {
 } from './services/baileyService';
 
 import { processarFilaEnvios, limparEnviosAntigos } from './services/filaEnvioService';
+import { limparLogAntigo } from './services/mensagemLog';
 
 import {
   connectEmpresa,
@@ -130,11 +131,11 @@ app.post('/disconnect', async (_req, res) => {
 
 // ── Enviar mensagem de texto ─────────────────────────────────────────────────
 app.post('/send', async (req, res) => {
-  const { to, text } = req.body as { to: string; text: string };
+  const { to, text, empresaId, tipo } = req.body as { to: string; text: string; empresaId?: string; tipo?: string };
   if (!to || !text) return res.status(400).json({ error: 'to e text são obrigatórios' });
 
   try {
-    await sendMessage(to, text);
+    await sendMessage(to, text, { empresaId, tipo });
     return res.json({ ok: true });
   } catch (err) {
     console.error('[Bot] Erro ao enviar mensagem:', err);
@@ -144,12 +145,12 @@ app.post('/send', async (req, res) => {
 
 // ── Enviar imagem ────────────────────────────────────────────────────────────
 app.post('/send-image', async (req, res) => {
-  const { to, imageBase64, caption } = req.body as { to: string; imageBase64: string; caption?: string };
+  const { to, imageBase64, caption, empresaId, tipo } = req.body as { to: string; imageBase64: string; caption?: string; empresaId?: string; tipo?: string };
   if (!to || !imageBase64) return res.status(400).json({ error: 'to e imageBase64 são obrigatórios' });
 
   try {
     const buf = Buffer.from(imageBase64, 'base64');
-    await sendImageBuffer(to, buf, caption);
+    await sendImageBuffer(to, buf, caption, { empresaId, tipo });
     return res.json({ ok: true });
   } catch (err) {
     console.error('[Bot] Erro ao enviar imagem:', err);
@@ -281,10 +282,10 @@ app.get('/empresa-wa/status/:empresaId', (req, res) => {
 
 app.post('/empresa-wa/send/:empresaId', async (req, res) => {
   const empresaId = req.params['empresaId'] as string;
-  const { telefone, texto } = req.body as { telefone: string; texto: string };
+  const { telefone, texto, tipo } = req.body as { telefone: string; texto: string; tipo?: string };
   if (!telefone || !texto) return res.status(400).json({ error: 'telefone e texto são obrigatórios' });
   try {
-    await sendEmpresaMessage(empresaId, telefone, texto);
+    await sendEmpresaMessage(empresaId, telefone, texto, tipo);
     return res.json({ ok: true });
   } catch (err) {
     // Só um código conhecido sai do bot; o texto cru (com o telefone) fica no log
@@ -355,7 +356,8 @@ async function startBot() {
 
     // Fila de envio: remove os já enviados/com erro depois de 7 dias
     limparEnviosAntigos().catch(() => {});
-    setInterval(() => { limparEnviosAntigos().catch(() => {}); }, 24 * 60 * 60 * 1000);
+    limparLogAntigo().catch(() => {});
+    setInterval(() => { limparEnviosAntigos().catch(() => {}); limparLogAntigo().catch(() => {}); }, 24 * 60 * 60 * 1000);
   } catch (err) {
     console.error('❌ Erro ao iniciar bot:', err);
     process.exit(1);

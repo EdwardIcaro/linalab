@@ -96,6 +96,7 @@ function textoDoAviso(nome: string, ordens: number, comObs: number, link: string
  */
 async function enviarAviso(pendencia: {
   id: string;
+  empresaId?: string;
   ordens: number;
   comObs: number;
   lavador: { nome: string; telefone: string | null; linkTokenCurto: string | null };
@@ -107,7 +108,7 @@ async function enviarAviso(pendencia: {
     pendencia.lavador.nome, pendencia.ordens, pendencia.comObs,
     linkDoPortal(pendencia.lavador.linkTokenCurto),
   );
-  await botSend(destino, texto);
+  await botSend(destino, texto, { empresaId: pendencia.empresaId, tipo: 'AVISO_LAVADOR' });
   await (prisma as any).lavadorAvisoPendente.deleteMany({ where: { id: pendencia.id } });
 }
 
@@ -141,7 +142,7 @@ export async function registrarAlteracaoPagina(
       });
 
       if (pendencia.ordens >= limiteOrdens) {
-        await enviarAviso({ id: pendencia.id, ordens: pendencia.ordens, comObs: pendencia.comObs, lavador: lav })
+        await enviarAviso({ id: pendencia.id, empresaId, ordens: pendencia.ordens, comObs: pendencia.comObs, lavador: lav })
           .catch(e => console.error('[LavAviso] envio por volume:', e));
       }
     } catch (e) {

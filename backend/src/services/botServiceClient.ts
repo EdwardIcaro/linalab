@@ -21,14 +21,17 @@ async function botFetch(path: string, opts?: { method?: string; body?: unknown }
   return res.json();
 }
 
-export async function botSend(to: string, text: string): Promise<void> {
-  await botFetch('/send', { method: 'POST', body: { to, text } });
+/** Identifica o envio no log de mensagens do bot (empresa + tipo do aviso). */
+export interface MetaEnvio { empresaId?: string | null; tipo?: string }
+
+export async function botSend(to: string, text: string, meta?: MetaEnvio): Promise<void> {
+  await botFetch('/send', { method: 'POST', body: { to, text, ...meta } });
 }
 
-export async function botSendImage(to: string, buf: Buffer, caption?: string): Promise<void> {
+export async function botSendImage(to: string, buf: Buffer, caption?: string, meta?: MetaEnvio): Promise<void> {
   await botFetch('/send-image', {
     method: 'POST',
-    body: { to, imageBase64: buf.toString('base64'), caption },
+    body: { to, imageBase64: buf.toString('base64'), caption, ...meta },
   });
 }
 

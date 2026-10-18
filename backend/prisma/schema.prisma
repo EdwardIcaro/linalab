@@ -1789,3 +1789,24 @@ model SolicitacaoVinculo {
   @@unique([empresaId, fornecedor], map: "solicitacao_vinculos_empresa")
   @@map("solicitacao_vinculos")
 }
+
+model WaMensagemLog {
+  id          String    @id @default(cuid())
+  canal       String    // LINA | EMPRESA
+  empresaId   String?
+  tipo        String    @default("AVISO")
+  destino     String
+  texto       String
+  midia       Boolean   @default(false)
+  status      String    @default("ENVIADO") // ENVIADO | ENTREGUE | LIDO | ERRO
+  erro        String?
+  waMessageId String?
+  createdAt   DateTime  @default(now())
+  entregueEm  DateTime?
+  lidoEm      DateTime?
+
+  @@index([createdAt(sort: Desc)])
+  @@index([empresaId, createdAt(sort: Desc)])
+  @@index([waMessageId])
+  @@map("wa_mensagens_log")
+}

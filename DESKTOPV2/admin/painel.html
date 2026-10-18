@@ -208,6 +208,22 @@ tbody tr.clicavel:hover td { background: var(--superficie-2); }
 .estado { color: var(--texto-2); padding: 40px 0; }
 a.btn { text-decoration: none; color: inherit; }
 .campo select { appearance: auto; }
+
+/* Mensagens (log do bot) */
+.filtro-sel { border: 1px solid var(--linha); background: var(--superficie); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--texto-2); max-width: 100%; }
+.msgs { display: grid; gap: 10px; }
+.msg { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 14px 16px; display: grid; gap: 8px; text-align: left; width: 100%; }
+.msg .cab-msg { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--texto-2); }
+.msg .cab-msg time { color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.msg .para { font-weight: 600; color: var(--texto); }
+.msg .para small { font-weight: 400; color: var(--texto-3); margin-left: 6px; }
+.msg .texto { white-space: pre-wrap; word-break: break-word; font-size: 14px; color: var(--texto); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.msg.aberta .texto { -webkit-line-clamp: unset; display: block; }
+.msg .erro-msg { font-size: 13px; color: var(--erro); }
+.msg .recibo { font-size: 12px; color: var(--texto-3); }
+.canal { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; background: var(--acento-suave); color: var(--acento-forte); }
+.canal.emp { background: var(--superficie-2); color: var(--texto-2); border: 1px solid var(--linha); }
+.mais { display: flex; justify-content: center; margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -230,6 +246,7 @@ const ICONES = {
   assinaturas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>',
   ofertas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="8" cy="8" r="1.5"/></svg>',
   seguranca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  mensagens: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5A8 8 0 1 1 21 12Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>',
   sistema: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
 };
 const SECOES = [
@@ -238,6 +255,7 @@ const SECOES = [
   { id: 'assinaturas', nome: 'Assinaturas', curto: 'Assinat.' },
   { id: 'ofertas', nome: 'Planos e convites', curto: 'Planos' },
   { id: 'seguranca', nome: 'Segurança', curto: 'Segurança' },
+  { id: 'mensagens', nome: 'Mensagens', curto: 'Msgs' },
   { id: 'sistema', nome: 'Sistema', curto: 'Sistema' },
 ];
 const SISTEMAS = {
@@ -648,7 +666,107 @@ function viewSistema() {
   ]);
 }
 
-const VIEWS = { geral: viewGeral, contas: viewContas, assinaturas: viewAssinaturas, ofertas: viewOfertas, seguranca: viewSeguranca, sistema: viewSistema };
+// ---------- Mensagens (log do bot) ----------
+const TIPOS_MSG = {
+  AVISO: 'Aviso', AVISO_ADMIN: 'Aviso ao dono', EMAIL_AUTOMACAO: 'Automação de e-mail', SEGURANCA: 'Segurança',
+  NOVA_ORDEM_LAVADOR: 'Nova ordem (lavador)', NOVA_ORDEM_FUNCIONARIO: 'Nova ordem (funcionário)', AVISO_LAVADOR: 'Aviso ao lavador',
+  DP_PONTO: 'Ponto', DP_ASSINATURA: 'Assinatura de ponto', DP_ROSTO: 'Cadastro de rosto', DP_FORA_DO_RAIO: 'Ponto fora do raio',
+  RELATORIO_FINANCEIRO: 'Relatório financeiro', PIX: 'PIX', CONFIRMAR_NUMERO: 'Confirmação de número',
+  MENSAGEM_MANUAL: 'Mensagem manual', TEMPLATE_ORDEM: 'Modelo de ordem', MENSAGEM_CLIENTE: 'Mensagem ao cliente',
+  novaOrdem: 'Nova ordem', ordemFinalizada: 'Ordem finalizada', ordemCancelada: 'Ordem cancelada', ordemEditada: 'Ordem editada',
+  clienteVip: 'Cliente VIP', saidaRegistrada: 'Saída de caixa', comissaoFechada: 'Comissão fechada', fechamentoCaixa: 'Fechamento de caixa',
+  resumoDiario: 'Resumo diário', resumoSemanal: 'Resumo semanal', reportAvaria: 'Avaria', caixaAberto: 'Caixa aberto', ordensParadas: 'Ordens paradas',
+};
+const nomeTipo = t => TIPOS_MSG[t] || String(t || 'Aviso').replace(/_/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase());
+const STATUS_MSG = {
+  ENVIADO: ['Enviada ✓', 'p-neutro'], ENTREGUE: ['Entregue ✓✓', 'p-ok'], LIDO: ['Lida ✓✓', 'p-info'], ERRO: ['Falhou', 'p-erro'],
+};
+const fmtNumero = d => d && d.length >= 12 && d.startsWith('55') ? `(${d.slice(2, 4)}) ${d.slice(4, -4)}-${d.slice(-4)}` : (d || '');
+estado.msg = { canal: '', status: '', empresaId: '', tipo: '', q: '', itens: [], proximo: null, dados: null };
+
+async function viewMensagens() {
+  $('#conteudo').innerHTML = topo('Mensagens', 'Tudo o que o bot enviou, pelo número da Lina e pelos WhatsApps das empresas. Fica guardado por 90 dias.',
+    '<button class="btn" data-acao-msg="atualizar">Atualizar</button>') + '<div id="msgCorpo"><div class="estado">Carregando…</div></div>';
+  await carregarMensagens(false);
+}
+
+async function carregarMensagens(maisAntigas) {
+  const m = estado.msg;
+  const p = new URLSearchParams({ limite: '50' });
+  for (const k of ['canal', 'status', 'empresaId', 'tipo', 'q']) if (m[k]) p.set(k, m[k]);
+  if (maisAntigas && m.proximo) p.set('antes', m.proximo);
+  try {
+    const d = await api(`/admin/mensagens?${p}`);
+    m.dados = d;
+    m.itens = maisAntigas ? m.itens.concat(d.itens) : d.itens;
+    m.proximo = d.proximo;
+    renderMensagens();
+  } catch (err) {
+    const el = $('#msgCorpo');
+    if (el) el.innerHTML = `<div class="painel">Não foi possível carregar: ${esc(err.message)}</div>`;
+  }
+}
+
+function renderMensagens() {
+  const m = estado.msg, d = m.dados, r = d.resumo24h || {};
+  const el = $('#msgCorpo');
+  if (!el) return;
+  const total = Object.values(r).reduce((a, b) => a + b, 0);
+  const entregues = (r.ENTREGUE || 0) + (r.LIDO || 0);
+  const chip = (campo, valor, rotulo) => `<button class="chip" data-msg-campo="${campo}" data-msg-valor="${valor}" aria-pressed="${m[campo] === valor}">${rotulo}</button>`;
+  el.innerHTML = `
+    <div class="grade g-kpi" style="margin-bottom:16px">
+      <div class="painel kpi"><div class="rot">Enviadas · 24h</div><div class="val num">${total}</div><div class="det">Lina e empresas</div></div>
+      <div class="painel kpi"><div class="rot">Entregues</div><div class="val num">${entregues}</div><div class="det">${total ? Math.round(entregues / total * 100) + '% do total' : '—'}</div></div>
+      <div class="painel kpi"><div class="rot">Lidas</div><div class="val num">${r.LIDO || 0}</div><div class="det">Só aparece se a pessoa deixa a confirmação de leitura ligada</div></div>
+      <div class="painel kpi"><div class="rot">Com falha</div><div class="val num">${r.ERRO || 0}</div><div class="det">${r.ERRO ? '<b class="neg">Confira abaixo</b>' : 'Nenhuma'}</div></div>
+    </div>
+    <div class="barra-filtros">
+      <label class="busca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="buscaMsg" placeholder="Buscar no texto ou pelo número" value="${esc(m.q)}"></label>
+      ${chip('canal', '', 'Todos')}${chip('canal', 'LINA', 'Número da Lina')}${chip('canal', 'EMPRESA', 'WhatsApp das empresas')}
+    </div>
+    <div class="barra-filtros">
+      ${chip('status', '', 'Qualquer situação')}${chip('status', 'ENVIADO', 'Só enviadas')}${chip('status', 'ENTREGUE', 'Entregues')}${chip('status', 'LIDO', 'Lidas')}${chip('status', 'ERRO', 'Falhas')}
+      <select class="filtro-sel" id="msgEmpresa" aria-label="Empresa"><option value="">Todas as empresas</option><option value="sem" ${m.empresaId === 'sem' ? 'selected' : ''}>Sem empresa (Lina)</option>
+        ${d.empresas.map(e => `<option value="${esc(e.id)}" ${m.empresaId === e.id ? 'selected' : ''}>${esc(e.nome)}</option>`).join('')}</select>
+      <select class="filtro-sel" id="msgTipo" aria-label="Tipo"><option value="">Todos os tipos</option>
+        ${d.tipos.map(t => `<option value="${esc(t.tipo)}" ${m.tipo === t.tipo ? 'selected' : ''}>${esc(nomeTipo(t.tipo))} (${t.n})</option>`).join('')}</select>
+    </div>
+    ${m.itens.length ? `<div class="msgs">${m.itens.map(msgHtml).join('')}</div>` : '<div class="painel sub">Nenhuma mensagem com esse filtro. O registro começou a valer a partir desta atualização.</div>'}
+    ${m.proximo ? '<div class="mais"><button class="btn" data-acao-msg="mais">Carregar mais antigas</button></div>' : ''}`;
+  const busca = $('#buscaMsg');
+  busca.addEventListener('input', () => { clearTimeout(renderMensagens.t); renderMensagens.t = setTimeout(() => { m.q = busca.value; carregarMensagens(false); }, 400); });
+  $('#msgEmpresa').addEventListener('change', e => { m.empresaId = e.target.value; carregarMensagens(false); });
+  $('#msgTipo').addEventListener('change', e => { m.tipo = e.target.value; carregarMensagens(false); });
+}
+
+function msgHtml(x) {
+  const [rot, cls] = STATUS_MSG[x.status] || STATUS_MSG.ENVIADO;
+  const para = x.grupo ? 'Grupo de WhatsApp' : (x.destinatario || fmtNumero(x.numero) || x.destino);
+  const recibo = [x.entregueEm && `entregue ${dataHora(x.entregueEm)}`, x.lidoEm && `lida ${dataHora(x.lidoEm)}`].filter(Boolean).join(' · ');
+  return `<button class="msg" data-msg-abrir>
+    <div class="cab-msg"><time>${dataHora(x.createdAt)}</time>
+      <span class="canal ${x.canal === 'EMPRESA' ? 'emp' : ''}">${x.canal === 'EMPRESA' ? 'Empresa' : 'Lina'}</span>
+      ${x.empresaNome ? `<span>${esc(x.empresaNome)}</span>` : ''}<span>· ${esc(nomeTipo(x.tipo))}</span>
+      <span style="margin-left:auto" class="pilula ${cls}">${rot}</span></div>
+    <div class="para">Para ${esc(para)}${x.destinatario && !x.grupo ? `<small>${esc(fmtNumero(x.numero))}</small>` : ''}</div>
+    <div class="texto">${esc(x.texto)}</div>
+    ${x.erro ? `<div class="erro-msg">${esc(x.erro)}</div>` : ''}
+    ${recibo ? `<div class="recibo">${recibo}</div>` : ''}
+  </button>`;
+}
+
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-msg-campo]');
+  if (c) { estado.msg[c.dataset.msgCampo] = c.dataset.msgValor; return carregarMensagens(false); }
+  const a = e.target.closest('[data-acao-msg]');
+  if (a) return carregarMensagens(a.dataset.acaoMsg === 'mais');
+  const b = e.target.closest('[data-msg-abrir]');
+  if (b) b.classList.toggle('aberta');
+});
+
+const VIEWS = { geral: viewGeral, contas: viewContas, assinaturas: viewAssinaturas, ofertas: viewOfertas, seguranca: viewSeguranca, mensagens: viewMensagens, sistema: viewSistema };
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-sec],[data-abrir],[data-fechar],[data-aba],[data-acao],[data-filtro]');

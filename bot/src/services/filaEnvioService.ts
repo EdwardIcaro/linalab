@@ -16,13 +16,13 @@ export async function processarFilaEnvios(): Promise<void> {
   // Sem WhatsApp conectado não adianta consumir: a mensagem voltaria como erro
   if (getStatus() !== 'connected') return;
 
-  let pendentes: { id: string; destino: string; texto: string; tentativas: number }[] = [];
+  let pendentes: { id: string; empresaId: string; destino: string; texto: string; tentativas: number }[] = [];
   try {
     pendentes = await (prisma as any).whatsappEnvio.findMany({
       where: { status: 'PENDENTE', tentativas: { lt: MAX_TENTATIVAS } },
       orderBy: { createdAt: 'asc' },
       take: LOTE,
-      select: { id: true, destino: true, texto: true, tentativas: true },
+      select: { id: true, empresaId: true, destino: true, texto: true, tentativas: true },
     });
   } catch (err: any) {
     // P1017 = Neon fechou conexão ociosa — reconecta e tenta no próximo ciclo
@@ -37,7 +37,7 @@ export async function processarFilaEnvios(): Promise<void> {
 
   for (const envio of pendentes) {
     try {
-      await sendMessage(envio.destino, envio.texto);
+      await sendMessage(envio.destino, envio.texto, { empresaId: envio.empresaId, tipo: 'EMAIL_AUTOMACAO' });
       // Texto é zerado depois do envio: a fila não guarda código de acesso à toa
       await (prisma as any).whatsappEnvio.update({
         where: { id: envio.id },

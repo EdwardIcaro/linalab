@@ -10,6 +10,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
+import { registrarEnvio, ouvirRecibos, type MetaEnvio } from './mensagemLog';
 import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio, handleDpPontoKeyword, handleDpLocation, handleDpEspelho } from './whatsappCommandHandler';
 import { notificarReconexao } from './ownerNotificationService';
 import { validateAndClaimByCode } from './pairingCodeStore';
@@ -207,6 +208,7 @@ export async function initBaileys(): Promise<void> {
     let hadCredsOnStart  = authFilesOnStart.length > 2;
     console.log(`[Baileys] Arquivos de auth no disco: ${authFilesOnStart.length} (sessão real: ${hadCredsOnStart})`);
     if (globalStore) globalStore.bind(sock.ev);
+    ouvirRecibos(sock);
 
     sock.ev.on('creds.update', async () => {
       credsJustUpdated = true;
@@ -671,7 +673,17 @@ export function startWatchdog(): void {
   console.log(`[Baileys][Watchdog] Ativo — checa a cada ${WATCHDOG_CHECK_INTERVAL_MS / 1000}s, limite de ${WATCHDOG_STUCK_THRESHOLD_MS / 60_000}min sem progresso.`);
 }
 
-export async function sendMessage(to: string, text: string): Promise<void> {
+export async function sendMessage(to: string, text: string, meta?: MetaEnvio): Promise<void> {
+  try {
+    const r = await enviarTexto(to, text);
+    await registrarEnvio({ canal: 'LINA', meta, destino: r?.key?.remoteJid || to, texto: text, waMessageId: r?.key?.id });
+  } catch (err) {
+    await registrarEnvio({ canal: 'LINA', meta, destino: to, texto: text, erro: err });
+    throw err;
+  }
+}
+
+async function enviarTexto(to: string, text: string): Promise<any> {
   if (!globalSocket) throw new Error('Bot Lina não está conectado');
   let jid: string;
   if (to.includes('@')) {
@@ -694,13 +706,20 @@ export async function sendMessage(to: string, text: string): Promise<void> {
       jid = `${cleanPhone}@s.whatsapp.net`;
     }
   }
-  await globalSocket.sendMessage(jid, { text });
+  return globalSocket.sendMessage(jid, { text });
 }
 
-export async function sendImageBuffer(to: string, imageBuffer: Buffer, caption?: string): Promise<void> {
-  if (!globalSocket) throw new Error('Bot Lina não está conectado');
+export async function sendImageBuffer(to: string, imageBuffer: Buffer, caption?: string, meta?: MetaEnvio): Promise<void> {
   const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
-  await globalSocket.sendMessage(jid, { image: imageBuffer, caption: caption ?? '', mimetype: 'image/png' });
+  const texto = `🖼️ Imagem${caption ? ' — ' + caption : ''}`;
+  try {
+    if (!globalSocket) throw new Error('Bot Lina não está conectado');
+    const r = await globalSocket.sendMessage(jid, { image: imageBuffer, caption: caption ?? '', mimetype: 'image/png' });
+    await registrarEnvio({ canal: 'LINA', meta, destino: jid, texto, midia: true, waMessageId: r?.key?.id });
+  } catch (err) {
+    await registrarEnvio({ canal: 'LINA', meta, destino: jid, texto, midia: true, erro: err });
+    throw err;
+  }
 }
 
 export async function sendMessageAndCaptureJid(toPhone: string, text: string): Promise<string | null> {
@@ -710,6 +729,7 @@ export async function sendMessageAndCaptureJid(toPhone: string, text: string): P
     const jid        = `${cleanPhone}@s.whatsapp.net`;
     const result     = await globalSocket.sendMessage(jid, { text });
     const actualJid  = result?.key?.remoteJid;
+    await registrarEnvio({ canal: 'LINA', meta: { tipo: 'CONFIRMAR_NUMERO' }, destino: actualJid || jid, texto: text, waMessageId: result?.key?.id });
     if (actualJid?.endsWith('@lid')) {
       lidToPhone.set(actualJid.split('@')[0], cleanPhone);
     }

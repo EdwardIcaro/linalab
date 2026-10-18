@@ -88,7 +88,7 @@ export const salvarTelefoneAdmin = async (req: Request, res: Response) => {
     const linkConfirmacao = `${process.env.FRONTEND_URL || 'http://localhost'}/admin/confirmar-whatsapp.html?token=${confirmToken}`;
 
     try {
-      await botSend(telefoneSemFormatacao, `🔐 Olá! Clique no link abaixo para confirmar este número:\n\n${linkConfirmacao}\n\nEste link expira em 10 minutos.`);
+      await botSend(telefoneSemFormatacao, `🔐 Olá! Clique no link abaixo para confirmar este número:\n\n${linkConfirmacao}\n\nEste link expira em 10 minutos.`, { tipo: 'SEGURANCA' });
     } catch (error) {
       console.error('Erro ao enviar confirmação WhatsApp:', error);
       // Não falhar a request, apenas avisar que bot não respondeu
@@ -144,7 +144,7 @@ export const confirmarTelefoneAdmin = async (req: Request, res: Response) => {
     // Enviar mensagem de sucesso
     try {
       const telefoneSemFormatacao = removerFormatacaoTelefone(config.whatsappNotificationPhone!);
-      await botSend(telefoneSemFormatacao, '✅ Número confirmado! Você receberá alertas de segurança neste número.');
+      await botSend(telefoneSemFormatacao, '✅ Número confirmado! Você receberá alertas de segurança neste número.', { tipo: 'SEGURANCA' });
     } catch (error) {
       console.error('Erro ao enviar confirmação:', error);
     }
@@ -300,7 +300,7 @@ export const recuperarSenha = async (req: Request, res: Response) => {
     for (const config of adminConfigs) {
       try {
         const telefoneSemFormatacao = removerFormatacaoTelefone(config.whatsappNotificationPhone!);
-        await botSend(telefoneSemFormatacao, `⚠️ Tentativa de reset de senha\n\nUsuário: ${usuario.nome}\nE-mail: ${usuario.email}\nIP: ${ip}\nHorário: ${horario}\n\nAprovar ou rejeitar: ${linkRevisar}\n(expira em 1 hora)`);
+        await botSend(telefoneSemFormatacao, `⚠️ Tentativa de reset de senha\n\nUsuário: ${usuario.nome}\nE-mail: ${usuario.email}\nIP: ${ip}\nHorário: ${horario}\n\nAprovar ou rejeitar: ${linkRevisar}\n(expira em 1 hora)`, { tipo: 'SEGURANCA' });
       } catch (error) {
         console.error('Erro ao notificar admin:', error);
       }
@@ -390,7 +390,8 @@ export const aprovarReset = async (req: Request, res: Response) => {
       try {
         await botSend(
           removerFormatacaoTelefone(adminConfig.whatsappNotificationPhone),
-          `✅ Reset aprovado para ${tentativa.usuario.nome} (${tentativa.usuario.email}).\n\nSe o e-mail não chegar, repasse este link (expira em 15 min, uso único):\n${linkReset}`
+          `✅ Reset aprovado para ${tentativa.usuario.nome} (${tentativa.usuario.email}).\n\nSe o e-mail não chegar, repasse este link (expira em 15 min, uso único):\n${linkReset}`,
+          { tipo: 'SEGURANCA' },
         );
         whatsappOwner = true;
       } catch (error) {

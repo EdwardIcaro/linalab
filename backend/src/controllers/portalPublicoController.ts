@@ -1525,7 +1525,7 @@ export const confirmarFace = async (req: Request, res: Response) => {
 
     if (func.wppJid) {
       botSend(func.wppJid,
-        `✅ *Rosto cadastrado com sucesso!*\n\nA partir de agora o sistema reconhece você ao bater ponto.`
+        `✅ *Rosto cadastrado com sucesso!*\n\nA partir de agora o sistema reconhece você ao bater ponto.`, { tipo: 'DP_ROSTO' }
       ).catch(() => {});
     }
 
@@ -1632,7 +1632,7 @@ export const confirmarPonto = async (req: Request, res: Response) => {
       if (!gpsNegado && gpsForaRaio) {
         if (func.wppJid) {
           botSend(func.wppJid,
-            `📍 *Ponto não registrado*\n\nVocê está a *${distanciaM}m* da empresa (raio permitido: ${raioGps}m).\n\nAproxime-se e tente novamente pelo link.`
+            `📍 *Ponto não registrado*\n\nVocê está a *${distanciaM}m* da empresa (raio permitido: ${raioGps}m).\n\nAproxime-se e tente novamente pelo link.`, { tipo: 'DP_FORA_DO_RAIO' }
           ).catch(() => {});
         }
         return res.status(403).json({ erro: 'Fora da área autorizada', distancia: distanciaM, raio: raioGps });

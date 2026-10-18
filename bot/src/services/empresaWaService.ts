@@ -12,6 +12,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { join } from 'path';
 import { tmpdir } from 'os';
 import prisma from '../db';
+import { registrarEnvio, ouvirRecibos } from './mensagemLog';
 
 interface EmpresaState {
   socket: WASocket | null;
@@ -201,6 +202,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
 
     st.socket = sock;
 
+    ouvirRecibos(sock);
     sock.ev.on('creds.update', async () => {
       try { mkdirSync(dir, { recursive: true }); await saveCreds(); } catch { return; }
       await persistAuthToDb(empresaId);
@@ -342,7 +344,18 @@ export function getEmpresaStatus(empresaId: string): { status: string; qrDataUrl
   return { status: st.status, ...(st.qrDataUrl ? { qrDataUrl: st.qrDataUrl } : {}) };
 }
 
-export async function sendEmpresaMessage(empresaId: string, telefone: string, texto: string): Promise<void> {
+export async function sendEmpresaMessage(empresaId: string, telefone: string, texto: string, tipo?: string): Promise<void> {
+  const meta = { empresaId, tipo: tipo || 'MENSAGEM_EMPRESA' };
+  try {
+    const r = await enviarDaEmpresa(empresaId, telefone, texto);
+    await registrarEnvio({ canal: 'EMPRESA', meta, destino: r?.key?.remoteJid || telefone, texto, waMessageId: r?.key?.id });
+  } catch (err) {
+    await registrarEnvio({ canal: 'EMPRESA', meta, destino: telefone, texto, erro: err });
+    throw err;
+  }
+}
+
+async function enviarDaEmpresa(empresaId: string, telefone: string, texto: string): Promise<any> {
   const st = sessions.get(empresaId);
   if (!st?.socket || st.status !== 'CONECTADO') throw new Error('WhatsApp da empresa não está conectado');
   const digits = telefone.replace(/\D/g, '');
@@ -351,7 +364,7 @@ export async function sendEmpresaMessage(empresaId: string, telefone: string, te
   const results = await st.socket.onWhatsApp(digits);
   const found   = Array.isArray(results) ? results[0] : results;
   if (!found?.exists) throw new Error(`Número ${telefone} não encontrado no WhatsApp`);
-  await st.socket.sendMessage(found.jid ?? jid, { text: texto });
+  return st.socket.sendMessage(found.jid ?? jid, { text: texto });
 }
 
 export async function disconnectEmpresa(empresaId: string): Promise<void> {

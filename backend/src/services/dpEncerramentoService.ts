@@ -72,7 +72,7 @@ async function avisarFuncionario(
   if (await jaAvisou(empresaId, chave)) return;
   const destino = await destinoWppFuncionario(funcionarioId);
   if (!destino) return; // sem WhatsApp vinculado — nada a enviar, e nada a marcar
-  await botSend(destino, texto);
+  await botSend(destino, texto, { empresaId, tipo: 'DP_PONTO' });
   await marcarAvisado(empresaId, chave);
 }
 
@@ -190,6 +190,7 @@ export async function rodarPontoPendente(): Promise<void> {
             `🔒 ${nome}, seu ponto de hoje ficou aberto e foi encerrado automaticamente às ` +
             `${minParaHora(saidaMin)}, que é o horário de saída da empresa.\n\n` +
             `Se você saiu em outro horário, fale com o gestor que ele ajusta.`,
+            { empresaId: emp.empresaId, tipo: 'DP_PONTO' },
           ).catch(e => console.error('[dp-ponto] aviso encerramento:', e));
         }
       }

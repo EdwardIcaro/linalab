@@ -3396,7 +3396,7 @@ async function handlePixOrdem(
       `Mostre este QR Code para o cliente escanear e pagar.`;
 
     // Enviar imagem diretamente (retornar string vazia para não duplicar msg)
-    await sendImageBuffer(from, qrCodeBuffer, caption);
+    await sendImageBuffer(from, qrCodeBuffer, caption, { empresaId: ordem.empresaId, tipo: 'PIX' });
     return ''; // Baileys ignora string vazia
 
   } catch (error) {

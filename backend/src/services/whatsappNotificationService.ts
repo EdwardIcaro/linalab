@@ -142,7 +142,7 @@ export async function notifyAdmins(empresaId: string, message: string, notifKey?
     }
     const dest = admin.jid ?? `${admin.telefone.replace(/\D/g, '')}@s.whatsapp.net`;
     try {
-      await botSend(dest, message);
+      await botSend(dest, message, { empresaId, tipo: notifKey || 'AVISO_ADMIN' });
     } catch (e) {
       console.error(`[Notif] Erro ao enviar para ${dest}:`, e);
     }
@@ -175,7 +175,7 @@ export async function notifyByPermission(empresaId: string, permission: string, 
   for (const u of botUsers) {
     if (!u.jid) continue;
     try {
-      await botSend(u.jid, message);
+      await botSend(u.jid, message, { empresaId, tipo: permission });
     } catch (e) {
       console.error(`[Notif] Erro ao enviar para ${u.jid}:`, e);
     }
@@ -235,7 +235,7 @@ export async function notifyLavadorNovaOrdem(empresaId: string, lavadorIds: stri
     if (obs) msg += `\n📋 ${obs}`;
 
     for (const lav of lavadores) {
-      if (lav.telefone) await botSend(lav.telefone, msg).catch(() => {});
+      if (lav.telefone) await botSend(lav.telefone, msg, { empresaId, tipo: 'NOVA_ORDEM_LAVADOR' }).catch(() => {});
     }
   } catch (e) {
     console.error('[Notif] notifyLavadorNovaOrdem:', e);
@@ -277,7 +277,7 @@ export async function notifyLcFuncionarioNovaOrdem(empresaId: string, funcionari
     const obs = dados.observacao?.trim();
     if (obs) msg += `\n📋 ${obs}`;
 
-    await botSend(func.wppJid, msg).catch(() => {});
+    await botSend(func.wppJid, msg, { empresaId, tipo: 'NOVA_ORDEM_FUNCIONARIO' }).catch(() => {});
   } catch (e) {
     console.error('[Notif] notifyLcFuncionarioNovaOrdem:', e);
   }
@@ -544,7 +544,7 @@ async function sendAdminBlocks(blocos: AdminBloco[]): Promise<void> {
       const header = multi ? b.headerMulti(b.empresaNome) : b.headerSingle;
       const footer = multi ? (b.footerMulti?.(indice) ?? '') : (b.footerSingle ?? '');
       try {
-        await botSend(dest, `${header}${b.corpo}${footer}`);
+        await botSend(dest, `${header}${b.corpo}${footer}`, { empresaId: b.empresaId, tipo: b.notifKey });
       } catch (e) {
         console.error(`[Notif] Erro ao enviar para ${dest}:`, e);
       }

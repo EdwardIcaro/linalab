@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { listarMensagens } from '../controllers/mensagemLogController';
 import {
   getGlobalStats,
   listCompanies,
@@ -70,6 +71,9 @@ router.get('/config/whatsapp', obterConfigWhatsapp);
 router.delete('/whatsapp-telefone', removerTelefoneAdmin);
 
 // Aprovação/rejeição de reset de senha
+// Log de mensagens enviadas pelo bot (Lina + WhatsApp das empresas)
+router.get('/mensagens', listarMensagens);
+
 router.get('/resetar-senha/tentativas', listarTentativasReset);
 router.post('/resetar-senha/aprovar', aprovarReset);
 router.post('/resetar-senha/rejeitar', rejeitarReset);

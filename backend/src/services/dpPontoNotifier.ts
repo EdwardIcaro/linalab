@@ -57,7 +57,7 @@ export async function notificarPontoRegistrado(
     if (!destino) return;
 
     const emoji = tipo === 'ENTRADA' ? '✅' : '👋';
-    await botSend(destino, `${emoji} *${tipo}* registrada às ${horaFormatada}!${alerta}`);
+    await botSend(destino, `${emoji} *${tipo}* registrada às ${horaFormatada}!${alerta}`, { tipo: 'DP_PONTO' });
   } catch (e) {
     console.error('[dpPonto] notificarPontoRegistrado:', e);
   }

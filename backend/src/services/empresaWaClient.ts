@@ -32,10 +32,10 @@ export async function empresaWaStatus(empresaId: string): Promise<{ status: stri
   return botEmpresaFetch(`/empresa-wa/status/${encodeURIComponent(empresaId)}`);
 }
 
-export async function empresaWaSend(empresaId: string, telefone: string, texto: string): Promise<void> {
+export async function empresaWaSend(empresaId: string, telefone: string, texto: string, tipo?: string): Promise<void> {
   await botEmpresaFetch(`/empresa-wa/send/${encodeURIComponent(empresaId)}`, {
     method: 'POST',
-    body: { telefone, texto },
+    body: { telefone, texto, tipo },
   });
 }
 

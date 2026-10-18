@@ -55,7 +55,7 @@ async function avisar(empresaId: string, funcionarioId: string, chave: string, t
   if (await jaAvisou(empresaId, chave)) return;
   const destino = await destinoWppFuncionario(funcionarioId);
   if (!destino) return; // sem WhatsApp: esse funcionário assina pelo totem
-  await botSend(destino, texto);
+  await botSend(destino, texto, { empresaId, tipo: 'DP_ASSINATURA' });
   await marcarAvisado(empresaId, chave);
 }
 

@@ -41,7 +41,7 @@ export async function runRelatorioFinanceiroMensal(): Promise<void> {
 
         for (const admin of admins) {
           const dest = admin.jid ?? admin.telefone;
-          await sendMessage(dest, msg).catch(e => console.error(`[RelatorioFinanceiro] Erro ao enviar pra ${dest}:`, e));
+          await sendMessage(dest, msg, { empresaId: empresa.id, tipo: 'RELATORIO_FINANCEIRO' }).catch(e => console.error(`[RelatorioFinanceiro] Erro ao enviar pra ${dest}:`, e));
         }
       } catch (e) {
         console.error(`[RelatorioFinanceiro] Erro na empresa ${empresa.id}:`, e);

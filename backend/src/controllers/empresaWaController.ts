@@ -90,7 +90,7 @@ export async function send(req: Request, res: Response) {
   const { telefone, texto } = req.body as { telefone: string; texto: string };
   if (!telefone || !texto) return res.status(400).json({ error: 'telefone e texto são obrigatórios' });
   try {
-    await empresaWaSend(empresaId, telefone, texto);
+    await empresaWaSend(empresaId, telefone, texto, 'MENSAGEM_MANUAL');
     return res.json({ ok: true });
   } catch (err: any) {
     return responderErroEnvio(res, err);
@@ -148,7 +148,7 @@ export async function enviarTemplate(req: Request, res: Response) {
       .replace(/\{\{dias\}\}/g,    String(dias))
       .replace(/\{\{empresa\}\}/g, empresa?.nome || '');
 
-    await empresaWaSend(empresaId, telefone, texto);
+    await empresaWaSend(empresaId, telefone, texto, 'TEMPLATE_ORDEM');
 
     return res.json({ ok: true, mensagem: texto });
   } catch (err: any) {
@@ -201,7 +201,7 @@ export async function enviarParaCliente(req: Request, res: Response) {
         .replace(/\{\{empresa\}\}/g, empresa?.nome || '');
     }
 
-    await empresaWaSend(empresaId, telefone, mensagem);
+    await empresaWaSend(empresaId, telefone, mensagem, 'MENSAGEM_CLIENTE');
     return res.json({ ok: true, mensagem });
   } catch (err: any) {
     return responderErroEnvio(res, err);
