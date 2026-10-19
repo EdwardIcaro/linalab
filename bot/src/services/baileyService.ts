@@ -60,25 +60,60 @@ function markProgress() { lastProgressAt = Date.now(); }
 // AUTH STATE — DB ↔ /tmp
 // ==========================================
 
+// Mensagens enviadas recentemente, pra atender pedidos de reenvio (getMessage)
+const enviadasRecentes = new Map<string, { msg: any; em: number }>();
+const ENVIADAS_MAX = 1000;
+const ENVIADAS_TTL = 6 * 60 * 60_000;
+
+function guardarEnviada(id: string, msg: any): void {
+  enviadasRecentes.set(id, { msg, em: Date.now() });
+  if (enviadasRecentes.size > ENVIADAS_MAX) {
+    const limite = Date.now() - ENVIADAS_TTL;
+    for (const [k, v] of enviadasRecentes) {
+      if (enviadasRecentes.size <= ENVIADAS_MAX && v.em >= limite) break;
+      enviadasRecentes.delete(k);
+    }
+  }
+}
+
 async function getGlobalInstance() {
   return prisma.whatsappInstance.findFirst({ where: { instanceName: GLOBAL_INSTANCE_NAME } });
 }
 
+function registrationIdDe(credsJson: string | undefined): number | null {
+  try { return credsJson ? JSON.parse(credsJson).registrationId ?? null : null; } catch { return null; }
+}
+
 async function restoreAuthFromDb(): Promise<void> {
   try {
-    // Sempre limpar /tmp e restaurar do banco — garante consistência em restarts/deploys
+    const instance = await getGlobalInstance();
+    const authFiles = instance?.authState ? JSON.parse(instance.authState) as Record<string, string> : null;
+
+    // O disco é a cópia viva: as chaves de sessão avançam a cada mensagem, e o banco só
+    // é atualizado de tempos em tempos. Restaurar o banco por cima de um disco mais novo
+    // volta as sessões no tempo e o celular do destinatário não consegue mais decifrar
+    // ("Aguardando mensagem"). Só usa o banco se o disco não tem sessão ou é de outro
+    // pareamento (registrationId diferente, ex.: depois do scan-local).
+    const credsDisco = join(GLOBAL_AUTH_DIR, 'creds.json');
+    if (existsSync(credsDisco) && readdirSync(GLOBAL_AUTH_DIR).length > 2) {
+      const regDisco = registrationIdDe(readFileSync(credsDisco, 'utf-8'));
+      const regBanco = registrationIdDe(authFiles?.['creds.json']);
+      if (regDisco !== null && (regBanco === null || regBanco === regDisco)) {
+        console.log('[Baileys] Auth state do disco mantido (mais recente que o banco)');
+        return;
+      }
+    }
+
     if (existsSync(GLOBAL_AUTH_DIR)) {
       rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
     }
     mkdirSync(GLOBAL_AUTH_DIR, { recursive: true });
 
-    const instance = await getGlobalInstance();
-    if (!instance?.authState) {
+    if (!authFiles) {
       console.log('[Baileys] Início limpo — sem credenciais salvas');
       return;
     }
 
-    const authFiles = JSON.parse(instance.authState) as Record<string, string>;
     for (const [filename, content] of Object.entries(authFiles)) {
       writeFileSync(join(GLOBAL_AUTH_DIR, filename), content, 'utf-8');
     }
@@ -199,8 +234,17 @@ export async function initBaileys(): Promise<void> {
       // fixo ({ conversation: 'Mensagem de contexto' }) que o WhatsApp chegou a exibir
       // como se fosse uma mensagem real nossa durante retries de sessão (visto em
       // produção em 21/09 durante instabilidade de rede).
-      getMessage: async (_key: any) => undefined,
+      // Quando o celular do destinatário não consegue decifrar, ele pede reenvio e o
+      // Baileys chama getMessage. Sem a mensagem aqui, ela fica "Aguardando mensagem" pra sempre.
+      getMessage: async (key: any) => enviadasRecentes.get(key?.id)?.msg,
     });
+
+    const enviarOriginal = sock.sendMessage.bind(sock);
+    sock.sendMessage = async (...args: any[]) => {
+      const r = await (enviarOriginal as any)(...args);
+      if (r?.key?.id && r.message) guardarEnviada(r.key.id, r.message);
+      return r;
+    };
 
     let credsJustUpdated = false;
     // Sessão real = múltiplos arquivos (creds.json sozinho = só noise keys, sem sessão)
@@ -308,6 +352,7 @@ export async function initBaileys(): Promise<void> {
 
           if (isRealLogout) {
             console.log('[Baileys] ⚠️ Logout real — limpando credenciais');
+            rmSync(GLOBAL_AUTH_DIR, { recursive: true, force: true });
             await prisma.whatsappInstance.updateMany({
               where: { instanceName: GLOBAL_INSTANCE_NAME },
               data: { status: 'disconnected', authState: null, qrCode: null },
