@@ -154,34 +154,57 @@ export async function chatCompletionComFerramentas(
     return { resposta: content, ferramentasChamadas: [], falhas: [] };
   }
 
-  messages.push(msg!);
-
   const ferramentasChamadas: string[] = [];
   const falhas: string[] = [];
 
-  for (const call of chamadas) {
-    ferramentasChamadas.push(call.function.name);
-    let resultado: string;
-    try {
-      const args = call.function.arguments ? JSON.parse(call.function.arguments) : {};
-      resultado = await executarFerramenta(call.function.name, args);
-    } catch (e) {
-      console.error(`[Groq] Erro executando ferramenta ${call.function.name}:`, e);
-      falhas.push(call.function.name);
-      resultado = 'Não consegui buscar esse dado agora.';
+  // A IA pode precisar de mais de uma busca (ex.: achar o cliente e depois as ordens dele).
+  // Até MAX_RODADAS rodadas com ferramentas; a última resposta sai sem ferramenta.
+  const MAX_RODADAS = 3;
+  let pendentes = chamadas;
+  let msgAtual = msg!;
+  for (let rodada = 1; ; rodada++) {
+    messages.push(msgAtual);
+    for (const call of pendentes) {
+      ferramentasChamadas.push(call.function.name);
+      let resultado: string;
+      try {
+        const args = call.function.arguments ? JSON.parse(call.function.arguments) : {};
+        resultado = await executarFerramenta(call.function.name, args);
+      } catch (e) {
+        console.error(`[Groq] Erro executando ferramenta ${call.function.name}:`, e);
+        falhas.push(call.function.name);
+        resultado = 'Não consegui buscar esse dado agora.';
+      }
+      messages.push({ role: 'tool', tool_call_id: call.id, content: resultado });
     }
-    messages.push({ role: 'tool', tool_call_id: call.id, content: resultado });
+
+    const ultima = rodada >= MAX_RODADAS;
+    let resp;
+    try {
+      resp = await groq.chat.completions.create({
+        model: 'openai/gpt-oss-120b',
+        messages,
+        ...(ultima ? {} : { tools, tool_choice: 'auto' as const }),
+        temperature: 0.5,
+        max_tokens: 600,
+      });
+    } catch (e: any) {
+      // Sem ferramentas na última rodada a IA às vezes ainda tenta chamar uma — a API recusa
+      if (e?.error?.error?.code === 'tool_use_failed') {
+        console.warn('[Groq] IA quis outra ferramenta além do limite:', e.error.error.failed_generation);
+        return { resposta: 'Não consegui juntar essa informação agora. Tenta perguntar de um jeito mais direto?', ferramentasChamadas, falhas };
+      }
+      throw e;
+    }
+
+    const m = resp.choices[0]?.message;
+    pendentes = m?.tool_calls ?? [];
+    if (pendentes.length === 0 || ultima) {
+      const content = (m?.content ?? '').trim().replace(/\*\*(.+?)\*\*/g, '*$1*');
+      return { resposta: content, ferramentasChamadas, falhas };
+    }
+    msgAtual = m!;
   }
-
-  const segunda = await groq.chat.completions.create({
-    model: 'openai/gpt-oss-120b',
-    messages,
-    temperature: 0.5,
-    max_tokens: 600,
-  });
-
-  const content = (segunda.choices[0]?.message?.content ?? '').trim().replace(/\*\*(.+?)\*\*/g, '*$1*');
-  return { resposta: content, ferramentasChamadas, falhas };
 }
 
 /**

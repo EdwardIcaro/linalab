@@ -29,15 +29,16 @@ export const FERRAMENTAS: ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'buscarOrdens',
-      description: 'Busca ordens de serviço finalizadas da empresa num período livre (não só hoje/mês atual), com filtro opcional de tipo de veículo.',
+      description: 'Lista ordens de serviço da empresa, uma por uma (número, cliente, veículo, valor, lavadores, status) com o total. Use pra "quais são as ordens…", ordens abertas/em andamento/no pátio, ordens de um cliente (ex.: Localiza) ou de um período.',
       parameters: {
         type: 'object',
         properties: {
-          inicio: { type: 'string', description: 'Data inicial, formato YYYY-MM-DD' },
-          fim: { type: 'string', description: 'Data final, formato YYYY-MM-DD' },
+          situacao: { type: 'string', enum: ['finalizadas', 'abertas'], description: 'finalizadas (padrão) ou abertas = pendentes, em andamento e aguardando pagamento (o pátio agora)' },
+          inicio: { type: 'string', description: 'Data inicial YYYY-MM-DD. Para finalizadas é obrigatória; para abertas, deixe vazio' },
+          fim: { type: 'string', description: 'Data final YYYY-MM-DD (padrão = inicio)' },
+          cliente: { type: 'string', description: 'Nome (parcial) do cliente pra filtrar — opcional' },
           tipoVeiculo: { type: 'string', description: 'Ex: CARRO, MOTO — opcional' },
         },
-        required: ['inicio', 'fim'],
       },
     },
   },
@@ -90,7 +91,7 @@ export async function executarFerramenta(
 
     case 'buscarOrdens':
       if (!hasPermission(ctx.user, 'ver_financeiro')) return 'O usuário não tem permissão pra ver ordens/financeiro.';
-      return buscarOrdensImpl(String(args.inicio ?? ''), String(args.fim ?? ''), args.tipoVeiculo, ctx.empresaId);
+      return buscarOrdensImpl(args, ctx.empresaId);
 
     case 'explicarSistema':
       return explicarSistemaImpl(String(args.topico ?? ''));
@@ -137,36 +138,63 @@ async function buscarClienteImpl(termo: string, empresaId: string): Promise<stri
   }).join('\n---\n');
 }
 
-async function buscarOrdensImpl(inicio: string, fim: string, tipoVeiculo: string | undefined, empresaId: string): Promise<string> {
-  const dataInicio = new Date(`${inicio}T00:00:00`);
-  const dataFim = new Date(`${fim}T23:59:59`);
-  if (isNaN(dataInicio.getTime()) || isNaN(dataFim.getTime())) {
-    return 'Não consegui entender o período pedido.';
+const LISTA_MAX = 25; // acima disso só o resumo — o limite de tokens da Groq é apertado
+
+const STATUS_LEGIVEL: Record<string, string> = {
+  PENDENTE: 'na fila', EM_ANDAMENTO: 'em andamento', AGUARDANDO_PAGAMENTO: 'aguardando pagamento', FINALIZADO: 'finalizada',
+};
+
+async function buscarOrdensImpl(args: any, empresaId: string): Promise<string> {
+  const abertas = args.situacao === 'abertas';
+  const inicio = String(args.inicio ?? '');
+  const fim = String(args.fim || inicio);
+  const cliente = String(args.cliente ?? '').trim();
+  const tipoVeiculo: string | undefined = args.tipoVeiculo || undefined;
+
+  let periodo: { gte: Date; lte: Date } | undefined;
+  if (inicio) {
+    const dataInicio = new Date(`${inicio}T00:00:00`);
+    const dataFim = new Date(`${fim}T23:59:59`);
+    if (isNaN(dataInicio.getTime()) || isNaN(dataFim.getTime())) return 'Não consegui entender o período pedido.';
+    periodo = { gte: dataInicio, lte: dataFim };
+  } else if (!abertas) {
+    return 'Preciso do período (inicio) pra buscar ordens finalizadas.';
   }
 
   const ordens = await prisma.ordemServico.findMany({
     where: {
       empresaId,
-      status: 'FINALIZADO',
-      dataFim: { gte: dataInicio, lte: dataFim },
+      ...(abertas
+        ? { status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] }, ...(periodo ? { createdAt: periodo } : {}) }
+        : { status: 'FINALIZADO', dataFim: periodo }),
+      ...(cliente ? { cliente: { nome: { contains: cliente, mode: 'insensitive' } } } : {}),
       ...(tipoVeiculo ? { veiculo: { tipoVeiculo: { equals: tipoVeiculo, mode: 'insensitive' } } } : {}),
     },
-    include: { veiculo: { select: { modelo: true, tipoVeiculo: true } } },
-    orderBy: { dataFim: 'desc' },
+    include: {
+      cliente: { select: { nome: true } },
+      veiculo: { select: { modelo: true, placa: true, tipoVeiculo: true } },
+      ordemLavadores: { select: { lavador: { select: { nome: true } } } },
+      lavador: { select: { nome: true } },
+    },
+    orderBy: abertas ? { createdAt: 'asc' } : { dataFim: 'desc' },
     take: 200,
   });
 
-  if (ordens.length === 0) return `Nenhuma ordem finalizada encontrada nesse período${tipoVeiculo ? ` (${tipoVeiculo})` : ''}.`;
+  const filtro = [cliente && `cliente "${cliente}"`, tipoVeiculo].filter(Boolean).join(', ');
+  const rotulo = abertas ? 'ordens abertas' : `ordens finalizadas de ${inicio}${fim !== inicio ? ` a ${fim}` : ''}`;
+  if (ordens.length === 0) return `Nenhuma das ${rotulo}${filtro ? ` (${filtro})` : ''}.`;
 
   const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
-  const porTipo: Record<string, number> = {};
-  for (const o of ordens) {
-    const t = o.veiculo?.tipoVeiculo ?? 'ITEM AVULSO';
-    porTipo[t] = (porTipo[t] ?? 0) + 1;
-  }
-  const resumoTipos = Object.entries(porTipo).map(([t, n]) => `${t}: ${n}`).join(', ');
+  const linhas = ordens.slice(0, LISTA_MAX).map(o => {
+    const item = o.veiculo ? `${o.veiculo.modelo ?? 'veículo'} ${o.veiculo.placa}` : (o.itemAvulso ?? 'item avulso');
+    const nomes = o.ordemLavadores.map(l => l.lavador.nome);
+    const lavadores = (nomes.length ? nomes : o.lavador ? [o.lavador.nome] : []).join(' e ') || 'sem lavador';
+    const status = abertas ? ` · ${STATUS_LEGIVEL[o.status] ?? o.status}` : '';
+    return `#${o.numeroOrdem} · ${o.cliente.nome} · ${item} · R$ ${o.valorTotal.toFixed(2)} · ${lavadores}${status}`;
+  });
+  const resto = ordens.length > LISTA_MAX ? `\n(+${ordens.length - LISTA_MAX} ordens não listadas)` : '';
 
-  return `${ordens.length} ordens finalizadas de ${inicio} a ${fim}. Faturamento total: R$ ${total.toFixed(2)}. Por tipo: ${resumoTipos}.`;
+  return `${ordens.length} ${rotulo}${filtro ? ` (${filtro})` : ''}. Total: R$ ${total.toFixed(2)}.\n${linhas.join('\n')}${resto}`;
 }
 
 function explicarSistemaImpl(topico: string): string {
