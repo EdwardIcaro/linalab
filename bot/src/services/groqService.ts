@@ -38,7 +38,12 @@ EMOJIS:
 DADOS:
 - Contexto tem: HOJE, MÊS ATUAL, MÊS ANTERIOR e possivelmente um dia específico mencionado.
 - Use só o que está no contexto. Valores: R$ X.XXX,XX.
-- Negrito: *texto* (um asterisco). NUNCA **texto**. Sem # para títulos. Máximo 2 parágrafos.`;
+- Negrito: *texto* (um asterisco). NUNCA **texto**. Sem # para títulos. Máximo 2 parágrafos.
+- Você conversa, não emite relatório: nada de molduras (━━━) nem números em emoji (1️⃣ 2️⃣). Listas curtas com • quando precisar.
+
+CONVERSA:
+- As mensagens anteriores (se houver) são a conversa recente com essa pessoa. Use-as pra entender referências curtas ("e ontem?", "e o Felipe?", "e em setembro?") — a pergunta nova continua o assunto anterior.
+- Os números valem sempre do CONTEXTO ou das ferramentas desta mensagem, nunca de uma resposta antiga sua.`;
 
 /**
  * Transcreve um áudio (buffer ogg/opus do WhatsApp) usando Whisper via Groq.
@@ -59,7 +64,8 @@ export async function transcribeAudio(buffer: Buffer): Promise<string> {
 export async function chatCompletion(
   userMessage: string,
   context: string = '',
-  systemPrompt?: string
+  systemPrompt?: string,
+  historico: ChatCompletionMessageParam[] = []
 ): Promise<string> {
   try {
     const defaultSystemPrompt = systemPrompt || LINA_SYSTEM_PROMPT;
@@ -76,6 +82,7 @@ export async function chatCompletion(
           role: 'system',
           content: defaultSystemPrompt
         },
+        ...historico,
         {
           role: 'user',
           content: fullMessage
@@ -109,10 +116,11 @@ export async function chatCompletionComFerramentas(
   context: string,
   tools: ChatCompletionTool[],
   executarFerramenta: (nome: string, args: any) => Promise<string>,
-  forcarFerramenta?: string
+  opcoes: { forcarFerramenta?: string; historico?: ChatCompletionMessageParam[]; promptExtra?: string } = {}
 ): Promise<{ resposta: string; ferramentasChamadas: string[]; falhas: string[] }> {
-  const systemPrompt = LINA_SYSTEM_PROMPT +
-    '\n\nFERRAMENTAS:\n- Você tem acesso a ferramentas pra buscar dado que não está no CONTEXTO DO DIA (cliente específico, período diferente de hoje/mês atual, dúvida sobre o próprio sistema). Use quando fizer sentido.\n- Se uma ferramenta te dá um nome que parece um termo comum (ex: "Data Point"), CONFIE no resultado dela — é o nome de um produto do sistema, não o termo genérico que você já conhece. Nunca substitua o resultado da ferramenta pelo seu próprio conhecimento.\n- Nunca invente o resultado de uma ferramenta — se ela não achou nada, diga isso.';
+  const { forcarFerramenta, historico = [], promptExtra = '' } = opcoes;
+  const systemPrompt = LINA_SYSTEM_PROMPT + promptExtra +
+    '\n\nFERRAMENTAS:\n- Você tem acesso a ferramentas pra buscar dado que não está no CONTEXTO DO DIA (cliente específico, período diferente de hoje/mês atual, dúvida sobre o próprio sistema). Use quando fizer sentido.\n- Se uma ferramenta te dá um nome que parece um termo comum (ex: "Data Point"), CONFIE no resultado dela — é o nome de um produto do sistema, não o termo genérico que você já conhece. Nunca substitua o resultado da ferramenta pelo seu próprio conhecimento.\n- Nunca invente o resultado de uma ferramenta — se ela não achou nada, diga isso.\n- Dia ou período que não está no CONTEXTO: busque com a ferramenta antes de responder. Nunca afirme que "não teve movimento" sem ter o dado daquele dia.';
 
   const fullMessage = context
     ? `CONTEXTO DO DIA:\n${context}\n\n---\n\nUSUÁRIO: ${userMessage}`
@@ -120,16 +128,20 @@ export async function chatCompletionComFerramentas(
 
   const messages: ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
+    ...historico,
     { role: 'user', content: fullMessage },
   ];
 
   const primeira = await groq.chat.completions.create({
     model: 'openai/gpt-oss-120b',
     messages,
-    tools,
-    tool_choice: forcarFerramenta
-      ? { type: 'function', function: { name: forcarFerramenta } }
-      : 'auto',
+    // Sem ferramenta nenhuma (ex.: lavador sem permissão de status) a API recusa `tools: []`
+    ...(tools.length ? {
+      tools,
+      tool_choice: forcarFerramenta
+        ? { type: 'function' as const, function: { name: forcarFerramenta } }
+        : 'auto' as const,
+    } : {}),
     temperature: 0.4,
     max_tokens: 600,
   });

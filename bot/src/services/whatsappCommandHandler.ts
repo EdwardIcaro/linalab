@@ -7,7 +7,8 @@ import { randomBytes } from 'crypto';
 import prisma from '../db';
 import { registrarPontoPoller } from './dpPontoPoller';
 import { chatCompletion, chatCompletionComFerramentas, transcribeAudio } from './groqService';
-import { FERRAMENTAS, executarFerramenta } from './linaTools';
+import { historicoRecente, EstadoPersistente } from './conversaMemoria';
+import { FERRAMENTAS, executarFerramenta, FERRAMENTAS_LAVADOR, executarFerramentaLavador } from './linaTools';
 import { registrarEvento, formatarErro } from './ownerNotificationService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
@@ -122,16 +123,18 @@ interface PendingSaida {
 const pendingSaidas = new Map<string, PendingSaida>(); // chave = JID (empresa vem do contexto)
 
 // Comando pendente aguardando seleção de empresa (JID → mensagem original)
-const pendingCommands = new Map<string, string>();
+const MENU_TTL = 10 * 60_000;
+const pendingCommands = new EstadoPersistente<string>('empresaPendente', MENU_TTL);
 
 // Admin navegando menu de notificações individuais (JID → empresaId)
-const pendingNotifMenu = new Map<string, string>();
+const pendingNotifMenu = new EstadoPersistente<string>('notifMenu', MENU_TTL);
 
 // Admin com menu de "resumo das saídas" aberto, aguardando o número do período (JID → empresaId)
-const pendingResumoSaidas = new Map<string, string>();
+const pendingResumoSaidas = new EstadoPersistente<string>('resumoSaidas', MENU_TTL);
 
 // Lavador com menu numerado aberto (JID → { lavadorId, empresaId })
-const pendingLavadorMenu = new Map<string, { lavadorId: string; empresaId: string; actions: string[] }>();
+// Vale 10 min e aceita várias escolhas seguidas (antes sumia na primeira resposta)
+const pendingLavadorMenu = new EstadoPersistente<{ lavadorId: string; empresaId: string; actions: string[] }>('lavadorMenu', MENU_TTL);
 
 // Funcionário (subaccount): mapeia comando → permissão necessária do Role
 const COMMAND_PERMISSION_MAP: Record<string, string> = {
@@ -763,11 +766,11 @@ export async function handleIncomingMessage(
       if (pendingReports.has(from)) return handleReportStep(from, message);
 
       // Resposta numérica ao menu interativo
-      if (pendingLavadorMenu.has(from)) {
+      if (pendingLavadorMenu.has(from) && /^\d{1,2}$/.test(command)) {
         const ctx = pendingLavadorMenu.get(from)!;
-        pendingLavadorMenu.delete(from);
         const idx = parseInt(command) - 1;
         const acao = ctx.actions[idx];
+        if (acao) pendingLavadorMenu.set(from, ctx); // renova a validade do menu
         if (acao === 'status')    return handleStatusLavador(ctx.lavadorId, ctx.empresaId);
         if (acao === 'comissoes') return handleComissoesLavador(ctx.lavadorId, ctx.empresaId);
         if (acao === 'link')      return handleLinkLavador(ctx.lavadorId);
@@ -794,7 +797,7 @@ export async function handleIncomingMessage(
       const pixMatch = message.trim().match(/^(?:pix|pagamento)(?:\s+ordem)?\s+(\d+)$/i);
       if (pixMatch) return handlePixOrdem(parseInt(pixMatch[1]), empresaId, from, user, false);
 
-      return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
+      return responderLavadorComIA(from, message, empresaId, lavadorId, lavFeatures);
     }
 
     // ── FUNCIONÁRIO (subaccount): comandos limitados pela permissão do Role ────
@@ -806,7 +809,8 @@ export async function handleIncomingMessage(
 
       // Menu de "resumo das saídas" aguardando escolha de período
       if (pendingResumoSaidas.has(from)) {
-        return handleResumoSaidasStep(pendingResumoSaidas.get(from)!, from, command);
+        if (/^\d{1,2}$/.test(command)) return handleResumoSaidasStep(pendingResumoSaidas.get(from)!, from, command);
+        pendingResumoSaidas.delete(from); // mudou de assunto — segue o fluxo normal
       }
 
       const isSaudacaoFunc = /^(oi|ol[aá]|bom\s*dia|boa\s*tarde|boa\s*noite|e\s*a[ií]|tudo|hey|opa|eae|boa|salve|boas|al[oô])$/i.test(command);
@@ -843,7 +847,7 @@ export async function handleIncomingMessage(
         return buildResumoSaidasMenuText();
       }
 
-      return `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
+      return responderFuncionarioComIA(from, message, user, empresaId);
     }
 
     // ── ADMIN: pendências com prioridade (não dependem de empresa ativa) ────────
@@ -873,7 +877,8 @@ export async function handleIncomingMessage(
 
     // Menu de "resumo das saídas" aguardando escolha de período
     if (pendingResumoSaidas.has(from)) {
-      return handleResumoSaidasStep(pendingResumoSaidas.get(from)!, from, command);
+      if (/^\d{1,2}$/.test(command)) return handleResumoSaidasStep(pendingResumoSaidas.get(from)!, from, command);
+      pendingResumoSaidas.delete(from);
     }
 
     // Detectar saudação simples — usada para evitar menu de empresa e contexto desnecessário
@@ -922,7 +927,7 @@ export async function handleIncomingMessage(
         '',
         FERRAMENTAS.filter(f => f.function?.name === 'explicarSistema'),
         (nome, args) => executarFerramenta(nome, args, { empresaId: '', user }),
-        'explicarSistema'
+        { forcarFerramenta: 'explicarSistema', historico: await historicoRecente(from) }
       );
       return resposta || 'Não tenho uma explicação pronta sobre isso ainda.';
     }
@@ -1154,14 +1159,14 @@ export async function handleIncomingMessage(
 
     if (isConversacionalLavador) {
       const ctxLavador = await buildContextLavadorConversacional(message, empresaId);
-      if (ctxLavador) return chatCompletion(message, ctxLavador);
+      if (ctxLavador) return chatCompletion(message, ctxLavador, undefined, await historicoRecente(from));
     }
 
     const lavadorResponse = await handleLavadorEspecifico(message, empresaId);
     if (lavadorResponse) return lavadorResponse;
 
     // Só constrói o contexto pesado quando vai para a IA
-    let dailyContext = await buildDailyContext(empresaId);
+    let dailyContext = `HOJE: ${hojeExtenso()}\n\n` + await buildDailyContext(empresaId);
 
     // Se a mensagem menciona uma data passada específica, enriquecer o contexto com dados daquele dia
     const dataReferenciada = parseDateFromMessage(message);
@@ -1175,7 +1180,8 @@ export async function handleIncomingMessage(
       message,
       dailyContext,
       FERRAMENTAS,
-      (nome, args) => executarFerramenta(nome, args, { empresaId, user })
+      (nome, args) => executarFerramenta(nome, args, { empresaId, user }),
+      { historico: await historicoRecente(from) }
     );
 
     if (falhas.length > 0) {
@@ -1189,6 +1195,108 @@ export async function handleIncomingMessage(
     const { texto, contexto } = formatarErro(error, { from, mensagemUsuario: message });
     registrarEvento('ERRO_USUARIO', texto, contexto).catch(() => {});
     return '❌ Desculpe, ocorreu um erro. Tente novamente.';
+  }
+}
+
+// ==========================================
+// IA PARA LAVADOR E FUNCIONÁRIO
+// ==========================================
+// Antes, qualquer coisa fora dos comandos exatos virava "Não entendi". Agora a pergunta
+// livre vai pra IA com os dados que ESSA pessoa pode ver e a conversa recente.
+
+const NAO_ENTENDI = `Não entendi, não. 😅 Manda *ajuda* pra ver o que eu consigo fazer por você!`;
+
+function hojeExtenso(): string {
+  const d = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  return `${d} (${getTodayStrBRT()})`;
+}
+
+/** Tira as molduras (━━━) e emojis de número dos relatórios prontos antes de mandar pra IA. */
+function relatorioParaContexto(texto: string, max = 1500): string {
+  const limpo = texto.replace(/^━+$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+  return limpo.length > max ? limpo.slice(0, max) + '…' : limpo;
+}
+
+// Lavador perguntando da empresa (faturamento, caixa, lucro): resposta fixa, sem IA.
+// A IA confundia com o "Faturamento" do próprio status dele e respondia um número.
+const PERGUNTA_DA_EMPRESA = /\b(empresa|loja|caixa|lucro|faturou|faturamos|faturaram|faturamento\s+(?:total|geral|da|do))\b/i;
+
+async function responderLavadorComIA(
+  from: string, message: string, empresaId: string, lavadorId: string, feats: string[],
+): Promise<string> {
+  if (PERGUNTA_DA_EMPRESA.test(message) && !/\b(eu|meu|minha|minhas|meus)\b/i.test(message)) {
+    return 'Os números da empresa ficam com o gestor 😉 Mas posso te mostrar os seus: manda *status* ou *comissoes*.';
+  }
+  try {
+    const podeStatus = feats.includes('meu_status');
+    const podeComissoes = feats.includes('minhas_comissoes');
+    const lav = await prisma.lavador.findUnique({ where: { id: lavadorId }, select: { nome: true } });
+
+    const partes = [`HOJE: ${hojeExtenso()}`, `QUEM ESTÁ FALANDO: ${lav?.nome ?? 'lavador'}`];
+    if (podeStatus) partes.push(`STATUS DELE(A) — HOJE E MÊS (valores = só as ordens dele(a), não da empresa):\n${relatorioParaContexto((await handleStatusLavador(lavadorId, empresaId)).replace(/Faturamento:/g, 'Valor das ordens dele(a):'))}`);
+    if (podeComissoes) partes.push(`COMISSÕES EM ABERTO DELE(A):\n${relatorioParaContexto(await handleComissoesLavador(lavadorId, empresaId))}`);
+    const { text: menu } = buildMenuLavador(feats);
+    partes.push(`MENU DELE(A) (pode responder com o número ou o comando: status, comissoes, link, reportar):\n${relatorioParaContexto(menu, 400)}`);
+
+    const promptExtra =
+      `\n\nQUEM É A PESSOA: um(a) lavador(a) da equipe, falando pelo próprio WhatsApp.` +
+      `\n- Você NÃO tem nenhum dado da empresa: faturamento, caixa, total de carros da loja ou números de outros lavadores. Se pedir qualquer um deles, diga só que essa informação fica com o gestor — sem número nenhum na resposta (nem R$ 0, nem o valor dele(a) no lugar).` +
+      `\n- Pergunta sem período ("quantos carros eu lavei?") = responda hoje E o mês atual.` +
+      (podeStatus ? `\n- Pra períodos fora de hoje/mês atual, use a ferramenta minhasOrdens.` : `\n- Essa pessoa não tem acesso ao próprio status por aqui; se pedir, diga que o gestor precisa liberar.`) +
+      `\n- Se o pedido for algo que um comando resolve (reportar avaria, link do portal), diga qual comando mandar.` +
+      `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.`;
+
+    const { resposta } = await chatCompletionComFerramentas(
+      message, partes.join('\n\n'),
+      podeStatus ? FERRAMENTAS_LAVADOR : [],
+      (nome, args) => executarFerramentaLavador(nome, args, { empresaId, lavadorId }),
+      { historico: await historicoRecente(from), promptExtra },
+    );
+    return resposta || NAO_ENTENDI;
+  } catch (err) {
+    console.error('[WhatsApp] IA do lavador falhou:', err);
+    return NAO_ENTENDI;
+  }
+}
+
+async function responderFuncionarioComIA(
+  from: string, message: string, user: WhatsAppUser, empresaId: string,
+): Promise<string> {
+  try {
+    const perms = user.botFeatures ?? user.permissoes ?? [];
+    const podeFinanceiro = hasPermission(user, 'ver_financeiro');
+    const partes = [`HOJE: ${hojeExtenso()}`, `QUEM ESTÁ FALANDO: ${user.nome ?? 'funcionário'}`];
+
+    if (podeFinanceiro) {
+      partes.push(await buildDailyContext(empresaId));
+      const dataReferenciada = parseDateFromMessage(message);
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      if (dataReferenciada && dataReferenciada < hoje) partes.push(await buildContextForDate(empresaId, dataReferenciada));
+    }
+    partes.push(`COMANDOS QUE ELE(A) PODE MANDAR:\n${relatorioParaContexto(buildMenuFuncionario(perms), 600)}`);
+
+    const ferramentas = FERRAMENTAS.filter(f => {
+      const n = f.function?.name;
+      if (n === 'buscarCliente') return hasPermission(user, 'gerenciar_clientes');
+      if (n === 'buscarOrdens') return podeFinanceiro;
+      return true;
+    });
+
+    const promptExtra =
+      `\n\nQUEM É A PESSOA: um(a) funcionário(a) da empresa, com acesso limitado pelo cargo.` +
+      (podeFinanceiro ? '' : `\n- Essa pessoa NÃO vê faturamento, caixa nem valores da empresa. Se pedir, diga com leveza que precisa de permissão do administrador — nunca estime nada.`) +
+      `\n- Se o pedido for algo que um dos comandos resolve, diga qual comando mandar.` +
+      `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.`;
+
+    const { resposta } = await chatCompletionComFerramentas(
+      message, partes.join('\n\n'), ferramentas,
+      (nome, args) => executarFerramenta(nome, args, { empresaId, user }),
+      { historico: await historicoRecente(from), promptExtra },
+    );
+    return resposta || NAO_ENTENDI;
+  } catch (err) {
+    console.error('[WhatsApp] IA do funcionário falhou:', err);
+    return NAO_ENTENDI;
   }
 }
 
@@ -1234,6 +1342,19 @@ function parseDateFromMessage(message: string): Date | null {
       const currentDay = new Date().getDay();
       let daysBack = currentDay - targetDay;
       if (daysBack <= 0) daysBack += 7;
+      const d = new Date(); d.setDate(d.getDate() - daysBack); d.setHours(0,0,0,0);
+      return d;
+    }
+  }
+
+  // Dia da semana sozinho ("e na sexta?", "como foi sábado") = o mais recente, contando hoje
+  const diaSoltoMatch = msg.match(/\b(domingo|segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado)(?:-feira)?\b/i);
+  if (diaSoltoMatch) {
+    const diaRaw = diaSoltoMatch[1].toLowerCase().replace(/[áà]/g, 'a').replace(/ç/g, 'c');
+    const targetDay = diasMap[diaRaw];
+    if (targetDay !== undefined) {
+      let daysBack = new Date().getDay() - targetDay;
+      if (daysBack < 0) daysBack += 7;
       const d = new Date(); d.setDate(d.getDate() - daysBack); d.setHours(0,0,0,0);
       return d;
     }

@@ -174,3 +174,69 @@ function explicarSistemaImpl(topico: string): string {
   const item = BASE_CONHECIMENTO.find(b => b.chaves.some(k => t.includes(k)));
   return item?.texto ?? 'Ainda não tenho uma explicação pronta sobre isso.';
 }
+
+// ── Lavador ─────────────────────────────────────────────────────────────────
+// Só enxerga as PRÓPRIAS ordens: lavadorId/empresaId vêm da identificação do número.
+
+export const FERRAMENTAS_LAVADOR: ChatCompletionTool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'minhasOrdens',
+      description: 'Ordens finalizadas em que o próprio lavador trabalhou num período: quantidade de carros, modelos/placas e comissão ganha. Use SEMPRE que a pergunta for sobre um período que não seja hoje ou o mês atual — inclusive continuações curtas como "e em agosto?" ou "e semana passada?".',
+      parameters: {
+        type: 'object',
+        properties: {
+          inicio: { type: 'string', description: 'Data inicial, formato YYYY-MM-DD' },
+          fim: { type: 'string', description: 'Data final, formato YYYY-MM-DD' },
+        },
+        required: ['inicio', 'fim'],
+      },
+    },
+  },
+];
+
+export async function executarFerramentaLavador(
+  nome: string,
+  args: any,
+  ctx: { empresaId: string; lavadorId: string },
+): Promise<string> {
+  if (nome !== 'minhasOrdens') return 'Ferramenta desconhecida.';
+  const inicio = String(args.inicio ?? '');
+  const fim = String(args.fim ?? '');
+  // Datas em horário de Brasília (UTC-3), igual o resto do bot
+  const dataInicio = new Date(`${inicio}T00:00:00-03:00`);
+  const dataFim = new Date(`${fim}T23:59:59.999-03:00`);
+  if (isNaN(dataInicio.getTime()) || isNaN(dataFim.getTime())) return 'Não consegui entender o período pedido.';
+
+  const lavador = await prisma.lavador.findUnique({ where: { id: ctx.lavadorId }, select: { comissao: true } });
+  const ordens = await prisma.ordemServico.findMany({
+    where: {
+      empresaId: ctx.empresaId,
+      status: 'FINALIZADO',
+      OR: [{ lavadorId: ctx.lavadorId }, { ordemLavadores: { some: { lavadorId: ctx.lavadorId } } }],
+      dataFim: { gte: dataInicio, lte: dataFim },
+    },
+    include: {
+      veiculo: { select: { modelo: true, placa: true } },
+      ordemLavadores: { where: { lavadorId: ctx.lavadorId }, select: { ganho: true, comissaoPaga: true } },
+    },
+    orderBy: { dataFim: 'desc' },
+    take: 300,
+  });
+  if (ordens.length === 0) return `Nenhuma ordem finalizada de ${inicio} a ${fim}.`;
+
+  let ganho = 0, aReceber = 0;
+  for (const o of ordens) {
+    const e = o.ordemLavadores[0];
+    const g = e ? e.ganho : o.valorTotal * ((lavador?.comissao ?? 0) / 100);
+    ganho += g;
+    if (e && !e.comissaoPaga) aReceber += g;
+  }
+  const carros = ordens.slice(0, 40).map(o => {
+    const dia = o.dataFim ? new Date(o.dataFim).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }) : '';
+    return `${dia} ${o.veiculo?.modelo ?? 'item avulso'}${o.veiculo?.placa ? ` (${o.veiculo.placa})` : ''}`;
+  });
+  return `${ordens.length} ordens finalizadas de ${inicio} a ${fim}. Comissão nesse período: R$ ${ganho.toFixed(2)} (ainda a receber: R$ ${aReceber.toFixed(2)}).\n` +
+    `Carros${ordens.length > 40 ? ' (os 40 mais recentes)' : ''}: ${carros.join('; ')}`;
+}

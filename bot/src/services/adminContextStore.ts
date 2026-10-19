@@ -1,43 +1,32 @@
 /**
- * Store em memória para contexto de empresa ativo por admin.
- * Admins com múltiplas empresas precisam selecionar qual empresa
- * estão gerenciando antes de executar comandos no bot.
- * TTL: 5 minutos, renovado a cada comando executado com sucesso.
+ * Empresa ativa por admin (quem tem várias empresas escolhe uma pra conversar).
+ * Vale 12h, renovada a cada uso, e fica salva em `bot_estados` — antes eram 5 minutos
+ * só em memória, e o bot perguntava "qual empresa?" a toda hora e depois de todo restart.
  */
+import { EstadoPersistente } from './conversaMemoria';
 
 interface AdminContext {
   empresaId:   string;
   empresaNome: string;
-  expiresAt:   number;
 }
 
-const store = new Map<string, AdminContext>(); // chave = JID do admin
+const TTL_MS = 12 * 60 * 60 * 1000;
+const RENOVAR_APOS_MS = 10 * 60 * 1000; // não grava no banco a cada mensagem
 
-// Limpar contextos expirados a cada 2 minutos
-setInterval(() => {
-  const now = Date.now();
-  for (const [jid, ctx] of store.entries()) {
-    if (ctx.expiresAt < now) store.delete(jid);
-  }
-}, 2 * 60 * 1000);
+const store = new EstadoPersistente<AdminContext>('empresaAtiva', TTL_MS);
 
-const TTL_MS = 5 * 60 * 1000;
-
-/** Retorna contexto ativo e renova TTL. Null se expirado/ausente. */
+/** Retorna contexto ativo e renova a validade. Null se expirado/ausente. */
 export function getContext(jid: string): AdminContext | null {
   const ctx = store.get(jid);
   if (!ctx) return null;
-  if (Date.now() > ctx.expiresAt) {
-    store.delete(jid);
-    return null;
-  }
-  ctx.expiresAt = Date.now() + TTL_MS;
+  const restante = store.expiraEm(jid) - Date.now();
+  if (TTL_MS - restante > RENOVAR_APOS_MS) store.set(jid, ctx);
   return ctx;
 }
 
 /** Define/atualiza contexto de empresa para o admin. */
 export function setContext(jid: string, empresaId: string, empresaNome: string): void {
-  store.set(jid, { empresaId, empresaNome, expiresAt: Date.now() + TTL_MS });
+  store.set(jid, { empresaId, empresaNome });
 }
 
 /** Remove contexto (ex: comando "mudar empresa"). */

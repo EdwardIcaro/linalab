@@ -28,6 +28,7 @@ import {
 
 import { processarFilaEnvios, limparEnviosAntigos } from './services/filaEnvioService';
 import { limparLogAntigo } from './services/mensagemLog';
+import { carregarEstados } from './services/conversaMemoria';
 
 import {
   connectEmpresa,
@@ -355,6 +356,8 @@ async function startBot() {
     }, 5000);
 
     // Fila de envio: remove os já enviados/com erro depois de 7 dias
+    // Menus numerados que estavam abertos antes do restart
+    carregarEstados().catch(() => {});
     limparEnviosAntigos().catch(() => {});
     limparLogAntigo().catch(() => {});
     setInterval(() => { limparEnviosAntigos().catch(() => {}); limparLogAntigo().catch(() => {}); }, 24 * 60 * 60 * 1000);
