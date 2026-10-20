@@ -1703,3 +1703,60 @@ model BotMemoria {
   @@index([jid, createdAt])
   @@map("bot_memorias")
 }
+
+// Espelho do backend, sem relações (o bot só lê): contas a pagar e fila da Localiza
+model ContaPagar {
+  id               String    @id @default(cuid())
+  empresaId        String
+  descricao        String
+  valor            Float
+  vencimento       DateTime
+  tipo             String    @default("AVULSA")
+  diaMensal        Int?
+  prazoDias        Int?
+  fornecedorNome   String?
+  lembrarDiasAntes Int       @default(3)
+  status           String    @default("PENDENTE")
+  pagaEm           DateTime?
+  valorPago        Float?
+  formaPagamento   String?
+  caixaRegistroId  String?
+  criadoPor        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([empresaId, status, vencimento])
+  @@map("contas_pagar")
+}
+
+model SolicitacaoLavagem {
+  id              String    @id @default(cuid())
+  usuarioId       String
+  origemEmpresaId String
+  fornecedor      String    @default("localiza")
+  numero          String
+  placa           String
+  tipo            String?
+  preco           Float?
+  precoTexto      String?
+  solicitante     String?
+  agencia         String?
+  diaAbertura     String?
+  status          String    @default("PENDENTE")
+  aceitaEmpresaId String?
+  aceitaPorId     String?
+  aceitaPorNome   String?
+  aceitaEm        DateTime?
+  ordemId         String?
+  canceladaEm     DateTime?
+  canceladaPor    String?
+  checklist       Json?
+  checklistPor    String?
+  checklistEm     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([usuarioId, fornecedor, numero, placa], map: "solicitacoes_lavagem_unica")
+  @@index([usuarioId, status, createdAt], map: "solicitacoes_lavagem_fila")
+  @@map("solicitacoes_lavagem")
+}

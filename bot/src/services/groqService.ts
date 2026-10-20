@@ -124,7 +124,28 @@ function resolverFerramenta(nome: string, tools: ChatCompletionTool[]): string |
   const apelido = APELIDOS_FERRAMENTA[nome.toLowerCase()];
   if (apelido && nomes.includes(apelido)) return apelido;
   const prefixo = nome.toLowerCase().slice(0, 5);
-  return nomes.find(n => n.toLowerCase().startsWith(prefixo)) ?? null;
+  const porPrefixo = nomes.find(n => n.toLowerCase().startsWith(prefixo));
+  if (porPrefixo) return porPrefixo;
+  // Erro de digitação ("sollicitacoesLocaliza"): o nome mais parecido, até 2 letras de diferença
+  let melhor: string | null = null, menor = 3;
+  for (const n of nomes) {
+    const d = distancia(nome.toLowerCase(), n.toLowerCase());
+    if (d < menor) { menor = d; melhor = n; }
+  }
+  return melhor;
+}
+
+function distancia(a: string, b: string): number {
+  const linha = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let diag = linha[0]; linha[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const acima = linha[j];
+      linha[j] = Math.min(linha[j] + 1, linha[j - 1] + 1, diag + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diag = acima;
+    }
+  }
+  return linha[b.length];
 }
 
 async function criarComReparo(params: any, tools: ChatCompletionTool[]): Promise<any> {

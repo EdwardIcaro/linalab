@@ -10,6 +10,7 @@ import { chatCompletion, chatCompletionComFerramentas, transcribeAudio } from '.
 import { historicoRecente, EstadoPersistente } from './conversaMemoria';
 import { tratarComandoMemoria, memoriasParaPrompt, FERRAMENTA_LEMBRAR, executarLembrar } from './memoriaLonga';
 import { FERRAMENTAS, executarFerramenta, FERRAMENTAS_LAVADOR, executarFerramentaLavador } from './linaTools';
+import type { ChatCompletionTool } from 'groq-sdk/resources/chat/completions';
 import { registrarEvento, formatarErro } from './ownerNotificationService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
 import { getContext, setContext, clearContext, detectEmpresaNoTexto } from './adminContextStore';
@@ -1069,7 +1070,10 @@ export async function handleIncomingMessage(
       return buildResumoSaidasMenuText();
     }
 
-    const isRelatorioRequest = /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
+    // "tem conta vencendo essa semana?" / "quanto saiu de despesa semana passada?" falam de outro
+    // assunto — vão pra IA (que tem ferramenta pra cada um) em vez do relatório geral do período.
+    const outroAssunto = /\b(contas?|despesas?|sa[ií]u|gast[eoa]|comiss|vales?|localiza|dev[eo]|pagar|caixa|clientes?|ordens?)\b/i.test(message);
+    const isRelatorioRequest = !outroAssunto && /resumo|relat[oó]rio|detalhe|semanal|semana/.test(command);
     if (isRelatorioRequest || /^ontem$/.test(command)) {
       const range = parseDateRangeFromMessage(message);
       if (range) return handleRelatorioPeriodo(range.inicio, range.fim, empresaId);
@@ -1185,10 +1189,10 @@ export async function handleIncomingMessage(
     const { resposta, falhas } = await chatCompletionComFerramentas(
       message,
       dailyContext,
-      [...FERRAMENTAS, FERRAMENTA_LEMBRAR],
-      (nome, args) => nome === 'lembrar'
+      [...FERRAMENTAS, ...FERRAMENTAS_GESTAO, FERRAMENTA_LEMBRAR],
+      async (nome, args) => nome === 'lembrar'
         ? executarLembrar(args, { jid: from, empresaId })
-        : executarFerramenta(nome, args, { empresaId, user }),
+        : (await executarFerramentaGestao(nome, args, empresaId, user)) ?? executarFerramenta(nome, args, { empresaId, user }),
       { historico, promptExtra: memorias }
     );
 
@@ -1228,6 +1232,88 @@ function relatorioParaContexto(texto: string, max = 1500): string {
 // Lavador perguntando da empresa (faturamento, caixa, lucro): resposta fixa, sem IA.
 // A IA confundia com o "Faturamento" do próprio status dele e respondia um número.
 const PERGUNTA_DA_EMPRESA = /\b(empresa|loja|caixa|lucro|faturou|faturamos|faturaram|faturamento\s+(?:total|geral|da|do))\b/i;
+
+// ── Ferramentas de gestão da IA (Fase 3a) ────────────────────────────────────
+// Os comandos que já existem, expostos pra IA chamar quando a pessoa pergunta do jeito
+// dela. Só leitura. Cada uma exige a mesma permissão do comando equivalente.
+
+const PERMISSAO_FERRAMENTA: Record<string, string> = {
+  caixaDoDia: 'ver_financeiro', fechamentoCaixa: 'ver_financeiro', saidasCaixa: 'ver_financeiro',
+  comissoesEmAberto: 'ver_financeiro', valesLavador: 'ver_financeiro', faturamentoLavadores: 'ver_financeiro',
+  contasAPagar: 'ver_financeiro', solicitacoesLocaliza: 'gerenciar_ordens', equipe: 'gerenciar_funcionarios',
+};
+
+const FERRAMENTAS_GESTAO: ChatCompletionTool[] = [
+  { type: 'function', function: { name: 'caixaDoDia', description: 'Caixa de hoje: entradas, saídas, saldo e últimas saídas.', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'fechamentoCaixa', description: 'Fechamento de caixa de um dia: valores digitados x computados, diferença, observações.', parameters: { type: 'object', properties: { data: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['data'] } } },
+  { type: 'function', function: { name: 'saidasCaixa', description: 'Saídas (despesas) do caixa num período, uma por uma.', parameters: { type: 'object', properties: { inicio: { type: 'string', description: 'YYYY-MM-DD' }, fim: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['inicio', 'fim'] } } },
+  { type: 'function', function: { name: 'comissoesEmAberto', description: 'Comissões ainda não pagas (quanto a empresa deve) — de todos os lavadores ou de um.', parameters: { type: 'object', properties: { lavador: { type: 'string', description: 'Nome do lavador (opcional)' } } } } },
+  { type: 'function', function: { name: 'valesLavador', description: 'Vales/adiantamentos pendentes de um lavador.', parameters: { type: 'object', properties: { lavador: { type: 'string' } }, required: ['lavador'] } } },
+  { type: 'function', function: { name: 'faturamentoLavadores', description: 'Faturamento e ordens por lavador (semana e mês, ou período em texto como "15 dias atrás", "semana passada").', parameters: { type: 'object', properties: { lavador: { type: 'string', description: 'opcional' }, periodo: { type: 'string', description: 'opcional, em português' } } } } },
+  { type: 'function', function: { name: 'contasAPagar', description: 'Contas a pagar pendentes: atrasadas e as que vencem nos próximos dias.', parameters: { type: 'object', properties: { dias: { type: 'number', description: 'Janela à frente, padrão 7' } } } } },
+  { type: 'function', function: { name: 'solicitacoesLocaliza', description: 'Carros pedidos pela Localiza por e-mail esperando alguém aceitar.', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'equipe', description: 'Lavadores ativos da empresa e como estão hoje.', parameters: { type: 'object', properties: {} } } },
+];
+
+function ferramentasGestaoPara(user: WhatsAppUser): ChatCompletionTool[] {
+  return FERRAMENTAS_GESTAO.filter(f => hasPermission(user, PERMISSAO_FERRAMENTA[f.function?.name ?? ''] ?? ''));
+}
+
+function diaBRT(ymd: string): { start: Date; end: Date } | null {
+  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? getDateRangeBRT(ymd) : null;
+}
+
+async function executarFerramentaGestao(nome: string, args: any, empresaId: string, user: WhatsAppUser): Promise<string | null> {
+  if (!(nome in PERMISSAO_FERRAMENTA)) return null; // não é daqui
+  if (!hasPermission(user, PERMISSAO_FERRAMENTA[nome])) return 'O usuário não tem permissão pra ver isso.';
+  const txt = (r: string) => relatorioParaContexto(r, 2000);
+
+  switch (nome) {
+    case 'caixaDoDia': return txt(await handleCaixaCommand(empresaId));
+    case 'fechamentoCaixa': {
+      if (!diaBRT(String(args.data ?? ''))) return 'Data inválida.';
+      return txt(await handleFechamentoCaixa(empresaId, new Date(`${args.data}T12:00:00`)));
+    }
+    case 'saidasCaixa': {
+      const ini = diaBRT(String(args.inicio ?? '')), fim = diaBRT(String(args.fim || args.inicio || ''));
+      if (!ini || !fim) return 'Período inválido.';
+      return txt(await handleSaidasDetalhadas(ini.start, fim.end, empresaId));
+    }
+    case 'comissoesEmAberto': return txt(await handleComissoesEmAberto(args.lavador ? String(args.lavador).toLowerCase() : null, empresaId));
+    case 'valesLavador': return txt(await handleValesLavador(String(args.lavador ?? '').toLowerCase(), empresaId));
+    case 'faturamentoLavadores': {
+      const texto = [args.lavador, args.periodo].filter(Boolean).join(' ').trim();
+      return txt(await handleFaturamentoCommand(empresaId, texto || undefined));
+    }
+    case 'contasAPagar': {
+      const dias = Math.min(Math.max(Number(args.dias) || 7, 1), 60);
+      const ate = getDateRangeBRT(getTodayStrBRT()).end.getTime() + dias * 86400000;
+      const contas = await prisma.contaPagar.findMany({
+        where: { empresaId, status: 'PENDENTE', vencimento: { lte: new Date(ate) } },
+        orderBy: { vencimento: 'asc' }, take: 30,
+      });
+      if (!contas.length) return `Nenhuma conta pendente vencendo nos próximos ${dias} dias.`;
+      const hoje = getDateRangeBRT(getTodayStrBRT()).start;
+      const total = contas.reduce((s, c) => s + c.valor, 0);
+      return `${contas.length} conta(s) pendente(s) até ${dias} dias. Total R$ ${total.toFixed(2)}.\n` + contas.map(c =>
+        `• ${c.descricao}${c.fornecedorNome ? ` (${c.fornecedorNome})` : ''} — R$ ${c.valor.toFixed(2)} — vence ${c.vencimento.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}${c.vencimento < hoje ? ' · ATRASADA' : ''}`
+      ).join('\n');
+    }
+    case 'solicitacoesLocaliza': {
+      const emp = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { usuarioId: true } });
+      if (!emp) return 'Empresa não encontrada.';
+      const sols = await prisma.solicitacaoLavagem.findMany({
+        where: { usuarioId: emp.usuarioId, status: 'PENDENTE' }, orderBy: { createdAt: 'asc' }, take: 30,
+      });
+      if (!sols.length) return 'Nenhuma solicitação da Localiza esperando aceite.';
+      return `${sols.length} solicitação(ões) esperando aceite (aceitar é pelo sistema, no index):\n` + sols.map(x =>
+        `• Nº ${x.numero} — ${x.placa}${x.tipo ? ` — ${x.tipo}` : ''}${x.precoTexto || x.preco ? ` — ${x.precoTexto ?? `R$ ${x.preco!.toFixed(2)}`}` : ''}${x.agencia ? ` — ${x.agencia}` : ''} — chegou ${x.createdAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+      ).join('\n');
+    }
+    case 'equipe': return txt(await handleLavadoresCommand(empresaId));
+  }
+  return null;
+}
 
 async function responderLavadorComIA(
   from: string, message: string, empresaId: string, lavadorId: string, feats: string[],
@@ -1311,10 +1397,10 @@ async function responderFuncionarioComIA(
       await memoriasParaPrompt(from, empresaId);
 
     const { resposta } = await chatCompletionComFerramentas(
-      message, partes.join('\n\n'), [...ferramentas, FERRAMENTA_LEMBRAR],
-      (nome, args) => nome === 'lembrar'
+      message, partes.join('\n\n'), [...ferramentas, ...ferramentasGestaoPara(user), FERRAMENTA_LEMBRAR],
+      async (nome, args) => nome === 'lembrar'
         ? executarLembrar(args, { jid: from, empresaId })
-        : executarFerramenta(nome, args, { empresaId, user }),
+        : (await executarFerramentaGestao(nome, args, empresaId, user)) ?? executarFerramenta(nome, args, { empresaId, user }),
       { historico: await historicoRecente(from), promptExtra },
     );
     return resposta || NAO_ENTENDI;
@@ -2438,6 +2524,15 @@ async function handleComissoesLavador(lavadorId: string, empresaId: string): Pro
 // CONTEXTO COMPLETO PARA IA
 // ==========================================
 
+/** Entradas do caixa = pagamentos recebidos no período. CaixaRegistro só tem SAIDA de verdade. */
+async function entradasPagas(empresaId: string, inicio: Date, fim: Date): Promise<number> {
+  const r = await prisma.pagamento.aggregate({
+    where: { empresaId, status: 'PAGO', pagoEm: { gte: inicio, lte: fim } },
+    _sum: { valor: true },
+  });
+  return r._sum.valor ?? 0;
+}
+
 /*
  * Constrói contexto com dados do dia E do mês para a IA responder qualquer período
  */
@@ -2457,7 +2552,7 @@ async function buildContextForDate(empresaId: string, date: Date): Promise<strin
 
     const dataLabel = date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
     const fat = faturamentoSemCortesia(ordens);
-    const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
+    const entradas = await entradasPagas(empresaId, start, end);
     const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
     let ctx = `\n=== ${dataLabel.toUpperCase()} ===\n`;
@@ -2512,6 +2607,7 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     const [
       empresa, lavadores, ordensDiaPatio, ordensDia, ordensMes, caixaDia, caixaMes,
       ordensMesAnterior, caixaMesAnterior, adiantamentos, fechamentosMes,
+      entradasDia, entradasMes, entradasMesAnt,
     ] = await Promise.all([
     // 1. Empresa
     prisma.empresa.findUnique({ where: { id: empresaId } }),
@@ -2583,13 +2679,16 @@ async function buildDailyContext(empresaId: string): Promise<string> {
       where: { empresaId, data: { gte: mesStart, lte: mesEnd } },
       include: { lavador: { select: { nome: true } } }
     }).catch(() => [] as { lavadorId: string; valorPago: number; data: Date; lavador: { nome: string } }[]),
+
+    // 9. Entradas do caixa (pagamentos recebidos) — dia, mês, mês anterior
+    entradasPagas(empresaId, diaStart, diaEnd),
+    entradasPagas(empresaId, mesStart, mesEnd),
+    entradasPagas(empresaId, mesAntStart, mesAntEnd),
     ]);
     if (!empresa) return 'Empresa não encontrada.';
 
-    const entradasDia = caixaDia.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasDia = caixaDia.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
-    const entradasMes = caixaMes.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasMes = caixaMes.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
     // ---- MONTAR CONTEXTO ----
@@ -2643,7 +2742,6 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     ctx += '\n';
 
     // --- MÊS ANTERIOR ---
-    const entradasMesAnt = caixaMesAnterior.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasMesAnt   = caixaMesAnterior.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
     const fatMesAnt = faturamentoSemCortesia(ordensMesAnterior);
     ctx += `=== MÊS ANTERIOR (${mesAntNomeFmt}) ===\n`;
@@ -2703,7 +2801,7 @@ async function handleResumoCommand(empresaId: string): Promise<string> {
   ]);
 
   const fat      = faturamentoSemCortesia(ordens);
-  const entradas = caixa.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
+  const entradas = await entradasPagas(empresaId, start, end);
   const saidas   = caixa.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
   return `📊 *RESUMO DO DIA*\n\n` +
