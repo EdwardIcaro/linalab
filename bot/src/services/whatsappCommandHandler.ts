@@ -1166,22 +1166,22 @@ export async function handleIncomingMessage(
     if (lavadorResponse) return lavadorResponse;
 
     // Só constrói o contexto pesado quando vai para a IA
-    let dailyContext = `HOJE: ${hojeExtenso()}\n\n` + await buildDailyContext(empresaId);
-
     // Se a mensagem menciona uma data passada específica, enriquecer o contexto com dados daquele dia
     const dataReferenciada = parseDateFromMessage(message);
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    if (dataReferenciada && dataReferenciada < hoje) {
-      const ctxExtra = await buildContextForDate(empresaId, dataReferenciada);
-      dailyContext += ctxExtra;
-    }
+    const [ctxDia, ctxExtra, historico] = await Promise.all([
+      contextoDoDiaCache(empresaId),
+      dataReferenciada && dataReferenciada < hoje ? buildContextForDate(empresaId, dataReferenciada) : Promise.resolve(''),
+      historicoRecente(from),
+    ]);
+    const dailyContext = `HOJE: ${hojeExtenso()}\n\n` + ctxDia + ctxExtra;
 
     const { resposta, falhas } = await chatCompletionComFerramentas(
       message,
       dailyContext,
       FERRAMENTAS,
       (nome, args) => executarFerramenta(nome, args, { empresaId, user }),
-      { historico: await historicoRecente(from) }
+      { historico }
     );
 
     if (falhas.length > 0) {
@@ -1230,11 +1230,16 @@ async function responderLavadorComIA(
   try {
     const podeStatus = feats.includes('meu_status');
     const podeComissoes = feats.includes('minhas_comissoes');
-    const lav = await prisma.lavador.findUnique({ where: { id: lavadorId }, select: { nome: true } });
+    const [lav, status, comissoes, historico] = await Promise.all([
+      prisma.lavador.findUnique({ where: { id: lavadorId }, select: { nome: true } }),
+      podeStatus ? handleStatusLavador(lavadorId, empresaId) : Promise.resolve(''),
+      podeComissoes ? handleComissoesLavador(lavadorId, empresaId) : Promise.resolve(''),
+      historicoRecente(from),
+    ]);
 
     const partes = [`HOJE: ${hojeExtenso()}`, `QUEM ESTÁ FALANDO: ${lav?.nome ?? 'lavador'}`];
-    if (podeStatus) partes.push(`STATUS DELE(A) — HOJE E MÊS (valores = só as ordens dele(a), não da empresa):\n${relatorioParaContexto((await handleStatusLavador(lavadorId, empresaId)).replace(/Faturamento:/g, 'Valor das ordens dele(a):'))}`);
-    if (podeComissoes) partes.push(`COMISSÕES EM ABERTO DELE(A):\n${relatorioParaContexto(await handleComissoesLavador(lavadorId, empresaId))}`);
+    if (podeStatus) partes.push(`STATUS DELE(A) — HOJE E MÊS (valores = só as ordens dele(a), não da empresa):\n${relatorioParaContexto(status.replace(/Faturamento:/g, 'Valor das ordens dele(a):'))}`);
+    if (podeComissoes) partes.push(`COMISSÕES EM ABERTO DELE(A):\n${relatorioParaContexto(comissoes)}`);
     const { text: menu } = buildMenuLavador(feats);
     partes.push(`MENU DELE(A) (pode responder com o número ou o comando: status, comissoes, link, reportar):\n${relatorioParaContexto(menu, 400)}`);
 
@@ -1250,7 +1255,7 @@ async function responderLavadorComIA(
       message, partes.join('\n\n'),
       podeStatus ? FERRAMENTAS_LAVADOR : [],
       (nome, args) => executarFerramentaLavador(nome, args, { empresaId, lavadorId }),
-      { historico: await historicoRecente(from), promptExtra },
+      { historico, promptExtra },
     );
     return resposta || NAO_ENTENDI;
   } catch (err) {
@@ -1268,10 +1273,14 @@ async function responderFuncionarioComIA(
     const partes = [`HOJE: ${hojeExtenso()}`, `QUEM ESTÁ FALANDO: ${user.nome ?? 'funcionário'}`];
 
     if (podeFinanceiro) {
-      partes.push(await buildDailyContext(empresaId));
       const dataReferenciada = parseDateFromMessage(message);
       const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-      if (dataReferenciada && dataReferenciada < hoje) partes.push(await buildContextForDate(empresaId, dataReferenciada));
+      const [ctxDia, ctxExtra] = await Promise.all([
+        contextoDoDiaCache(empresaId),
+        dataReferenciada && dataReferenciada < hoje ? buildContextForDate(empresaId, dataReferenciada) : Promise.resolve(''),
+      ]);
+      partes.push(ctxDia);
+      if (ctxExtra) partes.push(ctxExtra);
     }
     partes.push(`COMANDOS QUE ELE(A) PODE MANDAR:\n${relatorioParaContexto(buildMenuFuncionario(perms), 600)}`);
 
@@ -2455,6 +2464,18 @@ async function buildContextForDate(empresaId: string, date: Date): Promise<strin
   }
 }
 
+// Conversa seguida ("e ontem?", "e o Felipe?") reaproveita o contexto por 1 minuto
+const CONTEXTO_TTL_MS = 60_000;
+const contextoCache = new Map<string, { ctx: string; em: number }>();
+
+async function contextoDoDiaCache(empresaId: string): Promise<string> {
+  const c = contextoCache.get(empresaId);
+  if (c && Date.now() - c.em < CONTEXTO_TTL_MS) return c.ctx;
+  const ctx = await buildDailyContext(empresaId);
+  contextoCache.set(empresaId, { ctx, em: Date.now() });
+  return ctx;
+}
+
 async function buildDailyContext(empresaId: string): Promise<string> {
   try {
     const agora = new Date();
@@ -2471,85 +2492,90 @@ async function buildDailyContext(empresaId: string): Promise<string> {
     const { start: mesAntStart, end: mesAntEnd } = getMonthRangeBRT(anoAnterior, mesAnteriorNum);
 
     // 1. Empresa
-    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
-    if (!empresa) return 'Empresa não encontrada.';
+    // Todas as consultas em paralelo: o banco fica nos EUA (~150 ms por ida e volta) e
+    // em sequência elas somavam ~10 s antes de a IA começar a responder.
+    const [
+      empresa, lavadores, ordensDiaPatio, ordensDia, ordensMes, caixaDia, caixaMes,
+      ordensMesAnterior, caixaMesAnterior, adiantamentos, fechamentosMes,
+    ] = await Promise.all([
+    // 1. Empresa
+    prisma.empresa.findUnique({ where: { id: empresaId } }),
 
     // 2. Lavadores ativos
-    const lavadores = await prisma.lavador.findMany({ where: { empresaId, ativo: true } });
+    prisma.lavador.findMany({ where: { empresaId, ativo: true } }),
 
     // 3a. Pátio: ordens criadas hoje, todos os status (para contagem de status)
-    const ordensDiaPatio = await prisma.ordemServico.findMany({
+    prisma.ordemServico.findMany({
       where: { empresaId, status: { not: 'CANCELADO' }, createdAt: { gte: diaStart, lte: diaEnd } },
       include: {
         cliente: { select: { nome: true } },
         veiculo: { select: { placa: true, modelo: true } },
         lavador: { select: { nome: true } },
       }
-    });
+    }),
 
     // 3b. Faturamento: ordens FINALIZADAS hoje por dataFim (âncora correta para receita)
-    const ordensDia = await prisma.ordemServico.findMany({
+    prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO', dataFim: { gte: diaStart, lte: diaEnd } },
       include: {
         lavador: { select: { nome: true } },
         ordemLavadores: { include: { lavador: { select: { nome: true } } } },
         pagamentos: { select: { metodo: true, valor: true } },
       }
-    });
+    }),
 
     // 4. Ordens FINALIZADAS do MÊS por dataFim
-    const ordensMes = await prisma.ordemServico.findMany({
+    prisma.ordemServico.findMany({
       where: { empresaId, status: 'FINALIZADO', dataFim: { gte: mesStart, lte: mesEnd } },
       include: {
         lavador: { select: { nome: true } },
         ordemLavadores: { include: { lavador: { select: { nome: true } } } },
         pagamentos: { select: { metodo: true, valor: true } },
       }
-    });
+    }),
 
     // 5. Caixa do dia
-    const caixaDia = await prisma.caixaRegistro.findMany({
+    prisma.caixaRegistro.findMany({
       where: { empresaId, data: { gte: diaStart, lte: diaEnd } }
-    });
+    }),
+
+    // 6. Caixa do mês
+    prisma.caixaRegistro.findMany({
+      where: { empresaId, data: { gte: mesStart, lte: mesEnd } }
+    }),
+
+    // 6b. Ordens e caixa do mês anterior
+    prisma.ordemServico.findMany({
+      where: { empresaId, status: 'FINALIZADO', dataFim: { gte: mesAntStart, lte: mesAntEnd } },
+      include: {
+        lavador: { select: { nome: true } },
+        ordemLavadores: { include: { lavador: { select: { nome: true } } } },
+        pagamentos: { select: { metodo: true, valor: true } },
+      }
+    }),
+    prisma.caixaRegistro.findMany({
+      where: { empresaId, data: { gte: mesAntStart, lte: mesAntEnd } }
+    }),
+
+    // 7. Adiantamentos pendentes (todos, sem filtro de data)
+    prisma.adiantamento.findMany({
+      where: { empresaId, status: 'PENDENTE' },
+      include: { lavador: { select: { nome: true } } }
+    }),
+
+    // 8. Comissões fechadas do mês (FechamentoComissao)
+    prisma.fechamentoComissao.findMany({
+      where: { empresaId, data: { gte: mesStart, lte: mesEnd } },
+      include: { lavador: { select: { nome: true } } }
+    }).catch(() => [] as { lavadorId: string; valorPago: number; data: Date; lavador: { nome: string } }[]),
+    ]);
+    if (!empresa) return 'Empresa não encontrada.';
+
     const entradasDia = caixaDia.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasDia = caixaDia.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
 
-    // 6. Caixa do mês
-    const caixaMes = await prisma.caixaRegistro.findMany({
-      where: { empresaId, data: { gte: mesStart, lte: mesEnd } }
-    });
     const entradasMes = caixaMes.filter(c => c.tipo === 'ENTRADA').reduce((s, c) => s + c.valor, 0);
     const saidasMes = caixaMes.filter(c => c.tipo === 'SAIDA').reduce((s, c) => s + c.valor, 0);
-
-    // 6b. Ordens e caixa do mês anterior
-    const [ordensMesAnterior, caixaMesAnterior] = await Promise.all([
-      prisma.ordemServico.findMany({
-        where: { empresaId, status: 'FINALIZADO', dataFim: { gte: mesAntStart, lte: mesAntEnd } },
-        include: {
-          lavador: { select: { nome: true } },
-          ordemLavadores: { include: { lavador: { select: { nome: true } } } },
-          pagamentos: { select: { metodo: true, valor: true } },
-        }
-      }),
-      prisma.caixaRegistro.findMany({
-        where: { empresaId, data: { gte: mesAntStart, lte: mesAntEnd } }
-      }),
-    ]);
-
-    // 7. Adiantamentos pendentes (todos, sem filtro de data)
-    const adiantamentos = await prisma.adiantamento.findMany({
-      where: { empresaId, status: 'PENDENTE' },
-      include: { lavador: { select: { nome: true } } }
-    });
-
-    // 8. Comissões fechadas do mês (FechamentoComissao)
-    let fechamentosMes: { lavadorId: string; valorPago: number; data: Date; lavador: { nome: string } }[] = [];
-    try {
-      fechamentosMes = await prisma.fechamentoComissao.findMany({
-        where: { empresaId, data: { gte: mesStart, lte: mesEnd } },
-        include: { lavador: { select: { nome: true } } }
-      });
-    } catch { /* ignorar se não existir */ }
 
     // ---- MONTAR CONTEXTO ----
     const mesNomeFmt = mesStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
