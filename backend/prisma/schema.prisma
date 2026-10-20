@@ -1821,3 +1821,15 @@ model BotEstado {
   @@index([expiraEm])
   @@map("bot_estados")
 }
+
+model BotMemoria {
+  id        String   @id @default(cuid())
+  jid       String
+  empresaId String?
+  texto     String
+  origem    String   @default("USUARIO")
+  createdAt DateTime @default(now())
+
+  @@index([jid, createdAt])
+  @@map("bot_memorias")
+}

@@ -111,6 +111,44 @@ export async function chatCompletion(
  * o resultado como mensagens `role: 'tool'` → 2ª chamada → resposta final em
  * linguagem natural já considerando os dados buscados.
  */
+// O modelo às vezes chama a ferramenta com o nome errado ("lembra", "remember") e a Groq
+// recusa a requisição inteira (tool_use_failed). Quando dá pra saber qual ele quis,
+// a chamada é refeita aqui como se tivesse vindo certa.
+const APELIDOS_FERRAMENTA: Record<string, string> = {
+  lembra: 'lembrar', remember: 'lembrar', memorizar: 'lembrar', anotar: 'lembrar', guardar: 'lembrar', save_memory: 'lembrar',
+};
+
+function resolverFerramenta(nome: string, tools: ChatCompletionTool[]): string | null {
+  const nomes = tools.map(t => t.function?.name ?? '');
+  if (nomes.includes(nome)) return nome;
+  const apelido = APELIDOS_FERRAMENTA[nome.toLowerCase()];
+  if (apelido && nomes.includes(apelido)) return apelido;
+  const prefixo = nome.toLowerCase().slice(0, 5);
+  return nomes.find(n => n.toLowerCase().startsWith(prefixo)) ?? null;
+}
+
+async function criarComReparo(params: any, tools: ChatCompletionTool[]): Promise<any> {
+  try {
+    return await groq.chat.completions.create(params);
+  } catch (e: any) {
+    const err = e?.error?.error;
+    if (err?.code !== 'tool_use_failed' || !err.failed_generation || !tools.length) throw e;
+    let gerado: any;
+    try { gerado = JSON.parse(err.failed_generation); } catch { throw e; }
+    const nome = gerado?.name ? resolverFerramenta(String(gerado.name), tools) : null;
+    if (!nome) throw e;
+    console.warn(`[Groq] Ferramenta "${gerado.name}" corrigida para "${nome}"`);
+    return {
+      choices: [{
+        message: {
+          role: 'assistant', content: '',
+          tool_calls: [{ id: `reparo_${Date.now()}`, type: 'function', function: { name: nome, arguments: JSON.stringify(gerado.arguments ?? {}) } }],
+        },
+      }],
+    };
+  }
+}
+
 export async function chatCompletionComFerramentas(
   userMessage: string,
   context: string,
@@ -132,7 +170,7 @@ export async function chatCompletionComFerramentas(
     { role: 'user', content: fullMessage },
   ];
 
-  const primeira = await groq.chat.completions.create({
+  const primeira = await criarComReparo({
     model: 'openai/gpt-oss-120b',
     messages,
     // Sem ferramenta nenhuma (ex.: lavador sem permissão de status) a API recusa `tools: []`
@@ -144,7 +182,7 @@ export async function chatCompletionComFerramentas(
     } : {}),
     temperature: 0.4,
     max_tokens: 600,
-  });
+  }, tools);
 
   const msg = primeira.choices[0]?.message;
   const chamadas = msg?.tool_calls ?? [];
@@ -181,13 +219,13 @@ export async function chatCompletionComFerramentas(
     const ultima = rodada >= MAX_RODADAS;
     let resp;
     try {
-      resp = await groq.chat.completions.create({
+      resp = await criarComReparo({
         model: 'openai/gpt-oss-120b',
         messages,
         ...(ultima ? {} : { tools, tool_choice: 'auto' as const }),
         temperature: 0.5,
         max_tokens: 600,
-      });
+      }, ultima ? [] : tools);
     } catch (e: any) {
       // Sem ferramentas na última rodada a IA às vezes ainda tenta chamar uma — a API recusa
       if (e?.error?.error?.code === 'tool_use_failed') {

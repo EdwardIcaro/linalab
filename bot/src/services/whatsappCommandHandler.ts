@@ -8,6 +8,7 @@ import prisma from '../db';
 import { registrarPontoPoller } from './dpPontoPoller';
 import { chatCompletion, chatCompletionComFerramentas, transcribeAudio } from './groqService';
 import { historicoRecente, EstadoPersistente } from './conversaMemoria';
+import { tratarComandoMemoria, memoriasParaPrompt, FERRAMENTA_LEMBRAR, executarLembrar } from './memoriaLonga';
 import { FERRAMENTAS, executarFerramenta, FERRAMENTAS_LAVADOR, executarFerramentaLavador } from './linaTools';
 import { registrarEvento, formatarErro } from './ownerNotificationService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
@@ -752,6 +753,10 @@ export async function handleIncomingMessage(
       return getDeniedAccessMessage(user);
     }
 
+    // ── MEMÓRIA LONGA: "lembra que…", "o que você lembra de mim?", "esquece…" ──
+    const memoriaResp = await tratarComandoMemoria(from, message);
+    if (memoriaResp !== null) return memoriaResp;
+
     const command = message.trim().toLowerCase().replace(/\//g, '');
 
     // ── LAVADOR: empresa implícita ────────────────────────────────────────────
@@ -1169,19 +1174,22 @@ export async function handleIncomingMessage(
     // Se a mensagem menciona uma data passada específica, enriquecer o contexto com dados daquele dia
     const dataReferenciada = parseDateFromMessage(message);
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const [ctxDia, ctxExtra, historico] = await Promise.all([
+    const [ctxDia, ctxExtra, historico, memorias] = await Promise.all([
       contextoDoDiaCache(empresaId),
       dataReferenciada && dataReferenciada < hoje ? buildContextForDate(empresaId, dataReferenciada) : Promise.resolve(''),
       historicoRecente(from),
+      memoriasParaPrompt(from, empresaId),
     ]);
     const dailyContext = `HOJE: ${hojeExtenso()}\n\n` + ctxDia + ctxExtra;
 
     const { resposta, falhas } = await chatCompletionComFerramentas(
       message,
       dailyContext,
-      FERRAMENTAS,
-      (nome, args) => executarFerramenta(nome, args, { empresaId, user }),
-      { historico }
+      [...FERRAMENTAS, FERRAMENTA_LEMBRAR],
+      (nome, args) => nome === 'lembrar'
+        ? executarLembrar(args, { jid: from, empresaId })
+        : executarFerramenta(nome, args, { empresaId, user }),
+      { historico, promptExtra: memorias }
     );
 
     if (falhas.length > 0) {
@@ -1230,11 +1238,12 @@ async function responderLavadorComIA(
   try {
     const podeStatus = feats.includes('meu_status');
     const podeComissoes = feats.includes('minhas_comissoes');
-    const [lav, status, comissoes, historico] = await Promise.all([
+    const [lav, status, comissoes, historico, memorias] = await Promise.all([
       prisma.lavador.findUnique({ where: { id: lavadorId }, select: { nome: true } }),
       podeStatus ? handleStatusLavador(lavadorId, empresaId) : Promise.resolve(''),
       podeComissoes ? handleComissoesLavador(lavadorId, empresaId) : Promise.resolve(''),
       historicoRecente(from),
+      memoriasParaPrompt(from, empresaId),
     ]);
 
     const partes = [`HOJE: ${hojeExtenso()}`, `QUEM ESTÁ FALANDO: ${lav?.nome ?? 'lavador'}`];
@@ -1249,12 +1258,15 @@ async function responderLavadorComIA(
       `\n- Pergunta sem período ("quantos carros eu lavei?") = responda hoje E o mês atual.` +
       (podeStatus ? `\n- Pra períodos fora de hoje/mês atual, use a ferramenta minhasOrdens.` : `\n- Essa pessoa não tem acesso ao próprio status por aqui; se pedir, diga que o gestor precisa liberar.`) +
       `\n- Se o pedido for algo que um comando resolve (reportar avaria, link do portal), diga qual comando mandar.` +
-      `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.`;
+      `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.` +
+      memorias;
 
     const { resposta } = await chatCompletionComFerramentas(
       message, partes.join('\n\n'),
-      podeStatus ? FERRAMENTAS_LAVADOR : [],
-      (nome, args) => executarFerramentaLavador(nome, args, { empresaId, lavadorId }),
+      [...(podeStatus ? FERRAMENTAS_LAVADOR : []), FERRAMENTA_LEMBRAR],
+      (nome, args) => nome === 'lembrar'
+        ? executarLembrar(args, { jid: from, empresaId })
+        : executarFerramentaLavador(nome, args, { empresaId, lavadorId }),
       { historico, promptExtra },
     );
     return resposta || NAO_ENTENDI;
@@ -1295,11 +1307,14 @@ async function responderFuncionarioComIA(
       `\n\nQUEM É A PESSOA: um(a) funcionário(a) da empresa, com acesso limitado pelo cargo.` +
       (podeFinanceiro ? '' : `\n- Essa pessoa NÃO vê faturamento, caixa nem valores da empresa. Se pedir, diga com leveza que precisa de permissão do administrador — nunca estime nada.`) +
       `\n- Se o pedido for algo que um dos comandos resolve, diga qual comando mandar.` +
-      `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.`;
+      `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.` +
+      await memoriasParaPrompt(from, empresaId);
 
     const { resposta } = await chatCompletionComFerramentas(
-      message, partes.join('\n\n'), ferramentas,
-      (nome, args) => executarFerramenta(nome, args, { empresaId, user }),
+      message, partes.join('\n\n'), [...ferramentas, FERRAMENTA_LEMBRAR],
+      (nome, args) => nome === 'lembrar'
+        ? executarLembrar(args, { jid: from, empresaId })
+        : executarFerramenta(nome, args, { empresaId, user }),
       { historico: await historicoRecente(from), promptExtra },
     );
     return resposta || NAO_ENTENDI;
