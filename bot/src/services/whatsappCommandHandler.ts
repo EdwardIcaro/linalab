@@ -758,6 +758,10 @@ export async function handleIncomingMessage(
     const memoriaResp = await tratarComandoMemoria(from, message);
     if (memoriaResp !== null) return memoriaResp;
 
+    // ── AÇÃO DA IA esperando "sim" (PIX, pagar conta) ─────────────────────────
+    const acaoResp = await tratarConfirmacaoAcao(from, message, user);
+    if (acaoResp !== null) return acaoResp;
+
     const command = message.trim().toLowerCase().replace(/\//g, '');
 
     // ── LAVADOR: empresa implícita ────────────────────────────────────────────
@@ -1130,7 +1134,8 @@ export async function handleIncomingMessage(
       /\badiantamento\s+(?:de\s+)?[\d,\.]/i.test(message) ||                                      // "adiantamento de 200"
       /\b(sa[íi]da|despesa)\s+d[eo]\s+\w/i.test(message)                                          // "saída de gasolina"
     );
-    if (isSaida) return handleSaidaWhatsapp(message, from, senderName, empresaId);
+    // "paguei a conta de luz" com a conta cadastrada em Contas a Pagar → IA dá baixa nela
+    if (isSaida && !(await falaDeContaCadastrada(message, empresaId))) return handleSaidaWhatsapp(message, from, senderName, empresaId);
 
     if (command === 'ordens')    return handleOrdensAtivas(empresaId, user);
     if (command === 'resumo')    return handleResumoCommand(empresaId);
@@ -1186,20 +1191,29 @@ export async function handleIncomingMessage(
     ]);
     const dailyContext = `HOJE: ${hojeExtenso()}\n\n` + ctxDia + ctxExtra;
 
+    let confirmacao: string | null = null;
     const { resposta, falhas } = await chatCompletionComFerramentas(
       message,
       dailyContext,
-      [...FERRAMENTAS, ...FERRAMENTAS_GESTAO, FERRAMENTA_LEMBRAR],
-      async (nome, args) => nome === 'lembrar'
-        ? executarLembrar(args, { jid: from, empresaId })
-        : (await executarFerramentaGestao(nome, args, empresaId, user)) ?? executarFerramenta(nome, args, { empresaId, user }),
-      { historico, promptExtra: memorias }
+      [...FERRAMENTAS, ...FERRAMENTAS_GESTAO, ...FERRAMENTAS_ACAO, FERRAMENTA_LEMBRAR],
+      async (nome, args) => {
+        if (nome === 'lembrar') return executarLembrar(args, { jid: from, empresaId });
+        if (nome in PERMISSAO_ACAO) {
+          const r = await prepararAcao(nome, args, from, empresaId, user);
+          if (r.confirmacao) confirmacao = r.confirmacao;
+          return r.paraIA;
+        }
+        return (await executarFerramentaGestao(nome, args, empresaId, user)) ?? executarFerramenta(nome, args, { empresaId, user });
+      },
+      { historico, promptExtra: REGRA_ACOES + memorias }
     );
 
     if (falhas.length > 0) {
       registrarEvento('TOOL_FALHA', `Ferramenta(s) falharam: ${falhas.join(', ')} — pergunta: "${message.slice(0, 100)}"`, { empresaId, from }).catch(() => {});
     }
 
+    // Ação preparada: a pergunta de confirmação é fixa, não sai da IA
+    if (confirmacao) return confirmacao;
     return resposta || '❌ Não consegui montar uma resposta agora. Tenta reformular?';
 
   } catch (error) {
@@ -1315,6 +1329,232 @@ async function executarFerramentaGestao(nome: string, args: any, empresaId: stri
   return null;
 }
 
+// ── Ações da IA com confirmação (Fase 3b) ────────────────────────────────────
+// A ferramenta só PREPARA: guarda o pedido e a pessoa recebe um resumo fixo pra
+// responder "sim". Nada muda no banco antes disso. Na confirmação a permissão é
+// conferida de novo.
+
+type AcaoPendente =
+  | { tipo: 'pix'; empresaId: string; numero: number }
+  | { tipo: 'pagarConta'; empresaId: string; contaId: string; valorPago: number; forma: string; pagaEm: string; lancarCaixa: boolean };
+
+const acoesPendentes = new EstadoPersistente<AcaoPendente>('acaoPendente', 5 * 60_000);
+
+const PERMISSAO_ACAO: Record<string, string> = {
+  gerarPixOrdem: 'gerenciar_ordens',
+  pagarConta: 'ver_financeiro',
+};
+
+const FORMAS_CONTA = ['PIX', 'DINHEIRO', 'CARTAO', 'BOLETO', 'TRANSFERENCIA'];
+// FormaPagamento do caixa do Lina Wash só tem DINHEIRO | PIX | CARTAO | NFE | NA (igual ao backend)
+const FORMA_CONTA_NO_CAIXA: Record<string, 'PIX' | 'DINHEIRO' | 'CARTAO' | 'NA'> = {
+  PIX: 'PIX', DINHEIRO: 'DINHEIRO', CARTAO: 'CARTAO', BOLETO: 'NA', TRANSFERENCIA: 'PIX',
+};
+
+const FERRAMENTAS_ACAO: ChatCompletionTool[] = [
+  { type: 'function', function: { name: 'gerarPixOrdem', description: 'Gera o QR Code PIX de uma ordem aberta e manda aqui no WhatsApp. O sistema pede "sim" antes.', parameters: { type: 'object', properties: { numero: { type: 'number', description: 'Número da ordem' } }, required: ['numero'] } } },
+  { type: 'function', function: { name: 'pagarConta', description: 'Marca uma conta a pagar cadastrada como paga (e lança a saída no caixa). O sistema pede "sim" antes.', parameters: { type: 'object', properties: {
+    conta: { type: 'string', description: 'Descrição ou fornecedor da conta, como a pessoa falou' },
+    valorPago: { type: 'number', description: 'Só se a pessoa disser um valor diferente do da conta' },
+    formaPagamento: { type: 'string', enum: FORMAS_CONTA },
+    pagaEm: { type: 'string', description: 'YYYY-MM-DD; padrão hoje' },
+    lancarCaixa: { type: 'boolean', description: 'Lançar saída no caixa; padrão sim' },
+  }, required: ['conta'] } } },
+];
+
+const REGRA_ACOES =
+  `\n\nAÇÕES: pediu PIX de uma ordem ou disse que pagou/quer dar baixa numa conta → chame JÁ a ferramenta (gerarPixOrdem / pagarConta), sem perguntar "posso?".` +
+  ` A ferramenta não executa nada: o sistema mostra o resumo e pede o "sim" da pessoa. Nunca diga que já gerou ou já pagou.` +
+  ` Só pergunte antes quando faltar o essencial (número da ordem, qual conta).`;
+
+/** A mensagem fala em pagar uma conta que está cadastrada e pendente em Contas a Pagar? */
+async function falaDeContaCadastrada(message: string, empresaId: string): Promise<boolean> {
+  if (!/\b(paguei|pago|paga|pagamos|quitei|baixa)\b/i.test(message)) return false;
+  const pendentes = await prisma.contaPagar.findMany({ where: { empresaId, status: 'PENDENTE' }, select: { descricao: true, fornecedorNome: true } });
+  if (!pendentes.length) return false;
+  const msg = ` ${semAcento(message).replace(/[^a-z0-9]+/g, ' ')} `;
+  return pendentes.some(c => semAcento(`${c.descricao} ${c.fornecedorNome ?? ''}`)
+    .split(/[^a-z0-9]+/)
+    .some(p => p.length > 3 && !['conta', 'contas', 'mensal', 'pagar'].includes(p) && msg.includes(` ${p} `)));
+}
+
+function ferramentasAcaoPara(user: WhatsAppUser): ChatCompletionTool[] {
+  return FERRAMENTAS_ACAO.filter(f => hasPermission(user, PERMISSAO_ACAO[f.function?.name ?? ''] ?? ''));
+}
+
+const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const diaParaDate = (dia: string) => new Date(`${dia.slice(0, 10)}T12:00:00.000Z`);
+const dateParaDia = (d: Date) => d.toISOString().slice(0, 10);
+const diaBR = (dia: string) => dia.split('-').reverse().slice(0, 2).join('/');
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** Próximo vencimento de uma conta mensal (mesma regra do backend: dia limitado ao fim do mês). */
+function proximoVencimentoMensal(atual: Date, diaMensal: number): string {
+  const [ano, mes] = dateParaDia(atual).split('-').map(Number);
+  const pAno = mes === 12 ? ano + 1 : ano, pMes = mes === 12 ? 1 : mes + 1;
+  const dia = Math.min(Math.max(1, diaMensal), new Date(Date.UTC(pAno, pMes, 0)).getUTCDate());
+  return `${pAno}-${String(pMes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
+const RODAPE_CONFIRMA = `\n\nResponde *sim* pra confirmar ou *não* pra cancelar.`;
+
+async function prepararAcao(
+  nome: string, args: any, from: string, empresaId: string, user: WhatsAppUser,
+): Promise<{ paraIA: string; confirmacao?: string }> {
+  if (!hasPermission(user, PERMISSAO_ACAO[nome])) return { paraIA: 'O usuário não tem permissão pra isso.' };
+
+  if (nome === 'gerarPixOrdem') {
+    const numero = parseInt(String(args.numero ?? '').replace(/\D/g, ''));
+    if (!numero) return { paraIA: 'Qual o número da ordem? Pergunte à pessoa.' };
+    const ordem = await prisma.ordemServico.findFirst({
+      where: { empresaId, numeroOrdem: numero },
+      include: { cliente: { select: { nome: true } }, veiculo: { select: { modelo: true, placa: true } } },
+    });
+    if (!ordem) return { paraIA: `A ordem #${numero} não existe nessa empresa.` };
+    if (!['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(ordem.status)) {
+      return { paraIA: `A ordem #${numero} não está aberta (status ${ordem.status}); não dá pra gerar PIX.` };
+    }
+    acoesPendentes.set(from, { tipo: 'pix', empresaId, numero });
+    const veiculo = ordem.veiculo ? ` · ${(ordem.veiculo.modelo ?? '').toUpperCase()} ${ordem.veiculo.placa ?? ''}`.trimEnd() : '';
+    return {
+      paraIA: 'Preparado. O sistema vai pedir a confirmação.',
+      confirmacao: `💳 Gerar o PIX da ordem *#${numero}*?\n\n👤 ${ordem.cliente.nome}${veiculo}\n💰 *${brl(ordem.valorTotal)}*` + RODAPE_CONFIRMA,
+    };
+  }
+
+  if (nome === 'pagarConta') {
+    const pendentes = await prisma.contaPagar.findMany({ where: { empresaId, status: 'PENDENTE' }, orderBy: { vencimento: 'asc' } });
+    if (!pendentes.length) return { paraIA: 'Essa empresa não tem nenhuma conta a pagar pendente.' };
+    const busca = semAcento(String(args.conta ?? ''));
+    const palavras = busca.split(/\s+/).filter(p => p.length > 2 && !['conta', 'contas', 'pagar', 'paga', 'pago'].includes(p));
+    const achadas = palavras.length
+      ? pendentes.filter(c => { const alvo = semAcento(`${c.descricao} ${c.fornecedorNome ?? ''}`); return palavras.every(p => alvo.includes(p)); })
+      : [];
+    const lista = (cs: typeof pendentes) => cs.slice(0, 15).map(c => `• ${c.descricao}${c.fornecedorNome ? ` (${c.fornecedorNome})` : ''} — ${brl(c.valor)} — vence ${diaBR(dateParaDia(c.vencimento))}`).join('\n');
+    if (!achadas.length) return { paraIA: `Nenhuma conta pendente bate com "${args.conta}". Pendentes:\n${lista(pendentes)}\nPergunte qual delas.` };
+    if (achadas.length > 1) return { paraIA: `Mais de uma conta bate com "${args.conta}":\n${lista(achadas)}\nPergunte qual delas.` };
+
+    const conta = achadas[0];
+    const valorPago = args.valorPago !== undefined && isFinite(Number(args.valorPago)) && Number(args.valorPago) >= 0 ? Number(args.valorPago) : conta.valor;
+    const forma = FORMAS_CONTA.includes(String(args.formaPagamento ?? '').toUpperCase()) ? String(args.formaPagamento).toUpperCase() : 'PIX';
+    const hoje = getTodayStrBRT();
+    const pagaEm = /^\d{4}-\d{2}-\d{2}$/.test(String(args.pagaEm ?? '')) && args.pagaEm <= hoje ? String(args.pagaEm) : hoje;
+    const lc = await prisma.empresaSistema.findFirst({ where: { empresaId, sistema: 'lina-center', ativo: true }, select: { id: true } });
+    const lancarCaixa = args.lancarCaixa !== false && !lc && valorPago > 0;
+
+    acoesPendentes.set(from, { tipo: 'pagarConta', empresaId, contaId: conta.id, valorPago: Math.round(valorPago * 100) / 100, forma, pagaEm, lancarCaixa });
+    const linhas = [
+      `🧾 Marcar como *paga*?
+`,
+      `${conta.descricao}${conta.fornecedorNome ? ` (${conta.fornecedorNome})` : ''}`,
+      `💰 *${brl(valorPago)}*${valorPago !== conta.valor ? ` (conta de ${brl(conta.valor)})` : ''} · ${forma}`,
+      `📅 Paga em ${pagaEm === hoje ? 'hoje' : diaBR(pagaEm)} · vencimento ${diaBR(dateParaDia(conta.vencimento))}`,
+      lancarCaixa ? `📒 Lança a saída no caixa` : (lc ? '' : `📒 Sem lançar no caixa`),
+      conta.tipo === 'MENSAL' && conta.diaMensal ? `🔁 Mensal: a do mês que vem fica pra ${diaBR(proximoVencimentoMensal(conta.vencimento, conta.diaMensal))}` : '',
+    ].filter(Boolean);
+    return { paraIA: 'Preparado. O sistema vai pedir a confirmação.', confirmacao: linhas.join('\n') + RODAPE_CONFIRMA };
+  }
+
+  return { paraIA: 'Ação desconhecida.' };
+}
+
+const RE_SIM = /^(sim|s|pode|confirm[oa]|ok|isso|manda|bora|claro|positivo)\b/i;
+const RE_NAO = /^(n[aã]o|n|cancela|cancelar|deixa)\b/i;
+
+/** Resposta a uma ação preparada. null = não tinha ação, ou a pessoa mudou de assunto. */
+async function tratarConfirmacaoAcao(from: string, message: string, user: WhatsAppUser): Promise<string | null> {
+  const acao = acoesPendentes.get(from);
+  if (!acao) return null;
+  const t = message.trim();
+  acoesPendentes.delete(from);
+
+  if (RE_NAO.test(t)) {
+    // "não, é a de luz" → cancela e deixa a IA seguir com a correção
+    return t.replace(RE_NAO, '').replace(/^[\s,.!]+/, '').length > 2 ? null : 'Ok, cancelei. 👍';
+  }
+  if (!RE_SIM.test(t) || t.length > 40) return null; // mudou de assunto: a ação cai
+
+  const empresaOk = user.type === 'admin' ? !!user.empresas?.some(e => e.id === acao.empresaId) : user.empresaId === acao.empresaId;
+  const perm = acao.tipo === 'pix' ? PERMISSAO_ACAO.gerarPixOrdem : PERMISSAO_ACAO.pagarConta;
+  if (!empresaOk || !hasPermission(user, perm)) return getPermissionDeniedMessage();
+
+  if (acao.tipo === 'pix') return handlePixOrdem(acao.numero, acao.empresaId, from, user, false);
+
+  try {
+    const r = await pagarContaPeloBot(acao, user);
+    contextoCache.delete(acao.empresaId);
+    return `✅ Conta *${r.descricao}* marcada como paga (${brl(acao.valorPago)}).` +
+      (r.caixaLancado ? '\n📒 Saída lançada no caixa.' : '') +
+      (r.proxima ? `\n🔁 A do mês que vem já está cadastrada pra ${diaBR(r.proxima)}.` : '');
+  } catch (e: any) {
+    if (e?.message === 'JA_PAGA') return 'Essa conta já tinha sido paga. Nada mudou.';
+    console.error('[WhatsApp] pagar conta:', e);
+    return '❌ Não consegui marcar a conta como paga. Tenta pelo sistema.';
+  }
+}
+
+/** Mesmo efeito do POST /api/contas-pagar/:id/pagar do backend. */
+async function pagarContaPeloBot(
+  acao: Extract<AcaoPendente, { tipo: 'pagarConta' }>, user: WhatsAppUser,
+): Promise<{ descricao: string; caixaLancado: boolean; proxima: string | null }> {
+  const { empresaId } = acao;
+  const conta = await prisma.contaPagar.findFirst({ where: { id: acao.contaId, empresaId } });
+  if (!conta || conta.status === 'PAGA') throw new Error('JA_PAGA');
+
+  return prisma.$transaction(async (tx) => {
+    let caixaRegistroId: string | null = null;
+    if (acao.lancarCaixa) {
+      let fornecedorId: string | undefined;
+      if (conta.fornecedorNome) {
+        const f = await tx.fornecedor.findFirst({ where: { nome: conta.fornecedorNome, empresaId } })
+          || await tx.fornecedor.create({ data: { nome: conta.fornecedorNome, empresaId } });
+        fornecedorId = f.id;
+      }
+      const reg = await tx.caixaRegistro.create({
+        data: {
+          empresaId,
+          tipo: 'SAIDA',
+          valor: acao.valorPago,
+          formaPagamento: FORMA_CONTA_NO_CAIXA[acao.forma],
+          descricao: `[Contas] ${conta.descricao}`,
+          categoriaGasto: 'Contas',
+          fornecedorId,
+          origem: 'contas-pagar',
+          lancadoPor: user.nome ? `${user.nome} (WhatsApp)` : 'WhatsApp',
+          data: acao.pagaEm === getTodayStrBRT() ? new Date() : diaParaDate(acao.pagaEm),
+        },
+      });
+      caixaRegistroId = reg.id;
+    }
+
+    // Só marca se ainda estiver pendente (alguém pagou pelo sistema nesse meio-tempo)
+    const marcada = await tx.contaPagar.updateMany({
+      where: { id: conta.id, status: 'PENDENTE' },
+      data: { status: 'PAGA', pagaEm: diaParaDate(acao.pagaEm), valorPago: acao.valorPago, formaPagamento: acao.forma, caixaRegistroId },
+    });
+    if (marcada.count === 0) throw new Error('JA_PAGA');
+
+    let proxima: string | null = null;
+    if (conta.tipo === 'MENSAL' && conta.diaMensal) {
+      proxima = proximoVencimentoMensal(conta.vencimento, conta.diaMensal);
+      await tx.contaPagar.create({
+        data: {
+          empresaId,
+          descricao: conta.descricao,
+          valor: conta.valor,
+          vencimento: diaParaDate(proxima),
+          tipo: 'MENSAL',
+          diaMensal: conta.diaMensal,
+          fornecedorNome: conta.fornecedorNome,
+          lembrarDiasAntes: conta.lembrarDiasAntes,
+          criadoPor: conta.criadoPor,
+        },
+      });
+    }
+    return { descricao: conta.descricao, caixaLancado: !!caixaRegistroId, proxima };
+  }, { timeout: 30000 });
+}
+
 async function responderLavadorComIA(
   from: string, message: string, empresaId: string, lavadorId: string, feats: string[],
 ): Promise<string> {
@@ -1396,13 +1636,22 @@ async function responderFuncionarioComIA(
       `\n- Se a mensagem não for uma pergunta (ex.: lista de valores, recado solto), pergunte o que ela quer fazer, sem inventar.` +
       await memoriasParaPrompt(from, empresaId);
 
+    const acoes = ferramentasAcaoPara(user);
+    let confirmacao: string | null = null;
     const { resposta } = await chatCompletionComFerramentas(
-      message, partes.join('\n\n'), [...ferramentas, ...ferramentasGestaoPara(user), FERRAMENTA_LEMBRAR],
-      async (nome, args) => nome === 'lembrar'
-        ? executarLembrar(args, { jid: from, empresaId })
-        : (await executarFerramentaGestao(nome, args, empresaId, user)) ?? executarFerramenta(nome, args, { empresaId, user }),
-      { historico: await historicoRecente(from), promptExtra },
+      message, partes.join('\n\n'), [...ferramentas, ...ferramentasGestaoPara(user), ...acoes, FERRAMENTA_LEMBRAR],
+      async (nome, args) => {
+        if (nome === 'lembrar') return executarLembrar(args, { jid: from, empresaId });
+        if (nome in PERMISSAO_ACAO) {
+          const r = await prepararAcao(nome, args, from, empresaId, user);
+          if (r.confirmacao) confirmacao = r.confirmacao;
+          return r.paraIA;
+        }
+        return (await executarFerramentaGestao(nome, args, empresaId, user)) ?? executarFerramenta(nome, args, { empresaId, user });
+      },
+      { historico: await historicoRecente(from), promptExtra: (acoes.length ? REGRA_ACOES : '') + promptExtra },
     );
+    if (confirmacao) return confirmacao;
     return resposta || NAO_ENTENDI;
   } catch (err) {
     console.error('[WhatsApp] IA do funcionário falhou:', err);
