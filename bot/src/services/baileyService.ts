@@ -8,7 +8,7 @@ import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
+import { AUTH_BASE } from '../utils/authBase';
 import prisma from '../db';
 import { registrarEnvio, ouvirRecibos, type MetaEnvio } from './mensagemLog';
 import { handleIncomingMessage, handleIncomingImage, handleIncomingAudio, handleDpPontoKeyword, handleDpLocation, handleDpEspelho } from './whatsappCommandHandler';
@@ -20,7 +20,7 @@ import { validateAndClaimBotCode } from './botUserCodeStore';
 // CONSTANTES
 // ==========================================
 const GLOBAL_INSTANCE_NAME = 'lina-global';
-const GLOBAL_AUTH_DIR      = join(tmpdir(), 'baileys-global');
+const GLOBAL_AUTH_DIR      = join(AUTH_BASE, 'baileys-global');
 
 const BASE_DELAY    = 3000;
 const MAX_DELAY     = 60000;

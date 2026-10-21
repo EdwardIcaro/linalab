@@ -12,7 +12,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const prisma = new PrismaClient();
-const AUTH_DIR = join(tmpdir(), 'baileys-scan-local');
+const AUTH_DIR = join(process.env.BAILEYS_AUTH_DIR || tmpdir(), 'baileys-scan-local');
 const INSTANCE_NAME = 'lina-global';
 
 let savedSuccessfully = false;

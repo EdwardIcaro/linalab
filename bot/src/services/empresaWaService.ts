@@ -10,7 +10,7 @@ import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
+import { AUTH_BASE } from '../utils/authBase';
 import prisma from '../db';
 import { registrarEnvio, ouvirRecibos } from './mensagemLog';
 
@@ -79,7 +79,7 @@ function getState(empresaId: string): EmpresaState {
 }
 
 function authDir(empresaId: string): string {
-  return join(tmpdir(), `baileys-empresa-${empresaId}`);
+  return join(AUTH_BASE, `baileys-empresa-${empresaId}`);
 }
 
 async function restoreAuthFromDb(empresaId: string): Promise<void> {
