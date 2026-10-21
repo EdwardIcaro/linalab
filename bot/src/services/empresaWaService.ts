@@ -82,14 +82,51 @@ function authDir(empresaId: string): string {
   return join(AUTH_BASE, `baileys-empresa-${empresaId}`);
 }
 
+// Mensagens enviadas recentemente, pro getMessage: quando o celular do destinatário não
+// consegue decifrar, o WhatsApp pede reenvio e o Baileys precisa do conteúdo original.
+// Sem isso a mensagem fica em "Aguardando mensagem" pra sempre (mesmo fix do baileyService).
+const enviadasRecentes = new Map<string, { msg: any; em: number }>();
+const ENVIADAS_MAX = 1000;
+const ENVIADAS_TTL = 6 * 60 * 60_000;
+
+function guardarEnviada(id: string, msg: any): void {
+  enviadasRecentes.set(id, { msg, em: Date.now() });
+  if (enviadasRecentes.size > ENVIADAS_MAX) {
+    const limite = Date.now() - ENVIADAS_TTL;
+    for (const [k, v] of enviadasRecentes) {
+      if (enviadasRecentes.size <= ENVIADAS_MAX && v.em >= limite) break;
+      enviadasRecentes.delete(k);
+    }
+  }
+}
+
+function registrationIdDe(credsJson: string | undefined): number | null {
+  try { return credsJson ? JSON.parse(credsJson).registrationId ?? null : null; } catch { return null; }
+}
+
 async function restoreAuthFromDb(empresaId: string): Promise<void> {
   try {
     const dir = authDir(empresaId);
+    const session = await (prisma as any).whatsappEmpresaSession.findUnique({ where: { empresaId } });
+    const authFiles = session?.authState ? JSON.parse(session.authState) as Record<string, string> : null;
+
+    // O disco é a cópia viva (as chaves de sessão avançam a cada mensagem; o banco fica
+    // pra trás). Restaurar o banco por cima volta as sessões no tempo e o destinatário
+    // vê "Aguardando mensagem". Só usa o banco se o disco não tem sessão ou é de outro
+    // pareamento (registrationId diferente).
+    const credsDisco = join(dir, 'creds.json');
+    if (existsSync(credsDisco) && readdirSync(dir).length > 2) {
+      const regDisco = registrationIdDe(readFileSync(credsDisco, 'utf-8'));
+      const regBanco = registrationIdDe(authFiles?.['creds.json']);
+      if (regDisco !== null && (regBanco === null || regBanco === regDisco)) {
+        console.log(`[EmpresaWA:${empresaId}] Auth do disco mantido (mais recente que o banco)`);
+        return;
+      }
+    }
+
     if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
-    const session = await (prisma as any).whatsappEmpresaSession.findUnique({ where: { empresaId } });
-    if (!session?.authState) return;
-    const authFiles = JSON.parse(session.authState) as Record<string, string>;
+    if (!authFiles) return;
     for (const [f, c] of Object.entries(authFiles)) writeFileSync(join(dir, f), c, 'utf-8');
     console.log(`[EmpresaWA:${empresaId}] Auth restaurado (${Object.keys(authFiles).length} arquivos)`);
   } catch (err) {
@@ -196,8 +233,8 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
       qrTimeout: 60000,
       // undefined = "não tenho essa mensagem pra reenviar" (mesmo fix de baileyService.ts:
       // devolver conteúdo fixo aqui pode ser exibido pelo WhatsApp como mensagem real
-      // durante retries de sessão).
-      getMessage: async () => undefined,
+      // durante retries de sessão). Só devolve o que este processo realmente enviou.
+      getMessage: async (key: any) => enviadasRecentes.get(key?.id)?.msg,
     });
 
     st.socket = sock;
@@ -326,6 +363,7 @@ export async function connectEmpresa(empresaId: string): Promise<void> {
               data:  { status: 'DESCONECTADO', qrCode: null, ...(isLogout ? { authState: null } : {}) },
             });
           } catch {}
+          if (isLogout) rmSync(dir, { recursive: true, force: true });
           console.log(`[EmpresaWA:${empresaId}] ${isLogout ? 'Logout real — auth limpo' : 'Max tentativas atingido'}`);
         }
       }
@@ -364,7 +402,9 @@ async function enviarDaEmpresa(empresaId: string, telefone: string, texto: strin
   const results = await st.socket.onWhatsApp(digits);
   const found   = Array.isArray(results) ? results[0] : results;
   if (!found?.exists) throw new Error(`Número ${telefone} não encontrado no WhatsApp`);
-  return st.socket.sendMessage(found.jid ?? jid, { text: texto });
+  const r = await st.socket.sendMessage(found.jid ?? jid, { text: texto });
+  if (r?.key?.id && r.message) guardarEnviada(r.key.id, r.message);
+  return r;
 }
 
 export async function disconnectEmpresa(empresaId: string): Promise<void> {
