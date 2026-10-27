@@ -9,7 +9,7 @@ import { registrarPontoPoller } from './dpPontoPoller';
 import { chatCompletion, chatCompletionComFerramentas, transcribeAudio } from './groqService';
 import { historicoRecente, EstadoPersistente } from './conversaMemoria';
 import { tratarComandoMemoria, memoriasParaPrompt, FERRAMENTA_LEMBRAR, executarLembrar } from './memoriaLonga';
-import { FERRAMENTAS, executarFerramenta, FERRAMENTAS_LAVADOR, executarFerramentaLavador } from './linaTools';
+import { FERRAMENTAS, executarFerramenta, FERRAMENTAS_LAVADOR, executarFerramentaLavador, extrairPlaca, podeConsultarPlaca, consultarPlacaImpl } from './linaTools';
 import type { ChatCompletionTool } from 'groq-sdk/resources/chat/completions';
 import { registrarEvento, formatarErro } from './ownerNotificationService';
 import { identifyWhatsAppUser, hasPermission, getDeniedAccessMessage, getPermissionDeniedMessage, DEFAULT_LAVADOR_FEATURES, type WhatsAppUser } from './whatsappAuthService';
@@ -1183,13 +1183,14 @@ export async function handleIncomingMessage(
     // Se a mensagem menciona uma data passada específica, enriquecer o contexto com dados daquele dia
     const dataReferenciada = parseDateFromMessage(message);
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const [ctxDia, ctxExtra, historico, memorias] = await Promise.all([
+    const [ctxDia, ctxExtra, historico, memorias, ctxPlaca] = await Promise.all([
       contextoDoDiaCache(empresaId),
       dataReferenciada && dataReferenciada < hoje ? buildContextForDate(empresaId, dataReferenciada) : Promise.resolve(''),
       historicoRecente(from),
       memoriasParaPrompt(from, empresaId),
+      fichaDaPlaca(message, empresaId, user),
     ]);
-    const dailyContext = `HOJE: ${hojeExtenso()}\n\n` + ctxDia + ctxExtra;
+    const dailyContext = `HOJE: ${hojeExtenso()}\n\n` + ctxDia + ctxExtra + ctxPlaca;
 
     let confirmacao: string | null = null;
     const { resposta, falhas } = await chatCompletionComFerramentas(
@@ -1555,6 +1556,22 @@ async function pagarContaPeloBot(
   }, { timeout: 30000 });
 }
 
+/**
+ * Mensagem com placa ("TZG6D10", "verifica a placa ABC-1234") → a ficha do veículo já vai no
+ * contexto, sem depender da IA lembrar de chamar consultarPlaca (com a placa sozinha ela às vezes não chama).
+ */
+async function fichaDaPlaca(message: string, empresaId: string, user: WhatsAppUser): Promise<string> {
+  const placa = extrairPlaca(message);
+  if (!placa || !podeConsultarPlaca(user)) return '';
+  try {
+    const ficha = await consultarPlacaImpl(placa, empresaId, hasPermission(user, 'ver_financeiro'));
+    return `\n\n=== PLACA ${placa} (a mensagem cita essa placa — responda com base nisto) ===\n${relatorioParaContexto(ficha, 2000)}\n`;
+  } catch (err) {
+    console.error('[WhatsApp] ficha da placa falhou:', err);
+    return '';
+  }
+}
+
 async function responderLavadorComIA(
   from: string, message: string, empresaId: string, lavadorId: string, feats: string[],
 ): Promise<string> {
@@ -1626,8 +1643,11 @@ async function responderFuncionarioComIA(
       const n = f.function?.name;
       if (n === 'buscarCliente') return hasPermission(user, 'gerenciar_clientes');
       if (n === 'buscarOrdens') return podeFinanceiro;
+      if (n === 'consultarPlaca') return podeConsultarPlaca(user);
       return true;
     });
+    const ctxPlaca = await fichaDaPlaca(message, empresaId, user);
+    if (ctxPlaca) partes.push(ctxPlaca.trim());
 
     const promptExtra =
       `\n\nQUEM É A PESSOA: um(a) funcionário(a) da empresa, com acesso limitado pelo cargo.` +

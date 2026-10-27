@@ -45,6 +45,20 @@ export const FERRAMENTAS: ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
+      name: 'consultarPlaca',
+      description: 'Ficha de um veículo pela placa: modelo, cor, cliente dono, histórico de ordens (data, serviços, lavador, valor, pagamento) e pedidos da Localiza com essa placa. Use SEMPRE que a mensagem citar uma placa (ex.: TZG6D10, ABC-1234), mesmo que venha só a placa.',
+      parameters: {
+        type: 'object',
+        properties: {
+          placa: { type: 'string', description: 'Placa do veículo, com ou sem hífen' },
+        },
+        required: ['placa'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'explicarSistema',
       description: 'Explica um conceito do próprio sistema Lina X (planos, comissão, PIX, ecossistema) — não usa dado nenhum da empresa do usuário.',
       parameters: {
@@ -92,6 +106,10 @@ export async function executarFerramenta(
     case 'buscarOrdens':
       if (!hasPermission(ctx.user, 'ver_financeiro')) return 'O usuário não tem permissão pra ver ordens/financeiro.';
       return buscarOrdensImpl(args, ctx.empresaId);
+
+    case 'consultarPlaca':
+      if (!podeConsultarPlaca(ctx.user)) return 'O usuário não tem permissão pra consultar veículos.';
+      return consultarPlacaImpl(String(args.placa ?? ''), ctx.empresaId, hasPermission(ctx.user, 'ver_financeiro'));
 
     case 'explicarSistema':
       return explicarSistemaImpl(String(args.topico ?? ''));
@@ -195,6 +213,103 @@ async function buscarOrdensImpl(args: any, empresaId: string): Promise<string> {
   const resto = ordens.length > LISTA_MAX ? `\n(+${ordens.length - LISTA_MAX} ordens não listadas)` : '';
 
   return `${ordens.length} ${rotulo}${filtro ? ` (${filtro})` : ''}. Total: R$ ${total.toFixed(2)}.\n${linhas.join('\n')}${resto}`;
+}
+
+// ── Placa ───────────────────────────────────────────────────────────────────
+// Padrão antigo (ABC1234) e Mercosul (ABC1D23), com ou sem hífen/espaço.
+const PLACA_RE = /\b([A-Z]{3})[-\s]?(\d[A-Z0-9]\d{2})\b/i;
+
+/** Placa citada na mensagem, normalizada (TZG6D10), ou null. */
+export function extrairPlaca(texto: string): string | null {
+  const m = texto.match(PLACA_RE);
+  return m ? (m[1] + m[2]).toUpperCase() : null;
+}
+
+export function podeConsultarPlaca(user: WhatsAppUser): boolean {
+  return hasPermission(user, 'gerenciar_ordens') || hasPermission(user, 'gerenciar_clientes') || hasPermission(user, 'ver_financeiro');
+}
+
+const PLACA_HISTORICO_MAX = 10;
+const fmtDia = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+/** Só enxerga o que é da empresa ativa — placa é única no banco todo, mas o dono pode ser de outra empresa. */
+export async function consultarPlacaImpl(placaBruta: string, empresaId: string, comValores: boolean): Promise<string> {
+  const placa = extrairPlaca(placaBruta) ?? placaBruta.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  if (!/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(placa)) return `"${placaBruta}" não parece uma placa válida.`;
+  const variantes = [placa, `${placa.slice(0, 3)}-${placa.slice(3)}`];
+  const placaWhere = { OR: variantes.map(v => ({ placa: { equals: v, mode: 'insensitive' as const } })) };
+
+  const emp = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { usuarioId: true } });
+  const [veiculo, ordens, totais, lcVeiculo, solicitacoes] = await Promise.all([
+    prisma.veiculo.findFirst({ where: placaWhere, include: { cliente: { select: { nome: true, telefone: true, empresaId: true } } } }),
+    prisma.ordemServico.findMany({
+      where: { empresaId, veiculo: placaWhere },
+      include: {
+        items: { select: { quantidade: true, nomeCustom: true, servico: { select: { nome: true } }, adicional: { select: { nome: true } } } },
+        ordemLavadores: { select: { lavador: { select: { nome: true } } } },
+        lavador: { select: { nome: true } },
+        pagamentos: { where: { status: 'PAGO' }, select: { metodo: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: PLACA_HISTORICO_MAX,
+    }),
+    prisma.ordemServico.aggregate({ where: { empresaId, veiculo: placaWhere }, _count: true, _sum: { valorTotal: true } }),
+    prisma.lcVeiculo.findFirst({
+      where: { ...placaWhere, cliente: { empresaId } },
+      include: {
+        cliente: { select: { nome: true } },
+        ordens: { where: { empresaId }, orderBy: { createdAt: 'desc' }, take: 5, select: { numeroOrdem: true, status: true, valorTotal: true, createdAt: true } },
+      },
+    }),
+    emp ? prisma.solicitacaoLavagem.findMany({
+      where: { usuarioId: emp.usuarioId, ...placaWhere }, orderBy: { createdAt: 'desc' }, take: 5,
+    }) : Promise.resolve([]),
+  ]);
+
+  const veiculoDaEmpresa = veiculo && (veiculo.cliente.empresaId === empresaId || ordens.length > 0);
+  if (!veiculoDaEmpresa && !lcVeiculo && solicitacoes.length === 0) {
+    return `A placa ${placa} não tem cadastro, ordem nem pedido da Localiza nesta empresa.`;
+  }
+
+  const partes: string[] = [];
+  const valor = (v: number) => comValores ? ` · R$ ${v.toFixed(2)}` : '';
+
+  if (veiculoDaEmpresa) {
+    const desc = [veiculo.modelo, veiculo.cor, veiculo.ano, veiculo.subtipoVeiculo ?? veiculo.tipoVeiculo].filter(Boolean).join(' · ');
+    partes.push(`Veículo ${placa}: ${desc || 'sem detalhes'}\nCliente: ${veiculo.cliente.nome}${veiculo.cliente.telefone ? ` · ${veiculo.cliente.telefone}` : ''}\nCadastrado em ${fmtDia(veiculo.createdAt)}`);
+
+    if (ordens.length === 0) {
+      partes.push('Nenhuma ordem desta empresa com essa placa.');
+    } else {
+      const total = comValores ? ` · total R$ ${(totais._sum.valorTotal ?? 0).toFixed(2)}` : '';
+      const linhas = ordens.map(o => {
+        const servicos = o.items.map(i => {
+          const nome = i.servico?.nome ?? i.adicional?.nome ?? i.nomeCustom ?? 'serviço';
+          return i.quantidade > 1 ? `${i.quantidade}x ${nome}` : nome;
+        }).join(', ') || 'sem serviços';
+        const nomes = o.ordemLavadores.map(l => l.lavador.nome);
+        const lavadores = (nomes.length ? nomes : o.lavador ? [o.lavador.nome] : []).join(' e ') || 'sem lavador';
+        const quando = o.dataFim ? `finalizada ${fmtDia(o.dataFim)}` : `aberta ${fmtDia(o.createdAt)} · ${STATUS_LEGIVEL[o.status] ?? o.status}`;
+        const pago = comValores ? (o.pago ? ` · pago${o.pagamentos.length ? ` (${[...new Set(o.pagamentos.map(p => p.metodo))].join('/')})` : ''}` : ' · NÃO pago') : '';
+        return `#${o.numeroOrdem} · ${quando} · ${servicos} · ${lavadores}${valor(o.valorTotal)}${pago}`;
+      });
+      const resto = totais._count > ordens.length ? `\n(mostrando as ${ordens.length} mais recentes)` : '';
+      partes.push(`${totais._count} ordem(ns) desta empresa${total}:\n${linhas.join('\n')}${resto}`);
+    }
+  }
+
+  if (lcVeiculo) {
+    const linhas = lcVeiculo.ordens.map(o => `#${o.numeroOrdem} · ${fmtDia(o.createdAt)} · ${STATUS_LEGIVEL[o.status] ?? o.status}${valor(o.valorTotal)}`);
+    partes.push(`Lina Center (oficina): ${lcVeiculo.modelo} · cliente ${lcVeiculo.cliente.nome}\n${linhas.join('\n') || 'Nenhuma ordem na oficina.'}`);
+  }
+
+  if (solicitacoes.length) {
+    partes.push(`Pedidos da Localiza com essa placa:\n` + solicitacoes.map(s =>
+      `• Nº ${s.numero} · ${fmtDia(s.createdAt)} · ${s.status.toLowerCase()}${s.aceitaPorNome ? ` por ${s.aceitaPorNome}` : ''}${s.agencia ? ` · ${s.agencia}` : ''}`
+    ).join('\n'));
+  }
+
+  return partes.join('\n\n');
 }
 
 function explicarSistemaImpl(topico: string): string {
