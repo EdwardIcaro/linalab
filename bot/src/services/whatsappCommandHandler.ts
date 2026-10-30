@@ -1154,8 +1154,9 @@ export async function handleIncomingMessage(
     const fcMatch = message.trim().match(/^fc\s+([a-z0-9]+)$/i);
     if (fcMatch) return handleFechamentoDetalhes(empresaId, fcMatch[1]);
 
-    // Fechamento de caixa
-    const isFechamento = /\bfechamento\b|\bfechament[oa]\b|\babertura\b/i.test(message);
+    // Fechamento de caixa — "fechamento de comissão" e "como funciona o fechamento?" vão pra IA
+    const isFechamento = /\bfechamento\b|\bfechament[oa]\b|\babertura\b/i.test(message) &&
+      !/comiss/i.test(message) && !DUVIDA_SISTEMA.test(message);
     if (isFechamento) {
       const dataFech = parseDateFromMessage(message) ?? new Date();
       return handleFechamentoCaixa(empresaId, dataFech);
@@ -1170,14 +1171,20 @@ export async function handleIncomingMessage(
     // Consulta conversacional sobre lavador ("como tá o Felipe?", "como anda o João?")
     // → passa dados pro Groq para resposta pessoal e descontraída
     const isConversacionalLavador = /\b(como\s+(est[aá]|t[aá]|anda|vai|foi|est[aá]\s+indo|t[aá]\s+indo)|e\s+o\s+\w|e\s+a\s+\w|t[aá]\s+indo\s+bem)\b/i.test(message);
+    // "quais carros da Localiza o Lucas fez hoje?" cita o lavador mas é busca de ordens —
+    // vai pra IA (buscarOrdens com filtro), não pro cartão-resumo dele
+    const pedeOrdens = PEDE_ORDENS.test(message);
 
-    if (isConversacionalLavador) {
+    if (isConversacionalLavador && !pedeOrdens) {
       const ctxLavador = await buildContextLavadorConversacional(message, empresaId);
       if (ctxLavador) return chatCompletion(message, ctxLavador, undefined, await historicoRecente(from));
     }
 
-    const lavadorResponse = await handleLavadorEspecifico(message, empresaId);
-    if (lavadorResponse) return lavadorResponse;
+    // Cartão-resumo só pra mensagem curta ("Lucas", "lucas hoje")
+    if (!pedeOrdens && message.trim().split(/\s+/).length <= 3) {
+      const lavadorResponse = await handleLavadorEspecifico(message, empresaId);
+      if (lavadorResponse) return lavadorResponse;
+    }
 
     // Só constrói o contexto pesado quando vai para a IA
     // Se a mensagem menciona uma data passada específica, enriquecer o contexto com dados daquele dia
@@ -1556,6 +1563,10 @@ async function pagarContaPeloBot(
   }, { timeout: 30000 });
 }
 
+const DUVIDA_SISTEMA = /\b(como\s+(funciona|fa[çc]o|faz|fazer|uso|usa)|o\s+que\s+(é|e|significa)|onde\s+(fica|vejo|acho|est[aá])|pra\s+que\s+serve|por\s*que)\b/i;
+
+const PEDE_ORDENS =/\b(ordens?|os|carros?|ve[ií]culos?|placas?|motos?|localiza|r\$|reais|quais|quantos|lista|mostra|cancelad[ao]s?|reabr|volt[ae]r?|troca[r]?)\b|\d{2,}/i;
+
 /**
  * Mensagem com placa ("TZG6D10", "verifica a placa ABC-1234") → a ficha do veículo já vai no
  * contexto, sem depender da IA lembrar de chamar consultarPlaca (com a placa sozinha ela às vezes não chama).
@@ -1642,8 +1653,7 @@ async function responderFuncionarioComIA(
     const ferramentas = FERRAMENTAS.filter(f => {
       const n = f.function?.name;
       if (n === 'buscarCliente') return hasPermission(user, 'gerenciar_clientes');
-      if (n === 'buscarOrdens') return podeFinanceiro;
-      if (n === 'consultarPlaca') return podeConsultarPlaca(user);
+      if (n === 'buscarOrdens' || n === 'detalheOrdem' || n === 'consultarPlaca') return podeConsultarPlaca(user);
       return true;
     });
     const ctxPlaca = await fichaDaPlaca(message, empresaId, user);

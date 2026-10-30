@@ -9,6 +9,8 @@
 import type { ChatCompletionTool } from 'groq-sdk/resources/chat/completions';
 import prisma from '../db';
 import { hasPermission, type WhatsAppUser } from './whatsappAuthService';
+import { consultarManual } from './linaManual';
+import { getDateRangeBRT } from '../utils/dateUtils';
 
 export const FERRAMENTAS: ChatCompletionTool[] = [
   {
@@ -29,16 +31,31 @@ export const FERRAMENTAS: ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'buscarOrdens',
-      description: 'Lista ordens de serviço da empresa, uma por uma (número, cliente, veículo, valor, lavadores, status) com o total. Use pra "quais são as ordens…", ordens abertas/em andamento/no pátio, ordens de um cliente (ex.: Localiza) ou de um período.',
+      description: 'Busca ordens de serviço da empresa combinando filtros (cliente, lavador, valor, placa, status, período) e lista uma por uma (número, cliente, veículo, valor, lavadores, status, pagamento) com o total. Use pra qualquer pergunta sobre ordens específicas: "ordens do Lucas hoje", "carros da Localiza de R$ 30", "o que tá no pátio", "ordens canceladas da semana". Combine os filtros que a pessoa citou.',
       parameters: {
         type: 'object',
         properties: {
-          situacao: { type: 'string', enum: ['finalizadas', 'abertas'], description: 'finalizadas (padrão) ou abertas = pendentes, em andamento e aguardando pagamento (o pátio agora)' },
-          inicio: { type: 'string', description: 'Data inicial YYYY-MM-DD. Para finalizadas é obrigatória; para abertas, deixe vazio' },
+          situacao: { type: 'string', enum: ['finalizadas', 'abertas', 'canceladas', 'todas'], description: 'finalizadas (padrão, data = conclusão) · abertas = na fila, em andamento e aguardando pagamento (o pátio) · canceladas · todas (qualquer status, data = criação)' },
+          inicio: { type: 'string', description: 'Data inicial YYYY-MM-DD. Obrigatória para finalizadas, canceladas e todas (exceto quando buscar por placa); para abertas, deixe vazio' },
           fim: { type: 'string', description: 'Data final YYYY-MM-DD (padrão = inicio)' },
-          cliente: { type: 'string', description: 'Nome (parcial) do cliente pra filtrar — opcional' },
+          cliente: { type: 'string', description: 'Nome (parcial) do cliente — opcional' },
+          lavador: { type: 'string', description: 'Nome (parcial) do lavador — opcional' },
+          valor: { type: 'number', description: 'Valor exato da ordem em reais — opcional' },
+          placa: { type: 'string', description: 'Placa do veículo — opcional' },
           tipoVeiculo: { type: 'string', description: 'Ex: CARRO, MOTO — opcional' },
         },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'detalheOrdem',
+      description: 'Tudo sobre UMA ordem pelo número: cliente, veículo, serviços com preço, lavadores e comissão de cada um (paga ou não), status, horários (criada, início, fim), pagamentos, desconto, observações e se veio da fila da Localiza. Use quando citarem "ordem 1466", "#940", "a OS 12".',
+      parameters: {
+        type: 'object',
+        properties: { numero: { type: 'number', description: 'Número da ordem' } },
+        required: ['numero'],
       },
     },
   },
@@ -60,36 +77,15 @@ export const FERRAMENTAS: ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'explicarSistema',
-      description: 'Explica um conceito do próprio sistema Lina X (planos, comissão, PIX, ecossistema) — não usa dado nenhum da empresa do usuário.',
+      description: 'Manual do próprio sistema Lina X — como algo funciona ou onde fica: status de ordem, nova ordem/fila de entrada, pagamento e NFE, comissão e fechamento, caixa, histórico x financeiro, fila da Localiza, contas a pagar, portal do lavador, subcontas e cargos, o que a Lina faz no WhatsApp, planos, Data Point, Lina Center, PIX. Não usa dado da empresa.',
       parameters: {
         type: 'object',
         properties: {
-          topico: { type: 'string', description: 'O que o usuário quer entender sobre o sistema' },
+          topico: { type: 'string', description: 'A dúvida, com as palavras da pessoa (ex.: "como funciona o fechamento de comissão")' },
         },
         required: ['topico'],
       },
     },
-  },
-];
-
-// Base curada — de propósito NÃO deixamos a IA improvisar sobre preço/plano
-// (risco de inventar valor errado). Só responde o que está mapeado aqui.
-const BASE_CONHECIMENTO: Array<{ chaves: string[]; texto: string }> = [
-  {
-    chaves: ['plano', 'planos', 'assinatura', 'preço', 'preco', 'valor do sistema'],
-    texto: 'A Lina X tem 3 planos: *Basic* (R$89/mês, 1 empresa), *Pro* (R$169/mês, 2 empresas + Painel Vitrine) e *Premium* (R$279/mês, 5 empresas + Lina WhatsApp). Todo cadastro novo tem 7 dias de teste grátis.',
-  },
-  {
-    chaves: ['data point', 'ponto', 'controle de ponto'],
-    texto: 'Data Point é o módulo de controle de ponto CLT do ecossistema Lina — bate ponto com GPS ou QR code, calcula horas trabalhadas e afastamentos. É um sistema separado, ativado por empresa.',
-  },
-  {
-    chaves: ['comissão', 'comissao', 'comissões', 'comissoes'],
-    texto: 'A comissão de cada lavador é calculada por serviço. Quando mais de um lavador participa da mesma ordem, o percentual de cada um é dividido pelo número de lavadores envolvidos.',
-  },
-  {
-    chaves: ['pix'],
-    texto: 'O PIX gerado pelo bot é um QR Code estático, feito com a chave PIX cadastrada da empresa — serve pra qualquer valor e não expira.',
   },
 ];
 
@@ -104,8 +100,12 @@ export async function executarFerramenta(
       return buscarClienteImpl(String(args.termo ?? ''), ctx.empresaId);
 
     case 'buscarOrdens':
-      if (!hasPermission(ctx.user, 'ver_financeiro')) return 'O usuário não tem permissão pra ver ordens/financeiro.';
-      return buscarOrdensImpl(args, ctx.empresaId);
+      if (!podeConsultarPlaca(ctx.user)) return 'O usuário não tem permissão pra ver ordens.';
+      return buscarOrdensImpl(args, ctx.empresaId, hasPermission(ctx.user, 'ver_financeiro'));
+
+    case 'detalheOrdem':
+      if (!podeConsultarPlaca(ctx.user)) return 'O usuário não tem permissão pra ver ordens.';
+      return detalheOrdemImpl(Number(args.numero), ctx.empresaId, hasPermission(ctx.user, 'ver_financeiro'));
 
     case 'consultarPlaca':
       if (!podeConsultarPlaca(ctx.user)) return 'O usuário não tem permissão pra consultar veículos.';
@@ -159,47 +159,71 @@ async function buscarClienteImpl(termo: string, empresaId: string): Promise<stri
 const LISTA_MAX = 25; // acima disso só o resumo — o limite de tokens da Groq é apertado
 
 const STATUS_LEGIVEL: Record<string, string> = {
-  PENDENTE: 'na fila', EM_ANDAMENTO: 'em andamento', AGUARDANDO_PAGAMENTO: 'aguardando pagamento', FINALIZADO: 'finalizada',
+  PENDENTE: 'na fila', EM_ANDAMENTO: 'em andamento', AGUARDANDO_PAGAMENTO: 'aguardando pagamento', FINALIZADO: 'finalizada', CANCELADO: 'cancelada',
 };
 
-async function buscarOrdensImpl(args: any, empresaId: string): Promise<string> {
-  const abertas = args.situacao === 'abertas';
+const STATUS_POR_SITUACAO: Record<string, string[]> = {
+  finalizadas: ['FINALIZADO'],
+  abertas: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'],
+  canceladas: ['CANCELADO'],
+  todas: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO', 'FINALIZADO', 'CANCELADO'],
+};
+
+async function buscarOrdensImpl(args: any, empresaId: string, comValores: boolean): Promise<string> {
+  const situacao = STATUS_POR_SITUACAO[args.situacao] ? String(args.situacao) : 'finalizadas';
   const inicio = String(args.inicio ?? '');
   const fim = String(args.fim || inicio);
   const cliente = String(args.cliente ?? '').trim();
+  const lavador = String(args.lavador ?? '').trim();
+  const valor = args.valor != null && args.valor !== '' && !isNaN(Number(args.valor)) ? Number(args.valor) : null;
+  const placa = args.placa ? extrairPlaca(String(args.placa)) ?? String(args.placa).replace(/[^a-z0-9]/gi, '').toUpperCase() : '';
   const tipoVeiculo: string | undefined = args.tipoVeiculo || undefined;
 
   let periodo: { gte: Date; lte: Date } | undefined;
   if (inicio) {
-    const dataInicio = new Date(`${inicio}T00:00:00`);
-    const dataFim = new Date(`${fim}T23:59:59`);
-    if (isNaN(dataInicio.getTime()) || isNaN(dataFim.getTime())) return 'Não consegui entender o período pedido.';
-    periodo = { gte: dataInicio, lte: dataFim };
-  } else if (!abertas) {
-    return 'Preciso do período (inicio) pra buscar ordens finalizadas.';
+    const ini = /^\d{4}-\d{2}-\d{2}$/.test(inicio) ? getDateRangeBRT(inicio) : null;
+    const fi = /^\d{4}-\d{2}-\d{2}$/.test(fim) ? getDateRangeBRT(fim) : null;
+    if (!ini || !fi) return 'Não consegui entender o período pedido.';
+    periodo = { gte: ini.start, lte: fi.end };
+  } else if (situacao !== 'abertas' && !placa) {
+    return `Preciso do período (inicio) pra buscar ordens ${situacao}.`;
   }
 
+  // Finalizada pertence ao dia em que foi concluída; o resto, ao dia em que foi criada
+  const campoData = situacao === 'finalizadas' ? 'dataFim' : 'createdAt';
   const ordens = await prisma.ordemServico.findMany({
     where: {
       empresaId,
-      ...(abertas
-        ? { status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] }, ...(periodo ? { createdAt: periodo } : {}) }
-        : { status: 'FINALIZADO', dataFim: periodo }),
+      status: { in: STATUS_POR_SITUACAO[situacao] as any },
+      ...(periodo ? { [campoData]: periodo } : {}),
       ...(cliente ? { cliente: { nome: { contains: cliente, mode: 'insensitive' } } } : {}),
-      ...(tipoVeiculo ? { veiculo: { tipoVeiculo: { equals: tipoVeiculo, mode: 'insensitive' } } } : {}),
+      ...(lavador ? { OR: [
+        { lavador: { nome: { contains: lavador, mode: 'insensitive' } } },
+        { ordemLavadores: { some: { lavador: { nome: { contains: lavador, mode: 'insensitive' } } } } },
+      ] } : {}),
+      ...(valor != null ? { valorTotal: valor } : {}),
+      ...(placa || tipoVeiculo ? { veiculo: {
+        ...(placa ? { placa: { contains: placa, mode: 'insensitive' } } : {}),
+        ...(tipoVeiculo ? { tipoVeiculo: { equals: tipoVeiculo, mode: 'insensitive' } } : {}),
+      } } : {}),
     },
     include: {
       cliente: { select: { nome: true } },
       veiculo: { select: { modelo: true, placa: true, tipoVeiculo: true } },
       ordemLavadores: { select: { lavador: { select: { nome: true } } } },
       lavador: { select: { nome: true } },
+      pagamentos: { where: { status: 'PAGO' }, select: { metodo: true } },
     },
-    orderBy: abertas ? { createdAt: 'asc' } : { dataFim: 'desc' },
+    orderBy: situacao === 'finalizadas' ? { dataFim: 'desc' } : { createdAt: 'asc' },
     take: 200,
   });
 
-  const filtro = [cliente && `cliente "${cliente}"`, tipoVeiculo].filter(Boolean).join(', ');
-  const rotulo = abertas ? 'ordens abertas' : `ordens finalizadas de ${inicio}${fim !== inicio ? ` a ${fim}` : ''}`;
+  const filtro = [
+    cliente && `cliente "${cliente}"`, lavador && `lavador "${lavador}"`, valor != null && `R$ ${valor.toFixed(2)}`,
+    placa && `placa ${placa}`, tipoVeiculo,
+  ].filter(Boolean).join(', ');
+  const quando = periodo ? ` de ${inicio}${fim !== inicio ? ` a ${fim}` : ''}` : '';
+  const rotulo = `ordens ${situacao}${quando}`;
   if (ordens.length === 0) return `Nenhuma das ${rotulo}${filtro ? ` (${filtro})` : ''}.`;
 
   const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
@@ -207,12 +231,57 @@ async function buscarOrdensImpl(args: any, empresaId: string): Promise<string> {
     const item = o.veiculo ? `${o.veiculo.modelo ?? 'veículo'} ${o.veiculo.placa}` : (o.itemAvulso ?? 'item avulso');
     const nomes = o.ordemLavadores.map(l => l.lavador.nome);
     const lavadores = (nomes.length ? nomes : o.lavador ? [o.lavador.nome] : []).join(' e ') || 'sem lavador';
-    const status = abertas ? ` · ${STATUS_LEGIVEL[o.status] ?? o.status}` : '';
-    return `#${o.numeroOrdem} · ${o.cliente.nome} · ${item} · R$ ${o.valorTotal.toFixed(2)} · ${lavadores}${status}`;
+    const status = situacao !== 'finalizadas' ? ` · ${STATUS_LEGIVEL[o.status] ?? o.status}` : '';
+    const pago = comValores && o.pagamentos.length ? ` · ${[...new Set(o.pagamentos.map(p => p.metodo))].join('/')}` : '';
+    return `#${o.numeroOrdem} · ${o.cliente.nome} · ${item}${comValores ? ` · R$ ${o.valorTotal.toFixed(2)}` : ''} · ${lavadores}${status}${pago}`;
   });
   const resto = ordens.length > LISTA_MAX ? `\n(+${ordens.length - LISTA_MAX} ordens não listadas)` : '';
 
-  return `${ordens.length} ${rotulo}${filtro ? ` (${filtro})` : ''}. Total: R$ ${total.toFixed(2)}.\n${linhas.join('\n')}${resto}`;
+  return `${ordens.length} ${rotulo}${filtro ? ` (${filtro})` : ''}${comValores ? `. Total: R$ ${total.toFixed(2)}` : ''}.\n${linhas.join('\n')}${resto}`;
+}
+
+const fmtHora = (d: Date) => d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+async function detalheOrdemImpl(numero: number, empresaId: string, comValores: boolean): Promise<string> {
+  if (!Number.isInteger(numero) || numero <= 0) return 'Preciso do número da ordem.';
+  const o = await prisma.ordemServico.findFirst({
+    where: { empresaId, numeroOrdem: numero },
+    include: {
+      cliente: { select: { nome: true, telefone: true } },
+      veiculo: { select: { modelo: true, placa: true, cor: true } },
+      items: { select: { quantidade: true, subtotal: true, nomeCustom: true, servico: { select: { nome: true } }, adicional: { select: { nome: true } } } },
+      ordemLavadores: { select: { ganho: true, comissaoPaga: true, lavador: { select: { nome: true } } } },
+      lavador: { select: { nome: true } },
+      pagamentos: { select: { metodo: true, valor: true, status: true, pagoEm: true } },
+    },
+  });
+  if (!o) return `Não existe ordem #${numero} nesta empresa.`;
+  const emp = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { usuarioId: true } });
+  const sol = emp ? await prisma.solicitacaoLavagem.findFirst({ where: { usuarioId: emp.usuarioId, ordemId: o.id }, select: { numero: true, aceitaPorNome: true } }) : null;
+
+  const r = (v: number) => `R$ ${v.toFixed(2)}`;
+  const item = o.veiculo ? `${[o.veiculo.modelo, o.veiculo.cor].filter(Boolean).join(' ')} ${o.veiculo.placa}` : (o.itemAvulso ?? 'item avulso');
+  const servicos = o.items.map(i => {
+    const nome = i.servico?.nome ?? i.adicional?.nome ?? i.nomeCustom ?? 'serviço';
+    return `${i.quantidade > 1 ? `${i.quantidade}x ` : ''}${nome}${comValores ? ` (${r(i.subtotal)})` : ''}`;
+  }).join(', ') || 'sem serviços';
+  const lavs = o.ordemLavadores.length
+    ? o.ordemLavadores.map(l => `${l.lavador.nome}${comValores ? ` ${r(l.ganho)} ${l.comissaoPaga ? '(paga)' : '(em aberto)'}` : ''}`).join(', ')
+    : o.lavador?.nome ?? 'sem lavador';
+  const linhas = [
+    `Ordem #${o.numeroOrdem} · ${STATUS_LEGIVEL[o.status] ?? o.status}`,
+    `Cliente: ${o.cliente.nome}${o.cliente.telefone ? ` · ${o.cliente.telefone}` : ''} · ${item}`,
+    `Serviços: ${servicos}`,
+    `Lavador(es): ${lavs}`,
+    `Criada ${fmtHora(o.createdAt)}${o.dataInicio ? ` · início ${fmtHora(o.dataInicio)}` : ''}${o.dataFim ? ` · fim ${fmtHora(o.dataFim)}` : ''}`,
+  ];
+  if (comValores) {
+    linhas.push(`Valor: ${r(o.valorTotal)}${o.desconto ? ` · desconto ${r(o.desconto)}` : ''} · ${o.pago ? 'pago' : 'NÃO pago'}`);
+    if (o.pagamentos.length) linhas.push(`Pagamentos: ${o.pagamentos.map(p => `${p.metodo} ${r(p.valor)} ${p.status.toLowerCase()}${p.pagoEm ? ` em ${fmtHora(p.pagoEm)}` : ''}`).join(' · ')}`);
+  }
+  if (o.observacoes) linhas.push(`Observações: ${o.observacoes}`);
+  if (sol) linhas.push(`Veio da fila da Localiza (pedido Nº ${sol.numero}${sol.aceitaPorNome ? `, aceito por ${sol.aceitaPorNome}` : ''})`);
+  return linhas.join('\n');
 }
 
 // ── Placa ───────────────────────────────────────────────────────────────────
@@ -313,9 +382,7 @@ export async function consultarPlacaImpl(placaBruta: string, empresaId: string, 
 }
 
 function explicarSistemaImpl(topico: string): string {
-  const t = topico.toLowerCase();
-  const item = BASE_CONHECIMENTO.find(b => b.chaves.some(k => t.includes(k)));
-  return item?.texto ?? 'Ainda não tenho uma explicação pronta sobre isso.';
+  return consultarManual(topico);
 }
 
 // ── Lavador ─────────────────────────────────────────────────────────────────

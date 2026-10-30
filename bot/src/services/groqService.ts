@@ -170,6 +170,20 @@ async function criarComReparo(params: any, tools: ChatCompletionTool[]): Promise
   }
 }
 
+// Jeito "investiga, mostra, pergunta": pedido sobre coisa específica do sistema é resolvido
+// buscando o dado de verdade, mostrando o que achou e perguntando quando houver dúvida real.
+const REGRAS_INVESTIGAR = `
+
+COMO TRABALHAR (pedidos sobre ordens, carros, placas, lavadores, clientes):
+- Investigue antes de responder: busque com a ferramenta, combinando TODOS os filtros que a pessoa citou (ex.: "Localiza de 30 do Lucas hoje" = cliente Localiza + valor 30 + lavador Lucas + data de hoje, situacao todas). O CONTEXTO DO DIA é só um resumo — não liste ordens a partir dele.
+- Mostre o que achou: uma linha por ordem com • (#número · modelo placa · valor · status/lavador). Aqui pode passar de 2 parágrafos.
+- Quando ajudar, diga em uma linha o que ficou de fora do filtro (ex.: "As outras 3 da Localiza hoje são do Ruan e da Isabela").
+- Dúvida que muda o resultado (nome que bate com mais de uma pessoa, período não dito quando importa)? Faça UMA pergunta curta, com as opções em linhas "1." "2.". Se dá pra resolver com uma busca, busque em vez de perguntar.
+- Pedido pra ALTERAR algo que você não tem ferramenta pra fazer (reabrir ordem, trocar lavador, mudar valor, apagar, cancelar): diga que pelo WhatsApp você ainda não faz isso, mostre exatamente quais ordens seriam afetadas e diga onde fazer no sistema consultando explicarSistema. Nunca diga que fez.
+- NUNCA invente nome de tela, botão ou caminho do sistema. Só cite o que veio do explicarSistema; se ele não diz, fale que não sabe o caminho exato.
+- "Como funciona", "onde fica", "por que deu diferente": use explicarSistema e responda com as palavras do manual.
+- Termine com o próximo passo só quando houver um útil. Sem repetir a pergunta da pessoa.`;
+
 export async function chatCompletionComFerramentas(
   userMessage: string,
   context: string,
@@ -179,7 +193,8 @@ export async function chatCompletionComFerramentas(
 ): Promise<{ resposta: string; ferramentasChamadas: string[]; falhas: string[] }> {
   const { forcarFerramenta, historico = [], promptExtra = '' } = opcoes;
   const systemPrompt = LINA_SYSTEM_PROMPT + promptExtra +
-    '\n\nFERRAMENTAS:\n- Você tem acesso a ferramentas pra buscar dado que não está no CONTEXTO DO DIA (cliente específico, período diferente de hoje/mês atual, dúvida sobre o próprio sistema). Use quando fizer sentido.\n- Se uma ferramenta te dá um nome que parece um termo comum (ex: "Data Point"), CONFIE no resultado dela — é o nome de um produto do sistema, não o termo genérico que você já conhece. Nunca substitua o resultado da ferramenta pelo seu próprio conhecimento.\n- Nunca invente o resultado de uma ferramenta — se ela não achou nada, diga isso.\n- Dia ou período que não está no CONTEXTO: busque com a ferramenta antes de responder. Nunca afirme que "não teve movimento" sem ter o dado daquele dia.';
+    '\n\nFERRAMENTAS:\n- Você tem acesso a ferramentas pra buscar dado que não está no CONTEXTO DO DIA (cliente específico, período diferente de hoje/mês atual, dúvida sobre o próprio sistema). Use quando fizer sentido.\n- Se uma ferramenta te dá um nome que parece um termo comum (ex: "Data Point"), CONFIE no resultado dela — é o nome de um produto do sistema, não o termo genérico que você já conhece. Nunca substitua o resultado da ferramenta pelo seu próprio conhecimento.\n- Nunca invente o resultado de uma ferramenta — se ela não achou nada, diga isso.\n- Dia ou período que não está no CONTEXTO: busque com a ferramenta antes de responder. Nunca afirme que "não teve movimento" sem ter o dado daquele dia.' +
+    REGRAS_INVESTIGAR;
 
   const fullMessage = context
     ? `CONTEXTO DO DIA:\n${context}\n\n---\n\nUSUÁRIO: ${userMessage}`
