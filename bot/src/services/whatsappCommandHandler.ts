@@ -840,6 +840,12 @@ export async function handleIncomingMessage(
         return handleFaturamentoCommand(empresaId, faturamentoMatch[1]?.trim());
       }
 
+      const placasMatch = message.trim().match(/^(?:placas|confer[eê]ncia)(?:\s+(.+))?$/i);
+      if (placasMatch) {
+        if (!hasPermission(user, 'ver_financeiro')) return getPermissionDeniedMessage();
+        return handlePlacasCommand(empresaId, placasMatch[1]?.trim());
+      }
+
       if (['resumo', 'resumo do dia', 'resumo diario', 'resumo diário'].includes(command))
         return handleResumoCommand(empresaId);
       if (['caixa', 'status caixa'].includes(command))
@@ -1143,6 +1149,9 @@ export async function handleIncomingMessage(
 
     const faturamentoMatchAdmin = command.match(/^faturamento(?:\s+(.+))?$/);
     if (faturamentoMatchAdmin) return handleFaturamentoCommand(empresaId, faturamentoMatchAdmin[1]?.trim());
+
+    const placasMatchAdmin = message.trim().match(/^(?:placas|confer[eê]ncia)(?:\s+(.+))?$/i);
+    if (placasMatchAdmin) return handlePlacasCommand(empresaId, placasMatchAdmin[1]?.trim());
 
     if (command === 'caixa')     return handleCaixaCommand(empresaId);
     if (command === 'pendentes') return handlePendentesCommand(empresaId);
@@ -2641,7 +2650,7 @@ async function handleSaudacaoLavador(from: string, lavadorId: string, empresaId:
 
 function buildMenuFuncionario(botFeatures: string[]): string {
   const itens: string[] = [];
-  if (botFeatures.includes('ver_financeiro'))        itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa');
+  if (botFeatures.includes('ver_financeiro'))        itens.push('• *resumo* — resumo do dia\n• *caixa* — status do caixa\n• *placas localiza outubro* — placas faturadas p/ conferência');
   if (botFeatures.includes('gerenciar_ordens'))      itens.push('• *ordens* — ordens em andamento');
   if (botFeatures.includes('gerenciar_clientes'))    itens.push('• *clientes* — clientes atendidos hoje');
   if (botFeatures.includes('gerenciar_funcionarios')) itens.push('• *equipe* — produtividade dos lavadores hoje');
@@ -3306,6 +3315,112 @@ async function handlePendentesCommand(empresaId: string): Promise<string> {
 }
 
 /*
+ * Handler: placas [cliente] [período] — conferência das placas faturadas, pra prestar contas
+ * com cliente de frota (ex.: "placas localiza outubro", "placas localiza 01/10 a 15/10").
+ * Faturada = ordem FINALIZADA, no dia em que foi concluída. Sem período → mês atual.
+ */
+async function handlePlacasCommand(empresaId: string, textoLivre = ''): Promise<string> {
+  const fmtDia = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' });
+  const brl = (n: number) => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  let inicio: Date, fim: Date, label: string, resto = textoLivre;
+  const DATA = /\d{1,2}\/\d{1,2}(?:\/\d{2,4})?/.source;
+  const periodo = extrairPeriodoBusca(textoLivre);
+  const intervalo = periodo ? null : parseDateRangeFromMessage(textoLivre);
+  const dia = periodo || intervalo ? null : parseDateFromMessage(textoLivre);
+  if (periodo) {
+    ({ inicio, fim, label } = periodo);
+    resto = periodo.resto;
+  } else if (intervalo) {
+    ({ inicio, fim } = intervalo);
+    label = `${fmtDia(inicio)} a ${fmtDia(fim)}`;
+    resto = textoLivre.replace(new RegExp(`${DATA}[\\s\\S]*${DATA}`), '');
+  } else if (dia) {
+    inicio = dia;
+    fim = new Date(dia); fim.setHours(23, 59, 59, 999);
+    label = fmtDia(dia);
+    resto = textoLivre.replace(new RegExp(`${DATA}|\\b(?:hoje|ontem|anteontem)\\b`, 'i'), '');
+  } else {
+    const [ano, mes] = getTodayStrBRT().split('-').map(Number);
+    ({ start: inicio, end: fim } = getMonthRangeBRT(ano, mes));
+    label = 'mês atual';
+  }
+
+  // O que sobra é o cliente ("localiza", "da localiza", "faturadas da localiza do dia")
+  const termo = resto
+    .replace(/(^|\s)(faturad[ao]s?|cliente|d[aoe]s?|dia|no|na|em|at[eé]|a|ao)(?=\s|$)/gi, ' ')
+    .replace(/\s+/g, ' ').trim();
+  let clienteId: string | null = null;
+  let clienteNome = 'todos os clientes';
+  if (termo) {
+    const achados = await prisma.cliente.findMany({
+      where: { empresaId, nome: { contains: termo, mode: 'insensitive' } },
+      select: { id: true, nome: true },
+      orderBy: { nome: 'asc' },
+      take: 20,
+    });
+    // "Localiza" é um cliente; "Bruno localiza" é outro — nome exato vence o parcial
+    const exatos = achados.filter((c) => c.nome.trim().toLowerCase() === termo.toLowerCase());
+    const alvo = exatos.length ? exatos : achados;
+    if (!alvo.length) return `❌ Não encontrei cliente chamado "${termo}".`;
+    if (alvo.length > 1) {
+      return `🔎 Achei ${alvo.length} clientes com "${termo}":\n${alvo.map((c) => `• ${c.nome}`).join('\n')}\n\n` +
+        `_Manda de novo com o nome completo, ex.: *placas ${alvo[0].nome.toLowerCase()} mês*_`;
+    }
+    clienteId = alvo[0].id;
+    clienteNome = alvo[0].nome;
+  }
+
+  const LIMITE = 1000;
+  const ordens = await prisma.ordemServico.findMany({
+    where: {
+      empresaId,
+      status: 'FINALIZADO' as any,
+      dataFim: { gte: inicio, lte: fim },
+      ...(clienteId ? { clienteId } : {}),
+    },
+    select: {
+      numeroOrdem: true, valorTotal: true, dataFim: true, itemAvulso: true,
+      cliente: { select: { nome: true } },
+      veiculo: { select: { placa: true } },
+      pagamentos: { where: { status: 'PAGO' }, select: { valor: true } },
+    },
+    orderBy: { dataFim: 'asc' },
+    take: LIMITE,
+  });
+
+  const titulo = `🚗 *Placas faturadas — ${clienteNome}*`;
+  if (!ordens.length) return `${titulo}\n📅 ${label}\n\nNenhuma ordem finalizada nesse período.`;
+
+  const total = ordens.reduce((s, o) => s + o.valorTotal, 0);
+  const vezes = new Map<string, number>();
+  for (const o of ordens) if (o.veiculo?.placa) vezes.set(o.veiculo.placa, (vezes.get(o.veiculo.placa) ?? 0) + 1);
+  let semPagamento = 0;
+
+  const porDia = new Map<string, string[]>();
+  for (const o of ordens) {
+    const pago = o.pagamentos.reduce((s, p) => s + p.valor, 0);
+    const emAberto = pago + 0.01 < o.valorTotal;
+    if (emAberto) semPagamento++;
+    const item = o.veiculo?.placa ?? (o.itemAvulso || 'item avulso');
+    const marcas = `${(vezes.get(o.veiculo?.placa ?? '') ?? 0) > 1 ? ' 🔁' : ''}${emAberto ? ' ⏳' : ''}`;
+    const k = fmtDia(o.dataFim!);
+    porDia.set(k, [...(porDia.get(k) ?? []), `${item} · ${brl(o.valorTotal)} · #${o.numeroOrdem}${clienteId ? '' : ` · ${o.cliente.nome}`}${marcas}`]);
+  }
+
+  const blocos = [...porDia.entries()].map(([d, linhas]) => `*${d}* (${linhas.length})\n${linhas.join('\n')}`);
+  const repetidas = [...vezes.entries()].filter(([, n]) => n > 1);
+  const rodape = [
+    repetidas.length ? `🔁 Placa repetida no período: ${repetidas.map(([p, n]) => `${p} (${n}x)`).join(', ')}` : '',
+    semPagamento ? `⏳ ${semPagamento} ordem(ns) sem pagamento completo registrado` : '',
+    ordens.length === LIMITE ? `_Lista cortada em ${LIMITE} ordens — peça um período menor._` : '',
+  ].filter(Boolean);
+
+  return `${titulo}\n📅 ${label} · *${ordens.length} carro(s)* · *${brl(total)}*\n\n${blocos.join('\n\n')}` +
+    (rodape.length ? `\n\n${rodape.join('\n')}` : '');
+}
+
+/*
  * Handler: /ajuda
  */
 function handleAjudaCommand(): string {
@@ -3318,6 +3433,9 @@ function handleAjudaCommand(): string {
     `adiantamento de 150 · nova saída\n\n` +
     `*Caixa:*\n` +
     `fechamento · fechamento ontem · fechamento 02/04\n\n` +
+    `*Conferência de placas:*\n` +
+    `placas localiza outubro · placas localiza 01/10 a 15/10\n` +
+    `placas semana _(todos os clientes)_\n\n` +
     `*Relatórios:*\n` +
     `relatório ontem · relatório 02/04\n` +
     `relatório semanal · últimos 15 dias\n` +
