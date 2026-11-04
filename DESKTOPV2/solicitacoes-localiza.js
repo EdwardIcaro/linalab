@@ -28,6 +28,7 @@
     const st = document.createElement('style');
     st.id = 'sl-css';
     st.textContent = `
+      .sl [hidden]{display:none!important}
       .sl{--sl-ac:${acento};--sl-ok:#16a34a;--sl-av:#dc2626;--sl-mut:#64748b;--sl-bd:#e2e8f0}
       .sl-faixa{display:flex;align-items:center;gap:12px}
       .sl-n{background:var(--sl-ac);color:#fff;font-weight:800;border-radius:12px;min-width:44px;height:44px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
@@ -36,6 +37,9 @@
       .sl-pri{background:var(--sl-ac);color:#fff}.sl-sec{background:#f1f5f9;color:#0f172a}
       .sl-amb{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
       .sl-btn:disabled{opacity:.5;cursor:not-allowed}
+      .sl-del{background:#fff;color:var(--sl-av);border:1px solid #fecaca;flex:0 0 auto!important;padding:10px 12px}
+      .sl-conf{margin-top:12px;padding:10px 12px;border-radius:12px;background:#fee2e2;color:#991b1b;font-size:13px}
+      .sl-conf .sl-acts{margin-top:8px}.sl-conf .sl-pri{background:var(--sl-av)}
       .sl-ov{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9990;display:flex;align-items:flex-end;justify-content:center}
       @media(min-width:700px){.sl-ov{align-items:center}}
       .sl-sheet{background:#f1f5f9;width:100%;max-width:560px;max-height:92vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;font-family:inherit;color:#0f172a}
@@ -186,7 +190,10 @@
           <div class="sl-acts">
             <button class="sl-btn sl-amb" type="button" data-ck>${s.checklist ? '📋 Ver checklist' : '📋 Checklist de avarias'}</button>
             ${aceita ? '' : `<button class="sl-btn sl-pri" type="button" data-aceitar ${s.servico ? '' : 'disabled'}>Aceitar</button>`}
+            ${aceita ? '' : '<button class="sl-btn sl-del" type="button" data-remover aria-label="Remover da fila" title="Remover da fila">🗑</button>'}
           </div>
+          ${aceita ? '' : `<div class="sl-conf" data-conf hidden>Remover <b>${esc(s.placa)}</b> da fila? Use quando a Localiza cancelou e o e-mail de cancelamento não chegou.
+            <div class="sl-acts"><button class="sl-btn sl-sec" type="button" data-nao>Voltar</button><button class="sl-btn sl-pri" type="button" data-sim>Remover</button></div></div>`}
         </div>`;
     }
 
@@ -206,7 +213,26 @@
         el.querySelector('[data-ck]').onclick = () => abrirChecklist(s);
         const b = el.querySelector('[data-aceitar]');
         if (b) b.onclick = () => abrirAceite(s);
+        const del = el.querySelector('[data-remover]');
+        if (del) {
+          const conf = el.querySelector('[data-conf]');
+          const acts = el.querySelector('.sl-acts');
+          del.onclick = () => { conf.hidden = false; acts.hidden = true; };
+          conf.querySelector('[data-nao]').onclick = () => { conf.hidden = true; acts.hidden = false; };
+          conf.querySelector('[data-sim]').onclick = (e) => remover(s, e.currentTarget);
+        }
       });
+    }
+
+    async function remover(s, btn) {
+      btn.disabled = true; btn.textContent = 'Removendo...';
+      try {
+        await window.fetchApi(`/solicitacoes/${encodeURIComponent(s.id)}/remover`, { method: 'POST', semRedirect: true });
+        toast(`${s.placa} removido da fila`);
+      } catch (e) {
+        toast(e?.error || 'Não foi possível remover.', true);
+      }
+      carregar();
     }
 
     function abrirLista() {

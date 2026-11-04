@@ -274,6 +274,29 @@ export async function aceitar(req: Req, res: Response) {
   }
 }
 
+/**
+ * Remover da fila à mão — quando o e-mail de cancelamento da Localiza não chega.
+ * Só pendente; não apaga o registro: vira CANCELADA com quem removeu (fica o histórico).
+ */
+export async function remover(req: Req, res: Response) {
+  const empresaId = req.empresaId!;
+  const id = req.params.id as string;
+  try {
+    const s = await solicitacaoVisivel(empresaId, id);
+    if (!s) return res.status(404).json({ error: 'Solicitação não encontrada.' });
+    if (s.status !== 'PENDENTE') return res.status(409).json({ error: 'Só dá para remover carro que ainda não foi aceito.', code: 'NAO_PENDENTE' });
+    const trava = await prisma.solicitacaoLavagem.updateMany({
+      where: { id, status: 'PENDENTE' },
+      data: { status: 'CANCELADA', canceladaEm: new Date(), canceladaPor: `Removida por ${req.usuarioNome || 'funcionário'}` },
+    });
+    if (trava.count === 0) return res.status(409).json({ error: 'Esta solicitação acabou de ser aceita ou removida.', code: 'NAO_PENDENTE' });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[Solicitacoes] Erro ao remover:', err);
+    return res.status(500).json({ error: 'Erro ao remover a solicitação' });
+  }
+}
+
 /** Pendente da conta (empresa com vínculo) ou aceita por esta empresa. */
 async function solicitacaoVisivel(empresaId: string, id: string) {
   const s = await prisma.solicitacaoLavagem.findUnique({ where: { id } });

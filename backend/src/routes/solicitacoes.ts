@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requirePermission } from '../middlewares/permissionMiddleware';
 import {
-  listarFila, aceitar, verChecklist, salvarChecklist,
+  listarFila, aceitar, remover, verChecklist, salvarChecklist,
   verConfig, salvarVinculo, alternarModelo,
 } from '../controllers/solicitacaoController';
 
@@ -10,6 +10,7 @@ export const solicitacoesPortalRoutes: Router = Router();
 solicitacoesPortalRoutes.use(requirePermission('gerenciar_ordens'));
 solicitacoesPortalRoutes.get('/', listarFila);
 solicitacoesPortalRoutes.post('/:id/aceitar', aceitar);
+solicitacoesPortalRoutes.post('/:id/remover', remover);
 solicitacoesPortalRoutes.get('/:id/checklist', verChecklist);
 solicitacoesPortalRoutes.put('/:id/checklist', salvarChecklist);
 
