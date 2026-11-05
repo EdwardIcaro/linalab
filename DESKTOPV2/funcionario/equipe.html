@@ -2,467 +2,134 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Equipe — Lina X</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <style>
-    :root {
-      --navy:   #0f172a;
-      --navy-m: #1e293b;
-      --blue:   #3b82f6;
-      --blue-d: #2563eb;
-      --text:   #0f172a;
-      --mid:    #64748b;
-      --light:  #94a3b8;
-      --border: #e2e8f0;
-      --bg:     #f1f5f9;
-      --white:  #ffffff;
-      --green:  #10b981;
-      --red:    #ef4444;
-      --r:      12px;
-      --rpill:  999px;
-    }
-    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      display: flex;
-      flex-direction: column;
-    }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    .pagina { max-width: 860px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 120px; }
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit p { margin: 4px 0 0; font-size: 11px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .agora { display: flex; gap: 8px; margin: 16px 0 14px; flex-wrap: wrap; align-items: center; }
+    .agora .chip { padding: 4px 11px 4px 5px; font-size: 12px; cursor: default; }
+    .mostrar-inativos { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 700 11px var(--mono); cursor: pointer; }
+    .mostrar-inativos input { accent-color: var(--yellow); }
+    .lista { display: grid; gap: 14px; }
+    @media (min-width: 720px) { .lista { grid-template-columns: 1fr 1fr; } }
+    .lav { display: grid; gap: 10px; --sc: var(--c); }
+    .lav.inativo { opacity: .6; --sc: #9a96a8; }
+    .lav-topo { display: flex; align-items: center; gap: 12px; }
+    .av { position: relative; width: 50px; height: 50px; border-radius: 50%; border: 3px solid var(--ink); background: var(--c); color: var(--cream); display: grid; place-items: center; font: 400 20px var(--dela); flex: none; }
+    .av::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--cream); background: var(--st); }
+    .lav-topo .t { flex: 1; min-width: 0; }
+    .lav-topo .t b { display: block; font: 400 17px/1.1 var(--dela); overflow-wrap: anywhere; }
+    .situ { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ink); background: var(--sb); font: 700 10px var(--mono); color: var(--ink); }
+    .nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); }
+    .nums div { padding: 6px 4px; text-align: center; min-width: 0; }
+    .nums div + div { border-left: 2px dashed var(--line); }
+    .nums b { display: block; font: 400 16px/1.1 var(--dela); white-space: nowrap; }
+    .nums small { font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .lav-pe { display: flex; align-items: center; gap: 8px; }
+    .lav-pe .link-st { flex: 1; min-width: 0; font-size: 11px; color: var(--muted); }
+    .lav-pe .link-st b { color: var(--ink); }
+    .lav-pe .link-st.sem b { color: #c1361a; }
+    .lav-pe .btn { padding: 7px 11px; font-size: 12px; box-shadow: 2px 2px 0 var(--ink); flex: none; }
+    .vazio { text-align: center; padding: 26px 16px; --sc: var(--yellow); }
+    .vazio .ic { font-size: 28px; }
+    .vazio b { display: block; font: 400 17px var(--dela); margin: 6px 0 4px; }
+    .vazio p { margin: 0; font-size: 12px; color: var(--muted); }
+    .carregando { display: grid; justify-items: center; gap: 10px; padding: 34px 0; font: 700 12px var(--mono); }
+    .carregando i { width: 30px; height: 30px; border: 3px solid var(--cream); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
 
-    /* ── HEADER ─────────────────────────── */
-    .hd {
-      background: var(--navy);
-      flex-shrink: 0;
-      position: sticky; top: 0; z-index: 40;
-    }
-    .hd-top {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-    }
-    .hd-left { display: flex; align-items: center; gap: 10px; }
-    .btn-icon-hd {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      background: rgba(255,255,255,.1);
-      border: 1.5px solid rgba(255,255,255,.15);
-      color: rgba(255,255,255,.8);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; cursor: pointer;
-      text-decoration: none;
-      transition: background .18s; flex-shrink: 0;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .btn-icon-hd:hover  { background: rgba(255,255,255,.2); }
-    .btn-icon-hd:active { transform: scale(.92); }
-    .hd-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-    .hd-sub   { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
-
-    /* ── MAIN ───────────────────────────── */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 14px 100px;
-    }
-
-    .section-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--light);
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-
-    /* ── TEAM CARDS ─────────────────────── */
-    .team-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .member-card {
-      background: var(--white);
-      border-radius: var(--r);
-      padding: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-      border: 1px solid var(--border);
-    }
-    .member-card.inactive { opacity: .6; }
-
-    .card-top {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .avatar {
-      width: 46px; height: 46px;
-      border-radius: 13px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 19px; font-weight: 800;
-      color: white;
-      flex-shrink: 0;
-      letter-spacing: -.5px;
-    }
-
-    .member-info   { flex: 1; min-width: 0; }
-    .member-name   {
-      font-size: 15px; font-weight: 700;
-      color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    .status-pill {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 9px;
-      border-radius: var(--rpill);
-      font-size: 11px; font-weight: 700;
-      margin-top: 4px;
-    }
-    .status-pill i { font-size: 6px; }
-    .status-pill.active   { background: rgba(16,185,129,.12); color: var(--green); }
-    .status-pill.inactive { background: rgba(239,68,68,.1);   color: var(--red);   }
-
-    /* Stats */
-    .card-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-    }
-    .stat-box {
-      background: var(--bg);
-      border-radius: 9px;
-      padding: 10px 8px;
-      text-align: center;
-    }
-    .stat-val {
-      font-size: 15px; font-weight: 800;
-      color: var(--text);
-      line-height: 1; margin-bottom: 3px;
-    }
-    .stat-lbl {
-      font-size: 10px; font-weight: 600;
-      color: var(--light);
-      text-transform: uppercase; letter-spacing: .04em;
-    }
-
-    /* Link button */
-    .card-footer {
-      margin-top: 12px;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .btn-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px;
-      border-radius: var(--rpill);
-      border: 1.5px solid var(--border);
-      background: var(--white);
-      color: var(--blue-d);
-      font-size: 12px; font-weight: 700;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: all .18s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .btn-link:hover  { background: rgba(37,99,235,.05); border-color: var(--blue); }
-    .btn-link:active { transform: scale(.94); filter: brightness(.9); }
-
-    /* ── EMPTY STATE ────────────────────── */
-    .empty-wrap {
-      text-align: center;
-      padding: 60px 20px;
-    }
-    .empty-icon {
-      width: 72px; height: 72px;
-      border-radius: 20px;
-      background: var(--border);
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 20px;
-      font-size: 30px; color: var(--light);
-    }
-    .empty-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-    .empty-msg   { font-size: 14px; color: var(--mid); line-height: 1.5; }
-
-    /* ── BOTTOM SHEET ───────────────────── */
-    .sheet-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.45);
-      z-index: 200;
-      opacity: 0;
-      transition: opacity .25s ease;
-      pointer-events: none;
-    }
-    .sheet-backdrop.open { opacity: 1; pointer-events: all; }
-
-    .bottom-sheet {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 201;
-      background: var(--white);
-      border-radius: 20px 20px 0 0;
-      padding: 0 20px 40px;
-      transform: translateY(100%);
-      transition: transform .32s cubic-bezier(.32,0,.67,0);
-      max-height: 92vh;
-      overflow-y: auto;
-    }
-    .bottom-sheet.open { transform: translateY(0); }
-
-    .sheet-handle {
-      width: 36px; height: 4px;
-      background: var(--border);
-      border-radius: var(--rpill);
-      margin: 12px auto 20px;
-    }
-    .sheet-title {
-      font-size: 16px; font-weight: 800;
-      color: var(--text);
-      margin-bottom: 3px;
-    }
-    .sheet-sub {
-      font-size: 12px; color: var(--mid);
-      margin-bottom: 20px;
-    }
-
-    /* Link existente */
-    .existing-link {
-      background: rgba(16,185,129,.07);
-      border: 1.5px solid rgba(16,185,129,.22);
-      border-radius: var(--r);
-      padding: 12px 14px;
-      margin-bottom: 18px;
-      display: none;
-    }
-    .existing-link.visible { display: block; }
-    .existing-link-lbl {
-      font-size: 11px; font-weight: 700;
-      color: var(--green); text-transform: uppercase;
-      letter-spacing: .05em; margin-bottom: 6px;
-    }
-    .existing-link-url {
-      font-size: 11px; color: var(--mid);
-      word-break: break-all; font-family: monospace;
-      margin-bottom: 10px; line-height: 1.5;
-    }
-    .btn-copy-existing {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px;
-      border-radius: var(--rpill);
-      background: var(--green);
-      color: white;
-      font-size: 12px; font-weight: 700;
-      border: none; cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .btn-copy-existing:active { transform: scale(.95); filter: brightness(.9); }
-
-    /* Seleção de duração */
-    .dur-section-label {
-      font-size: 13px; font-weight: 600;
-      color: var(--text); margin-bottom: 10px;
-    }
-    .duration-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .dur-opt {
-      padding: 11px 8px;
-      border-radius: 10px;
-      border: 1.5px solid var(--border);
-      background: var(--white);
-      font-size: 13px; font-weight: 600;
-      color: var(--mid);
-      cursor: pointer;
-      text-align: center;
-      transition: all .15s;
-      font-family: 'Inter', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .dur-opt.sel {
-      border-color: var(--blue-d);
-      background: rgba(37,99,235,.07);
-      color: var(--blue-d);
-    }
-    .dur-opt:active { transform: scale(.96); }
-
-    .dur-warn {
-      font-size: 12px; color: #d97706;
-      margin-bottom: 14px; display: none;
-      background: rgba(245,158,11,.08);
-      border-radius: 8px; padding: 8px 12px;
-    }
+    /* janela do link do portal */
+    .sheet-backdrop { position: fixed; inset: 0; z-index: 800; background: #0e0f24bb; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+    .bottom-sheet { position: fixed; z-index: 810; left: 0; right: 0; bottom: 0; margin: 0 auto; width: 100%; max-width: 560px; max-height: 90vh; overflow: auto;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-bottom: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 0 var(--blue);
+      transform: translateY(105%); transition: transform .45s cubic-bezier(.2, .9, .3, 1.1); }
+    .bottom-sheet.open { transform: none; }
+    .sheet-handle { width: 44px; height: 5px; background: var(--ink); opacity: .25; border-radius: 3px; margin: 10px auto 0; }
+    .sheet-cab { display: flex; align-items: center; gap: 10px; padding: 8px 14px 12px; border-bottom: 3px solid var(--ink); }
+    .sheet-cab > div { flex: 1; min-width: 0; }
+    .sheet-title { font: 400 17px/1.1 var(--dela); }
+    .sheet-sub { margin-top: 3px; font: 700 11px var(--mono); color: var(--muted); }
+    .sheet-corpo { padding: 14px 14px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+    .existing-link { display: none; gap: 8px; padding: 10px; border: 2.5px solid var(--ink); border-radius: 12px; background: #e2f4e8; }
+    .existing-link.visible { display: grid; }
+    .existing-link-lbl { font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #1a7d45; }
+    .existing-link-url { display: block; padding: 7px 9px; border: 2px dashed var(--ink); border-radius: 8px; background: var(--paper); font: 700 11px var(--mono); overflow-wrap: anywhere; user-select: all; }
+    .btn-copy-existing { justify-self: end; padding: 6px 12px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--cream); color: var(--ink); font: 400 13px var(--dela); box-shadow: 2px 2px 0 var(--ink); cursor: pointer; }
+    .rot { font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .duration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .dur-opt { padding: 10px 6px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink); font: 400 15px var(--dela); cursor: pointer; }
+    .dur-opt.sel { background: var(--blue); color: var(--cream); box-shadow: 3px 3px 0 var(--ink); }
+    .dur-opt[data-val="permanent"] { border-style: dashed; }
+    .dur-opt[data-val="permanent"].sel { border-style: solid; background: var(--orange); }
+    .dur-warn { display: none; padding: 7px 10px; border: 2px solid var(--ink); border-radius: 10px; background: var(--yellow); font: 700 11px var(--mono); }
     .dur-warn.visible { display: block; }
-
-    .btn-generate {
-      width: 100%; padding: 14px;
-      border-radius: var(--r);
-      background: var(--blue-d); border: none;
-      color: white; font-size: 15px; font-weight: 700;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-      transition: opacity .18s;
-    }
-    .btn-generate:hover    { opacity: .88; }
-    .btn-generate:active   { transform: scale(.98); filter: brightness(.9); }
-    .btn-generate:disabled { opacity: .45; cursor: not-allowed; transform: none; filter: none; }
-
-    /* ── MOBILE NAV ─────────────────────── */
-    .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--white);
-      border-top: 1px solid var(--border);
-      display: flex; justify-content: space-around;
-      height: 68px; z-index: 100;
-      box-shadow: 0 -2px 10px rgba(0,0,0,.06);
-    }
-    .nav-item {
-      flex: 1;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-decoration: none; color: var(--light);
-      font-size: 10px; gap: 4px;
-      border: none; background: none; cursor: pointer;
-      border-top: 3px solid transparent;
-      font-family: 'Inter', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-      transition: color .18s;
-    }
-    .nav-item i      { font-size: 22px; }
-    .nav-item:hover  { color: var(--blue-d); }
-    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
-
-    /* Menu dropdown */
-    .menu-dropdown {
-      display: none;
-      position: fixed;
-      bottom: 80px; right: 16px;
-      background: var(--white);
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.12);
-      border: 1px solid var(--border);
-      min-width: 190px; z-index: 999;
-      animation: slideUp .22s ease;
-    }
-    .menu-dropdown.active { display: block; }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .menu-dropdown a, .menu-dropdown button {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px; color: var(--text);
-      text-decoration: none; border: none;
-      background: none; width: 100%;
-      cursor: pointer; font-size: 14px; font-weight: 500;
-      font-family: 'Inter', sans-serif;
-      transition: background .15s;
-    }
-    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--bg); }
-    .menu-dropdown .menu-logout { color: var(--red); }
-    .menu-dropdown .menu-logout:hover { background: rgba(239,68,68,.06); }
-
-    .overlay {
-      display: none; position: fixed;
-      inset: 0; background: rgba(0,0,0,.3); z-index: 998;
-    }
-    .overlay.active { display: block; }
+    .btn-generate { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 3px solid var(--ink); border-radius: 12px;
+      background: var(--blue); color: var(--cream); font: 400 15px var(--dela); box-shadow: 4px 4px 0 var(--ink); cursor: pointer; }
+    .btn-generate:disabled { opacity: .6; }
   </style>
 </head>
 <body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <header class="hd">
-    <div class="hd-top">
-      <div class="hd-left">
-        <a href="index.html" class="btn-icon-hd logo-link">
-          <i class="fas fa-briefcase"></i>
-        </a>
-        <div>
-          <div class="hd-title">Equipe</div>
-          <div class="hd-sub" id="empresaNome">Carregando...</div>
-        </div>
-      </div>
-    </div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
+    <div class="topo-tit"><h1>Equipe</h1><p id="empresaNome">Carregando...</p></div>
   </header>
+  <div class="agora">
+    <span id="teamCount" style="display:contents"></span>
+    <label class="mostrar-inativos"><input type="checkbox" id="toggleInativosEquipe" onchange="loadFuncionarios()"> mostrar inativos</label>
+  </div>
+  <div class="lista" id="content"></div>
+</div>
 
-  <!-- MAIN -->
-  <main class="main">
-    <p class="section-label" id="teamCount" style="display:none"></p>
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;cursor:pointer;margin:0 0 12px;">
-      <input type="checkbox" id="toggleInativosEquipe" onchange="loadFuncionarios()"> Mostrar inativos
-    </label>
-    <div class="team-grid" id="content"></div>
-  </main>
+<nav id="mobileNav"></nav>
+<div id="menu"></div>
 
-  <!-- MOBILE NAV -->
-  <nav id="mobileNav"></nav>
-
-  <!-- MENU DROPDOWN -->
-  <div id="menu"></div>
-  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
-
-  <!-- BOTTOM SHEET BACKDROP -->
-  <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeTokenModal()"></div>
-
-  <!-- BOTTOM SHEET: TOKEN -->
-  <div class="bottom-sheet" id="tokenSheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title"  id="sheetTitle">Link de Acesso</div>
-    <div class="sheet-sub"    id="sheetSub">Gere um link para o funcionário acessar o portal</div>
-
-    <!-- Link existente -->
+<!-- link de acesso ao portal -->
+<div class="sheet-backdrop" id="sheetBackdrop" onclick="closeTokenModal()"></div>
+<div class="bottom-sheet" id="tokenSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-cab">
+    <div><div class="sheet-title" id="sheetTitle">Link de acesso</div><div class="sheet-sub" id="sheetSub">o lavador vê as ordens e a comissão dele</div></div>
+    <button class="fechar" onclick="closeTokenModal()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="sheet-corpo">
     <div class="existing-link" id="existingLinkBox">
       <div class="existing-link-lbl"><i class="fas fa-check-circle"></i> Link ativo</div>
-      <div class="existing-link-url" id="existingLinkUrl"></div>
-      <button class="btn-copy-existing" onclick="copyExistingLink()">
-        <i class="fas fa-copy"></i> Copiar link ativo
-      </button>
+      <code class="existing-link-url" id="existingLinkUrl"></code>
+      <button class="btn-copy-existing" onclick="copyExistingLink()"><i class="fas fa-copy"></i> Copiar link ativo</button>
     </div>
-
-    <!-- Duração -->
-    <div class="dur-section-label">Gerar novo link</div>
+    <span class="rot">Gerar novo link</span>
     <div class="duration-grid">
-      <button class="dur-opt sel" data-val="24"       onclick="selectDuration(this)">24 horas</button>
-      <button class="dur-opt"     data-val="48"       onclick="selectDuration(this)">48 horas</button>
-      <button class="dur-opt"     data-val="72"       onclick="selectDuration(this)">72 horas</button>
-      <button class="dur-opt"     data-val="168"      onclick="selectDuration(this)">1 semana</button>
-      <button class="dur-opt"     data-val="permanent" onclick="selectDuration(this)" style="grid-column:1/-1">🔓 Link Permanente</button>
+      <button class="dur-opt sel" data-val="24" onclick="selectDuration(this)">24 horas</button>
+      <button class="dur-opt" data-val="48" onclick="selectDuration(this)">48 horas</button>
+      <button class="dur-opt" data-val="72" onclick="selectDuration(this)">72 horas</button>
+      <button class="dur-opt" data-val="168" onclick="selectDuration(this)">1 semana</button>
+      <button class="dur-opt" data-val="permanent" onclick="selectDuration(this)" style="grid-column:1/-1">🔓 Link permanente</button>
     </div>
-    <div class="dur-warn" id="durWarn">⚠️ Links permanentes nunca expiram. Use com cuidado.</div>
-
-    <button class="btn-generate" id="btnGenerate" onclick="generateToken()">
-      <i class="fas fa-link"></i> Gerar Link
-    </button>
+    <div class="dur-warn" id="durWarn">⚠️ Links permanentes nunca expiram. Use só para quem é fixo.</div>
+    <button class="btn-generate" id="btnGenerate" onclick="generateToken()"><i class="fas fa-link"></i> Gerar link</button>
   </div>
+</div>
 
   <script src="../api.js"></script>
   <script src="utils.js"></script>
   <script>
     const PAGE_ACTIVE = 'funcionarios';
 
-    const AVATAR_COLORS = [
-      '#3b82f6','#8b5cf6','#ec4899','#f97316',
-      '#10b981','#06b6d4','#f59e0b','#ef4444'
-    ];
+    const AVATAR_COLORS = ['#2f62e6', '#6b4fd8', '#c2418f', '#ff5b2e', '#22a15a', '#0d9488', '#d4a017', '#e5383b'];
 
     function avatarColor(name) {
       return AVATAR_COLORS[(name || '').charCodeAt(0) % AVATAR_COLORS.length];
@@ -498,7 +165,7 @@
     async function loadFuncionarios() {
       const content  = document.getElementById('content');
       const countEl  = document.getElementById('teamCount');
-      content.innerHTML = createLoading();
+      content.innerHTML = '<div class="carregando" style="grid-column:1/-1"><i></i>Carregando...</div>';
 
       try {
         const response     = await window.api.getLavadores();
@@ -508,78 +175,62 @@
         const mostrarInativos = document.getElementById('toggleInativosEquipe')?.checked;
         const funcionarios = mostrarInativos ? todos : todos.filter(f => f.ativo);
         const inativosOcultos = todos.length - funcionarios.length;
+        const ativos = todos.filter(f => f.ativo).length;
+        countEl.innerHTML = `<span class="chip" style="--sc: var(--green)"><b>${ativos}</b>ativo${ativos !== 1 ? 's' : ''}</span>`
+          + (todos.length - ativos ? `<span class="chip" style="--sc: #9a96a8"><b>${todos.length - ativos}</b>inativo${todos.length - ativos !== 1 ? 's' : ''}</span>` : '');
 
         if (funcionarios.length === 0) {
-          countEl.style.display = 'none';
           content.innerHTML = `
-            <div class="empty-wrap">
-              <div class="empty-icon"><i class="fas fa-users"></i></div>
-              <div class="empty-title">${todos.length === 0 ? 'Nenhum funcionário' : 'Nenhum funcionário ativo'}</div>
-              <div class="empty-msg">${todos.length === 0 ? 'Não há funcionários cadastrados no momento.' : `${inativosOcultos} inativo(s) oculto(s) — marque "Mostrar inativos".`}</div>
-            </div>`;
+            <section class="cartao vazio" style="grid-column:1/-1">
+              <div class="ic">👷</div>
+              <b>${todos.length === 0 ? 'Nenhum funcionário' : 'Nenhum funcionário ativo'}</b>
+              <p>${todos.length === 0 ? 'Não há funcionários cadastrados no momento.' : `${inativosOcultos} inativo(s) oculto(s) — marque "mostrar inativos".`}</p>
+            </section>`;
           return;
         }
-
-        const ativos = todos.filter(f => f.ativo).length;
-        countEl.textContent = `${todos.length} membro${todos.length !== 1 ? 's' : ''} · ${ativos} ativo${ativos !== 1 ? 's' : ''}`;
-        countEl.style.display = 'block';
 
         content.innerHTML = funcionarios.map(f => {
           const comissaoMes = f.comissaoMesAtual || 0;
           const ordensMes   = f.ordensMesAtual   || 0;
           const safeName    = (f.nome || '').replace(/'/g, "\\'");
+          const cor         = avatarColor(f.nome || '');
+          // situação do link do portal (tokens já vêm na lista)
+          const token = (f.tokens || []).find(t => t.ativo === true);
+          const vencido = token && token.expiraEm && new Date(token.expiraEm).getTime() < Date.now();
+          const linkTxt = !token || vencido ? 'sem link ativo'
+            : token.expiraEm === null ? 'permanente'
+            : 'até ' + new Date(token.expiraEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          const semLink = !token || vencido;
 
           return `
-            <div class="member-card ${f.ativo ? '' : 'inactive'}">
-              <div class="card-top">
-                <div class="avatar" style="background:${avatarColor(f.nome || '')}">${avatarInitial(f.nome)}</div>
-                <div class="member-info">
-                  <div class="member-name">${f.nome || 'Sem nome'}</div>
-                  <span class="status-pill ${f.ativo ? 'active' : 'inactive'}">
-                    <i class="fas fa-circle"></i>
-                    ${f.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
+            <article class="cartao lav${f.ativo ? '' : ' inativo'}" style="--c: ${cor}; --st: ${f.ativo ? 'var(--green)' : '#9a96a8'}; --sb: ${f.ativo ? '#dff5e6' : '#ece8dd'}">
+              <div class="lav-topo">
+                <span class="av">${avatarInitial(f.nome)}</span>
+                <span class="t"><b>${escapeHtml(f.nome || 'Sem nome')}</b><span class="situ">${f.ativo ? 'ativo' : 'inativo'}</span></span>
               </div>
-
-              <div class="card-stats">
-                <div class="stat-box">
-                  <div class="stat-val">${f.comissao || 0}%</div>
-                  <div class="stat-lbl">Comissão</div>
-                </div>
-                <div class="stat-box">
-                  <div class="stat-val">${ordensMes}</div>
-                  <div class="stat-lbl">Ordens/mês</div>
-                </div>
-                <div class="stat-box">
-                  <div class="stat-val">${formatCompact(comissaoMes)}</div>
-                  <div class="stat-lbl">Ganho/mês</div>
-                </div>
+              <div class="nums">
+                <div><b>${f.comissao || 0}%</b><small>comissão</small></div>
+                <div><b>${ordensMes}</b><small>ordens/mês</small></div>
+                <div><b>${formatCompact(comissaoMes)}</b><small>ganho/mês</small></div>
               </div>
-
               ${f.ativo ? `
-              <div class="card-footer">
-                <button class="btn-link" onclick="openTokenModal('${f.id}','${safeName}')">
-                  <i class="fas fa-link"></i> Link de acesso
-                </button>
+              <div class="lav-pe">
+                <span class="link-st${semLink ? ' sem' : ''}"><i class="fas fa-link"></i> Portal: <b>${linkTxt}</b></span>
+                <button class="btn${semLink ? ' azul' : ''}" onclick="openTokenModal('${f.id}','${safeName}')">${semLink ? 'Gerar link' : 'Ver link'}</button>
               </div>` : ''}
-            </div>
-          `;
+            </article>`;
         }).join('');
 
       } catch (err) {
         console.error(err);
-        countEl.style.display = 'none';
+        countEl.innerHTML = '';
         content.innerHTML = `
-          <div class="empty-wrap">
-            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
-            <div class="empty-title">Erro ao carregar</div>
-            <div class="empty-msg">Tente novamente em alguns segundos.<br>
-              <button class="btn-link" style="margin-top:16px" onclick="loadFuncionarios()">
-                <i class="fas fa-redo"></i> Tentar novamente
-              </button>
-            </div>
-          </div>`;
+          <section class="cartao vazio" style="grid-column:1/-1">
+            <div class="ic">⚠️</div>
+            <b>Erro ao carregar</b>
+            <p>Tente novamente em alguns segundos.</p>
+            <button class="btn azul" style="margin-top:12px" onclick="loadFuncionarios()"><i class="fas fa-redo"></i> Tentar novamente</button>
+          </section>`;
       }
     }
 
@@ -594,7 +245,7 @@
       existingLinkUrl  = null;
 
       document.getElementById('sheetTitle').textContent = lavadorNome;
-      document.getElementById('sheetSub').textContent   = 'Gere ou copie o link de acesso ao portal';
+      document.getElementById('sheetSub').textContent   = 'o lavador vê as ordens e a comissão dele';
       document.getElementById('existingLinkBox').classList.remove('visible');
       document.getElementById('durWarn').classList.remove('visible');
 
@@ -666,14 +317,16 @@
           : `Link copiado! Válido por ${selectedDuration}h`;
         showToast(msg, 'success');
         closeTokenModal();
+        loadFuncionarios();
       } catch (err) {
         console.error(err);
         showToast('Erro ao gerar link. Tente novamente.', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-link"></i> Gerar Link';
+        btn.innerHTML = '<i class="fas fa-link"></i> Gerar link';
       }
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
