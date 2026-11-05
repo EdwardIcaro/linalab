@@ -2,358 +2,244 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Higienização — Lina X</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <script defer src="/vendor/alpinejs/cdn.min.js"></script>
   <style>
-    :root {
-      --navy:#0f172a; --purple:#7c3aed; --purple-d:#6d28d9; --purple-l:#f5f3ff; --purple-m:#ddd6fe;
-      --text:#0f172a; --mid:#64748b; --light:#94a3b8; --border:#e2e8f0; --bg:#f8fafc; --white:#fff;
-      --green:#10b981; --green-d:#059669; --red:#ef4444; --r:10px; --rpill:999px;
-    }
-    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'Inter',-apple-system,sans-serif; height:100dvh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; overflow:hidden; }
-    [x-cloak] { display:none !important; }
-    button { font-family:inherit; }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    [x-cloak] { display: none !important; }
+    :root { --roxo: #7a3fd0; }
+    .pagina { max-width: 720px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 130px; }
+    .topo { display: flex; align-items: center; gap: 12px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(22px, 5.8vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit p { margin: 4px 0 0; font-size: 11px; opacity: .8; }
+    .secoes { display: grid; gap: 16px; margin-top: 16px; }
+    .sec-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sec-cab .num { width: 26px; height: 26px; border-radius: 8px; border: 2.5px solid var(--ink); background: var(--sc); color: var(--cf, var(--cream)); display: grid; place-items: center; font: 400 13px/1 var(--dela); flex: none; }
+    .sec-cab h2 { margin: 0; font: 400 16px/1.1 var(--dela); flex: 1; }
+    .sec-cab h2 small { font: 700 11px var(--mono); color: var(--muted); margin-left: 4px; }
+    .vazio-sec { margin: 0; font-size: 12px; color: var(--muted); }
 
-    /* Header */
-    .hd { flex-shrink:0; background:var(--navy); padding:14px 16px; z-index:40; }
-    .hd-row { display:flex; align-items:center; justify-content:space-between; }
-    .hd-left { display:flex; align-items:center; gap:10px; }
-    .btn-back { width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.1); border:1.5px solid rgba(255,255,255,.15); color:rgba(255,255,255,.8); display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; text-decoration:none; }
-    .hd-title { font-size:18px; font-weight:800; color:#fff; letter-spacing:-.3px; }
-    .hd-sub { font-size:11px; color:rgba(255,255,255,.4); margin-top:1px; }
-    .hd-badge { background:rgba(124,58,237,.25); border:1px solid rgba(124,58,237,.4); border-radius:var(--rpill); padding:4px 12px; font-size:11px; font-weight:700; color:#c4b5fd; }
+    .itens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .item { display: grid; justify-items: center; gap: 4px; padding: 12px 4px 10px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink);
+      font: 700 12px var(--mono); cursor: pointer; box-shadow: 3px 3px 0 var(--ink); min-width: 0; }
+    .item i { font-size: 22px; }
+    .item.on { background: var(--roxo); color: var(--cream); box-shadow: 3px 3px 0 var(--pink); transform: translate(-1px, -1px); }
+    .item.outros { border-style: dashed; }
 
-    /* Body */
-    .body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:90px; }
-    .sec { background:var(--white); border-bottom:1px solid var(--border); padding:14px 16px; }
-    .sec-lbl { font-size:10px; font-weight:700; color:var(--light); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
-    .sec-lbl b { color:var(--purple); }
-    .sec-empty { text-align:center; color:var(--light); font-size:13px; padding:14px 0; }
+    .servicos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .svc { position: relative; padding: 10px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink); text-align: left; cursor: pointer;
+      box-shadow: 3px 3px 0 var(--ink); display: grid; gap: 4px; min-width: 0; }
+    .svc b { font: 400 13px/1.15 var(--dela); overflow-wrap: anywhere; }
+    .svc span { font: 700 15px var(--mono); }
+    .svc.on { background: var(--yellow); box-shadow: 4px 4px 0 var(--roxo); }
+    .svc.on::after { content: "✓"; position: absolute; top: -9px; right: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--green); color: var(--cream); border: 2px solid var(--ink); display: grid; place-items: center; font: 700 11px/1 var(--mono); }
+    .svc.add { border-style: dashed; background: none; display: flex; align-items: center; justify-content: center; gap: 6px; font: 700 12px var(--mono); box-shadow: none; min-height: 64px; }
+    .na-hora { margin-top: 12px; border: 2px dashed var(--ink); border-radius: 12px; }
+    .na-hora > button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 0; background: none; color: var(--ink); font: 700 12px var(--mono); cursor: pointer; text-align: left; }
+    .na-hora > button .tg { margin-left: auto; width: 36px; height: 20px; border-radius: 999px; border: 2px solid var(--ink); background: var(--paper); position: relative; transition: background .2s; flex: none; }
+    .na-hora > button .tg::after { content: ""; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); transition: transform .2s; }
+    .na-hora.on { border-style: solid; background: #fff3c4; }
+    .na-hora.on > button .tg { background: var(--green); }
+    .na-hora.on > button .tg::after { transform: translateX(16px); background: var(--cream); }
+    .na-hora-campos { display: grid; grid-template-columns: 1fr 120px; gap: 8px; padding: 0 12px 12px; }
+    .na-hora-campos .entrada { padding: 8px 10px; font-size: 12px; }
+    .qtd { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 2px dashed var(--line); }
+    .qtd > span { font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .passos { display: flex; align-items: center; border: 2.5px solid var(--ink); border-radius: 10px; overflow: hidden; background: var(--paper); }
+    .passos button { width: 38px; height: 36px; border: 0; background: none; color: var(--ink); font: 400 18px var(--dela); cursor: pointer; }
+    .passos button:active { background: var(--yellow); }
+    .passos b { min-width: 38px; text-align: center; font: 400 17px var(--dela); border-inline: 2.5px solid var(--ink); line-height: 36px; }
 
-    /* Chips (itens) */
-    .chips { display:flex; flex-wrap:wrap; gap:8px; }
-    .chip { flex-shrink:0; padding:9px 15px; border:2px solid var(--border); border-radius:var(--rpill); background:var(--bg); cursor:pointer; font-size:13px; font-weight:600; color:var(--mid); white-space:nowrap; transition:all .15s; }
-    .chip:hover { border-color:var(--purple-m); }
-    .chip.on { border-color:var(--purple); background:var(--purple-l); color:var(--purple-d); }
-    .chip { display:inline-flex; align-items:center; gap:6px; }
-    .chip i { font-size:12px; opacity:.85; }
-    .add-svc-btn { display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:2px dashed var(--purple-m); border-radius:var(--r); background:var(--purple-l); color:var(--purple-d); font-size:13px; font-weight:700; cursor:pointer; }
-    .add-svc-btn:hover { border-style:solid; }
+    .busca { position: relative; }
+    .busca .lupa { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); line-height: 0; z-index: 1; }
+    .busca .entrada { padding-left: 34px; height: 46px; }
+    .resultados { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); overflow: hidden; }
+    .res { display: flex; align-items: center; gap: 10px; padding: 9px 10px; cursor: pointer; }
+    .res + .res { border-top: 2px dashed var(--line); }
+    .res .av { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--ink); background: var(--pink); display: grid; place-items: center; font: 400 14px var(--dela); flex: none; }
+    .res .av.novo { background: var(--roxo); color: var(--cream); }
+    .res b { display: block; font: 700 13px var(--mono); } .res small { display: block; font-size: 11px; color: var(--muted); }
+    .cli { display: flex; align-items: center; gap: 10px; }
+    .cli .av { width: 40px; height: 40px; border-radius: 12px; border: 2.5px solid var(--ink); background: var(--pink); display: grid; place-items: center; font: 400 17px var(--dela); flex: none; }
+    .cli .t { flex: 1; min-width: 0; } .cli .t b { display: block; font: 400 15px var(--dela); } .cli .t span { font-size: 11px; color: var(--muted); }
+    .mini-btn { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; flex: none; }
 
-    /* Serviços */
-    .svc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .svc-card { position:relative; overflow:hidden; padding:11px 12px 11px 16px; border:2px solid var(--border); border-radius:var(--r); background:var(--bg); cursor:pointer; transition:all .15s; }
-    .svc-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--border); }
-    .svc-card.on { border-color:var(--purple); background:var(--purple-l); }
-    .svc-card.on::before { background:var(--purple); }
-    .svc-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:1px; }
-    .svc-card.on .svc-name { color:var(--purple-d); }
-    .svc-price { font-size:18px; font-weight:800; color:var(--text); }
-    .svc-card.on .svc-price { color:var(--purple-d); }
-    .svc-check { position:absolute; top:8px; right:8px; width:18px; height:18px; border-radius:50%; background:var(--purple); color:#fff; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0); transition:all .2s; }
-    .svc-card.on .svc-check { opacity:1; transform:scale(1); }
+    .equipe { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
+    .lav { display: grid; justify-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); flex: none; }
+    .lav .av { position: relative; width: 48px; height: 48px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--paper); display: grid; place-items: center; font: 400 18px var(--dela); }
+    .lav.on .av { color: var(--cream); box-shadow: 3px 3px 0 var(--ink); }
+    .lav span { font: 700 11px var(--mono); }
+    .obs { width: 100%; min-height: 64px; resize: vertical; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 11px; font: 400 13px/1.4 var(--mono); outline: none; }
+    .obs:focus { box-shadow: 3px 3px 0 var(--blue); }
 
-    /* Valor na hora */
-    .valor-hora-btn { display:flex; align-items:center; gap:8px; width:100%; padding:12px 14px; border:2px dashed var(--purple-m); border-radius:var(--r); background:var(--purple-l); color:var(--purple-d); font-size:13px; font-weight:700; cursor:pointer; margin-top:8px; }
-    .valor-hora-btn.on { border-style:solid; background:var(--purple); color:#fff; }
-    .valor-hora-box { margin-top:10px; display:grid; gap:8px; }
-    .inp { width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:var(--r); font-size:14px; font-family:inherit; outline:none; background:var(--white); transition:border-color .15s; }
-    .inp:focus { border-color:var(--purple); }
-    .qtd-row { display:flex; align-items:center; gap:12px; margin-top:10px; }
-    .qtd-lbl { font-size:13px; font-weight:600; color:var(--mid); }
-    .qtd-ctl { display:flex; align-items:center; gap:0; border:1.5px solid var(--border); border-radius:var(--r); overflow:hidden; }
-    .qtd-btn { width:38px; height:38px; border:none; background:var(--bg); color:var(--purple-d); font-size:18px; font-weight:700; cursor:pointer; }
-    .qtd-val { width:44px; text-align:center; font-size:15px; font-weight:700; }
+    .rodape-h { position: fixed; z-index: 600; left: 0; right: 0; bottom: 0; background: var(--cream); color: var(--ink); border-top: 3px solid var(--ink); box-shadow: 0 -5px 0 var(--roxo);
+      padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .rodape-dentro { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+    .total { flex: 1; min-width: 0; }
+    .total small { font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .total b { display: block; font: 400 22px/1 var(--dela); white-space: nowrap; }
+    .total span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-criar { padding: 13px 18px; font-size: 15px; background: var(--roxo); color: var(--cream); }
 
-    /* Cliente */
-    .cli-search { position:relative; }
-    .cli-input { width:100%; padding:11px 14px 11px 40px; border:1.5px solid var(--border); border-radius:var(--r); font-size:14px; font-family:inherit; outline:none; background:var(--white); }
-    .cli-input:focus { border-color:var(--purple); }
-    .cli-search .fa-search { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--light); font-size:13px; }
-    .dropdown { margin-top:8px; border:1.5px solid var(--border); border-radius:var(--r); overflow:hidden; max-height:240px; overflow-y:auto; }
-    .dr { display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer; border-bottom:1px solid var(--border); }
-    .dr:last-child { border-bottom:none; }
-    .dr:active { background:var(--purple-l); }
-    .dr-av { width:34px; height:34px; border-radius:50%; background:var(--purple-l); color:var(--purple-d); font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .dr-av.new { background:var(--purple); color:#fff; }
-    .dr-name { font-size:14px; font-weight:600; color:var(--text); }
-    .dr-sub { font-size:12px; color:var(--light); }
-    .cli-tag { display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid var(--purple); background:var(--purple-l); border-radius:var(--r); }
-    .ct-av { width:38px; height:38px; border-radius:50%; background:var(--purple); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .ct-name { font-size:14px; font-weight:700; color:var(--text); }
-    .ct-info { font-size:12px; color:var(--mid); }
-    .ct-x { width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.06); border:none; color:var(--mid); cursor:pointer; font-size:13px; flex-shrink:0; }
-
-    /* Lavadores */
-    .lav-row { display:flex; flex-wrap:wrap; gap:10px; }
-    .lav { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
-    .lav-av { width:44px; height:44px; border-radius:50%; border:2.5px solid var(--border); background:var(--bg); color:var(--mid); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; transition:all .15s; }
-    .lav.on .lav-av { border-color:var(--purple); background:var(--purple-l); color:var(--purple-d); }
-    .lav-nm { font-size:11px; font-weight:600; color:var(--mid); max-width:56px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .lav.on .lav-nm { color:var(--purple-d); }
-
-    textarea.inp { resize:vertical; min-height:70px; }
-
-    /* Footer */
-    .footer { position:fixed; bottom:0; left:0; right:0; padding:12px 16px; padding-bottom:max(14px,env(safe-area-inset-bottom)); background:var(--white); border-top:1px solid var(--border); z-index:40; }
-    .btn-criar { width:100%; padding:15px; border:none; border-radius:12px; background:var(--purple); color:#fff; font-size:15px; font-weight:800; cursor:pointer; transition:opacity .15s; display:flex; align-items:center; justify-content:center; gap:8px; }
-    .btn-criar:disabled { background:var(--light); cursor:not-allowed; }
-
-    /* Backdrop / sheet */
-    .backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); backdrop-filter:blur(4px); display:flex; align-items:flex-end; z-index:90; }
-    .sheet { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-height:90dvh; display:flex; flex-direction:column; animation:slideUp .3s cubic-bezier(.34,1.4,.64,1); }
-    @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
-    .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:14px auto 0; }
-    .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:1px solid var(--border); }
-    .sheet-title { font-size:16px; font-weight:800; }
-    .sheet-close { width:30px; height:30px; border-radius:50%; background:var(--bg); border:none; color:var(--mid); font-size:14px; cursor:pointer; }
-    .sheet-body { padding:16px 20px; overflow-y:auto; }
-    .sheet-footer { display:flex; gap:8px; padding:12px 20px; padding-bottom:max(16px,env(safe-area-inset-bottom)); border-top:1px solid var(--border); }
-    .fld { margin-bottom:12px; }
-    .fld label { display:block; font-size:12px; font-weight:600; color:var(--mid); margin-bottom:5px; }
-    .fld label span { color:var(--red); }
-    .btn-cancel { flex:1; padding:13px; border:1.5px solid var(--border); border-radius:12px; background:var(--white); color:var(--mid); font-size:14px; font-weight:700; cursor:pointer; }
-    .btn-confirm { flex:2; padding:13px; border:none; border-radius:12px; background:var(--purple); color:#fff; font-size:14px; font-weight:800; cursor:pointer; }
-
-    /* Sucesso */
-    .sheet-success { background:var(--white); border-radius:24px 24px 0 0; width:100%; padding:0 24px 32px; text-align:center; animation:slideUp .3s cubic-bezier(.34,1.4,.64,1); }
-    .s-ring { width:72px; height:72px; border-radius:50%; background:var(--purple-l); color:var(--purple-d); display:flex; align-items:center; justify-content:center; font-size:34px; margin:8px auto 16px; }
-    .s-title { font-size:20px; font-weight:800; }
-    .s-sub { font-size:13px; color:var(--light); margin-top:4px; }
-    .s-num { font-size:14px; font-weight:700; color:var(--purple-d); margin:14px 0; }
-    .btn-nova { width:100%; padding:14px; border:none; border-radius:12px; background:var(--purple); color:#fff; font-size:15px; font-weight:800; cursor:pointer; margin-bottom:10px; }
-    .btn-dash { display:block; padding:12px; color:var(--mid); font-size:14px; font-weight:600; text-decoration:none; }
-
-    /* Toast */
-    .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(16px); background:#1f2937; color:#fff; padding:11px 18px; border-radius:12px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(0,0,0,.22); opacity:0; transition:opacity .25s,transform .25s; z-index:999; pointer-events:none; }
-    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-    .toast.success i { color:#34d399; } .toast.error i { color:#f87171; }
-    .spin { width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; }
-    @keyframes sp { to { transform:rotate(360deg); } }
+    .folha-fundo { opacity: 1; pointer-events: auto; }
+    .folha-fundo .folha { transform: none; animation: subir .45s cubic-bezier(.2, .9, .3, 1.1); }
+    @keyframes subir { from { transform: translateY(60%); } to { transform: none; } }
+    .pe-2 { display: flex; gap: 10px; } .pe-2 .btn { flex: 1; } .pe-2 .btn.cancelar { flex: 0 0 auto; background: var(--paper); }
+    .sucesso { text-align: center; padding: 22px 16px calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; justify-items: center; }
+    .anel { width: 78px; height: 78px; border-radius: 50%; background: var(--roxo); color: var(--cream); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); display: grid; place-items: center; font-size: 30px; animation: pulo .6s cubic-bezier(.3, 1.6, .5, 1) both; }
+    @keyframes pulo { from { transform: scale(.2) rotate(-30deg); } to { transform: none; } }
+    .sucesso h3 { margin: 6px 0 0; font: 400 24px/1.1 var(--dela); }
+    .sucesso .num { font: 400 15px var(--dela); background: var(--yellow); border: 2.5px solid var(--ink); border-radius: 8px; padding: 2px 10px; transform: rotate(-3deg); }
+    .sucesso p { margin: 0; font-size: 12px; color: var(--muted); }
+    .sucesso .acoes { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
   </style>
 </head>
 <body x-data="avulsa()" x-init="init()">
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <div class="hd">
-    <div class="hd-row">
-      <div class="hd-left">
-        <a href="index.html" class="btn-back"><i class="fas fa-arrow-left"></i></a>
-        <div>
-          <div class="hd-title">Higienização</div>
-          <div class="hd-sub">Tapete, banco, sofá e afins</div>
-        </div>
-      </div>
-      <div class="hd-badge">🧺 Higienização</div>
-    </div>
-  </div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Voltar"><i class="fas fa-arrow-left"></i></a>
+    <div class="topo-tit"><h1>Higienização</h1><p>tapete, banco, sofá e afins</p></div>
+  </header>
 
-  <!-- BODY -->
-  <div class="body">
-    <!-- ITEM -->
-    <div class="sec">
-      <div class="sec-lbl">O que está lavando?</div>
-      <div class="sec-empty" x-show="loadingItens" x-cloak>Carregando itens...</div>
-      <div class="chips" x-show="!loadingItens">
+  <div class="secoes">
+    <!-- 1. item -->
+    <section class="cartao" style="--sc: var(--roxo)">
+      <div class="sec-cab"><span class="num">1</span><h2>O que está lavando?</h2></div>
+      <p class="vazio-sec" x-show="loadingItens" x-cloak>Carregando itens...</p>
+      <div class="itens" x-show="!loadingItens">
         <template x-for="it in itens" :key="it.key">
-          <button class="chip" :class="{on: item===it.key}" @click="selecionarItem(it.key)">
-            <i class="fas" :class="it.icon"></i> <span x-text="it.label"></span>
-          </button>
+          <button class="item" :class="{on: item===it.key}" @click="selecionarItem(it.key)"><i class="fas" :class="it.icon"></i><span x-text="it.label"></span></button>
         </template>
-        <button class="chip" :class="{on: item==='OUTROS'}" @click="selecionarItem('OUTROS')">
-          <i class="fas fa-ellipsis"></i> Outros
-        </button>
+        <button class="item outros" :class="{on: item==='OUTROS'}" @click="selecionarItem('OUTROS')"><i class="fas fa-ellipsis"></i>Outros</button>
       </div>
-    </div>
+    </section>
 
-    <!-- SERVIÇO -->
-    <div class="sec" x-show="item" x-cloak>
-      <div class="sec-lbl">Serviço</div>
-
-      <!-- Serviços cadastrados (não aparece em Outros) -->
-      <div class="sec-empty" x-show="item!=='OUTROS' && loadingServicos" x-cloak>Carregando serviços...</div>
-      <div class="svc-grid" x-show="item!=='OUTROS' && !loadingServicos && servicos.length > 0">
-        <template x-for="s in servicos" :key="s.id">
-          <div class="svc-card" :class="{on: svc?.id===s.id}" @click="pickServico(s)">
-            <div class="svc-check">✓</div>
-            <div class="svc-name" x-text="s.nome"></div>
-            <div class="svc-price" x-text="'R$ ' + Number(s.preco||0).toFixed(2).replace('.',',')"></div>
-          </div>
-        </template>
-      </div>
-      <div x-show="item!=='OUTROS' && !loadingServicos && servicos.length===0" x-cloak style="text-align:center;padding:6px 0 4px;">
-        <div style="color:var(--mid);font-size:13px;margin-bottom:10px;">Nenhum serviço cadastrado para este item.</div>
-        <button class="add-svc-btn" @click="abrirNovoServico()">
-          <i class="fas fa-plus-circle"></i> Adicionar um novo serviço
-        </button>
-      </div>
-
-      <!-- Valor na hora -->
-      <button class="valor-hora-btn" :class="{on: modoValorHora}" @click="toggleValorHora()">
-        <i class="fas fa-pen"></i>
-        <span x-text="modoValorHora ? 'Valor na hora (ativo)' : 'Colocar valor na hora'"></span>
-      </button>
-      <div class="valor-hora-box" x-show="modoValorHora" x-cloak>
-        <input type="text" class="inp" x-model="vhNome" placeholder="Nome do serviço (ex: Higienização)">
-        <input type="number" class="inp" x-model="vhPreco" step="0.01" min="0.01" placeholder="Valor R$ 0,00">
-      </div>
-
-      <!-- Quantidade -->
-      <div class="qtd-row">
-        <span class="qtd-lbl">Quantidade</span>
-        <div class="qtd-ctl">
-          <button class="qtd-btn" @click="qtd = Math.max(1, qtd-1)">−</button>
-          <span class="qtd-val" x-text="qtd"></span>
-          <button class="qtd-btn" @click="qtd = qtd+1">+</button>
+    <!-- 2. serviço -->
+    <section class="cartao" style="--sc: var(--yellow); --cf: var(--ink)">
+      <div class="sec-cab"><span class="num">2</span><h2>Serviço</h2></div>
+      <p class="vazio-sec" x-show="!item">Escolha o item primeiro.</p>
+      <div x-show="item" x-cloak>
+        <p class="vazio-sec" x-show="item!=='OUTROS' && loadingServicos">Carregando serviços...</p>
+        <p class="vazio-sec" x-show="item==='OUTROS'" style="margin-bottom:4px">Para "Outros", coloque o valor na hora.</p>
+        <div class="servicos" x-show="item!=='OUTROS' && !loadingServicos">
+          <p class="vazio-sec" x-show="servicos.length===0" style="grid-column: 1 / -1">Nenhum serviço cadastrado para este item.</p>
+          <template x-for="s in servicos" :key="s.id">
+            <button class="svc" :class="{on: svc?.id===s.id}" @click="pickServico(s)"><b x-text="s.nome"></b><span x-text="'R$ ' + Number(s.preco||0).toFixed(2).replace('.',',')"></span></button>
+          </template>
+          <button class="svc add" @click="abrirNovoServico()"><i class="fas fa-plus"></i> Novo serviço</button>
         </div>
-      </div>
-    </div>
-
-    <!-- CLIENTE (obrigatório) -->
-    <div class="sec" x-show="item" x-cloak>
-      <div class="sec-lbl">Cliente <b>*</b></div>
-      <template x-if="!cliente">
-        <div>
-          <div class="cli-search">
-            <i class="fas fa-search"></i>
-            <input type="text" class="cli-input" x-model="searchQuery" @input="buscar()" placeholder="Buscar cliente por nome ou telefone...">
+        <div class="na-hora" :class="{on: modoValorHora}">
+          <button @click="toggleValorHora()"><i class="fas fa-pen-to-square"></i> <span x-text="modoValorHora ? 'Valor na hora (ligado)' : 'Colocar valor na hora'"></span><span class="tg"></span></button>
+          <div class="na-hora-campos" x-show="modoValorHora" x-cloak>
+            <input class="entrada" type="text" x-model="vhNome" placeholder="Nome (ex.: tapete persa)">
+            <input class="entrada" type="number" x-model="vhPreco" step="0.01" min="0.01" placeholder="R$ 0,00">
           </div>
-          <div class="dropdown" x-show="showDrop" x-cloak>
-            <div class="dr" x-show="buscando"><span class="dr-sub">Buscando...</span></div>
+        </div>
+        <div class="qtd"><span>Quantidade</span><div class="passos"><button @click="qtd = Math.max(1, qtd-1)">−</button><b x-text="qtd"></b><button @click="qtd = qtd+1">+</button></div></div>
+      </div>
+    </section>
+
+    <!-- 3. cliente (obrigatório) -->
+    <section class="cartao" style="--sc: var(--pink); --cf: var(--ink)">
+      <div class="sec-cab"><span class="num">3</span><h2>Cliente <small style="color: var(--red)">*</small></h2></div>
+      <template x-if="!cliente">
+        <div class="busca">
+          <span class="lupa"><i class="fas fa-search"></i></span>
+          <input class="entrada" type="text" x-model="searchQuery" @input="buscar()" @blur="setTimeout(() => showDrop = false, 180)" placeholder="Nome ou telefone…" autocomplete="off">
+          <div class="resultados" x-show="showDrop" x-cloak>
+            <div class="res" x-show="buscando"><small>Buscando…</small></div>
             <template x-for="r in results" :key="r.id">
-              <div class="dr" @click="pickCliente(r)">
-                <div class="dr-av" x-text="r.nome[0]?.toUpperCase()"></div>
-                <div>
-                  <div class="dr-name" x-text="r.nome"></div>
-                  <div class="dr-sub" x-text="r.telefone || 'sem telefone'"></div>
-                </div>
-              </div>
+              <div class="res" @mousedown.prevent="pickCliente(r)"><span class="av" x-text="r.nome[0]?.toUpperCase()"></span><span><b x-text="r.nome"></b><small x-text="r.telefone || 'sem telefone'"></small></span></div>
             </template>
-            <div class="dr" @click="abrirFormRapido()">
-              <div class="dr-av new">+</div>
-              <div>
-                <div class="dr-name" style="color:var(--purple-d)">Cadastrar cliente rápido</div>
-                <div class="dr-sub">Só nome e telefone</div>
-              </div>
-            </div>
+            <div class="res" @mousedown.prevent="abrirFormRapido()"><span class="av novo">+</span><span><b style="color: var(--roxo)">Cliente rápido</b><small>só nome e telefone</small></span></div>
           </div>
         </div>
       </template>
-      <div class="cli-tag" x-show="cliente" x-cloak>
-        <div class="ct-av" x-text="cliente?.nome?.[0]?.toUpperCase() || '?'"></div>
-        <div style="flex:1;min-width:0">
-          <div class="ct-name" x-text="cliente?.nome"></div>
-          <div class="ct-info" x-text="cliente?.telefone || 'sem telefone'"></div>
-        </div>
-        <button class="ct-x" @click="cliente=null; searchQuery=''">✕</button>
+      <div class="cli" x-show="cliente" x-cloak>
+        <span class="av" x-text="cliente?.nome?.[0]?.toUpperCase() || '?'"></span>
+        <span class="t"><b x-text="cliente?.nome"></b><span x-text="cliente?.telefone || 'sem telefone'"></span></span>
+        <button class="mini-btn" title="Trocar cliente" @click="cliente=null; searchQuery=''"><i class="fas fa-times"></i></button>
       </div>
-    </div>
+    </section>
 
-    <!-- LAVADOR -->
-    <div class="sec" x-show="item" x-cloak>
-      <div class="sec-lbl">Funcionário <span style="font-weight:400;text-transform:none;color:var(--light)">(opcional)</span></div>
-      <div class="sec-empty" x-show="loadingLavadores" x-cloak>Carregando...</div>
-      <div class="lav-row" x-show="!loadingLavadores">
-        <template x-for="l in lavadores" :key="l.id">
-          <div class="lav" :class="{on: lavs.includes(l.id)}" @click="toggleLav(l)">
-            <div class="lav-av" x-text="l.nome[0]?.toUpperCase()"></div>
-            <div class="lav-nm" x-text="l.nome"></div>
-          </div>
+    <!-- 4. quem faz + descrição -->
+    <section class="cartao" style="--sc: var(--green)">
+      <div class="sec-cab"><span class="num">4</span><h2>Quem vai fazer <small>(opcional)</small></h2></div>
+      <p class="vazio-sec" x-show="loadingLavadores" x-cloak>Carregando...</p>
+      <div class="equipe" x-show="!loadingLavadores">
+        <template x-for="(l, i) in lavadores" :key="l.id">
+          <button class="lav" :class="{on: lavs.includes(l.id)}" @click="toggleLav(l)">
+            <span class="av" :style="lavs.includes(l.id) ? 'background:' + corLav(i) : ''" x-text="l.nome[0]?.toUpperCase()"></span><span x-text="l.nome.split(' ')[0]"></span>
+          </button>
         </template>
       </div>
-    </div>
-
-    <!-- DESCRIÇÃO -->
-    <div class="sec" x-show="item" x-cloak>
-      <div class="sec-lbl">Descrição do serviço <span style="font-weight:400;text-transform:none;color:var(--light)">(opcional)</span></div>
-      <textarea class="inp" x-model="obs" placeholder="Ex: Tapete grande da sala, mancha de café no canto..."></textarea>
-    </div>
+      <div class="sec-cab" style="margin: 12px 0 6px"><h2 style="font-size: 13px">Descrição <small>(opcional)</small></h2></div>
+      <textarea class="obs" x-model="obs" placeholder="Ex.: tapete grande da sala, mancha de café no canto…"></textarea>
+    </section>
   </div>
+</div>
 
-  <!-- FOOTER -->
-  <div class="footer">
-    <button class="btn-criar" :disabled="!podeCriar() || criando" @click="criar()">
-      <span class="spin" x-show="criando" x-cloak></span>
-      <span x-text="criando ? 'Criando...' : ('Criar ordem · R$ ' + valorTotal().toFixed(2).replace('.',','))"></span>
-    </button>
+<!-- rodapé fixo -->
+<div class="rodape-h">
+  <div class="rodape-dentro">
+    <div class="total"><small>Total</small><b x-text="'R$ ' + valorTotal().toFixed(2).replace('.',',')"></b>
+      <span x-text="temServico() ? qtd + '× ' + (modoValorHora ? vhNome : svc?.nome) + (cliente ? ' · ' + cliente.nome : '') : 'escolha o item e o serviço'"></span></div>
+    <button class="btn btn-criar" :disabled="!podeCriar() || criando" @click="criar()"><i class="fas fa-check"></i> <span x-text="criando ? 'Criando…' : 'Criar ordem'"></span></button>
   </div>
+</div>
 
-  <!-- SHEET: CADASTRO RÁPIDO -->
-  <div class="backdrop" x-show="showForm" x-cloak @click.self="showForm=false">
-    <div class="sheet" @click.stop>
-      <div class="sheet-handle"></div>
-      <div class="sheet-header">
-        <div class="sheet-title">Cliente rápido</div>
-        <button class="sheet-close" @click="showForm=false">✕</button>
-      </div>
-      <div class="sheet-body">
-        <div class="fld">
-          <label>Nome <span>*</span></label>
-          <input type="text" class="inp" x-model="form.nome" placeholder="Nome do cliente">
-        </div>
-        <div class="fld">
-          <label>Telefone</label>
-          <input type="tel" class="inp" x-model="form.telefone" placeholder="(00) 00000-0000">
-        </div>
-      </div>
-      <div class="sheet-footer">
-        <button class="btn-cancel" @click="showForm=false">Cancelar</button>
-        <button class="btn-confirm" @click="confirmarClienteRapido()">Confirmar</button>
+<!-- cliente rápido -->
+<div class="folha-fundo" x-show="showForm" x-cloak @click.self="showForm=false">
+  <div class="folha" style="--sc: var(--pink)" role="dialog" aria-label="Cliente rápido" @click.stop>
+    <div class="folha-cab"><h3>Cliente rápido<small>só nome e telefone</small></h3><button class="fechar" @click="showForm=false"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo">
+      <div class="campo"><label>Nome <span>*</span></label><input class="entrada" type="text" x-model="form.nome" placeholder="Nome do cliente"></div>
+      <div class="campo"><label>Telefone</label><input class="entrada" type="tel" x-model="form.telefone" placeholder="(00) 00000-0000"></div>
+    </div>
+    <div class="folha-pe pe-2"><button class="btn cancelar" @click="showForm=false">Cancelar</button><button class="btn" style="background: var(--pink)" @click="confirmarClienteRapido()"><i class="fas fa-check"></i> Confirmar</button></div>
+  </div>
+</div>
+
+<!-- novo serviço para o item -->
+<div class="folha-fundo" x-show="showNovoServico" x-cloak @click.self="showNovoServico=false">
+  <div class="folha" style="--sc: var(--yellow)" role="dialog" aria-label="Novo serviço" @click.stop>
+    <div class="folha-cab"><h3>Novo serviço<small x-text="item ? 'para ' + labelItem(item).toLowerCase() : ''"></small></h3><button class="fechar" @click="showNovoServico=false"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo">
+      <div class="campo"><label>Nome do serviço <span>*</span></label><input class="entrada" type="text" x-model="novoSvc.nome" placeholder="Ex.: higienização de tapete"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+        <div class="campo"><label>Preço <span>*</span></label><input class="entrada" type="number" x-model="novoSvc.preco" step="0.01" min="0.01" placeholder="R$ 0,00"></div>
+        <div class="campo"><label>Comissão % <small style="text-transform: none">(opcional)</small></label><input class="entrada" type="number" x-model="novoSvc.comissao" step="0.01" min="0" placeholder="Ex.: 40"></div>
       </div>
     </div>
+    <div class="folha-pe pe-2"><button class="btn cancelar" @click="showNovoServico=false">Cancelar</button><button class="btn" style="background: var(--yellow)" :disabled="salvandoServico" @click="salvarNovoServico()"><i class="fas fa-check"></i> <span x-text="salvandoServico ? 'Salvando…' : 'Criar serviço'"></span></button></div>
   </div>
+</div>
 
-  <!-- SHEET: NOVO SERVIÇO -->
-  <div class="backdrop" x-show="showNovoServico" x-cloak @click.self="showNovoServico=false">
-    <div class="sheet" @click.stop>
-      <div class="sheet-handle"></div>
-      <div class="sheet-header">
-        <div>
-          <div class="sheet-title">Novo serviço</div>
-          <div style="font-size:12px;color:var(--light);margin-top:2px;" x-text="item ? labelItem(item) : ''"></div>
-        </div>
-        <button class="sheet-close" @click="showNovoServico=false">✕</button>
-      </div>
-      <div class="sheet-body">
-        <div class="fld">
-          <label>Nome do serviço <span>*</span></label>
-          <input type="text" class="inp" x-model="novoSvc.nome" placeholder="Ex: Higienização de tapete">
-        </div>
-        <div class="fld">
-          <label>Preço <span>*</span></label>
-          <input type="number" class="inp" x-model="novoSvc.preco" step="0.01" min="0.01" placeholder="R$ 0,00">
-        </div>
-        <div class="fld">
-          <label>Comissão (%) <span style="color:var(--light)">— opcional</span></label>
-          <input type="number" class="inp" x-model="novoSvc.comissao" step="0.01" min="0" placeholder="Ex: 40">
-        </div>
-      </div>
-      <div class="sheet-footer">
-        <button class="btn-cancel" @click="showNovoServico=false">Cancelar</button>
-        <button class="btn-confirm" :disabled="salvandoServico" @click="salvarNovoServico()">
-          <span x-text="salvandoServico ? 'Salvando...' : 'Criar serviço'"></span>
-        </button>
+<!-- sucesso -->
+<div class="folha-fundo" x-show="sucesso" x-cloak>
+  <div class="folha" style="--sc: var(--roxo)" role="dialog" aria-label="Ordem criada" @click.stop>
+    <div class="sucesso">
+      <div class="anel"><i class="fas fa-couch"></i></div>
+      <h3>Ordem criada!</h3>
+      <span class="num" x-text="'#' + ordemNum"></span>
+      <p>Higienização registrada e na fila.</p>
+      <div class="acoes">
+        <button class="btn" @click="reset()"><i class="fas fa-plus"></i> Outra higienização</button>
+        <a class="btn azul" href="/funcionario/ordens.html"><i class="fas fa-list"></i> Ver ordens</a>
       </div>
     </div>
   </div>
-
-  <!-- SHEET: SUCESSO -->
-  <div class="backdrop" x-show="sucesso" x-cloak>
-    <div class="sheet-success" @click.stop>
-      <div class="sheet-handle"></div>
-      <div style="height:20px"></div>
-      <div class="s-ring">✓</div>
-      <div class="s-title">Ordem Criada!</div>
-      <div class="s-sub">Higienização registrada</div>
-      <div class="s-num" x-text="'Ordem # ' + ordemNum"></div>
-      <button class="btn-nova" @click="reset()">+ Nova Higienização</button>
-      <a class="btn-dash" href="ordens.html">Ver Ordens</a>
-    </div>
-  </div>
+</div>
 
   <script src="../api.js"></script>
   <script>
@@ -509,6 +395,8 @@
           this.searchQuery = '';
         },
 
+        corLav(i) { return ['#2f62e6', '#22a15a', '#6b4fd8', '#ff5b2e', '#c2418f', '#0d9488', '#d4a017', '#e5383b'][i % 8]; },
+
         toggleLav(l) {
           const i = this.lavs.indexOf(l.id);
           if (i >= 0) this.lavs.splice(i, 1);
@@ -575,7 +463,7 @@
     function showToast(message, type = 'success') {
       const old = document.getElementById('_toast'); if (old) old.remove();
       const t = document.createElement('div');
-      t.id = '_toast'; t.className = `toast ${type}`;
+      t.id = '_toast'; t.className = `toast toast-${type}`;
       const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
       t.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
       document.body.appendChild(t);
@@ -583,5 +471,6 @@
       setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
