@@ -2,905 +2,382 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0066cc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Lina X">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/image/logo-icon.png">
   <link rel="icon" type="image/png" href="/image/logo-icon.png">
   <title>Lina X - Painel do Funcionário</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    .pagina { padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 150px; }
 
-    :root {
-      --primary:    #0066cc;
-      --primary-dk: #004ea3;
-      --amber:      #f59e0b;
-      --amber-dk:   #d97706;
-      --bg:         #eef2f8;
-      --card:       #ffffff;
-      --text:       #111827;
-      --muted:      #6b7280;
-      --border:     #e5e7eb;
-      --shadow:     0 1px 4px rgba(0,0,0,0.08);
-      --shadow-md:  0 4px 14px rgba(0,0,0,0.12);
-    }
+    /* ===== topo ===== */
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .turno { font: 700 13px var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .topo-dir { margin-left: auto; display: flex; align-items: center; gap: 14px; flex: none; }
+    .pill-amarela { background: var(--yellow); color: var(--ink); border-radius: 8px; padding: 5px 12px; max-width: 150px;
+      font: 700 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .link-sub { color: var(--cream); font: 700 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+      text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; background: none; border: 0; padding: 4px 0; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+    /* ===== título: nome da empresa (o empresa-switcher vira seletor quando há 2+ empresas) ===== */
+    .titulo-bloco { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 18px 0 4px; text-align: center; }
+    .titulo { font: 400 clamp(26px, 6.4vw, 48px)/1.05 var(--dela); color: var(--cream); margin: 0; max-width: 100%;
+      text-shadow: 3px 3px 0 var(--lina); letter-spacing: -.01em; text-wrap: balance; overflow-wrap: anywhere; }
+    .titulo .emp-chev { color: var(--yellow); text-shadow: none; }
+    .saudacao { text-align: center; margin: 10px 0 16px; font: 700 15px var(--mono); }
+    .saudacao strong { color: var(--yellow); font: 400 17px var(--dela); margin-left: 2px; }
 
-    /* ===== HEADER ===== */
-    .header {
-      background: linear-gradient(160deg, #004ea3 0%, #0066cc 100%);
-      padding: 16px 16px 20px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+    /* ===== layout ===== */
+    .colunas { display: grid; gap: 14px; }
+    @media (min-width: 920px) { .colunas { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; } }
+    .coluna { display: grid; gap: 14px; min-width: 0; align-content: start; }
 
-    .header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
+    /* ===== botão do caixa (estados vêm do JS: caixa-open / caixa-closed / caixa-not-opened / caixa-loading) ===== */
+    .hero-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+      background: var(--space-2); color: var(--cream); border: 3px solid var(--ink); border-radius: 14px; padding: 10px 14px 11px;
+      box-shadow: 4px 4px 0 var(--ink); transition: transform 80ms, box-shadow 80ms, background .2s; }
+    .hero-btn.caixa-open { background: var(--green); }
+    .hero-btn.caixa-closed { background: var(--yellow); color: var(--ink); }
+    .hero-btn.caixa-not-opened { background: var(--red); }
+    .hero-btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+    .hero-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink);
+      display: grid; place-items: center; font-size: 16px; flex: none; }
+    .hero-body { min-width: 0; flex: 1; }
+    .hero-label { display: flex; align-items: center; gap: 8px; font: 400 17px/1.1 var(--dela); }
+    .hero-label::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--cream); border: 2px solid var(--ink); flex: none; animation: piscar 1.6s ease-in-out infinite; }
+    .hero-sub { display: block; font: 700 11px var(--mono); margin-top: 2px; opacity: .9; }
+    .hero-arrow { font-size: 16px; flex: none; }
+    @keyframes piscar { 50% { opacity: .25; } }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
+    /* ===== o dia num cartão só: faturado (desliza p/ total bruto) + em aberto + aguardando ===== */
+    .meta { --sc: var(--orange); }
+    .meta-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .meta-topo .rot { display: block; margin-bottom: 3px; font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .meta-topo .data { font: 400 20px/1.1 var(--dela); }
+    .dia-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .dia-chips .chip b { min-width: 24px; }
+    .fat { width: 132px; flex: none; background: var(--yellow); border: 2.5px solid var(--ink); border-radius: 10px; padding: 4px 8px 5px;
+      text-align: right; line-height: 1; transform: rotate(2deg); overflow: hidden; cursor: pointer; user-select: none; touch-action: pan-y; }
+    .stat-hoje-inner { display: flex; width: 200%; transition: transform .25s cubic-bezier(.4, 0, .2, 1); }
+    .stat-hoje-slide { width: 50%; padding-left: 2px; }
+    .fat .stat-value { display: block; font: 400 18px/1 var(--dela); white-space: nowrap; }
+    .fat .stat-label { font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .stat-hoje-dots { display: flex; justify-content: flex-end; gap: 4px; margin-top: 4px; }
+    .stat-dot { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--ink); background: transparent; }
+    .stat-dot-active { background: var(--ink); }
+    .stats-retry { outline: 3px dashed var(--red); outline-offset: 3px; }
 
-    .brand-logo {
-      width: 38px; height: 38px;
-      background: rgba(255,255,255,0.18);
-      border: 1.5px solid rgba(255,255,255,0.3);
-      border-radius: 11px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px;
-      color: white;
-      font-weight: 900;
-      letter-spacing: -1px;
-      flex-shrink: 0;
-    }
+    /* ===== faixa da Localiza (componente compartilhado solicitacoes-localiza.js, restilizado aqui) ===== */
+    html body #slCartao { background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; padding: 9px 10px 9px 9px; box-shadow: 4px 4px 0 var(--blue); }
+    html body .sl-faixa { gap: 12px; }
+    html body .sl-n { width: 42px; min-width: 42px; height: 42px; border-radius: 10px; border: 3px solid var(--ink); background: var(--yellow); color: var(--ink); font: 400 19px var(--dela); }
+    html body .sl-t b { font: 400 14px/1.15 var(--dela); color: var(--ink); }
+    html body .sl-t span { font: 700 11px var(--mono); color: var(--muted); }
+    html body .sl-btn { font: 400 13px var(--dela); border: 2.5px solid var(--ink); border-radius: 10px; padding: 7px 12px 9px; box-shadow: 2px 2px 0 var(--ink); }
+    html body .sl-pri { background: var(--blue); color: var(--cream); }
+    html body .sl-sec { background: var(--paper); color: var(--ink); }
+    html body .sl-amb { background: var(--paper); color: var(--ink); }
+    html body .sl-del { background: var(--paper); color: var(--red); }
+    html body .sl-conf .sl-pri { background: var(--red); }
+    html body .sl-ov { background: #0e0f24bb; }
+    html body .sl-sheet { background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-bottom: 0; box-shadow: 0 -6px 0 var(--blue); font-family: var(--mono); }
+    @media (min-width: 700px) { html body .sl-sheet { border-bottom: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--blue); } }
+    html body .sl-hd, html body .sl-ft { background: var(--cream); border-color: var(--ink); border-width: 3px; }
+    html body .sl-hd h3 { font: 400 17px/1.1 var(--dela); }
+    html body .sl-x { background: var(--paper); border: 2.5px solid var(--ink); color: var(--ink); }
+    html body .sl-card, html body .sl-item, html body .sl-res { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
+    html body .sl-placa { background: #fff; border: 2.5px solid #0b7a3b; border-radius: 6px; font: 700 16px var(--mono); box-shadow: 2px 2px 0 #0b7a3b; color: var(--ink); }
+    html body .sl-preco b { font: 400 16px var(--dela); }
+    html body .sl-meta b { color: var(--ink); font-weight: 700; }
+    html body .sl-aviso { border: 2px solid var(--ink); background: var(--yellow); color: var(--ink); border-radius: 8px; }
+    html body .sl-aviso.azul { background: #cfdcff; color: var(--ink); }
+    html body .sl-aviso.verm { background: #ffd0cc; color: var(--ink); }
+    html body .sl-inp, html body .sl-item textarea { border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); font-family: var(--mono); font-weight: 700; color: var(--ink); }
+    html body .sl-info { background: #cfdcff; color: var(--ink); border: 2px solid var(--ink); }
+    html body .sl-foto { border: 2.5px dashed var(--ink); background: var(--paper); }
+    html body .sl-seg { background: #e3d8bd; border: 2px solid var(--ink); }
+    html body .sl-sec-t, html body .sl-lbl { font-family: var(--mono); color: var(--muted); }
 
-    .brand-info { min-width: 0; }
-    .brand-empresa {
-      font-size: 15px;
-      font-weight: 700;
-      color: white;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 200px;
-      display: block;
-    }
-    .brand-tag {
-      font-size: 10px;
-      color: rgba(255,255,255,0.65);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    /* ===== navegação ===== */
+    .rotulo-secao { display: flex; align-items: center; gap: 12px; font: 700 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--cream); }
+    .rotulo-secao::after { content: ""; flex: 1; height: 0; border-top: 2px dashed #f4ecd855; }
+    .grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .grade .full-width { grid-column: 1 / -1; }
+    @media (min-width: 560px) and (max-width: 919px) { .grade { grid-template-columns: repeat(4, minmax(0, 1fr)); } .grade .full-width { grid-column: auto; } }
+    .mod { position: relative; display: flex; flex-direction: column; gap: 10px; min-height: 112px; padding: 14px; text-decoration: none;
+      background: var(--bg, var(--cream)); color: var(--fg, var(--ink)); border: 3px solid var(--ink); border-radius: 14px;
+      box-shadow: 5px 5px 0 var(--ink); transition: transform 80ms, box-shadow 80ms; min-width: 0; }
+    .mod:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--ink); }
+    .mod:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+    .mod .ic { width: 40px; height: 40px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--cream); color: var(--ink);
+      display: grid; place-items: center; font-size: 17px; }
+    .mod b { font: 400 17px/1.1 var(--dela); margin-top: auto; overflow-wrap: anywhere; }
+    .mod small { font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; opacity: .75; }
+    .mod .badge { position: absolute; top: -9px; right: -9px; background: var(--orange); color: var(--ink); border: 2.5px solid var(--ink);
+      border-radius: 999px; font: 400 12px/1 var(--dela); padding: 4px 8px 5px; transform: rotate(6deg); }
 
-    .btn-logout {
-      background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.22);
-      color: white;
-      padding: 8px 13px;
-      border-radius: 9px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: background 0.18s;
-    }
-    .btn-logout:hover { background: rgba(255,255,255,0.24); }
-    .btn-logout:active { transform: scale(0.96); }
+    .empty-box { text-align: center; padding: 30px 18px; }
+    .empty-box i { font-size: 34px; display: block; margin-bottom: 10px; }
+    .empty-box h3 { margin: 0 0 6px; font: 400 17px var(--dela); }
+    .empty-box p { margin: 0; font-size: 13px; color: var(--muted); }
 
-    .header-greeting {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .greeting-text {
-      font-size: 13px;
-      color: rgba(255,255,255,0.8);
-    }
-    .greeting-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: white;
-    }
-    .date-chip {
-      margin-left: auto;
-      background: rgba(255,255,255,0.16);
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 3px 9px;
-      border-radius: 20px;
-      font-size: 11px;
-      color: rgba(255,255,255,0.9);
-      font-weight: 600;
-    }
+    /* ===== perfil ===== */
+    .profile-link { display: flex; align-items: center; gap: 12px; text-decoration: none; --sc: var(--orange); }
+    .profile-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--pink); border: 3px solid var(--ink);
+      display: grid; place-items: center; font: 400 16px var(--dela); color: var(--ink); flex: none; }
+    .profile-info { flex: 1; min-width: 0; }
+    .profile-name { display: block; font: 400 14px var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .profile-sub { font-size: 12px; color: var(--muted); }
+    .profile-arrow { font-size: 14px; }
 
-    /* ===== MAIN ===== */
-    .main {
-      padding: 16px 16px 120px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    /* ===== STATS STRIP ===== */
-    .stats-strip {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .stat-card {
-      background: var(--card);
-      border-radius: 13px;
-      padding: 11px 8px;
-      text-align: center;
-      box-shadow: var(--shadow);
-    }
-
-    .stat-value {
-      font-size: 19px;
-      font-weight: 800;
-      color: var(--primary);
-      line-height: 1;
-      margin-bottom: 3px;
-    }
-
-    .stat-label {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-    }
-
-    /* KPI Hoje — swipeable */
-    .stat-card-hoje { overflow: hidden; cursor: pointer; user-select: none; touch-action: pan-y; }
-    .stat-hoje-inner { display: flex; width: 200%; transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); }
-    .stat-hoje-slide { width: 50%; }
-    .stat-hoje-dots { display: flex; justify-content: center; gap: 4px; margin-top: 5px; }
-    .stat-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(120,120,120,0.2); transition: background 0.2s; }
-    .stat-dot-active { background: var(--primary); }
-
-    /* ===== HERO BUTTON (Caixa) ===== */
-    .hero-btn {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      border-radius: 18px;
-      padding: 18px 20px;
-      text-decoration: none;
-      transition: transform 0.14s, box-shadow 0.14s;
-      cursor: pointer;
-      border: none;
-      width: 100%;
-      text-align: left;
-    }
-    .hero-btn:active {
-      transform: scale(0.97);
-    }
-
-    /* Estado: carregando / não configurado */
-    .hero-btn.caixa-loading {
-      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-      box-shadow: 0 6px 20px rgba(107,114,128,0.25);
-    }
-    /* Estado: aberto */
-    .hero-btn.caixa-open {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      box-shadow: 0 6px 20px rgba(5,150,105,0.35);
-    }
-    /* Estado: fechado */
-    .hero-btn.caixa-closed {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      box-shadow: 0 6px 20px rgba(245,158,11,0.35);
-    }
-    /* Estado: não aberto hoje */
-    .hero-btn.caixa-not-opened {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      box-shadow: 0 6px 20px rgba(239,68,68,0.35);
-    }
-
-    .hero-icon {
-      width: 50px; height: 50px;
-      background: rgba(255,255,255,0.22);
-      border-radius: 13px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      color: white;
-      flex-shrink: 0;
-    }
-
-    .hero-body { flex: 1; min-width: 0; }
-    .hero-label {
-      font-size: 17px;
-      font-weight: 800;
-      color: white;
-      margin-bottom: 2px;
-    }
-    .hero-sub {
-      font-size: 12px;
-      color: rgba(255,255,255,0.82);
-      font-weight: 500;
-    }
-
-    .hero-arrow {
-      color: rgba(255,255,255,0.65);
-      font-size: 15px;
-      flex-shrink: 0;
-    }
-
-    /* ===== FAB SAÍDA (controle de caixa) ===== */
-    .fab-saida {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(calc(-50% - 52px));
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      z-index: 499;
-      box-shadow: 0 4px 14px rgba(239,68,68,.5);
-      outline: 2.5px solid rgba(255,255,255,0.22);
-      outline-offset: 2px;
-      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.18s;
-    }
-    .fab-saida:hover {
-      filter: brightness(1.12);
-      transform: translateX(calc(-50% - 52px)) scale(1.1);
-    }
-    .fab-saida:active {
-      transform: translateX(calc(-50% - 52px)) scale(0.92);
-    }
-
-    /* Drop-up caixa */
-    .fab-dropup {
-      position: fixed;
-      bottom: 84px;
-      left: 50%;
-      transform: translateX(calc(-50% - 52px));
-      background: #1e293b;
-      border-radius: 14px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.35);
-      overflow: hidden;
-      min-width: 196px;
-      z-index: 600;
-      opacity: 0;
-      pointer-events: none;
-      transform-origin: bottom left;
-      transition: opacity .18s, transform .2s cubic-bezier(.34,1.4,.64,1);
-      transform: translateX(calc(-50% - 52px)) scale(.85) translateY(8px);
-    }
-    .fab-dropup.open {
-      opacity: 1;
-      pointer-events: all;
-      transform: translateX(calc(-50% - 52px)) scale(1) translateY(0);
-    }
-    .dropup-item {
-      display: flex; align-items: center; gap: 11px;
-      padding: 12px 16px;
-      color: rgba(255,255,255,.9);
-      font-size: 13px; font-weight: 600;
-      border: none; background: none; width: 100%;
-      cursor: pointer; font-family: inherit;
-      text-align: left; transition: background .15s;
-      border-bottom: 1px solid rgba(255,255,255,.07);
-    }
-    .dropup-item:last-child { border-bottom: none; }
-    .dropup-item:hover:not(.disabled) { background: rgba(255,255,255,.1); }
-    .dropup-item.disabled { opacity: 0.35; cursor: not-allowed; }
-    .dropup-item i { width: 16px; text-align: center; font-size: 14px; }
-    .fab-dropup-overlay {
-      display: none; position: fixed; inset: 0; z-index: 599;
-    }
+    /* ===== atalhos fixos: caixa · gota (nova ordem) · higienização ===== */
+    .atalhos .fab-saida, .atalhos .fab-fila { display: none; }
+    .atalho.sofa { background: var(--yellow); }
+    .atalho-rot { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); font: 700 9px var(--mono); letter-spacing: .06em;
+      text-transform: uppercase; white-space: nowrap; color: var(--cream); background: var(--space); padding: 1px 5px; border-radius: 4px; }
+    .atalho.agua { width: 66px; height: 66px; border-radius: 50%; border-width: 4px; background: var(--blue); color: var(--cream); font-size: 26px; }
+    .atalho.agua::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 3px solid var(--blue); animation: onda 2.4s ease-out infinite; }
+    .atalho.agua::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+      background: linear-gradient(120deg, transparent 30%, #ffffff55 50%, transparent 70%) 0 0 / 220% 100%; animation: brilho 3s linear infinite; }
+    @keyframes onda { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.5); opacity: 0; } }
+    .caixa-wrap { position: relative; }
+    .fab-dropup { position: absolute; left: -10px; bottom: 70px; width: 220px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink);
+      border-radius: 14px; box-shadow: 5px 5px 0 var(--pink); padding: 6px; display: none; z-index: 610; }
+    .fab-dropup.open { display: block; }
+    .dropup-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 8px; border: 0; background: none; text-align: left;
+      font: 700 13px var(--mono); color: var(--ink); border-radius: 9px; cursor: pointer; }
+    .dropup-item + .dropup-item { border-top: 2px dashed #17152b26; border-radius: 0; }
+    .dropup-item i { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--ink); display: grid; place-items: center; font-size: 13px; flex: none; color: var(--ink); }
+    .dropup-item.disabled { opacity: .35; cursor: not-allowed; }
+    .fab-dropup-overlay { position: fixed; inset: 0; z-index: 550; background: #0e0f24aa; display: none; }
     .fab-dropup-overlay.open { display: block; }
 
-    /* ===== FAB FILA DE ENTRADA ===== */
-    .fab-fila {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(calc(-50% + 52px));
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      text-decoration: none;
-      z-index: 499;
-      box-shadow: 0 4px 14px rgba(139,92,246,0.5);
-      outline: 2.5px solid rgba(255,255,255,0.22);
-      outline-offset: 2px;
-      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.18s;
-    }
-    .fab-fila:hover {
-      filter: brightness(1.12);
-      transform: translateX(calc(-50% + 52px)) scale(1.1);
-    }
-    .fab-fila:active {
-      transform: translateX(calc(-50% + 52px)) scale(0.92);
-    }
-    .fab-fila-label {
-      position: fixed;
-      bottom: 78px;
-      left: 50%;
-      transform: translateX(calc(-50% + 52px));
-      font-size: 9px;
-      font-weight: 700;
-      color: #6d28d9;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      display: none;
-      white-space: nowrap;
-    }
+    /* ===== atalho de contas a pagar: canto direito, treme quando há conta e mostra um balãozinho ===== */
+    .atalho-contas { position: fixed; z-index: 600; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+    .atalho-contas .atalho { width: 46px; height: 46px; border-radius: 14px; background: var(--pink); font-size: 17px; box-shadow: 3px 3px 0 var(--yellow);
+      animation: tremer 4s ease-in-out infinite; }
+    .atalho-contas .atalho .badge { position: absolute; top: -9px; right: -9px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px;
+      background: var(--red); color: var(--cream); border: 2px solid var(--ink); font: 400 11px/18px var(--dela); text-align: center; }
+    .atalho-contas.calmo .atalho { animation: none; }
+    .atalho-contas.calmo .atalho .badge { background: var(--cream); color: var(--ink); }
+    @keyframes tremer { 0%, 84%, 100% { transform: rotate(0); } 86% { transform: rotate(-9deg); } 89% { transform: rotate(8deg); } 92% { transform: rotate(-6deg); } 95% { transform: rotate(4deg); } 98% { transform: rotate(-2deg); } }
+    .balao { position: absolute; right: calc(100% + 10px); top: 50%; transform: translate(6px, -50%); white-space: nowrap; pointer-events: none;
+      background: var(--cream); color: var(--ink); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 3px 3px 0 var(--pink);
+      padding: 4px 8px; font: 700 11px/1.25 var(--mono); opacity: 0; transition: opacity .35s, transform .35s; }
+    .balao b { font-family: var(--dela); font-weight: 400; }
+    .balao em { font-style: normal; color: #c1361a; }
+    .balao::after { content: ""; position: absolute; right: -7px; top: 50%; width: 10px; height: 10px; background: var(--cream);
+      border: 2px solid var(--ink); border-left: 0; border-bottom: 0; transform: translateY(-50%) rotate(45deg); }
+    .atalho-contas.dica .balao { opacity: 1; transform: translate(0, -50%); }
+    @media (prefers-reduced-motion: reduce) { .atalho-contas .atalho { animation: none; } }
 
-    /* ===== SECTION LABEL ===== */
-    .section-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.9px;
-      color: var(--muted);
-      padding: 0 2px;
-      margin-top: 4px;
-    }
-
-    /* ===== NAV GRID ===== */
-    .nav-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .nav-btn {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      background: var(--card);
-      border-radius: 15px;
-      padding: 15px 13px;
-      text-decoration: none;
-      box-shadow: var(--shadow);
-      transition: transform 0.14s, box-shadow 0.14s;
-      cursor: pointer;
-      border: none;
-      width: 100%;
-      text-align: left;
-      position: relative;
-      overflow: hidden;
-    }
-    .nav-btn::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: transparent;
-      transition: background 0.15s;
-    }
-    .nav-btn:active::after {
-      background: rgba(0,0,0,0.04);
-    }
-    .nav-btn:active {
-      transform: scale(0.96);
-      box-shadow: none;
-    }
-    .nav-btn.full-width {
-      grid-column: 1 / -1;
-    }
-
-    .nav-icon {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 19px;
-      flex-shrink: 0;
-    }
-
-    .nav-body { flex: 1; min-width: 0; }
-    .nav-label {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: block;
-    }
-    .nav-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 1px;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: block;
-    }
-
-    .nav-arrow {
-      color: #d1d5db;
-      font-size: 11px;
-      flex-shrink: 0;
-    }
-
-    /* Icon color variants */
-    .ic-blue   { background: rgba(0,102,204,0.1);   color: #0066cc; }
-    .ic-green  { background: rgba(5,150,105,0.1);   color: #059669; }
-    .ic-purple { background: rgba(124,58,237,0.1);  color: #7c3aed; }
-    .ic-teal   { background: rgba(13,148,136,0.1);  color: #0d9488; }
-    .ic-amber  { background: rgba(217,119,6,0.1);   color: #d97706; }
-    .ic-indigo { background: rgba(99,102,241,0.1);  color: #6366f1; }
-    .ic-rose   { background: rgba(225,29,72,0.1);   color: #e11d48; }
-    .ic-slate  { background: rgba(100,116,139,0.1); color: #475569; }
-
-    /* ===== PROFILE LINK ===== */
-    .profile-link {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--card);
-      border-radius: 13px;
-      padding: 13px 14px;
-      text-decoration: none;
-      box-shadow: var(--shadow);
-      transition: transform 0.14s;
-      border: 1px solid var(--border);
-    }
-    .profile-link:active { transform: scale(0.97); }
-
-    .profile-avatar {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dk));
-      display: flex; align-items: center; justify-content: center;
-      color: white;
-      font-size: 15px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .profile-info { flex: 1; min-width: 0; }
-    .profile-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      display: block;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .profile-sub {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    .profile-arrow {
-      color: #d1d5db;
-      font-size: 11px;
-    }
-
-    /* ===== EMPTY STATE ===== */
-    .empty-box {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 44px 24px;
-      text-align: center;
-      box-shadow: var(--shadow);
-    }
-    .empty-box i { font-size: 44px; color: #d1d5db; margin-bottom: 14px; display: block; }
-    .empty-box h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .empty-box p { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-    /* ===== FAB — Nova Ordem ===== */
-    @keyframes fab-pulse {
-      0%   { box-shadow: 0 0 0 0 rgba(0,102,204,0.55), 0 6px 20px rgba(0,102,204,0.45); }
-      70%  { box-shadow: 0 0 0 18px rgba(0,102,204,0), 0 6px 20px rgba(0,102,204,0.45); }
-      100% { box-shadow: 0 0 0 0 rgba(0,102,204,0), 0 6px 20px rgba(0,102,204,0.45); }
-    }
-    @keyframes fab-shine {
-      0%   { background-position: -200% center; }
-      100% { background-position: 200% center; }
-    }
-    .fab-nova-ordem {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #1a7fe8 0%, #0055bb 50%, #003a8c 100%);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 27px;
-      text-decoration: none;
-      z-index: 500;
-      animation: fab-pulse 2.4s ease-out infinite;
-      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.18s;
-      /* anel brilhante */
-      outline: 3px solid rgba(255,255,255,0.18);
-      outline-offset: 3px;
-    }
-    .fab-nova-ordem::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: linear-gradient(120deg,
-        transparent 30%,
-        rgba(255,255,255,0.28) 50%,
-        transparent 70%
-      );
-      background-size: 200% 100%;
-      animation: fab-shine 3s linear infinite;
-      pointer-events: none;
-    }
-    .fab-nova-ordem:hover {
-      transform: translateX(-50%) scale(1.12);
-      filter: brightness(1.12);
-      animation: none;
-      box-shadow: 0 8px 28px rgba(0,102,204,0.6), 0 0 0 10px rgba(0,102,204,0.12);
-    }
-    .fab-nova-ordem:active {
-      transform: translateX(-50%) scale(0.92);
-      filter: brightness(0.95);
-    }
-
-    /* ===== CAIXA MODALS ===== */
-    .caixa-modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
+    /* ===== janelas do caixa (abrir / fechar / relatório) ===== */
+    .caixa-modal-overlay { display: none; position: fixed; inset: 0; background: #0e0f24bb; z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
     .caixa-modal-overlay.active { display: flex; }
-
-    .caixa-modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    }
-
+    .caixa-modal-content { background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 6px 6px 0 var(--blue);
+      padding: 18px; max-width: 500px; width: 100%; max-height: 90vh; overflow: auto; }
     .caixa-modal-content.wide { max-width: 560px; }
-
-    .caixa-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .caixa-modal-header h2 { margin: 0; font-size: 18px; }
-    .caixa-modal-close {
-      background: none; border: none;
-      font-size: 24px; cursor: pointer; color: #666;
-    }
-
-    .caixa-form-group { margin-bottom: 16px; }
-    .caixa-form-group label {
-      display: block; font-weight: 600;
-      margin-bottom: 6px; font-size: 14px;
-    }
-    .caixa-form-group input {
-      width: 100%; padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px; font-size: 14px;
-      font-family: inherit; box-sizing: border-box;
-    }
-    .caixa-form-group input:focus {
-      outline: none; border-color: #0066cc;
-    }
-
-    .caixa-modal-btns {
-      display: flex; gap: 12px;
-      justify-content: flex-end;
-      margin-top: 24px;
-    }
-    .caixa-btn-cancel, .caixa-btn-submit, .caixa-btn-danger {
-      padding: 10px 20px; border-radius: 6px;
-      border: none; cursor: pointer;
-      font-weight: 600; transition: all 0.2s;
-    }
-    .caixa-btn-cancel { background: #f3f4f6; color: #374151; }
-    .caixa-btn-cancel:hover { background: #e0e0e0; }
-    .caixa-btn-submit { background: #0066cc; color: white; }
-    .caixa-btn-submit:hover { background: #0052a3; }
-    .caixa-btn-danger { background: #dc2626; color: white; }
-    .caixa-btn-danger:hover { background: #b91c1c; }
-    .caixa-btn-cancel:disabled,
-    .caixa-btn-submit:disabled,
-    .caixa-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* Grid de métodos no fechamento */
-    .caixa-fech-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .caixa-fech-item {
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      text-align: center;
-    }
-    .caixa-fech-item .label {
-      font-size: 13px; font-weight: 600;
-      color: #555; margin-bottom: 8px;
-    }
-    .caixa-fech-item input {
-      width: 100%; padding: 9px;
-      border: 1px solid var(--border);
-      border-radius: 6px; font-size: 16px;
-      font-weight: 700; text-align: center;
-      color: #111; box-sizing: border-box;
-    }
-
-    /* Tabela de relatório */
-    .caixa-rel-table {
-      width: 100%; border-collapse: collapse;
-      margin-bottom: 16px;
-    }
-    .caixa-rel-table th {
-      text-align: left; padding: 8px;
-      color: #666; font-size: 13px;
-      border-bottom: 2px solid var(--border);
-    }
-    .caixa-rel-table th:not(:first-child) { text-align: right; }
-    .caixa-rel-table td {
-      padding: 10px 8px; border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
-    .caixa-rel-table td:not(:first-child) { text-align: right; }
-    .caixa-rel-table tr.divergente { background: #fee2e2; }
-    .caixa-rel-diff-ok { color: #059669; font-weight: 700; }
-    .caixa-rel-diff-err { color: #dc2626; font-weight: 700; }
-    .caixa-status-badge {
-      display: inline-block; padding: 8px 24px;
-      border-radius: 20px; font-weight: 700; font-size: 16px;
-    }
-    .caixa-status-badge.conferido { background: #d1fae5; color: #065f46; }
-    .caixa-status-badge.divergente { background: #fee2e2; color: #991b1b; }
-
+    .caixa-modal-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .caixa-modal-header h2 { margin: 0; font: 400 18px/1.1 var(--dela); }
+    .caixa-modal-close { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; flex: none; }
+    .caixa-modal-content > p { color: var(--muted) !important; }
+    .caixa-form-group { margin-bottom: 14px; }
+    .caixa-form-group label { display: block; font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+    .caixa-form-group input, .caixa-form-group textarea, .caixa-fech-item input { width: 100%; border: 2.5px solid var(--ink) !important; border-radius: 10px !important;
+      background: var(--paper); color: var(--ink); padding: 9px 11px; font: 700 14px var(--mono); outline: none; }
+    .caixa-form-group input:focus, .caixa-form-group textarea:focus, .caixa-fech-item input:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .caixa-form-group small { color: var(--muted) !important; }
+    .caixa-modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+    .caixa-btn-cancel, .caixa-btn-submit, .caixa-btn-danger { border: 3px solid var(--ink); border-radius: 12px; padding: 9px 16px 11px; cursor: pointer;
+      font: 400 14px/1.1 var(--dela); box-shadow: 3px 3px 0 var(--ink); }
+    .caixa-btn-cancel { background: var(--paper); color: var(--ink); }
+    .caixa-btn-submit { background: var(--blue); color: var(--cream); }
+    .caixa-btn-danger { background: var(--red); color: var(--cream); }
+    .caixa-btn-cancel:active, .caixa-btn-submit:active, .caixa-btn-danger:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+    .caixa-btn-cancel:disabled, .caixa-btn-submit:disabled, .caixa-btn-danger:disabled { opacity: .6; cursor: not-allowed; }
+    .caixa-fech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .caixa-fech-item { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; padding: 10px; text-align: center; box-shadow: 3px 3px 0 var(--ink); }
+    .caixa-fech-item .label { font: 700 12px var(--mono); margin-bottom: 6px; }
+    .caixa-fech-item input { text-align: center; font-size: 16px; }
+    .aviso-irrev { margin: 14px 0; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--yellow); text-align: center; font: 700 12px var(--mono); }
+    .caixa-rel-wrap { overflow-x: auto; }
+    .caixa-rel-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-family: var(--mono); }
+    .caixa-rel-table th { text-align: left; padding: 8px 6px; font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid var(--ink); }
+    .caixa-rel-table th:not(:first-child), .caixa-rel-table td:not(:first-child) { text-align: right; }
+    .caixa-rel-table td { padding: 9px 6px; border-bottom: 2px dashed #17152b33; font-size: 13px; font-weight: 700; }
+    .caixa-rel-table tr.divergente { background: #ffd0cc; }
+    .caixa-rel-diff-ok { color: var(--green); }
+    .caixa-rel-diff-err { color: #c1361a; }
+    .caixa-status-badge { display: inline-block; padding: 6px 16px 8px; border: 3px solid var(--ink); border-radius: 12px; font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); }
+    .caixa-status-badge.conferido { background: var(--green); color: var(--cream); }
+    .caixa-status-badge.divergente { background: var(--red); color: var(--cream); }
     @keyframes caixa-spin { to { transform: rotate(360deg); } }
     .caixa-spin { animation: caixa-spin 1s linear infinite; }
 
-    /* ===== CONFIRM DIALOG ===== */
-    .confirm-dialog {
-      position: fixed; inset: 0; z-index: 2000;
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-    }
-    .confirm-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
-    .confirm-box {
-      position: relative; background: white; border-radius: 18px; padding: 24px;
-      max-width: 340px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    }
-    .confirm-box h2 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .confirm-box p { font-size: 14px; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
+    /* ===== confirmação de saída ===== */
+    .confirm-dialog { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .confirm-overlay { position: absolute; inset: 0; background: #0e0f24bb; }
+    .confirm-box { position: relative; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; padding: 20px;
+      max-width: 340px; width: 100%; box-shadow: 6px 6px 0 var(--pink); }
+    .confirm-box h2 { margin: 0 0 6px; font: 400 18px var(--dela); }
+    .confirm-box p { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
     .confirm-buttons { display: flex; gap: 10px; }
-    .btn-cancel, .btn-confirm {
-      flex: 1; padding: 12px; border-radius: 11px; border: none;
-      cursor: pointer; font-weight: 700; font-size: 14px; transition: opacity 0.18s;
-    }
-    .btn-cancel { background: #f3f4f6; color: #374151; }
-    .btn-confirm { background: #dc3545; color: white; }
-    .btn-cancel:hover { background: #e5e7eb; }
-    .btn-confirm:hover { opacity: 0.88; }
+    .btn-cancel, .btn-confirm { flex: 1; padding: 10px 12px 12px; border: 3px solid var(--ink); border-radius: 12px; cursor: pointer; font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); }
+    .btn-cancel { background: var(--paper); color: var(--ink); }
+    .btn-confirm { background: var(--red); color: var(--cream); }
 
-    /* ===== DESKTOP CENTERING ===== */
-    @media (min-width: 501px) {
-      .header { padding: 18px 20px 22px; }
-      .main { padding: 20px 20px 120px; gap: 14px; }
-      .nav-btn { padding: 18px 16px; }
-      .nav-label { font-size: 15px; }
-    }
+    /* ===== janelas de saída / sangria / gorjeta (sobem de baixo) ===== */
+    .sheet-overlay { position: fixed; inset: 0; background: #0e0f24bb; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 999; }
+    .sheet-overlay.open { opacity: 1; pointer-events: all; }
+    .sheet { position: fixed; bottom: 0; left: 0; right: 0; margin: 0 auto; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; z-index: 1000;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-bottom: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 0 var(--blue);
+      transform: translateY(105%); transition: transform .45s cubic-bezier(.2, .9, .3, 1.1); }
+    .sheet.open { transform: none; }
+    .sheet-handle { width: 44px; height: 5px; background: var(--ink); opacity: .25; border-radius: 3px; margin: 10px auto 0; }
+    .sheet-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px 12px; border-bottom: 3px solid var(--ink); }
+    .sheet-title { font: 400 17px/1.1 var(--dela); }
+    .sheet-close { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; font-size: 15px; flex: none; }
+    .sheet-body { padding: 14px; }
+    .sheet-footer { padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 3px solid var(--ink); }
+    .btn-submit-sheet { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 3px solid var(--ink); border-radius: 12px;
+      background: var(--blue); color: var(--cream); font: 400 15px/1.1 var(--dela); box-shadow: 4px 4px 0 var(--ink); cursor: pointer; }
+    .btn-submit-sheet.verde { background: var(--green); }
+    .btn-submit-sheet:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+    .btn-submit-sheet:disabled { opacity: .5; cursor: not-allowed; }
+    .rot-cat { font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+    .cat-chip { padding: 6px 12px 7px; border-radius: 999px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
+    .cat-chip i { color: var(--ink) !important; }
+    .cat-chip.sel-despesa { background: var(--red); color: var(--cream); }
+    .cat-chip.sel-adiant { background: var(--yellow); }
+    .cat-chip.sel-outro { background: var(--pink); }
+    .cat-chip[class*="sel-"] i { color: inherit !important; }
+    .sfield { margin-bottom: 12px; }
+    .sfield label { display: block; font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+    .sfield input, .sfield select { width: 100%; padding: 9px 11px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink);
+      font: 700 14px var(--mono); outline: none; }
+    .sfield input:focus, .sfield select:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .saldo-banner { background: var(--yellow); border: 2.5px solid var(--ink); border-radius: 10px; padding: 9px 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+    .saldo-banner b { font: 400 16px var(--dela); }
+    .lav-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--paper); border: 2.5px solid var(--ink); border-top: 0;
+      border-radius: 0 0 10px 10px; z-index: 10; max-height: 200px; overflow-y: auto; }
+    .lav-dropdown div { padding: 10px 12px; font-size: 13px; font-weight: 700; cursor: pointer; border-bottom: 2px dashed #17152b26; }
+    .lav-dropdown div:hover { background: #e3d8bd; }
 
-    /* ===== SHEET SAÍDA/SANGRIA ===== */
-    .sheet-overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .25s; z-index:999; }
-    .sheet-overlay.open { opacity:1; pointer-events:all; }
-    .sheet { position:fixed; bottom:0; left:0; right:0; background:#fff; border-radius:20px 20px 0 0; transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); z-index:1000; max-height:92vh; overflow-y:auto; }
-    .sheet.open { transform:translateY(0); }
-    .sheet-handle { width:40px; height:4px; background:#e2e8f0; border-radius:2px; margin:12px auto 0; }
-    .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; }
-    .sheet-title { font-size:16px; font-weight:700; }
-    .sheet-close { width:30px; height:30px; border-radius:50%; background:#f1f5f9; border:none; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:#64748b; }
-    .sheet-body { padding:18px; }
-    .sheet-footer { padding:14px 18px 24px; border-top:1px solid #e2e8f0; }
-    .btn-submit-sheet { width:100%; padding:14px; border-radius:12px; background:#0f172a; color:#fff; border:none; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
-    .btn-submit-sheet:disabled { opacity:.5; cursor:not-allowed; }
-    .cat-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
-    .cat-chip { padding:8px 14px; border-radius:20px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
-    .cat-chip.sel-despesa { background:#fef2f2; border-color:#ef4444; color:#ef4444; }
-    .cat-chip.sel-adiant  { background:#fffbeb; border-color:#f59e0b; color:#b45309; }
-    .cat-chip.sel-outro   { background:#f5f3ff; border-color:#8b5cf6; color:#7c3aed; }
-    .sfield { margin-bottom:14px; }
-    .sfield label { display:block; font-weight:600; font-size:13px; margin-bottom:6px; color:#374151; }
-    .sfield input, .sfield select { width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box; }
-    .sfield input:focus, .sfield select:focus { border-color:#2563eb; }
-    .saldo-banner { background:#f1f5f9; border-radius:10px; padding:11px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+    @media (max-width: 520px) {
+      .turno { font-size: 11px; }
+      .topo-dir .pill-amarela { display: none; }
+      .titulo-bloco { margin-top: 16px; }
+    }
   </style>
 </head>
 <body>
+  <div id="ceu" aria-hidden="true"></div>
+  <div id="grao" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <header class="header">
-    <div class="header-row">
-      <div class="brand">
-        <div class="brand-logo">LX</div>
-        <div class="brand-info">
-          <span class="brand-empresa" id="empresaNome">Carregando...</span>
-          <span class="brand-tag">Painel do Funcionário</span>
-        </div>
+  <div class="pagina">
+    <header class="topo">
+      <span class="turno" id="datePill"></span>
+      <div class="topo-dir">
+        <span class="pill-amarela" id="cargoPill" hidden></span>
+        <button class="link-sub" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
       </div>
-      <button class="btn-logout" onclick="logout()">
-        <i class="fas fa-sign-out-alt"></i>
-        Sair
-      </button>
+    </header>
+
+    <div class="titulo-bloco">
+      <span class="sticker">Lina Wash</span>
+      <h1 class="titulo"><span id="empresaNome">Carregando...</span></h1>
     </div>
-    <div class="header-greeting">
-      <span class="greeting-text">Olá,</span>
-      <span class="greeting-name" id="usuarioNome">...</span>
-      <span class="date-chip" id="datePill"></span>
-    </div>
-  </header>
+    <p class="saudacao"><span id="saudacaoTexto">Olá</span>, <strong id="usuarioNome">...</strong></p>
 
-  <main class="main">
+    <main class="colunas">
+      <div class="coluna">
+        <!-- Caixa (visível se ver_financeiro ou gerenciar_ordens) -->
+        <button class="hero-btn caixa-loading" id="heroCaixa" style="display:none" onclick="handleCaixaClick()">
+          <span class="hero-icon" id="heroCaixaIcon"><i class="fas fa-cash-register"></i></span>
+          <span class="hero-body">
+            <span class="hero-label" id="heroCaixaLabel">Verificando caixa...</span>
+            <span class="hero-sub" id="heroCaixaSub">Aguarde um momento</span>
+          </span>
+          <span class="hero-arrow"><i class="fas fa-arrow-right"></i></span>
+        </button>
 
-    <!-- STATS (somente com permissão ver_dashboard) -->
-    <div class="stats-strip" id="statsStrip" style="display:none">
-      <div class="stat-card">
-        <div class="stat-value" id="statOrdens">-</div>
-        <div class="stat-label">Em Aberto</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statAguardando">-</div>
-        <div class="stat-label">Aguardando</div>
-      </div>
-      <div class="stat-card stat-card-hoje" id="statCardHoje">
-        <div class="stat-hoje-inner" id="statHojeInner">
-          <div class="stat-hoje-slide">
-            <div class="stat-value" id="statFat">-</div>
-            <div class="stat-label">Hoje</div>
+        <!-- O dia (somente com permissão ver_dashboard) -->
+        <section class="cartao meta" id="statsStrip" style="display:none">
+          <div class="meta-topo">
+            <div><span class="rot">Hoje</span><span class="data" id="dataLonga"></span></div>
+            <div class="fat stat-card-hoje" id="statCardHoje" title="Toque para alternar">
+              <div class="stat-hoje-inner" id="statHojeInner">
+                <div class="stat-hoje-slide"><span class="stat-value" id="statFat">-</span><span class="stat-label">faturado</span></div>
+                <div class="stat-hoje-slide"><span class="stat-value" id="statFatTotal">-</span><span class="stat-label">total bruto</span></div>
+              </div>
+              <div class="stat-hoje-dots"><span class="stat-dot stat-dot-active"></span><span class="stat-dot"></span></div>
+            </div>
           </div>
-          <div class="stat-hoje-slide">
-            <div class="stat-value" id="statFatTotal">-</div>
-            <div class="stat-label">Total Bruto</div>
+          <div class="dia-chips">
+            <a class="chip" data-ordens href="/funcionario/ordens.html" style="--sc: var(--blue)"><b id="statOrdens">-</b>em aberto</a>
+            <a class="chip" data-ordens href="/funcionario/ordens.html" style="--sc: var(--pink); --cf: var(--ink)"><b id="statAguardando">-</b>aguardando pagamento</a>
           </div>
+        </section>
+
+        <!-- SOLICITAÇÕES DA LOCALIZA (some sozinho sem gerenciar_ordens, sem vínculo ou sem carros) -->
+        <div id="slCartao" hidden></div>
+      </div>
+
+      <div class="coluna">
+        <div class="rotulo-secao" id="sectionLabel" style="display:none">Navegação</div>
+        <nav class="grade" id="navGrid"></nav>
+
+        <div class="cartao empty-box" id="emptyState" style="display:none">
+          <i class="fas fa-lock"></i>
+          <h3>Sem permissões</h3>
+          <p>Você ainda não tem acesso a nenhuma função.<br>Fale com o administrador da empresa.</p>
         </div>
-        <div class="stat-hoje-dots">
-          <span class="stat-dot stat-dot-active"></span>
-          <span class="stat-dot"></span>
-        </div>
+
+        <!-- PERFIL (sempre visível) -->
+        <a href="/funcionario/perfil.html" class="cartao profile-link" id="profileLink" style="display:none">
+          <span class="profile-avatar" id="profileInitial">?</span>
+          <span class="profile-info">
+            <span class="profile-name" id="profileName">Meu Perfil</span>
+            <span class="profile-sub">Ver e editar meus dados</span>
+          </span>
+          <span class="profile-arrow"><i class="fas fa-arrow-right"></i></span>
+        </a>
       </div>
-    </div>
-
-    <!-- HERO: Caixa (visível se ver_financeiro) -->
-    <button class="hero-btn caixa-loading" id="heroCaixa" style="display:none" onclick="handleCaixaClick()">
-      <div class="hero-icon" id="heroCaixaIcon">
-        <i class="fas fa-cash-register"></i>
-      </div>
-      <div class="hero-body">
-        <div class="hero-label" id="heroCaixaLabel">Verificando caixa...</div>
-        <div class="hero-sub" id="heroCaixaSub">Aguarde um momento</div>
-      </div>
-      <i class="fas fa-chevron-right hero-arrow"></i>
-    </button>
-
-    <!-- SOLICITAÇÕES DA LOCALIZA (some sozinho sem gerenciar_ordens, sem vínculo ou sem carros) -->
-    <div id="slCartao" hidden style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);margin:0 0 16px;"></div>
-
-    <!-- CONTAS A PAGAR (some sozinho sem ver_financeiro ou sem contas) -->
-    <div id="cpCartao" hidden style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);margin:0 0 16px;"></div>
-
-    <!-- SEÇÃO NAVEGAÇÃO -->
-    <div class="section-label" id="sectionLabel" style="display:none">Navegação</div>
-
-    <!-- GRID DE BOTÕES -->
-    <div class="nav-grid" id="navGrid"></div>
-
-    <!-- EMPTY STATE -->
-    <div class="empty-box" id="emptyState" style="display:none">
-      <i class="fas fa-lock"></i>
-      <h3>Sem permissões</h3>
-      <p>Você ainda não tem acesso a nenhuma função.<br>Fale com o administrador da empresa.</p>
-    </div>
-
-    <!-- PERFIL (sempre visível) -->
-    <a href="/funcionario/perfil.html" class="profile-link" id="profileLink" style="display:none">
-      <div class="profile-avatar" id="profileInitial">?</div>
-      <div class="profile-info">
-        <span class="profile-name" id="profileName">Meu Perfil</span>
-        <span class="profile-sub">Ver e editar meus dados</span>
-      </div>
-      <i class="fas fa-chevron-right profile-arrow"></i>
-    </a>
-
-  </main>
-
-  <!-- FAB: Nova Ordem (gota) -->
-  <a href="/funcionario/nova-ordem.html?scan=1" class="fab-nova-ordem" id="fabNovaOrdem" style="display:none" title="Nova Ordem">
-    <i class="fas fa-tint"></i>
-  </a>
-
-  <!-- FAB: Higienização (sofá) — ao lado do gota -->
-  <a href="/funcionario/higienizacao.html" class="fab-fila" id="fabFila" title="Higienização">
-    <i class="fas fa-couch"></i>
-  </a>
-  <div class="fab-fila-label" id="fabFilaLabel">Higienização</div>
-
-  <!-- FAB: Saída / Caixa — ao lado esquerdo do gota -->
-  <button class="fab-saida" id="fabSaida" style="display:none" title="Controle de Caixa" onclick="toggleSaidaDropup()">
-    <i class="fas fa-receipt"></i>
-  </button>
-
-  <!-- Drop-up controle de caixa -->
-  <div class="fab-dropup" id="saidaDropup">
-    <button class="dropup-item" id="dropItemGorjeta" onclick="dropupAcao('gorjeta')">
-      <i class="fas fa-gift" style="color:#10b981"></i> Lançar Gorjeta
-    </button>
-    <button class="dropup-item" id="dropItemSaida" onclick="dropupAcao('saida')">
-      <i class="fas fa-receipt" style="color:#f97316"></i> Lançar Saída
-    </button>
-    <button class="dropup-item" id="dropItemSangria" onclick="dropupAcao('sangria')">
-      <i class="fas fa-money-bill-wave" style="color:#8b5cf6"></i> Sangria
-    </button>
-    <button class="dropup-item" id="dropItemAbrirCaixa" onclick="dropupAcao('abrir')">
-      <i class="fas fa-door-open" style="color:#10b981"></i> Abrir Caixa
-    </button>
-    <button class="dropup-item" id="dropItemFecharCaixa" onclick="dropupAcao('fechar')">
-      <i class="fas fa-door-closed" style="color:#ef4444"></i> Fechar Caixa
-    </button>
+    </main>
   </div>
+
+  <!-- Atalhos fixos: caixa · gota (nova ordem) · higienização -->
   <div class="fab-dropup-overlay" id="saidaDropupOverlay" onclick="closeSaidaDropup()"></div>
+  <div class="atalhos">
+    <div class="caixa-wrap">
+      <div class="fab-dropup" id="saidaDropup">
+        <button class="dropup-item" id="dropItemGorjeta" onclick="dropupAcao('gorjeta')"><i class="fas fa-gift" style="background:var(--green)"></i>Lançar gorjeta</button>
+        <button class="dropup-item" id="dropItemSaida" onclick="dropupAcao('saida')"><i class="fas fa-receipt" style="background:var(--yellow)"></i>Lançar saída</button>
+        <button class="dropup-item" id="dropItemSangria" onclick="dropupAcao('sangria')"><i class="fas fa-piggy-bank" style="background:var(--pink)"></i>Sangria</button>
+        <button class="dropup-item" id="dropItemAbrirCaixa" onclick="dropupAcao('abrir')"><i class="fas fa-door-open" style="background:var(--green)"></i>Abrir caixa</button>
+        <button class="dropup-item" id="dropItemFecharCaixa" onclick="dropupAcao('fechar')" style="color:#c1361a"><i class="fas fa-lock" style="background:var(--orange)"></i>Fechar caixa</button>
+      </div>
+      <button class="atalho fab-saida" id="fabSaida" style="display:none" title="Controle de caixa" onclick="toggleSaidaDropup()"><i class="fas fa-wallet"></i></button>
+    </div>
+    <a href="/funcionario/nova-ordem.html?scan=1" class="atalho agua" id="fabNovaOrdem" style="display:none" title="Nova ordem"><i class="fas fa-tint"></i></a>
+    <a href="/funcionario/higienizacao.html" class="atalho sofa fab-fila" id="fabFila" title="Higienização"><i class="fas fa-couch"></i><span class="atalho-rot" id="fabFilaLabel">Higienização</span></a>
+  </div>
+
+  <!-- Atalho de contas a pagar (só aparece quando existe conta vencida ou nos próximos 30 dias) -->
+  <div class="atalho-contas" id="atalhoContas" hidden>
+    <span class="balao" id="contasBalao"></span>
+    <a class="atalho" href="/funcionario/financeiro.html?aba=contas" title="Contas a pagar" id="contasLink"><i class="fas fa-file-invoice-dollar"></i><span class="badge" id="contasBadge"></span></a>
+  </div>
 
   <!-- SHEET: Saída / Sangria (via FAB dropup) -->
   <div class="sheet-overlay" id="indexSaidaOverlay" onclick="closeIndexSaidaSheet()"></div>
@@ -912,11 +389,11 @@
     </div>
     <div class="sheet-body">
       <div id="indexSaldoBanner" class="saldo-banner" style="display:none">
-        <span style="font-size:12px;font-weight:600;color:#64748b;">💵 Saldo disponível</span>
-        <span id="indexSaldoDisp" style="font-size:15px;font-weight:800;color:#0f172a;">R$ 0,00</span>
+        <span>💵 Saldo disponível</span>
+        <b id="indexSaldoDisp">R$ 0,00</b>
       </div>
       <div id="indexCatChipsWrap">
-        <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Categoria</div>
+        <div class="rot-cat">Categoria</div>
         <div class="cat-chips" id="indexCatChips">
           <button class="cat-chip" data-cat="Despesa" onclick="selectIndexCat('Despesa')"><i class="fas fa-receipt" style="color:#ef4444"></i> Despesa</button>
           <button class="cat-chip" data-cat="Adiantamento" onclick="selectIndexCat('Adiantamento')"><i class="fas fa-hand-holding-usd" style="color:#f59e0b"></i> Vale</button>
@@ -955,7 +432,7 @@
         <label id="indexSRespLabel">Fornecedor (opcional)</label>
         <div style="position:relative">
           <input type="text" id="indexSResp" placeholder="Nome do fornecedor ou responsável">
-          <div id="indexLavDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;z-index:10;max-height:200px;overflow-y:auto;"></div>
+          <div id="indexLavDropdown" class="lav-dropdown"></div>
         </div>
         <input type="hidden" id="indexSLavadorId">
       </div>
@@ -982,7 +459,7 @@
     <div class="sheet-body">
       <div class="sfield">
         <label>Lavador *</label>
-        <select id="indexGLavador" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-family:inherit;background:#fff;">
+        <select id="indexGLavador">
           <option value="">Selecione o lavador...</option>
         </select>
       </div>
@@ -996,7 +473,7 @@
       </div>
     </div>
     <div class="sheet-footer">
-      <button class="btn-submit-sheet" id="indexGorjetaSubmitBtn" onclick="submitIndexGorjeta()" style="background:#10b981">
+      <button class="btn-submit-sheet verde" id="indexGorjetaSubmitBtn" onclick="submitIndexGorjeta()">
         <i class="fas fa-check"></i> Confirmar Gorjeta
       </button>
     </div>
@@ -1011,8 +488,8 @@
       </div>
       <div class="caixa-form-group">
         <label>Troco inicial em dinheiro (opcional)</label>
-        <input type="number" id="abrirValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="font-size:18px; font-weight:600;">
-        <small style="color:#666; display:block; margin-top:4px;">Deixe em branco se não houver troco no caixa.</small>
+        <input type="number" id="abrirValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="font-size:18px;">
+        <small style="display:block; margin-top:4px;">Deixe em branco se não houver troco no caixa.</small>
       </div>
       <div class="caixa-form-group">
         <label>Responsável pela abertura</label>
@@ -1034,16 +511,16 @@
         <h2><i class="fas fa-door-closed"></i> Fechar Caixa do Dia</h2>
         <button class="caixa-modal-close" onclick="closeCaixaModal('modalFecharCaixa')">&times;</button>
       </div>
-      <p style="color:#666; font-size:14px; margin-bottom:20px;">
+      <p style="font-size:13px; margin:0 0 16px;">
         Informe o valor físico que está no caixa para cada forma de pagamento. Deixe em branco para considerar R$ 0,00.
       </p>
       <div class="caixa-fech-grid" id="fecharCampos"></div>
-      <div style="margin:16px 0; padding:12px 16px; background:#fff3cd; border-radius:8px; text-align:center; color:#856404;">
+      <div class="aviso-irrev">
         <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
       </div>
       <div class="caixa-form-group">
         <label>Observação (opcional)</label>
-        <textarea id="fecharObs" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="resize:vertical; min-height:70px; font-family:inherit; width:100%; padding:11px; border:1.5px solid #ddd; border-radius:8px;"></textarea>
+        <textarea id="fecharObs" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="resize:vertical; min-height:70px;"></textarea>
       </div>
       <div class="caixa-modal-btns">
         <button class="caixa-btn-cancel" onclick="closeCaixaModal('modalFecharCaixa')">Cancelar</button>
@@ -1062,7 +539,7 @@
         <button class="caixa-modal-close" onclick="closeCaixaModal('modalRelatorio')">&times;</button>
       </div>
       <div style="text-align:center; margin-bottom:20px;" id="relatorioStatusIndex"></div>
-      <table class="caixa-rel-table">
+      <div class="caixa-rel-wrap"><table class="caixa-rel-table">
         <thead>
           <tr>
             <th>Método</th>
@@ -1072,8 +549,8 @@
           </tr>
         </thead>
         <tbody id="relatorioTbodyIndex"></tbody>
-      </table>
-      <div id="relatorioRodapeIndex" style="font-size:13px; color:#666; margin-top:8px;"></div>
+      </table></div>
+      <div id="relatorioRodapeIndex" style="font-size:12px; margin-top:8px;"></div>
       <div class="caixa-modal-btns" style="margin-top:16px;">
         <button class="caixa-btn-submit" onclick="closeCaixaModal('modalRelatorio')">Fechar</button>
       </div>
@@ -1087,18 +564,39 @@
     document.addEventListener('DOMContentLoaded', () => {
       let perms = [];
       try { perms = JSON.parse(localStorage.getItem('permissoes') || '[]'); } catch (e) {}
-      const el = document.getElementById('cpCartao');
-      if (el && window.ContasPagar && perms.includes('ver_financeiro')) {
-        ContasPagar.montarCartao(el, { acento: '#2563eb', aoAbrir: () => { location.href = '/funcionario/financeiro.html?aba=contas'; } });
-      }
+      if (perms.includes('ver_financeiro')) montarAtalhoContas();
       const sl = document.getElementById('slCartao');
       if (sl && window.SolicitacoesLocaliza && perms.includes('gerenciar_ordens')) {
-        SolicitacoesLocaliza.montar(sl, { aoCriarOrdem: () => { if (typeof loadStats === 'function') loadStats(); } });
+        SolicitacoesLocaliza.montar(sl, { acento: '#2f62e6', aoCriarOrdem: () => { if (typeof loadStats === 'function') loadStats(); } });
       }
     });
   </script>
   <script src="/funcionario/empresa-switcher.js"></script>
   <script>
+    // Contas a pagar: atalho no canto que treme e mostra um balão (mesmo resumo do cartão antigo)
+    async function montarAtalhoContas() {
+      let r;
+      try { r = await window.fetchApi('/contas-pagar/resumo'); } catch { return; }
+      const venc = r?.vencidas?.qtd || 0, hoje = r?.hoje || 0, prox = r?.proximas || [];
+      if (!venc && !prox.length) return;
+      const brl = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const dataBR = d => { const [a, m, dd] = String(d).slice(0, 10).split('-'); return `${dd}/${m}`; };
+      const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const box = document.getElementById('atalhoContas');
+      const balao = document.getElementById('contasBalao');
+      let n, txt;
+      if (venc) { n = venc; txt = `<b>${venc === 1 ? '1 conta vencida' : venc + ' contas vencidas'}</b><br><em>${brl(r.vencidas.total)}</em>`; }
+      else if (hoje) { n = hoje; txt = `<b>${hoje === 1 ? '1 conta vence hoje' : hoje + ' contas vencem hoje'}</b><br>${esc(prox[0].descricao)} · ${brl(prox[0].valor)}`; }
+      else { n = prox.length; txt = `<b>Próxima conta</b><br>${esc(prox[0].descricao)} · ${dataBR(prox[0].vencimento)}`; box.classList.add('calmo'); }
+      document.getElementById('contasBadge').textContent = n;
+      document.getElementById('contasLink').setAttribute('aria-label', 'Contas a pagar: ' + balao.textContent);
+      balao.innerHTML = txt;
+      box.hidden = false;
+      const dica = ms => { box.classList.add('dica'); clearTimeout(dica.t); dica.t = setTimeout(() => box.classList.remove('dica'), ms); };
+      setTimeout(() => dica(5000), 900);
+      box.addEventListener('mouseenter', () => dica(3000));
+    }
+
     // Definição dos botões por permissão
     const NAV_PAGES = [
       {
@@ -1107,6 +605,7 @@
         sub: 'Criar serviço',
         icon: 'fa-plus-circle',
         color: 'ic-blue',
+        bg: 'var(--orange)', fg: '',
         href: '/funcionario/nova-ordem.html'
       },
       {
@@ -1115,6 +614,7 @@
         sub: 'Histórico de serviços',
         icon: 'fa-list-alt',
         color: 'ic-green',
+        bg: 'var(--blue)', fg: 'var(--cream)',
         href: '/funcionario/ordens.html'
       },
       {
@@ -1123,6 +623,7 @@
         sub: 'Base de clientes',
         icon: 'fa-users',
         color: 'ic-purple',
+        bg: 'var(--cream)', fg: '',
         href: '/funcionario/clientes.html'
       },
       {
@@ -1131,6 +632,7 @@
         sub: 'Lavadores',
         icon: 'fa-hard-hat',
         color: 'ic-teal',
+        bg: 'var(--green)', fg: 'var(--cream)',
         href: '/funcionario/equipe.html'
       },
       {
@@ -1139,6 +641,7 @@
         sub: 'Ganhos da equipe',
         icon: 'fa-hand-holding-usd',
         color: 'ic-rose',
+        bg: 'var(--pink)', fg: '',
         href: '/funcionario/comissoes.html'
       },
       {
@@ -1147,6 +650,7 @@
         sub: 'Caixa e receitas',
         icon: 'fa-money-bill-wave',
         color: 'ic-amber',
+        bg: 'var(--yellow)', fg: '',
         href: '/funcionario/financeiro.html'
       },
       {
@@ -1155,6 +659,7 @@
         sub: 'Tabela de preços',
         icon: 'fa-wrench',
         color: 'ic-indigo',
+        bg: 'var(--paper)', fg: '',
         href: '/funcionario/servicos.html'
       },
       {
@@ -1163,6 +668,7 @@
         sub: 'Entrada e saída da equipe',
         icon: 'fa-fingerprint',
         color: 'ic-slate',
+        bg: 'var(--space-2)', fg: 'var(--cream)',
         href: '/funcionario/data-point.html'
       },
     ];
@@ -1177,8 +683,13 @@
       const now = new Date();
       const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
       const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-      document.getElementById('datePill').textContent =
-        `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+      const dd = String(now.getDate()).padStart(2, '0'), mm = String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('datePill').textContent = `${days[now.getDay()]} · ${dd}.${mm}.${now.getFullYear()}`;
+      document.getElementById('dataLonga').textContent = `${now.getDate()} ${months[now.getMonth()]}`;
+      const hora = now.getHours();
+      document.getElementById('saudacaoTexto').textContent = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+      const cargo = localStorage.getItem('cargo');
+      if (cargo) { const p = document.getElementById('cargoPill'); p.textContent = cargo; p.hidden = false; }
 
       // Dados do usuário
       await loadUserData();
@@ -1205,6 +716,11 @@
 
       // Grid de navegação
       renderNavGrid(permissoes);
+
+      // Chips do dia só levam às ordens para quem pode ver as ordens
+      if (!permissoes.includes('gerenciar_ordens')) {
+        document.querySelectorAll('[data-ordens]').forEach(a => a.removeAttribute('href'));
+      }
 
       // Stats
       if (permissoes.includes('ver_dashboard')) {
@@ -1259,15 +775,11 @@
       grid.innerHTML = visibles.map((p, i) => {
         const isLastOdd = visibles.length % 2 !== 0 && i === visibles.length - 1;
         return `
-          <a href="${p.href}" class="nav-btn${isLastOdd ? ' full-width' : ''}">
-            <div class="nav-icon ${p.color}">
-              <i class="fas ${p.icon}"></i>
-            </div>
-            <div class="nav-body">
-              <span class="nav-label">${p.label}</span>
-              <span class="nav-sub">${p.sub}</span>
-            </div>
-            <i class="fas fa-chevron-right nav-arrow"></i>
+          <a href="${p.href}" class="mod${isLastOdd ? ' full-width' : ''}" style="--bg: ${p.bg}${p.fg ? '; --fg: ' + p.fg : ''}">
+            <span class="ic"><i class="fas ${p.icon}"></i></span>
+            <b>${p.label}</b>
+            <small>${p.sub}</small>
+            ${p.href === '/funcionario/ordens.html' ? '<span class="badge" id="badgeOrdens" hidden title="Aguardando pagamento"></span>' : ''}
           </a>
         `;
       }).join('');
@@ -1275,7 +787,7 @@
 
     async function loadStats() {
       const strip = document.getElementById('statsStrip');
-      strip.style.display = 'grid';
+      strip.style.display = 'block';
       // Limpa qualquer estado de falha anterior (retry)
       strip.classList.remove('stats-retry');
       strip.style.cursor = '';
@@ -1311,6 +823,8 @@
 
         document.getElementById('statOrdens').textContent = ordensAtivas ?? '-';
         document.getElementById('statAguardando').textContent = aguardandoTotal ?? '-';
+        const badge = document.getElementById('badgeOrdens');
+        if (badge) { badge.textContent = aguardandoTotal || ''; badge.hidden = !aguardandoTotal; }
 
         const fmt = v => v > 0 ? 'R$\u00a0' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : 'R$\u00a00';
         document.getElementById('statFat').textContent = fmt(fatHoje || 0);
@@ -1339,6 +853,7 @@
           dots.forEach((d, i) => d.classList.toggle('stat-dot-active', i === slide));
         }
 
+        card.addEventListener('click', () => goTo(slide ? 0 : 1));
         card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
         card.addEventListener('touchend', e => {
           const diff = startX - e.changedTouches[0].clientX;
@@ -1517,11 +1032,11 @@
     }
 
     function showToastIndex(msg, type) {
-      const bg = type === 'success' ? '#059669' : '#ef4444';
+      const bg = type === 'success' ? 'var(--green)' : 'var(--red)';
       const t = document.createElement('div');
-      t.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
-        background:${bg};color:#fff;padding:10px 20px;border-radius:10px;
-        font-size:13px;font-weight:700;z-index:9999;white-space:nowrap;`;
+      t.style.cssText = `position:fixed;bottom:110px;left:50%;transform:translateX(-50%);max-width:90vw;text-align:center;
+        background:${bg};color:var(--cream);padding:9px 16px 10px;border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink);
+        font:700 13px var(--mono);z-index:9999;`;
       t.textContent = msg;
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 3000);
@@ -1711,7 +1226,7 @@
       const filtered = indexLavadoresCache.filter(l => !query || l.nome?.toLowerCase().includes(query.toLowerCase()));
       if (!filtered.length) { drop.style.display = 'none'; return; }
       drop.innerHTML = filtered.map(l =>
-        `<div onclick="selectIndexLavador('${l.id}','${l.nome.replace(/'/g,"\\'")}' )" style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #e2e8f0;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">${l.nome}</div>`
+        `<div onclick="selectIndexLavador('${l.id}','${l.nome.replace(/'/g,"\\'")}' )">${l.nome}</div>`
       ).join('');
       drop.style.display = 'block';
     }
@@ -1778,6 +1293,7 @@
       finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
   <script src="/pwa-install.js"></script>
 </body>
 </html>
