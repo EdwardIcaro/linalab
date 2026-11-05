@@ -2,1347 +2,476 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Nova Ordem — Lina X</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <script defer src="/vendor/alpinejs/cdn.min.js"></script>
   <style>
-    :root {
-      --navy:   #0f172a;
-      --navy-m: #1e293b;
-      --blue:   #3b82f6;
-      --blue-d: #2563eb;
-      --blue-l: #eff6ff;
-      --blue-m: #bfdbfe;
-      --text:   #0f172a;
-      --mid:    #64748b;
-      --light:  #94a3b8;
-      --border: #e2e8f0;
-      --bg:     #f8fafc;
-      --white:  #ffffff;
-      --green:  #10b981;
-      --green-d:#059669;
-      --red:    #ef4444;
-      --amber:  #f59e0b;
-      --r:      10px;
-      --rpill:  999px;
-    }
-    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { height: 100%; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      overflow: hidden;
-    }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
     [x-cloak] { display: none !important; }
-    button { font-family: 'Inter', -apple-system, sans-serif; }
+    .pagina { max-width: 720px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 150px; }
 
-    /* ── HEADER ───────────────────────────────── */
-    .hd {
-      flex-shrink: 0;
-      background: var(--navy);
-      padding: 14px 16px;
-      position: relative;
-      z-index: 40;
-    }
-    .hd-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .hd-left { display: flex; align-items: center; gap: 10px; }
-    .btn-back-hd {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      background: rgba(255,255,255,.1);
-      border: 1.5px solid rgba(255,255,255,.15);
-      color: rgba(255,255,255,.8);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; cursor: pointer; text-decoration: none;
-      transition: background .18s;
-      flex-shrink: 0;
-    }
-    .btn-back-hd:hover { background: rgba(255,255,255,.18); }
-    .btn-back-hd:active { transform: scale(.93); }
-    .hd-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-    .hd-sub { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
-    .hd-badge {
-      background: rgba(59,130,246,.18);
-      border: 1px solid rgba(59,130,246,.3);
-      border-radius: var(--rpill);
-      padding: 4px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #93c5fd;
-      letter-spacing: .3px;
-    }
+    /* ===== topo ===== */
+    .topo { display: flex; align-items: center; gap: 12px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); white-space: nowrap; }
 
-    /* Search */
-    .search-row { display: flex; gap: 8px; }
-    .sw { flex: 1; position: relative; }
-    .search-input {
-      width: 100%;
-      padding: 11px 14px 11px 40px;
-      background: rgba(255,255,255,.1);
-      border: 1.5px solid rgba(255,255,255,.12);
-      border-radius: var(--r);
-      font-size: 14px;
-      font-family: 'Inter', sans-serif;
-      color: #fff;
-      outline: none;
-      transition: all .2s;
-    }
-    .search-input::placeholder { color: rgba(255,255,255,.35); }
-    .search-input:focus { background: rgba(255,255,255,.16); border-color: rgba(59,130,246,.6); }
-    .si {
-      position: absolute;
-      left: 13px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 14px;
-      pointer-events: none;
-      color: rgba(255,255,255,.4);
-    }
-    .btn-cam {
-      flex-shrink: 0;
-      width: 44px; height: 44px;
-      background: rgba(59,130,246,.18);
-      border: 1.5px solid rgba(59,130,246,.3);
-      border-radius: var(--r);
-      font-size: 19px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      transition: all .2s;
-    }
-    .btn-cam:hover { background: rgba(59,130,246,.32); }
-    .btn-cam:active { transform: scale(.92); }
+    /* ===== trilha: 4 paradas, gruda no topo ao rolar ===== */
+    .trilha { position: sticky; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 50; margin: 14px 0 16px; padding: 10px 14px 8px; --sc: var(--yellow); }
+    .trilha-pista { position: relative; margin: 0 12px; padding-top: 24px; }
+    .trilha .barra { height: 10px; border: 2.5px solid var(--ink); border-radius: 999px; background: #e3d8bd; overflow: hidden; }
+    .trilha .cheia { height: 100%; border-right: 2.5px solid var(--ink); transition: width .6s cubic-bezier(.3, 1.3, .5, 1);
+      background: repeating-linear-gradient(-45deg, var(--blue) 0 6px, #4b7cf0 6px 12px); animation: listras .9s linear infinite; }
+    .trilha .cheia.zero { border-right: 0; }
+    .paradas { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; }
+    .parada { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--cream); border: 2.5px solid var(--ink); transition: background .3s; }
+    .parada.ok { background: var(--green); }
+    .parada.ok::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--cream); font: 700 9px/1 var(--mono); }
+    .nomes { position: relative; height: 16px; margin: 4px 12px 0; }
+    .nomes span { position: absolute; transform: translateX(-50%); font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .nomes span.ok { color: var(--ink); }
+    .nomes span:first-child { transform: none; margin-left: -12px; } .nomes span:last-child { transform: translateX(-100%); margin-left: 12px; }
+    .carrinho { position: absolute; top: 0; width: 38px; margin-left: -24px; transition: left .6s cubic-bezier(.3, 1.3, .5, 1); }
+    .carrinho svg { display: block; overflow: visible; }
+    .carrinho .corpo { animation: chacoalho .42s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 100%; }
+    .carrinho .roda { animation: girar .5s linear infinite; transform-box: fill-box; transform-origin: center; }
 
-    /* Dropdown */
-    .dropdown {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0; right: 0;
-      background: var(--white);
-      border-radius: 12px;
-      box-shadow: 0 12px 32px rgba(0,0,0,.22);
-      z-index: 50;
-      overflow: hidden;
-    }
-    .dr {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 14px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background .1s;
-    }
-    .dr:last-child { border-bottom: none; }
-    .dr:hover { background: var(--bg); }
-    .dr-av {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      color: #fff;
-      font-size: 14px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .dr-av.new { background: none; border: 2px dashed var(--blue); color: var(--blue); font-size: 17px; }
-    .dr-name { font-size: 13px; font-weight: 600; color: var(--text); }
-    .dr-sub { font-size: 11px; color: var(--light); margin-top: 1px; }
-    .dr-loading { padding: 14px; text-align: center; font-size: 13px; color: var(--light); }
+    /* ===== seções ===== */
+    .secoes { display: grid; gap: 16px; }
+    .sec-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sec-cab .num { width: 26px; height: 26px; border-radius: 8px; border: 2.5px solid var(--ink); background: var(--sc); color: var(--cf, var(--cream));
+      display: grid; place-items: center; font: 400 13px/1 var(--dela); flex: none; }
+    .sec-cab h2 { margin: 0; font: 400 16px/1.1 var(--dela); flex: 1; min-width: 0; }
+    .sec-cab h2 small { font: 700 11px var(--mono); color: var(--muted); margin-left: 4px; }
+    .travada { opacity: .42; pointer-events: none; filter: grayscale(.5); transition: opacity .3s, filter .3s; }
+    .aviso-trava { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -4px 0 0; font: 700 12px var(--mono); color: var(--yellow); }
+    .vazio-sec { margin: 0; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .gira { width: 14px; height: 14px; border: 2.5px solid var(--ink); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
 
-    /* Client tag */
-    .client-tag {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(255,255,255,.08);
-      border: 1.5px solid rgba(255,255,255,.14);
-      border-radius: var(--r);
-      padding: 9px 13px;
-    }
-    .ct-av {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      color: #fff;
-      font-size: 14px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .ct-name { font-size: 14px; font-weight: 700; color: #fff; flex: 1; }
-    .ct-info { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 1px; }
-    .ct-edit {
-      background: rgba(255,255,255,.12);
-      color: rgba(255,255,255,.7);
-      border: 1.5px solid rgba(255,255,255,.18);
-      border-radius: 8px;
-      width: 32px; height: 32px;
-      font-size: 13px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      transition: all .18s;
-      flex-shrink: 0;
-    }
-    .ct-edit:hover { background: rgba(255,255,255,.22); color: #fff; }
-    .ct-x {
-      background: rgba(255,255,255,.1);
-      border: none;
-      border-radius: 50%;
-      width: 24px; height: 24px;
-      color: rgba(255,255,255,.5);
-      font-size: 12px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-    }
+    /* cliente */
+    .busca { position: relative; display: flex; gap: 8px; }
+    .busca-campo { position: relative; flex: 1; min-width: 0; }
+    .busca-campo .lupa { position: absolute; z-index: 1; line-height: 0; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+    .busca-campo .entrada { padding-left: 34px; font-size: 14px; height: 46px; }
+    .btn-camera { flex: none; width: 52px; height: 46px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--orange); color: var(--cream);
+      font-size: 18px; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+    .btn-camera:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+    .dica-busca { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
+    .resultados { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; background: var(--paper); border: 2.5px solid var(--ink);
+      border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); overflow: hidden; max-height: 320px; overflow-y: auto; }
+    .res { display: flex; align-items: center; gap: 10px; padding: 9px 10px; cursor: pointer; }
+    .res + .res { border-top: 2px dashed var(--line); }
+    .res:hover { background: #fff3c4; }
+    .res .av { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--ink); background: var(--pink); display: grid; place-items: center; font: 400 14px var(--dela); flex: none; }
+    .res .av.novo { background: var(--green); color: var(--cream); }
+    .res b { display: block; font: 700 13px/1.2 var(--mono); }
+    .res small { display: block; font-size: 11px; color: var(--muted); }
+    .res.carregando { color: var(--muted); font-size: 12px; cursor: default; }
+    .cli { display: flex; align-items: center; gap: 12px; }
+    .cli-info { flex: 1; min-width: 0; }
+    .cli-info b { display: block; font: 400 14px/1.15 var(--dela); }
+    .cli-info span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-btn { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; flex: none; }
+    .cli .placa { min-width: 92px; }
 
-    /* ── MAIN (scrollável) ────────────────────── */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
-    }
+    /* veículo */
+    .tipos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .tipo { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper);
+      color: var(--ink); text-align: left; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); }
+    .tipo i { font-size: 20px; width: 28px; text-align: center; }
+    .tipo b { display: block; font: 400 15px/1.1 var(--dela); }
+    .tipo small { display: block; font-size: 10px; color: var(--muted); }
+    .tipo.on { background: var(--blue); color: var(--cream); }
+    .tipo.on small { color: #dfe6ff; }
+    .categorias { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .cat { padding: 6px 12px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
+    .cat.on { background: var(--ink); color: var(--yellow); }
+    .cat.trocar { border-style: dashed; background: transparent; }
 
-    .sec {
-      flex-shrink: 0;
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 16px;
-    }
-    .sec-lbl {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--light);
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      margin-bottom: 8px;
-    }
-    .sec-lbl b { color: var(--blue); font-weight: 700; }
-    .sec-lbl-row { display: flex; align-items: center; justify-content: space-between; }
-    .sec-lbl-todos {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 11px;
-      border: 1.5px solid var(--blue-m);
-      border-radius: var(--rpill);
-      background: var(--blue-l);
-      color: var(--blue-d);
-      font-size: 11px; font-weight: 700;
-      letter-spacing: .2px; text-transform: none;
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .sec-lbl-todos:hover { border-color: var(--blue); background: #dbeafe; }
-    .sec-lbl-todos:active { transform: scale(.95); }
-    .sec-lbl-todos i { font-size: 10px; }
+    /* serviço */
+    .servicos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .svc { position: relative; padding: 10px 10px 9px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink);
+      text-align: left; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); display: flex; flex-direction: column; gap: 2px; min-height: 92px; min-width: 0; }
+    .svc b { font: 400 13px/1.15 var(--dela); overflow-wrap: anywhere; }
+    .svc small { font-size: 10px; color: var(--muted); line-height: 1.3; }
+    .svc .preco { margin-top: auto; font: 700 15px var(--mono); }
+    .svc.on { background: var(--yellow); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--orange); }
+    .svc .marca { position: absolute; top: -9px; right: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--green); color: var(--cream);
+      border: 2px solid var(--ink); display: none; place-items: center; font: 700 11px/1 var(--mono); }
+    .svc.on .marca { display: grid; }
+    .svc .ultimo { position: absolute; top: -9px; left: 8px; background: var(--ink); color: var(--yellow); border-radius: 5px; padding: 1px 6px;
+      font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .adds-cab { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 8px; }
+    .adds-cab .rotulo { color: var(--muted); font-size: 10px; }
+    .btn-todos { border: 2px solid var(--ink); border-radius: 8px; background: transparent; color: var(--ink); font: 700 11px var(--mono); padding: 3px 8px; cursor: pointer; }
+    .adds { display: flex; flex-wrap: wrap; gap: 8px; }
+    .add { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 2.5px solid var(--ink); border-radius: 999px;
+      background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
+    .add em { font-style: normal; color: var(--muted); font-size: 11px; }
+    .add.on { background: var(--pink); }
+    .add.on em { color: var(--ink); }
+    .add.on::before { content: "✓"; }
 
-    /* Tipo */
-    .tipo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .tipo-btn {
-      position: relative; overflow: hidden;
-      display: flex; align-items: flex-start; flex-direction: column;
-      gap: 2px;
-      padding: 14px 14px 14px 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--r);
-      background: var(--bg);
-      cursor: pointer;
-      transition: all .15s;
-      min-height: 72px;
-    }
-    .tipo-btn:hover { border-color: var(--blue-m); }
-    .tipo-btn.on { border-color: var(--blue); background: var(--blue-l); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+    /* observação */
+    .obs { width: 100%; min-height: 70px; resize: vertical; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper);
+      color: var(--ink); padding: 9px 11px; font: 400 13px/1.4 var(--mono); outline: none; }
+    .obs:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .obs-dica { margin: 6px 0 0; font-size: 11px; color: var(--green); font-weight: 700; }
 
-    .tipo-btn::after {
-      content: '';
-      position: absolute;
-      right: -8px; bottom: -6px;
-      width: 110px; height: 58px;
-      background-repeat: no-repeat;
-      background-size: contain;
-      background-position: right bottom;
-      opacity: .08;
-      pointer-events: none;
-      transition: opacity .2s;
-    }
-    .tipo-btn.on::after { opacity: .14; }
-    .tipo-btn:hover::after { opacity: .12; }
+    /* equipe */
+    .equipe { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
+    .lav { display: grid; justify-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); flex: none; }
+    .lav .av { position: relative; width: 50px; height: 50px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--paper);
+      display: grid; place-items: center; font: 400 19px var(--dela); transition: transform .15s; }
+    .lav.on .av { color: var(--cream); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px, -1px); }
+    .lav.on .av::after { content: "✓"; position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--green);
+      color: var(--cream); border: 2px solid var(--ink); display: grid; place-items: center; font: 700 9px/1 var(--mono); }
+    .lav span { font: 700 11px var(--mono); }
 
-    .tipo-car::after {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 210 82'%3E%3Cpath fill-rule='evenodd' fill='%23000' d='M6,76 L6,52 L28,52 L52,16 L88,6 L148,6 L176,20 L204,52 L204,76 Z M46,50 A20,20 0 1,0 46,90 A20,20 0 1,0 46,50 Z M158,50 A20,20 0 1,0 158,90 A20,20 0 1,0 158,50 Z'/%3E%3C/svg%3E");
-    }
-    .tipo-moto::after {
-      width: 100px; height: 62px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 96'%3E%3Ccircle cx='36' cy='70' r='23' fill='%23000'/%3E%3Ccircle cx='154' cy='70' r='23' fill='%23000'/%3E%3Cpath fill='%23000' d='M36,70 L58,36 L88,26 L114,34 L142,58 L154,70 L134,70 L116,52 L94,54 L74,70 Z M88,26 L95,12 L112,14 L106,32 Z M58,36 L44,46 L36,42 L50,28 Z M36,70 A5,5 0 1,0 46,70 A5,5 0 1,0 36,70 Z M149,70 A5,5 0 1,0 159,70 A5,5 0 1,0 149,70 Z'/%3E%3C/svg%3E");
-    }
+    /* ===== rodapé fixo: total + criar ===== */
+    .rodape-ordem { position: fixed; z-index: 600; left: 0; right: 0; bottom: 0; background: var(--cream); color: var(--ink); border-top: 3px solid var(--ink);
+      box-shadow: 0 -5px 0 var(--blue); padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .rodape-dentro { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+    .total { flex: 1; min-width: 0; }
+    .total .rotulo { font-size: 10px; color: var(--muted); }
+    .total b { display: block; font: 400 24px/1 var(--dela); white-space: nowrap; }
+    .total b small { font-size: .55em; margin-right: 2px; }
+    .total .itens { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-criar { flex: none; padding: 13px 18px; font-size: 16px; }
 
-    .tipo-name { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.2; }
-    .tipo-btn.on .tipo-name { color: var(--blue-d); }
-    .tipo-sub { font-size: 10px; color: var(--light); margin-top: 1px; }
+    /* ===== janelas (sobem de baixo) ===== */
+    .folha-fundo { opacity: 1; pointer-events: auto; }
+    .folha-fundo .folha { transform: none; animation: subir .45s cubic-bezier(.2, .9, .3, 1.1); }
+    @keyframes subir { from { transform: translateY(60%); } to { transform: none; } }
+    .form-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-grade .inteiro { grid-column: 1 / -1; }
+    .entrada.erro { border-color: var(--red); box-shadow: 3px 3px 0 var(--red); }
+    .campo .erro-txt { font: 700 11px var(--mono); color: var(--red); }
+    .obrig { font-size: 11px; color: var(--muted); }
+    .obrig span { color: var(--red); }
+    .sugestoes { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; z-index: 100; background: var(--paper); border: 2.5px solid var(--ink);
+      border-radius: 10px; box-shadow: 3px 3px 0 var(--ink); max-height: 200px; overflow-y: auto; }
+    .sugestoes .res b { font-size: 12px; }
+    .cli-sel { margin-top: 6px; padding: 5px 9px; border: 2px dashed var(--ink); border-radius: 8px; font-size: 12px; }
+    .cores { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cor { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid var(--ink); cursor: pointer; padding: 0; }
+    .cor.on { box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--ink); }
+    .cor-nome { color: var(--blue); text-transform: none; letter-spacing: 0; }
+    .folha-pe { display: flex; gap: 10px; }
+    .folha-pe .btn { flex: 1; }
+    .add-linha { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; border: 0; border-bottom: 2px dashed var(--line); background: none;
+      color: var(--ink); cursor: pointer; text-align: left; }
+    .add-linha .caixinha { width: 22px; height: 22px; border: 2.5px solid var(--ink); border-radius: 6px; display: grid; place-items: center; font: 700 11px var(--mono); flex: none; }
+    .add-linha.on .caixinha { background: var(--pink); }
+    .add-linha.on .caixinha::after { content: "✓"; }
+    .add-linha b { flex: 1; font: 700 13px var(--mono); }
+    .add-linha span { font: 700 12px var(--mono); color: var(--muted); }
 
-    /* Chips */
-    .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-    .chips::-webkit-scrollbar { display: none; }
-    .chip {
-      flex-shrink: 0;
-      padding: 6px 13px;
-      border: 2px solid var(--border);
-      border-radius: var(--rpill);
-      background: var(--bg);
-      cursor: pointer;
-      font-size: 12px; font-weight: 600; color: var(--mid);
-      white-space: nowrap;
-      transition: all .15s;
-    }
-    .chip:hover { border-color: var(--blue-m); }
-    .chip.on { border-color: var(--blue); background: var(--blue-l); color: var(--blue-d); }
-    .chip-trocar { border-style: dashed; color: var(--mid); border-color: var(--border); display: inline-flex; align-items: center; gap: 4px; }
-    .chip-trocar:hover { border-color: var(--amber); color: var(--amber); }
+    /* câmera (leitura da placa) */
+    .camera { position: relative; aspect-ratio: 4 / 3; max-width: 100%; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; background: #0e0f24; }
+    .camera video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .camera .guia { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+    .camera .guia i { width: 72%; aspect-ratio: 3.2 / 1; border: 3px dashed var(--yellow); border-radius: 10px; }
+    .camera p { position: absolute; bottom: 8px; left: 0; right: 0; margin: 0; text-align: center; color: var(--cream); font: 700 11px var(--mono); text-shadow: 0 1px 2px #000; }
+    .camera-erro { padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #ffd0cc; font: 700 12px var(--mono); }
 
-    /* Serviços */
-    .svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .svc-card {
-      position: relative; overflow: hidden;
-      padding: 11px 12px 11px 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--r);
-      background: var(--bg);
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .svc-card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 4px;
-      background: var(--border);
-      transition: background .15s;
-    }
-    .svc-card:hover { border-color: var(--blue-m); }
-    .svc-card.on { border-color: var(--blue); background: var(--blue-l); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
-    .svc-card.on::before { background: var(--blue); }
-    /* Último serviço realizado — destaque verde */
-    .svc-card.is-last { border-color: var(--green); }
-    .svc-card.is-last::before { background: var(--green); }
-    .svc-card.is-last.on { border-color: var(--green); background: #ecfdf5; box-shadow: 0 0 0 3px rgba(16,185,129,.12); }
-    .svc-card.is-last.on::before { background: var(--green); }
-    .svc-card.is-last.on .svc-name,
-    .svc-card.is-last.on .svc-price { color: var(--green-d); }
-    .svc-card.is-last .svc-check { background: var(--green); }
-    .svc-check {
-      position: absolute; top: 8px; right: 8px;
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: var(--blue); color: #fff;
-      font-size: 9px; font-weight: 900;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; transform: scale(0);
-      transition: all .2s;
-    }
-    .svc-card.on .svc-check { opacity: 1; transform: scale(1); }
-    .svc-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
-    .svc-card.on .svc-name { color: var(--blue-d); }
-    .svc-desc { font-size: 10px; color: var(--light); margin-bottom: 5px; line-height: 1.3; }
-    .svc-price { font-size: 18px; font-weight: 800; color: var(--text); }
-    .svc-card.on .svc-price { color: var(--blue-d); }
+    /* sucesso */
+    .sucesso { text-align: center; padding: 22px 16px calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; justify-items: center; }
+    .anel { width: 78px; height: 78px; border-radius: 50%; background: var(--green); color: var(--cream); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+      display: grid; place-items: center; font: 400 36px/1 var(--dela); animation: pulo .6s cubic-bezier(.3, 1.6, .5, 1) both; }
+    @keyframes pulo { from { transform: scale(.2) rotate(-30deg); } to { transform: none; } }
+    .sucesso h3 { margin: 6px 0 0; font: 400 24px/1.1 var(--dela); }
+    .sucesso .num { font: 400 15px var(--dela); background: var(--yellow); border: 2.5px solid var(--ink); border-radius: 8px; padding: 2px 10px; transform: rotate(-3deg); }
+    .sucesso p { margin: 0; font-size: 12px; color: var(--muted); }
+    .sucesso .acoes { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
 
-    /* Adicionais */
-    .add-chip {
-      flex-shrink: 0;
-      display: flex; align-items: center; gap: 5px;
-      padding: 6px 12px;
-      border: 2px solid var(--border);
-      border-radius: var(--rpill);
-      background: var(--bg);
-      cursor: pointer;
-      font-size: 12px; font-weight: 600; color: var(--mid);
-      white-space: nowrap;
-      transition: all .15s;
-    }
-    .add-chip:hover { border-color: var(--blue-m); }
-    .add-chip.on { border-color: var(--blue); background: var(--blue-l); color: var(--blue-d); }
-    .add-tick {
-      width: 15px; height: 15px;
-      border-radius: 50%;
-      background: var(--blue); color: #fff;
-      font-size: 8px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .add-price { font-size: 10px; opacity: .6; font-weight: 500; }
-
-    /* Lista de adicionais no sheet */
-    .add-list { display: flex; flex-direction: column; gap: 8px; }
-    .add-row {
-      display: flex; align-items: center; gap: 10px;
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      background: var(--white);
-      cursor: pointer;
-      font-family: inherit;
-      transition: all .15s;
-    }
-    .add-row.on { border-color: var(--blue); background: var(--blue-l); }
-    .add-row-check {
-      width: 20px; height: 20px; border-radius: 50%;
-      background: var(--blue); color: #fff;
-      font-size: 10px; font-weight: 900;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .add-row-name { flex: 1; text-align: left; font-size: 14px; font-weight: 600; color: var(--text); }
-    .add-row.on .add-row-name { color: var(--blue-d); }
-    .add-row-price { font-size: 13px; font-weight: 700; color: var(--green-d); }
-
-    /* Lavadores */
-    .lav-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; }
-    .lav-row::-webkit-scrollbar { display: none; }
-    .lav { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0; }
-    .lav-av {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      border: 2.5px solid var(--border);
-      background: var(--bg); color: var(--mid);
-      font-size: 16px; font-weight: 800;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .2s;
-      position: relative;
-    }
-    .lav.on .lav-av {
-      border-color: transparent; color: #fff;
-      box-shadow: 0 4px 14px rgba(0,0,0,.22);
-    }
-    .lav-tick {
-      position: absolute;
-      bottom: -2px; right: -2px;
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: var(--green);
-      border: 2px solid #fff;
-      color: #fff; font-size: 8px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .lav-name { font-size: 10px; font-weight: 600; color: var(--mid); white-space: nowrap; }
-    .lav.on .lav-name { font-weight: 700; }
-
-    /* Seletor de cores */
-    .color-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; }
-    .color-sw { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-    .color-circle {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      transition: all .15s;
-      position: relative;
-      box-shadow: 0 2px 6px rgba(0,0,0,.15);
-    }
-    .color-sw.on .color-circle { border-color: var(--blue); }
-    .color-sw.on .color-circle::after {
-      content: '✓';
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 900; color: #fff;
-      text-shadow: 0 1px 3px rgba(0,0,0,.4);
-    }
-    .color-lbl { font-size: 9px; font-weight: 600; color: var(--mid); text-align: center; line-height: 1.1; }
-
-    /* Estado vazio / loading */
-    .sec-empty {
-      padding: 16px 0;
-      text-align: center;
-      font-size: 12px;
-      color: var(--light);
-    }
-    .sec-spinner {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 0;
-      font-size: 12px;
-      color: var(--light);
-    }
-    .spin-ico {
-      width: 16px; height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--blue);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── FOOTER ───────────────────────────────── */
-    .ft {
-      flex-shrink: 0;
-      background: var(--white);
-      border-top: 1px solid var(--border);
-      padding: 12px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .ft-total { flex: 1; }
-    .ft-lbl { font-size: 10px; font-weight: 700; color: var(--light); text-transform: uppercase; letter-spacing: .6px; }
-    .ft-val { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1.1; }
-    .ft-val em { font-size: 13px; font-weight: 600; color: var(--mid); font-style: normal; }
-    .ft-desc { font-size: 11px; color: var(--light); margin-top: 1px; }
-    .btn-criar {
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      color: #fff;
-      border: none;
-      border-radius: var(--rpill);
-      padding: 14px 24px;
-      font-size: 14px; font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      letter-spacing: -.2px;
-      box-shadow: 0 4px 16px rgba(37,99,235,.35);
-      transition: all .2s;
-    }
-    .btn-criar:not(:disabled):hover { box-shadow: 0 6px 22px rgba(37,99,235,.45); transform: translateY(-1px); }
-    .btn-criar:not(:disabled):active { transform: scale(.96); box-shadow: none; }
-    .btn-criar:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
-
-    /* ── OBSERVAÇÃO ─────────────────────────── */
-    .obs-textarea {
-      width: 100%;
-      min-height: 72px;
-      padding: 10px 12px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--r);
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      color: var(--text);
-      background: #fff;
-      resize: none;
-      outline: none;
-      transition: border-color .18s;
-      line-height: 1.5;
-    }
-    .obs-textarea:focus { border-color: var(--blue); }
-    .obs-hint { font-size: 11px; color: #25d366; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
-
-    /* ── BOTTOM SHEET BASE ────────────────────── */
-    .backdrop {
-      position: fixed; inset: 0; z-index: 100;
-      background: rgba(15,23,42,.55);
-      backdrop-filter: blur(6px);
-      display: flex; align-items: flex-end;
-    }
-    .sheet {
-      background: var(--white);
-      border-radius: 24px 24px 0 0;
-      width: 100%;
-      max-height: 90dvh;
-      display: flex;
-      flex-direction: column;
-      animation: slideUp .32s cubic-bezier(.34,1.4,.64,1);
-    }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .sheet-handle {
-      width: 40px; height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 14px auto 0;
-      flex-shrink: 0;
-    }
-    .sheet-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .sheet-title { font-size: 16px; font-weight: 800; color: var(--text); }
-    .sheet-sub { font-size: 12px; color: var(--light); margin-top: 2px; }
-    .sheet-close {
-      width: 30px; height: 30px;
-      border-radius: 50%;
-      background: var(--bg);
-      border: none; color: var(--mid);
-      font-size: 14px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .sheet-body {
-      padding: 16px 20px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      flex: 1;
-    }
-    .sheet-footer {
-      display: flex; gap: 8px;
-      padding: 12px 20px;
-      padding-bottom: max(16px, env(safe-area-inset-bottom));
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    /* Form no sheet */
-    .form-required-hint { font-size: 11px; color: var(--light); margin-bottom: 14px; }
-    .form-required-hint span { color: var(--red); }
-    .form-row { display: grid; gap: 10px; margin-bottom: 10px; }
-    .form-row.cols2 { grid-template-columns: 1fr 1fr; }
-    .form-row.cols1 { grid-template-columns: 1fr; }
-    .fld label {
-      display: block;
-      font-size: 10px; font-weight: 700;
-      color: var(--mid);
-      text-transform: uppercase; letter-spacing: .6px;
-      margin-bottom: 5px;
-    }
-    .fld label span { color: var(--red); }
-    .fld input, .fld select {
-      width: 100%;
-      padding: 11px 13px;
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: var(--r);
-      font-size: 14px;
-      font-family: 'Inter', sans-serif;
-      color: var(--text);
-      outline: none;
-      transition: all .18s;
-    }
-    .fld input:focus, .fld select:focus { border-color: var(--blue); background: var(--white); }
-    .fld input::placeholder { color: var(--light); }
-    .fld input.error { border-color: var(--red); }
-    .fld-err { font-size: 10px; color: var(--red); margin-top: 3px; font-weight: 500; }
-
-    /* Botões sheet */
-    .btn-cancel {
-      flex: 0 0 auto;
-      padding: 13px 18px;
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: var(--rpill);
-      font-size: 14px; font-weight: 600;
-      color: var(--mid);
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .btn-cancel:hover { background: var(--border); }
-    .btn-confirm {
-      flex: 1;
-      padding: 13px;
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      border: none;
-      border-radius: var(--rpill);
-      font-size: 14px; font-weight: 700; color: #fff;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(37,99,235,.3);
-      transition: all .2s;
-    }
-    .btn-confirm:hover { box-shadow: 0 6px 20px rgba(37,99,235,.4); transform: translateY(-1px); }
-    .btn-confirm:active { transform: scale(.96); }
-    .btn-confirm:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; transform: none; }
-
-    /* ── SHEET SUCESSO ────────────────────────── */
-    .sheet-success {
-      background: var(--white);
-      border-radius: 24px 24px 0 0;
-      width: 100%;
-      padding: 8px 28px 44px;
-      text-align: center;
-      animation: slideUp .35s cubic-bezier(.34,1.56,.64,1);
-    }
-    .s-ring {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--green-d), var(--green));
-      color: #fff; font-size: 32px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 14px;
-      box-shadow: 0 8px 24px rgba(16,185,129,.35);
-    }
-    .s-title { font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
-    .s-sub { font-size: 14px; color: var(--mid); margin-bottom: 8px; }
-    .s-num {
-      display: inline-block;
-      background: var(--blue-l); color: var(--blue-d);
-      border-radius: var(--rpill);
-      padding: 6px 22px;
-      font-size: 15px; font-weight: 800;
-      margin-bottom: 28px;
-    }
-    .btn-nova {
-      width: 100%; max-width: 280px;
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      color: #fff; border: none;
-      border-radius: var(--rpill);
-      padding: 15px;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(37,99,235,.35);
-      font-family: 'Inter', sans-serif;
-    }
-    .btn-dash {
-      width: 100%; max-width: 280px;
-      background: rgba(15,23,42,.07);
-      color: var(--navy);
-      border: 1.5px solid var(--border);
-      border-radius: var(--rpill);
-      padding: 13px;
-      font-size: 14px; font-weight: 600;
-      cursor: pointer;
-      margin-top: 10px;
-      text-decoration: none;
-      display: block;
-      font-family: 'Inter', sans-serif;
-    }
-
-    /* ── LOCK DAS SEÇÕES ─────────────────────── */
-    .sections-wrap {
-      position: relative;
-      min-height: 280px;
-    }
-    .sections-content {
-      transition: opacity 0.22s;
-    }
-    .sections-content.locked {
-      opacity: 0.25;
-      pointer-events: none;
-      user-select: none;
-    }
-    .lock-hint {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      pointer-events: none;
-    }
-    .lock-hint-box {
-      background: var(--white);
-      border-radius: 18px;
-      padding: 20px 28px;
-      text-align: center;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.13);
-      border: 1.5px solid var(--border);
-      max-width: 220px;
-    }
-    .lock-hint-box i {
-      font-size: 30px;
-      color: var(--light);
-      margin-bottom: 10px;
-      display: block;
-    }
-    .lock-hint-box p {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--mid);
-      line-height: 1.55;
-      margin: 0;
-    }
-
-    /* ── CAMERA OCR MODAL (fullscreen) ─────────── */
-    .camera-overlay {
-      position: fixed; inset: 0;
-      background: #000;
-      z-index: 300;
-      display: flex; flex-direction: column;
-      animation: fadeIn .22s ease;
-    }
-    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-    .camera-sheet {
-      display: flex; flex-direction: column;
-      height: 100%; width: 100%;
-    }
-    .camera-hd {
-      flex-shrink: 0;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px;
-      padding-top: max(14px, env(safe-area-inset-top));
-      background: rgba(0,0,0,.65);
-      position: absolute; top: 0; left: 0; right: 0;
-      z-index: 10;
-    }
-    .camera-hd-title {
-      font-size: 16px; font-weight: 800; color: #fff;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .camera-hd-close {
-      width: 36px; height: 36px;
-      background: rgba(255,255,255,.15);
-      border: 1.5px solid rgba(255,255,255,.2);
-      border-radius: 50%;
-      color: #fff;
-      font-size: 15px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .18s;
-    }
-    .camera-hd-close:hover { background: rgba(255,255,255,.28); }
-    .camera-viewport {
-      position: relative; flex: 1;
-      background: #000; overflow: hidden;
-    }
-    .camera-video {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover; display: block;
-    }
-    .camera-guide {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      pointer-events: none;
-    }
-    .camera-guide-rect {
-      width: 82%; max-width: 340px;
-      aspect-ratio: 3 / 1;
-      border: 3px solid rgba(255,220,0,.95);
-      border-radius: 10px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,.45);
-    }
-    .camera-guide-label {
-      margin-top: 18px;
-      color: rgba(255,255,255,.85);
-      font-size: 12px; font-weight: 500;
-      background: rgba(0,0,0,.5);
-      padding: 5px 16px; border-radius: 20px;
-    }
-    .camera-controls {
-      flex-shrink: 0;
-      padding: 18px 24px;
-      padding-bottom: max(22px, env(safe-area-inset-bottom));
-      background: rgba(0,0,0,.75);
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .camera-error {
-      background: rgba(239,68,68,.2);
-      border: 1px solid rgba(239,68,68,.4);
-      border-radius: 10px; padding: 10px 14px;
-      color: #fca5a5;
-      font-size: 13px; text-align: center;
-    }
-    .camera-btn-cap {
-      width: 100%; padding: 16px;
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      border: none; border-radius: var(--rpill);
-      font-size: 16px; font-weight: 700; color: #fff;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 9px;
-      box-shadow: 0 6px 20px rgba(37,99,235,.45);
-      font-family: 'Inter', sans-serif;
-      transition: opacity .18s, transform .1s;
-    }
-    .camera-btn-cap:active:not(:disabled) { transform: scale(.97); }
-    .camera-btn-cap:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-    .cam-spin {
-      width: 18px; height: 18px;
-      border: 2.5px solid rgba(255,255,255,.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-
-    /* ── TOAST ────────────────────────────────── */
-    .toast {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%) translateY(16px);
-      background: #1f2937;
-      color: #fff;
-      padding: 11px 18px;
-      border-radius: 12px;
-      font-size: 14px; font-weight: 600;
-      display: flex; align-items: center; gap: 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.22);
-      opacity: 0;
-      transition: opacity .25s, transform .25s;
-      z-index: 999;
-      pointer-events: none;
-      max-width: calc(100vw - 32px);
-      white-space: nowrap;
-    }
+    /* aviso rápido */
+    .toast { position: fixed; left: 50%; bottom: 110px; z-index: 9999; display: flex; align-items: center; gap: 8px; max-width: 90vw;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink);
+      padding: 9px 14px 10px; font: 700 13px var(--mono); opacity: 0; transform: translateX(-50%) translateY(12px); transition: opacity .25s, transform .25s; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast.success i { color: #34d399; }
-    .toast.error   i { color: #f87171; }
-    .toast.info    i { color: #fbbf24; }
+    .toast.success { background: var(--green); color: var(--cream); }
+    .toast.error { background: var(--red); color: var(--cream); }
+    .toast.info { background: var(--yellow); }
+
+    @media (max-width: 380px) { .servicos { gap: 8px; } .svc b { font-size: 12px; } .btn-criar { padding: 12px 14px; font-size: 14px; } }
   </style>
 </head>
 <body x-data="app()" x-init="init()">
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- ══ HEADER ════════════════════════════════ -->
-  <div class="hd">
-    <div class="hd-row">
-      <div class="hd-left">
-        <a href="index.html" class="btn-back-hd">
-          <i class="fas fa-arrow-left"></i>
-        </a>
-        <div>
-          <div class="hd-title">Nova Ordem</div>
-          <div class="hd-sub">Preencha os dados abaixo</div>
-        </div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Voltar"><i class="fas fa-arrow-left"></i></a>
+    <div class="topo-tit"><h1>Nova ordem</h1></div>
+  </header>
+
+  <!-- trilha do que falta: o carrinho anda conforme a ordem fica pronta -->
+  <div class="cartao trilha" aria-label="Progresso da ordem">
+    <div class="trilha-pista">
+      <div class="carrinho" aria-hidden="true" :style="'left:' + trilhaP() + '%'" style="left: 0%">
+        <svg width="38" height="22" viewBox="12 4 34 22">
+          <g class="corpo">
+            <path d="M13 21 V15 Q13 13 15 13 L19 13 L23 7 Q24 6 26 6 L34 6 Q36 6 37 7.5 L40 13 L42 13.5 Q44 14 44 16 V21 Z" fill="#ff5b2e" stroke="#17152b" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M21.5 13 L24.5 8.5 Q25 8 26 8 L29.5 8 V13 Z M31.5 8 L34 8 Q35 8 35.5 9 L37.5 13 L31.5 13 Z" fill="#cfe8ff" stroke="#17152b" stroke-width="1.5" stroke-linejoin="round"/>
+          </g>
+          <g class="roda"><circle cx="20" cy="22" r="4" fill="#17152b"/><circle cx="20" cy="22" r="1.7" fill="#f4ecd8"/></g>
+          <g class="roda"><circle cx="37" cy="22" r="4" fill="#17152b"/><circle cx="37" cy="22" r="1.7" fill="#f4ecd8"/></g>
+        </svg>
       </div>
-      <div class="hd-badge">Lina X</div>
-    </div>
-
-    <!-- Busca (sem cliente selecionado) -->
-    <div x-show="!cliente">
-      <div class="search-row">
-        <div class="sw">
-          <i class="fas fa-search si"></i>
-          <input
-            class="search-input"
-            type="search"
-            placeholder="Buscar cliente, placa ou veículo..."
-            x-model="searchQuery"
-            @input="buscar()"
-            @blur="setTimeout(()=> showDrop=false, 180)"
-            @focus="if(results.length > 0 || searchQuery.length >= 2) showDrop=true"
-            autocomplete="off"
-          >
-          <!-- Dropdown resultados -->
-          <div class="dropdown" x-show="showDrop" x-cloak>
-            <div class="dr-loading" x-show="buscando">
-              <i class="fas fa-spinner fa-spin"></i> Buscando...
-            </div>
-            <template x-for="r in results" :key="r.clienteId + '-' + (r.veiculoId || 'novo')">
-              <div class="dr" @mousedown.prevent="pick(r)">
-                <div class="dr-av" x-text="r.nome[0]?.toUpperCase()"></div>
-                <div style="flex:1;min-width:0">
-                  <div class="dr-name" x-text="r.nome"></div>
-                  <div class="dr-sub" x-text="(r.modelo && r.modelo !== '—' ? r.modelo + ' · ' : '') + (r.placa && r.placa !== '—' ? r.placa : '')"></div>
-                </div>
-              </div>
-            </template>
-            <!-- Novo cliente -->
-            <div class="dr" @mousedown.prevent="abrirFormNovoCliente()">
-              <div class="dr-av new">+</div>
-              <div>
-                <div class="dr-name" style="color:var(--blue)">Cadastrar novo cliente</div>
-                <div class="dr-sub" x-text="searchQuery.length > 0 ? 'Nome: &quot;' + searchQuery + '&quot;' : 'Preencher dados do cliente'"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Câmera OCR -->
-        <button class="btn-cam" title="Escanear placa" @click="abrirCamera()">📷</button>
+      <div class="barra"><div class="cheia" :class="{zero: trilhaP() === 0}" :style="'width:' + trilhaP() + '%'" style="width: 0%"></div></div>
+      <div class="paradas">
+        <template x-for="(ok, i) in trilhaFeitos()" :key="i">
+          <i class="parada" :class="{ok}" :style="'left:' + (i * 33.333) + '%'"></i>
+        </template>
       </div>
     </div>
-
-    <!-- Tag cliente selecionado -->
-    <div class="client-tag" x-show="cliente" x-cloak>
-      <div class="ct-av" x-text="cliente?.nome?.[0]?.toUpperCase() || '?'"></div>
-      <div style="flex:1;min-width:0">
-        <div class="ct-name" x-text="cliente?.nome"></div>
-        <div class="ct-info" x-text="[cliente?.modelo, cliente?.placa, cliente?.telefone].filter(Boolean).join(' · ')"></div>
-      </div>
-      <button class="ct-edit" @click="abrirFormEdicao()" title="Editar">
-        <i class="fas fa-pencil-alt"></i>
-      </button>
-      <button class="ct-x" @click="cliente=null; ultimoServicoId=null; catLocked=false; searchQuery=''">✕</button>
+    <div class="nomes">
+      <span style="left: 0%" :class="{ok: trilhaFeitos()[0]}">Cliente</span><span style="left: 33.33%" :class="{ok: trilhaFeitos()[1]}">Veículo</span><span style="left: 66.66%" :class="{ok: trilhaFeitos()[2]}">Serviço</span><span style="left: 100%" :class="{ok: trilhaFeitos()[3]}">Equipe</span>
     </div>
   </div>
 
-  <!-- ══ MAIN ══════════════════════════════════ -->
-  <div class="main">
-  <div class="sections-wrap">
-
-    <!-- Hint de lock quando sem cliente -->
-    <div class="lock-hint" x-show="!cliente" x-cloak>
-      <div class="lock-hint-box">
-        <i class="fas fa-user-circle"></i>
-        <p>Busque ou cadastre<br>um cliente primeiro</p>
-      </div>
-    </div>
-
-    <div class="sections-content" :class="{locked: !cliente}">
-
-    <!-- Tipo de veículo -->
-    <div class="sec">
-      <div class="sec-lbl">Tipo de Veículo</div>
-      <div class="tipo-row">
-        <button class="tipo-btn tipo-car" :class="{on: tipo==='CARRO'}" @click="tipo='CARRO'">
-          <div class="tipo-name">Carro</div>
-          <div class="tipo-sub">Hatch · Sedan · SUV</div>
-        </button>
-        <button class="tipo-btn tipo-moto" :class="{on: tipo==='MOTO'}" @click="tipo='MOTO'; cat=null">
-          <div class="tipo-name">Moto</div>
-          <div class="tipo-sub">Qualquer porte</div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Categoria (só CARRO) -->
-    <div class="sec" x-show="tipo==='CARRO'" x-cloak>
-      <div class="sec-lbl">Categoria</div>
-      <!-- Trancada: veículo cadastrado com categoria → mostra só ela + botão trocar -->
-      <div class="chips" x-show="catLocked" x-cloak>
-        <button class="chip on" x-text="(cats.find(c => c.k === cat)?.l) || cat"></button>
-        <button class="chip chip-trocar" @click="destravarCategoria()">
-          <i class="fas fa-pencil-alt" style="font-size:10px"></i> trocar
-        </button>
-      </div>
-      <!-- Livre: todas as categorias -->
-      <div class="chips" x-show="!catLocked">
-        <template x-for="c in cats" :key="c.k">
-          <button class="chip" :class="{on: cat===c.k}" @click="cat=c.k" x-text="c.l"></button>
-        </template>
-      </div>
-    </div>
-
-    <!-- Serviços -->
-    <div class="sec">
-      <div class="sec-lbl">Serviço</div>
-
-      <!-- Aguardando seleção de tipo -->
-      <div class="sec-empty" x-show="!tipo">
-        Selecione o tipo de veículo primeiro
-      </div>
-
-      <!-- Carregando -->
-      <div class="sec-spinner" x-show="tipo && loadingServicos" x-cloak>
-        <div class="spin-ico"></div> Carregando serviços...
-      </div>
-
-      <!-- Nenhum serviço -->
-      <div class="sec-empty" x-show="tipo && !loadingServicos && servicos.length === 0" x-cloak>
-        Nenhum serviço cadastrado para este tipo
-      </div>
-
-      <!-- Grid de serviços -->
-      <div class="svc-grid" x-show="tipo && !loadingServicos && servicos.length > 0" x-cloak>
-        <template x-for="s in servicos" :key="s.id">
-          <div class="svc-card" :class="{on: svc?.id===s.id, 'is-last': ultimoServicoId===s.id}" @click="svc = svc?.id===s.id ? null : s">
-            <div class="svc-check">✓</div>
-            <div x-show="ultimoServicoId === s.id" x-cloak style="position:absolute;top:0;left:4px;background:#10b981;color:#fff;font-size:9px;padding:3px 8px;border-radius:0 0 8px 0;font-weight:700;letter-spacing:.3px;z-index:2">ÚLTIMA</div>
-            <div class="svc-name" x-text="s.nome"></div>
-            <div class="svc-desc" x-text="s.descricao || ''"></div>
-            <div class="svc-price" x-text="'R$ ' + Number(s.preco || 0).toFixed(2).replace('.',',')"></div>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Adicionais -->
-    <div class="sec" x-show="adicionais.length > 0" x-cloak>
-      <div class="sec-lbl sec-lbl-row">
-        <span>
-          Adicionais
-          <b x-show="adds.length > 0" x-text="'· ' + adds.length" x-cloak></b>
-        </span>
-        <!-- Botão: ver todos (ao lado do título) -->
-        <button class="sec-lbl-todos" x-show="adicionais.length > TOP_ADD_COUNT" @click="showAllAdds=true">
-          <i class="fas fa-layer-group"></i>
-          <span x-text="'Todos (' + adicionais.length + ')'"></span>
-        </button>
-      </div>
-      <div class="chips">
-        <!-- Top usados (frequência) -->
-        <template x-for="a in adicionaisTop()" :key="a.id">
-          <button class="add-chip" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)">
-            <div class="add-tick" x-show="adds.includes(a.id)" x-cloak>✓</div>
-            <span x-text="a.nome"></span>
-            <span class="add-price" x-text="'+ R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span>
-          </button>
-        </template>
-      </div>
-    </div>
-
-    <!-- Observação -->
-    <div class="sec" x-show="cliente" x-cloak>
-      <div class="sec-lbl">
-        Observação
-        <span style="font-size:11px;font-weight:400;color:var(--light);margin-left:4px">(opcional)</span>
-      </div>
-      <textarea class="obs-textarea"
-        x-model="obs"
-        placeholder="Ex: não colocar pretinho nos pneus, carro já está na doca..."
-        maxlength="500"
-        rows="3"></textarea>
-      <div class="obs-hint" x-show="obs.trim()" x-cloak>
-        <i class="fab fa-whatsapp"></i>
-        Será enviado ao lavador via WhatsApp
-      </div>
-    </div>
-
-    <!-- Lavadores -->
-    <div class="sec">
-      <div class="sec-lbl">
-        Responsável
-        <b x-show="lavs.length > 0" x-text="'· ' + lavs.length" x-cloak></b>
-        <span x-show="lavs.length === 0" x-cloak style="font-size:11px;font-weight:400;color:var(--light);margin-left:4px">(opcional)</span>
-      </div>
-
-      <!-- Carregando -->
-      <div class="sec-spinner" x-show="loadingLavadores" x-cloak>
-        <div class="spin-ico"></div> Carregando...
-      </div>
-
-      <!-- Nenhum -->
-      <div class="sec-empty" x-show="!loadingLavadores && lavadores.length === 0" x-cloak>
-        Nenhum lavador cadastrado
-      </div>
-
-      <div class="lav-row" x-show="!loadingLavadores && lavadores.length > 0" x-cloak>
-        <template x-for="(l, i) in lavadores" :key="l.id">
-          <div class="lav" :class="{on: lavs.includes(l.id)}" @click="toggleLav(l)">
-            <div class="lav-av"
-              :style="lavs.includes(l.id)
-                ? 'background:' + lavGrad(i) + ';box-shadow:0 4px 14px ' + lavShadow(i)
-                : ''">
-              <span x-text="l.nome?.[0]?.toUpperCase()"></span>
-              <div class="lav-tick" x-show="lavs.includes(l.id)" x-cloak>✓</div>
-            </div>
-            <span class="lav-name"
-              :style="lavs.includes(l.id) ? 'color:' + lavColor(i) : ''"
-              x-text="l.nome?.split(' ')[0]">
-            </span>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    </div><!-- /sections-content -->
-  </div><!-- /sections-wrap -->
-  </div><!-- /main -->
-
-  <!-- ══ FOOTER ════════════════════════════════ -->
-  <div class="ft">
-    <div class="ft-total">
-      <div class="ft-lbl">Total</div>
-      <div class="ft-val"><em>R$&nbsp;</em><span x-text="total().toFixed(2).replace('.',',')"></span></div>
-      <div class="ft-desc" x-show="descItens()" x-text="descItens()" x-cloak></div>
-    </div>
-    <button class="btn-criar"
-      :disabled="!podecriar()"
-      @click="criar()"
-      x-text="criando ? 'Criando...' : '✓  Criar Ordem'">
-    </button>
-  </div>
-
-  <!-- ══ CAMERA OCR MODAL ═══════════════════════ -->
-  <div class="camera-overlay" x-show="ocr.isOpen" x-cloak @click.self="closeCameraModal()">
-    <div class="camera-sheet" @click.stop>
-      <div class="camera-hd">
-        <span class="camera-hd-title">📷 Ler Placa</span>
-        <button class="camera-hd-close" @click="closeCameraModal()">✕</button>
-      </div>
-      <div class="camera-viewport">
-        <video id="ocrVideoNO" class="camera-video" autoplay playsinline muted></video>
-        <div class="camera-guide">
-          <div class="camera-guide-rect"></div>
-          <div class="camera-guide-label">Posicione a placa dentro do retângulo</div>
-        </div>
-      </div>
-      <div class="camera-controls">
-        <div class="camera-error" x-show="ocr.error" x-text="ocr.error" x-cloak></div>
-        <button class="camera-btn-cap" @click="ocrCapturar()" :disabled="ocr.isProcessing">
-          <template x-if="!ocr.isProcessing">
-            <span>Capturar</span>
-          </template>
-          <template x-if="ocr.isProcessing">
-            <span style="display:flex;align-items:center;gap:8px">
-              <span class="cam-spin"></span> Analisando...
-            </span>
-          </template>
-        </button>
-      </div>
-    </div>
-    <canvas id="ocrCanvasNO" style="display:none"></canvas>
-  </div>
-
-  <!-- ══ BOTTOM SHEET: NOVO / EDITAR CLIENTE ═══ -->
-  <div class="backdrop" x-show="showForm" x-cloak @click.self="showForm=false">
-    <div class="sheet" @click.stop>
-      <div class="sheet-handle"></div>
-      <div class="sheet-header">
-        <div>
-          <div class="sheet-title" x-text="formEdicao ? 'Editar Cliente' : 'Novo Cliente'"></div>
-          <div class="sheet-sub">Dados do cliente e veículo</div>
-        </div>
-        <button class="sheet-close" @click="showForm=false">✕</button>
-      </div>
-
-      <div class="sheet-body">
-        <div class="form-required-hint"><span>*</span> campos obrigatórios</div>
-
-        <!-- Nome -->
-        <div class="form-row cols1">
-          <div class="fld" style="position:relative">
-            <label>Nome completo</label>
-            <input type="text" placeholder="Ex: João da Silva (opcional — N/A se vazio)"
-              x-model="form.nome"
-              @input="buscarClientesNoForm()"
+  <div class="secoes">
+    <!-- 1. cliente -->
+    <section class="cartao" style="--sc: var(--pink); --cf: var(--ink)">
+      <div class="sec-cab"><span class="num">1</span><h2>Cliente</h2></div>
+      <div x-show="!cliente">
+        <div class="busca">
+          <div class="busca-campo">
+            <span class="lupa"><i class="fas fa-search"></i></span>
+            <input class="entrada" type="search" placeholder="Nome, placa ou modelo…"
+              x-model="searchQuery"
+              @input="buscar()"
+              @blur="setTimeout(()=> showDrop=false, 180)"
+              @focus="if(results.length > 0 || searchQuery.length >= 2) showDrop=true"
               autocomplete="off">
-
-            <!-- Dropdown de sugestões de clientes -->
-            <div x-show="formClienteSuggestions.length > 0" x-cloak
-              style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; margin-top:4px; z-index:100; max-height:200px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-              <template x-for="c in formClienteSuggestions" :key="c.id">
-                <div @click="selecionarClienteDoForm(c)"
-                  style="padding:10px 12px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center"
-                  @mouseenter="$el.style.background='var(--light)'"
-                  @mouseleave="$el.style.background='white'">
-                  <div style="flex:1">
-                    <div style="font-weight:500" x-text="c.nome"></div>
-                    <div style="font-size:12px; color:var(--mid)" x-text="c.telefone || 'Sem telefone'"></div>
-                  </div>
-                  <div style="margin-left:8px; color:var(--mid); font-size:12px">
-                    <span x-text="(c.veiculos?.length || 0) + ' veículo(s)'"></span>
-                  </div>
+            <div class="resultados" x-show="showDrop" x-cloak>
+              <div class="res carregando" x-show="buscando"><span class="gira"></span> Buscando…</div>
+              <template x-for="r in results" :key="r.clienteId + '-' + (r.veiculoId || 'novo')">
+                <div class="res" @mousedown.prevent="pick(r)">
+                  <span class="av" x-text="r.nome[0]?.toUpperCase()"></span>
+                  <span style="min-width:0"><b x-text="r.nome"></b><small x-text="(r.modelo && r.modelo !== '—' ? r.modelo + ' · ' : '') + (r.placa && r.placa !== '—' ? r.placa : '')"></small></span>
                 </div>
               </template>
-              <div x-show="formBuscandoClientes" x-cloak
-                style="padding:10px; text-align:center; color:var(--mid); font-size:12px">
-                Buscando...
+              <div class="res" @mousedown.prevent="abrirFormNovoCliente()">
+                <span class="av novo">+</span>
+                <span><b style="color: var(--green)">Cadastrar novo cliente</b><small x-text="searchQuery.length > 0 ? 'Nome: “' + searchQuery + '”' : 'preencher dados do cliente'"></small></span>
               </div>
             </div>
-
-            <!-- Badge quando cliente está selecionado -->
-            <div x-show="formClienteSelecionado && !formClienteSuggestions.length" x-cloak
-              style="margin-top:6px; padding:6px 10px; background:var(--light); border-radius:4px; font-size:12px; color:var(--mid)">
-              <span>✓ Cliente selecionado: </span>
-              <strong x-text="formClienteSelecionado?.nome"></strong>
-            </div>
           </div>
+          <button class="btn-camera" title="Ler placa com a câmera" @click="abrirCamera()"><i class="fas fa-camera"></i></button>
         </div>
-
-        <!-- Telefone + CPF -->
-        <div class="form-row cols2">
-          <div class="fld">
-            <label>Telefone / WhatsApp</label>
-            <input type="tel" placeholder="(11) 9 0000-0000"
-              x-model="form.telefone"
-              @input="maskPhone($event)">
-          </div>
-          <div class="fld">
-            <label>CPF / CNPJ</label>
-            <input type="text" placeholder="000.000.000-00"
-              x-model="form.cpf">
-          </div>
+        <p class="dica-busca">Dica: aponte a câmera para a placa e o cliente aparece sozinho.</p>
+      </div>
+      <div x-show="cliente" x-cloak>
+        <div class="cli">
+          <div class="placa" x-show="cliente?.placa && cliente?.placa !== '—'"><b x-text="cliente?.placa"></b></div>
+          <div class="cli-info"><b x-text="cliente?.nome"></b><span x-text="[cliente?.modelo, cliente?.cor, cliente?.telefone].filter(v => v && v !== '—').join(' · ')"></span></div>
+          <button class="mini-btn" title="Editar cliente" @click="abrirFormEdicao()"><i class="fas fa-pen"></i></button>
+          <button class="mini-btn" title="Trocar cliente" @click="cliente=null; ultimoServicoId=null; catLocked=false; searchQuery=''"><i class="fas fa-times"></i></button>
         </div>
+      </div>
+    </section>
 
-        <!-- Modelo + Placa -->
-        <div class="form-row cols2">
-          <div class="fld">
-            <label>Modelo do veículo <span>*</span></label>
-            <input type="text" placeholder="Ex: HB20, Civic"
-              x-model="form.modelo"
-              :class="{error: formErros.modelo}"
-              @input="formErros.modelo=false">
-            <div class="fld-err" x-show="formErros.modelo" x-cloak>Modelo é obrigatório</div>
-          </div>
-          <div class="fld">
-            <label>Placa <span>*</span></label>
-            <input type="text" placeholder="ABC-1234"
-              x-model="form.placa"
-              :class="{error: formErros.placa}"
-              @input="form.placa=$event.target.value.toUpperCase(); formErros.placa=false"
-              maxlength="8">
-            <div class="fld-err" x-show="formErros.placa" x-cloak>Placa é obrigatória</div>
-          </div>
+    <p class="aviso-trava" x-show="!cliente"><i class="fas fa-lock"></i> Escolha o cliente para liberar o resto</p>
+
+    <div class="secoes" :class="{travada: !cliente}">
+      <!-- 2. veículo -->
+      <section class="cartao" style="--sc: var(--blue)">
+        <div class="sec-cab"><span class="num">2</span><h2>Veículo</h2></div>
+        <div class="tipos">
+          <button class="tipo" :class="{on: tipo==='CARRO'}" @click="tipo='CARRO'"><i class="fas fa-car-side"></i><span><b>Carro</b><small>hatch · sedan · SUV</small></span></button>
+          <button class="tipo" :class="{on: tipo==='MOTO'}" @click="tipo='MOTO'; cat=null"><i class="fas fa-motorcycle"></i><span><b>Moto</b><small>qualquer porte</small></span></button>
         </div>
-
-        <!-- Cor do veículo -->
-        <div class="fld" style="margin-bottom:10px">
-          <label>
-            Cor do veículo
-            <span x-show="form.cor" x-text="'— ' + form.cor" style="color:var(--blue);text-transform:none;letter-spacing:0;font-weight:600" x-cloak></span>
-          </label>
-          <div class="color-grid">
-            <template x-for="c in coresCarro" :key="c.nome">
-              <div class="color-sw" :class="{on: form.cor===c.nome}" @click="form.cor=c.nome">
-                <div class="color-circle" :style="'background:' + c.hex"></div>
-                <span class="color-lbl" x-text="c.nome"></span>
-              </div>
+        <div x-show="tipo==='CARRO'" x-cloak>
+          <!-- travada: veículo cadastrado com categoria → só ela + trocar -->
+          <div class="categorias" x-show="catLocked" x-cloak>
+            <button class="cat on" x-text="(cats.find(c => c.k === cat)?.l) || cat"></button>
+            <button class="cat trocar" @click="destravarCategoria()"><i class="fas fa-pen" style="font-size: 10px"></i> trocar</button>
+          </div>
+          <div class="categorias" x-show="!catLocked">
+            <template x-for="c in cats" :key="c.k">
+              <button class="cat" :class="{on: cat===c.k}" @click="cat=c.k" x-text="c.l"></button>
             </template>
           </div>
         </div>
+      </section>
 
-        <!-- Ano -->
-        <div class="form-row cols1">
-          <div class="fld">
-            <label>Ano</label>
-            <input type="number" placeholder="2020"
-              x-model="form.ano" min="1990" max="2030">
-          </div>
-        </div>
-      </div>
-
-      <div class="sheet-footer">
-        <button class="btn-cancel" @click="showForm=false">Cancelar</button>
-        <button class="btn-confirm" @click="confirmarCliente()"
-          x-text="formEdicao ? 'Salvar Alterações' : 'Confirmar Cliente'">
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ BOTTOM SHEET: TODOS OS ADICIONAIS ═════ -->
-  <div class="backdrop" x-show="showAllAdds" x-cloak @click.self="showAllAdds=false">
-    <div class="sheet" @click.stop>
-      <div class="sheet-handle"></div>
-      <div class="sheet-header">
-        <div>
-          <div class="sheet-title">Adicionais</div>
-          <div class="sheet-sub">Toque para adicionar ou remover</div>
-        </div>
-        <button class="sheet-close" @click="showAllAdds=false">✕</button>
-      </div>
-      <div class="sheet-body">
-        <div style="position:relative;margin-bottom:14px">
-          <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--light);font-size:13px"></i>
-          <input type="text" x-model="addSearch" placeholder="Buscar adicional..."
-            style="width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none">
-        </div>
-        <div class="add-list">
-          <template x-for="a in adicionaisFiltrados()" :key="a.id">
-            <button class="add-row" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)">
-              <div class="add-row-check" x-show="adds.includes(a.id)" x-cloak>✓</div>
-              <span class="add-row-name" x-text="a.nome"></span>
-              <span class="add-row-price" x-text="'+ R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span>
+      <!-- 3. serviço -->
+      <section class="cartao" style="--sc: var(--orange)">
+        <div class="sec-cab"><span class="num">3</span><h2>Serviço</h2></div>
+        <p class="vazio-sec" x-show="!tipo">Escolha o tipo de veículo primeiro</p>
+        <p class="vazio-sec" x-show="tipo && loadingServicos" x-cloak><span class="gira"></span> Carregando serviços…</p>
+        <p class="vazio-sec" x-show="tipo && !loadingServicos && servicos.length === 0" x-cloak>Nenhum serviço cadastrado para este tipo</p>
+        <div class="servicos" x-show="tipo && !loadingServicos && servicos.length > 0" x-cloak>
+          <template x-for="s in servicos" :key="s.id">
+            <button class="svc" :class="{on: svc?.id===s.id}" @click="svc = svc?.id===s.id ? null : s">
+              <span class="ultimo" x-show="ultimoServicoId === s.id" x-cloak>último</span>
+              <span class="marca">✓</span>
+              <b x-text="s.nome"></b>
+              <small x-text="s.descricao || ''"></small>
+              <span class="preco" x-text="'R$ ' + Number(s.preco || 0).toFixed(2).replace('.',',')"></span>
             </button>
           </template>
-          <div x-show="adicionaisFiltrados().length === 0" x-cloak style="text-align:center;color:var(--light);padding:24px 0;font-size:13px">
-            Nenhum adicional encontrado
+        </div>
+        <div x-show="adicionais.length > 0" x-cloak>
+          <div class="adds-cab">
+            <span class="rotulo">Adicionais<span x-show="adds.length > 0" x-text="' · ' + adds.length"></span></span>
+            <button class="btn-todos" x-show="adicionais.length > TOP_ADD_COUNT" @click="showAllAdds=true"><i class="fas fa-layer-group"></i> <span x-text="'Todos (' + adicionais.length + ')'"></span></button>
+          </div>
+          <div class="adds">
+            <template x-for="a in adicionaisTop()" :key="a.id">
+              <button class="add" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)"><span x-text="a.nome"></span> <em x-text="'+R$' + Number(a.preco || 0).toFixed(2).replace('.',',')"></em></button>
+            </template>
           </div>
         </div>
-      </div>
-      <div class="sheet-footer">
-        <button class="btn-confirm" @click="showAllAdds=false" style="flex:1">
-          Concluído<span x-show="adds.length > 0" x-text="' · ' + adds.length + ' selecionado(s)'" x-cloak></span>
-        </button>
-      </div>
-    </div>
-  </div>
+      </section>
 
-  <!-- ══ BOTTOM SHEET: SUCESSO ═════════════════ -->
-  <div class="backdrop" x-show="sucesso" x-cloak>
-    <div class="sheet-success" @click.stop>
-      <div class="sheet-handle"></div>
-      <div style="height:20px"></div>
-      <div class="s-ring">✓</div>
-      <div class="s-title">Ordem Criada!</div>
-      <div class="s-sub">Adicionada à fila com sucesso</div>
-      <div class="s-num" x-text="'Ordem # ' + ordemNum"></div>
-      <button class="btn-nova" @click="reset()">+ Nova Ordem</button>
-      <a class="btn-dash" href="ordens.html">Ver Ordens</a>
+      <!-- 4. equipe + observação -->
+      <section class="cartao" style="--sc: var(--green)">
+        <div class="sec-cab"><span class="num">4</span><h2>Equipe <small x-text="lavs.length ? '· ' + lavs.length : '(opcional)'"></small></h2></div>
+        <p class="vazio-sec" x-show="loadingLavadores" x-cloak><span class="gira"></span> Carregando…</p>
+        <p class="vazio-sec" x-show="!loadingLavadores && lavadores.length === 0" x-cloak>Nenhum lavador cadastrado</p>
+        <div class="equipe" x-show="!loadingLavadores && lavadores.length > 0" x-cloak>
+          <template x-for="(l, i) in lavadores" :key="l.id">
+            <button class="lav" :class="{on: lavs.includes(l.id)}" @click="toggleLav(l)">
+              <span class="av" :style="lavs.includes(l.id) ? 'background:' + lavGrad(i) : ''" x-text="l.nome?.[0]?.toUpperCase()"></span>
+              <span x-text="l.nome?.split(' ')[0]"></span>
+            </button>
+          </template>
+        </div>
+        <div x-show="cliente" x-cloak>
+          <div class="sec-cab" style="margin: 12px 0 6px"><h2 style="font-size: 13px">Observação <small>(opcional)</small></h2></div>
+          <textarea class="obs" x-model="obs" maxlength="500" rows="3" placeholder="Ex.: não passar pretinho, carro já está na doca…"></textarea>
+          <p class="obs-dica" x-show="obs.trim()" x-cloak><i class="fab fa-whatsapp"></i> Vai junto no aviso do lavador pelo WhatsApp</p>
+        </div>
+      </section>
     </div>
   </div>
+</div>
+
+<!-- rodapé fixo: total + criar -->
+<div class="rodape-ordem">
+  <div class="rodape-dentro">
+    <div class="total"><span class="rotulo">Total</span><b><small>R$</small><span x-text="total().toFixed(2).replace('.',',')">0,00</span></b><span class="itens" x-text="descItens() || 'escolha um serviço'"></span></div>
+    <button class="btn verde btn-criar" :disabled="!podecriar() || criando" @click="criar()"><i class="fas fa-check"></i> <span x-text="criando ? 'Criando…' : 'Criar ordem'"></span></button>
+  </div>
+</div>
+
+<!-- câmera: leitura da placa -->
+<div class="folha-fundo" x-show="ocr.isOpen" x-cloak @click.self="closeCameraModal()">
+  <div class="folha" style="--sc: var(--orange)" role="dialog" aria-label="Ler placa" @click.stop>
+    <div class="folha-cab"><h3>Ler placa<small>posicione a placa dentro do retângulo</small></h3><button class="fechar" @click="closeCameraModal()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo">
+      <div class="camera">
+        <video id="ocrVideoNO" autoplay playsinline muted></video>
+        <div class="guia"><i></i></div>
+      </div>
+      <div class="camera-erro" x-show="ocr.error" x-text="ocr.error" x-cloak></div>
+    </div>
+    <div class="folha-pe">
+      <button class="btn azul" @click="ocrCapturar()" :disabled="ocr.isProcessing">
+        <template x-if="!ocr.isProcessing"><span><i class="fas fa-camera"></i> Capturar</span></template>
+        <template x-if="ocr.isProcessing"><span style="display:flex;align-items:center;gap:8px"><span class="gira" style="border-color: var(--cream); border-top-color: transparent"></span> Analisando…</span></template>
+      </button>
+    </div>
+  </div>
+  <canvas id="ocrCanvasNO" style="display:none"></canvas>
+</div>
+
+<!-- novo cliente / editar -->
+<div class="folha-fundo" x-show="showForm" x-cloak @click.self="showForm=false">
+  <div class="folha" style="--sc: var(--pink)" role="dialog" aria-label="Cliente" @click.stop>
+    <div class="folha-cab"><h3><span x-text="formEdicao ? 'Editar cliente' : 'Novo cliente'"></span><small>dados do cliente e do veículo</small></h3><button class="fechar" @click="showForm=false"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo">
+      <div class="obrig"><span>*</span> campos obrigatórios</div>
+      <div class="form-grade">
+        <div class="campo inteiro" style="position:relative">
+          <label>Nome</label>
+          <input class="entrada" type="text" placeholder="Ex.: João da Silva (opcional)" x-model="form.nome" @input="buscarClientesNoForm()" autocomplete="off">
+          <div class="sugestoes" x-show="formClienteSuggestions.length > 0" x-cloak>
+            <template x-for="c in formClienteSuggestions" :key="c.id">
+              <div class="res" @click="selecionarClienteDoForm(c)">
+                <span class="av" x-text="c.nome?.[0]?.toUpperCase()"></span>
+                <span style="flex:1;min-width:0"><b x-text="c.nome"></b><small x-text="(c.telefone || 'Sem telefone') + ' · ' + (c.veiculos?.length || 0) + ' veículo(s)'"></small></span>
+              </div>
+            </template>
+            <div class="res carregando" x-show="formBuscandoClientes" x-cloak><span class="gira"></span> Buscando…</div>
+          </div>
+          <div class="cli-sel" x-show="formClienteSelecionado && !formClienteSuggestions.length" x-cloak>✓ Cliente selecionado: <strong x-text="formClienteSelecionado?.nome"></strong></div>
+        </div>
+        <div class="campo"><label>WhatsApp</label><input class="entrada" type="tel" placeholder="(11) 9 0000-0000" x-model="form.telefone" @input="maskPhone($event)"></div>
+        <div class="campo"><label>CPF / CNPJ</label><input class="entrada" type="text" placeholder="000.000.000-00" x-model="form.cpf"></div>
+        <div class="campo">
+          <label>Modelo <span>*</span></label>
+          <input class="entrada" type="text" placeholder="Ex.: HB20" x-model="form.modelo" :class="{erro: formErros.modelo}" @input="formErros.modelo=false">
+          <span class="erro-txt" x-show="formErros.modelo" x-cloak>Modelo é obrigatório</span>
+        </div>
+        <div class="campo">
+          <label>Placa <span>*</span></label>
+          <input class="entrada" type="text" placeholder="ABC1D23" maxlength="8" x-model="form.placa" :class="{erro: formErros.placa}" @input="form.placa=$event.target.value.toUpperCase(); formErros.placa=false">
+          <span class="erro-txt" x-show="formErros.placa" x-cloak>Placa é obrigatória</span>
+        </div>
+        <div class="campo inteiro">
+          <label>Cor <span class="cor-nome" x-show="form.cor" x-text="'— ' + form.cor" x-cloak></span></label>
+          <div class="cores">
+            <template x-for="c in coresCarro" :key="c.nome">
+              <button type="button" class="cor" :class="{on: form.cor===c.nome}" :title="c.nome" :style="'background:' + c.hex" @click="form.cor=c.nome"></button>
+            </template>
+          </div>
+        </div>
+        <div class="campo"><label>Ano</label><input class="entrada" type="number" placeholder="2020" x-model="form.ano" min="1990" max="2030"></div>
+      </div>
+    </div>
+    <div class="folha-pe">
+      <button class="btn" @click="showForm=false">Cancelar</button>
+      <button class="btn verde" @click="confirmarCliente()"><i class="fas fa-check"></i> <span x-text="formEdicao ? 'Salvar' : 'Confirmar cliente'"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- todos os adicionais -->
+<div class="folha-fundo" x-show="showAllAdds" x-cloak @click.self="showAllAdds=false">
+  <div class="folha" style="--sc: var(--pink)" role="dialog" aria-label="Adicionais" @click.stop>
+    <div class="folha-cab"><h3>Adicionais<small>toque para pôr ou tirar</small></h3><button class="fechar" @click="showAllAdds=false"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo" style="gap: 0">
+      <input class="entrada" type="text" x-model="addSearch" placeholder="Buscar adicional…" style="margin-bottom: 8px">
+      <template x-for="a in adicionaisFiltrados()" :key="a.id">
+        <button class="add-linha" :class="{on: adds.includes(a.id)}" @click="toggleAdd(a)"><span class="caixinha"></span><b x-text="a.nome"></b><span x-text="'+ R$ ' + Number(a.preco || 0).toFixed(2).replace('.',',')"></span></button>
+      </template>
+      <p class="vazio-sec" x-show="adicionaisFiltrados().length === 0" x-cloak style="justify-content:center;padding:20px 0">Nenhum adicional encontrado</p>
+    </div>
+    <div class="folha-pe"><button class="btn azul" @click="showAllAdds=false">Concluído<span x-show="adds.length > 0" x-text="' · ' + adds.length + ' escolhido(s)'" x-cloak></span></button></div>
+  </div>
+</div>
+
+<!-- sucesso -->
+<div class="folha-fundo" x-show="sucesso" x-cloak>
+  <div class="folha" style="--sc: var(--green)" role="dialog" aria-label="Ordem criada" @click.stop>
+    <div class="sucesso">
+      <div class="anel">✓</div>
+      <h3>Ordem criada!</h3>
+      <span class="num" x-text="'#' + ordemNum"></span>
+      <p>Já está na fila de espera.</p>
+      <div class="acoes">
+        <button class="btn" @click="reset()"><i class="fas fa-plus"></i> Outra ordem</button>
+        <a class="btn azul" href="/funcionario/ordens.html"><i class="fas fa-list"></i> Ver ordens</a>
+      </div>
+    </div>
+  </div>
+</div>
 
   <script src="../api.js"></script>
   <script>
     // Paleta de gradientes para lavadores (atribuída por índice)
-    const GRADS = [
-      { grad: 'linear-gradient(135deg,#2563eb,#60a5fa)', shadow: 'rgba(37,99,235,.35)',  color: '#60a5fa' },
-      { grad: 'linear-gradient(135deg,#059669,#34d399)', shadow: 'rgba(5,150,105,.35)',   color: '#34d399' },
-      { grad: 'linear-gradient(135deg,#7c3aed,#a78bfa)', shadow: 'rgba(124,58,237,.35)', color: '#a78bfa' },
-      { grad: 'linear-gradient(135deg,#ea580c,#fb923c)', shadow: 'rgba(234,88,12,.35)',   color: '#fb923c' },
-      { grad: 'linear-gradient(135deg,#db2777,#f472b6)', shadow: 'rgba(219,39,119,.35)',  color: '#f472b6' },
-      { grad: 'linear-gradient(135deg,#0d9488,#2dd4bf)', shadow: 'rgba(13,148,136,.35)',  color: '#2dd4bf' },
-      { grad: 'linear-gradient(135deg,#d97706,#fcd34d)', shadow: 'rgba(217,119,6,.35)',   color: '#fcd34d' },
-      { grad: 'linear-gradient(135deg,#dc2626,#f87171)', shadow: 'rgba(220,38,38,.35)',   color: '#f87171' },
-    ];
+    // Cores dos lavadores (atribuídas por índice), na paleta Decola
+    const GRADS = ['#2f62e6', '#22a15a', '#6b4fd8', '#ff5b2e', '#c2418f', '#0d9488', '#d4a017', '#e5383b']
+      .map(c => ({ grad: c, shadow: c, color: c }));
 
     function app() {
       return {
@@ -1873,6 +1002,16 @@
         lavShadow(i) { return GRADS[i % GRADS.length].shadow; },
         lavColor(i)  { return GRADS[i % GRADS.length].color; },
 
+        // ── Trilha do topo: cliente → veículo → serviço → equipe ──
+        trilhaFeitos() {
+          return [!!this.cliente, !!(this.tipo && (this.tipo !== 'CARRO' || this.cat)), !!this.svc, this.lavs.length > 0];
+        },
+        trilhaP() {
+          const f = this.trilhaFeitos();
+          let n = 0; while (n < 4 && f[n]) n++;
+          return n <= 1 ? 0 : ((n - 1) / 3) * 100;
+        },
+
         // ── Totais ─────────────────────────
         total() {
           let t = this.svc?.preco || 0;
@@ -2094,5 +1233,6 @@
       setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
