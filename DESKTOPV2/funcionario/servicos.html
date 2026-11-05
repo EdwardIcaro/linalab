@@ -2,383 +2,148 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Serviços — Lina X</title>
-  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <style>
-    :root {
-      --navy:   #0f172a;
-      --navy-m: #1e293b;
-      --blue:   #3b82f6;
-      --blue-d: #2563eb;
-      --text:   #0f172a;
-      --mid:    #64748b;
-      --light:  #94a3b8;
-      --border: #e2e8f0;
-      --bg:     #f1f5f9;
-      --white:  #ffffff;
-      --green:  #10b981;
-      --green-d:#059669;
-      --amber:  #f59e0b;
-      --red:    #ef4444;
-      --r:      12px;
-    }
-    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      min-height: 100vh;
-    }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    :root { --light: var(--muted); --roxo: #7a3fd0; }
+    .pagina { max-width: 860px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 120px; }
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit p { margin: 4px 0 0; font-size: 11px; opacity: .8; }
+    .btn-novo { padding: 8px 12px; font-size: 13px; background: var(--yellow); box-shadow: 3px 3px 0 var(--pink); }
+    .abas { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; gap: 8px; overflow-x: auto; margin: 10px calc(var(--gutter) * -1) 0; padding: 12px var(--gutter);
+      background: linear-gradient(var(--space) 78%, transparent); scrollbar-width: none; }
+    .tab-btn { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 7px; border: 2.5px solid var(--cream); border-radius: 999px; background: none;
+      color: var(--cream); font: 700 12px var(--mono); cursor: pointer; white-space: nowrap; }
+    .tab-btn b { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--cream); color: var(--ink); display: grid; place-items: center; font: 400 11px/1 var(--dela); }
+    .tab-btn.active { background: var(--cream); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--pink); }
+    .tab-btn.active b { background: var(--ink); color: var(--yellow); }
+    .tab-btn .ico { width: 22px; text-align: center; }
 
-    /* ── HEADER ── */
-    .hd {
-      background: var(--navy);
-      padding: 0 16px;
-      height: 56px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
-    }
-    .hd-left { display: flex; align-items: center; gap: 12px; }
-    .hd-back {
-      background: none; border: none; color: #fff;
-      font-size: 18px; cursor: pointer; padding: 6px;
-      border-radius: 8px; transition: background .15s;
-    }
-    .hd-back:hover { background: rgba(255,255,255,.1); }
-    .hd-title { font-size: 16px; font-weight: 700; color: #fff; }
-    .hd-count { font-size: 11px; color: rgba(255,255,255,.5); }
-    .hd-btn {
-      background: var(--blue-d); border: none; color: #fff;
-      padding: 8px 14px; border-radius: 8px; font-size: 13px;
-      font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
-      transition: background .15s;
-    }
-    .hd-btn:hover { background: var(--blue); }
+    .grupo-tit { display: flex; align-items: center; gap: 10px; margin: 8px 0 10px; font: 400 15px var(--dela); }
+    .grupo-tit i { width: 30px; height: 30px; border-radius: 9px; border: 2.5px solid var(--ink); background: var(--c); color: var(--cream); display: grid; place-items: center; font-size: 13px; flex: none; }
+    .grupo-tit::after { content: ""; flex: 1; border-top: 2px dashed var(--cream); opacity: .4; }
+    .grupo-tit small { font: 700 11px var(--mono); opacity: .7; }
+    .grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    @media (min-width: 720px) { .grade { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .svc { cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; --sc: var(--c); min-height: 120px; }
+    .svc b { font: 400 14px/1.15 var(--dela); overflow-wrap: anywhere; }
+    .svc .preco { font: 400 20px/1 var(--dela); margin-top: auto; white-space: nowrap; }
+    .svc .preco small { font-size: .55em; margin-right: 2px; }
+    .etqs { display: flex; flex-wrap: wrap; gap: 4px; }
+    .etq { padding: 0 6px; border-radius: 5px; border: 1.5px solid var(--ink); background: var(--paper); font: 700 9px/1.6 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+    .etq.com { background: var(--yellow); }
+    .etq.todas { border-style: dashed; }
+    .lista-ad { display: grid; gap: 10px; }
+    .linha-ad { display: flex; align-items: center; gap: 12px; cursor: pointer; --sc: var(--pink); }
+    .linha-ad .ic { width: 38px; height: 38px; border-radius: 11px; border: 2.5px solid var(--ink); background: var(--pink); display: grid; place-items: center; flex: none; }
+    .linha-ad .t { flex: 1; min-width: 0; }
+    .linha-ad .t b { display: block; font: 400 14px var(--dela); }
+    .linha-ad .t span { display: block; font-size: 11px; color: var(--muted); }
+    .linha-ad .v { font: 400 16px var(--dela); white-space: nowrap; }
+    .dica { font-size: 11px; opacity: .85; margin: 0 0 12px; }
 
-    /* ── TABS ── */
-    .tabs-bar {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      position: sticky; top: 56px; z-index: 90;
-    }
-    .tab-btn {
-      flex: 1; padding: 13px 0;
-      border: none; background: none;
-      font-size: 13px; font-weight: 600; color: var(--mid);
-      cursor: pointer; border-bottom: 2px solid transparent;
-      transition: all .15s; display: flex; align-items: center;
-      justify-content: center; gap: 6px;
-    }
-    .tab-btn.active { color: var(--blue-d); border-bottom-color: var(--blue-d); }
-    .tab-count {
-      background: var(--bg); border-radius: 99px;
-      padding: 1px 7px; font-size: 11px; font-weight: 700; color: var(--mid);
-    }
-    .tab-btn.active .tab-count { background: #dbeafe; color: var(--blue-d); }
-
-    /* ── LISTA ── */
-    .list-body { padding: 12px 16px 100px; }
-
-    .list-section-title {
-      font-size: 10px; font-weight: 700; color: var(--light);
-      text-transform: uppercase; letter-spacing: .6px;
-      padding: 0 4px; margin-bottom: 8px;
-    }
-
-    .item-list { display: flex; flex-direction: column; gap: 8px; }
-
-    .item-row {
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: var(--r);
-      padding: 14px 16px;
-      display: flex; align-items: center; gap: 12px;
-      cursor: pointer; transition: border-color .15s, box-shadow .15s;
-    }
-    .item-row:hover { border-color: var(--blue); box-shadow: 0 2px 12px rgba(37,99,235,.07); }
-    .item-row:active { transform: scale(.99); }
-
-    .item-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; flex-shrink: 0;
-    }
-    .item-icon.servico { background: #dbeafe; color: var(--blue-d); }
-    .item-icon.adicional { background: #fef3c7; color: #92400e; }
-
-    .item-info { flex: 1; min-width: 0; }
-    .item-name {
-      font-size: 14px; font-weight: 700; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .item-meta { font-size: 11px; color: var(--mid); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; }
-
-    .item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-    .item-price { font-size: 15px; font-weight: 800; color: var(--green-d); }
-    .item-badge {
-      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
-    }
-    .badge-carro { background: #dbeafe; color: var(--blue-d); }
-    .badge-moto  { background: #fce7f3; color: #9d174d; }
-    .badge-outros{ background: #f0fdf4; color: #065f46; }
-    .badge-comissao { background: #f0fdf4; color: #065f46; }
-
-    /* ── ESTADOS ── */
-    .state-box {
-      display: flex; flex-direction: column;
-      align-items: center; text-align: center;
-      padding: 60px 20px; gap: 12px;
-    }
-    .state-icon { font-size: 48px; color: var(--border); }
-    .state-title { font-size: 16px; font-weight: 700; }
-    .state-sub { font-size: 13px; color: var(--mid); }
-    .btn-state {
-      padding: 10px 20px; background: var(--blue-d); color: #fff;
-      border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
-      cursor: pointer; margin-top: 4px;
-    }
-
-    .spin {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border); border-top-color: var(--blue-d);
-      border-radius: 50%; animation: spin .8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── DRAWER ── */
-    .drawer-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.45); z-index: 200;
-    }
-    .drawer-overlay.open { display: block; }
-    .drawer {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--white); border-radius: 20px 20px 0 0;
-      z-index: 201; max-height: 92vh; overflow-y: auto;
-      transform: translateY(100%);
-      transition: transform .3s cubic-bezier(.4,0,.2,1);
-      display: flex; flex-direction: column;
-    }
-    .drawer.open { transform: translateY(0); }
-    .drawer-handle {
-      width: 36px; height: 4px; background: var(--border);
-      border-radius: 99px; margin: 12px auto 0; flex-shrink: 0;
-    }
-    .drawer-header {
-      padding: 16px 20px 12px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .drawer-title { font-size: 16px; font-weight: 700; }
-    .drawer-close {
-      background: none; border: none;
-      width: 32px; height: 32px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; color: var(--mid); cursor: pointer; transition: background .15s;
-    }
-    .drawer-close:hover { background: var(--bg); }
-    .drawer-body { padding: 20px; flex: 1; overflow-y: auto; }
-    .drawer-footer {
-      padding: 12px 20px; border-top: 1px solid var(--border);
-      display: flex; gap: 10px; flex-shrink: 0;
-    }
-
-    /* ── FORM ── */
-    .form-group { margin-bottom: 16px; }
-    .form-label {
-      display: block; font-size: 12px; font-weight: 600;
-      color: var(--mid); margin-bottom: 5px;
-    }
-    .form-input, .form-select {
-      width: 100%; padding: 10px 12px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-size: 14px; font-family: inherit; color: var(--text);
-      background: var(--white); transition: border-color .15s;
-    }
-    .form-input:focus, .form-select:focus { outline: none; border-color: var(--blue-d); }
-    .form-hint { font-size: 11px; color: var(--light); margin-top: 4px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    /* Checkboxes de categoria */
-    .cat-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 8px; margin-top: 4px;
-    }
-    .cat-chip {
-      display: flex; align-items: center; gap: 6px;
-      padding: 8px 10px; border-radius: 8px;
-      border: 1.5px solid var(--border); cursor: pointer;
-      font-size: 12px; font-weight: 600; color: var(--mid);
-      transition: all .15s; user-select: none;
-    }
-    .cat-chip input[type="checkbox"] { display: none; }
-    .cat-chip.checked { background: #dbeafe; border-color: var(--blue-d); color: var(--blue-d); }
-    .cat-chip i { font-size: 11px; }
-
-    /* Botões footer */
-    .btn-f {
-      flex: 1; padding: 12px; border: none; border-radius: 10px;
-      font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-      font-family: inherit;
-    }
-    .btn-f-cancel { background: var(--bg); color: var(--mid); }
-    .btn-f-cancel:hover { background: var(--border); }
-    .btn-f-save { background: var(--blue-d); color: #fff; }
-    .btn-f-save:hover { background: var(--blue); }
-    .btn-f-save:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-f-danger { background: #fef2f2; color: var(--red); border: 1.5px solid #fecaca; flex: none; padding: 12px 16px; }
-    .btn-f-danger:hover { background: #fee2e2; }
-
-    /* ── BOTTOM NAV ── */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--white); border-top: 1px solid var(--border);
-      display: flex; z-index: 100; height: 64px;
-    }
-    .nav-item {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-decoration: none; color: var(--light);
-      font-size: 10px; font-weight: 600; gap: 3px;
-      border: none; background: none; cursor: pointer;
-      border-top: 2px solid transparent; transition: all .15s;
-    }
-    .nav-item i { font-size: 20px; }
-    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
-
-    /* ── TOAST ── */
-    .toast-container {
-      position: fixed; bottom: 80px; left: 50%;
-      transform: translateX(-50%); z-index: 500;
-      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
-    }
-    .toast {
-      padding: 10px 18px; border-radius: 10px;
-      font-size: 13px; font-weight: 600; color: #fff;
-      animation: toast-in .2s ease; white-space: nowrap;
-    }
-    .toast.success { background: var(--green-d); }
-    .toast.error   { background: var(--red); }
-    .toast.info    { background: var(--blue-d); }
-    @keyframes toast-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-    @media (min-width: 640px) {
-      .drawer { left: auto; right: 0; width: 440px; border-radius: 20px 0 0 20px; max-height: 100vh; }
-    }
-
-    /* ── CATEGORIAS (drag + toggle) ── */
-    .cat-config { padding: 16px; }
-    .cat-config-hint {
-      font-size: 13px; color: var(--mid); background: #eff6ff;
-      border: 1px solid #bfdbfe; border-radius: 10px;
-      padding: 12px 14px; margin-bottom: 16px; line-height: 1.5;
-    }
-    .cat-config-hint i { color: var(--blue-d); margin-right: 6px; }
-    .cat-item {
-      display: flex; align-items: center; gap: 12px;
-      background: var(--white); border: 1.5px solid var(--border);
-      border-radius: 12px; padding: 14px; margin-bottom: 10px;
-      transition: border-color .15s, opacity .15s;
-    }
-    .cat-item.inativo { opacity: .55; }
-    .cat-item.sortable-ghost { opacity: .3; border-style: dashed; border-color: var(--blue); }
-    .cat-item.sortable-chosen { border-color: var(--blue); box-shadow: 0 4px 12px rgba(59,130,246,.15); }
-    .cat-drag {
-      color: var(--light); font-size: 16px; cursor: grab;
-      touch-action: none; flex-shrink: 0; padding: 4px;
-    }
-    .cat-drag:active { cursor: grabbing; }
-    .cat-name { flex: 1; font-size: 15px; font-weight: 600; color: var(--text); }
-    .cat-name small { display: block; font-size: 11px; font-weight: 400; color: var(--light); margin-top: 1px; }
-    /* Toggle switch */
-    .cat-toggle {
-      position: relative; width: 44px; height: 26px;
-      border-radius: 13px; background: #cbd5e1; cursor: pointer;
-      transition: background .2s; flex-shrink: 0; border: none;
-    }
+    /* categorias: arrastar e ligar/desligar */
+    .cat-config { background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--blue); padding: 6px 12px; }
+    .cat-config-hint { display: flex; gap: 8px; padding: 6px 0 10px; font-size: 11px; color: var(--muted); border-bottom: 2px dashed var(--line); }
+    .cat-item { display: flex; align-items: center; gap: 12px; padding: 9px 0; background: var(--cream); }
+    .cat-item + .cat-item { border-top: 2px dashed var(--line); }
+    .cat-item.inativo { opacity: .45; }
+    .cat-drag { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--ink); background: #9fc1ff; display: grid; place-items: center; font-size: 14px; flex: none; cursor: grab; }
+    .cat-name { flex: 1; font: 400 14px var(--dela); }
+    .cat-name small { display: block; font: 700 9px var(--mono); color: var(--muted); letter-spacing: .06em; }
+    .cat-toggle { width: 40px; height: 22px; border-radius: 999px; border: 2px solid var(--ink); background: var(--paper); position: relative; cursor: pointer; flex: none; }
+    .cat-toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); transition: transform .2s; }
     .cat-toggle.on { background: var(--green); }
-    .cat-toggle::after {
-      content: ''; position: absolute; top: 3px; left: 3px;
-      width: 20px; height: 20px; border-radius: 50%;
-      background: #fff; transition: transform .2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,.2);
-    }
-    .cat-toggle.on::after { transform: translateX(18px); }
-    .cat-save-bar {
-      position: sticky; bottom: 0; background: var(--white);
-      border-top: 1px solid var(--border); padding: 14px 16px;
-      padding-bottom: max(16px, env(safe-area-inset-bottom));
-    }
-    .cat-save-btn {
-      width: 100%; padding: 14px; border: none; border-radius: 12px;
-      background: var(--blue-d); color: #fff; font-size: 15px; font-weight: 700;
-      font-family: inherit; cursor: pointer; transition: background .15s;
-    }
-    .cat-save-btn:hover { background: var(--blue); }
-    .cat-save-btn:disabled { background: var(--light); cursor: not-allowed; }
+    .cat-toggle.on::after { transform: translateX(18px); background: var(--cream); }
+    .sortable-ghost { opacity: .4; }
+    .cat-save-bar { margin-top: 14px; }
+    .cat-save-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 3px solid var(--ink); border-radius: 12px;
+      background: var(--green); color: var(--cream); font: 400 15px var(--dela); box-shadow: 4px 4px 0 var(--ink); cursor: pointer; }
+    .state-box { text-align: center; padding: 26px 16px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--yellow); display: grid; gap: 6px; justify-items: center; }
+    .state-icon { font-size: 26px; }
+    .state-title { font: 400 17px var(--dela); }
+    .state-sub { font-size: 12px; color: var(--muted); }
+    .btn-state { margin-top: 6px; padding: 8px 14px; border: 3px solid var(--ink); border-radius: 12px; background: var(--yellow); color: var(--ink); font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+    .spin { width: 30px; height: 30px; border: 3px solid var(--ink); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
+
+    /* janela de baixo com o formulário */
+    .drawer-overlay { position: fixed; inset: 0; z-index: 800; background: #0e0f24bb; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer { position: fixed; z-index: 810; left: 0; right: 0; bottom: 0; margin: 0 auto; width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-bottom: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 0 var(--yellow);
+      transform: translateY(105%); transition: transform .45s cubic-bezier(.2, .9, .3, 1.1); }
+    .drawer.open { transform: none; }
+    .drawer-handle { width: 44px; height: 5px; background: var(--ink); opacity: .25; border-radius: 3px; margin: 10px auto 0; flex: none; }
+    .drawer-header { display: flex; align-items: center; gap: 10px; padding: 8px 14px 12px; border-bottom: 3px solid var(--ink); flex: none; }
+    .drawer-title { flex: 1; min-width: 0; font: 400 17px/1.1 var(--dela); }
+    .drawer-close { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; font-size: 15px; flex: none; }
+    .drawer-body { padding: 14px; overflow: auto; display: grid; gap: 12px; align-content: start; }
+    .drawer-footer { display: flex; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 3px solid var(--ink); flex: none; }
+    .drawer-footer .btn-f-save { flex: 1; }
+    .form-group { display: grid; gap: 4px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-label { font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .form-input, .form-select { width: 100%; min-width: 0; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 11px; font: 700 14px var(--mono); outline: none; }
+    textarea.form-input { font-weight: 400; font-size: 13px; }
+    .form-input:focus, .form-select:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .form-hint { font-size: 10px; color: var(--muted); }
+    .cat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cat-chip { padding: 5px 11px; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; user-select: none; }
+    .cat-chip input { display: none; }
+    .cat-chip.checked { background: var(--ink); color: var(--yellow); }
+    .cat-chip.checked::before { content: "✓ "; }
+    .btn-f { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 3px solid var(--ink); border-radius: 12px; padding: 10px 14px;
+      font: 400 14px/1.1 var(--dela); box-shadow: 3px 3px 0 var(--ink); cursor: pointer; background: var(--paper); color: var(--ink); }
+    .btn-f:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-f-save { background: var(--green); color: var(--cream); }
+    .btn-f-danger { color: #c1361a; }
+    .toast-container { position: fixed; z-index: 5000; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; justify-items: center; width: max-content; max-width: 90vw; }
+    .toast-container .toast { position: static; transform: none; opacity: 1; pointer-events: auto; }
+    .toast-container .toast.info { background: var(--yellow); }
   </style>
 </head>
 <body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <header class="hd">
-    <div class="hd-left">
-      <button class="hd-back" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
-      <div>
-        <div class="hd-title">Serviços e Adicionais</div>
-        <div class="hd-count" id="hd-count">Carregando...</div>
-      </div>
-    </div>
-    <button class="hd-btn" id="btnNovo" onclick="abrirNovo()">
-      <i class="fas fa-plus"></i> Novo
-    </button>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
+    <div class="topo-tit"><h1>Serviços</h1><p id="hd-count">Carregando...</p></div>
+    <button class="btn btn-novo" id="btnNovo" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo</button>
   </header>
 
-  <!-- TABS -->
-  <div class="tabs-bar">
-    <button class="tab-btn active" id="tabServicos" onclick="setTab('servicos')">
-      <i class="fas fa-wrench"></i> Serviços
-      <span class="tab-count" id="countServicos">—</span>
-    </button>
-    <button class="tab-btn" id="tabAdicionais" onclick="setTab('adicionais')">
-      <i class="fas fa-star"></i> Adicionais
-      <span class="tab-count" id="countAdicionais">—</span>
-    </button>
-    <button class="tab-btn" id="tabCategorias" onclick="setTab('categorias')">
-      <i class="fas fa-layer-group"></i> Categorias
-    </button>
+  <nav class="abas">
+    <button class="tab-btn active" id="tabServicos" onclick="setTab('servicos')"><b id="countServicos">—</b>Serviços</button>
+    <button class="tab-btn" id="tabAdicionais" onclick="setTab('adicionais')"><b id="countAdicionais">—</b>Adicionais</button>
+    <button class="tab-btn" id="tabCategorias" onclick="setTab('categorias')"><i class="fas fa-layer-group ico"></i>Categorias</button>
+  </nav>
+
+  <div id="listBody"><div class="state-box"><div class="spin"></div></div></div>
+</div>
+
+<nav id="bottomNav"></nav>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="fecharDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawerTitle">—</span>
+    <button class="drawer-close" onclick="fecharDrawer()"><i class="fas fa-times"></i></button>
   </div>
-
-  <!-- CONTEÚDO -->
-  <div class="list-body" id="listBody">
-    <div class="state-box"><div class="spin"></div></div>
-  </div>
-
-  <!-- BOTTOM NAV -->
-  <nav class="bottom-nav" id="bottomNav"></nav>
-
-  <!-- TOASTS -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- DRAWER OVERLAY -->
-  <div class="drawer-overlay" id="drawerOverlay" onclick="fecharDrawer()"></div>
-
-  <!-- DRAWER -->
-  <div class="drawer" id="drawer">
-    <div class="drawer-handle"></div>
-    <div class="drawer-header">
-      <span class="drawer-title" id="drawerTitle">—</span>
-      <button class="drawer-close" onclick="fecharDrawer()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="drawer-body" id="drawerBody"></div>
-    <div class="drawer-footer" id="drawerFooter"></div>
-  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer" id="drawerFooter"></div>
+</div>
 
   <script src="../api.js"></script>
   <script src="utils.js"></script>
@@ -413,7 +178,7 @@
       const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
       if (!perms.includes('config_ver_servicos')) {
         showToast('Sem permissão para gerenciar serviços', 'error');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+        setTimeout(() => { window.location.href = '/funcionario/index.html'; }, 1500);
         return;
       }
       document.getElementById('bottomNav').innerHTML = createMobileNav(PAGE_ACTIVE);
@@ -442,7 +207,7 @@
       } catch {
         document.getElementById('listBody').innerHTML = `
           <div class="state-box">
-            <i class="fas fa-exclamation-triangle state-icon"></i>
+            <div class="state-icon">⚠️</div>
             <div class="state-title">Erro ao carregar</div>
             <div class="state-sub">Verifique a conexão e tente novamente.</div>
             <button class="btn-state" onclick="carregar()">Tentar novamente</button>
@@ -495,7 +260,7 @@
       if (!categorias.length) {
         body.innerHTML = `
           <div class="state-box">
-            <i class="fas fa-layer-group state-icon"></i>
+            <div class="state-icon">🚗</div>
             <div class="state-title">Nenhuma categoria</div>
             <div class="state-sub">As categorias de carro aparecem aqui conforme os serviços são cadastrados.</div>
           </div>`;
@@ -574,44 +339,49 @@
       }
     }
 
-    // ── RENDER SERVIÇOS ───────────────────────────
+    // ── RENDER SERVIÇOS (cardápio agrupado por tipo de veículo) ──
+    const GRUPOS_TIPO = [
+      ['CARRO', 'Carro', 'fas fa-car-side', 'var(--blue)'],
+      ['MOTO', 'Moto', 'fas fa-motorcycle', 'var(--orange)'],
+      ['AVULSO', 'Higienização', 'fas fa-couch', 'var(--roxo)'],
+      ['OUTROS', 'Outros', 'fas fa-ellipsis', '#6b6780'],
+    ];
+    function precoHtml(v) { return `<small>R$</small>${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+
     function renderServicos() {
       const body = document.getElementById('listBody');
       if (!servicos.length) {
         body.innerHTML = `
           <div class="state-box">
-            <i class="fas fa-wrench state-icon"></i>
+            <div class="state-icon">🧽</div>
             <div class="state-title">Nenhum serviço</div>
             <div class="state-sub">Crie o primeiro serviço para começar.</div>
-            <button class="btn-state" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo Serviço</button>
+            <button class="btn-state" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo serviço</button>
           </div>`;
         return;
       }
-      body.innerHTML = `<div class="item-list">${servicos.map(s => cardServico(s)).join('')}</div>`;
+      const conhecidos = GRUPOS_TIPO.map(g => g[0]);
+      body.innerHTML = GRUPOS_TIPO.map(([t, rotulo, ico, cor]) => {
+        const lista = servicos.filter(s => t === 'OUTROS' ? !conhecidos.slice(0, 3).includes(s.tipoVeiculo) : s.tipoVeiculo === t);
+        if (!lista.length) return '';
+        return `<h2 class="grupo-tit"><i class="${ico}" style="--c: ${cor}"></i>${rotulo} <small>${lista.length}</small></h2>
+          <div class="grade">${lista.map(s => cardServico(s, cor)).join('')}</div>`;
+      }).join('');
     }
 
-    function cardServico(s) {
-      const tipo  = s.tipoVeiculo || '';
-      const cats  = (s.subtiposVeiculo || []).map(x => LABELS_CAT[x.categoria || x] || x.categoria || x).join(', ');
-      const tipoCls = tipo === 'CARRO' ? 'badge-carro' : tipo === 'MOTO' ? 'badge-moto' : 'badge-outros';
-      const tipoLabel = tipo === 'CARRO' ? 'Carro' : tipo === 'MOTO' ? 'Moto' : tipo || '—';
-      const comissao = s.comissaoPercentual != null
-        ? `<span class="item-badge badge-comissao">${s.comissaoPercentual}% comissão</span>` : '';
+    function cardServico(s, cor) {
+      const tipo = s.tipoVeiculo || '';
+      const subs = (s.subtiposVeiculo || []).map(x => x.categoria || x);
+      let etqs = '';
+      if (tipo === 'CARRO') etqs = subs.length ? subs.map(x => `<span class="etq">${escHtml(LABELS_CAT[x] || x)}</span>`).join('') : '<span class="etq todas">todos os carros</span>';
+      else if (tipo === 'AVULSO') etqs = subs.map(x => `<span class="etq">${escHtml(LABEL_ITEM_AVULSO(x))}</span>`).join('');
+      const comissao = s.comissaoPercentual != null ? `<span class="etq com">${s.comissaoPercentual}% comissão</span>` : '';
       return `
-        <div class="item-row" onclick="abrirEditarServico('${s.id}')">
-          <div class="item-icon servico"><i class="fas fa-wrench"></i></div>
-          <div class="item-info">
-            <div class="item-name">${escHtml(s.nome)}</div>
-            <div class="item-meta">
-              <span>${cats || 'Todos'}</span>
-            </div>
-          </div>
-          <div class="item-right">
-            <div class="item-price">${fmtR(s.preco)}</div>
-            <span class="item-badge ${tipoCls}">${tipoLabel}</span>
-            ${comissao}
-          </div>
-        </div>`;
+        <article class="cartao svc" style="--c: ${cor}" onclick="abrirEditarServico('${s.id}')">
+          <b>${escHtml(s.nome)}</b>
+          <div class="etqs">${etqs}${comissao}</div>
+          <span class="preco">${precoHtml(s.preco)}</span>
+        </article>`;
     }
 
     // ── RENDER ADICIONAIS ─────────────────────────
@@ -620,28 +390,23 @@
       if (!adicionais.length) {
         body.innerHTML = `
           <div class="state-box">
-            <i class="fas fa-star state-icon"></i>
+            <div class="state-icon">✨</div>
             <div class="state-title">Nenhum adicional</div>
             <div class="state-sub">Crie o primeiro adicional para começar.</div>
-            <button class="btn-state" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo Adicional</button>
+            <button class="btn-state" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo adicional</button>
           </div>`;
         return;
       }
-      body.innerHTML = `<div class="item-list">${adicionais.map(a => cardAdicional(a)).join('')}</div>`;
+      body.innerHTML = `<p class="dica">Os mais usados aparecem primeiro na nova ordem.</p><div class="lista-ad">${adicionais.map(a => cardAdicional(a)).join('')}</div>`;
     }
 
     function cardAdicional(a) {
       return `
-        <div class="item-row" onclick="abrirEditarAdicional('${a.id}')">
-          <div class="item-icon adicional"><i class="fas fa-star"></i></div>
-          <div class="item-info">
-            <div class="item-name">${escHtml(a.nome)}</div>
-            ${a.descricao ? `<div class="item-meta">${escHtml(a.descricao)}</div>` : ''}
-          </div>
-          <div class="item-right">
-            <div class="item-price">${fmtR(a.preco)}</div>
-          </div>
-        </div>`;
+        <article class="cartao linha-ad" onclick="abrirEditarAdicional('${a.id}')">
+          <span class="ic"><i class="fas fa-circle-plus"></i></span>
+          <span class="t"><b>${escHtml(a.nome)}</b><span>${a.descricao ? escHtml(a.descricao) : 'sem descrição'}</span></span>
+          <span class="v">+ ${precoHtml(a.preco)}</span>
+        </article>`;
     }
 
     // ── BOTÃO "NOVO" (contexto-aware) ─────────────
@@ -670,7 +435,7 @@
 
     function abrirFormServico(s) {
       editandoId = s?.id || null;
-      document.getElementById('drawerTitle').textContent = s ? 'Editar Serviço' : 'Novo Serviço';
+      document.getElementById('drawerTitle').textContent = s ? 'Editar serviço' : 'Novo serviço';
 
       const tipo     = s?.tipoVeiculo || '';
       const catsSel  = (s?.subtiposVeiculo || []).map(x => x.categoria || x);
@@ -847,7 +612,7 @@
 
     function abrirFormAdicional(a) {
       editandoId = a?.id || null;
-      document.getElementById('drawerTitle').textContent = a ? 'Editar Adicional' : 'Novo Adicional';
+      document.getElementById('drawerTitle').textContent = a ? 'Editar adicional' : 'Novo adicional';
 
       document.getElementById('drawerBody').innerHTML = `
         <div class="form-group">
@@ -922,11 +687,12 @@
     }
     function showToast(msg, type = 'info') {
       const el = document.createElement('div');
-      el.className = `toast ${type}`;
+      el.className = `toast ${type} show`;
       el.textContent = msg;
       document.getElementById('toastContainer').appendChild(el);
       setTimeout(() => el.remove(), 3000);
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
