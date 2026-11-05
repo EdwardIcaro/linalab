@@ -2,499 +2,156 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Comissões — Lina X</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <style>
-    :root {
-      --navy:   #0f172a;
-      --navy-m: #1e293b;
-      --blue-d: #2563eb;
-      --blue:   #3b82f6;
-      --green:  #059669;
-      --amber:  #f59e0b;
-      --red:    #ef4444;
-      --orange: #f97316;
-      --purple: #8b5cf6;
-      --bg:     #f1f5f9;
-      --white:  #ffffff;
-      --border: #e2e8f0;
-      --text:   #0f172a;
-      --muted:  #64748b;
-      --light:  #94a3b8;
-    }
-    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      display: flex; flex-direction: column;
-    }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    .pagina { max-width: 760px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 120px; }
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit small { display: block; margin-top: 4px; font: 700 11px var(--mono); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* ── HEADER ── */
-    .hdr {
-      background: var(--navy);
-      position: sticky; top: 0; z-index: 40;
-      flex-shrink: 0;
-    }
-    .hdr-top {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px 10px;
-    }
-    .hdr-left { display: flex; align-items: center; gap: 10px; }
-    .hdr-logo {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: rgba(255,255,255,.1);
-      border: 1.5px solid rgba(255,255,255,.15);
-      color: rgba(255,255,255,.8);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; text-decoration: none;
-      transition: background .18s;
-    }
-    .hdr-logo:hover { background: rgba(255,255,255,.2); }
-    .hdr-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-    .hdr-sub   { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
-    .hdr-right { display: flex; align-items: center; gap: 6px; }
-    .icon-btn {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: rgba(255,255,255,.08);
-      border: 1.5px solid rgba(255,255,255,.12);
-      color: rgba(255,255,255,.7);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; cursor: pointer; text-decoration: none;
-      transition: background .18s;
-    }
-    .icon-btn:hover { background: rgba(255,255,255,.18); }
+    .quem { display: flex; gap: 12px; overflow-x: auto; margin: 16px calc(var(--gutter) * -1) 0; padding: 4px var(--gutter) 8px; scrollbar-width: none; }
+    .pessoa { flex: none; display: grid; justify-items: center; gap: 4px; background: none; border: 0; padding: 0; color: var(--cream); cursor: pointer; }
+    .pessoa .av { width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--cream); background: transparent; display: grid; place-items: center; font: 400 20px var(--dela); color: var(--cream); transition: transform .15s; }
+    .pessoa > span:last-child { font: 700 11px var(--mono); }
+    .pessoa.active .av { background: var(--c); border-color: var(--ink); box-shadow: 3px 3px 0 var(--yellow); transform: translateY(-2px); }
+    .pessoa.active > span:last-child { color: var(--yellow); }
+    .quem .vazio-txt { font: 700 12px var(--mono); opacity: .6; padding: 10px 0; }
 
-    /* Employee chips row (inside header) */
-    .emp-row {
-      display: flex; gap: 6px;
-      overflow-x: auto; padding: 0 16px 12px;
-      scrollbar-width: none;
-    }
-    .emp-row::-webkit-scrollbar { display: none; }
-    .emp-chip {
-      flex-shrink: 0;
-      display: flex; align-items: center; gap: 6px;
-      padding: 5px 12px 5px 8px;
-      border-radius: 999px;
-      border: 1.5px solid rgba(255,255,255,.15);
-      background: rgba(255,255,255,.07);
-      color: rgba(255,255,255,.6);
-      font-size: 12px; font-weight: 600;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: all .18s;
-    }
-    .emp-chip:hover { background: rgba(255,255,255,.15); color: #fff; }
-    .emp-chip.active {
-      background: var(--blue-d);
-      border-color: var(--blue-d);
-      color: #fff;
-    }
-    .emp-avatar {
-      width: 20px; height: 20px; border-radius: 50%;
-      background: rgba(255,255,255,.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 800;
-    }
-    .emp-chip.active .emp-avatar { background: rgba(255,255,255,.25); }
-
-    /* ── MENU DROPDOWN ── */
-    .menu-dropdown {
-      display: none; position: fixed;
-      top: 58px; right: 12px;
-      background: var(--white); border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,.15);
-      min-width: 190px; z-index: 500;
-      overflow: hidden;
-    }
-    .menu-dropdown.active { display: block; }
-    .menu-dropdown a, .menu-dropdown button {
-      display: flex; align-items: center; gap: 10px;
-      padding: 13px 16px; text-decoration: none;
-      color: var(--text); font-size: 13px; font-weight: 500;
-      border: none; background: none; width: 100%; cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: background .15s;
-    }
-    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--bg); }
-    .menu-dropdown button:last-child { color: var(--red); }
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 499; }
-    .overlay.active { display: block; }
-
-    /* ── MAIN ── */
-    .main { flex: 1; overflow-y: auto; padding: 14px 14px 100px; }
-
-    /* Period filter */
-    .period-bar {
-      display: flex; gap: 6px; margin-bottom: 12px;
-      overflow-x: auto; scrollbar-width: none;
-    }
-    .period-bar::-webkit-scrollbar { display: none; }
-    .period-chip {
-      flex-shrink: 0;
-      padding: 7px 14px; border-radius: 999px;
-      border: 1.5px solid var(--border);
-      background: var(--white); color: var(--muted);
-      font-size: 12px; font-weight: 600; cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: all .18s;
-    }
-    .period-chip.active {
-      background: var(--navy); border-color: var(--navy); color: #fff;
-    }
-    .date-row {
-      display: none; gap: 8px; align-items: center;
-      margin-bottom: 12px; flex-wrap: wrap;
-    }
+    .periodos { display: flex; gap: 6px; overflow-x: auto; margin: 8px 0 10px; scrollbar-width: none; }
+    .period-chip { flex: none; padding: 5px 11px; border: 2px dashed var(--cream); border-radius: 999px; background: none; color: var(--cream); font: 700 12px var(--mono); cursor: pointer; }
+    .period-chip.active { border-style: solid; background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+    .date-row { display: none; align-items: center; gap: 6px; margin-bottom: 12px; font: 700 12px var(--mono); }
     .date-row.show { display: flex; }
-    .date-row input {
-      flex: 1; min-width: 120px; padding: 8px 10px;
-      border: 1.5px solid var(--border); border-radius: 9px;
-      font-size: 13px; font-family: 'Inter', sans-serif; outline: none;
-      background: var(--white);
-    }
-    .date-row input:focus { border-color: var(--blue-d); }
-    .btn-buscar {
-      padding: 8px 16px; border-radius: 9px;
-      background: var(--blue-d); color: #fff;
-      border: none; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-    }
+    .date-row .entrada { flex: 1; min-width: 0; padding: 6px 8px; font-size: 12px; }
+    .date-row .btn { padding: 7px 12px; font-size: 13px; }
 
-    /* Stats card */
-    .stats-card {
-      background: var(--navy);
-      border-radius: 14px;
-      padding: 18px 18px 14px;
-      margin-bottom: 14px;
-      color: #fff;
-    }
-    .stats-name {
-      font-size: 13px; font-weight: 600;
-      color: rgba(255,255,255,.55);
-      margin-bottom: 2px;
-    }
-    .stats-comiss-pct {
-      display: inline-block;
-      background: rgba(37,99,235,.35);
-      color: #93c5fd;
-      border-radius: 999px;
-      font-size: 11px; font-weight: 700;
-      padding: 2px 8px; margin-left: 6px;
-    }
-    .stats-total-label {
-      font-size: 11px; color: rgba(255,255,255,.45);
-      text-transform: uppercase; letter-spacing: .4px;
-      margin-top: 10px; margin-bottom: 4px;
-    }
-    .stats-total-value {
-      font-size: 30px; font-weight: 800; letter-spacing: -.5px;
-    }
-    .stats-grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px; margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(255,255,255,.1);
-    }
-    .stats-pill {
-      background: rgba(255,255,255,.07);
-      border-radius: 10px;
-      padding: 10px 10px 8px;
-    }
-    .stats-pill-val {
-      font-size: 15px; font-weight: 800; color: #fff;
-    }
-    .stats-pill-lbl {
-      font-size: 10px; font-weight: 600;
-      color: rgba(255,255,255,.4);
-      text-transform: uppercase; letter-spacing: .3px;
-      margin-top: 3px;
-    }
+    /* contracheque */
+    .cheque { padding: 0; overflow: hidden; --sc: var(--green); }
+    .cheque-topo { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--c); color: var(--cream); border-bottom: 3px solid var(--ink); }
+    .cheque-topo b { flex: 1; min-width: 0; font: 400 16px var(--dela); overflow-wrap: anywhere; }
+    .cheque-topo span { font: 700 11px var(--mono); opacity: .9; text-align: right; }
+    .conta { padding: 10px 14px 4px; }
+    .conta-linha { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font: 700 13px var(--mono); }
+    .conta-linha span:first-child { color: var(--muted); font-weight: 400; }
+    .conta-linha.menos span:last-child { color: #c1361a; }
+    .conta-total { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 4px 14px 12px; padding-top: 10px; border-top: 3px double var(--ink); }
+    .conta-total small { font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .conta-total b { font: 400 clamp(22px, 7vw, 30px)/1 var(--dela); color: #1a7d45; white-space: nowrap; }
+    .conta-total b.neg { color: #c1361a; }
+    .cheque .btn { margin: 0 14px 14px; width: calc(100% - 28px); }
+    .carregando { display: grid; justify-items: center; gap: 10px; padding: 30px 0; font: 700 12px var(--mono); }
+    .carregando i { width: 30px; height: 30px; border: 3px solid var(--cream); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
+    .vazio { text-align: center; padding: 22px 16px; --sc: var(--yellow); }
+    .vazio .ic { font-size: 26px; }
+    .vazio b { display: block; font: 400 16px var(--dela); margin: 6px 0 4px; }
+    .vazio p { margin: 0; font-size: 12px; color: var(--muted); }
 
-    /* Status filter */
-    .status-filter {
-      display: flex; gap: 6px;
-      overflow-x: auto; scrollbar-width: none;
-      margin-bottom: 12px;
-    }
-    .status-filter::-webkit-scrollbar { display: none; }
-    .sf-chip {
-      flex-shrink: 0;
-      padding: 5px 12px; border-radius: 999px;
-      border: 1.5px solid var(--border);
-      background: var(--white); color: var(--muted);
-      font-size: 11px; font-weight: 700; cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: all .18s;
-      text-transform: uppercase; letter-spacing: .3px;
-    }
-    .sf-chip.active-all    { background: var(--navy);  border-color: var(--navy);   color: #fff; }
-    .sf-chip.active-fin    { background: var(--green); border-color: var(--green);  color: #fff; }
-    .sf-chip.active-ag     { background: var(--orange);border-color: var(--orange); color: #fff; }
-    .sf-chip.active-em     { background: var(--blue-d);border-color: var(--blue-d); color: #fff; }
+    .filtros { display: flex; gap: 6px; margin: 18px 0 4px; flex-wrap: wrap; }
+    .sf-chip { padding: 4px 10px; border: 2px solid var(--cream); border-radius: 999px; background: none; color: var(--cream); font: 700 11px var(--mono); cursor: pointer; }
+    .sf-chip[class*="active"] { background: var(--cream); color: var(--ink); border-color: var(--ink); box-shadow: 2px 2px 0 var(--pink); }
+    .sec-tit { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+    .sec-tit::after { content: ""; flex: 1; border-top: 2px dashed currentColor; opacity: .5; }
+    .ords { padding: 2px 12px; --sc: var(--blue); }
+    .ords.deb { --sc: var(--red); }
+    .ord { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 9px 0; align-items: center; }
+    .ord + .ord { border-top: 2px dashed var(--line); }
+    .ord .t { min-width: 0; }
+    .ord .t b { display: block; font: 400 13px/1.2 var(--dela); overflow-wrap: anywhere; }
+    .ord .t > span { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); min-width: 0; }
+    .ord .t .os { flex: none; padding: 0 5px; border-radius: 4px; background: var(--ink); color: var(--cream); font: 700 10px/1.5 var(--mono); }
+    .ord .t .sv { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ord .v { text-align: right; font: 400 15px var(--dela); color: #1a7d45; white-space: nowrap; }
+    .ord .v small { display: block; font: 700 10px var(--mono); color: var(--muted); }
+    .st { display: inline-block; margin-top: 3px; padding: 0 6px; border-radius: 5px; border: 1.5px solid var(--ink); font: 700 9px/1.5 var(--mono); letter-spacing: .04em; text-transform: uppercase; background: var(--b); color: var(--ink); }
+    .deb .v { color: #c1361a; }
 
-    /* Section label */
-    .section-lbl {
-      font-size: 11px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 8px;
-    }
-
-    /* Order cards */
-    .orders-list { display: flex; flex-direction: column; gap: 9px; }
-    .ord-card {
-      background: var(--white);
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.07);
-      overflow: hidden;
-      display: flex;
-    }
-    .ord-accent { width: 4px; flex-shrink: 0; }
-    .acc-FINALIZADO           { background: var(--green); }
-    .acc-AGUARDANDO_PAGAMENTO { background: var(--orange); }
-    .acc-EM_ANDAMENTO         { background: var(--blue); }
-    .acc-PENDENTE             { background: var(--amber); }
-    .acc-CANCELADO            { background: var(--light); }
-
-    .ord-body { flex: 1; padding: 12px 13px; min-width: 0; }
-    .ord-top {
-      display: flex; align-items: flex-start;
-      justify-content: space-between; gap: 8px;
-      margin-bottom: 6px;
-    }
-    .ord-num  { font-size: 11px; font-weight: 700; color: var(--muted); }
-    .ord-date { font-size: 11px; color: var(--light); margin-top: 1px; }
-    .s-badge {
-      flex-shrink: 0; padding: 3px 8px; border-radius: 999px;
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .2px;
-    }
-    .s-FINALIZADO           { background: rgba(5,150,105,.1);  color: #065f46; }
-    .s-AGUARDANDO_PAGAMENTO { background: rgba(249,115,22,.1); color: #c2410c; }
-    .s-EM_ANDAMENTO         { background: rgba(37,99,235,.1);  color: #1d4ed8; }
-    .s-PENDENTE             { background: rgba(245,158,11,.1); color: #92400e; }
-    .s-CANCELADO            { background: rgba(100,116,139,.1);color: var(--muted); }
-
-    .ord-client { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ord-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-    .tag-model {
-      display: inline-flex; align-items: center;
-      background: var(--bg); color: var(--text);
-      font-size: 11px; font-weight: 600;
-      padding: 2px 7px; border-radius: 5px;
-      border: 1px solid var(--border);
-    }
-    .tag-plate {
-      display: inline-flex; align-items: center;
-      background: var(--navy); color: #fff;
-      font-size: 11px; font-weight: 700;
-      padding: 2px 7px; border-radius: 5px;
-      letter-spacing: .5px;
-    }
-    .tag-svc {
-      font-size: 11px; color: var(--muted); font-weight: 500;
-    }
-    .ord-divider { height: 1px; background: var(--border); margin: 8px 0; }
-    .ord-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .ord-valor { font-size: 13px; color: var(--muted); }
-    .ord-valor strong { color: var(--text); }
-    .ord-comiss {
-      display: flex; align-items: center; gap: 6px;
-    }
-    .comiss-pill {
-      background: rgba(5,150,105,.1);
-      color: var(--green); border-radius: 999px;
-      font-size: 11px; font-weight: 700;
-      padding: 3px 10px;
-    }
-    .comiss-val {
-      font-size: 16px; font-weight: 800; color: var(--green);
-    }
-
-    /* Loading / empty */
-    .loading-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; padding: 56px 20px; gap: 12px;
-    }
-    .spin {
-      width: 32px; height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--blue-d);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-txt { font-size: 14px; color: var(--muted); font-weight: 500; }
-    .empty-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; padding: 56px 20px; text-align: center; gap: 10px;
-    }
-    .empty-ico {
-      width: 68px; height: 68px; border-radius: 50%;
-      background: var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 26px; color: var(--light); margin-bottom: 4px;
-    }
-    .empty-title { font-size: 16px; font-weight: 700; }
-    .empty-sub   { font-size: 13px; color: var(--muted); max-width: 220px; }
-
-    /* Toast */
-    .toast {
-      position: fixed; bottom: 90px; left: 14px; right: 14px;
-      background: var(--navy); color: #fff;
-      padding: 13px 16px; border-radius: 12px;
-      display: flex; align-items: center; gap: 10px;
-      font-size: 13px; font-weight: 600;
-      transform: translateY(120px); opacity: 0;
-      transition: transform .3s ease, opacity .3s ease;
-      z-index: 2000; max-width: 420px; margin: 0 auto;
-    }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.success { background: #064e3b; }
-    .toast.error   { background: #7f1d1d; }
-
-    /* ── MOBILE NAV (gerado por utils.js) ── */
-    .mobile-bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--white); border-top: 1px solid var(--border);
-      display: flex; justify-content: space-around;
-      height: 64px; z-index: 200;
-      box-shadow: 0 -2px 12px rgba(0,0,0,.07);
-    }
-    .nav-item {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-decoration: none; color: var(--light);
-      font-size: 10px; font-weight: 600; gap: 4px;
-      border: none; background: none; cursor: pointer;
-      border-top: 3px solid transparent;
-      font-family: 'Inter', sans-serif;
-      transition: color .18s;
-    }
-    .nav-item i { font-size: 20px; }
-    .nav-item:hover { color: var(--blue-d); }
-    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
-
-    @media (min-width: 600px) {
-      .main { padding: 18px 20px 100px; max-width: 640px; margin: 0 auto; }
-      .stats-total-value { font-size: 34px; }
-    }
+    /* fechar e pagar */
+    .janela { position: fixed; inset: 0; z-index: 1200; background: #0e0f24bb; align-items: flex-end; justify-content: center; }
+    @media (min-width: 700px) { .janela { align-items: center; } }
+    .janela .folha { transform: none; animation: subir .4s cubic-bezier(.2, .9, .3, 1.1); }
+    @keyframes subir { from { transform: translateY(60%); } to { transform: none; } }
+    .pagar-v { text-align: center; } .pagar-v small { font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); } .pagar-v b { display: block; font: 400 34px/1.1 var(--dela); color: #1a7d45; }
+    .pe-2 { display: flex; gap: 10px; } .pe-2 .btn { flex: 1; } .pe-2 .btn.cancelar { flex: 0 0 auto; background: var(--paper); }
   </style>
 </head>
 <body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <header class="hdr">
-    <div class="hdr-top">
-      <div class="hdr-left">
-        <a href="index.html" class="hdr-logo">
-          <i class="fas fa-arrow-left"></i>
-        </a>
-        <div>
-          <div class="hdr-title">Comissões</div>
-          <div class="hdr-sub" id="empresaNome">Carregando...</div>
-        </div>
-      </div>
-      <div class="hdr-right">
-        <a href="perfil.html" class="icon-btn"><i class="fas fa-user-circle"></i></a>
-        <button class="icon-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
-        <button class="icon-btn" onclick="toggleMenu()"><i class="fas fa-ellipsis-v"></i></button>
-      </div>
-    </div>
-    <!-- Employee chips -->
-    <div class="emp-row" id="empRow">
-      <div class="loading-txt" style="color:rgba(255,255,255,.35);font-size:12px;padding-bottom:12px;">Carregando...</div>
-    </div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
+    <div class="topo-tit"><h1>Comissões</h1><small id="empresaNome">Carregando...</small></div>
   </header>
 
-  <!-- MENU -->
-  <div class="menu-dropdown" id="menuDropdown">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
-    <a href="ordens.html"><i class="fas fa-list-alt"></i> Ordens</a>
-    <a href="financeiro.html"><i class="fas fa-money-bill-wave"></i> Financeiro</a>
-    <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+  <nav class="quem" id="empRow"><span class="vazio-txt">Carregando...</span></nav>
+
+  <div class="periodos">
+    <button class="period-chip active" id="pre-today" onclick="setPreset('today')">Hoje</button>
+    <button class="period-chip" id="pre-week" onclick="setPreset('week')">Semana</button>
+    <button class="period-chip" id="pre-month" onclick="setPreset('month')">Mês</button>
+    <button class="period-chip" id="pre-abertas" onclick="setPreset('abertas')">Em aberto</button>
+    <button class="period-chip" id="pre-custom" onclick="setPreset('custom')"><i class="fas fa-calendar"></i> Período</button>
   </div>
-  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
-
-  <!-- MAIN -->
-  <main class="main">
-    <!-- Period filter -->
-    <div class="period-bar">
-      <button class="period-chip active" id="pre-today"  onclick="setPreset('today')">Hoje</button>
-      <button class="period-chip"        id="pre-week"   onclick="setPreset('week')">Semana</button>
-      <button class="period-chip"        id="pre-month"  onclick="setPreset('month')">Mês</button>
-      <button class="period-chip"        id="pre-abertas" onclick="setPreset('abertas')">Abertas</button>
-      <button class="period-chip"        id="pre-custom" onclick="setPreset('custom')">Período</button>
-    </div>
-    <div class="date-row" id="dateRow">
-      <input type="date" id="dInicio">
-      <span style="color:var(--muted);font-size:13px;">até</span>
-      <input type="date" id="dFim">
-      <button class="btn-buscar" onclick="applyCustom()">Buscar</button>
-    </div>
-
-    <!-- Stats card -->
-    <div id="statsCard"></div>
-
-    <!-- Status filter -->
-    <div class="status-filter" id="statusFilter" style="display:none">
-      <button class="sf-chip active-all" id="sf-all" onclick="setStatusFilter('')">Todos</button>
-      <button class="sf-chip" id="sf-fin" onclick="setStatusFilter('FINALIZADO')">Finalizado</button>
-      <button class="sf-chip" id="sf-ag"  onclick="setStatusFilter('AGUARDANDO_PAGAMENTO')">Aguardando</button>
-      <button class="sf-chip" id="sf-em"  onclick="setStatusFilter('EM_ANDAMENTO')">Em andamento</button>
-    </div>
-
-    <!-- Orders list -->
-    <div class="section-lbl" id="listLabel" style="display:none">Ordens a receber</div>
-    <div id="orderList"></div>
-
-    <!-- Debits section -->
-    <div class="section-lbl" id="debitLabel" style="display:none;margin-top:14px">Débitos pendentes</div>
-    <div id="debitList"></div>
-  </main>
-
-  <!-- MOBILE NAV -->
-  <nav id="mobileNav"></nav>
-
-  <!-- TOAST -->
-  <div class="toast" id="toast">
-    <i id="toastIco" class="fas fa-check-circle"></i>
-    <span id="toastMsg"></span>
+  <div class="date-row" id="dateRow">
+    <input class="entrada" type="date" id="dInicio"><span>até</span><input class="entrada" type="date" id="dFim">
+    <button class="btn azul" onclick="applyCustom()">Buscar</button>
   </div>
 
-  <!-- MODAL FECHAR COMISSÃO -->
-  <div id="fecharModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;align-items:flex-end;justify-content:center;">
-    <div style="background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));">
-      <div style="font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;">Fechar e Pagar Comissão</div>
-      <div style="font-size:13px;color:#6b7280;margin-bottom:14px;">Fecha todas as comissões e adiantamentos do período mostrado.</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
-        <span style="font-size:13px;color:#6b7280;">Valor a pagar</span>
-        <span id="fecharValor" style="font-size:20px;font-weight:800;color:#059669;">R$ 0,00</span>
-      </div>
-      <div id="fecharFormaWrap" style="margin-bottom:14px;">
-        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Forma de pagamento</label>
-        <select id="fecharForma" style="width:100%;padding:11px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:15px;">
+  <div id="statsCard"></div>
+
+  <div class="filtros" id="statusFilter" style="display:none">
+    <button class="sf-chip active-all" id="sf-all" onclick="setStatusFilter('')">Todas</button>
+    <button class="sf-chip" id="sf-fin" onclick="setStatusFilter('FINALIZADO')">Finalizadas</button>
+    <button class="sf-chip" id="sf-ag" onclick="setStatusFilter('AGUARDANDO_PAGAMENTO')">Aguardando pgto</button>
+    <button class="sf-chip" id="sf-em" onclick="setStatusFilter('EM_ANDAMENTO')">Em andamento</button>
+  </div>
+
+  <p class="sec-tit" id="listLabel" style="display:none">Ordens a receber</p>
+  <div id="orderList"></div>
+
+  <p class="sec-tit" id="debitLabel" style="display:none">Débitos a descontar</p>
+  <div id="debitList"></div>
+</div>
+
+<nav id="mobileNav"></nav>
+<div class="menu-dropdown" id="menuDropdown">
+  <a href="/funcionario/index.html"><i class="fas fa-home"></i> Início</a>
+  <a href="/funcionario/ordens.html"><i class="fas fa-list-alt"></i> Ordens</a>
+  <a href="/funcionario/financeiro.html"><i class="fas fa-money-bill-wave"></i> Financeiro</a>
+  <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+</div>
+<div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+<div class="toast" id="toast"><i id="toastIco" class="fas fa-check-circle"></i><span id="toastMsg"></span></div>
+
+<!-- fechar e pagar comissão -->
+<div class="janela" id="fecharModal" style="display:none" onclick="if(event.target===this)fecharModalClose()">
+  <div class="folha" style="--sc: var(--green)" role="dialog" aria-label="Fechar comissão">
+    <div class="folha-cab"><h3>Fechar e pagar comissão<small>fecha as comissões e vales do período mostrado</small></h3><button class="fechar" onclick="fecharModalClose()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo" style="gap: 14px">
+      <div class="pagar-v"><small>Valor a pagar</small><b id="fecharValor">R$ 0,00</b></div>
+      <div class="campo" id="fecharFormaWrap"><label>Forma de pagamento</label>
+        <select class="entrada" id="fecharForma">
           <option value="">Selecione...</option>
           <option value="DINHEIRO">💵 Dinheiro</option>
           <option value="PIX">📱 PIX</option>
           <option value="CARTAO">💳 Cartão</option>
         </select>
       </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Observação (opcional)</label>
-        <textarea id="fecharObs" rows="2" placeholder="Ex: adiantamento descontado" style="width:100%;padding:11px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:15px;resize:none;"></textarea>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button onclick="fecharModalClose()" style="flex:1;padding:13px;background:#f3f4f6;color:#374151;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Cancelar</button>
-        <button id="fecharConfirmBtn" onclick="confirmarFechar()" style="flex:2;padding:13px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Fechar e Pagar</button>
-      </div>
+      <div class="campo"><label>Observação <small style="text-transform: none">(opcional)</small></label><textarea class="entrada" id="fecharObs" rows="2" placeholder="Ex.: adiantamento descontado" style="resize: vertical; font-weight: 400; font-size: 13px"></textarea></div>
     </div>
+    <div class="folha-pe pe-2"><button class="btn cancelar" onclick="fecharModalClose()">Cancelar</button><button class="btn verde" id="fecharConfirmBtn" onclick="confirmarFechar()"><i class="fas fa-check"></i> Fechar e pagar</button></div>
   </div>
+</div>
 
   <script src="../api.js"></script>
   <script src="utils.js"></script>
@@ -568,7 +225,7 @@
       } catch (e) {
         showToast(e?.error || e?.message || 'Erro ao fechar comissão.', 'error');
       } finally {
-        btn.disabled = false; btn.innerHTML = 'Fechar e Pagar';
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Fechar e pagar';
       }
     }
 
@@ -579,7 +236,7 @@
       const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
       if (!perms.includes('gerenciar_funcionarios')) {
         showToast('Sem permissão para comissões', 'error');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+        setTimeout(() => { window.location.href = '/funcionario/index.html'; }, 1500);
         return;
       }
 
@@ -679,8 +336,7 @@
         funcionarios = r.lavadores || r || [];
 
         if (!funcionarios.length) {
-          document.getElementById('empRow').innerHTML =
-            '<span style="color:rgba(255,255,255,.3);font-size:12px;padding-bottom:12px;">Nenhum funcionário</span>';
+          document.getElementById('empRow').innerHTML = '<span class="vazio-txt">Nenhum funcionário</span>';
           document.getElementById('statsCard').innerHTML = emptyHtml('fa-users', 'Nenhum funcionário', 'Cadastre funcionários para ver comissões.');
           return;
         }
@@ -690,22 +346,17 @@
         document.getElementById('empRow').querySelector(`[data-id="${selectedId}"]`)?.classList.add('active');
         await loadOrdens();
       } catch (e) {
-        document.getElementById('empRow').innerHTML =
-          '<span style="color:rgba(255,255,255,.35);font-size:12px;padding-bottom:12px;">Erro ao carregar</span>';
+        document.getElementById('empRow').innerHTML = '<span class="vazio-txt">Erro ao carregar</span>';
         showToast('Erro ao carregar funcionários', 'error');
       }
     }
 
     function renderEmpChips() {
-      const colors = ['#2563eb','#059669','#f59e0b','#ef4444','#8b5cf6','#f97316'];
+      const colors = ['#2f62e6', '#22a15a', '#ff5b2e', '#c2418f', '#6b4fd8', '#0d9488', '#d4a017', '#e5383b'];
       document.getElementById('empRow').innerHTML = funcionarios.map((f, i) => {
         const inicial = (f.nome || 'F').charAt(0).toUpperCase();
-        const color   = colors[i % colors.length];
-        return `
-          <button class="emp-chip" data-id="${f.id}" onclick="selectFuncionario('${f.id}')">
-            <div class="emp-avatar" style="background:${color}22;color:${color}">${inicial}</div>
-            ${f.nome.split(' ')[0]}
-          </button>`;
+        return `<button class="pessoa emp-chip" data-id="${f.id}" style="--c: ${colors[i % colors.length]}" onclick="selectFuncionario('${f.id}')">
+            <span class="av">${inicial}</span><span>${(f.nome || '').split(' ')[0]}</span></button>`;
       }).join('');
     }
 
@@ -776,32 +427,17 @@
       // Botão de fechar só para quem tem a permissão e havendo algo a fechar
       const podeFechar = temPermissao('fechar_comissao') && (ordensComissao.length > 0 || adiantamentosPend.length > 0);
 
+      const cor = getComputedStyle(document.querySelector(`.pessoa[data-id="${selectedId}"]`) || document.body).getPropertyValue('--c') || 'var(--blue)';
       document.getElementById('statsCard').innerHTML = `
-        <div class="stats-card">
-          <div class="stats-name">
-            ${func.nome}
-            <span class="stats-comiss-pct">${pct}% comissão</span>
+        <section class="cartao cheque" style="--c: ${cor}">
+          <div class="cheque-topo"><b>${func.nome}</b><span>${pct}% de comissão<br>${labelPeriodo.toLowerCase()}</span></div>
+          <div class="conta">
+            <div class="conta-linha"><span>${ordensComissao.length} ordem${ordensComissao.length !== 1 ? 's' : ''} · comissão</span><span>${formatCurrency(totalComissao)}</span></div>
+            <div class="conta-linha menos"><span>Débitos (${adiantamentosPend.length + debitosOS.length})</span><span>− ${formatCurrency(totalDebitos)}</span></div>
           </div>
-          <div class="stats-total-label">A receber (líquido) — ${labelPeriodo}</div>
-          <div class="stats-total-value" style="color:${saldoLiquido < 0 ? 'var(--red)' : '#fff'}">${formatCurrency(saldoLiquido)}</div>
-          <div class="stats-grid">
-            <div class="stats-pill">
-              <div class="stats-pill-val">${ordensComissao.length}</div>
-              <div class="stats-pill-lbl">Ordens</div>
-            </div>
-            <div class="stats-pill">
-              <div class="stats-pill-val">${formatCurrency(totalComissao)}</div>
-              <div class="stats-pill-lbl">Comissão</div>
-            </div>
-            <div class="stats-pill">
-              <div class="stats-pill-val" style="color:${totalDebitos > 0 ? '#fca5a5' : '#6ee7b7'}">${formatCurrency(totalDebitos)}</div>
-              <div class="stats-pill-lbl">Débitos</div>
-            </div>
-          </div>
-          ${podeFechar ? `<button onclick="abrirFecharModal()" style="width:100%;margin-top:14px;padding:13px;background:rgba(255,255,255,.16);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
-            <i class="fas fa-check-circle" style="margin-right:6px"></i> Fechar e Pagar Comissão
-          </button>` : ''}
-        </div>`;
+          <div class="conta-total"><small>A pagar</small><b class="${saldoLiquido < 0 ? 'neg' : ''}">${formatCurrency(saldoLiquido)}</b></div>
+          ${podeFechar ? `<button class="btn verde" onclick="abrirFecharModal()"><i class="fas fa-hand-holding-dollar"></i> Fechar e pagar</button>` : ''}
+        </section>`;
     }
 
     // ── RENDER ORDENS PENDENTES ──
@@ -824,46 +460,19 @@
       };
       const pct = parseFloat(func.comissao) || 0;
 
-      list.innerHTML = `<div class="orders-list">${filtered.map(o => {
+      const COR_ST = { FINALIZADO: '#9be3b5', AGUARDANDO_PAGAMENTO: '#ffc6e3', EM_ANDAMENTO: '#c5d4ff', PENDENTE: '#fff3c4', CANCELADO: '#e3d8bd' };
+      list.innerHTML = `<section class="cartao ords">${filtered.map(o => {
         const comiss  = getWasherShare(o, selectedId);
         const valor   = parseFloat(o.valorTotal) || 0;
         const status  = o.status || 'PENDENTE';
-        const sLabel  = STATUS_LABEL[status] || status;
         const data    = o.createdAt ? new Date(o.createdAt).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
-        const hora    = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
-        const cliente = o.cliente?.nome || '—';
-        const modelo  = o.veiculo?.modelo || '';
-        const placa   = o.veiculo?.placa  || '';
-        const svc     = o.servico?.nome   || o.tipoVeiculo || '';
-
-        return `
-          <div class="ord-card">
-            <div class="ord-accent acc-${status}"></div>
-            <div class="ord-body">
-              <div class="ord-top">
-                <div>
-                  <div class="ord-num">#${o.numeroOrdem || o.id?.slice(0,8)}</div>
-                  <div class="ord-date">${data}${hora ? ' · ' + hora : ''}</div>
-                </div>
-                <span class="s-badge s-${status}">${sLabel}</span>
-              </div>
-              <div class="ord-client">${cliente}</div>
-              <div class="ord-meta">
-                ${modelo ? `<span class="tag-model">${modelo}</span>` : ''}
-                ${placa  ? `<span class="tag-plate">${placa}</span>`  : ''}
-                ${svc    ? `<span class="tag-svc">${svc}</span>`      : ''}
-              </div>
-              <div class="ord-divider"></div>
-              <div class="ord-bottom">
-                <div class="ord-valor">Valor OS: <strong>${formatCurrency(valor)}</strong></div>
-                <div class="ord-comiss">
-                  <span class="comiss-pill">${pct}%</span>
-                  <span class="comiss-val">${formatCurrency(comiss)}</span>
-                </div>
-              </div>
-            </div>
+        const detalhe = [o.servico?.nome || o.tipoVeiculo, o.veiculo?.modelo, o.veiculo?.placa, data].filter(Boolean).join(' · ');
+        return `<div class="ord">
+            <span class="t"><b>${o.cliente?.nome || '—'}</b><span><span class="os">#${o.numeroOrdem || o.id?.slice(0,8)}</span><span class="sv">${detalhe}</span></span>
+              <span class="st" style="--b: ${COR_ST[status] || '#e3d8bd'}">${(STATUS_LABEL[status] || status).toLowerCase()}</span></span>
+            <span class="v">+ ${formatCurrency(comiss)}<small>OS ${formatCurrency(valor)} · ${pct}%</small></span>
           </div>`;
-      }).join('')}</div>`;
+      }).join('')}</section>`;
     }
 
     // ── RENDER DÉBITOS PENDENTES ──
@@ -894,27 +503,11 @@
         return;
       }
 
-      list.innerHTML = `<div class="orders-list">${allDebits.map(d => `
-        <div class="ord-card">
-          <div class="ord-accent" style="background:var(--red)"></div>
-          <div class="ord-body">
-            <div class="ord-top">
-              <div>
-                <div class="ord-num">${d.tipo === 'adiantamento' ? 'ADIANTAMENTO' : 'DÉBITO OS'}</div>
-                <div class="ord-date">${d.sub}</div>
-              </div>
-              <span class="s-badge" style="background:rgba(239,68,68,.1);color:#b91c1c">Pendente</span>
-            </div>
-            <div class="ord-client">${d.label}</div>
-            <div class="ord-divider"></div>
-            <div class="ord-bottom">
-              <div class="ord-valor">A descontar</div>
-              <div class="ord-comiss">
-                <span class="comiss-val" style="color:var(--red)">-${formatCurrency(d.valor)}</span>
-              </div>
-            </div>
-          </div>
-        </div>`).join('')}</div>`;
+      list.innerHTML = `<section class="cartao ords deb">${allDebits.map(d => `
+        <div class="ord">
+          <span class="t"><b>${d.label}</b><span>${d.tipo === 'adiantamento' ? 'vale' : 'débito de OS'} · ${d.sub}</span><span class="st" style="--b: #ffe0dc">pendente</span></span>
+          <span class="v">− ${formatCurrency(d.valor)}<small>a descontar</small></span>
+        </div>`).join('')}</section>`;
     }
 
     // ── HELPERS ──
@@ -923,15 +516,11 @@
     }
 
     function loadingHtml() {
-      return `<div class="loading-wrap"><div class="spin"></div><div class="loading-txt">Carregando...</div></div>`;
+      return `<div class="carregando"><i></i>Carregando...</div>`;
     }
 
     function emptyHtml(ico, title, sub) {
-      return `<div class="empty-wrap">
-        <div class="empty-ico"><i class="fas ${ico}"></i></div>
-        <div class="empty-title">${title}</div>
-        <div class="empty-sub">${sub}</div>
-      </div>`;
+      return `<section class="cartao vazio"><div class="ic"><i class="fas ${ico}"></i></div><b>${title}</b><p>${sub}</p></section>`;
     }
 
     function showToast(msg, type = 'success') {
@@ -939,6 +528,7 @@
       const i = document.getElementById('toastIco');
       document.getElementById('toastMsg').textContent = msg;
       t.className = `toast ${type}`;
+      void t.offsetWidth;
       i.className = `fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`;
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 3000);
@@ -953,5 +543,6 @@
       document.getElementById('overlay').classList.remove('active');
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
