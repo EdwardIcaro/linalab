@@ -2,817 +2,245 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Clientes — Lina X</title>
-  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <style>
-    :root {
-      --navy:   #0f172a;
-      --navy-m: #1e293b;
-      --blue:   #3b82f6;
-      --blue-d: #2563eb;
-      --text:   #0f172a;
-      --mid:    #64748b;
-      --light:  #94a3b8;
-      --border: #e2e8f0;
-      --bg:     #f1f5f9;
-      --white:  #ffffff;
-      --green:  #10b981;
-      --green-d:#059669;
-      --amber:  #f59e0b;
-      --red:    #ef4444;
-      --r:      12px;
-    }
-    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      min-height: 100vh;
-    }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    :root { --mid: var(--muted); --light: var(--muted); --text: var(--ink); --blue-d: var(--blue); }
+    .pagina { max-width: 860px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 120px; }
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit p { margin: 4px 0 0; font-size: 11px; opacity: .8; }
+    .btn-novo { padding: 8px 12px; font-size: 13px; background: var(--yellow); box-shadow: 3px 3px 0 var(--pink); }
+    .sino { display: none; }
+    .sino b { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; background: var(--red); color: var(--cream);
+      border: 2px solid var(--space); display: grid; place-items: center; font: 400 10px/1 var(--dela); }
 
-    /* ── HEADER ── */
-    .hd {
-      background: var(--navy);
-      padding: 0 16px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .hd-left { display: flex; align-items: center; gap: 12px; }
-    .hd-back {
-      background: none; border: none; color: #fff;
-      font-size: 18px; cursor: pointer; padding: 6px;
-      border-radius: 8px; transition: background .15s;
-    }
-    .hd-back:hover { background: rgba(255,255,255,.1); }
-    .hd-title { font-size: 16px; font-weight: 700; color: #fff; }
-    .hd-subtitle { font-size: 11px; color: rgba(255,255,255,.55); }
-    .hd-btn {
-      background: var(--blue-d); border: none; color: #fff;
-      padding: 8px 14px; border-radius: 8px; font-size: 13px;
-      font-weight: 600; cursor: pointer; display: flex;
-      align-items: center; gap: 6px; transition: background .15s;
-    }
-    .hd-btn:hover { background: var(--blue); }
-    .hd-right { display: flex; align-items: center; gap: 10px; }
-    .hd-bell {
-      position: relative;
-      background: none; border: none; color: #fff;
-      font-size: 17px; cursor: pointer; padding: 8px;
-      border-radius: 8px; transition: background .15s;
-    }
-    .hd-bell:hover { background: rgba(255,255,255,.1); }
-    .hd-bell-badge {
-      position: absolute; top: 1px; right: 1px;
-      background: var(--red); color: #fff;
-      font-size: 10px; font-weight: 700; line-height: 1;
-      min-width: 16px; height: 16px; padding: 0 3px;
-      border-radius: 99px;
-      display: flex; align-items: center; justify-content: center;
-      border: 1.5px solid var(--navy);
-    }
-
-    /* ── NOTIFICAÇÕES: CLIENTES INATIVOS ── */
-    .notif-toggle {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--mid); font-weight: 600;
-      padding: 2px 0 14px;
-      cursor: pointer;
-    }
-    .notif-toggle input {
-      width: 15px; height: 15px; accent-color: var(--blue-d); cursor: pointer;
-    }
-    .notif-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 10px; padding: 12px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .notif-row:last-child { border-bottom: none; }
-    .notif-info { min-width: 0; flex: 1; }
-    .notif-nome {
-      font-size: 14px; font-weight: 700; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .notif-meta { font-size: 12px; color: var(--mid); margin-top: 2px; }
-    .notif-actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .btn-notif-ignore, .btn-notif-msg {
-      display: flex; align-items: center; gap: 5px;
-      padding: 7px 10px; border-radius: 8px;
-      font-size: 11px; font-weight: 700;
-      cursor: pointer; white-space: nowrap;
-      border: 1.5px solid var(--border); background: none; color: var(--mid);
-      transition: all .15s;
-    }
-    .btn-notif-ignore:hover { border-color: var(--red); color: var(--red); background: #fef2f2; }
-    .btn-notif-msg { border-color: #bbf7d0; color: #25D366; }
-    .btn-notif-msg:hover { background: #f0fdf4; border-color: #25D366; }
-    .btn-notif-msg:disabled { opacity: .4; cursor: not-allowed; }
-
-    /* ── BUSCA ── */
-    .search-bar {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 16px 0;
-      position: sticky;
-      top: 56px;
-      z-index: 90;
-    }
-    .search-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 9px 14px;
-      transition: border-color .15s;
-    }
-    .search-wrap:focus-within { border-color: var(--blue-d); }
-    .search-wrap i { color: var(--light); font-size: 14px; }
-    .search-wrap input {
-      flex: 1; border: none; background: none;
-      font-size: 14px; color: var(--text); outline: none;
-    }
-    .search-wrap input::placeholder { color: var(--light); }
-    .search-clear {
-      background: none; border: none; color: var(--light);
-      cursor: pointer; padding: 2px; display: none; font-size: 14px;
-    }
+    .busca { position: relative; margin-top: 16px; }
+    .busca .lupa { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); line-height: 0; z-index: 1; font-size: 15px; }
+    .busca .entrada { height: 50px; padding-left: 40px; padding-right: 40px; font-size: 14px; border-width: 3px; box-shadow: 4px 4px 0 var(--pink); }
+    .search-clear { display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
     .search-clear.visible { display: block; }
+    .filtros { display: flex; gap: 8px; overflow-x: auto; margin: 14px calc(var(--gutter) * -1) 4px; padding: 0 var(--gutter) 6px; scrollbar-width: none; }
+    .filtro { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 6px; border: 2.5px solid var(--cream); border-radius: 999px; background: none;
+      color: var(--cream); font: 700 12px var(--mono); cursor: pointer; white-space: nowrap; }
+    .filtro b { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--cream); color: var(--ink); display: grid; place-items: center; font: 400 11px/1 var(--dela); }
+    .filtro.on { background: var(--c, var(--cream)); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+    .filtro.on b { background: var(--ink); color: var(--c, var(--cream)); }
 
-    /* ── FILTROS ── */
-    .filter-bar {
-      display: flex;
-      gap: 8px;
-      padding: 10px 16px 12px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .filter-bar::-webkit-scrollbar { display: none; }
-    .filter-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 12px;
-      border-radius: 20px;
-      border: 1.5px solid var(--border);
-      background: var(--white);
-      font-size: 12px; font-weight: 600; color: var(--mid);
-      cursor: pointer; white-space: nowrap;
-      transition: all .15s;
-    }
-    .filter-btn.active {
-      background: var(--navy); color: #fff; border-color: var(--navy);
-    }
-    .filter-badge {
-      background: rgba(255,255,255,.25);
-      border-radius: 99px;
-      padding: 0 5px;
-      font-size: 10px;
-      font-weight: 700;
-    }
-    .filter-btn:not(.active) .filter-badge {
-      background: var(--bg);
-      color: var(--mid);
-    }
+    .lista { gap: 14px; margin-top: 10px; }
+    @media (min-width: 720px) { .lista { grid-template-columns: 1fr 1fr; } }
+    .cli { cursor: pointer; display: grid; gap: 10px; }
+    .cli-topo { display: flex; align-items: center; gap: 10px; }
+    .av { width: 42px; height: 42px; border-radius: 12px; border: 2.5px solid var(--ink); background: var(--c); color: var(--ink); display: grid; place-items: center; font: 400 18px var(--dela); flex: none; }
+    .cli-topo .t { flex: 1; min-width: 0; }
+    .cli-topo .t b { display: block; font: 400 15px/1.15 var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cli-topo .t > span { display: block; font-size: 11px; color: var(--muted); }
+    .sem-nome { display: inline-block; padding: 0 6px; border-radius: 5px; background: #fff3c4; border: 1.5px solid var(--ink); font: 700 10px var(--mono); color: var(--ink); vertical-align: 2px; }
+    .sem-tel { color: #c1361a; }
+    .quando { flex: none; text-align: right; font: 700 10px var(--mono); color: var(--muted); }
+    .quando b { display: block; font: 400 13px var(--dela); color: var(--ink); }
+    .quando.sumiu b { color: #c1361a; }
+    .numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); }
+    .numeros div { padding: 5px 4px; text-align: center; min-width: 0; }
+    .numeros div + div { border-left: 2px dashed var(--line); }
+    .numeros b { display: block; font: 400 14px/1.1 var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .numeros small { font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .placas { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .placa.mini { min-width: 0; } .placa.mini::before { font-size: 6px; padding: 1px 0; } .placa.mini b { font-size: 12px; padding: 2px 6px 3px; }
+    .placas .mais { font: 700 11px var(--mono); color: var(--muted); }
+    .cli-pe { display: flex; align-items: center; gap: 6px; }
+    .chamar { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 2px solid #128c4a; border-radius: 10px; background: #e2f4e8; font-size: 11px; }
+    .chamar .btn { margin-left: auto; padding: 5px 9px; font-size: 11px; background: #25d366; box-shadow: 2px 2px 0 var(--ink); white-space: nowrap; }
+    .mini-acao { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; flex: none; margin-left: auto; }
+    .chamar + .mini-acao { margin-left: 0; }
+    .mini-acao.perigo { color: #c1361a; margin-left: 0; }
+    .state-container { text-align: center; padding: 26px 16px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--yellow); }
+    .state-container .state-icon { font-size: 28px; }
+    .state-container .state-title { font: 400 17px var(--dela); margin: 6px 0 4px; }
+    .state-container .state-sub { font-size: 12px; color: var(--muted); }
+    .spin { width: 30px; height: 30px; margin: 0 auto; border: 3px solid var(--ink); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
 
-    /* ── GRID DE CARDS ── */
-    .crm-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 12px;
-      padding: 12px 16px;
-      padding-bottom: 100px;
-    }
+    /* ===== janela de baixo (detalhe, formulário, sumidos) ===== */
+    .drawer-overlay { position: fixed; inset: 0; z-index: 800; background: #0e0f24bb; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer { position: fixed; z-index: 810; left: 0; right: 0; bottom: 0; margin: 0 auto; width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-bottom: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 0 var(--blue);
+      transform: translateY(105%); transition: transform .45s cubic-bezier(.2, .9, .3, 1.1); }
+    .drawer.open { transform: none; }
+    .drawer-handle { width: 44px; height: 5px; background: var(--ink); opacity: .25; border-radius: 3px; margin: 10px auto 0; flex: none; }
+    .drawer-header { display: flex; align-items: center; gap: 10px; padding: 8px 14px 12px; border-bottom: 3px solid var(--ink); flex: none; }
+    .drawer-title { flex: 1; min-width: 0; font: 400 17px/1.1 var(--dela); }
+    .drawer-close, .modal-close-btn { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; font-size: 15px; flex: none; }
+    .drawer-body { padding: 14px; overflow: auto; display: grid; gap: 12px; align-content: start; }
+    .drawer-footer { display: flex; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 3px solid var(--ink); flex: none; }
+    .drawer-footer .btn-f { flex: 1; }
+    .det-num { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .det-num div { border: 2.5px solid var(--ink); border-radius: 12px; padding: 8px 4px; text-align: center; background: var(--paper); box-shadow: 3px 3px 0 var(--c); min-width: 0; }
+    .det-num b { display: block; font: 400 clamp(13px, 4vw, 17px)/1.1 var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .det-num small { font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .det-linha { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 2px dashed var(--line); font: 700 12px var(--mono); }
+    .det-linha span:first-child { color: var(--muted); font-weight: 400; }
+    .det-tit { margin: 4px 0 -4px; font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .veic { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+    .veic + .veic { border-top: 2px dashed var(--line); }
+    .veic .t { flex: 1; min-width: 0; font: 700 13px var(--mono); }
+    .btn-transf { padding: 5px 9px; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); color: var(--ink); font: 700 11px var(--mono); cursor: pointer; white-space: nowrap; }
+    .acoes-det { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .acoes-det .btn { padding: 10px 8px; font-size: 13px; }
+    .acoes-det .btn.largo { grid-column: 1 / -1; }
+    .btn.zap { background: #25d366; }
+    .btn.lixo { background: var(--paper); color: #c1361a; }
+    .reengajar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 2px solid #128c4a; border-radius: 10px; background: #e2f4e8; font-size: 12px; }
+    .vazio-txt { margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
 
-    /* ── CARD DE CLIENTE ── */
-    .client-card {
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: var(--r);
-      padding: 16px;
-      cursor: pointer;
-      transition: border-color .15s, box-shadow .15s;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .client-card:hover {
-      border-color: var(--blue);
-      box-shadow: 0 4px 16px rgba(37,99,235,.08);
-    }
+    /* formulário */
+    .form-section { display: grid; gap: 10px; }
+    .form-section-title { font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .form-group { display: grid; gap: 4px; }
+    .form-label { font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .form-input { width: 100%; min-width: 0; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 11px; font: 700 14px var(--mono); outline: none; }
+    .form-input:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .form-hint { font-size: 10px; color: var(--muted); }
+    .vehicle-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .vehicle-row .form-input { padding: 8px 9px; font-size: 13px; }
+    .btn-remove-veh { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--ink); background: #ffe0dc; color: #c1361a; cursor: pointer; }
+    .btn-add-veh { justify-self: start; padding: 6px 12px; border: 2px dashed var(--ink); border-radius: 10px; background: none; color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
+    .btn-f { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 3px solid var(--ink); border-radius: 12px; padding: 10px 14px;
+      font: 400 14px/1.1 var(--dela); box-shadow: 3px 3px 0 var(--ink); cursor: pointer; background: var(--paper); color: var(--ink); }
+    .btn-f:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-f-save { background: var(--green); color: var(--cream); }
+    .btn-f-wa { background: #25d366; color: var(--ink); }
+    .btn-f-cancel { flex: 0 0 auto !important; }
 
-    .cc-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .cc-avatar {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--blue), var(--blue-d));
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 18px; font-weight: 700;
-      flex-shrink: 0;
-    }
-    .cc-avatar.na {
-      background: linear-gradient(135deg, var(--light), var(--mid));
-    }
-    .cc-info { flex: 1; min-width: 0; }
-    .cc-name-row { display: flex; align-items: center; gap: 6px; }
-    .cc-name {
-      font-size: 15px; font-weight: 700; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .cc-name.na-name { color: var(--mid); font-style: italic; }
-    .cc-phone {
-      font-size: 12px; color: var(--mid); margin-top: 2px;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .cc-phone .no-phone { font-style: italic; }
+    /* clientes sumidos (sino) */
+    .notif-toggle { display: flex; align-items: center; gap: 8px; font: 700 12px var(--mono); }
+    .notif-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 2px dashed var(--line); }
+    .notif-info { flex: 1; min-width: 0; }
+    .notif-nome { font: 400 14px var(--dela); }
+    .notif-meta { font-size: 11px; color: var(--muted); }
+    .notif-actions { display: flex; gap: 6px; flex: none; }
+    .btn-notif-ignore, .btn-notif-msg { padding: 5px 8px; border: 2px solid var(--ink) !important; border-radius: 8px; background: var(--paper); color: var(--ink) !important; font: 700 11px var(--mono); cursor: pointer; }
+    .btn-notif-msg { background: #25d366; }
 
-    /* Badges */
-    .badge-semnom {
-      display: inline-block; padding: 1px 6px;
-      background: #fef3c7; color: #92400e;
-      border: 1px solid #fde68a;
-      border-radius: 4px; font-size: 9px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .4px;
-      white-space: nowrap;
-    }
-    .badge-visita {
-      display: inline-flex; align-items: center; gap: 3px;
-      padding: 2px 7px; border-radius: 20px;
-      font-size: 10px; font-weight: 600; white-space: nowrap;
-    }
-    .badge-visita.recente { background: #d1fae5; color: #065f46; }
-    .badge-visita.media   { background: #fef3c7; color: #92400e; }
-    .badge-visita.antiga  { background: #fee2e2; color: #991b1b; }
-
-    .cc-tags {
-      display: flex; gap: 6px; flex-wrap: wrap;
-    }
-    .tag {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 8px; border-radius: 6px;
-      font-size: 11px; font-weight: 600;
-    }
-    .tag-plate {
-      background: var(--navy); color: #fff;
-      letter-spacing: .5px;
-    }
-    .tag-model {
-      background: var(--bg); color: var(--mid);
-      border: 1px solid var(--border);
-    }
-
-    .cc-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-    }
-    .cc-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .cc-stat-val { font-size: 14px; font-weight: 700; color: var(--text); }
-    .cc-stat-lbl { font-size: 10px; font-weight: 600; color: var(--light); text-transform: uppercase; letter-spacing: .4px; }
-
-    .cc-actions { display: flex; gap: 6px; }
-    .cc-action-btn {
-      width: 34px; height: 34px;
-      border-radius: 8px;
-      border: 1.5px solid var(--border);
-      background: none;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 13px;
-      color: var(--mid);
-      transition: all .15s;
-    }
-    .cc-action-btn:hover { border-color: var(--blue); color: var(--blue-d); background: #eff6ff; }
-    .cc-action-btn.danger:hover { border-color: var(--red); color: var(--red); background: #fef2f2; }
-    .cc-action-btn.wa { color: #25D366; border-color: #bbf7d0; }
-    .cc-action-btn.wa:hover { background: #f0fdf4; border-color: #25D366; }
-
-    /* ── ESTADOS ── */
-    .state-container {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 60px 20px; text-align: center;
-      gap: 12px;
-    }
-    .state-icon { font-size: 52px; color: var(--border); }
-    .state-title { font-size: 17px; font-weight: 700; color: var(--text); }
-    .state-sub { font-size: 13px; color: var(--mid); }
-    .spin {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--blue-d);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── DRAWER (bottom-sheet) ── */
-    .drawer-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.45);
-      z-index: 200;
-    }
-    .drawer-overlay.open { display: block; }
-
-    .drawer {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--white);
-      border-radius: 20px 20px 0 0;
-      z-index: 201;
-      max-height: 90vh;
-      overflow-y: auto;
-      transform: translateY(100%);
-      transition: transform .3s cubic-bezier(.4,0,.2,1);
-      display: flex; flex-direction: column;
-    }
-    .drawer.open { transform: translateY(0); }
-
-    .drawer-handle {
-      width: 36px; height: 4px;
-      background: var(--border);
-      border-radius: 99px;
-      margin: 12px auto 0;
-      flex-shrink: 0;
-    }
-    .drawer-header {
-      padding: 16px 20px 12px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .drawer-title { font-size: 16px; font-weight: 700; color: var(--text); }
-    .drawer-close {
-      background: none; border: none;
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; color: var(--mid);
-      cursor: pointer; transition: background .15s;
-    }
-    .drawer-close:hover { background: var(--bg); }
-
-    .drawer-body { padding: 16px 20px; flex: 1; overflow-y: auto; }
-    .drawer-footer {
-      padding: 12px 20px;
-      border-top: 1px solid var(--border);
-      display: flex; gap: 10px;
-      flex-shrink: 0;
-    }
-
-    /* ── FORM DENTRO DO DRAWER ── */
-    .form-section { margin-bottom: 20px; }
-    .form-section-title {
-      font-size: 11px; font-weight: 700; color: var(--light);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 10px;
-    }
-    .form-group { margin-bottom: 14px; }
-    .form-label {
-      display: block; font-size: 12px; font-weight: 600;
-      color: var(--mid); margin-bottom: 5px;
-    }
-    .form-input {
-      width: 100%; padding: 10px 12px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-size: 14px; font-family: inherit;
-      color: var(--text);
-      transition: border-color .15s;
-      background: var(--white);
-    }
-    .form-input:focus { outline: none; border-color: var(--blue-d); }
-    .form-hint { font-size: 11px; color: var(--light); margin-top: 4px; }
-
-    .vehicle-row {
-      display: flex; gap: 8px; align-items: center;
-      margin-bottom: 8px;
-    }
-    .vehicle-row .form-input { flex: 1; margin: 0; }
-    .btn-remove-veh {
-      width: 34px; height: 34px; flex-shrink: 0;
-      background: none; border: 1.5px solid var(--border);
-      border-radius: 8px; color: var(--red);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      font-size: 13px; transition: all .15s;
-    }
-    .btn-remove-veh:hover { background: #fef2f2; border-color: var(--red); }
-
-    .btn-add-veh {
-      width: 100%; padding: 9px;
-      background: none; border: 1.5px dashed var(--border);
-      border-radius: 8px; color: var(--blue-d);
-      font-size: 13px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center;
-      justify-content: center; gap: 6px;
-      transition: all .15s;
-    }
-    .btn-add-veh:hover { border-color: var(--blue-d); background: #eff6ff; }
-
-    /* ── BOTÕES DRAWER FOOTER ── */
-    .btn-f {
-      flex: 1; padding: 12px;
-      border: none; border-radius: 10px;
-      font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: background .15s;
-    }
-    .btn-f-cancel { background: var(--bg); color: var(--mid); }
-    .btn-f-cancel:hover { background: var(--border); }
-    .btn-f-save { background: var(--blue-d); color: #fff; }
-    .btn-f-save:hover { background: var(--blue); }
-    .btn-f-save:disabled { opacity: .5; cursor: not-allowed; }
-
-    /* ── SEÇÕES DE DETALHE ── */
-    .detail-stat-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .detail-stat {
-      background: var(--bg);
-      border-radius: 10px;
-      padding: 12px;
-      text-align: center;
-    }
-    .detail-stat-val { font-size: 18px; font-weight: 700; color: var(--text); }
-    .detail-stat-lbl { font-size: 10px; font-weight: 600; color: var(--light); text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
-
-    .detail-section-title {
-      font-size: 11px; font-weight: 700; color: var(--light);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 10px; padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
-    }
-    .detail-row {
-      display: flex; justify-content: space-between;
-      align-items: center;
-      padding: 9px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-row-label { color: var(--mid); font-weight: 500; }
-    .detail-row-val { color: var(--text); font-weight: 600; }
-
-    /* Veículos no detalhe */
-    .veh-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .veh-card {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-      text-align: center;
-    }
-    .veh-card-plate { font-size: 13px; font-weight: 700; }
-    .veh-card-model { font-size: 11px; color: var(--mid); margin-top: 2px; }
-    .btn-transfer-veh {
-      margin-top: 6px; width: 100%;
-      padding: 4px 0;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 10px; font-weight: 600; color: var(--mid);
-      cursor: pointer; transition: all .15s;
-      display: flex; align-items: center; justify-content: center; gap: 4px;
-    }
-    .btn-transfer-veh:hover { border-color: var(--blue); color: var(--blue-d); background: #eff6ff; }
-
-    .detail-action-row {
-      display: flex; gap: 8px; margin-top: 4px; margin-bottom: 16px;
-    }
-    .btn-detail-action {
-      flex: 1; padding: 10px;
-      border-radius: 10px; border: 1.5px solid var(--border);
-      background: none; font-size: 13px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center;
-      justify-content: center; gap: 6px;
-      color: var(--text); transition: all .15s;
-    }
-    .btn-detail-action:hover { border-color: var(--blue); color: var(--blue-d); background: #eff6ff; }
-    .btn-detail-action.wa { color: #25D366; border-color: #bbf7d0; }
-    .btn-detail-action.wa:hover { background: #f0fdf4; border-color: #25D366; }
-    .btn-detail-action.danger { color: var(--red); border-color: #fecaca; }
-    .btn-detail-action.danger:hover { background: #fef2f2; border-color: var(--red); }
-
-    /* Box de reengajamento WhatsApp */
-    .wa-reengage-box {
-      background: #f0fdf4;
-      border: 1.5px solid #bbf7d0;
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 16px;
-    }
-    .wa-reengage-title {
-      font-size: 12px; font-weight: 700; color: #065f46;
-      margin-bottom: 6px;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .wa-reengage-msg {
-      font-size: 12px; color: #047857;
-      margin-bottom: 10px; line-height: 1.5;
-    }
-    .btn-wa-reengage {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 14px;
-      background: #25D366; color: #fff;
-      border: none; border-radius: 8px;
-      font-size: 13px; font-weight: 700;
-      cursor: pointer; text-decoration: none;
-      transition: background .15s;
-    }
-    .btn-wa-reengage:hover { background: #1da851; }
-
-    /* ── MODAL TRANSFERÊNCIA ── */
-    .modal-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.55);
-      z-index: 300;
-      align-items: center; justify-content: center;
-    }
+    /* janelas do meio (transferir, WhatsApp) */
+    .modal-overlay { position: fixed; inset: 0; z-index: 900; background: #0e0f24bb; display: none; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.open { display: flex; }
-    .modal-box {
-      background: var(--white);
-      border-radius: 16px;
-      width: 90%; max-width: 420px;
-      max-height: 80vh;
-      overflow: hidden;
-      display: flex; flex-direction: column;
-    }
-    .modal-header {
-      padding: 18px 20px 14px;
-      border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .modal-header h3 { font-size: 15px; font-weight: 700; }
-    .modal-close-btn {
-      background: none; border: none; font-size: 18px; color: var(--mid);
-      cursor: pointer; padding: 4px;
-    }
-    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
-    .modal-footer {
-      padding: 12px 20px;
-      border-top: 1px solid var(--border);
-      display: flex; gap: 10px;
-    }
-
-    .transfer-info {
-      background: var(--bg);
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 13px; margin-bottom: 14px;
-    }
-    .transfer-info strong { color: var(--text); }
-    .transfer-info span { color: var(--mid); }
-
-    .transfer-search-results {
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-    .transfer-result-item {
-      padding: 10px 12px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer; font-size: 13px;
-      transition: background .1s;
-    }
-    .transfer-result-item:last-child { border-bottom: none; }
-    .transfer-result-item:hover { background: #eff6ff; }
-    .transfer-result-item.selected { background: #dbeafe; }
-    .transfer-result-name { font-weight: 600; color: var(--text); }
-    .transfer-result-phone { font-size: 11px; color: var(--mid); }
-
-    .selected-client-box {
-      background: #dbeafe;
-      border: 1.5px solid #93c5fd;
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-top: 10px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .selected-client-name { font-size: 13px; font-weight: 700; color: var(--blue-d); }
-    .btn-deselect {
-      background: none; border: none; color: var(--light);
-      cursor: pointer; font-size: 16px; padding: 2px;
-    }
-
-    /* ── NAV ── */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--white);
-      border-top: 1px solid var(--border);
-      display: flex;
-      z-index: 100;
-      height: 64px;
-    }
-    .nav-item {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-decoration: none; color: var(--light);
-      font-size: 10px; font-weight: 600; gap: 3px;
-      border: none; background: none; cursor: pointer;
-      border-top: 2px solid transparent;
-      transition: all .15s;
-    }
-    .nav-item i { font-size: 20px; }
-    .nav-item.active { color: var(--blue-d); border-top-color: var(--blue-d); }
-    .nav-item:hover { color: var(--blue-d); }
-
-    /* ── TOAST ── */
-    .toast-container {
-      position: fixed; bottom: 80px; left: 50%;
-      transform: translateX(-50%);
-      z-index: 500; display: flex; flex-direction: column;
-      gap: 8px; pointer-events: none;
-    }
-    .toast {
-      padding: 10px 18px; border-radius: 10px;
-      font-size: 13px; font-weight: 600; color: #fff;
-      animation: toast-in .2s ease;
-      white-space: nowrap;
-    }
-    .toast.success { background: var(--green-d, #059669); }
-    .toast.error   { background: var(--red); }
-    .toast.info    { background: var(--blue-d); }
-    @keyframes toast-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-    @media (min-width: 640px) {
-      .drawer { left: auto; right: 0; width: 420px; border-radius: 20px 0 0 20px; max-height: 100vh; }
-    }
-
-    /* ── WA MODAL ── */
-    .wa-cliente-info {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; background: var(--bg);
-      border-radius: 8px; margin-bottom: 12px;
-    }
-    .wa-status-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 9px 12px; border-radius: 8px;
-      font-size: 12px; font-weight: 600; margin-bottom: 12px;
-    }
-    .wa-status-banner.conectado { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
-    .wa-status-banner.desconectado { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
-    .wa-tab-bar {
-      display: flex; gap: 4px; background: var(--bg);
-      border-radius: 10px; padding: 3px; margin-bottom: 12px;
-    }
-    .wa-tab-btn {
-      flex: 1; padding: 7px 10px; border: none;
-      border-radius: 8px; font-size: 12px; font-weight: 600;
-      cursor: pointer; background: transparent; color: var(--mid);
-      transition: all .18s; font-family: inherit;
-    }
-    .wa-tab-btn.ativo {
-      background: var(--white); color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,.1);
-    }
-    .wa-templates-list { max-height: 200px; overflow-y: auto; }
-    .wa-template-card {
-      padding: 10px 12px; border: 1.5px solid var(--border);
-      border-radius: 8px; cursor: pointer; margin-bottom: 6px;
-      transition: all .15s;
-    }
-    .wa-template-card:hover { border-color: #25D366; }
-    .wa-template-card.selecionado { border-color: #25D366; background: #f0fdf4; }
-    .tc-nome { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .tc-texto { font-size: 11px; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wa-preview-box {
-      background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;
-      padding: 10px 12px; font-size: 12px; color: #166534;
-      white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin-top: 12px;
-    }
-    .wa-msg-textarea {
-      width: 100%; min-height: 110px; border: 1.5px solid var(--border);
-      border-radius: 8px; padding: 10px 12px; font-size: 13px;
-      resize: vertical; font-family: inherit; color: var(--text); background: var(--white);
-    }
-    .wa-msg-textarea:focus { outline: none; border-color: #25D366; }
-    .btn-f-wa { background: #25D366; color: #fff; }
-    .btn-f-wa:hover { background: #1da851; }
-    .btn-f-wa:disabled { opacity: .5; cursor: not-allowed; }
+    .modal-box { width: 100%; max-width: 460px; max-height: 90vh; display: flex; flex-direction: column; background: var(--cream); color: var(--ink); border: 3px solid var(--ink);
+      border-radius: 18px; box-shadow: 6px 6px 0 var(--blue); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 3px solid var(--ink); }
+    .modal-header h3 { margin: 0; font: 400 16px/1.1 var(--dela); }
+    .modal-body { padding: 14px; overflow: auto; display: grid; gap: 12px; align-content: start; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 14px; border-top: 3px solid var(--ink); }
+    .transfer-info { padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #fff3c4; font-size: 12px; line-height: 1.5; }
+    .transfer-search-results { border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; }
+    .transfer-result-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; cursor: pointer; background: var(--paper); }
+    .transfer-result-item + .transfer-result-item { border-top: 2px dashed var(--line); }
+    .transfer-result-item.selected { background: #fff3c4; }
+    .transfer-result-name { font: 700 13px var(--mono); }
+    .transfer-result-phone { font-size: 11px; color: var(--muted); }
+    .selected-client-box { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--green); color: var(--cream); }
+    .selected-client-name { font: 400 14px var(--dela); }
+    .btn-deselect { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+    .wa-cliente-info { display: flex; align-items: center; gap: 10px; }
+    .wa-status-banner { padding: 7px 10px; border: 2px solid var(--ink); border-radius: 10px; font: 700 12px var(--mono); }
+    .wa-status-banner.conectado { background: #e2f4e8; color: #1a6b3d; }
+    .wa-status-banner.desconectado { background: #ffe0dc; color: #c1361a; }
+    .wa-tab-bar { display: flex; gap: 6px; }
+    .wa-tab-btn { flex: 1; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
+    .wa-tab-btn.ativo { background: var(--ink); color: var(--yellow); }
+    .wa-templates-list { display: grid; gap: 6px; }
+    .wa-template-card { padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); cursor: pointer; }
+    .wa-template-card.selecionado { background: #25d366; box-shadow: 2px 2px 0 var(--ink); }
+    .tc-nome { font: 700 12px var(--mono); }
+    .tc-texto { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wa-template-card.selecionado .tc-texto { color: var(--ink); }
+    .wa-preview-box, .wa-msg-textarea { width: 100%; border: 2.5px solid var(--ink); border-radius: 12px; background: #dcf8c6; color: var(--ink); padding: 10px 12px; font: 400 13px/1.45 var(--mono); white-space: pre-wrap; }
+    .wa-msg-textarea { min-height: 110px; resize: vertical; outline: none; }
+    .toast-container { position: fixed; z-index: 5000; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; justify-items: center; width: max-content; max-width: 90vw; }
+    .toast-container .toast { position: static; transform: none; opacity: 1; pointer-events: auto; }
+    .toast-container .toast.info { background: var(--yellow); }
   </style>
 </head>
 <body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <header class="hd">
-    <div class="hd-left">
-      <button class="hd-back" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
-      <div>
-        <div class="hd-title">CRM de Clientes</div>
-        <div class="hd-subtitle" id="countLabel">Carregando...</div>
-      </div>
-    </div>
-    <div class="hd-right">
-      <button class="hd-bell" id="btnNotif" onclick="openNotifPanel()" style="display:none" title="Clientes sem visitar há muito tempo">
-        <i class="fas fa-bell"></i>
-        <span class="hd-bell-badge" id="notifBadge">0</span>
-      </button>
-      <button class="hd-btn" onclick="openFormNew()">
-        <i class="fas fa-plus"></i> Novo
-      </button>
-    </div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
+    <div class="topo-tit"><h1>Clientes</h1><p id="countLabel">Carregando...</p></div>
+    <button class="ico-btn sino" id="btnNotif" onclick="openNotifPanel()" title="Clientes sem visitar há muito tempo"><i class="fas fa-bell"></i><b id="notifBadge">0</b></button>
+    <button class="btn btn-novo" onclick="openFormNew()"><i class="fas fa-plus"></i> Novo</button>
   </header>
 
-  <!-- BUSCA + FILTROS -->
-  <div class="search-bar">
-    <div class="search-wrap">
-      <i class="fas fa-search"></i>
-      <input type="text" id="searchInput" placeholder="Nome, telefone ou placa..." oninput="onSearch(this)">
-      <button class="search-clear" id="searchClear" onclick="clearSearch()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="filter-bar" id="filterBar"></div>
+  <div class="busca">
+    <span class="lupa"><i class="fas fa-search"></i></span>
+    <input class="entrada" type="text" id="searchInput" placeholder="Nome, telefone ou placa…" oninput="onSearch(this)" autocomplete="off">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Limpar"><i class="fas fa-times"></i></button>
   </div>
+  <nav class="filtros" id="filterBar"></nav>
+  <div class="lista" id="grid"></div>
+</div>
 
-  <!-- CARDS -->
-  <div class="crm-grid" id="grid"></div>
+<nav id="bottomNav"></nav>
+<div class="toast-container" id="toastContainer"></div>
 
-  <!-- NAV -->
-  <nav class="bottom-nav" id="bottomNav"></nav>
-
-  <!-- TOAST -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- DRAWER OVERLAY -->
-  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-
-  <!-- DRAWER -->
-  <div class="drawer" id="drawer">
-    <div class="drawer-handle"></div>
-    <div class="drawer-header">
-      <span class="drawer-title" id="drawerTitle">—</span>
-      <button class="drawer-close" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="drawer-body" id="drawerBody"></div>
-    <div class="drawer-footer" id="drawerFooter" style="display:none"></div>
+<!-- janela de baixo: detalhe, formulário e clientes sumidos -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawerTitle">—</span>
+    <button class="drawer-close" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
   </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer" id="drawerFooter" style="display:none"></div>
+</div>
 
-  <!-- MODAL TRANSFERÊNCIA -->
-  <div class="modal-overlay" id="transferModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h3><i class="fas fa-exchange-alt" style="color:var(--blue-d);margin-right:6px"></i> Transferir Veículo</h3>
-        <button class="modal-close-btn" onclick="closeTransferModal()"><i class="fas fa-times"></i></button>
+<!-- transferir veículo -->
+<div class="modal-overlay" id="transferModal" onclick="if(event.target===this)closeTransferModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fas fa-right-left"></i> Transferir veículo</h3>
+      <button class="modal-close-btn" onclick="closeTransferModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="transfer-info" id="transferInfo"></div>
+      <div class="form-group">
+        <label class="form-label">Novo dono</label>
+        <input type="text" class="form-input" id="transferSearch" placeholder="Nome ou telefone…" oninput="onTransferSearch(this)">
       </div>
-      <div class="modal-body">
-        <div class="transfer-info" id="transferInfo"></div>
-        <div class="form-group">
-          <label class="form-label">Buscar cliente destino</label>
-          <input type="text" class="form-input" id="transferSearch"
-                 placeholder="Nome ou telefone..."
-                 oninput="onTransferSearch(this)">
-        </div>
-        <div id="transferResults"></div>
-        <div id="selectedClientBox" style="display:none"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-f btn-f-cancel" onclick="closeTransferModal()">Cancelar</button>
-        <button class="btn-f btn-f-save" id="btnConfirmTransfer" onclick="confirmarTransferencia()" disabled>
-          <i class="fas fa-check"></i> Confirmar
-        </button>
-      </div>
+      <div id="transferResults"></div>
+      <div id="selectedClientBox" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-f btn-f-cancel" onclick="closeTransferModal()">Cancelar</button>
+      <button class="btn-f btn-f-save" id="btnConfirmTransfer" onclick="confirmarTransferencia()" disabled><i class="fas fa-check"></i> Confirmar</button>
     </div>
   </div>
+</div>
 
-  <!-- MODAL WA -->
-  <div class="modal-overlay" id="waModal">
-    <div class="modal-box" style="max-width:480px">
-      <div class="modal-header">
-        <h3><i class="fab fa-whatsapp" style="color:#25D366;margin-right:6px"></i> Enviar mensagem</h3>
-        <button class="modal-close-btn" onclick="closeWaModal()"><i class="fas fa-times"></i></button>
-      </div>
-      <div class="modal-body" id="waModalBody" style="min-height:160px"></div>
-      <div class="modal-footer">
-        <button class="btn-f btn-f-cancel" onclick="closeWaModal()">Cancelar</button>
-        <button class="btn-f btn-f-wa" id="waSendBtn" onclick="sendWaMessage()" disabled>
-          <i class="fab fa-whatsapp"></i> Enviar
-        </button>
-      </div>
+<!-- mensagem pelo WhatsApp da empresa -->
+<div class="modal-overlay" id="waModal" onclick="if(event.target===this)closeWaModal()">
+  <div class="modal-box" style="max-width:480px; box-shadow: 6px 6px 0 #25d366">
+    <div class="modal-header">
+      <h3><i class="fab fa-whatsapp"></i> Enviar mensagem</h3>
+      <button class="modal-close-btn" onclick="closeWaModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="waModalBody" style="min-height:160px"></div>
+    <div class="modal-footer">
+      <button class="btn-f btn-f-cancel" onclick="closeWaModal()">Cancelar</button>
+      <button class="btn-f btn-f-wa" id="waSendBtn" onclick="sendWaMessage()" disabled><i class="fab fa-whatsapp"></i> Enviar</button>
     </div>
   </div>
+</div>
 
   <script src="../api.js"></script>
   <script src="utils.js"></script>
@@ -851,7 +279,7 @@
       const permissoes = JSON.parse(localStorage.getItem('permissoes') || '[]');
       if (!permissoes.includes('gerenciar_clientes')) {
         showToast('Sem permissão para gerenciar clientes', 'error');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+        setTimeout(() => { window.location.href = '/funcionario/index.html'; }, 1500);
         return;
       }
 
@@ -948,7 +376,7 @@
       const badge = document.getElementById('notifBadge');
       if (!btn || !badge) return;
       if (notificaveis.length > 0) {
-        btn.style.display = 'flex';
+        btn.style.display = 'grid';
         badge.textContent = notificaveis.length > 99 ? '99+' : notificaveis.length;
       } else {
         btn.style.display = 'none';
@@ -980,7 +408,7 @@
 
       if (!lista.length) {
         body.innerHTML = toggleHtml + `<div class="state-container">
-          <i class="fas fa-check-circle state-icon" style="color:var(--green)"></i>
+          <div class="state-icon">👏</div>
           <div class="state-title">Tudo em dia!</div>
           <div class="state-sub">Nenhum cliente esquecido no momento.</div>
         </div>`;
@@ -1033,20 +461,15 @@
     // ── FILTRO BAR ────────────────────────────────
     function renderFilterBar() {
       const filtros = [
-        { id: 'todos',    label: 'Todos' },
-        { id: 'hoje',     label: 'Hoje' },
-        { id: 'recentes', label: 'Recentes 7d' },
-        { id: 'inativos', label: 'Inativos 30d+' },
-        { id: 'semNome',  label: 'Sem Nome' }
+        { id: 'todos',    label: 'Todos',        cor: 'var(--cream)' },
+        { id: 'hoje',     label: 'Hoje',         cor: 'var(--yellow)' },
+        { id: 'recentes', label: '7 dias',       cor: '#9be3b5' },
+        { id: 'inativos', label: 'Sumidos 30d+', cor: 'var(--pink)' },
+        { id: 'semNome',  label: 'Sem nome',     cor: '#ffb199' }
       ];
-      document.getElementById('filterBar').innerHTML = filtros.map(f => {
-        const count = filterCounts[f.id] ?? 0;
-        return `<button class="filter-btn ${filtroAtivo === f.id ? 'active' : ''}"
-                        onclick="setFiltro('${f.id}')">
-          ${f.label}
-          <span class="filter-badge">${count}</span>
-        </button>`;
-      }).join('');
+      document.getElementById('filterBar').innerHTML = filtros.map(f =>
+        `<button class="filtro ${filtroAtivo === f.id ? 'on' : ''}" style="--c: ${f.cor}" onclick="setFiltro('${f.id}')"><b>${filterCounts[f.id] ?? 0}</b>${f.label}</button>`
+      ).join('');
     }
 
     function setFiltro(id) {
@@ -1129,8 +552,8 @@
 
       if (total === 0) {
         setGrid(`<div class="state-container">
-          <i class="fas fa-users-slash state-icon"></i>
-          <div class="state-title">Nenhum cliente encontrado</div>
+          <div class="state-icon">🔎</div>
+          <div class="state-title">Ninguém encontrado</div>
           <div class="state-sub">Tente outro termo ou mude o filtro.</div>
         </div>`);
         return;
@@ -1138,6 +561,7 @@
 
       const g = document.getElementById('grid');
       g.style.display = 'grid';
+      g.classList.add('lista');
       g.innerHTML = '';
       renderedCount = 0;
       appendNextBatch();
@@ -1167,71 +591,41 @@
       g.innerHTML = html;
     }
 
+    // Cor do avatar a partir do id (fica igual entre recarregamentos)
+    const CORES_AV = ['var(--pink)', 'var(--yellow)', '#9fc1ff', '#9be3b5', '#ffb199', '#d6b8ff'];
+    function corAvatar(id) { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CORES_AV[h % CORES_AV.length]; }
+    function quandoHtml(c) {
+      const dias = diasDesdeUltimaVisita(c);
+      if (dias === null) return `<span class="quando">última visita<b>—</b></span>`;
+      return `<span class="quando${dias > 30 ? ' sumiu' : ''}">última visita<b>${dias === 0 ? 'hoje' : `há ${dias} dia${dias > 1 ? 's' : ''}`}</b></span>`;
+    }
+
     function clienteCard(c) {
-      const isNA      = !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
-      const veiculos  = c.veiculos || [];
-      // Clientes sem nome: usar placa como identificador primário
-      const primeiraPlaca = veiculos[0]?.placa || null;
-      const displayNome   = isNA ? (primeiraPlaca || 'Sem nome') : c.nome;
-      const initial       = isNA ? (primeiraPlaca ? primeiraPlaca.charAt(0).toUpperCase() : '?') : c.nome.charAt(0).toUpperCase();
-      const totalGasto   = calcTotalGasto(c);
-      const totalOrdens  = c._totalOrdens ?? 0;
-      const visitaBadge  = badgeVisitaHtml(c);
-
-      // Se sem nome, não mostrar a placa novamente nas tags (já está no nome)
-      const veiculosParaTags = isNA && primeiraPlaca ? veiculos.slice(1) : veiculos;
-      const vehicleTags = veiculosParaTags.slice(0, 2).map(v =>
-        `<span class="tag tag-plate">${v.placa}</span>
-         ${v.modelo ? `<span class="tag tag-model">${v.modelo}</span>` : ''}`
-      ).join('');
-      const moreVeh = veiculosParaTags.length > 2 ? `<span class="tag tag-model">+${veiculosParaTags.length - 2}</span>` : '';
-
-      const waBtn = c.telefone
-        ? `<button class="cc-action-btn wa" title="Enviar mensagem WhatsApp" onclick="event.stopPropagation(); openWaModal('${c.id}')">
-             <i class="fab fa-whatsapp"></i>
-           </button>`
-        : '';
-
-      const semNomeBadge = isNA ? `<span class="badge-semnom">sem nome</span>` : '';
-
+      const isNA     = !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
+      const veiculos = c.veiculos || [];
+      const dias     = diasDesdeUltimaVisita(c);
+      const sumiu    = dias !== null && dias > 30;
+      const initial  = isNA ? (veiculos[0]?.placa ? veiculos[0].placa.charAt(0).toUpperCase() : '?') : c.nome.charAt(0).toUpperCase();
+      const placas   = veiculos.slice(0, 3).map(v => `<span class="placa mini"><b>${escHtml(v.placa)}</b></span>`).join('')
+        + (veiculos.length > 3 ? `<span class="mais">+${veiculos.length - 3}</span>` : '');
+      const chamar = sumiu && c.telefone
+        ? `<div class="chamar"><i class="fab fa-whatsapp" style="font-size: 16px; color: #128c4a"></i><span>Sumiu há <b>${dias} dias</b></span>
+             <button class="btn" onclick="event.stopPropagation(); openWaModal('${c.id}')">Chamar de volta</button></div>` : '';
       return `
-        <div class="client-card" onclick="openDetail('${c.id}')">
-          <div class="cc-top">
-            <div class="cc-avatar ${isNA ? 'na' : ''}">${initial}</div>
-            <div class="cc-info">
-              <div class="cc-name-row">
-                <div class="cc-name">${escHtml(displayNome)}</div>
-                ${semNomeBadge}
-              </div>
-              <div class="cc-phone">
-                <i class="fas fa-phone" style="font-size:10px"></i>
-                ${c.telefone ? escHtml(c.telefone) : '<span class="no-phone">Sem telefone</span>'}
-              </div>
-            </div>
-            ${visitaBadge ? `<div>${visitaBadge}</div>` : ''}
+        <article class="cartao cli" style="--sc: ${sumiu ? 'var(--pink)' : 'var(--blue)'}" onclick="openDetail('${c.id}')">
+          <div class="cli-topo">
+            <span class="av" style="--c: ${corAvatar(c.id)}">${escHtml(initial)}</span>
+            <span class="t"><b>${isNA ? '<span class="sem-nome">sem nome</span>' : escHtml(c.nome)}</b><span>${c.telefone ? escHtml(c.telefone) : '<span class="sem-tel">sem telefone</span>'}</span></span>
+            ${quandoHtml(c)}
           </div>
-          ${veiculos.length > 0 ? `<div class="cc-tags">${vehicleTags}${moreVeh}</div>` : ''}
-          <div class="cc-bottom">
-            <div class="cc-stat">
-              <div class="cc-stat-val">${totalOrdens}</div>
-              <div class="cc-stat-lbl">Visitas</div>
-            </div>
-            <div class="cc-stat">
-              <div class="cc-stat-val">${veiculos.length}</div>
-              <div class="cc-stat-lbl">Veículos</div>
-            </div>
-            <div class="cc-stat">
-              <div class="cc-stat-val">${fmtCurrency(totalGasto)}</div>
-              <div class="cc-stat-lbl">Total gasto</div>
-            </div>
-            <div class="cc-actions" onclick="event.stopPropagation()">
-              ${waBtn}
-              <button class="cc-action-btn" title="Editar" onclick="openFormEdit('${c.id}')"><i class="fas fa-pencil-alt"></i></button>
-              ${temPermissao('excluir_clientes') ? `<button class="cc-action-btn danger" title="Excluir" onclick="confirmDelete('${c.id}', '${escHtml(c.nome)}')"><i class="fas fa-trash"></i></button>` : ''}
-            </div>
+          <div class="numeros"><div><b>${c._totalOrdens ?? 0}</b><small>visitas</small></div><div><b>${veiculos.length}</b><small>veículos</small></div><div><b>${gastoCurto(calcTotalGasto(c))}</b><small>gasto</small></div></div>
+          ${veiculos.length ? `<div class="placas">${placas}</div>` : ''}
+          <div class="cli-pe" onclick="event.stopPropagation()">
+            ${chamar}
+            <button class="mini-acao" title="Editar" onclick="openFormEdit('${c.id}')"><i class="fas fa-pen"></i></button>
+            ${temPermissao('excluir_clientes') ? `<button class="mini-acao perigo" title="Excluir" onclick="confirmDelete('${c.id}', '${escHtml(c.nome)}')"><i class="fas fa-trash"></i></button>` : ''}
           </div>
-        </div>
-      `;
+        </article>`;
     }
 
     // ── BUSCA ─────────────────────────────────────
@@ -1276,7 +670,8 @@
       if (!c) return;
 
       openDrawer();
-      document.getElementById('drawerTitle').textContent = c.nome && c.nome !== 'N/A' ? c.nome : 'Cliente sem nome';
+      const isNA = !c.nome || c.nome === 'N/A';
+      document.getElementById('drawerTitle').textContent = isNA ? 'Cliente sem nome' : c.nome;
       document.getElementById('drawerFooter').style.display = 'none';
 
       const totalGasto  = calcTotalGasto(c);
@@ -1286,83 +681,34 @@
       const uvData      = ultimaVisitaDate(c);
       const ultimaVisitaFmt = uvData ? uvData.toLocaleDateString('pt-BR') : '—';
 
-      const waAction = c.telefone
-        ? `<button class="btn-detail-action wa" onclick="openWaModal('${c.id}')">
-             <i class="fab fa-whatsapp"></i> WhatsApp
-           </button>`
-        : '';
+      // Reengajar: 15+ dias sem visita e com telefone
+      const reengajar = c.telefone && dias !== null && dias >= 15
+        ? `<div class="reengajar"><i class="fab fa-whatsapp" style="font-size: 18px; color: #128c4a"></i><span>Última visita há <b>${dias} dias</b>. Mande uma mensagem para trazer o cliente de volta.</span></div>` : '';
 
-      // Box de reengajamento (15+ dias sem visita e tem telefone)
-      let reengageBox = '';
-      if (c.telefone && dias !== null && dias >= 15) {
-        reengageBox = `
-          <div class="wa-reengage-box">
-            <div class="wa-reengage-title"><i class="fab fa-whatsapp"></i> Reengajar cliente</div>
-            <div class="wa-reengage-msg">Última visita há <strong>${dias} dias</strong>. Envie uma mensagem personalizada para trazer o cliente de volta.</div>
-            <button class="btn-wa-reengage" onclick="openWaModal('${c.id}')">
-              <i class="fab fa-whatsapp"></i> Enviar mensagem
-            </button>
-          </div>`;
-      }
-
-      const veiculosHtml = veiculos.length > 0
-        ? `<div class="detail-section-title" style="margin-top:20px">Veículos (${veiculos.length})</div>
-           <div class="veh-grid">
-             ${veiculos.map(v => `
-               <div class="veh-card">
-                 <div class="veh-card-plate">${v.placa}</div>
-                 <div class="veh-card-model">${v.modelo || '—'}</div>
-                 <button class="btn-transfer-veh" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')">
-                   <i class="fas fa-exchange-alt"></i> Transferir
-                 </button>
-               </div>
-             `).join('')}
-           </div>`
-        : `<div style="color:var(--light);font-size:13px;margin-top:16px;text-align:center">Nenhum veículo vinculado</div>`;
+      const veiculosHtml = veiculos.length
+        ? veiculos.map(v => `<div class="veic"><span class="placa mini"><b>${escHtml(v.placa)}</b></span><span class="t">${escHtml(v.modelo || '—')}</span>
+            <button class="btn-transf" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')"><i class="fas fa-right-left"></i> Transferir</button></div>`).join('')
+        : `<p class="vazio-txt">Nenhum veículo vinculado</p>`;
 
       document.getElementById('drawerBody').innerHTML = `
-        <div class="detail-stat-row">
-          <div class="detail-stat">
-            <div class="detail-stat-val">${totalOrdens}</div>
-            <div class="detail-stat-lbl">Visitas</div>
-          </div>
-          <div class="detail-stat">
-            <div class="detail-stat-val">${veiculos.length}</div>
-            <div class="detail-stat-lbl">Veículos</div>
-          </div>
-          <div class="detail-stat">
-            <div class="detail-stat-val">${fmtCurrency(totalGasto)}</div>
-            <div class="detail-stat-lbl">Total gasto</div>
-          </div>
+        <div class="det-num">
+          <div style="--c: var(--yellow)"><b>${totalOrdens}</b><small>visitas</small></div>
+          <div style="--c: var(--blue)"><b>${veiculos.length}</b><small>veículos</small></div>
+          <div style="--c: var(--green)"><b>${gastoCurto(totalGasto)}</b><small>gasto</small></div>
         </div>
-
-        ${reengageBox}
-
-        <div class="detail-action-row">
-          ${waAction}
-          <button class="btn-detail-action" onclick="openFormEdit('${c.id}')">
-            <i class="fas fa-pencil-alt"></i> Editar
-          </button>
-          ${temPermissao('excluir_clientes') ? `<button class="btn-detail-action danger" onclick="confirmDelete('${c.id}', '${escHtml(c.nome || 'N/A')}')">
-            <i class="fas fa-trash"></i> Excluir
-          </button>` : ''}
+        ${reengajar}
+        <div>
+          <div class="det-linha"><span>Telefone</span><span>${c.telefone ? escHtml(c.telefone) : '—'}</span></div>
+          <div class="det-linha"><span>Última visita</span><span>${ultimaVisitaFmt}${dias !== null ? ` · há ${dias}d` : ''}</span></div>
         </div>
-
-        <div class="detail-section-title">Informações</div>
-        <div class="detail-row">
-          <span class="detail-row-label">Nome</span>
-          <span class="detail-row-val">${escHtml(c.nome || 'N/A')}</span>
+        <p class="det-tit">Veículos (${veiculos.length})</p>
+        <div>${veiculosHtml}</div>
+        <div class="acoes-det">
+          <a class="btn verde largo" href="/funcionario/nova-ordem.html"><i class="fas fa-plus"></i> Nova ordem</a>
+          <button class="btn" onclick="openFormEdit('${c.id}')"><i class="fas fa-pen"></i> Editar</button>
+          ${c.telefone ? `<button class="btn zap" onclick="openWaModal('${c.id}')"><i class="fab fa-whatsapp"></i> Mensagem</button>` : '<button class="btn" disabled><i class="fab fa-whatsapp"></i> Sem telefone</button>'}
+          ${temPermissao('excluir_clientes') ? `<button class="btn lixo largo" onclick="confirmDelete('${c.id}', '${escHtml(c.nome || 'N/A')}')"><i class="fas fa-trash"></i> Excluir cliente</button>` : ''}
         </div>
-        <div class="detail-row">
-          <span class="detail-row-label">Telefone</span>
-          <span class="detail-row-val">${c.telefone ? escHtml(c.telefone) : '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-row-label">Última visita</span>
-          <span class="detail-row-val">${ultimaVisitaFmt}${dias !== null ? ` <span style="color:var(--mid);font-weight:400;font-size:11px">(${dias}d atrás)</span>` : ''}</span>
-        </div>
-
-        ${veiculosHtml}
       `;
     }
 
@@ -1644,13 +990,16 @@
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Gasto nos quadrinhos vai sem centavos, para caber no celular
+    function gastoCurto(v) { return 'R$ ' + Math.round(v || 0).toLocaleString('pt-BR'); }
+
     function fmtCurrency(v) {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
     }
 
     function showToast(msg, type = 'info') {
       const el = document.createElement('div');
-      el.className = `toast ${type}`;
+      el.className = `toast ${type} show`;
       el.textContent = msg;
       document.getElementById('toastContainer').appendChild(el);
       setTimeout(() => el.remove(), 3000);
@@ -1814,5 +1163,6 @@
       }
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
