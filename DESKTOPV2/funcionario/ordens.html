@@ -2,1049 +2,399 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
   <title>Ordens — Lina X</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <style>
-    :root {
-      --navy:   #0f172a;
-      --navy-m: #1e293b;
-      --blue:   #3b82f6;
-      --blue-d: #2563eb;
-      --text:   #0f172a;
-      --mid:    #64748b;
-      --light:  #94a3b8;
-      --border: #e2e8f0;
-      --bg:     #f1f5f9;
-      --white:  #ffffff;
-      --green:  #10b981;
-      --green-d:#059669;
-      --amber:  #f59e0b;
-      --orange: #f97316;
-      --red:    #ef4444;
-      --r:      12px;
-      --rpill:  999px;
-    }
-    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html,body { height: 100%; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      display: flex; flex-direction: column;
-    }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    /* nomes antigos de cor ainda usados em trechos montados pelo JS */
+    :root { --mid: var(--muted); --light: var(--muted); --border: var(--ink); --bg: var(--paper); --card: var(--paper); --text: var(--ink);
+      --green-d: var(--green); --blue-d: var(--blue); --amber: var(--yellow); }
+    .hidden { display: none !important; }
+    .pagina { max-width: 760px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 120px; }
 
-    /* ── HEADER ─────────────────────────────── */
-    .hd {
-      background: var(--navy);
-      flex-shrink: 0;
-      position: sticky; top: 0; z-index: 40;
-    }
-    .hd-top {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px 10px;
-    }
-    .hd-left { display: flex; align-items: center; gap: 10px; }
-    .btn-icon-hd {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      background: rgba(255,255,255,.1);
-      border: 1.5px solid rgba(255,255,255,.15);
-      color: rgba(255,255,255,.8);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; cursor: pointer;
-      text-decoration: none;
-      transition: background .18s; flex-shrink: 0;
-    }
-    .btn-icon-hd:hover { background: rgba(255,255,255,.2); }
-    .btn-icon-hd:active { transform: scale(.93); }
-    .hd-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-    .hd-sub { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
-    .hd-right { display: flex; align-items: center; gap: 8px; }
-    .btn-new-hd {
-      height: 34px; padding: 0 14px;
-      background: var(--blue-d);
-      border: none; border-radius: var(--rpill);
-      color: #fff; font-size: 13px; font-weight: 700;
-      display: flex; align-items: center; gap: 6px;
-      cursor: pointer; text-decoration: none;
-      font-family: 'Inter', sans-serif;
-      transition: opacity .18s;
-    }
-    .btn-new-hd:hover { opacity: .85; }
-    .btn-hist-hd {
-      height: 34px; padding: 0 12px;
-      background: rgba(255,255,255,.14);
-      border: 1px solid rgba(255,255,255,.22); border-radius: var(--rpill);
-      color: #fff; font-size: 13px; font-weight: 600;
-      display: flex; align-items: center; gap: 6px;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: background .18s;
-    }
-    .btn-hist-hd:hover { background: rgba(255,255,255,.22); }
-    .btn-hist-hd:active { transform: scale(.95); }
-    .hist-chip {
-      flex-shrink: 0; padding: 7px 14px; border-radius: 999px;
-      border: 1.5px solid #e5e7eb; background: #fff; color: #555;
-      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
-      font-family: 'Inter', sans-serif; transition: all .15s;
-    }
-    .hist-chip.active { background: var(--blue-d); border-color: var(--blue-d); color: #fff; }
+    /* ===== topo ===== */
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit small { display: block; margin-top: 4px; font: 700 11px var(--mono); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-nova { padding: 8px 12px; font-size: 13px; background: var(--yellow); box-shadow: 3px 3px 0 var(--pink); }
 
-    /* Filter tabs */
-    .filter-tabs {
-      display: flex; gap: 6px;
-      overflow-x: auto; padding: 0 16px 12px;
-      scrollbar-width: none;
-    }
-    .filter-tabs::-webkit-scrollbar { display: none; }
-    .filter-tabs.hidden { display: none; }
-    .ftab {
-      flex-shrink: 0;
-      padding: 6px 14px;
-      border-radius: var(--rpill);
-      border: 1.5px solid rgba(255,255,255,.15);
-      background: rgba(255,255,255,.06);
-      color: rgba(255,255,255,.55);
-      font-size: 12px; font-weight: 600;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: all .18s;
-    }
-    .ftab.active {
-      background: var(--blue-d);
-      border-color: var(--blue-d);
-      color: #fff;
-    }
+    /* ===== abas de status: grudam no topo ===== */
+    .abas { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; gap: 8px; overflow-x: auto; margin: 14px calc(var(--gutter) * -1) 0;
+      padding: 10px var(--gutter); background: linear-gradient(var(--space) 75%, transparent); scrollbar-width: none; }
+    .ftab { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 7px; border: 2.5px solid var(--cream); border-radius: 999px;
+      background: transparent; color: var(--cream); font: 700 12px var(--mono); cursor: pointer; white-space: nowrap; }
+    .ftab b { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--cream); color: var(--ink); display: grid; place-items: center; font: 400 12px/1 var(--dela); }
+    .ftab.active { background: var(--c, var(--cream)); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+    .ftab.active b { background: var(--ink); color: var(--c, var(--cream)); }
 
-    /* ── MAIN ────────────────────────────────── */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 14px 14px 100px;
-    }
+    .atalhos-lista { display: flex; gap: 8px; margin: 4px 0 14px; }
+    .atalhos-lista a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 2px dashed var(--cream); border-radius: 10px;
+      color: var(--cream); font: 700 11px var(--mono); text-decoration: none; }
+    .atalhos-lista a.fila { border-color: var(--yellow); color: var(--yellow); }
 
-    /* Quick action links */
-    .quick-links {
-      display: flex; gap: 8px;
-      margin-bottom: 14px;
-    }
-    .qlink {
-      flex: 1;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      padding: 10px 8px;
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: var(--r);
-      font-size: 12px; font-weight: 600; color: var(--mid);
-      text-decoration: none;
-      transition: all .18s;
-    }
-    .qlink:hover { border-color: var(--blue); color: var(--blue-d); }
-    .qlink i { font-size: 14px; }
-    .qlink-amber { color: #92400e; border-color: rgba(245,158,11,.3); background: rgba(255,251,235,.8); }
-    .qlink-amber:hover { border-color: var(--amber); color: #78350f; }
+    /* ===== cartão de ordem (cor da sombra = status) ===== */
+    [data-st="PENDENTE"] { --st: var(--yellow); }
+    [data-st="EM_ANDAMENTO"] { --st: var(--blue); }
+    [data-st="AGUARDANDO_PAGAMENTO"] { --st: var(--pink); }
+    [data-st="FINALIZADO"], [data-st="COMPLETO"] { --st: var(--green); }
+    [data-st="CANCELADO"] { --st: #b9b2c8; }
+    .lista { display: grid; gap: 12px; }
+    @media (min-width: 720px) { .lista { grid-template-columns: 1fr 1fr; } }
+    .ordem { --sc: var(--st); cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: transform .12s; }
+    .ordem:active { transform: translate(2px, 2px); }
+    .ordem-topo { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--st); border-bottom: 2.5px solid var(--ink); }
+    .ordem-topo .num { font: 400 15px/1 var(--dela); }
+    .ordem-topo .quando { font: 700 10px var(--mono); opacity: .75; }
+    .status { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--st);
+      font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: piscar 1.6s ease-in-out infinite; }
+    @keyframes piscar { 50% { opacity: .3; } }
+    [data-st="EM_ANDAMENTO"] .ordem-topo, [data-st="EM_ANDAMENTO"] .det-topo { color: var(--cream); }
+    [data-st="EM_ANDAMENTO"] .status { color: #a9c1ff; }
+    .ordem-meio { display: flex; gap: 12px; align-items: center; padding: 8px 12px 6px; }
+    .ordem-meio .info { flex: 1; min-width: 0; }
+    .ordem-meio .info b { display: block; font: 400 14px/1.15 var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ordem-meio .info span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .placa b { font-size: 14px; }
+    .avulso { width: 96px; flex: none; display: grid; place-items: center; gap: 2px; padding: 6px 4px; border: 2.5px dashed var(--ink); border-radius: 6px; font: 700 10px var(--mono); text-align: center; }
+    .avulso i { font-size: 16px; }
+    .ordem-pe { display: flex; align-items: center; gap: 8px; padding: 6px 12px 8px; border-top: 2px dashed var(--line); margin-top: auto; }
+    .valor { font: 400 18px/1 var(--dela); white-space: nowrap; }
+    .valor small { font-size: .55em; margin-right: 2px; }
+    .falta { font: 700 10px var(--mono); color: var(--muted); white-space: nowrap; }
+    .lavs { display: flex; margin-left: 4px; }
+    .lavs i { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ink); background: var(--c); color: var(--cream); display: grid; place-items: center;
+      font: 400 11px/1 var(--dela); font-style: normal; margin-left: -6px; }
+    .lavs i:first-child { margin-left: 0; }
+    .acoes { margin-left: auto; display: flex; gap: 6px; }
+    .acao { height: 34px; min-width: 34px; padding: 0 10px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink);
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: 700 12px var(--mono); cursor: pointer; box-shadow: 2px 2px 0 var(--ink); white-space: nowrap; }
+    .acao:active { transform: translate(2px, 2px); box-shadow: none; }
+    .acao.lav { background: var(--yellow); }
+    .acao.concluir { background: var(--blue); color: var(--cream); }
+    .acao.pagar { background: var(--green); color: var(--cream); }
 
-    /* ── ORDER CARDS ─────────────────────────── */
-    .orders-list { display: flex; flex-direction: column; gap: 10px; }
+    .vazio { text-align: center; padding: 30px 16px; --sc: var(--yellow); }
+    .vazio .ic { font-size: 34px; }
+    .vazio b { display: block; font: 400 18px var(--dela); margin: 8px 0 4px; }
+    .vazio p { margin: 0 0 14px; font-size: 12px; color: var(--muted); }
+    .loading-wrap { display: grid; justify-items: center; gap: 10px; padding: 40px 0; font: 700 12px var(--mono); }
+    .spin { width: 30px; height: 30px; border: 3px solid var(--cream); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
+    .folha .spin, .cartao .spin { border-color: var(--ink); border-top-color: transparent; }
 
-    .order-card {
-      background: var(--white);
-      border-radius: var(--r);
-      box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
-      display: flex;
-      overflow: hidden;
-      cursor: pointer;
-      transition: box-shadow .18s, transform .12s;
-    }
-    .order-card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,.1);
-      transform: translateY(-1px);
-    }
-    .order-card:active { transform: scale(.99); }
+    /* ===== detalhe ===== */
+    .det { --sc: var(--st); padding: 0; overflow: hidden; }
+    .det-topo { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--st); border-bottom: 3px solid var(--ink); }
+    .det-topo .num { font: 400 22px/1 var(--dela); }
+    .det-topo .quando { font: 700 11px var(--mono); opacity: .8; margin-top: 4px; }
+    .det-topo .valor { margin-left: auto; font-size: 24px; text-align: right; }
+    .det-topo .valor span { display: block; font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .det-corpo { padding: 14px; display: grid; gap: 14px; }
+    .det-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .det-item { background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 7px 9px; min-width: 0; }
+    .det-item.inteiro { grid-column: 1 / -1; }
+    .det-item small { display: block; font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .det-item b { display: block; font: 700 13px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .det-item .placa { margin-top: 3px; min-width: 0; }
+    .det-sec h4 { margin: 0 0 6px; font: 400 13px var(--dela); }
+    .linha { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 2px dashed var(--line); font: 700 13px var(--mono); }
+    .linha span:last-child { white-space: nowrap; }
+    .nota { background: #fff3c4; border: 2px solid var(--ink); border-radius: 10px; padding: 8px 10px; font-size: 12px; transform: rotate(-.6deg); white-space: pre-wrap; }
+    .acoes-fixas { position: fixed; z-index: 600; left: 0; right: 0; bottom: 0; background: var(--cream); border-top: 3px solid var(--ink); box-shadow: 0 -5px 0 var(--blue);
+      padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .det-acoes { max-width: 760px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; }
+    .det-acoes .btn { flex: 1 1 auto; padding: 10px 12px; font-size: 13px; }
+    .btn.amarelo { background: var(--yellow); }
+    .btn.zap { background: #25d366; color: var(--ink); }
+    .btn.lixo { flex: 0 0 auto; background: var(--paper); color: #c1361a; }
+    .btn.icone { flex: 0 0 auto; }
 
-    .card-accent {
-      width: 4px; flex-shrink: 0;
-    }
-    .acc-PENDENTE          { background: var(--amber); }
-    .acc-EM_ANDAMENTO      { background: var(--blue); }
-    .acc-AGUARDANDO_PAGAMENTO { background: var(--orange); }
-    .acc-COMPLETO          { background: var(--green); }
+    /* ===== janelas (sobem de baixo; no computador ficam no centro) ===== */
+    .janela { position: fixed; inset: 0; z-index: 800; background: #0e0f24bb; display: none; align-items: flex-end; justify-content: center; }
+    .janela.active { display: flex; }
+    @media (min-width: 700px) { .janela { align-items: center; } }
+    .janela .folha { transform: none; animation: subir .4s cubic-bezier(.2, .9, .3, 1.1); }
+    @keyframes subir { from { transform: translateY(60%); } to { transform: none; } }
+    .folha-pe { display: flex; gap: 10px; }
+    .folha-pe .btn { flex: 1; }
+    .folha-pe .btn.cancelar { flex: 0 0 auto; background: var(--paper); }
+    .folha-corpo > p { margin: 0; font-size: 12px; color: var(--muted); }
 
-    .card-body {
-      flex: 1; padding: 13px 14px;
-      min-width: 0;
-    }
-    .card-top {
-      display: flex; align-items: flex-start;
-      justify-content: space-between; gap: 8px;
-      margin-bottom: 6px;
-    }
-    .card-num {
-      font-size: 12px; font-weight: 700; color: var(--mid);
-      letter-spacing: .3px;
-    }
-    .card-date {
-      font-size: 11px; color: var(--light);
-      margin-top: 1px;
-    }
-    .sbadge {
-      flex-shrink: 0;
-      padding: 3px 9px;
-      border-radius: var(--rpill);
-      font-size: 10px; font-weight: 700;
-      letter-spacing: .2px; text-transform: uppercase;
-    }
-    .sbadge-PENDENTE { background: rgba(245,158,11,.12); color: #92400e; }
-    .sbadge-EM_ANDAMENTO { background: rgba(59,130,246,.12); color: #1d4ed8; }
-    .sbadge-AGUARDANDO_PAGAMENTO { background: rgba(249,115,22,.12); color: #c2410c; }
-    .sbadge-COMPLETO { background: rgba(16,185,129,.12); color: #065f46; }
+    /* pagamento: recibo no topo, depois "quanto" e "como" */
+    .pag-corpo { gap: 16px; grid-auto-rows: max-content; }
+    .recibo { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 14px; padding: 12px 14px; box-shadow: 3px 3px 0 var(--ink); }
+    .recibo-linhas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); text-align: center; align-items: end; }
+    .recibo-linhas div + div { border-left: 2px dashed var(--line); }
+    .recibo-linhas small { display: block; font: 700 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .recibo-linhas b { display: block; font: 700 13px var(--mono); white-space: nowrap; }
+    .recibo-linhas .falta-v { font: 400 17px/1.2 var(--dela); color: #c1361a; }
+    .recibo-linhas .falta-v.zerou { color: var(--green); }
+    .recibo .tubo { margin-top: 10px; height: 10px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: #e3d8bd; }
+    .recibo .tubo i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--green) 0 6px, #3fbf76 6px 12px);
+      animation: listras .9s linear infinite; transition: width .5s cubic-bezier(.3, 1.3, .5, 1); }
+    .passo { display: grid; gap: 8px; }
+    .passo-tit { display: flex; align-items: center; gap: 8px; font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .passo-tit .n { width: 20px; height: 20px; border-radius: 6px; background: var(--ink); color: var(--yellow); display: grid; place-items: center; font: 400 11px/1 var(--dela); }
+    .valor-linha { display: flex; gap: 8px; align-items: stretch; }
+    .campo-real { position: relative; flex: 1; min-width: 0; }
+    .campo-real > span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font: 400 16px var(--dela); color: var(--muted); pointer-events: none; }
+    .campo-real .entrada { height: 52px; padding-left: 44px; font: 400 22px var(--dela); }
+    .btn-resto { flex: none; display: grid; place-items: center; gap: 1px; min-width: 100px; padding: 4px 10px; border: 2.5px solid var(--ink); border-radius: 10px;
+      background: var(--yellow); color: var(--ink); box-shadow: 3px 3px 0 var(--ink); cursor: pointer; font: 700 10px/1.1 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+    .btn-resto b { font: 400 13px/1 var(--dela); text-transform: none; letter-spacing: 0; }
+    .btn-resto:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+    .btn-resto:disabled { background: #e3d8bd; color: var(--muted); box-shadow: none; cursor: default; }
+    .troco { align-items: center; gap: 8px; background: #dff5e6; border: 2px solid var(--green); border-radius: 10px; padding: 7px 10px; font: 700 12px var(--mono); color: #1a6b3d; }
+    .troco b { margin-left: auto; font: 400 15px var(--dela); }
+    .metodos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .metodo { display: grid; justify-items: center; align-content: center; gap: 5px; min-height: 66px; padding: 8px 4px; border: 2.5px solid var(--ink); border-radius: 12px;
+      background: var(--paper); color: var(--ink); font: 700 11px var(--mono); cursor: pointer; box-shadow: 3px 3px 0 var(--m); }
+    .metodo i { font-size: 19px; color: var(--m); }
+    .metodo:active { transform: translate(2px, 2px); box-shadow: none; }
+    .metodo.cinza { border-style: dashed; }
+    .dica-metodo { margin: 0; font-size: 10px; line-height: 1.4; color: var(--muted); }
+    .pagos { display: grid; gap: 6px; }
+    .pagos:empty { display: none; }
+    .pago { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); font: 700 12px/1.2 var(--mono); }
+    .pago .ic { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--ink); background: var(--m); color: #fff; display: grid; place-items: center; font-size: 11px; flex: none; }
+    .pago b { margin-left: auto; font: 400 14px var(--dela); white-space: nowrap; }
+    .pago .tira, .pago .qr { height: 26px; min-width: 26px; padding: 0 6px; border-radius: 8px; border: 2px solid var(--ink); background: #ffe0dc; color: #c1361a; cursor: pointer; font: 700 11px var(--mono); flex: none; }
+    .pago .qr { background: #d6f5ef; color: #127a6e; }
+    .desconto-bloco { border: 2px dashed var(--ink); border-radius: 12px; }
+    .btn-toggle-discount { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 0; background: none; color: var(--ink); font: 700 12px var(--mono); cursor: pointer; text-align: left; }
+    .btn-toggle-discount.has-discount { color: #1a6b3d; }
+    .discount-section { padding: 0 12px 12px; }
+    .discount-label { display: flex; align-items: center; gap: 6px; font: 700 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .discount-applied { align-items: center; gap: 8px; margin-top: 8px; }
+    .btn-remove-discount { margin-left: auto; border: 0; background: none; color: #c1361a; font: 700 11px var(--mono); text-decoration: underline; cursor: pointer; }
+    .desc-campos { display: flex; gap: 8px; margin-top: 8px; }
+    .desc-campos .entrada { height: 44px; font: 400 16px var(--dela); }
+    .desc-campos .pct { position: relative; width: 82px; flex: none; }
+    .desc-campos .pct .entrada { padding-right: 24px; text-align: right; }
+    .desc-campos .pct span { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font: 700 13px var(--mono); color: var(--muted); pointer-events: none; }
+    .desc-campos .btn { padding: 8px 12px; font-size: 13px; }
 
-    .card-client {
-      font-size: 15px; font-weight: 700; color: var(--text);
-      margin-bottom: 3px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .card-meta {
-      display: flex; align-items: center; gap: 6px;
-      flex-wrap: wrap;
-    }
-    .card-model {
-      display: inline-flex; align-items: center;
-      background: var(--bg2);
-      color: var(--text);
-      font-size: 11px; font-weight: 600;
-      padding: 2px 8px; border-radius: 5px;
-      border: 1px solid var(--border);
-    }
-    .card-plate {
-      display: inline-flex; align-items: center;
-      background: var(--navy);
-      color: #fff;
-      font-size: 11px; font-weight: 700;
-      padding: 2px 8px; border-radius: 5px;
-      letter-spacing: .5px;
-    }
-    .card-avulso {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: #f5f3ff;
-      color: #6d28d9;
-      font-size: 11px; font-weight: 700;
-      padding: 2px 9px; border-radius: 5px;
-      border: 1px solid #ddd6fe;
-    }
-    .card-svc {
-      font-size: 12px; color: var(--mid); font-weight: 500;
-    }
-    .card-divider {
-      height: 1px; background: var(--border); margin: 10px 0;
-    }
-    .card-bottom {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    }
-    .card-value {
-      font-size: 16px; font-weight: 800; color: var(--text);
-    }
-    .card-actions { display: flex; gap: 7px; flex-shrink: 0; }
-    .btn-card {
-      height: 32px; padding: 0 12px;
-      border-radius: var(--rpill);
-      border: none; cursor: pointer;
-      font-size: 12px; font-weight: 700;
-      display: flex; align-items: center; gap: 5px;
-      font-family: 'Inter', sans-serif;
-      transition: opacity .18s;
-    }
-    .btn-card:hover { opacity: .85; }
-    .btn-card:active { transform: scale(.95); }
-    .btn-card-eye  { background: rgba(100,116,139,.1); color: var(--mid); }
-    .btn-card-done { background: rgba(16,185,129,.12); color: #065f46; }
-    .btn-card-pay  { background: linear-gradient(135deg, var(--orange), #ea580c); color: #fff; }
-
-    /* ── LOADING ─────────────────────────────── */
-    .loading-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 60px 20px; gap: 14px;
-    }
-    .spin {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--blue-d);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-    .loading-txt { font-size: 14px; color: var(--mid); font-weight: 500; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── EMPTY STATE ─────────────────────────── */
-    .empty-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 60px 20px; text-align: center; gap: 10px;
-    }
-    .empty-icon {
-      width: 72px; height: 72px; border-radius: 50%;
-      background: var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px; color: var(--light); margin-bottom: 6px;
-    }
-    .empty-title { font-size: 18px; font-weight: 700; color: var(--text); }
-    .empty-sub { font-size: 14px; color: var(--mid); max-width: 240px; }
-    .btn-empty {
-      margin-top: 6px; padding: 11px 24px;
-      background: linear-gradient(135deg, var(--blue-d), var(--blue));
-      border: none; border-radius: var(--rpill);
-      color: #fff; font-size: 14px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-    }
-
-    /* ── DETAIL VIEW ─────────────────────────── */
-    .detail-wrap { display: flex; flex-direction: column; gap: 12px; padding-bottom: 90px; }
-
-    .detail-hero {
-      background: var(--navy-m);
-      border-radius: var(--r);
-      padding: 18px;
-    }
-    .detail-hero-top {
-      display: flex; align-items: center;
-      justify-content: space-between; gap: 12px;
-      margin-bottom: 14px;
-    }
-    .detail-num {
-      font-size: 22px; font-weight: 800; color: #fff;
-      letter-spacing: -.3px;
-    }
-    .detail-hero-date { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 2px; }
-    .detail-value {
-      font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 2px;
-    }
-    .detail-value-label { font-size: 12px; color: rgba(255,255,255,.45); }
-
-    .detail-card {
-      background: var(--white);
-      border-radius: var(--r);
-      padding: 16px 18px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    }
-    .detail-card-title {
-      font-size: 11px; font-weight: 700; color: var(--light);
-      letter-spacing: .6px; text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .info-item {}
-    .info-label { font-size: 11px; color: var(--light); font-weight: 600; margin-bottom: 2px; }
-    .info-value { font-size: 14px; font-weight: 700; color: var(--text); }
-    .info-value-plate {
-      display: inline-flex; align-items: center;
-      background: var(--navy); color: #fff;
-      font-size: 13px; font-weight: 800;
-      padding: 3px 10px; border-radius: 6px;
-      letter-spacing: .8px;
-    }
-
-    .svc-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .svc-row:last-child { border-bottom: none; }
-    .svc-name { font-size: 14px; font-weight: 500; color: var(--text); }
-    .svc-price { font-size: 14px; font-weight: 700; color: var(--blue-d); }
-
-    .obs-text { font-size: 14px; color: var(--mid); line-height: 1.6; }
-
-    /* ── STICKY DETAIL ACTIONS ───────────────── */
-    .sticky-actions {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      padding: 12px 14px;
-      padding-bottom: max(14px, env(safe-area-inset-bottom));
-      background: rgba(255,255,255,.9);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border);
-      display: flex; gap: 8px; z-index: 30;
-    }
-    .btn-action {
-      flex: 1; padding: 14px;
-      border-radius: var(--rpill);
-      border: none; cursor: pointer;
-      font-size: 14px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      font-family: 'Inter', sans-serif;
-      transition: opacity .18s, transform .1s;
-    }
-    .btn-action:active { transform: scale(.97); }
-    .btn-action-back { background: var(--bg); color: var(--mid); border: 1.5px solid var(--border); }
-    .btn-action-done { background: linear-gradient(135deg, var(--green-d), var(--green)); color: #fff; box-shadow: 0 4px 12px rgba(5,150,105,.3); }
-    .btn-action-pay  { background: linear-gradient(135deg, var(--orange), #ea580c); color: #fff; box-shadow: 0 4px 12px rgba(234,88,12,.3); }
-    .btn-action-edit { background: rgba(59,130,246,.1); color: var(--blue-d); border: 1.5px solid rgba(59,130,246,.2); }
-    .btn-action-del  { background: rgba(220,38,38,.08); color: #b91c1c; border: 1.5px solid rgba(220,38,38,.2); }
-    .btn-action-wa   { background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; box-shadow: 0 4px 12px rgba(37,211,102,.3); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; }
-
-    /* ── PAYMENT MODAL ───────────────────────── */
-    .modal-overlay {
-      display: none; position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.55);
-      z-index: 2000;
-      align-items: flex-end; justify-content: center;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal-content {
-      background: var(--white);
-      border-radius: 24px 24px 0 0;
-      padding: 8px 20px 0;
-      width: 100%; max-width: 560px;
-      max-height: 90vh;
-      overflow-y: auto;
-      animation: slideUp .3s cubic-bezier(.34,1.4,.64,1);
-    }
-    @keyframes slideUp {
-      from { transform: translateY(40px); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
-    }
-    .modal-handle {
-      width: 40px; height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 8px auto 14px;
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 18px;
-    }
-    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
-    .modal-close {
-      width: 32px; height: 32px;
-      background: var(--bg); border: none; border-radius: 50%;
-      color: var(--mid); font-size: 14px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .modal-close:hover { color: var(--text); }
-
-    .pay-summary {
-      background: var(--bg); border-radius: 12px;
-      padding: 14px; text-align: center; margin-bottom: 16px;
-    }
-    .pay-remaining { font-size: 32px; font-weight: 800; color: var(--text); }
-    .pay-summary-row {
-      display: flex; justify-content: center; gap: 16px;
-      margin-top: 6px; font-size: 12px; color: var(--mid);
-    }
-    .pay-summary-row span { font-weight: 700; color: var(--text); }
-
-    /* Discount section — colapsível no rodapé */
-    .btn-toggle-discount {
-      width: 100%; padding: 10px 14px;
-      background: rgba(245,158,11,.08);
-      border: 1.5px dashed rgba(245,158,11,.4);
-      border-radius: 10px;
-      color: #92400e; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      transition: background .18s;
-      margin-bottom: 10px;
-    }
-    .btn-toggle-discount:hover { background: rgba(245,158,11,.14); }
-    .btn-toggle-discount.has-discount {
-      background: rgba(16,185,129,.08);
-      border-color: rgba(16,185,129,.4);
-      color: #065f46;
-    }
-    .discount-section {
-      background: rgba(245,158,11,.07);
-      border: 1.5px solid rgba(245,158,11,.25);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-    .discount-label {
-      font-size: 12px; font-weight: 700; color: #92400e;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .discount-input {
-      width: 100%; padding: 9px 9px 9px 26px;
-      border: 1.5px solid rgba(245,158,11,.35);
-      border-radius: 8px;
-      font-size: 15px; font-weight: 700; color: var(--text);
-      font-family: 'Inter', sans-serif;
-      background: var(--white); outline: none;
-    }
-    .discount-input:focus { border-color: var(--amber); }
-    .discount-pct-input {
-      width: 100%; padding: 9px 24px 9px 10px;
-      border: 1.5px solid rgba(245,158,11,.35);
-      border-radius: 8px;
-      font-size: 15px; font-weight: 700; color: var(--text);
-      font-family: 'Inter', sans-serif;
-      background: var(--white); outline: none;
-    }
-    .discount-pct-input:focus { border-color: var(--amber); }
-    .btn-apply-discount {
-      padding: 9px 14px;
-      background: var(--amber); border: none; border-radius: 8px;
-      color: #fff; font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      white-space: nowrap;
-    }
-    .btn-apply-discount:hover { opacity: .85; }
-    .discount-applied {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-top: 8px;
-      font-size: 12px; color: #065f46;
-      background: rgba(16,185,129,.1);
-      border-radius: 6px; padding: 6px 10px;
-    }
-    .btn-remove-discount {
-      background: none; border: none; color: var(--red);
-      cursor: pointer; font-size: 13px;
-    }
-    /* PIX QR btn no item de pagamento */
-    .btn-pix-qr {
-      padding: 4px 10px; border-radius: 6px;
-      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3);
-      color: var(--green-d); font-size: 12px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      display: inline-flex; align-items: center; gap: 5px;
-      transition: background .15s;
-    }
-    .btn-pix-qr:hover { background: rgba(16,185,129,.2); }
-    /* Modal de edição de ordem */
-    .edit-modal-overlay {
-      position: fixed; inset: 0; z-index: 1100;
-      background: rgba(15,23,42,.6); backdrop-filter: blur(3px);
-      display: flex; align-items: flex-end; justify-content: center;
-    }
-    .edit-modal-content {
-      background: var(--white); border-radius: 24px 24px 0 0;
-      padding: 20px 20px 24px; width: 100%; max-width: 540px;
-      max-height: 85vh; overflow-y: auto;
-    }
-    .edit-modal-title {
-      font-size: 17px; font-weight: 800; color: var(--text);
-      margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
-    }
-    .edit-form-label {
-      font-size: 12px; font-weight: 700; color: var(--mid);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 6px;
-    }
-    .edit-form-group { margin-bottom: 16px; }
-    .edit-textarea {
-      width: 100%; padding: 12px; border: 1.5px solid var(--border);
-      border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif;
-      color: var(--text); resize: none; outline: none;
-      transition: border-color .18s;
-    }
-    .edit-textarea:focus { border-color: var(--blue); }
+    /* escolher pessoas, serviços e adicionais (editar, setar lavador) */
+    .rot-grupo { font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .rot-grupo em { font-style: normal; text-transform: none; letter-spacing: 0; }
     .lavador-chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
-    .lavador-chip {
-      padding: 7px 14px; border-radius: var(--rpill);
-      border: 1.5px solid var(--border); background: var(--bg);
-      font-size: 13px; font-weight: 600; color: var(--mid);
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: all .15s;
-    }
-    .lavador-chip.selected {
-      border-color: var(--blue-d); background: rgba(37,99,235,.1); color: var(--blue-d);
-    }
+    .lavador-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink);
+      font: 700 12px var(--mono); cursor: pointer; user-select: none; }
+    .lavador-chip.selected { background: var(--yellow); box-shadow: 2px 2px 0 var(--ink); }
+    .lavador-chip.selected::before { content: "✓"; }
+    .info-ro { display: flex; gap: 16px; flex-wrap: wrap; padding: 9px 11px; border: 2px dashed var(--ink); border-radius: 10px; }
+    .info-ro small { display: block; font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .info-ro b { font: 700 13px var(--mono); }
+    .edit-textarea { width: 100%; resize: vertical; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 11px; font: 400 13px/1.4 var(--mono); outline: none; }
+    .edit-textarea:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .pix-qr-copy { display: inline-flex; align-items: center; gap: 6px; border: 2.5px solid var(--ink); border-radius: 10px; padding: 8px 14px; background: var(--green); color: var(--cream);
+      font: 400 13px var(--dela); box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+    #pixQrModalBody img { border: 3px solid var(--ink) !important; border-radius: 12px; background: #fff; }
+    #avisarModalBody select { border: 2.5px solid var(--ink) !important; font-family: var(--mono) !important; font-weight: 700; }
+    #avisarModalBody #avisarPreview { border: 2px dashed var(--ink) !important; font-family: var(--mono); font-size: 13px !important; }
 
-    .pay-input-wrap {
-      position: relative; margin-bottom: 12px;
-    }
-    .pay-prefix {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      font-size: 16px; font-weight: 700; color: var(--mid);
-    }
-    .pay-input {
-      width: 100%; padding: 16px 16px 16px 42px;
-      border: 2px solid var(--border); border-radius: 12px;
-      font-size: 28px; font-weight: 800; text-align: right;
-      font-family: 'Inter', sans-serif; color: var(--text);
-      outline: none; transition: border-color .18s;
-    }
-    .pay-input:focus { border-color: var(--blue-d); }
+    /* histórico de finalizadas */
+    .janela.cheia .folha { max-height: 92vh; height: 92vh; }
+    .periodos { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hist-chip { padding: 4px 10px; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); font: 700 11px var(--mono); cursor: pointer; }
+    .hist-chip.active { background: var(--ink); color: var(--yellow); }
+    .hist-datas { align-items: center; gap: 6px; }
+    .hist-datas .entrada { flex: 1; min-width: 0; padding: 7px 8px; font-size: 12px; }
+    .hist-datas .btn { padding: 7px 12px; font-size: 13px; }
+    .hist-total { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 10px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--green); color: var(--cream); margin-bottom: 4px; }
+    .hist-total b { font: 400 20px var(--dela); }
+    .hist { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 2px dashed var(--line); }
+    .hist .placa { min-width: 84px; } .hist .placa b { font-size: 12px; padding: 3px 4px 4px; }
+    .hist .avulso { width: 84px; }
+    .hist .info { flex: 1; min-width: 0; font-size: 11px; color: var(--muted); }
+    .hist .info b { display: block; font: 700 12px var(--mono); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist .v { font: 700 12px var(--mono); white-space: nowrap; text-align: right; }
+    .hist .v i { display: block; font-style: normal; font-size: 10px; color: var(--muted); }
+    .hist .mini { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; flex: none; }
+    .hist-vazio { text-align: center; color: var(--muted); padding: 28px 10px; font-size: 13px; }
 
-    .btn-fill-remaining {
-      width: 100%; padding: 11px;
-      background: rgba(37,99,235,.07);
-      border: 1.5px solid rgba(37,99,235,.2);
-      border-radius: var(--rpill);
-      color: var(--blue-d); font-size: 13px; font-weight: 700;
-      cursor: pointer; margin-bottom: 14px;
-      font-family: 'Inter', sans-serif;
-    }
-
-    .pay-troco {
-      background: #ecfdf5; border: 1px solid #6ee7b7;
-      border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
-      display: flex; align-items: center; gap: 10px;
-      color: #065f46; font-size: 14px; font-weight: 600;
-    }
-    .pay-troco i { color: #10b981; }
-
-    .pay-methods {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px; margin-bottom: 14px;
-    }
-    .pay-method-btn {
-      padding: 12px 8px;
-      border: 1.5px solid var(--border);
-      background: var(--white); border-radius: 10px;
-      cursor: pointer; font-weight: 600; font-size: 13px;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 5px;
-      transition: all .18s; font-family: 'Inter', sans-serif;
-      color: var(--text);
-    }
-    .pay-method-btn:hover {
-      border-color: var(--blue-d);
-      color: var(--blue-d);
-      background: rgba(37,99,235,.04);
-    }
-    .pay-method-btn.pending {
-      background: #fef3c7; color: #92400e; border-color: #fbbf24;
-    }
-    .pay-method-btn i { font-size: 18px; }
-
-    /* PIX QR Panel */
-    .pix-qr-panel {
-      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-      border: 1.5px solid rgba(16,185,129,.25);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 14px;
-      text-align: center;
-      animation: fadeIn .25s ease;
-    }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .pix-qr-title {
-      font-size: 13px; font-weight: 700; color: var(--green-d);
-      margin-bottom: 12px;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-    }
-    .pix-qr-img {
-      width: 180px; height: 180px;
-      border-radius: 10px;
-      margin: 0 auto 12px;
-      display: block;
-      border: 3px solid rgba(16,185,129,.2);
-    }
-    .pix-qr-valor {
-      font-size: 22px; font-weight: 800; color: var(--green-d);
-      margin-bottom: 4px;
-    }
-    .pix-qr-chave {
-      font-size: 12px; color: var(--mid);
-      margin-bottom: 12px;
-      word-break: break-all;
-    }
-    .pix-qr-copy {
-      width: 100%;
-      padding: 10px;
-      background: rgba(16,185,129,.12);
-      border: 1.5px solid rgba(16,185,129,.25);
-      border-radius: var(--rpill);
-      color: var(--green-d); font-size: 13px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      transition: background .18s;
-    }
-    .pix-qr-copy:hover { background: rgba(16,185,129,.2); }
-    .pix-qr-loading {
-      padding: 24px 0;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 10px;
-      color: var(--green-d); font-size: 13px; font-weight: 600;
-    }
-    .pix-qr-error {
-      font-size: 13px; color: var(--mid); padding: 8px 0;
-    }
-
-    .pay-list { margin-bottom: 4px; }
-    .pay-list-label {
-      font-size: 12px; font-weight: 700; color: var(--light);
-      letter-spacing: .4px; text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .pay-list-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 12px;
-      background: var(--bg); border-radius: 8px;
-      margin-bottom: 6px; font-size: 14px; font-weight: 600;
-    }
-    .pay-list-item button {
-      background: none; border: none;
-      color: var(--light); cursor: pointer; font-size: 15px;
-      transition: color .15s;
-    }
-    .pay-list-item button:hover { color: var(--red); }
-
-    .modal-actions {
-      position: sticky; bottom: 0;
-      padding: 12px 0;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
-      background: var(--white);
-      display: flex; gap: 8px;
-    }
-    .btn-modal-cancel {
-      padding: 14px 20px;
-      background: var(--bg); border: 1.5px solid var(--border);
-      border-radius: var(--rpill);
-      color: var(--mid); font-size: 14px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-    }
-    .btn-modal-submit {
-      flex: 1; padding: 14px;
-      background: linear-gradient(135deg, var(--green-d), var(--green));
-      border: none; border-radius: var(--rpill);
-      color: #fff; font-size: 14px; font-weight: 700;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: opacity .18s;
-      box-shadow: 0 4px 12px rgba(5,150,105,.3);
-    }
-    .btn-modal-submit:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-
-    /* ── TOAST ───────────────────────────────── */
-    .toast {
-      position: fixed; bottom: 90px;
-      left: 50%; transform: translateX(-50%) translateY(20px);
-      background: var(--navy); color: #fff;
-      padding: 12px 20px; border-radius: var(--rpill);
-      display: flex; align-items: center; gap: 9px;
-      font-size: 14px; font-weight: 600;
-      z-index: 9999; opacity: 0;
-      transition: opacity .25s, transform .25s;
-      white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,.25);
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast-success i { color: var(--green); }
-    .toast-error   i { color: #f87171; }
-    .toast-info    i { color: #60a5fa; }
-
-    /* ── CONFIRM DIALOG ──────────────────────── */
-    .confirm-dialog {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 10000;
-    }
-    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); }
-    .confirm-box {
-      background: var(--white);
-      border-radius: 20px; padding: 28px 24px;
-      max-width: 360px; width: 90%;
-      position: relative; z-index: 1;
-      box-shadow: 0 20px 60px rgba(0,0,0,.25);
-      animation: slideUp .25s cubic-bezier(.34,1.56,.64,1);
-    }
-    .confirm-box h2 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
-    .confirm-box p { font-size: 14px; color: var(--mid); line-height: 1.5; margin-bottom: 24px; }
+    /* confirmação e aviso rápido */
+    .confirm-dialog { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .confirm-overlay { position: absolute; inset: 0; background: #0e0f24bb; }
+    .confirm-box { position: relative; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; padding: 20px; max-width: 360px; width: 100%; box-shadow: 6px 6px 0 var(--pink); }
+    .confirm-box h2 { margin: 0 0 6px; font: 400 18px var(--dela); }
+    .confirm-box p { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
     .confirm-buttons { display: flex; gap: 10px; }
-    .btn-cancel {
-      flex: 1; padding: 12px;
-      border: 1.5px solid var(--border); background: var(--white);
-      border-radius: var(--rpill); font-weight: 700; font-size: 14px;
-      cursor: pointer; color: var(--mid); font-family: 'Inter', sans-serif;
-    }
-    .btn-confirm {
-      flex: 1; padding: 12px;
-      background: linear-gradient(135deg, var(--green-d), var(--green));
-      border: none; border-radius: var(--rpill);
-      color: #fff; font-weight: 700; font-size: 14px;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-    }
+    .btn-cancel, .btn-confirm { flex: 1; padding: 10px 12px 12px; border: 3px solid var(--ink); border-radius: 12px; cursor: pointer; font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); }
+    .btn-cancel { background: var(--paper); color: var(--ink); }
+    .btn-confirm { background: var(--blue); color: var(--cream); }
+    .toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 5000; display: flex; align-items: center; gap: 8px; max-width: 90vw;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink);
+      padding: 9px 14px 10px; font: 700 13px var(--mono); opacity: 0; transform: translateX(-50%) translateY(12px); transition: opacity .25s, transform .25s; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast-success { background: var(--green); color: var(--cream); }
+    .toast-error { background: var(--red); color: var(--cream); }
   </style>
 </head>
 <body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-  <!-- ══ HEADER ════════════════════════════════════ -->
-  <header class="hd">
-    <div class="hd-top">
-      <div class="hd-left">
-        <a href="index.html" class="btn-icon-hd">
-          <i class="fas fa-home"></i>
-        </a>
-        <div>
-          <div class="hd-title">Ordens</div>
-          <div class="hd-sub" id="empresaNome">Carregando...</div>
-        </div>
-      </div>
-      <div class="hd-right">
-        <button class="btn-icon-hd" onclick="abrirHistorico()" title="Histórico de finalizadas">
-          <i class="fas fa-clock-rotate-left"></i>
-        </button>
-        <a href="nova-ordem.html" class="btn-new-hd">
-          <i class="fas fa-plus"></i> Nova
-        </a>
-        <button class="btn-icon-hd" onclick="logout()" title="Sair">
-          <i class="fas fa-sign-out-alt"></i>
-        </button>
-      </div>
-    </div>
-
-    <div class="filter-tabs" id="filterTabs">
-      <button class="ftab active" onclick="setFilter(this,'ACTIVE')">Ativas</button>
-      <button class="ftab" onclick="setFilter(this,'PENDENTE')">Pendente</button>
-      <button class="ftab" onclick="setFilter(this,'EM_ANDAMENTO')">Em Andamento</button>
-      <button class="ftab" onclick="setFilter(this,'AGUARDANDO_PAGAMENTO')">Aguardando</button>
-    </div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
+    <div class="topo-tit"><h1>Ordens</h1><small id="empresaNome">Carregando...</small></div>
+    <button class="ico-btn" onclick="abrirHistorico()" title="Finalizadas"><i class="fas fa-clock-rotate-left"></i></button>
+    <a class="btn btn-nova" href="/funcionario/nova-ordem.html"><i class="fas fa-plus"></i> Nova</a>
+    <button class="ico-btn" onclick="logout()" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
   </header>
 
-  <!-- ══ CONTENT ═══════════════════════════════════ -->
-  <main class="main" id="mainContent"></main>
+  <nav class="abas" id="filterTabs">
+    <button class="ftab active" style="--c: var(--cream)" onclick="setFilter(this,'ACTIVE')"><b data-cnt="ACTIVE">–</b>Ativas</button>
+    <button class="ftab" style="--c: var(--yellow)" onclick="setFilter(this,'PENDENTE')"><b data-cnt="PENDENTE">–</b>Pendente</button>
+    <button class="ftab" style="--c: #7fa2ff" onclick="setFilter(this,'EM_ANDAMENTO')"><b data-cnt="EM_ANDAMENTO">–</b>Em andamento</button>
+    <button class="ftab" style="--c: var(--pink)" onclick="setFilter(this,'AGUARDANDO_PAGAMENTO')"><b data-cnt="AGUARDANDO_PAGAMENTO">–</b>Aguardando pgto</button>
+  </nav>
 
-  <!-- ══ PAYMENT MODAL ══════════════════════════════ -->
-  <div class="modal-overlay" id="paymentModal" onclick="if(event.target===this)closePaymentModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="modal-header">
-        <h2 class="modal-title">Registrar Pagamento</h2>
-        <button class="modal-close" onclick="closePaymentModal()">✕</button>
-      </div>
+  <main id="mainContent"></main>
+</div>
 
-      <div class="pay-summary">
-        <div class="pay-remaining" id="remainingAmount">R$ 0,00</div>
-        <div class="pay-summary-row">
-          <div>Total: <span id="totalAmount">R$ 0,00</span></div>
-          <div>·</div>
-          <div>Pago: <span id="paidAmount">R$ 0,00</span></div>
+<!-- pagamento -->
+<div class="janela" id="paymentModal" onclick="if(event.target===this)closePaymentModal()">
+  <div class="folha" style="--sc: var(--green)" role="dialog" aria-label="Registrar pagamento" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3>Registrar pagamento<small id="paySub">—</small></h3><button class="fechar" onclick="closePaymentModal()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo pag-corpo">
+      <div class="recibo">
+        <div class="recibo-linhas">
+          <div><small>Total</small><b id="totalAmount">R$ 0,00</b></div>
+          <div><small>Pago</small><b id="paidAmount">R$ 0,00</b></div>
+          <div><small>Falta</small><b class="falta-v" id="remainingAmount">R$ 0,00</b></div>
         </div>
+        <div class="tubo"><i id="payTubo"></i></div>
       </div>
 
-      <div class="pay-input-wrap">
-        <span class="pay-prefix">R$</span>
-        <input type="text" class="pay-input" id="paymentValueInput" placeholder="0,00"
-               oninput="formatPaymentInput(event)">
+      <div class="passo">
+        <div class="passo-tit"><span class="n">1</span>Quanto o cliente pagou</div>
+        <div class="valor-linha">
+          <label class="campo-real"><span>R$</span><input class="entrada" id="paymentValueInput" inputmode="numeric" placeholder="0,00" aria-label="Valor pago" oninput="formatPaymentInput(event)"></label>
+          <button class="btn-resto" id="btnResto" onclick="fillRemainingAmount()" title="Preencher com o valor que falta">Restante<b id="payRestoV">R$ 0</b></button>
+        </div>
+        <div class="troco" id="trocoDisplay" style="display:none"><i class="fas fa-coins"></i> Troco <b id="trocoValue"></b></div>
       </div>
 
-      <div class="pay-troco" id="trocoDisplay" style="display:none">
-        <i class="fas fa-coins"></i>
-        Troco: <strong id="trocoValue"></strong>
+      <div class="passo">
+        <div class="passo-tit"><span class="n">2</span>Como pagou</div>
+        <div class="metodos">
+          <button class="metodo" style="--m: var(--green)" onclick="addPayment('DINHEIRO')"><i class="fas fa-money-bill-wave"></i>Dinheiro</button>
+          <button class="metodo" style="--m: #1a9e8f" onclick="addPaymentPix()"><i class="fab fa-pix"></i>PIX</button>
+          <button class="metodo" style="--m: var(--blue)" onclick="addPayment('CARTAO')"><i class="fas fa-credit-card"></i>Cartão</button>
+          <button class="metodo cinza" style="--m: #6b6780" onclick="addPayment('NFE')"><i class="fas fa-file-invoice"></i>NFe</button>
+          <button class="metodo cinza" style="--m: #c2418f" id="btnPayCortesia" onclick="addPayment('CORTESIA')" title="Não conta como faturamento. A comissão do lavador é paga normalmente."><i class="fas fa-gift"></i>Cortesia</button>
+          <button class="metodo cinza" style="--m: var(--orange)" onclick="addPayment('PENDENTE')"><i class="fas fa-clock"></i>Pendente</button>
+        </div>
+        <p class="dica-metodo">Digite o valor e toque na forma de pagamento. Cortesia não conta no faturamento; a comissão do lavador é paga normalmente.</p>
       </div>
 
-      <button class="btn-fill-remaining" onclick="fillRemainingAmount()">
-        Preencher valor restante
-      </button>
+      <div class="pagos" id="paymentsList"></div>
 
-      <div class="pay-methods">
-        <button class="pay-method-btn" onclick="addPayment('DINHEIRO')">
-          <i class="fas fa-money-bill-wave"></i> Dinheiro
-        </button>
-        <button class="pay-method-btn" onclick="addPaymentPix()">
-          <i class="fab fa-pix"></i> PIX
-        </button>
-        <button class="pay-method-btn" onclick="addPayment('CARTAO')">
-          <i class="fas fa-credit-card"></i> Cartão
-        </button>
-        <button class="pay-method-btn" onclick="addPayment('NFE')">
-          <i class="fas fa-file-invoice"></i> NFe
-        </button>
-        <button id="btnPayCortesia" class="pay-method-btn" onclick="addPayment('CORTESIA')" title="Não conta como faturamento. A comissão do lavador é paga normalmente.">
-          <i class="fas fa-gift"></i> Cortesia
-        </button>
-        <button class="pay-method-btn pending" onclick="addPayment('PENDENTE')">
-          <i class="fas fa-clock"></i> Pendente
-        </button>
-      </div>
-
-      <div class="pay-list" id="paymentsList"></div>
-
-      <!-- Desconto colapsível (aparece apenas quando maxDesconto > 0) -->
-      <div id="discountToggleWrap" style="display:none">
-        <button class="btn-toggle-discount" id="discountToggleBtn" onclick="toggleDiscountPanel()">
-          <i class="fas fa-tag"></i>
-          <span id="discountToggleLabel">Aplicar Desconto</span>
-        </button>
+      <!-- desconto (aparece só quando o cargo permite: maxDesconto > 0) -->
+      <div class="desconto-bloco" id="discountToggleWrap" style="display:none">
+        <button class="btn-toggle-discount" id="discountToggleBtn" onclick="toggleDiscountPanel()"><i class="fas fa-tag"></i> <span id="discountToggleLabel">Aplicar desconto</span> <small id="discountMaxLabel" style="margin-left:auto;color:var(--muted)"></small></button>
         <div class="discount-section" id="discountSection" style="display:none">
-          <div class="discount-label">
-            <i class="fas fa-tag"></i> Desconto
-            <span id="discountMaxLabel" style="margin-left:auto;font-size:11px;font-weight:500;color:#92400e;opacity:.8"></span>
-          </div>
           <div id="discountAppliedRow" style="display:none" class="discount-applied">
-            <span id="discountAppliedText" style="font-size:13px;font-weight:700;color:#065f46"></span>
-            <button class="btn-remove-discount" onclick="removeDiscount()">
-              <i class="fas fa-times"></i> Remover
-            </button>
+            <span id="discountAppliedText" style="font:700 12px var(--mono);color:#1a6b3d"></span>
+            <button class="btn-remove-discount" onclick="removeDiscount()">remover</button>
           </div>
-          <div id="discountInputRow" style="display:flex;gap:8px;margin-top:8px">
-            <div class="pay-input-wrap" style="margin:0;flex:1">
-              <span class="pay-prefix">R$</span>
-              <input type="text" class="pay-input discount-input" id="discountValueInput"
-                     placeholder="0,00" oninput="syncDiscountFromValue(event)">
-            </div>
-            <div class="pay-input-wrap" style="margin:0;width:74px">
-              <input type="text" class="pay-input discount-pct-input" id="discountPctInput"
-                     placeholder="0" oninput="syncDiscountFromPct(event)"
-                     style="padding-right:24px;text-align:right">
-              <span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--mid);pointer-events:none">%</span>
-            </div>
-            <button class="btn-apply-discount" onclick="applyDiscount()">Aplicar</button>
+          <div id="discountInputRow" class="desc-campos" style="display:flex">
+            <label class="campo-real"><span>R$</span><input class="entrada" id="discountValueInput" inputmode="numeric" placeholder="0,00" oninput="syncDiscountFromValue(event)"></label>
+            <label class="pct"><input class="entrada" id="discountPctInput" inputmode="decimal" placeholder="0" oninput="syncDiscountFromPct(event)"><span>%</span></label>
+            <button class="btn azul" onclick="applyDiscount()">Aplicar</button>
           </div>
         </div>
       </div>
-
-      <div class="modal-actions">
-        <button class="btn-modal-cancel" onclick="closePaymentModal()">Cancelar</button>
-        <button class="btn-modal-submit" id="submitPaymentBtn" onclick="submitPayments()" disabled>
-          Finalizar Ordem
-        </button>
-      </div>
+    </div>
+    <div class="folha-pe">
+      <button class="btn cancelar" onclick="closePaymentModal()">Cancelar</button>
+      <button class="btn verde" id="submitPaymentBtn" onclick="submitPayments()" disabled>Finalizar ordem</button>
     </div>
   </div>
+</div>
 
-  <!-- ══ EDIT ORDEM MODAL ══════════════════════ -->
-  <div class="edit-modal-overlay" id="editOrdemModal" style="display:none" onclick="if(event.target===this)closeEditModal()">
-    <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:92vh">
-      <div class="modal-handle"></div>
-      <div class="edit-modal-title">
-        <i class="fas fa-edit" style="color:var(--blue-d)"></i>
-        Editar Ordem
+<!-- editar ordem -->
+<div class="janela" id="editOrdemModal" style="display:none" onclick="if(event.target===this)closeEditModal()">
+  <div class="folha" style="--sc: var(--blue)" role="dialog" aria-label="Editar ordem" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3>Editar ordem<small>serviços, adicionais, lavadores e observação</small></h3><button class="fechar" onclick="closeEditModal()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo">
+      <div class="info-ro" id="editInfoSection">
+        <div><small>Cliente</small><b id="editClienteNome">—</b></div>
+        <div><small>Veículo</small><b id="editVeiculoInfo">—</b></div>
       </div>
-
-      <!-- INFO READ-ONLY: cliente + veículo -->
-      <div id="editInfoSection" style="margin-bottom:16px;padding:12px;background:var(--bg);border-radius:10px;font-size:13px">
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Cliente</div>
-            <div id="editClienteNome" style="font-weight:600;color:var(--text)">—</div>
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Veículo</div>
-            <div id="editVeiculoInfo" style="font-weight:600;color:var(--text)">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SERVIÇOS -->
-      <div class="edit-form-group">
-        <div class="edit-form-label">Serviços <span style="color:var(--light);font-weight:400;font-size:11px">(selecione ao menos um)</span></div>
-        <div class="lavador-chip-wrap" id="editServicosWrap">
-          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
-        </div>
-      </div>
-
-      <!-- ADICIONAIS -->
-      <div class="edit-form-group" id="editAdicionaisGroup">
-        <div class="edit-form-label">Adicionais <span style="color:var(--light);font-weight:400;font-size:11px">(opcional)</span></div>
-        <div class="lavador-chip-wrap" id="editAdicionaisWrap">
-          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
-        </div>
-      </div>
-
-      <!-- LAVADORES -->
-      <div class="edit-form-group">
-        <div class="edit-form-label">Lavadores</div>
-        <div class="lavador-chip-wrap" id="editLavadoresWrap">
-          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
-        </div>
-      </div>
-
-      <!-- OBSERVAÇÕES -->
-      <div class="edit-form-group">
-        <div class="edit-form-label">Observações</div>
-        <textarea class="edit-textarea" id="editObservacoes" rows="2"
-                  placeholder="Anotações sobre a ordem..."></textarea>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-modal-cancel" onclick="closeEditModal()">Cancelar</button>
-        <button class="btn-modal-submit" id="saveEditBtn" onclick="saveEditOrdem()">
-          Salvar
-        </button>
-      </div>
+      <div><div class="rot-grupo">Serviços <em>(ao menos um)</em></div><div class="lavador-chip-wrap" id="editServicosWrap"><span class="rot-grupo">Carregando...</span></div></div>
+      <div id="editAdicionaisGroup"><div class="rot-grupo">Adicionais <em>(opcional)</em></div><div class="lavador-chip-wrap" id="editAdicionaisWrap"><span class="rot-grupo">Carregando...</span></div></div>
+      <div><div class="rot-grupo">Lavadores</div><div class="lavador-chip-wrap" id="editLavadoresWrap"><span class="rot-grupo">Carregando...</span></div></div>
+      <div><div class="rot-grupo">Observações</div><textarea class="edit-textarea" id="editObservacoes" rows="2" placeholder="Anotações sobre a ordem..."></textarea></div>
+    </div>
+    <div class="folha-pe">
+      <button class="btn cancelar" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn azul" id="saveEditBtn" onclick="saveEditOrdem()">Salvar</button>
     </div>
   </div>
+</div>
 
-  <!-- ══ MODAL: SETAR FUNCIONÁRIO ════════════════ -->
-  <div class="edit-modal-overlay" id="setarLavadorModal" style="display:none" onclick="if(event.target===this)closeSetarLavadorModal()">
-    <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:70vh">
-      <div class="modal-handle"></div>
-      <div class="edit-modal-title">
-        <i class="fas fa-user-hard-hat" style="color:var(--blue-d)"></i>
-        Setar Funcionário
-      </div>
-      <p style="font-size:13px;color:var(--mid);margin-bottom:14px">Selecione quem vai lavar essa ordem. O status passará para <strong>Em Andamento</strong>.</p>
-      <div class="edit-form-group">
-        <div class="edit-form-label">Funcionários</div>
-        <div class="lavador-chip-wrap" id="setarLavadoresWrap">
-          <div style="font-size:13px;color:var(--mid)">Carregando...</div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-modal-cancel" onclick="closeSetarLavadorModal()">Cancelar</button>
-        <button class="btn-modal-submit" id="confirmarSetarLavBtn" onclick="confirmarSetarLavador()">
-          Confirmar
-        </button>
-      </div>
+<!-- setar funcionário -->
+<div class="janela" id="setarLavadorModal" style="display:none" onclick="if(event.target===this)closeSetarLavadorModal()">
+  <div class="folha" style="--sc: var(--yellow)" role="dialog" aria-label="Setar funcionário" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3>Quem vai lavar?<small>a ordem passa para em andamento</small></h3><button class="fechar" onclick="closeSetarLavadorModal()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo"><div class="lavador-chip-wrap" id="setarLavadoresWrap"><span class="rot-grupo">Carregando...</span></div></div>
+    <div class="folha-pe">
+      <button class="btn cancelar" onclick="closeSetarLavadorModal()">Cancelar</button>
+      <button class="btn azul" id="confirmarSetarLavBtn" onclick="confirmarSetarLavador()">Confirmar</button>
     </div>
   </div>
+</div>
 
-  <!-- ══ AVISAR CLIENTE MODAL ══════════════════ -->
-  <div class="edit-modal-overlay" id="avisarModal" style="display:none;z-index:3000"
-       onclick="if(event.target===this)fecharAvisarModal()">
-    <div class="edit-modal-content" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="edit-modal-title">
-        <i class="fab fa-whatsapp" style="color:#25D366"></i>
-        Avisar Cliente
-      </div>
-      <div id="avisarModalBody"></div>
-      <div class="modal-actions" style="padding-top:8px">
-        <button class="btn-modal-cancel" onclick="fecharAvisarModal()">Cancelar</button>
-        <button class="btn-modal-submit" id="btnEnviarAviso" onclick="enviarAviso()">Enviar</button>
-      </div>
+<!-- avisar cliente pelo WhatsApp da empresa -->
+<div class="janela" id="avisarModal" style="display:none;z-index:3000" onclick="if(event.target===this)fecharAvisarModal()">
+  <div class="folha" style="--sc: #25d366" role="dialog" aria-label="Avisar cliente" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3><i class="fab fa-whatsapp"></i> Avisar cliente</h3><button class="fechar" onclick="fecharAvisarModal()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo"><div id="avisarModalBody"></div></div>
+    <div class="folha-pe">
+      <button class="btn cancelar" onclick="fecharAvisarModal()">Cancelar</button>
+      <button class="btn verde" id="btnEnviarAviso" onclick="enviarAviso()">Enviar</button>
     </div>
   </div>
+</div>
 
-  <!-- ══ PIX QR MODAL ═══════════════════════════ -->
-  <div class="edit-modal-overlay" id="pixQrModal" style="display:none;z-index:3000" onclick="if(event.target===this)closePixQrModal()">
-    <div class="edit-modal-content" onclick="event.stopPropagation()" style="max-height:70vh">
-      <div class="modal-handle"></div>
-      <div class="edit-modal-title">
-        <i class="fab fa-pix" style="color:var(--green-d)"></i>
-        QR Code PIX
+<!-- QR Code PIX -->
+<div class="janela" id="pixQrModal" style="display:none;z-index:3000" onclick="if(event.target===this)closePixQrModal()">
+  <div class="folha" style="--sc: #1a9e8f" role="dialog" aria-label="QR Code PIX" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3><i class="fab fa-pix"></i> QR Code PIX</h3><button class="fechar" onclick="closePixQrModal()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo"><div id="pixQrModalBody" style="text-align:center"></div></div>
+    <div class="folha-pe"><button class="btn" onclick="closePixQrModal()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- histórico de finalizadas -->
+<div class="janela cheia" id="historicoModal" style="display:none;z-index:1300" onclick="if(event.target===this)fecharHistorico()">
+  <div class="folha" style="--sc: var(--green)" role="dialog" aria-label="Finalizadas" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3>Finalizadas<small>ordens pagas e concluídas</small></h3><button class="fechar" onclick="fecharHistorico()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo" style="grid-auto-rows:max-content">
+      <div class="periodos">
+        <button class="hist-chip active" data-preset="hoje" onclick="setHistPreset('hoje')">Hoje</button>
+        <button class="hist-chip" data-preset="7" onclick="setHistPreset('7')">7 dias</button>
+        <button class="hist-chip" data-preset="30" onclick="setHistPreset('30')">30 dias</button>
+        <button class="hist-chip" data-preset="tudo" onclick="setHistPreset('tudo')">Tudo</button>
+        <button class="hist-chip" data-preset="custom" onclick="setHistPreset('custom')">Período</button>
       </div>
-      <div id="pixQrModalBody" style="text-align:center"></div>
-      <div class="modal-actions" style="padding-top:8px">
-        <button class="btn-modal-submit" onclick="closePixQrModal()">Fechar</button>
+      <div class="hist-datas" id="histCustomRow" style="display:none">
+        <input class="entrada" type="date" id="histIni"><span>→</span><input class="entrada" type="date" id="histFim">
+        <button class="btn azul" onclick="aplicarHistCustom()">OK</button>
       </div>
+      <div id="historicoList"></div>
     </div>
   </div>
-
-  <!-- ══ HISTÓRICO (ordens finalizadas) ═════════════ -->
-  <div id="historicoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1300;flex-direction:column;">
-    <div style="background:#fff;max-width:560px;width:100%;margin:auto;height:100%;max-height:100%;display:flex;flex-direction:column;">
-      <div style="display:flex;align-items:center;gap:10px;padding:16px;border-bottom:1px solid #eef0f3;position:sticky;top:0;background:#fff;">
-        <i class="fas fa-clock-rotate-left" style="color:var(--blue-d);"></i>
-        <div style="font-size:16px;font-weight:700;color:#111827;flex:1;">Histórico — Finalizadas</div>
-        <button onclick="fecharHistorico()" style="width:34px;height:34px;border:none;background:#f3f4f6;border-radius:9px;cursor:pointer;color:#555;font-size:16px;">&times;</button>
-      </div>
-      <div style="padding:10px 12px;border-bottom:1px solid #f2f4f7;display:flex;flex-direction:column;gap:8px;">
-        <div style="display:flex;gap:6px;overflow-x:auto;">
-          <button class="hist-chip active" data-preset="hoje" onclick="setHistPreset('hoje')">Hoje</button>
-          <button class="hist-chip" data-preset="7" onclick="setHistPreset('7')">7 dias</button>
-          <button class="hist-chip" data-preset="30" onclick="setHistPreset('30')">30 dias</button>
-          <button class="hist-chip" data-preset="tudo" onclick="setHistPreset('tudo')">Tudo</button>
-          <button class="hist-chip" data-preset="custom" onclick="setHistPreset('custom')">Período</button>
-        </div>
-        <div id="histCustomRow" style="display:none;gap:6px;align-items:center;">
-          <input type="date" id="histIni" style="flex:1;min-width:0;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
-          <span style="color:#9ca3af;">→</span>
-          <input type="date" id="histFim" style="flex:1;min-width:0;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
-          <button onclick="aplicarHistCustom()" style="padding:8px 12px;background:var(--blue-d);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">OK</button>
-        </div>
-      </div>
-      <div id="historicoList" style="flex:1;overflow-y:auto;padding:12px 12px calc(12px + env(safe-area-inset-bottom));"></div>
-    </div>
-  </div>
+</div>
 
   <script src="../api.js"></script>
   <script src="utils.js"></script>
@@ -1108,140 +458,108 @@
     }
 
     // ── LOAD ORDENS ───────────────────────────────
+    const ATALHOS_LISTA = `<div class="atalhos-lista">
+        <a class="fila" href="/funcionario/fila-entrada.html"><i class="fas fa-bolt"></i> Fila de entrada</a>
+        <a href="/funcionario/servicos.html"><i class="fas fa-wrench"></i> Serviços</a>
+      </div>`;
+    const ROT_STATUS = { PENDENTE: 'Pendente', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PAGAMENTO: 'Aguardando pgto', FINALIZADO: 'Finalizada', COMPLETO: 'Concluída', CANCELADO: 'Cancelada' };
+    const CORES_LAV = ['#2f62e6', '#22a15a', '#6b4fd8', '#ff5b2e', '#c2418f', '#0d9488', '#d4a017', '#e5383b'];
+    function corLavador(id) { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return CORES_LAV[h % CORES_LAV.length]; }
+    function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function valorCurto(v) { return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    // "há 12 min", "há 1h05"; mais de um dia vira a data
+    function quandoTxt(iso) {
+      if (!iso) return '';
+      const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+      if (min < 60) return `há ${min} min`;
+      if (min < 24 * 60) return `há ${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+      return formatDate(iso);
+    }
+    function idVeiculoHtml(o) {
+      if (o.tipoOrdem === 'AVULSO') return `<span class="avulso"><i class="fas fa-couch"></i>${escHtml(o.itemAvulso || 'Higienização')}</span>`;
+      return o.veiculo?.placa ? `<span class="placa"><b>${escHtml(o.veiculo.placa)}</b></span>` : '';
+    }
+    function lavadoresDe(o) {
+      const lavs = (o.lavadores || []).map(l => (typeof l === 'object' ? l : { id: l, nome: '' })).filter(l => l.nome);
+      if (!lavs.length && o.lavador?.nome) lavs.push(o.lavador);
+      return lavs;
+    }
+    // Contagem das abas: a lista "Ativas" traz todas; as outras só atualizam a própria aba
+    function atualizarContagens(ordens, total) {
+      const pinta = (k, n) => { const el = document.querySelector(`[data-cnt="${k}"]`); if (el) el.textContent = n; };
+      if (currentFilter === 'ACTIVE') {
+        pinta('ACTIVE', total ?? ordens.length);
+        ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].forEach(k => pinta(k, ordens.filter(o => o.status === k).length));
+      } else {
+        pinta(currentFilter, total ?? ordens.length);
+      }
+    }
+
     async function loadOrdens() {
       const main = document.getElementById('mainContent');
-      main.innerHTML = `
-        <div class="quick-links">
-          <a href="fila-entrada.html" class="qlink qlink-amber">
-            <i class="fas fa-bolt"></i> Fila de Entrada
-          </a>
-          <a href="servicos.html" class="qlink">
-            <i class="fas fa-wrench"></i> Serviços
-          </a>
-        </div>
-        <div class="loading-wrap">
-          <div class="spin"></div>
-          <div class="loading-txt">Carregando ordens...</div>
-        </div>
-      `;
+      main.innerHTML = ATALHOS_LISTA + `<div class="loading-wrap"><div class="spin"></div>Carregando ordens...</div>`;
 
       try {
         const response = await window.api.getOrdens(1, 50, '', currentFilter);
         ordensCache = response.data || response.ordens || [];
+        atualizarContagens(ordensCache, response.pagination?.total);
         renderOrdensList(ordensCache);
       } catch (error) {
         console.error('Erro ao carregar ordens:', error);
-        main.innerHTML = `
-          <div class="empty-wrap">
-            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
-            <div class="empty-title">Erro ao carregar</div>
-            <div class="empty-sub">Tente novamente em instantes.</div>
-            <button class="btn-empty" onclick="loadOrdens()">Tentar novamente</button>
-          </div>
-        `;
+        main.innerHTML = ATALHOS_LISTA + `
+          <div class="cartao vazio">
+            <div class="ic"><i class="fas fa-exclamation-triangle"></i></div>
+            <b>Erro ao carregar</b>
+            <p>Tente novamente em instantes.</p>
+            <button class="btn azul" onclick="loadOrdens()">Tentar novamente</button>
+          </div>`;
       }
     }
 
     // Renderiza a lista a partir de um array em memória (sem re-fetch)
     function renderOrdensList(ordens) {
       const main = document.getElementById('mainContent');
-      let listHTML = `
-          <div class="quick-links">
-            <a href="fila-entrada.html" class="qlink qlink-amber">
-              <i class="fas fa-bolt"></i> Fila de Entrada
-            </a>
-            <a href="servicos.html" class="qlink">
-              <i class="fas fa-wrench"></i> Serviços
-            </a>
-          </div>
-        `;
+      if (ordens.length === 0) {
+        main.innerHTML = ATALHOS_LISTA + `
+          <div class="cartao vazio">
+            <div class="ic">🫧</div>
+            <b>Nada por aqui</b>
+            <p>Nenhuma ordem neste status agora.</p>
+            <a class="btn azul" href="/funcionario/nova-ordem.html"><i class="fas fa-plus"></i> Nova ordem</a>
+          </div>`;
+        return;
+      }
+      main.innerHTML = ATALHOS_LISTA + `<div class="lista">${ordens.map(ordem => {
+        const status = ordem.status || 'PENDENTE';
+        // Nomes dos serviços: usa ordem.servicos ou deriva dos items (inclui nomeCustom de itens avulsos)
+        let svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ');
+        if (!svcNomes) svcNomes = (ordem.items || []).filter(i => !i.adicional).map(i => i.servico?.nome || i.nomeCustom).filter(Boolean).join(', ');
+        const nAdds = (ordem.items || []).filter(i => i.adicional).length;
+        const svcTxt = (svcNomes || '—') + (nAdds ? ` + ${nAdds} adicional${nAdds > 1 ? 'is' : ''}` : '');
+        const sub = ordem.tipoOrdem === 'AVULSO' ? 'Higienização · avulso' : [ordem.veiculo?.modelo, ordem.veiculo?.cor].filter(Boolean).join(' · ');
 
-        if (ordens.length === 0) {
-          listHTML += `
-            <div class="empty-wrap">
-              <div class="empty-icon"><i class="fas fa-inbox"></i></div>
-              <div class="empty-title">Nenhuma ordem</div>
-              <div class="empty-sub">Não há ordens neste status no momento.</div>
-              <button class="btn-empty" onclick="window.location.href='nova-ordem.html'">
-                + Nova Ordem
-              </button>
-            </div>
-          `;
-        } else {
-          listHTML += `<div class="orders-list">`;
-          ordens.forEach(ordem => {
-            const isAvulso = ordem.tipoOrdem === 'AVULSO';
-            // Nomes dos serviços: usa ordem.servicos ou deriva dos items (inclui nomeCustom de itens avulsos)
-            let svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ');
-            if (!svcNomes) {
-              svcNomes = (ordem.items || [])
-                .map(i => i.servico?.nome || i.nomeCustom)
-                .filter(Boolean).join(', ');
-            }
-            svcNomes = svcNomes || '—';
-            const status = ordem.status || 'PENDENTE';
-            const accClass = `acc-${status}`;
-            const badgeClass = `sbadge-${status}`;
-            const statusLabel = {
-              PENDENTE: 'Pendente',
-              EM_ANDAMENTO: 'Em Andamento',
-              AGUARDANDO_PAGAMENTO: 'Aguardando',
-              COMPLETO: 'Concluído'
-            }[status] || status;
+        const temLavador = (ordem.lavadores?.length > 0) || !!ordem.lavadorId;
+        const pendenteSemLav = status === 'PENDENTE' && !temLavador;
+        const canDone = status === 'EM_ANDAMENTO' || (status === 'PENDENTE' && temLavador);
+        const canPay  = status === 'AGUARDANDO_PAGAMENTO';
 
-            const temLavador = (ordem.lavadores?.length > 0) || !!ordem.lavadorId;
-            const pendenteSemLav = status === 'PENDENTE' && !temLavador;
-            const canDone = status === 'EM_ANDAMENTO' || (status === 'PENDENTE' && temLavador);
-            const canPay  = status === 'AGUARDANDO_PAGAMENTO';
+        const total = ordem.valorTotal || ordem.valor || 0;
+        const pago = (ordem.pagamentos || []).filter(p => p.status === 'PAGO').reduce((t, p) => t + (p.valor || 0), 0);
+        const falta = canPay && pago > 0.009 && total - pago > 0.009 ? `<span class="falta">falta ${formatCurrency(total - pago)}</span>` : '';
+        const lavs = lavadoresDe(ordem);
+        const lavsHtml = lavs.length ? `<span class="lavs">${lavs.map(l => `<i style="--c: ${corLavador(l.id || l.nome)}" title="${escHtml(l.nome)}">${escHtml(l.nome.charAt(0).toUpperCase())}</i>`).join('')}</span>` : '';
 
-            listHTML += `
-              <div class="order-card" onclick="viewOrdem('${ordem.id}')">
-                <div class="card-accent ${accClass}"></div>
-                <div class="card-body">
-                  <div class="card-top">
-                    <div>
-                      <div class="card-num"># ${ordem.numeroOrdem || ordem.id.substring(0,8).toUpperCase()}</div>
-                      <div class="card-date">${formatDate(ordem.createdAt)}</div>
-                    </div>
-                    <span class="sbadge ${badgeClass}">${statusLabel}</span>
-                  </div>
-                  <div class="card-client">${ordem.cliente?.nome || '—'}</div>
-                  <div class="card-meta">
-                    ${isAvulso
-                      ? `<span class="card-avulso"><i class="fas fa-couch"></i> ${ordem.itemAvulso || 'Higienização'}</span>`
-                      : `${ordem.veiculo?.modelo ? `<span class="card-model">${ordem.veiculo.modelo}</span>` : ''}
-                         ${ordem.veiculo?.placa ? `<span class="card-plate">${ordem.veiculo.placa}</span>` : ''}`}
-                    <span class="card-svc">${svcNomes}</span>
-                  </div>
-                  <div class="card-divider"></div>
-                  <div class="card-bottom">
-                    <div class="card-value">${formatCurrency(ordem.valorTotal || ordem.valor)}</div>
-                    <div class="card-actions" onclick="event.stopPropagation()">
-                      ${pendenteSemLav ? `
-                        <button class="btn-card btn-card-done" style="background:var(--amber);color:#fff" onclick="openSetarLavadorModal('${ordem.id}')" title="Setar Funcionário">
-                          <i class="fas fa-user-plus"></i>
-                        </button>` : ''}
-                      ${canDone ? `
-                        <button class="btn-card btn-card-done" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir">
-                          <i class="fas fa-flag-checkered"></i>
-                        </button>` : ''}
-                      ${canPay ? `
-                        <button class="btn-card btn-card-pay" onclick="openPaymentModalFromTable('${ordem.id}')" title="Pagar">
-                          <i class="fas fa-credit-card"></i> Pagar
-                        </button>` : ''}
-                      <button class="btn-card btn-card-eye" onclick="viewOrdem('${ordem.id}')" title="Ver">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-          });
-          listHTML += `</div>`;
-        }
+        let acoes = '';
+        if (pendenteSemLav) acoes += `<button class="acao lav" onclick="openSetarLavadorModal('${ordem.id}')" title="Setar funcionário"><i class="fas fa-user-plus"></i></button>`;
+        if (canDone) acoes += `<button class="acao concluir" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir lavagem"><i class="fas fa-flag-checkered"></i></button>`;
+        if (canPay) acoes += `<button class="acao pagar" onclick="openPaymentModalFromTable('${ordem.id}')" title="Pagar"><i class="fas fa-credit-card"></i> Pagar</button>`;
 
-        main.innerHTML = listHTML;
+        return `<article class="cartao ordem" data-st="${status}" onclick="viewOrdem('${ordem.id}')">
+            <div class="ordem-topo"><span class="num">#${ordem.numeroOrdem || ordem.id.substring(0, 8).toUpperCase()}</span><span class="quando">${quandoTxt(ordem.createdAt)}</span><span class="status">${ROT_STATUS[status] || status}</span></div>
+            <div class="ordem-meio">${idVeiculoHtml(ordem)}<div class="info"><b>${escHtml(ordem.cliente?.nome || '—')}</b>${sub ? `<span>${escHtml(sub)}</span>` : ''}<span>${escHtml(svcTxt)}</span></div></div>
+            <div class="ordem-pe"><span class="valor"><small>R$</small>${valorCurto(total)}</span>${falta}${lavsHtml}<span class="acoes" onclick="event.stopPropagation()">${acoes}</span></div>
+          </article>`;
+      }).join('')}</div>`;
     }
 
     // Um card ainda pertence ao filtro atual?
@@ -1267,7 +585,7 @@
         currentOrdem = preloaded;
         renderOrdemDetail();   // pinta na hora com o que a lista já tinha
       } else {
-        main.innerHTML = `<div class="loading-wrap"><div class="spin"></div><div class="loading-txt">Carregando...</div></div>`;
+        main.innerHTML = `<div class="loading-wrap"><div class="spin"></div>Carregando...</div>`;
       }
 
       try {
@@ -1277,12 +595,12 @@
       } catch (error) {
         console.error('Erro:', error);
         if (!preloaded) main.innerHTML = `
-          <div class="empty-wrap">
-            <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
-            <div class="empty-title">Erro ao carregar</div>
-            <button class="btn-empty" onclick="goBack()">Voltar</button>
-          </div>
-        `;
+          <div class="cartao vazio">
+            <div class="ic"><i class="fas fa-exclamation-triangle"></i></div>
+            <b>Erro ao carregar</b>
+            <p>Tente de novo em instantes.</p>
+            <button class="btn" onclick="goBack()">Voltar</button>
+          </div>`;
       }
     }
 
@@ -1310,57 +628,32 @@
         }
         let svcHtml = '';
         if (svcList.length > 0) {
-          svcHtml = `
-            <div class="detail-card">
-              <div class="detail-card-title"><i class="fas fa-broom" style="margin-right:6px"></i>Serviços</div>
-              ${svcList.map(s => `
-                <div class="svc-row">
-                  <span class="svc-name">${s.nome}</span>
-                  <span class="svc-price">${formatCurrency(s.preco)}</span>
-                </div>
-              `).join('')}
-            </div>
-          `;
+          svcHtml = `<div class="det-sec"><h4><i class="fas fa-broom"></i> Serviços</h4>
+              ${svcList.map(s => `<div class="linha"><span>${escHtml(s.nome)}</span><span>${formatCurrency(s.preco)}</span></div>`).join('')}</div>`;
         }
 
         let addHtml = '';
         if ((currentOrdem.adicionais || []).length > 0) {
-          addHtml = `
-            <div class="detail-card">
-              <div class="detail-card-title"><i class="fas fa-plus-circle" style="margin-right:6px"></i>Adicionais</div>
-              ${currentOrdem.adicionais.map(a => `
-                <div class="svc-row">
-                  <span class="svc-name">${a.nome}</span>
-                  <span class="svc-price">${formatCurrency(a.preco)}</span>
-                </div>
-              `).join('')}
-            </div>
-          `;
+          addHtml = `<div class="det-sec"><h4><i class="fas fa-plus-circle"></i> Adicionais</h4>
+              ${currentOrdem.adicionais.map(a => `<div class="linha"><span>${escHtml(a.nome)}</span><span>${formatCurrency(a.preco)}</span></div>`).join('')}</div>`;
         }
 
         let obsHtml = '';
         if (currentOrdem.observacoes) {
-          obsHtml = `
-            <div class="detail-card">
-              <div class="detail-card-title"><i class="fas fa-note-sticky" style="margin-right:6px"></i>Observações</div>
-              <p class="obs-text">${currentOrdem.observacoes}</p>
-            </div>
-          `;
+          obsHtml = `<div class="nota"><i class="fas fa-note-sticky"></i> ${escHtml(currentOrdem.observacoes)}</div>`;
         }
 
         // Sticky action buttons
-        let actionsHtml = `<button class="btn-action btn-action-back" onclick="goBack()">
-          <i class="fas fa-arrow-left"></i> Voltar
-        </button>`;
+        let actionsHtml = `<button class="btn icone" onclick="goBack()" title="Voltar"><i class="fas fa-arrow-left"></i></button>`;
 
         const temLavadorDetalhe = (currentOrdem.lavadores?.length > 0) || !!currentOrdem.lavadorId;
 
         if (status === 'PENDENTE' && !temLavadorDetalhe) {
-          actionsHtml += `<button class="btn-action" style="background:var(--amber);color:#fff;border:none" onclick="openSetarLavadorModal('${currentOrdem.id}')">
+          actionsHtml += `<button class="btn amarelo" onclick="openSetarLavadorModal('${currentOrdem.id}')">
             <i class="fas fa-user-plus"></i> Setar Funcionário
           </button>`;
         } else if (status === 'EM_ANDAMENTO' || status === 'PENDENTE') {
-          actionsHtml += `<button class="btn-action btn-action-done" onclick="markAsComplete()">
+          actionsHtml += `<button class="btn azul" onclick="markAsComplete()">
             <i class="fas fa-flag-checkered"></i> Concluir
           </button>`;
         }
@@ -1368,7 +661,7 @@
           const telCliente = (currentOrdem.cliente?.telefone || '').replace(/\D/g, '');
           if (telCliente) {
             if (empresaWaConectado) {
-              actionsHtml += `<button class="btn-action btn-action-wa" onclick="abrirAvisarModal('${currentOrdem.id}')">
+              actionsHtml += `<button class="btn zap" onclick="abrirAvisarModal('${currentOrdem.id}')">
                 <i class="fab fa-whatsapp"></i> Avisar
               </button>`;
             } else {
@@ -1376,77 +669,56 @@
                 ? currentOrdem.cliente.nome.split(' ')[0] : 'cliente';
               const placaCliente = currentOrdem.veiculo?.placa || '';
               const msgWa = encodeURIComponent(`Olá ${nomeCliente}! Seu veículo${placaCliente ? ' ' + placaCliente : ''} está pronto para retirada. 🚗✨`);
-              actionsHtml += `<a href="https://wa.me/55${telCliente}?text=${msgWa}" target="_blank" class="btn-action btn-action-wa">
+              actionsHtml += `<a href="https://wa.me/55${telCliente}?text=${msgWa}" target="_blank" class="btn zap">
                 <i class="fab fa-whatsapp"></i> Avisar
               </a>`;
             }
           }
-          actionsHtml += `<button class="btn-action btn-action-pay" onclick="openPaymentModal(currentOrdem)">
+          actionsHtml += `<button class="btn verde" onclick="openPaymentModal(currentOrdem)">
             <i class="fas fa-credit-card"></i> Pagar
           </button>`;
         }
         // Editar: livre nas ativas; em FINALIZADA/CANCELADA só com editar_ordem_finalizada
         const podeEditar = (status !== 'FINALIZADO' && status !== 'CANCELADO') || temPermissao('editar_ordem_finalizada');
         if (podeEditar) {
-          actionsHtml += `<button class="btn-action btn-action-edit" onclick="editOrdem('${currentOrdem.id}')">
+          actionsHtml += `<button class="btn icone" onclick="editOrdem('${currentOrdem.id}')" title="Editar">
             <i class="fas fa-edit"></i>
           </button>`;
         }
         // Excluir ordem — só para quem tem a permissão (ação destrutiva)
         if (temPermissao('excluir_ordens')) {
-          actionsHtml += `<button class="btn-action btn-action-del" onclick="excluirOrdem('${currentOrdem.id}')" title="Excluir ordem">
+          actionsHtml += `<button class="btn lixo" onclick="excluirOrdem('${currentOrdem.id}')" title="Excluir ordem">
             <i class="fas fa-trash-alt"></i>
           </button>`;
         }
 
+        const temPlaca = currentOrdem.tipoOrdem !== 'AVULSO' && currentOrdem.veiculo?.placa;
+        const veic = [currentOrdem.veiculo?.modelo, currentOrdem.veiculo?.cor].filter(Boolean).join(' · ');
         main.innerHTML = `
-          <div class="detail-wrap">
-            <div class="detail-hero">
-              <div class="detail-hero-top">
-                <div>
-                  <div class="detail-num"># ${currentOrdem.numeroOrdem || currentOrdem.id.substring(0,8).toUpperCase()}</div>
-                  <div class="detail-hero-date">${formatDate(currentOrdem.createdAt)}</div>
-                </div>
-                <span class="sbadge ${badgeClass}">${statusLabel}</span>
-              </div>
-              <div class="detail-value">${formatCurrency(currentOrdem.valorTotal || currentOrdem.valor)}</div>
-              <div class="detail-value-label">Valor total</div>
+          <article class="cartao det" data-st="${status}">
+            <div class="det-topo">
+              <div><div class="num">#${currentOrdem.numeroOrdem || currentOrdem.id.substring(0,8).toUpperCase()}</div>
+                <div class="quando">${formatDate(currentOrdem.createdAt)} · ${quandoTxt(currentOrdem.createdAt)} · ${statusLabel}</div></div>
+              <div class="valor"><small>R$</small>${valorCurto(currentOrdem.valorTotal || currentOrdem.valor)}<span>valor total</span></div>
             </div>
-
-            <div class="detail-card">
-              <div class="detail-card-title">Informações</div>
-              <div class="info-grid">
-                <div class="info-item">
-                  <div class="info-label">Cliente</div>
-                  <div class="info-value">${currentOrdem.cliente?.nome || '—'}</div>
+            <div class="det-corpo">
+              <div class="det-grade">
+                <div class="det-item"><small>Cliente</small><b>${escHtml(currentOrdem.cliente?.nome || '—')}</b></div>
+                <div class="det-item"><small>${currentOrdem.tipoOrdem === 'AVULSO' ? 'Item' : 'Placa'}</small>
+                  ${currentOrdem.tipoOrdem === 'AVULSO'
+                    ? `<b><i class="fas fa-couch"></i> ${escHtml(currentOrdem.itemAvulso || 'Higienização')}</b>`
+                    : (temPlaca ? `<span class="placa"><b>${escHtml(currentOrdem.veiculo.placa)}</b></span>` : '<b>—</b>')}
                 </div>
-                <div class="info-item">
-                  <div class="info-label">${currentOrdem.tipoOrdem === 'AVULSO' ? 'Item' : 'Placa'}</div>
-                  <div class="info-value">
-                    ${currentOrdem.tipoOrdem === 'AVULSO'
-                      ? `<span class="card-avulso"><i class="fas fa-couch"></i> ${currentOrdem.itemAvulso || 'Higienização'}</span>`
-                      : (currentOrdem.veiculo?.placa
-                          ? `<span class="info-value-plate">${currentOrdem.veiculo.placa}</span>`
-                          : '—')}
-                  </div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Pagamento</div>
-                  <div class="info-value">${currentOrdem.metodoPagamento || '—'}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Lavadores</div>
-                  <div class="info-value">${lavNomes}</div>
-                </div>
+                ${veic ? `<div class="det-item inteiro"><small>Veículo</small><b>${escHtml(veic)}</b></div>` : ''}
+                <div class="det-item"><small>Pagamento</small><b>${escHtml(currentOrdem.metodoPagamento || '—')}</b></div>
+                <div class="det-item"><small>Lavadores</small><b>${escHtml(lavNomes)}</b></div>
               </div>
+              ${svcHtml}
+              ${addHtml}
+              ${obsHtml}
             </div>
-
-            ${svcHtml}
-            ${addHtml}
-            ${obsHtml}
-          </div>
-
-          <div class="sticky-actions">${actionsHtml}</div>
+          </article>
+          <div class="acoes-fixas"><div class="det-acoes">${actionsHtml}</div></div>
         `;
     }
 
@@ -1538,6 +810,8 @@
       paymentModal.desconto     = 0;
       paymentModal.maxDesconto  = 0;
       paymentModal.isOpen       = true;
+      document.getElementById('paySub').textContent = ['#' + (order.numeroOrdem || String(order.id).substring(0, 8).toUpperCase()),
+        order.cliente?.nome, order.veiculo?.placa].filter(Boolean).join(' · ');
 
       // maxDesconto do usuário — busca uma vez por visita (não muda na sessão)
       if (_maxDescontoCache === null) {
@@ -1580,62 +854,52 @@
       if (inputRow) inputRow.style.display = 'flex';
     }
 
+    // Cores e ícones de cada forma de pagamento (lista de lançados)
+    const PAG_VISUAL = {
+      DINHEIRO: ['Dinheiro', 'var(--green)', 'fas fa-money-bill-wave'], PIX: ['PIX', '#1a9e8f', 'fab fa-pix'],
+      CARTAO: ['Cartão', 'var(--blue)', 'fas fa-credit-card'], NFE: ['NFe', '#6b6780', 'fas fa-file-invoice'],
+      CORTESIA: ['Cortesia', '#c2418f', 'fas fa-gift'], PENDENTE: ['Pendente', 'var(--orange)', 'fas fa-clock'],
+    };
     function updatePaymentModalUI() {
       updateTrocoDisplay();
-      document.getElementById('remainingAmount').textContent = formatCurrency(paymentModal.remaining);
+      const lancado = paymentModal.payments.reduce((s, p) => s + p.amount, 0);
+      const falta = Math.max(paymentModal.remaining, 0);
+      const elFalta = document.getElementById('remainingAmount');
+      elFalta.textContent = formatCurrency(falta);
+      elFalta.classList.toggle('zerou', falta <= 0.01);
       // Mostra original + desconto ou apenas total
       const totalEl = document.getElementById('totalAmount');
       if (paymentModal.desconto > 0) {
-        totalEl.innerHTML = `<span style="text-decoration:line-through;color:var(--mid);font-size:11px;font-weight:500">${formatCurrency(paymentModal.originalTotal)}</span> ${formatCurrency(paymentModal.total)}`;
+        totalEl.innerHTML = `<s style="color:var(--muted);font-size:10px">${formatCurrency(paymentModal.originalTotal)}</s> ${formatCurrency(paymentModal.total)}`;
       } else {
         totalEl.textContent = formatCurrency(paymentModal.total);
       }
-      document.getElementById('paidAmount').textContent      = formatCurrency(paymentModal.paid);
-      document.getElementById('paymentValueInput').value     = paymentModal.inputValue;
+      document.getElementById('paidAmount').textContent = formatCurrency(paymentModal.paid + lancado);
+      const pct = paymentModal.total > 0 ? Math.min((paymentModal.paid + lancado) / paymentModal.total * 100, 100) : 0;
+      document.getElementById('payTubo').style.width = pct.toFixed(1) + '%';
+      document.getElementById('payRestoV').textContent = formatCurrency(falta);
+      document.getElementById('btnResto').disabled = falta <= 0.01;
+      document.getElementById('paymentValueInput').value = paymentModal.inputValue;
 
       const listDiv = document.getElementById('paymentsList');
       const hasPayments = paymentModal.payments.length > 0;
       const hasDiscount = paymentModal.desconto > 0;
 
-      if (!hasPayments && !hasDiscount) {
-        listDiv.innerHTML = '';
-        document.getElementById('submitPaymentBtn').disabled = true;
-      } else {
-        let html = `<div class="pay-list-label">Pagamentos adicionados</div>`;
-
-        // Desconto como item removível no topo da lista
-        if (hasDiscount) {
-          html += `
-            <div class="pay-list-item" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);">
-              <span style="color:#92400e;font-weight:700;">
-                <i class="fas fa-tag" style="margin-right:5px;font-size:11px;opacity:.7"></i>
-                Desconto — <span style="color:var(--red)">− ${formatCurrency(paymentModal.desconto)}</span>
-              </span>
-              <button onclick="removeDiscount()" title="Remover desconto" style="color:#92400e;">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-          `;
-        }
-
-        paymentModal.payments.forEach((p, i) => {
-          const pixBtn = p.method === 'PIX' && paymentModal.orderId
-            ? `<button class="btn-pix-qr" onclick="showPixQrForPayment(${p.amount})" title="Ver QR PIX"><i class="fab fa-pix"></i> QR</button>`
-            : '';
-          html += `
-            <div class="pay-list-item">
-              <span>${p.method} — ${formatCurrency(p.amount)}</span>
-              <div style="display:flex;gap:6px;align-items:center">
-                ${pixBtn}
-                <button onclick="removePayment(${i})"><i class="fas fa-times"></i></button>
-              </div>
-            </div>
-          `;
-        });
-
-        listDiv.innerHTML = html;
-        document.getElementById('submitPaymentBtn').disabled = !hasPayments;
+      let html = '';
+      // Desconto como item removível no topo da lista
+      if (hasDiscount) {
+        html += `<div class="pago"><span class="ic" style="--m: var(--yellow); color: var(--ink)"><i class="fas fa-tag"></i></span><span>Desconto</span>
+          <b style="color:#c1361a">− ${formatCurrency(paymentModal.desconto)}</b><button class="tira" onclick="removeDiscount()" title="Remover desconto"><i class="fas fa-times"></i></button></div>`;
       }
+      paymentModal.payments.forEach((p, i) => {
+        const [nome, cor, ico] = PAG_VISUAL[p.method] || [p.method, 'var(--muted)', 'fas fa-receipt'];
+        const pixBtn = p.method === 'PIX' && paymentModal.orderId
+          ? `<button class="qr" onclick="showPixQrForPayment(${p.amount})" title="Ver QR PIX"><i class="fab fa-pix"></i> QR</button>` : '';
+        html += `<div class="pago"><span class="ic" style="--m: ${cor}"><i class="${ico}"></i></span><span>${nome}</span><b>${formatCurrency(p.amount)}</b>${pixBtn}
+          <button class="tira" onclick="removePayment(${i})" title="Remover"><i class="fas fa-times"></i></button></div>`;
+      });
+      listDiv.innerHTML = html;
+      document.getElementById('submitPaymentBtn').disabled = !hasPayments;
     }
 
     function updateTrocoDisplay() {
@@ -1821,7 +1085,7 @@
         toggleLabel.textContent = `Desconto ${formatCurrency(paymentModal.desconto)} aplicado`;
       } else {
         toggleBtn.classList.remove('has-discount');
-        toggleLabel.textContent = 'Aplicar Desconto';
+        toggleLabel.textContent = 'Aplicar desconto';
       }
     }
 
@@ -1830,6 +1094,7 @@
       if (!section) return;
       const isOpen = section.style.display !== 'none';
       section.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) setTimeout(() => document.getElementById('discountValueInput')?.focus(), 50);
     }
 
     function syncDiscountFromValue(event) {
@@ -2019,7 +1284,7 @@
       } catch (error) {
         showToast(`Erro: ${error.error || 'Tente novamente.'}`, 'error');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Finalizar Ordem';
+        submitBtn.innerHTML = 'Finalizar ordem';
         paymentModal.isProcessing = false;
       }
     }
@@ -2060,9 +1325,9 @@
 
       // Mostra modal com loading
       modal.style.display = 'flex';
-      document.getElementById('editLavadoresWrap').innerHTML  = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
-      document.getElementById('editServicosWrap').innerHTML   = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
-      document.getElementById('editAdicionaisWrap').innerHTML = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
+      document.getElementById('editLavadoresWrap').innerHTML  = '<span class="rot-grupo">Carregando...</span>';
+      document.getElementById('editServicosWrap').innerHTML   = '<span class="rot-grupo">Carregando...</span>';
+      document.getElementById('editAdicionaisWrap').innerHTML = '<span class="rot-grupo">Carregando...</span>';
 
       try {
         // Carrega ordem e listas em paralelo
@@ -2239,7 +1504,7 @@
 
     async function carregarHistorico() {
       const list = document.getElementById('historicoList');
-      list.innerHTML = `<div class="loading-wrap"><div class="spin"></div><div class="loading-txt">Carregando...</div></div>`;
+      list.innerHTML = `<div class="loading-wrap"><div class="spin"></div>Carregando...</div>`;
       const { ini, fim } = _rangeHistorico();
       try {
         // tipo='historico' → backend filtra por dataFim (data de conclusão)
@@ -2247,36 +1512,30 @@
         historicoCache = resp.data || resp.ordens || [];
         renderHistorico(historicoCache);
       } catch {
-        list.innerHTML = `<div style="text-align:center;color:var(--mid);padding:2rem;">Erro ao carregar histórico.</div>`;
+        list.innerHTML = `<div class="hist-vazio">Erro ao carregar o histórico.</div>`;
       }
     }
 
     function renderHistorico(ordens) {
       const list = document.getElementById('historicoList');
       if (!ordens.length) {
-        list.innerHTML = `<div style="text-align:center;color:var(--mid);padding:2.5rem 1rem;">
-          <div style="font-size:1.6rem;margin-bottom:.4rem;">📋</div>Nenhuma ordem finalizada.</div>`;
+        list.innerHTML = `<div class="hist-vazio"><div style="font-size:26px">📋</div>Nenhuma ordem finalizada no período.</div>`;
         return;
       }
       const podeEditar = temPermissao('editar_ordem_finalizada');
-      list.innerHTML = ordens.map(o => {
-        const modelo = o.veiculo?.modelo || (o.tipoOrdem === 'AVULSO' ? (o.itemAvulso || 'Higienização') : '—');
-        const placa  = o.veiculo?.placa || '';
-        const num    = o.numeroOrdem || o.id.substring(0, 8).toUpperCase();
-        const lavs   = o.lavadores || [];
-        const lavIni = lavs.length ? lavs.map(l => (l.nome || '?').charAt(0).toUpperCase()).join('') : '—';
-        const data   = formatDate(o.dataFim || o.createdAt);
-        return `
-          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #eef0f3;border-radius:12px;padding:12px;margin-bottom:8px;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:12px;color:#9ca3af;">#${num} · ${data}</div>
-              <div style="font-size:14px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${modelo}${placa ? ` · ${placa}` : ''}</div>
-              <div style="font-size:12px;color:#6b7280;">Cliente: ${o.cliente?.nome || '—'}</div>
-            </div>
-            <div title="Lavador(es)" style="width:34px;height:34px;border-radius:50%;background:#eef2ff;color:#4338ca;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${lavIni}</div>
-            ${podeEditar ? `<button onclick="editarLavadorHistorico('${o.id}')" title="Editar lavador" style="width:34px;height:34px;border:1px solid rgba(59,130,246,.2);background:rgba(59,130,246,.08);color:var(--blue-d);border-radius:9px;cursor:pointer;flex-shrink:0;"><i class="fas fa-user-pen"></i></button>` : ''}
-          </div>`;
-      }).join('');
+      const soma = ordens.reduce((t, o) => t + (o.valorTotal || 0), 0);
+      list.innerHTML = `<div class="hist-total"><span class="rotulo">${ordens.length} ${ordens.length === 1 ? 'ordem' : 'ordens'}</span><b>${formatCurrency(soma)}</b></div>` +
+        ordens.map(o => {
+          const num  = o.numeroOrdem || o.id.substring(0, 8).toUpperCase();
+          const lavs = lavadoresDe(o).map(l => l.nome.split(' ')[0]).join(', ');
+          const det  = [o.veiculo?.modelo, lavs].filter(Boolean).join(' · ');
+          return `<div class="hist">
+              ${o.tipoOrdem === 'AVULSO' ? `<span class="avulso"><i class="fas fa-couch"></i>${escHtml(o.itemAvulso || 'Higienização')}</span>` : `<span class="placa"><b>${escHtml(o.veiculo?.placa || '—')}</b></span>`}
+              <div class="info"><b>${escHtml(o.cliente?.nome || '—')}</b>#${num} · ${formatDate(o.dataFim || o.createdAt)}${det ? ' · ' + escHtml(det) : ''}</div>
+              <span class="v">${formatCurrency(o.valorTotal || 0)}</span>
+              ${podeEditar ? `<button class="mini" onclick="editarLavadorHistorico('${o.id}')" title="Editar lavador"><i class="fas fa-user-pen"></i></button>` : ''}
+            </div>`;
+        }).join('');
     }
 
     function editarLavadorHistorico(ordemId) {
@@ -2293,7 +1552,7 @@
       const modal = document.getElementById('setarLavadorModal');
       const wrap  = document.getElementById('setarLavadoresWrap');
       if (!modal || !wrap) return;
-      wrap.innerHTML = '<div style="font-size:13px;color:var(--mid)">Carregando...</div>';
+      wrap.innerHTML = '<span class="rot-grupo">Carregando...</span>';
       // Quando aberto pelo histórico (z-index 1300), sobe acima dele; senão volta ao padrão
       modal.style.zIndex = contexto === 'historico' ? '1400' : '';
       modal.style.display = 'flex';
@@ -2416,7 +1675,7 @@
 
     function goBack() {
       showListMode();
-      window.history.pushState({}, '', 'ordens.html');
+      window.history.pushState({}, '', '/funcionario/ordens.html');
       currentOrdem = null;
       loadOrdens();
     }
@@ -2597,5 +1856,6 @@
       });
     }
   </script>
+  <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
