@@ -74,6 +74,30 @@ export const createVeiculo = async (req: EmpresaRequest, res: Response) => {
 };
 
 /**
+ * Modelos já cadastrados na empresa, com quantos veículos de cada
+ * (alimenta as sugestões do campo de modelo: os mais usados aparecem primeiro)
+ */
+export const getModelosVeiculos = async (req: EmpresaRequest, res: Response) => {
+  try {
+    const grupos = await prisma.veiculo.groupBy({
+      by: ['modelo'],
+      where: { cliente: { empresaId: req.empresaId }, modelo: { not: null } },
+      _count: { _all: true },
+      orderBy: { _count: { modelo: 'desc' } },
+      take: 300,
+    });
+    res.json({
+      modelos: grupos
+        .filter(g => g.modelo && g.modelo.trim())
+        .map(g => ({ modelo: g.modelo!.trim(), qtd: g._count._all })),
+    });
+  } catch (error) {
+    console.error('Erro ao listar modelos de veículos:', error);
+    res.status(500).json({ error: 'Erro ao listar modelos' });
+  }
+};
+
+/**
  * Listar veículos da empresa
  */
 export const getVeiculos = async (req: EmpresaRequest, res: Response) => {

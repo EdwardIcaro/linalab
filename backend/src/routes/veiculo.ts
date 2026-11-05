@@ -7,7 +7,8 @@ import {
   updateVeiculo,
   deleteVeiculo,
   getVeiculoByPlaca,
-  transferirVeiculo
+  transferirVeiculo,
+  getModelosVeiculos
 } from '../controllers/veiculoController';
 
 const router: Router = Router();
@@ -18,6 +19,7 @@ router.use(requirePermission('gerenciar_clientes', 'gerenciar_ordens'));
 // Rotas de veículos (todas requerem middleware de multi-empresa)
 router.post('/', createVeiculo);
 router.get('/', getVeiculos);
+router.get('/modelos', getModelosVeiculos);
 router.get('/placa/:placa', getVeiculoByPlaca);
 router.get('/:id', getVeiculoById);
 router.put('/:id', updateVeiculo);
