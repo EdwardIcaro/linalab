@@ -2,591 +2,323 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lina X - Financeiro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
+  <title>Financeiro — Lina X</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
   <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Visual Decola (aprovado em 04/11/2026). Backup do visual antigo: tag git design-classico-2026-11-05 */
+    .pagina { max-width: 760px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 120px; }
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(24px, 6vw, 34px)/1 var(--dela); text-shadow: 3px 3px 0 var(--lina); }
+    .topo-tit small { display: block; margin-top: 4px; font: 700 11px var(--mono); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-saida { padding: 8px 12px; font-size: 13px; background: var(--orange); color: var(--cream); box-shadow: 3px 3px 0 var(--pink); }
 
-    :root {
-      --navy:    #0f172a;
-      --navy-m:  #1e293b;
-      --primary: #2563eb;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger:  #ef4444;
-      --orange:  #f97316;
-      --purple:  #8b5cf6;
-      --bg:      #f1f5f9;
-      --white:   #ffffff;
-      --border:  #e2e8f0;
-      --muted:   #64748b;
-      --faint:   #94a3b8;
-      --text:    #1e293b;
-      --shadow:  0 1px 3px rgba(0,0,0,.08);
-      --shadow-md:0 4px 12px rgba(0,0,0,.10);
-    }
+    /* ===== saldo do dia ===== */
+    .saldo { margin-top: 16px; --sc: var(--green); }
+    .saldo-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .saldo-topo .rotulo { color: var(--muted); font-size: 10px; }
+    .saldo-num { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .saldo-num > div { padding: 0 6px; min-width: 0; }
+    .saldo-num > div + div { border-left: 2px dashed var(--line); }
+    .saldo-num > div > small { display: flex; align-items: center; gap: 5px; font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .saldo-num > div > small::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--c); }
+    .saldo-num b { display: block; margin-top: 2px; font: 400 clamp(15px, 4.6vw, 21px)/1.1 var(--dela); white-space: nowrap; }
+    .saldo-num b small { font-size: .55em; }
+    .saldo-liq { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding-top: 8px; border-top: 2px dashed var(--line); font: 700 11px var(--mono); }
+    .saldo-liq b { font: 400 16px var(--dela); color: var(--green); }
+    .saldo-liq b.neg { color: #c1361a; }
 
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      min-height: 100vh;
-    }
+    /* ===== abas ===== */
+    .abas { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; gap: 8px; overflow-x: auto; margin: 6px calc(var(--gutter) * -1) 0;
+      padding: 12px var(--gutter); background: linear-gradient(var(--space) 78%, transparent); scrollbar-width: none; }
+    .tab-btn { flex: none; position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 2.5px solid var(--cream); border-radius: 999px;
+      background: transparent; color: var(--cream); font: 700 12px var(--mono); cursor: pointer; white-space: nowrap; }
+    .tab-btn.active { background: var(--cream); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--pink); }
+    .bolinha { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--red); color: var(--cream); border: 2px solid var(--ink);
+      display: inline-grid; place-items: center; font: 400 10px/1 var(--dela); }
+    .tab-pane { display: none; gap: 12px; }
+    .tab-pane.active { display: grid; }
+    .tab-pane > * { min-width: 0; }
+    .filtros { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .filtro { flex: none; padding: 4px 10px; border: 2px dashed var(--cream); border-radius: 999px; background: none; color: var(--cream); font: 700 11px var(--mono); cursor: pointer; }
+    .filtro.on, .filtro.active { border-style: solid; background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+    .datas { display: flex; align-items: center; gap: 6px; font: 700 12px var(--mono); }
+    .datas .entrada { flex: 1; min-width: 0; padding: 6px 8px; font-size: 12px; }
+    .sec-tit { display: flex; align-items: center; gap: 10px; margin: 4px 0 -2px; font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--cream); opacity: .8; }
+    .sec-tit::after { content: ""; flex: 1; border-top: 2px dashed currentColor; opacity: .5; }
 
-    /* ===== HEADER ===== */
-    .hdr {
-      background: var(--navy);
-      padding: 13px 16px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 40;
-      box-shadow: 0 1px 0 rgba(255,255,255,.06);
-    }
-    .hdr-left { display: flex; align-items: center; gap: 10px; }
-    .hdr-logo {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.18);
-      display: flex; align-items: center; justify-content: center;
-      color: rgba(255,255,255,.85); font-size: 15px; text-decoration: none;
-    }
-    .hdr-title  { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
-    .hdr-sub    { font-size: 11px; color: rgba(255,255,255,.4); }
-    .hdr-right  { display: flex; gap: 6px; }
-    .icon-btn {
-      width: 32px; height: 32px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,.1); border: 1.5px solid rgba(255,255,255,.12);
-      border-radius: 8px; color: rgba(255,255,255,.75); font-size: 13px;
-      cursor: pointer; text-decoration: none; transition: background .15s;
-    }
-    .icon-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+    /* ===== movimentações ===== */
+    .movs { padding: 4px 12px; --sc: var(--blue); }
+    .mov { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; padding: 10px 0; cursor: pointer; }
+    .mov + .mov { border-top: 2px dashed var(--line); }
+    .mov .ic { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--ink); background: var(--c); color: var(--cream); display: grid; place-items: center; font-size: 13px; }
+    .mov .t { min-width: 0; display: grid; gap: 3px; }
+    .mov .t b { font: 400 13px/1.2 var(--dela); color: var(--ink); overflow-wrap: anywhere; }
+    .mov .t b strong { font-weight: 400; color: var(--blue); }
+    .mov .meta { display: flex; align-items: center; gap: 6px; min-width: 0; font: 400 11px/1.2 var(--mono); color: var(--muted); }
+    .mov .meta .os { flex: none; padding: 0 5px; border-radius: 4px; background: var(--ink); color: var(--cream); font: 700 10px/1.5 var(--mono); }
+    .mov .meta .sv { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mov .pe-v { display: flex; align-items: center; gap: 5px; }
+    .mov .hr { font: 700 10px var(--mono); color: var(--muted); }
+    .mov .v { display: grid; justify-items: end; gap: 4px; font: 400 14px/1 var(--dela); white-space: nowrap; }
+    .mov .v.pos { color: #1a7d45; } .mov .v.neg { color: #c1361a; } .mov .v.neu { color: var(--muted); }
+    .forma { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; border: 1.5px solid var(--ink); background: var(--fc); color: var(--fcf, #fff);
+      font: 700 9px/1.4 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+    .forma i { font-size: 9px; }
+    .vazio { text-align: center; padding: 26px 16px; --sc: var(--yellow); }
+    .vazio i { font-size: 30px; }
+    .vazio b { display: block; font: 400 17px var(--dela); margin: 8px 0 4px; }
+    .vazio p { margin: 0; font-size: 12px; color: var(--muted); }
+    .carregando { display: grid; justify-items: center; gap: 10px; padding: 34px 0; font: 700 12px var(--mono); }
+    .carregando i { width: 30px; height: 30px; border: 3px solid var(--cream); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
 
-    /* ===== MAIN ===== */
-    .main { max-width: 640px; margin: 0 auto; padding: 14px 14px 100px; }
+    /* ===== caixa ===== */
+    .caixa-status { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--pink);
+      background: var(--green); color: var(--cream); }
+    .caixa-status.fechado { background: var(--red); }
+    .caixa-status .bola { width: 42px; height: 42px; border-radius: 12px; border: 3px solid var(--ink); background: var(--cream); color: var(--ink); display: grid; place-items: center; font-size: 17px; flex: none; }
+    .caixa-status .t { flex: 1; min-width: 0; }
+    .caixa-status .t b { display: block; font: 400 17px/1.1 var(--dela); }
+    .caixa-status .t span { display: block; font: 700 11px var(--mono); opacity: .9; }
+    .acoes-caixa { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .acao-cx { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink);
+      font: 700 12px var(--mono); text-align: left; cursor: pointer; box-shadow: 3px 3px 0 var(--c); }
+    .acao-cx i { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--ink); background: var(--c); color: var(--cream); display: grid; place-items: center; font-size: 13px; flex: none; }
+    .acao-cx:active { transform: translate(2px, 2px); box-shadow: none; }
+    .acao-cx.perigo { color: #c1361a; }
+    .acao-cx.larga { grid-column: 1 / -1; }
 
-    /* ===== BALANCE CARDS ===== */
-    .balance-row {
-      display: grid; grid-template-columns: repeat(3,1fr);
-      gap: 8px; margin-bottom: 16px;
-    }
-    .bal-card {
-      background: var(--white); border-radius: 12px;
-      padding: 12px 10px; border: 1px solid var(--border);
-      box-shadow: var(--shadow); border-top: 3px solid var(--border);
-    }
-    .bal-card.green  { border-top-color: var(--success); }
-    .bal-card.red    { border-top-color: var(--danger); }
-    .bal-card.orange { border-top-color: var(--warning); }
-    .bal-label  { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
-    .bal-value  { font-size: 17px; font-weight: 800; letter-spacing: -.5px; }
-    .bal-card.green  .bal-value { color: var(--success); }
-    .bal-card.red    .bal-value { color: var(--danger); }
-    .bal-card.orange .bal-value { color: var(--warning); }
+    /* ===== pendências ===== */
+    .pend { display: flex; align-items: center; gap: 10px; --sc: var(--orange); }
+    .pend .t { flex: 1; min-width: 0; }
+    .pend .t b { display: block; font: 400 14px/1.15 var(--dela); }
+    .pend .t span { display: block; font-size: 11px; color: var(--muted); }
+    .pend .t .dias { display: inline-block; margin-top: 3px; padding: 0 6px; border-radius: 5px; background: #ffe0dc; color: #c1361a; font: 700 10px var(--mono); border: 1.5px solid #c1361a; }
+    .pend .t .dias.hoje { background: #fff3c4; color: var(--ink); border-color: var(--ink); }
+    .pend .lado { display: grid; justify-items: end; gap: 6px; }
+    .pend .v { font: 400 16px var(--dela); white-space: nowrap; }
+    .btn-p { padding: 7px 12px; font-size: 12px; box-shadow: 3px 3px 0 var(--ink); }
 
-    /* ===== TABS ===== */
-    .tabs-wrap {
-      background: var(--white); border-radius: 14px;
-      border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden;
-    }
-    .tabs-bar {
-      display: flex; border-bottom: 1px solid var(--border);
-      background: var(--bg); overflow-x: auto; scrollbar-width: none;
-    }
-    .tabs-bar::-webkit-scrollbar { display: none; }
-    .tab-btn {
-      flex: 1; min-width: 90px; padding: 12px 8px;
-      font-size: 12px; font-weight: 600; color: var(--muted);
-      background: none; border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 5px;
-      white-space: nowrap; position: relative; font-family: inherit;
-      transition: color .15s;
-    }
-    .tab-btn:hover { color: var(--primary); }
-    .tab-btn.active { color: var(--primary); background: var(--white); }
-    .tab-btn.active::after {
-      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
-      height: 2px; background: var(--primary);
-    }
-    .tab-badge {
-      background: var(--warning); color: #fff;
-      border-radius: 999px; font-size: 10px; font-weight: 700;
-      padding: 1px 6px; line-height: 1.4;
-    }
-    .tab-pane { display: none; padding: 16px; animation: fadeIn .2s ease; }
-    .tab-pane.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    /* ===== contas a pagar (componente compartilhado contas-pagar.js, restilizado aqui) ===== */
+    html body #cpHost { background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--pink); padding: 12px; }
+    html body .cp { --cp-acento: var(--blue); --cp-txt: var(--ink); --cp-txt2: var(--muted); --cp-txt3: var(--muted); --cp-linha: var(--ink); --cp-sup: var(--paper); --cp-sup2: var(--cream); font-family: var(--mono); }
+    html body .cp-cab h2 { font: 400 18px var(--dela); }
+    html body .cp-btn { border: 2.5px solid var(--ink); border-radius: 10px; font: 400 13px var(--dela); box-shadow: 2px 2px 0 var(--ink); }
+    html body .cp-btn-pri { background: var(--yellow); border-color: var(--ink); color: var(--ink); }
+    html body .cp-tile { border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+    html body .cp-tile .v { font: 400 18px var(--dela); }
+    html body .cp-aba { border: 2px solid var(--ink); color: var(--ink); }
+    html body .cp-aba.on { background: var(--ink); border-color: var(--ink); color: var(--yellow); }
+    html body .cp-chip { border: 2px dashed var(--ink); background: var(--paper); }
+    html body .cp-conta { border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+    html body .cp-conta .ds, html body .cp-val { font-family: var(--dela); font-weight: 400; }
+    html body .cp-pagar { border: 2px solid var(--ink); background: var(--green); color: var(--cream); font: 400 12px var(--dela); }
+    html body .cp-mais { border: 2px solid var(--ink); }
+    html body .cp-vazio { border: 2px dashed var(--ink); }
+    html body .cp-aviso { border: 2px solid var(--ink); background: var(--yellow); color: var(--ink); }
+    html body .cp-veu { background: #0e0f24bb; }
+    html body .cp-modal { background: var(--cream); color: var(--ink); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--pink); font-family: var(--mono); }
+    html body .cp-modal header { border-bottom: 3px solid var(--ink); }
+    html body .cp-modal header h3 { font: 400 17px var(--dela); }
+    html body .cp-x { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 10px; }
+    html body .cp-campo input, html body .cp-campo select { border: 2.5px solid var(--ink); background: var(--paper); font-family: var(--mono); font-weight: 700; }
+    html body .cp-tipo-op { border: 2.5px solid var(--ink); background: var(--paper); }
+    html body .cp-tipo-op.on { background: var(--blue); color: var(--cream); }
+    html body .cp-tipo-op.on span { color: inherit; }
+    html body .cp-calc { background: #cfdcff; border: 2px solid var(--ink); }
+    html body .cp-rod { border-top: 3px solid var(--ink); }
+    html body .cp-toast { background: var(--ink); color: var(--cream); border: 3px solid var(--ink); font-family: var(--mono); }
 
-    /* ===== MOV CARDS ===== */
-    .filter-row {
-      display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
-    }
-    .filter-row input, .filter-row select {
-      flex: 1; min-width: 120px;
-      padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 10px;
-      font-size: 13px; font-family: inherit; background: var(--white); color: var(--text);
-      outline: none; transition: border-color .15s;
-    }
-    .filter-row input:focus, .filter-row select:focus { border-color: var(--primary); }
-    .preset-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-    .preset-btn {
-      padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 999px;
-      background: var(--white); font-size: 12px; font-weight: 600; color: var(--muted);
-      cursor: pointer; font-family: inherit; transition: all .15s;
-    }
-    .preset-btn.active, .preset-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-    .mov-card {
-      background: var(--white); border: 1px solid var(--border); border-radius: 12px;
-      padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow);
-      display: flex; align-items: center; gap: 12px;
-      cursor: pointer;
-    }
-    .mov-card:active { background: var(--bg, #f6f7fb); }
-
-    /* --- detalhe da movimentação --- */
-    .det-topo {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; margin-bottom: 12px;
-    }
-    .det-valor { font-size: 20px; font-weight: 800; }
-    .det-valor.pos { color: var(--success); }
-    .det-valor.neg { color: var(--danger); }
-    .det-desc { font-size: 15px; line-height: 1.4; margin: 0 0 18px; }
-    .det-lista { margin: 0; display: flex; flex-direction: column; gap: 10px; }
-    .det-lista > div {
-      display: flex; align-items: baseline; justify-content: space-between;
-      gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--border);
-    }
-    .det-lista dt { margin: 0; font-size: 12px; color: var(--muted); }
-    .det-lista dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
-    .mov-ico {
-      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 15px;
-    }
-    .mov-ico.entrada  { background: #d1fae5; color: var(--success); }
-    .mov-ico.saida    { background: #fee2e2; color: var(--danger); }
-    .mov-ico.adiant   { background: #fef3c7; color: var(--warning); }
-    .mov-ico.sangria  { background: #f1f5f9; color: var(--muted); }
-    .mov-ico.fecham   { background: #dbeafe; color: var(--primary); }
-    .mov-ico.pendente { background: #ede9fe; color: var(--purple); }
-    .mov-info { flex: 1; min-width: 0; }
-    .mov-desc { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mov-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .mov-val  { font-size: 15px; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
-    .mov-val.pos { color: var(--success); }
-    .mov-val.neg { color: var(--danger); }
-    .mov-val.neu { color: var(--muted); }
-
-    .type-chip {
-      display: inline-flex; align-items: center;
-      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
-      text-transform: uppercase; letter-spacing: .3px;
-    }
-    .chip-entrada  { background: #d1fae5; color: #065f46; }
-    .chip-saida    { background: #fee2e2; color: #991b1b; }
-    .chip-adiant   { background: #fef3c7; color: #92400e; }
-    .chip-sangria  { background: #f1f5f9; color: #475569; }
-    .chip-fecham   { background: #dbeafe; color: #1e40af; }
-    .chip-pendente { background: #ede9fe; color: #5b21b6; }
-
-    /* ===== CAIXA ===== */
-    .caixa-btns {
-      display: grid; grid-template-columns: repeat(2,1fr);
-      gap: 10px; margin-bottom: 18px;
-    }
-    .caixa-btn {
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: 14px 8px; border-radius: 12px; border: 1.5px solid var(--border);
-      background: var(--white); cursor: pointer; font-family: inherit;
-      transition: all .2s; font-size: 12px; font-weight: 600; color: var(--muted);
-    }
-    .caixa-btn:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-    .caixa-btn i { font-size: 22px; }
-    .caixa-btn.btn-green  { background: linear-gradient(135deg,#10b981,#059669); color: #fff; border: none; }
-    .caixa-btn.btn-red    { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; border: none; }
-    .caixa-btn.btn-orange { color: var(--warning); }
-    .caixa-btn.btn-purple { color: var(--purple); }
-
-    .section-label {
-      font-size: 12px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 10px;
-    }
-
-    /* ===== PENDÊNCIAS ===== */
-    .pend-card {
-      background: var(--white); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px; margin-bottom: 8px; box-shadow: var(--shadow);
-    }
-    .pend-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .pend-veiculo { font-size: 14px; font-weight: 700; }
-    .pend-val { font-size: 16px; font-weight: 800; color: var(--purple); }
-    .pend-meta { font-size: 12px; color: var(--muted); }
-    .pend-actions { display: flex; gap: 8px; margin-top: 10px; }
-    .btn-quitar {
-      flex: 1; padding: 10px; border-radius: 10px;
-      background: var(--primary); color: #fff;
-      border: none; cursor: pointer; font-family: inherit;
-      font-size: 13px; font-weight: 700; transition: opacity .15s;
-    }
-    .btn-quitar:hover { opacity: .9; }
-
-    /* ===== EMPTY / LOADING ===== */
-    .empty {
-      text-align: center; padding: 48px 20px; color: var(--muted);
-    }
-    .empty i    { font-size: 44px; color: var(--faint); margin-bottom: 12px; display: block; }
-    .empty h3   { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .empty p    { font-size: 13px; }
-    .loading    { text-align: center; padding: 48px 20px; }
-    .spinner {
-      width: 32px; height: 32px; border-radius: 50%;
-      border: 3px solid var(--border); border-top-color: var(--primary);
-      animation: spin .9s linear infinite; margin: 0 auto 12px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading p  { font-size: 13px; color: var(--muted); }
-
-    /* ===== BOTTOM SHEET MODAL ===== */
-    .sheet-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.5); z-index: 1000;
-      opacity: 0; pointer-events: none; transition: opacity .25s;
-    }
-    .sheet-overlay.open { opacity: 1; pointer-events: all; }
-    .sheet {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      max-width: 640px; margin: 0 auto;
-      background: var(--white); border-radius: 20px 20px 0 0;
-      max-height: 92vh; overflow-y: auto;
-      transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
-      z-index: 1001;
-    }
-    .sheet.open { transform: translateY(0); }
-    .sheet-handle {
-      width: 40px; height: 4px; background: var(--border);
-      border-radius: 2px; margin: 12px auto 0;
-    }
-    .sheet-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--white); z-index: 10;
-    }
-    .sheet-title { font-size: 16px; font-weight: 700; }
-    .sheet-close {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--bg); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; color: var(--muted); transition: background .15s;
-    }
-    .sheet-close:hover { background: var(--border); }
-    .sheet-body { padding: 18px; }
-
-    /* ===== FORM FIELDS ===== */
-    .field { margin-bottom: 14px; }
-    .field label {
-      display: block; font-size: 12px; font-weight: 700;
-      color: var(--muted); text-transform: uppercase; letter-spacing: .4px;
-      margin-bottom: 6px;
-    }
-    .field input, .field select, .field textarea {
-      width: 100%; padding: 11px 13px;
-      border: 1.5px solid var(--border); border-radius: 10px;
-      font-size: 14px; font-family: inherit; color: var(--text);
-      background: var(--white); outline: none; transition: border-color .15s;
-    }
-    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); }
-    .field textarea { resize: none; min-height: 80px; }
-
-    /* Categoria chips */
-    .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-    .cat-chip {
-      flex: 1; min-width: 90px; padding: 10px 8px;
-      border: 1.5px solid var(--border); border-radius: 10px;
-      background: var(--white); cursor: pointer; font-family: inherit;
-      font-size: 12px; font-weight: 600; color: var(--muted);
-      text-align: center; transition: all .15s; display: flex;
-      flex-direction: column; align-items: center; gap: 4px;
-    }
-    .cat-chip i { font-size: 18px; }
-    .cat-chip.sel-despesa  { border-color: var(--danger);  background: #fee2e2; color: var(--danger); }
-    .cat-chip.sel-adiant   { border-color: var(--warning); background: #fef3c7; color: var(--warning); }
-    .cat-chip.sel-sangria  { border-color: var(--muted);   background: #f1f5f9; color: var(--muted); }
-    .cat-chip.sel-outro    { border-color: var(--purple);  background: #ede9fe; color: var(--purple); }
-
-    .sheet-footer {
-      padding: 14px 18px 24px;
-      border-top: 1px solid var(--border);
-      position: sticky; bottom: 0; background: var(--white);
-    }
-    .btn-submit-sheet {
-      width: 100%; padding: 14px; border-radius: 12px;
-      background: var(--primary); color: #fff; border: none;
-      font-family: inherit; font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: opacity .15s;
-    }
-    .btn-submit-sheet:hover { opacity: .9; }
+    /* ===== janelas ===== */
+    .sheet-overlay { position: fixed; inset: 0; background: #0e0f24bb; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 999; }
+    .sheet-overlay.open, .sheet-overlay.active { opacity: 1; pointer-events: all; }
+    .sheet { position: fixed; bottom: 0; left: 0; right: 0; margin: 0 auto; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; z-index: 1000;
+      background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-bottom: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 0 var(--sc, var(--orange));
+      transform: translateY(105%); transition: transform .45s cubic-bezier(.2, .9, .3, 1.1); }
+    .sheet.open, .sheet.active { transform: none; }
+    .sheet-handle { width: 44px; height: 5px; background: var(--ink); opacity: .25; border-radius: 3px; margin: 10px auto 0; }
+    .sheet-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px 12px; border-bottom: 3px solid var(--ink); }
+    .sheet-title { font: 400 17px/1.1 var(--dela); }
+    .sheet-close, .modal-close-btn { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; font-size: 18px; line-height: 1; flex: none; }
+    .sheet-body { padding: 14px; display: grid; gap: 12px; }
+    .sheet-footer { padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 3px solid var(--ink); }
+    .btn-submit-sheet { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 3px solid var(--ink); border-radius: 12px;
+      background: var(--orange); color: var(--cream); font: 400 15px/1.1 var(--dela); box-shadow: 4px 4px 0 var(--ink); cursor: pointer; }
+    .btn-submit-sheet.verde { background: var(--green); }
+    .btn-submit-sheet:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
     .btn-submit-sheet:disabled { opacity: .5; cursor: not-allowed; }
+    .rot-cat { font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .cat-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .cat-chip { display: grid; justify-items: center; gap: 3px; padding: 8px 2px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
+    .cat-chip i { font-size: 16px; color: var(--ink) !important; }
+    .cat-chip.sel-despesa { background: var(--orange); color: var(--cream); box-shadow: 3px 3px 0 var(--ink); }
+    .cat-chip.sel-adiant { background: #c58a00; color: var(--cream); box-shadow: 3px 3px 0 var(--ink); }
+    .cat-chip.sel-outro { background: #6b4fd8; color: var(--cream); box-shadow: 3px 3px 0 var(--ink); }
+    .cat-chip[class*="sel-"] i { color: inherit !important; }
+    .field label, .modal-field label { display: block; font: 700 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+    .field input, .field select, .field textarea, .modal-field input { width: 100%; padding: 9px 11px; border: 2.5px solid var(--ink) !important; border-radius: 10px !important; background: var(--paper) !important;
+      color: var(--ink); font: 700 14px var(--mono) !important; outline: none; }
+    .field textarea { font-weight: 400 !important; font-size: 13px !important; }
+    .field input:focus, .field select:focus, .field textarea:focus, .modal-field input:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .saldo-banner { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #fff3c4; font: 700 12px var(--mono); }
+    .saldo-banner b { font: 400 16px var(--dela); }
+    .lav-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--paper); border: 2.5px solid var(--ink); border-top: 0;
+      border-radius: 0 0 10px 10px; z-index: 10; max-height: 200px; overflow-y: auto; }
+    .lav-dropdown div { padding: 10px 12px; font-size: 13px; font-weight: 700; cursor: pointer; border-bottom: 2px dashed var(--line); }
+    .lav-dropdown div:hover { background: #e3d8bd; }
 
-    /* ===== MODAIS EXISTENTES (abertura/fechamento/relatório) ===== */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.5); z-index: 2000;
-      align-items: center; justify-content: center; padding: 16px;
-    }
+    .modal-overlay { position: fixed; inset: 0; z-index: 2000; background: #0e0f24bb; display: none; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.active { display: flex; }
-    .modal-box {
-      background: var(--white); border-radius: 16px;
-      padding: 22px; max-width: 480px; width: 100%;
-      box-shadow: 0 10px 40px rgba(0,0,0,.2); max-height: 90vh; overflow-y: auto;
-    }
-    .modal-hdr {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 18px;
-    }
-    .modal-hdr h2 { font-size: 16px; font-weight: 700; }
-    .modal-close-btn {
-      background: none; border: none; font-size: 22px;
-      cursor: pointer; color: var(--muted); line-height: 1;
-    }
-    .modal-field { margin-bottom: 14px; }
-    .modal-field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-    .modal-field input, .modal-field select {
-      width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
-      border-radius: 10px; font-size: 14px; font-family: inherit; outline: none;
-    }
-    .modal-field input:focus, .modal-field select:focus { border-color: var(--primary); }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-    .btn-cancel { padding: 10px 18px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13px; }
-    .btn-confirm { padding: 10px 18px; border-radius: 10px; border: none; background: var(--primary); color: #fff; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13px; }
-    .btn-confirm-danger { background: var(--danger); }
-    .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
-
-    /* Fechamento grid */
-    .fech-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 16px; }
-    .fech-item { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
-    .fech-item .flabel { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
-    .fech-item input { width: 100%; padding: 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; font-weight: 700; text-align: center; font-family: inherit; outline: none; }
-    .fech-item input:focus { border-color: var(--primary); }
-    .fech-esp { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 6px; }
-
-    /* Relatório */
-    .rel-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-    .rel-table th { text-align: left; padding: 8px; font-size: 12px; color: var(--muted); border-bottom: 2px solid var(--border); font-weight: 600; }
-    .rel-table th:not(:first-child) { text-align: right; }
-    .rel-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .modal-box { width: 100%; max-width: 480px; max-height: 90vh; overflow: auto; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px;
+      box-shadow: 6px 6px 0 var(--sc, var(--blue)); padding: 16px; display: grid; gap: 12px; }
+    .modal-hdr { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .modal-hdr h2 { margin: 0; font: 400 18px/1.1 var(--dela); }
+    .modal-box > p { margin: 0; font-size: 12px !important; color: var(--muted) !important; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .btn-cancel, .btn-confirm { padding: 9px 16px 11px; border: 3px solid var(--ink); border-radius: 12px; cursor: pointer; font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); }
+    .btn-cancel { background: var(--paper); color: var(--ink); }
+    .btn-confirm { background: var(--blue); color: var(--cream); }
+    .btn-confirm-danger { background: var(--red); }
+    .btn-cancel:disabled, .btn-confirm:disabled { opacity: .6; cursor: not-allowed; }
+    .aviso-irrev { padding: 8px 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--yellow); text-align: center; font: 700 12px var(--mono); }
+    .det-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .det-valor { font: 400 26px/1.1 var(--dela); }
+    .det-valor.pos { color: #1a7d45; } .det-valor.neg { color: #c1361a; } .det-valor.neu { color: var(--muted); }
+    .det-desc { margin: 0; font: 700 13px var(--mono); }
+    .det-lista { margin: 0; }
+    .det-lista > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 2px dashed var(--line); font: 700 12px var(--mono); }
+    .det-lista dt { color: var(--muted); font-weight: 400; }
+    .det-lista dd { margin: 0; text-align: right; }
+    .type-chip { display: inline-block; padding: 2px 9px; border-radius: 999px; border: 2px solid var(--ink); font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--cream); background: var(--muted); }
+    .chip-entrada { background: var(--green); } .chip-saida { background: var(--red); } .chip-pendente { background: var(--orange); }
+    .chip-sangria { background: #c2418f; } .chip-fecham { background: var(--ink); } .chip-adiant { background: #c58a00; }
+    .fech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .fech-item { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; padding: 10px; text-align: center; box-shadow: 3px 3px 0 var(--ink); }
+    .fech-item .flabel { font: 700 12px var(--mono); margin-bottom: 6px; }
+    .fech-item input { width: 100%; padding: 8px; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--cream); color: var(--ink); font: 400 16px var(--dela); text-align: center; outline: none; }
+    .rel-wrap { overflow-x: auto; }
+    .rel-table { width: 100%; border-collapse: collapse; font-family: var(--mono); }
+    .rel-table th { text-align: left; padding: 8px 6px; font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid var(--ink); }
+    .rel-table td { padding: 9px 6px; border-bottom: 2px dashed var(--line); font-size: 13px; font-weight: 700; }
     .rel-table td:not(:first-child) { text-align: right; }
-    .rel-table tr.diverg { background: #fee2e2; }
-    .diff-ok { color: var(--success); font-weight: 700; }
-    .diff-err { color: var(--danger); font-weight: 700; }
-    .status-big { display: inline-block; padding: 6px 20px; border-radius: 20px; font-weight: 700; font-size: 14px; }
-    .status-big.conferido  { background: #d1fae5; color: #065f46; }
-    .status-big.divergente { background: #fee2e2; color: #991b1b; }
+    .rel-table tr.diverg { background: #ffd0cc; }
+    .diff-ok { color: var(--green); } .diff-err { color: #c1361a; }
+    .status-big { display: inline-block; padding: 6px 16px 8px; border: 3px solid var(--ink); border-radius: 12px; font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); color: var(--cream); }
+    .status-big.conferido { background: var(--green); } .status-big.divergente { background: var(--red); }
+    .quitar-info { padding: 10px 12px; border: 2px dashed var(--ink); border-radius: 10px; }
+    .quitar-info b { display: block; font: 400 15px var(--dela); }
+    .quitar-info span { font-size: 12px; color: var(--muted); }
+    .pay-methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .pay-btn { padding: 12px 4px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink); font: 700 12px var(--mono); cursor: pointer; box-shadow: 3px 3px 0 var(--m, var(--ink)); }
+    .pay-btn.dinheiro { --m: var(--green); } .pay-btn.pix { --m: #1a9e8f; } .pay-btn.cartao { --m: var(--blue); } .pay-btn.cortesia { --m: #c2418f; }
+    .pay-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+    .pay-btn:disabled { opacity: .5; }
 
-    /* ===== QUITAR PENDÊNCIA ===== */
-    .pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .pay-btn {
-      padding: 14px; border-radius: 12px; border: 1.5px solid var(--border);
-      background: var(--white); cursor: pointer; font-family: inherit;
-      font-size: 14px; font-weight: 600; text-align: center; transition: all .15s;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-    }
-    .pay-btn i { font-size: 22px; }
-    .pay-btn.dinheiro { border-color: var(--success); color: var(--success); }
-    .pay-btn.pix      { border-color: var(--primary); color: var(--primary); }
-    .pay-btn.cartao   { border-color: var(--purple);  color: var(--purple); }
-    .pay-btn.cortesia { border-color: #ec4899; color: #ec4899; }
-    .pay-btn:disabled { opacity: .5; cursor: not-allowed; }
-
-    /* ===== TOAST ===== */
-    .toast {
-      position: fixed; bottom: 88px; left: 14px; right: 14px;
-      max-width: 400px; margin: 0 auto;
-      background: var(--white); padding: 13px 15px; border-radius: 12px;
-      box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 10px;
-      z-index: 3000; transform: translateY(120px); transition: transform .28s ease;
-    }
-    .toast.show { transform: translateY(0); }
-    .toast.success { border-left: 3px solid var(--success); }
-    .toast.success i { color: var(--success); }
-    .toast.error   { border-left: 3px solid var(--danger); }
-    .toast.error i { color: var(--danger); }
-    .toast-msg { font-size: 13px; font-weight: 500; }
-
-    /* ===== MOBILE NAV ===== */
-    .mobile-bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--white); border-top: 1px solid var(--border);
-      display: flex; justify-content: space-around;
-      height: 64px; z-index: 999;
-      box-shadow: 0 -2px 12px rgba(0,0,0,.08);
-    }
-    .nav-item {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-decoration: none; color: var(--muted);
-      font-size: 10px; font-weight: 600; gap: 3px;
-      border: none; background: none; cursor: pointer;
-      border-top: 2.5px solid transparent; font-family: inherit;
-    }
-    .nav-item.active { color: var(--primary); border-top-color: var(--primary); }
-    .nav-item i { font-size: 19px; }
-
-    /* Menu dropdown */
-    .menu-dropdown {
-      display: none; position: fixed; top: 58px; right: 14px;
-      background: var(--white); border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.18); border: 1px solid var(--border);
-      min-width: 180px; z-index: 1000; overflow: hidden;
-    }
-    .menu-dropdown.active { display: block; }
-    .menu-dropdown a, .menu-dropdown button {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px; color: var(--text); text-decoration: none;
-      border: none; background: none; width: 100%; cursor: pointer;
-      font-size: 13px; font-weight: 500; font-family: inherit; transition: background .15s;
-    }
-    .menu-dropdown a:hover, .menu-dropdown button:hover { background: var(--bg); color: var(--primary); }
-    .overlay { display: none; position: fixed; inset: 0; z-index: 999; }
-    .overlay.active { display: block; }
-
-    @media (min-width: 500px) {
-      .bal-value { font-size: 20px; }
-    }
+    @media (max-width: 380px) { .acoes-caixa { gap: 8px; } .acao-cx { font-size: 11px; padding: 9px; } }
   </style>
 </head>
 <body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
 
-<!-- HEADER -->
-<header class="hdr">
-  <div class="hdr-left">
-    <a href="index.html" class="hdr-logo">
-      <i class="fas fa-arrow-left"></i>
-    </a>
-    <div>
-      <div class="hdr-title">Financeiro</div>
-      <div class="hdr-sub" id="empresaNome">Carregando...</div>
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
+    <div class="topo-tit"><h1>Financeiro</h1><small id="empresaNome">Carregando...</small></div>
+    <button class="btn btn-saida" onclick="abrirSaidaTopo()"><i class="fas fa-arrow-up"></i> Saída</button>
+  </header>
+
+  <!-- saldo do dia -->
+  <section class="cartao saldo" id="balCards">
+    <div class="saldo-topo"><span class="rotulo" id="saldoRot">Hoje</span></div>
+    <div class="saldo-num">
+      <div style="--c: var(--green)"><small>Entrou</small><b id="balFat">—</b></div>
+      <div style="--c: var(--red)"><small>Saiu</small><b id="balSai">—</b></div>
+      <div style="--c: var(--orange)"><small>Pendente</small><b id="balPend">—</b></div>
     </div>
-  </div>
-  <div class="hdr-right">
-    <a href="perfil.html" class="icon-btn" title="Perfil"><i class="fas fa-user-circle"></i></a>
-    <button class="icon-btn" onclick="logout()" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
-    <button class="icon-btn" onclick="toggleMenu()" title="Menu"><i class="fas fa-ellipsis-v"></i></button>
-  </div>
-</header>
+    <div class="saldo-liq"><span>Sobrou hoje</span><b id="balLiq">—</b></div>
+  </section>
 
-<!-- MENU DROPDOWN -->
+  <nav class="abas">
+    <button class="tab-btn active" id="tb-mov" onclick="switchTab('mov')"><i class="fas fa-right-left"></i> Movimentações</button>
+    <button class="tab-btn" id="tb-caixa" onclick="switchTab('caixa')"><i class="fas fa-cash-register"></i> Caixa</button>
+    <button class="tab-btn" id="tb-pend" onclick="switchTab('pend')"><i class="fas fa-hourglass-half"></i> Pendências <span class="bolinha" id="pendBadge" style="display:none">0</span></button>
+    <button class="tab-btn" id="tb-contas" onclick="switchTab('contas')"><i class="fas fa-file-invoice-dollar"></i> Contas a pagar <span class="bolinha" id="contasBadge" hidden></span></button>
+  </nav>
+
+  <!-- movimentações -->
+  <div id="tab-mov" class="tab-pane active">
+    <div class="filtros">
+      <button class="filtro preset-btn active" id="pre-today" onclick="setPreset('today')">Hoje</button>
+      <button class="filtro preset-btn" id="pre-week" onclick="setPreset('week')">Semana</button>
+      <button class="filtro preset-btn" id="pre-month" onclick="setPreset('month')">Mês</button>
+      <span style="width:6px"></span>
+      <button class="filtro tipo-f on" onclick="filtrarTipo(this,'')">Todos</button>
+      <button class="filtro tipo-f" onclick="filtrarTipo(this,'PAGAMENTO')">Entradas</button>
+      <button class="filtro tipo-f" onclick="filtrarTipo(this,'SAIDA')">Saídas</button>
+      <button class="filtro tipo-f" onclick="filtrarTipo(this,'PENDENTE')">Pendentes</button>
+      <button class="filtro tipo-f" onclick="filtrarTipo(this,'SANGRIA')">Sangrias</button>
+    </div>
+    <div class="datas">
+      <input class="entrada" type="date" id="fDataInicio" onchange="applyFilters()"><span>→</span><input class="entrada" type="date" id="fDataFim" onchange="applyFilters()">
+    </div>
+    <select id="fTipo" hidden onchange="applyFilters()">
+      <option value="">Todos</option><option value="PAGAMENTO">Entradas</option><option value="SAIDA">Saídas</option><option value="PENDENTE">Pendentes</option><option value="SANGRIA">Sangrias</option>
+    </select>
+    <div id="movList"></div>
+  </div>
+
+  <!-- caixa -->
+  <div id="tab-caixa" class="tab-pane">
+    <div id="caixaBtns" style="display:grid;gap:12px"></div>
+    <p class="sec-tit" id="caixaHistLabel" style="display:none">Movimentações de hoje</p>
+    <div id="caixaHist"></div>
+  </div>
+
+  <!-- pendências -->
+  <div id="tab-pend" class="tab-pane">
+    <p style="margin: 0; font-size: 12px; opacity: .85">Ordens lavadas que ficaram para pagar depois.</p>
+    <div id="pendList" style="display:grid;gap:12px"></div>
+  </div>
+
+  <!-- contas a pagar (componente compartilhado /contas-pagar.js) -->
+  <div id="tab-contas" class="tab-pane">
+    <div id="cpHost"></div>
+  </div>
+</div>
+
+<!-- barra de baixo e menu (montados pelo utils.js) -->
+<nav id="mobileNav"></nav>
 <div class="menu-dropdown" id="menuDropdown">
-  <a href="perfil.html"><i class="fas fa-id-card"></i><span>Meu Perfil</span></a>
-  <a href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
+  <a href="/funcionario/perfil.html"><i class="fas fa-id-card"></i><span>Meu perfil</span></a>
+  <a href="/funcionario/index.html"><i class="fas fa-home"></i><span>Início</span></a>
   <button onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button>
 </div>
 <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
-<!-- MAIN -->
-<main class="main">
-  <!-- Balance Cards -->
-  <div class="balance-row" id="balCards">
-    <div class="bal-card green"><div class="bal-label">Faturamento</div><div class="bal-value" id="balFat">—</div></div>
-    <div class="bal-card red"><div class="bal-label">Saídas</div><div class="bal-value" id="balSai">—</div></div>
-    <div class="bal-card orange"><div class="bal-label">Pendências</div><div class="bal-value" id="balPend">—</div></div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="tabs-wrap">
-    <div class="tabs-bar">
-      <button class="tab-btn active" id="tb-mov" onclick="switchTab('mov')">
-        <i class="fas fa-exchange-alt"></i> Movimentações
-      </button>
-      <button class="tab-btn" id="tb-caixa" onclick="switchTab('caixa')">
-        <i class="fas fa-cash-register"></i> Caixa
-      </button>
-      <button class="tab-btn" id="tb-pend" onclick="switchTab('pend')">
-        <i class="fas fa-clock"></i> Pendências
-        <span class="tab-badge" id="pendBadge" style="display:none">0</span>
-      </button>
-      <button class="tab-btn" id="tb-contas" onclick="switchTab('contas')">
-        <i class="fas fa-file-invoice-dollar"></i> Contas a pagar
-      </button>
-    </div>
-
-    <!-- TAB MOVIMENTAÇÕES -->
-    <div id="tab-mov" class="tab-pane active">
-      <div class="filter-row">
-        <input type="date" id="fDataInicio" onchange="applyFilters()">
-        <input type="date" id="fDataFim" onchange="applyFilters()">
-        <select id="fTipo" onchange="applyFilters()">
-          <option value="">Todos</option>
-          <option value="PAGAMENTO">Entradas</option>
-          <option value="SAIDA">Saídas</option>
-          <option value="PENDENTE">Pendentes</option>
-          <option value="SANGRIA">Sangrias</option>
-        </select>
-      </div>
-      <div class="preset-row">
-        <button class="preset-btn active" id="pre-today" onclick="setPreset('today')">Hoje</button>
-        <button class="preset-btn" id="pre-week" onclick="setPreset('week')">Semana</button>
-        <button class="preset-btn" id="pre-month" onclick="setPreset('month')">Mês</button>
-      </div>
-      <div id="movList"></div>
-    </div>
-
-    <!-- TAB CAIXA -->
-    <div id="tab-caixa" class="tab-pane">
-      <div id="caixaBtns"></div>
-      <div class="section-label" id="caixaHistLabel" style="display:none">Hoje</div>
-      <div id="caixaHist"></div>
-    </div>
-
-    <!-- TAB PENDÊNCIAS -->
-    <div id="tab-pend" class="tab-pane">
-      <div id="pendList"></div>
-    </div>
-
-    <!-- TAB CONTAS A PAGAR (componente compartilhado /contas-pagar.js) -->
-    <div id="tab-contas" class="tab-pane">
-      <div id="cpHost"></div>
-    </div>
-  </div>
-</main>
-
-<!-- NAV -->
-<nav id="mobileNav"></nav>
-
-<!-- ==================== SHEET: SAÍDA ==================== -->
+<!-- saída / sangria -->
 <div class="sheet-overlay" id="saidaOverlay" onclick="closeSaidaSheet()"></div>
 <div class="sheet" id="saidaSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <span class="sheet-title" id="saidaSheetTitle">Lançar Saída</span>
+    <span class="sheet-title" id="saidaSheetTitle">Lançar saída</span>
     <button class="sheet-close" onclick="closeSaidaSheet()"><i class="fas fa-times"></i></button>
   </div>
   <div class="sheet-body">
-    <!-- Saldo disponível (visível só na sangria) -->
-    <div id="saldoBanner" style="display:none; background:var(--bg); border-radius:10px; padding:11px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-size:12px; font-weight:600; color:var(--muted);">💵 Saldo disponível</span>
-      <span id="saldoDisp" style="font-size:15px; font-weight:800; color:var(--text);">R$ 0,00</span>
-    </div>
-
-    <!-- Categoria chips -->
+    <div id="saldoBanner" class="saldo-banner" style="display:none"><span>💵 Disponível em dinheiro</span><b id="saldoDisp">R$ 0,00</b></div>
     <div id="catChipsWrap">
-      <div style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;">Categoria</div>
+      <div class="rot-cat">Categoria</div>
       <div class="cat-chips" id="catChips">
-        <button class="cat-chip" data-cat="Despesa" onclick="selectCat('Despesa')">
-          <i class="fas fa-receipt" style="color:var(--danger)"></i> Despesa
-        </button>
-        <button class="cat-chip" data-cat="Adiantamento" onclick="selectCat('Adiantamento')">
-          <i class="fas fa-hand-holding-usd" style="color:var(--warning)"></i> Vale
-        </button>
-        <button class="cat-chip" data-cat="Outro" onclick="selectCat('Outro')">
-          <i class="fas fa-ellipsis-h" style="color:var(--purple)"></i> Outro
-        </button>
+        <button class="cat-chip" data-cat="Despesa" onclick="selectCat('Despesa')"><i class="fas fa-receipt"></i>Despesa</button>
+        <button class="cat-chip" data-cat="Adiantamento" onclick="selectCat('Adiantamento')"><i class="fas fa-hand-holding-usd"></i>Vale</button>
+        <button class="cat-chip" data-cat="Outro" onclick="selectCat('Outro')"><i class="fas fa-ellipsis-h"></i>Outro</button>
       </div>
     </div>
-
-    <!-- Tipo de gasto (pro relatório financeiro) — some quando é Adiantamento -->
     <div class="field" id="sCategoriaGastoField">
       <label>Tipo de gasto</label>
       <select id="sCategoriaGasto">
@@ -596,16 +328,9 @@
         <option value="Outros" selected>Outros</option>
       </select>
     </div>
-
-    <!-- Valor -->
+    <div class="field"><label>Valor (R$) *</label><input type="number" id="sValor" step="0.01" min="0.01" placeholder="0,00"></div>
     <div class="field">
-      <label>Valor (R$) *</label>
-      <input type="number" id="sValor" step="0.01" min="0.01" placeholder="0,00">
-    </div>
-
-    <!-- Forma de pagamento -->
-    <div class="field">
-      <label>Forma de Pagamento *</label>
+      <label>Pago com *</label>
       <select id="sFormaPag">
         <option value="">Selecione...</option>
         <option value="DINHEIRO">💵 Dinheiro</option>
@@ -615,180 +340,111 @@
         <option value="CHEQUE">📄 Cheque</option>
       </select>
     </div>
-
-    <!-- Descrição (obrigatório para não-Adiantamento; opcional para Adiantamento) -->
-    <div class="field" id="sDescField">
-      <label id="sDescLabel">Descrição *</label>
-      <input type="text" id="sDescricao" placeholder="Ex: Compra de produto de limpeza">
-    </div>
-
-    <!-- Responsável / Fornecedor -->
+    <div class="field" id="sDescField"><label id="sDescLabel">Descrição *</label><input type="text" id="sDescricao" placeholder="Ex: Compra de produto de limpeza"></div>
     <div class="field" id="sRespField">
       <label id="sRespLabel">Fornecedor (opcional)</label>
       <div style="position:relative">
         <input type="text" id="sResp" placeholder="Nome do fornecedor ou responsável">
-        <div id="lavDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--white); border:1.5px solid var(--border); border-top:none; border-radius:0 0 10px 10px; z-index:10; max-height:200px; overflow-y:auto;"></div>
+        <div id="lavDropdown" class="lav-dropdown"></div>
       </div>
       <input type="hidden" id="sLavadorId">
     </div>
-
-    <!-- Data (opcional) -->
-    <div class="field">
-      <label>Data (deixe vazio para agora)</label>
-      <input type="date" id="sData">
-    </div>
+    <div class="field"><label>Data (vazio = agora)</label><input type="date" id="sData"></div>
   </div>
   <div class="sheet-footer">
-    <button class="btn-submit-sheet" id="saidaSubmitBtn" onclick="submitSaida()">
-      <i class="fas fa-check"></i> Confirmar Saída
-    </button>
+    <button class="btn-submit-sheet" id="saidaSubmitBtn" onclick="submitSaida()"><i class="fas fa-check"></i> Confirmar saída</button>
   </div>
 </div>
 
-<!-- ==================== MODAL: DETALHE DA MOVIMENTAÇÃO ==================== -->
-<div class="modal-overlay" id="movDetalheModal">
+<!-- detalhe da movimentação -->
+<div class="modal-overlay" id="movDetalheModal" onclick="if(event.target===this)fecharDetalheMov()">
   <div class="modal-box">
-    <div class="modal-hdr">
-      <h2><i class="fas fa-receipt"></i> Detalhes</h2>
-      <button class="modal-close-btn" onclick="fecharDetalheMov()">×</button>
-    </div>
-    <div class="det-topo">
-      <span class="type-chip" id="detChip"></span>
-      <span class="det-valor" id="detValor"></span>
-    </div>
+    <div class="modal-hdr"><h2>Detalhes</h2><button class="modal-close-btn" onclick="fecharDetalheMov()">×</button></div>
+    <div class="det-topo"><span class="type-chip" id="detChip"></span><span class="det-valor" id="detValor"></span></div>
     <p class="det-desc" id="detDesc"></p>
     <dl class="det-lista" id="detLista"></dl>
-    <div class="modal-actions">
-      <button class="btn-confirm" onclick="fecharDetalheMov()">Fechar</button>
-    </div>
+    <div class="modal-actions"><button class="btn-confirm" onclick="fecharDetalheMov()">Fechar</button></div>
   </div>
 </div>
 
-<!-- ==================== MODAL: ABERTURA ==================== -->
-<div class="modal-overlay" id="aberturaModal">
-  <div class="modal-box">
-    <div class="modal-hdr">
-      <h2><i class="fas fa-door-open"></i> Abrir Caixa</h2>
-      <button class="modal-close-btn" onclick="closeAberturaModal()">×</button>
-    </div>
+<!-- abrir caixa -->
+<div class="modal-overlay" id="aberturaModal" onclick="if(event.target===this)closeAberturaModal()">
+  <div class="modal-box" style="--sc: var(--green)">
+    <div class="modal-hdr"><h2><i class="fas fa-door-open"></i> Abrir caixa</h2><button class="modal-close-btn" onclick="closeAberturaModal()">×</button></div>
     <div class="modal-field">
       <label>Troco inicial (opcional)</label>
-      <input type="number" id="abValorInicial" step="0.01" min="0" placeholder="R$ 0,00" style="font-size:18px;font-weight:700;">
-      <small style="color:var(--muted);display:block;margin-top:4px;">Deixe em branco se não houver troco.</small>
+      <input type="number" id="abValorInicial" step="0.01" min="0" placeholder="R$ 0,00">
+      <small style="color:var(--muted);display:block;margin-top:4px;font-size:11px">Deixe em branco se não houver troco.</small>
     </div>
-    <div class="modal-field">
-      <label>Responsável</label>
-      <input type="text" id="abResponsavel" placeholder="Nome do responsável">
-    </div>
+    <div class="modal-field"><label>Responsável</label><input type="text" id="abResponsavel" placeholder="Nome do responsável"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeAberturaModal()">Cancelar</button>
-      <button class="btn-confirm" id="btnAbrirConfirm" onclick="confirmarAbertura()">
-        <i class="fas fa-door-open"></i> Abrir
-      </button>
+      <button class="btn-confirm" id="btnAbrirConfirm" onclick="confirmarAbertura()" style="background:var(--green)"><i class="fas fa-door-open"></i> Abrir</button>
     </div>
   </div>
 </div>
 
-<!-- ==================== MODAL: FECHAMENTO ==================== -->
-<div class="modal-overlay" id="fechamentoModal">
-  <div class="modal-box">
-    <div class="modal-hdr">
-      <h2><i class="fas fa-door-closed"></i> Fechar Caixa</h2>
-      <button class="modal-close-btn" onclick="closeFechamentoModal()">×</button>
-    </div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Informe o valor físico para cada método. Deixe em branco para R$ 0,00.</p>
+<!-- fechar caixa -->
+<div class="modal-overlay" id="fechamentoModal" onclick="if(event.target===this)closeFechamentoModal()">
+  <div class="modal-box" style="--sc: var(--red)">
+    <div class="modal-hdr"><h2><i class="fas fa-lock"></i> Fechar caixa</h2><button class="modal-close-btn" onclick="closeFechamentoModal()">×</button></div>
+    <p>Conte e digite o que tem de verdade em cada forma. Vazio conta como R$ 0,00.</p>
     <div class="fech-grid" id="fechGrid"></div>
-    <div style="padding:10px 14px;background:#fef3c7;border-radius:8px;text-align:center;color:#92400e;font-size:13px;margin-bottom:12px;">
-      <i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.
-    </div>
-    <div class="field" style="margin-bottom:16px;">
-      <label>Observação (opcional)</label>
-      <textarea id="fechObs" placeholder="Ex: Falta de R$ 50 por troco. Dinheiro é sensível a falsas, verificar com cliente..." style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;background:var(--white);resize:vertical;min-height:80px;"></textarea>
-    </div>
+    <div class="aviso-irrev"><i class="fas fa-exclamation-triangle"></i> Esta ação não pode ser desfeita.</div>
+    <div class="field"><label>Observação (opcional)</label><textarea id="fechObs" rows="2" placeholder="Ex: faltou R$ 2 de troco" style="resize:vertical"></textarea></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeFechamentoModal()">Cancelar</button>
-      <button class="btn-confirm btn-confirm-danger" id="btnFechConfirm" onclick="confirmarFechamento()">
-        <i class="fas fa-lock"></i> Confirmar Fechamento
-      </button>
+      <button class="btn-confirm btn-confirm-danger" id="btnFechConfirm" onclick="confirmarFechamento()"><i class="fas fa-lock"></i> Confirmar fechamento</button>
     </div>
   </div>
 </div>
 
-<!-- ==================== MODAL: RELATÓRIO ==================== -->
-<div class="modal-overlay" id="relatorioModal">
-  <div class="modal-box" style="max-width:540px;">
-    <div class="modal-hdr">
-      <h2><i class="fas fa-file-alt"></i> Relatório de Fechamento</h2>
-      <button class="modal-close-btn" onclick="closeRelatorioModal()">×</button>
+<!-- relatório do fechamento -->
+<div class="modal-overlay" id="relatorioModal" onclick="if(event.target===this)closeRelatorioModal()">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-hdr"><h2><i class="fas fa-file-alt"></i> Relatório do fechamento</h2><button class="modal-close-btn" onclick="closeRelatorioModal()">×</button></div>
+    <div style="text-align:center" id="relStatus"></div>
+    <div class="rel-wrap">
+      <table class="rel-table">
+        <thead><tr><th>Método</th><th style="text-align:right">Digitado</th><th style="text-align:right">Sistema</th><th style="text-align:right">Diferença</th></tr></thead>
+        <tbody id="relTbody"></tbody>
+      </table>
     </div>
-    <div style="text-align:center;margin-bottom:18px;" id="relStatus"></div>
-    <table class="rel-table">
-      <thead>
-        <tr>
-          <th>Método</th>
-          <th style="text-align:right">Digitado</th>
-          <th style="text-align:right">Sistema</th>
-          <th style="text-align:right">Diferença</th>
-        </tr>
-      </thead>
-      <tbody id="relTbody"></tbody>
-    </table>
-    <div id="relRodape" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
-    <div class="modal-actions">
-      <button class="btn-confirm" onclick="closeRelatorioModal()">Fechar</button>
-    </div>
+    <div id="relRodape" style="font-size:12px;color:var(--muted)"></div>
+    <div class="modal-actions"><button class="btn-confirm" onclick="closeRelatorioModal()">Fechar</button></div>
   </div>
 </div>
 
-<!-- ==================== MODAL: QUITAR PENDÊNCIA ==================== -->
-<div class="modal-overlay" id="quitarModal">
-  <div class="modal-box">
-    <div class="modal-hdr">
-      <h2><i class="fas fa-money-bill-wave"></i> Quitar Pendência</h2>
-      <button class="modal-close-btn" onclick="closeQuitarModal()">×</button>
-    </div>
-    <div id="quitarInfo" style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;"></div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Escolha a forma de pagamento:</p>
+<!-- quitar pendência -->
+<div class="modal-overlay" id="quitarModal" onclick="if(event.target===this)closeQuitarModal()">
+  <div class="modal-box" style="--sc: var(--green)">
+    <div class="modal-hdr"><h2>Quitar pendência</h2><button class="modal-close-btn" onclick="closeQuitarModal()">×</button></div>
+    <div id="quitarInfo" class="quitar-info"></div>
+    <p>Como o cliente pagou:</p>
     <div class="pay-methods" id="quitarPayMethods"></div>
   </div>
 </div>
 
-<!-- ==================== SHEET: GORJETA ==================== -->
+<!-- gorjeta -->
 <div class="sheet-overlay" id="gorjetaOverlay" onclick="closeGorjetaSheet()"></div>
-<div class="sheet" id="gorjetaSheet">
+<div class="sheet" id="gorjetaSheet" style="--sc: var(--green)">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <span class="sheet-title">Lançar Gorjeta</span>
+    <span class="sheet-title">Lançar gorjeta</span>
     <button class="sheet-close" onclick="closeGorjetaSheet()"><i class="fas fa-times"></i></button>
   </div>
   <div class="sheet-body">
-    <div class="field">
-      <label>Lavador *</label>
-      <select id="gLavador" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;background:var(--white);">
-        <option value="">Selecione o lavador...</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Valor (R$) *</label>
-      <input type="number" id="gValor" step="0.01" min="0.01" placeholder="0,00">
-    </div>
-    <div class="field">
-      <label>Observação (opcional)</label>
-      <input type="text" id="gObs" placeholder="Ex: Gorjeta do cliente João">
-    </div>
+    <div class="field"><label>Lavador *</label><select id="gLavador"><option value="">Selecione o lavador...</option></select></div>
+    <div class="field"><label>Valor (R$) *</label><input type="number" id="gValor" step="0.01" min="0.01" placeholder="0,00"></div>
+    <div class="field"><label>Observação (opcional)</label><input type="text" id="gObs" placeholder="Ex: Gorjeta do cliente João"></div>
   </div>
   <div class="sheet-footer">
-    <button class="btn-submit-sheet" id="gorjetaSubmitBtn" onclick="submitGorjeta()" style="background:#10b981">
-      <i class="fas fa-check"></i> Confirmar Gorjeta
-    </button>
+    <button class="btn-submit-sheet verde" id="gorjetaSubmitBtn" onclick="submitGorjeta()"><i class="fas fa-check"></i> Confirmar gorjeta</button>
   </div>
 </div>
 
-<!-- TOAST -->
-<div class="toast" id="toast">
-  <i class="fas fa-check-circle" id="toastIco"></i>
-  <span class="toast-msg" id="toastMsg"></span>
-</div>
+<!-- aviso rápido -->
+<div class="toast" id="toast"><i class="fas fa-check-circle" id="toastIco"></i><span class="toast-msg" id="toastMsg"></span></div>
 
 <script src="../api.js"></script>
 <script src="/contas-pagar.js"></script>
@@ -811,7 +467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
   if (!perms.includes('ver_financeiro')) {
     showToast('Sem permissão para o financeiro', 'error');
-    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+    setTimeout(() => { window.location.href = '/funcionario/index.html'; }, 1500);
     return;
   }
 
@@ -823,7 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('fDataInicio').value = today;
   document.getElementById('fDataFim').value    = today;
 
-  await Promise.all([loadBalanceCards(), loadMovimentacoes(), loadPendenciasCount()]);
+  await Promise.all([loadBalanceCards(), loadMovimentacoes(), loadPendenciasCount(), loadContasBadge()]);
   // ?aba=contas abre direto em Contas a pagar (cartão do dashboard)
   if (new URLSearchParams(location.search).get('aba') === 'contas') switchTab('contas');
 });
@@ -834,11 +490,21 @@ function todayStr() {
 }
 
 // ===================== BALANCE =====================
+// No saldo do topo vai sem centavos, para os três números caberem lado a lado no celular
+function valorCurto(v) { return `<small>R$</small>${Math.round(v || 0).toLocaleString('pt-BR')}`; }
+
 async function loadBalanceCards() {
+  const d = new Date();
+  const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  document.getElementById('saldoRot').textContent = `Hoje · ${dias[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
   try {
     const r = await window.api.getResumoDia();
-    document.getElementById('balFat').textContent  = formatCurrency(r.faturamentoDia || 0);
-    document.getElementById('balSai').textContent  = formatCurrency(r.totalSaidas || 0);
+    const fat = r.faturamentoDia || 0, sai = r.totalSaidas || 0;
+    document.getElementById('balFat').innerHTML = valorCurto(fat);
+    document.getElementById('balSai').innerHTML = valorCurto(sai);
+    const liq = document.getElementById('balLiq');
+    liq.textContent = formatCurrency(fat - sai) || 'R$ 0,00';
+    liq.classList.toggle('neg', fat - sai < 0);
   } catch(e) {
     document.getElementById('balFat').textContent = 'Erro';
   }
@@ -850,11 +516,39 @@ async function loadPendenciasCount() {
     const r = await window.api.getOrdens(1, 500, '', 'FINALIZADO', '', '', '', '', 'PENDENTE');
     const total = r.pagination?.total || 0;
     const valor = (r.ordens || []).reduce((s, o) => s + (parseFloat(o.valorTotal)||0), 0);
-    document.getElementById('balPend').textContent = formatCurrency(valor);
+    document.getElementById('balPend').innerHTML = valorCurto(valor);
     const badge = document.getElementById('pendBadge');
-    if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
+    if (total > 0) { badge.textContent = total; badge.style.display = 'inline-grid'; }
     else badge.style.display = 'none';
   } catch(e) {}
+}
+
+// Bolinha da aba Contas a pagar: vencidas + as que vencem hoje (mesmo resumo do atalho do painel)
+async function loadContasBadge() {
+  try {
+    const r = await window.fetchApi('/contas-pagar/resumo');
+    const n = (r?.vencidas?.qtd || 0) + (r?.hoje || 0);
+    const b = document.getElementById('contasBadge');
+    b.textContent = n; b.hidden = !n;
+  } catch (e) {}
+}
+
+// Saída pelo botão do topo: com o caixa aberto vai direto; fechado, leva para a aba Caixa
+async function abrirSaidaTopo() {
+  try {
+    const st = await window.api.getStatusCaixa();
+    caixaStatus = { ...caixaStatus, isOpen: st.isOpen || false, notOpened: st.notOpened ?? true, saldoDinheiro: st.saldoDinheiro || 0, currentUserNome: st.currentUserNome || '' };
+  } catch (e) {}
+  if (caixaStatus.isOpen) { openSaidaSheet('saida'); return; }
+  switchTab('caixa');
+  showToast('Abra o caixa para lançar saídas', 'error');
+}
+
+// Filtro por tipo (chips) → mesmo <select id="fTipo"> que a busca usa
+function filtrarTipo(btn, tipo) {
+  document.querySelectorAll('.tipo-f').forEach(b => b.classList.toggle('on', b === btn));
+  document.getElementById('fTipo').value = tipo;
+  applyFilters();
 }
 
 // ===================== TABS =====================
@@ -867,7 +561,7 @@ function switchTab(tab) {
   if (tab === 'mov')   loadMovimentacoes();
   if (tab === 'caixa') loadCaixa();
   if (tab === 'pend')  loadPendencias();
-  if (tab === 'contas' && !window._cpMontado) window._cpMontado = ContasPagar.montar(document.getElementById('cpHost'), { acento: '#2563eb' });
+  if (tab === 'contas' && !window._cpMontado) window._cpMontado = ContasPagar.montar(document.getElementById('cpHost'), { acento: '#2f62e6' });
 }
 
 // ===================== MOVIMENTAÇÕES =====================
@@ -885,7 +579,7 @@ async function loadMovimentacoes() {
       return;
     }
     movsAtuais = movs;
-    container.innerHTML = movs.map(m => buildMovCard(m)).join('');
+    container.innerHTML = `<section class="cartao movs">${movs.map(m => buildMovCard(m)).join('')}</section>`;
   } catch(e) {
     container.innerHTML = createEmptyHtml('fa-exclamation-triangle', 'Erro ao carregar', 'Tente novamente.');
   }
@@ -928,6 +622,15 @@ function estiloMov(m) {
   return { icoClass, chipClass, chipLabel, valClass, valPre, ico: icoMap[icoClass] || 'fa-circle' };
 }
 
+const COR_MOV = { entrada: 'var(--green)', saida: 'var(--red)', adiant: '#c58a00', sangria: '#c2418f', fecham: 'var(--ink)', pendente: 'var(--orange)' };
+// forma de pagamento: cor, ícone, texto escuro?, rótulo
+const FORMA_VISUAL = {
+  DINHEIRO: ['var(--green)', 'fas fa-money-bill-wave', false, 'Dinheiro'], PIX: ['#1a9e8f', 'fab fa-pix', false, 'PIX'],
+  CARTAO: ['var(--blue)', 'fas fa-credit-card', false, 'Cartão'], NFE: ['#6b6780', 'fas fa-file-invoice', false, 'NFe'],
+  CORTESIA: ['#c2418f', 'fas fa-gift', false, 'Cortesia'], PENDENTE: ['var(--yellow)', 'fas fa-hourglass-half', true, 'Pendente'],
+  CHEQUE: ['var(--paper)', 'fas fa-money-check', true, 'Cheque'],
+};
+
 function ehPagamentoMov(m) {
   return !!m && (m.tipo === 'PAGAMENTO' || m.tipo === 'PENDENTE');
 }
@@ -944,19 +647,16 @@ function buildMovCard(m) {
 
   const hora = m.data ? new Date(m.data).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
   const data = m.data ? new Date(m.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '';
-  const meta = [data, hora, m.formaPagamento, m.lavador?.nome || m.fornecedor?.nome].filter(Boolean).join(' · ');
+  const meta = [data, m.lavador?.nome || m.fornecedor?.nome].filter(Boolean).join(' · ');
+  const F = FORMA_VISUAL[m.formaPagamento];
+  const forma = m.formaPagamento
+    ? `<span class="forma" style="--fc: ${F ? F[0] : 'var(--muted)'}${F && F[2] ? '; --fcf: var(--ink)' : ''}">${F ? `<i class="${F[1]}"></i>` : ''}${escHtml(F ? F[3] : m.formaPagamento)}</span>` : '';
 
   return `
-    <div class="mov-card" onclick="abrirDetalheMov('${escHtml(m.id)}')">
-      <div class="mov-ico ${e.icoClass}"><i class="fas ${e.ico}"></i></div>
-      <div class="mov-info">
-        <div class="mov-desc">${descHtml}</div>
-        <div class="mov-meta">
-          <span class="type-chip ${e.chipClass}">${e.chipLabel}</span>
-          ${meta ? `<span style="margin-left:6px">${escHtml(meta)}</span>` : ''}
-        </div>
-      </div>
-      <div class="mov-val ${e.valClass}">${e.valPre}${formatCurrency(m.valor)}</div>
+    <div class="mov" onclick="abrirDetalheMov('${escHtml(m.id)}')">
+      <span class="ic" style="--c: ${COR_MOV[e.icoClass] || 'var(--muted)'}"><i class="fas ${e.ico}"></i></span>
+      <span class="t"><b>${descHtml}</b><span class="meta"><span class="os">${e.chipLabel}</span>${meta ? `<span class="sv">${escHtml(meta)}</span>` : ''}</span></span>
+      <span class="v ${e.valClass}">${e.valPre}${formatCurrency(m.valor)}<span class="pe-v">${hora ? `<span class="hr">${hora}</span>` : ''}${forma}</span></span>
     </div>`;
 }
 
@@ -1051,27 +751,22 @@ async function loadCaixa() {
     caixaStatus = { isOpen: status.isOpen||false, notOpened: status.notOpened??true, paymentMethodsConfig: status.paymentMethodsConfig||caixaStatus.paymentMethodsConfig, currentUserNome: status.currentUserNome||'', saldoDinheiro: status.saldoDinheiro||0 };
   } catch(e) {}
 
-  let html = '<div class="caixa-btns">';
-  if (!caixaStatus.isOpen) {
-    html += `<button class="caixa-btn btn-green" onclick="openAberturaModal()" style="grid-column:span 2">
-      <i class="fas fa-door-open"></i> <span>Abrir Caixa</span>
-    </button>`;
+  const aberto = caixaStatus.isOpen;
+  let html = `<div class="caixa-status${aberto ? '' : ' fechado'}">
+      <span class="bola"><i class="fas fa-cash-register"></i></span>
+      <span class="t"><b>${aberto ? 'Caixa aberto' : (caixaStatus.notOpened ? 'Caixa não aberto hoje' : 'Caixa fechado')}</b>
+      <span>${aberto ? 'dinheiro no caixa: ' + formatCurrency(caixaStatus.saldoDinheiro || 0) : 'abra o caixa para começar o dia'}</span></span>
+    </div>`;
+  if (!aberto) {
+    html += `<div class="acoes-caixa"><button class="acao-cx larga" style="--c: var(--green)" onclick="openAberturaModal()"><i class="fas fa-door-open"></i>Abrir caixa</button></div>`;
   } else {
-    html += `
-      <button class="caixa-btn btn-orange" onclick="openSaidaSheet('saida')">
-        <i class="fas fa-receipt"></i><span>Lançar Saída</span>
-      </button>
-      <button class="caixa-btn btn-purple" onclick="openSaidaSheet('sangria')">
-        <i class="fas fa-money-bill-wave"></i><span>Sangria</span>
-      </button>
-      <button class="caixa-btn btn-red" onclick="openFechamentoModal()" style="grid-column:span 2">
-        <i class="fas fa-door-closed"></i><span>Fechar Caixa</span>
-      </button>
-      <button class="caixa-btn" onclick="openGorjetaSheet()" style="grid-column:span 2;color:#10b981;border-color:#10b981">
-        <i class="fas fa-gift"></i><span>Lançar Gorjeta</span>
-      </button>`;
+    html += `<div class="acoes-caixa">
+      <button class="acao-cx" style="--c: var(--green)" onclick="openGorjetaSheet()"><i class="fas fa-hand-holding-heart"></i>Gorjeta</button>
+      <button class="acao-cx" style="--c: var(--orange)" onclick="openSaidaSheet('saida')"><i class="fas fa-arrow-up"></i>Saída</button>
+      <button class="acao-cx" style="--c: #c2418f" onclick="openSaidaSheet('sangria')"><i class="fas fa-piggy-bank"></i>Sangria</button>
+      <button class="acao-cx perigo" style="--c: var(--red)" onclick="openFechamentoModal()"><i class="fas fa-lock"></i>Fechar caixa</button>
+    </div>`;
   }
-  html += '</div>';
   btns.innerHTML = html;
 
   try {
@@ -1079,7 +774,7 @@ async function loadCaixa() {
     const movs = r.registros || [];
     if (movs.length > 0) {
       lbl.style.display = 'block';
-      hist.innerHTML = movs.map(m => buildMovCard(m)).join('');
+      hist.innerHTML = `<section class="cartao movs">${movs.map(m => buildMovCard(m)).join('')}</section>`;
     } else {
       lbl.style.display = 'none';
       hist.innerHTML = createEmptyHtml('fa-cash-register', 'Sem movimentações', 'Nenhuma movimentação hoje.');
@@ -1105,32 +800,26 @@ async function loadPendencias() {
 }
 
 function buildPendCard(o) {
-  const dataCriacao = o.createdAt ? new Date(o.createdAt).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '—';
+  const criada = o.createdAt ? new Date(o.createdAt) : null;
+  const dataCriacao = criada ? criada.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'America/Sao_Paulo' }) : '—';
+  const dias = criada ? Math.floor((Date.now() - criada.getTime()) / 86400000) : 0;
+  const veic = [o.veiculo?.modelo, o.veiculo?.placa].filter(Boolean).join(' · ') || 'Veículo';
   return `
-    <div class="pend-card">
-      <div class="pend-top">
-        <div>
-          <div class="pend-veiculo">${o.veiculo?.modelo || o.veiculo?.placa || 'Veículo'}</div>
-          <div class="pend-meta">
-            #${o.numeroOrdem || o.id?.slice(0,8)} · ${o.cliente?.nome || '—'} · ${dataCriacao}
-          </div>
-        </div>
-        <div class="pend-val">${formatCurrency(o.valorTotal||0)}</div>
-      </div>
-      ${o.veiculo?.placa ? `<div class="pend-meta" style="margin-bottom:8px;">Placa: ${o.veiculo.placa}</div>` : ''}
-      <div class="pend-actions">
-        <button class="btn-quitar" onclick="openQuitarModal(${JSON.stringify(o).replace(/"/g,'&quot;')})">
-          <i class="fas fa-money-bill-wave"></i> Quitar Pagamento
-        </button>
-      </div>
-    </div>`;
+    <section class="cartao pend">
+      <span class="t"><b>${escHtml(o.cliente?.nome || '—')}</b><span>Ordem #${o.numeroOrdem || o.id?.slice(0,8)} · ${escHtml(veic)} · ${dataCriacao}</span>
+        <span class="dias${dias ? '' : ' hoje'}">${dias ? `há ${dias} dia${dias > 1 ? 's' : ''}` : 'de hoje'}</span></span>
+      <span class="lado"><span class="v">${formatCurrency(o.valorTotal||0)}</span>
+        <button class="btn verde btn-p" onclick="openQuitarModal(${JSON.stringify(o).replace(/"/g,'&quot;')})">Quitar</button></span>
+    </section>`;
 }
 
 // ===================== SHEET SAÍDA =====================
 async function openSaidaSheet(mode) {
   saidaMode = mode;
   catSelecionada = '';
-  document.getElementById('saidaSheetTitle').textContent = mode === 'sangria' ? 'Registrar Sangria' : 'Lançar Saída';
+  document.getElementById('saidaSheetTitle').textContent = mode === 'sangria' ? 'Registrar sangria' : 'Lançar saída';
+  document.getElementById('saidaSheet').style.setProperty('--sc', mode === 'sangria' ? '#c2418f' : 'var(--orange)');
+  document.getElementById('saidaSubmitBtn').innerHTML = '<i class="fas fa-check"></i> ' + (mode === 'sangria' ? 'Registrar sangria' : 'Confirmar saída');
   document.getElementById('catChipsWrap').style.display = mode === 'sangria' ? 'none' : 'block';
   document.getElementById('sDescField').style.display  = mode === 'sangria' ? 'none' : 'block';
   document.getElementById('sRespField').style.display  = mode === 'sangria' ? 'none' : 'block';
@@ -1206,7 +895,7 @@ function renderLavDropdown(query) {
   const filtered = lavadoresCache.filter(l => !query || l.nome?.toLowerCase().includes(query.toLowerCase()));
   if (filtered.length === 0) { drop.style.display = 'none'; return; }
   drop.innerHTML = filtered.map(l =>
-    `<div onclick="selectLavador('${l.id}','${l.nome}')" style="padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${l.nome}</div>`
+    `<div onclick="selectLavador('${l.id}','${l.nome}')">${l.nome}</div>`
   ).join('');
   drop.style.display = 'block';
 }
@@ -1236,7 +925,7 @@ async function submitSaida() {
       showToast('Sangria registrada!', 'success');
       closeSaidaSheet(); await Promise.all([loadBalanceCards(), loadCaixa()]);
     } catch(e) { showToast(e?.error || e?.message || 'Erro ao registrar sangria', 'error'); }
-    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar saída'; }
     return;
   }
 
@@ -1260,7 +949,7 @@ async function submitSaida() {
     showToast('Saída lançada com sucesso!', 'success');
     closeSaidaSheet(); await Promise.all([loadBalanceCards(), loadCaixa()]);
   } catch(e) { showToast(e?.message || 'Erro ao lançar saída', 'error'); }
-  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída'; }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Confirmar saída'; }
 }
 
 // ===================== GORJETA =====================
@@ -1278,7 +967,7 @@ async function openGorjetaSheet() {
   document.getElementById('gObs').value   = '';
   const btn = document.getElementById('gorjetaSubmitBtn');
   btn.disabled = false;
-  btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Gorjeta';
+  btn.innerHTML = '<i class="fas fa-check"></i> Confirmar gorjeta';
   document.getElementById('gorjetaOverlay').classList.add('active');
   document.getElementById('gorjetaSheet').classList.add('active');
 }
@@ -1306,7 +995,7 @@ async function submitGorjeta() {
     showToast(e?.error || e?.message || 'Erro ao registrar gorjeta', 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Gorjeta';
+    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar gorjeta';
   }
 }
 
@@ -1402,8 +1091,8 @@ function openQuitarModal(ordemStr) {
   const ordem = typeof ordemStr === 'string' ? JSON.parse(ordemStr.replace(/&quot;/g,'"')) : ordemStr;
   quitarOrdemAtual = ordem;
   document.getElementById('quitarInfo').innerHTML = `
-    <div style="font-weight:700;font-size:14px;margin-bottom:4px">${ordem.veiculo?.modelo || 'Veículo'} — ${formatCurrency(ordem.valorTotal||0)}</div>
-    <div style="font-size:12px;color:var(--muted)">Cliente: ${ordem.cliente?.nome||'—'} · OS #${ordem.numeroOrdem||'—'}</div>`;
+    <b>${escHtml(ordem.cliente?.nome || '—')} · ${formatCurrency(ordem.valorTotal||0)}</b>
+    <span>Ordem #${ordem.numeroOrdem||'—'} · ${escHtml(ordem.veiculo?.modelo || 'Veículo')}${ordem.veiculo?.placa ? ' · ' + escHtml(ordem.veiculo.placa) : ''}</span>`;
 
   const cfg = caixaStatus?.paymentMethodsConfig || { DINHEIRO: true, PIX: true, CARTAO: true, NFE: false, CORTESIA: true };
   const metodos = [
@@ -1447,10 +1136,10 @@ async function processarQuitar(metodo) {
 
 // ===================== HELPERS =====================
 function createLoadingHtml() {
-  return `<div class="loading"><div class="spinner"></div><p>Carregando...</p></div>`;
+  return `<div class="carregando"><i></i>Carregando...</div>`;
 }
 function createEmptyHtml(ico, title, msg) {
-  return `<div class="empty"><i class="fas ${ico}"></i><h3>${title}</h3><p>${msg}</p></div>`;
+  return `<section class="cartao vazio"><i class="fas ${ico}"></i><b>${title}</b><p>${msg}</p></section>`;
 }
 
 function showToast(msg, type='success') {
@@ -1458,11 +1147,13 @@ function showToast(msg, type='success') {
   const i = document.getElementById('toastIco');
   const m = document.getElementById('toastMsg');
   t.className = `toast ${type}`;
+  void t.offsetWidth;
   i.className = `fas ${type==='success'?'fa-check-circle':'fa-exclamation-circle'}`;
   m.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 </script>
+<script src="/funcionario/decola-base.js"></script>
 </body>
 </html>
