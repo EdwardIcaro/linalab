@@ -408,14 +408,14 @@
         <div class="campo"><label>WhatsApp</label><input class="entrada" type="tel" placeholder="(11) 9 0000-0000" x-model="form.telefone" @input="maskPhone($event)"></div>
         <div class="campo"><label>CPF / CNPJ</label><input class="entrada" type="text" placeholder="000.000.000-00" x-model="form.cpf"></div>
         <div class="campo">
-          <label>Modelo <span>*</span></label>
-          <input class="entrada" type="text" placeholder="Ex.: HB20" x-model="form.modelo" :class="{erro: formErros.modelo}" @input="formErros.modelo=false">
-          <span class="erro-txt" x-show="formErros.modelo" x-cloak>Modelo é obrigatório</span>
-        </div>
-        <div class="campo">
           <label>Placa <span>*</span></label>
           <input class="entrada" type="text" placeholder="ABC1D23" maxlength="8" x-model="form.placa" :class="{erro: formErros.placa}" @input="form.placa=$event.target.value.toUpperCase(); formErros.placa=false">
           <span class="erro-txt" x-show="formErros.placa" x-cloak>Placa é obrigatória</span>
+        </div>
+        <div class="campo inteiro" data-modelo-host>
+          <label>Modelo <span>*</span></label>
+          <input class="entrada" type="text" placeholder="Comece a digitar: onix, hb20…" x-model="form.modelo" :class="{erro: formErros.modelo}" @input="formErros.modelo=false" data-modelo-carro>
+          <span class="erro-txt" x-show="formErros.modelo" x-cloak>Modelo é obrigatório</span>
         </div>
         <div class="campo inteiro">
           <label>Cor <span class="cor-nome" x-show="form.cor" x-text="'— ' + form.cor" x-cloak></span></label>
@@ -467,6 +467,7 @@
 </div>
 
   <script src="../api.js"></script>
+  <script src="/funcionario/modelos-carro.js"></script>
   <script>
     // Paleta de gradientes para lavadores (atribuída por índice)
     // Cores dos lavadores (atribuídas por índice), na paleta Decola
@@ -551,8 +552,11 @@
           ]);
 
           // Abre câmera automaticamente se vier do FAB com ?scan=1
-          if (new URLSearchParams(location.search).get('scan') === '1') {
+          const params = new URLSearchParams(location.search);
+          if (params.get('scan') === '1') {
             this.$nextTick(() => this.abrirCamera());
+          } else if (params.get('placa')) {
+            this.abrirPorPlaca(params.get('placa').toUpperCase().replace(/[^A-Z0-9]/g, ''));
           }
 
           // Recarrega serviços e categorias ao mudar tipo
@@ -567,6 +571,30 @@
             this.svc = null;
             this.loadServicos();
           });
+        },
+
+        // Acha cliente/veículo pela placa (câmera ou ?placa= vindo da página de clientes);
+        // placa não cadastrada abre o formulário já preenchido
+        async abrirPorPlaca(placa) {
+          try {
+            const r = await window.api.getVeiculoByPlaca(placa);
+            if (r?.veiculo && r?.cliente) {
+              this.pick({
+                clienteId:      r.cliente.id,
+                veiculoId:      r.veiculo.id,
+                nome:           r.cliente.nome,
+                modelo:         r.veiculo.modelo || '',
+                placa:          r.veiculo.placa,
+                telefone:       r.cliente.telefone || '',
+                cor:            r.veiculo.cor || '',
+                tipoVeiculo:    r.veiculo.tipoVeiculo || null,
+                subtipoVeiculo: r.veiculo.subtipoVeiculo || null,
+              });
+              return;
+            }
+          } catch { /* não encontrado → abre form */ }
+          this.abrirFormNovoCliente();
+          this.form.placa = placa;
         },
 
         // ── Busca de clientes ──────────────
@@ -1185,27 +1213,7 @@
             const data = await window.api.reconhecerPlaca(base64);
             if (data?.placa) {
               this.closeCameraModal();
-              // Tenta encontrar cliente/veículo pela placa no banco
-              try {
-                const r = await window.api.getVeiculoByPlaca(data.placa);
-                if (r?.veiculo && r?.cliente) {
-                  this.pick({
-                    clienteId:      r.cliente.id,
-                    veiculoId:      r.veiculo.id,
-                    nome:           r.cliente.nome,
-                    modelo:         r.veiculo.modelo || '',
-                    placa:          r.veiculo.placa,
-                    telefone:       r.cliente.telefone || '',
-                    cor:            r.veiculo.cor || '',
-                    tipoVeiculo:    r.veiculo.tipoVeiculo || null,
-                    subtipoVeiculo: r.veiculo.subtipoVeiculo || null,
-                  });
-                  return;
-                }
-              } catch { /* não encontrado → abre form */ }
-              // Placa não cadastrada → abre form pré-preenchido
-              this.abrirFormNovoCliente();
-              this.form.placa = data.placa;
+              await this.abrirPorPlaca(data.placa);
             } else {
               this.ocr.error = 'Nenhuma placa detectada. Tente novamente.';
               this.ocr.isProcessing = false;

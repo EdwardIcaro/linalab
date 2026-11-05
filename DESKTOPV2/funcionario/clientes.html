@@ -61,6 +61,43 @@
     .mini-acao { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; flex: none; margin-left: auto; }
     .chamar + .mini-acao { margin-left: 0; }
     .mini-acao.perigo { color: #c1361a; margin-left: 0; }
+    /* resultado de veículo (busca por placa): placa grande primeiro, dono depois */
+    .veic-res { display: flex; align-items: center; gap: 12px; cursor: pointer; --sc: var(--blue); }
+    .veic-res.frota { --sc: #0b7a3b; }
+    .veic-res .placa { min-width: 112px; }
+    .veic-res .placa b { font-size: 17px; }
+    .placa b mark { background: var(--yellow); color: var(--ink); border-radius: 2px; }
+    .veic-res .t { flex: 1; min-width: 0; }
+    .veic-res .t b { display: block; font: 400 14px/1.15 var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .veic-res .dono { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; padding: 1px 7px; border-radius: 6px; border: 1.5px solid var(--ink); background: var(--paper);
+      font: 700 10px var(--mono); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .veic-res.frota .dono { background: #0b7a3b; color: #fff; border-color: #0b7a3b; }
+    .veic-res .ir { font: 400 18px var(--dela); flex: none; }
+    .sec-res { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .9; }
+    .sec-res::after { content: ""; flex: 1; border-top: 2px dashed currentColor; opacity: .5; }
+    .veic-mais { margin: 8px 0 0; font: 700 11px var(--mono); opacity: .8; text-align: center; }
+    /* frota (6+ veículos): resumo por modelo no cartão; no detalhe, busca própria e grupos */
+    .cli.frota { --sc: #0b7a3b; }
+    .selo-frota { flex: none; padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ink); background: #0b7a3b; color: #fff; font: 700 10px var(--mono); }
+    .modelos-resumo { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mr { padding: 2px 8px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--paper); font: 700 11px var(--mono); }
+    .mr b { font: 400 11px var(--dela); }
+    .busca-frota { position: sticky; top: -14px; z-index: 2; background: var(--cream); padding: 6px 0 8px; }
+    .busca-frota .lupa { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); line-height: 0; }
+    .busca-frota .form-input { padding-left: 34px; }
+    .grupo { border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); overflow: hidden; }
+    .grupo + .grupo { margin-top: 8px; }
+    .grupo > button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 0; background: none; color: var(--ink); cursor: pointer; text-align: left; }
+    .grupo > button b { flex: 1; min-width: 0; font: 400 14px var(--dela); }
+    .grupo > button span { font: 700 11px var(--mono); color: var(--muted); }
+    .grupo > button .seta { transition: transform .2s; }
+    .grupo.aberto > button .seta { transform: rotate(180deg); }
+    .grupo-corpo { display: none; border-top: 2px dashed var(--line); padding: 2px 12px 8px; }
+    .grupo.aberto .grupo-corpo, .grupo.solto .grupo-corpo { display: block; }
+    .grupo.solto .grupo-corpo { border-top: 0; }
+    .grupo .veic.alvo { background: #fff3c4; margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
+    .btn-os { padding: 5px 9px; border: 2px solid var(--ink); border-radius: 8px; background: var(--green); color: var(--cream); font: 700 11px var(--mono); text-decoration: none; white-space: nowrap; }
+    .mais-grupo { width: 100%; margin-top: 4px; padding: 6px; border: 2px dashed var(--ink); border-radius: 8px; background: none; font: 700 11px var(--mono); cursor: pointer; color: var(--ink); }
     .state-container { text-align: center; padding: 26px 16px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--yellow); }
     .state-container .state-icon { font-size: 28px; }
     .state-container .state-title { font: 400 17px var(--dela); margin: 6px 0 4px; }
@@ -108,7 +145,7 @@
     .form-input { width: 100%; min-width: 0; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 11px; font: 700 14px var(--mono); outline: none; }
     .form-input:focus { box-shadow: 3px 3px 0 var(--blue); }
     .form-hint { font-size: 10px; color: var(--muted); }
-    .vehicle-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .vehicle-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 36px; gap: 8px; align-items: start; margin-bottom: 8px; }
     .vehicle-row .form-input { padding: 8px 9px; font-size: 13px; }
     .btn-remove-veh { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--ink); background: #ffe0dc; color: #c1361a; cursor: pointer; }
     .btn-add-veh { justify-self: start; padding: 6px 12px; border: 2px dashed var(--ink); border-radius: 10px; background: none; color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
@@ -186,6 +223,7 @@
     <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Limpar"><i class="fas fa-times"></i></button>
   </div>
   <nav class="filtros" id="filterBar"></nav>
+  <div id="veicResult"></div>
   <div class="lista" id="grid"></div>
 </div>
 
@@ -244,6 +282,7 @@
 
   <script src="../api.js"></script>
   <script src="utils.js"></script>
+  <script src="/funcionario/modelos-carro.js"></script>
   <script>
     const PAGE_TITLE  = 'Clientes';
     const PAGE_ACTIVE = 'clientes';
@@ -540,16 +579,69 @@
     // rola a tela (IntersectionObserver) — evita recriar centenas de cards de
     // uma vez a cada busca/filtro, que é o que travava a rolagem em celulares
     // mais fracos com listas de clientes grandes.
+    // ── RESULTADO POR VEÍCULO ─────────────────────
+    // Com 2+ letras/números de placa, mostra os CARROS que batem (com o dono) antes dos clientes:
+    // em frota grande o carro procurado não fica escondido atrás do cartão do cliente.
+    const FROTA_MIN = 6; // a partir de quantos veículos o cliente é tratado como frota
+    const ehFrota = (c) => (c.veiculos || []).length >= FROTA_MIN;
+    const normPlaca = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    function marcaPlaca(placa, qp) {
+      const p = escHtml(placa || ''), i = qp ? normPlaca(placa).indexOf(qp) : -1;
+      return i < 0 ? p : p.slice(0, i) + '<mark>' + p.slice(i, i + qp.length) + '</mark>' + p.slice(i + qp.length);
+    }
+    function veiculosPorPlaca(q) {
+      const qp = normPlaca(q);
+      if (qp.length < 2) return [];
+      const achados = [];
+      for (const c of allClientes) {
+        if (filtroAtivo !== 'todos' && !matchFiltro(c, filtroAtivo)) continue;
+        for (const v of (c.veiculos || [])) if (normPlaca(v.placa).includes(qp)) achados.push({ c, v });
+      }
+      return achados;
+    }
+    function renderVeiculos(q) {
+      const box = document.getElementById('veicResult');
+      const achados = veiculosPorPlaca(q);
+      if (!achados.length) { box.innerHTML = ''; return achados; }
+      const qp = normPlaca(q), max = 40;
+      box.innerHTML = `<p class="sec-res">Veículos com essa placa · ${achados.length}</p>
+        <div class="lista">${achados.slice(0, max).map(({ c, v }) => {
+          const frota = ehFrota(c);
+          const nome = c.nome && c.nome !== 'N/A' ? c.nome : 'Cliente sem nome';
+          return `<article class="cartao veic-res${frota ? ' frota' : ''}" onclick="openDetail('${c.id}', '${escHtml(v.placa)}')">
+            <span class="placa"><b>${marcaPlaca(v.placa, qp)}</b></span>
+            <span class="t"><b>${escHtml(v.modelo || 'Modelo não informado')}</b>
+              <span class="dono"><i class="fas ${frota ? 'fa-key' : 'fa-user'}"></i> ${escHtml(nome)}${frota ? ` · ${c.veiculos.length} carros` : ''}</span></span>
+            <span class="ir">→</span></article>`;
+        }).join('')}</div>
+        ${achados.length > max ? `<p class="veic-mais">+ ${achados.length - max} — digite mais da placa para afinar</p>` : ''}
+        <p class="sec-res">Clientes</p>`;
+      return achados;
+    }
+    // o cliente bate na busca por algo além da placa? (nome, telefone ou modelo)
+    function bateSemPlaca(c, q) {
+      return (c.nome || '').toLowerCase().includes(q) || (c.telefone || '').includes(q)
+        || (c.veiculos || []).some(v => (v.modelo || '').toLowerCase().includes(q));
+    }
+
     function renderGrid() {
+      const qBusca = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+      // quem apareceu só pela placa já está nos resultados de veículo — não repete como cliente
+      const nVeic = renderVeiculos(qBusca).length;
+      if (nVeic) filtered = filtered.filter(c => bateSemPlaca(c, qBusca));
       const total    = filtered.length;
       const allTotal = allClientes.length;
-      document.getElementById('countLabel').textContent =
-        total === allTotal
+      document.getElementById('countLabel').textContent = nVeic
+        ? `${nVeic} veículo${nVeic !== 1 ? 's' : ''} · ${total} cliente${total !== 1 ? 's' : ''}`
+        : total === allTotal
           ? `${total} cliente${total !== 1 ? 's' : ''}`
           : `${total} de ${allTotal} cliente${allTotal !== 1 ? 's' : ''}`;
+      // só carros no resultado: some o título "Clientes" vazio
+      if (nVeic && !total) document.querySelector('#veicResult .sec-res:last-of-type')?.remove();
 
       if (gridObserver) { gridObserver.disconnect(); gridObserver = null; }
 
+      if (total === 0 && document.getElementById('veicResult').innerHTML) { setGrid(''); return; }
       if (total === 0) {
         setGrid(`<div class="state-container">
           <div class="state-icon">🔎</div>
@@ -600,6 +692,13 @@
       return `<span class="quando${dias > 30 ? ' sumiu' : ''}">última visita<b>${dias === 0 ? 'hoje' : `há ${dias} dia${dias > 1 ? 's' : ''}`}</b></span>`;
     }
 
+    // contagem de veículos por modelo (maior primeiro); sem modelo vira "Sem modelo"
+    function resumoModelos(veiculos) {
+      const cont = {};
+      for (const v of veiculos) { const m = (v.modelo || '').trim() || 'Sem modelo'; cont[m] = (cont[m] || 0) + 1; }
+      return Object.entries(cont).sort((a, b) => b[1] - a[1]);
+    }
+
     function clienteCard(c) {
       const isNA     = !c.nome || c.nome === 'N/A' || c.nome.trim() === '';
       const veiculos = c.veiculos || [];
@@ -608,18 +707,21 @@
       const initial  = isNA ? (veiculos[0]?.placa ? veiculos[0].placa.charAt(0).toUpperCase() : '?') : c.nome.charAt(0).toUpperCase();
       const placas   = veiculos.slice(0, 3).map(v => `<span class="placa mini"><b>${escHtml(v.placa)}</b></span>`).join('')
         + (veiculos.length > 3 ? `<span class="mais">+${veiculos.length - 3}</span>` : '');
+      const frota    = ehFrota(c);
+      const resumo   = frota ? resumoModelos(veiculos) : [];
       const chamar = sumiu && c.telefone
         ? `<div class="chamar"><i class="fab fa-whatsapp" style="font-size: 16px; color: #128c4a"></i><span>Sumiu há <b>${dias} dias</b></span>
              <button class="btn" onclick="event.stopPropagation(); openWaModal('${c.id}')">Chamar de volta</button></div>` : '';
       return `
-        <article class="cartao cli" style="--sc: ${sumiu ? 'var(--pink)' : 'var(--blue)'}" onclick="openDetail('${c.id}')">
+        <article class="cartao cli${frota ? ' frota' : ''}" style="${frota ? '' : `--sc: ${sumiu ? 'var(--pink)' : 'var(--blue)'}`}" onclick="openDetail('${c.id}')">
           <div class="cli-topo">
-            <span class="av" style="--c: ${corAvatar(c.id)}">${escHtml(initial)}</span>
-            <span class="t"><b>${isNA ? '<span class="sem-nome">sem nome</span>' : escHtml(c.nome)}</b><span>${c.telefone ? escHtml(c.telefone) : '<span class="sem-tel">sem telefone</span>'}</span></span>
-            ${quandoHtml(c)}
+            <span class="av" style="--c: ${frota ? '#0b7a3b' : corAvatar(c.id)}; ${frota ? 'color: #fff' : ''}">${frota ? '<i class="fas fa-key"></i>' : escHtml(initial)}</span>
+            <span class="t"><b>${isNA ? '<span class="sem-nome">sem nome</span>' : escHtml(c.nome)}</b><span>${frota ? `${veiculos.length} veículos · ${resumo.length} modelo${resumo.length !== 1 ? 's' : ''}` : c.telefone ? escHtml(c.telefone) : '<span class="sem-tel">sem telefone</span>'}</span></span>
+            ${frota ? '<span class="selo-frota">frota</span>' : quandoHtml(c)}
           </div>
           <div class="numeros"><div><b>${c._totalOrdens ?? 0}</b><small>visitas</small></div><div><b>${veiculos.length}</b><small>veículos</small></div><div><b>${gastoCurto(calcTotalGasto(c))}</b><small>gasto</small></div></div>
-          ${veiculos.length ? `<div class="placas">${placas}</div>` : ''}
+          ${frota ? `<div class="modelos-resumo">${resumo.slice(0, 5).map(([m, n]) => `<span class="mr"><b>${n}</b> ${escHtml(m)}</span>`).join('')}${resumo.length > 5 ? `<span class="mr">+${resumo.length - 5}</span>` : ''}</div>`
+            : veiculos.length ? `<div class="placas">${placas}</div>` : ''}
           <div class="cli-pe" onclick="event.stopPropagation()">
             ${chamar}
             <button class="mini-acao" title="Editar" onclick="openFormEdit('${c.id}')"><i class="fas fa-pen"></i></button>
@@ -665,9 +767,13 @@
     }
 
     // ── DRAWER DETALHE ────────────────────────────
-    async function openDetail(id) {
+    let detCliente = null, detAbertos = new Set(), detLimite = {};
+    async function openDetail(id, placaAlvo = '') {
       const c = allClientes.find(x => x.id === id);
       if (!c) return;
+      detCliente = c; detAbertos = new Set(); detLimite = {};
+      const alvo = placaAlvo && (c.veiculos || []).find(v => v.placa === placaAlvo);
+      if (alvo) detAbertos.add((alvo.modelo || '').trim() || 'Sem modelo');
 
       openDrawer();
       const isNA = !c.nome || c.nome === 'N/A';
@@ -685,10 +791,9 @@
       const reengajar = c.telefone && dias !== null && dias >= 15
         ? `<div class="reengajar"><i class="fab fa-whatsapp" style="font-size: 18px; color: #128c4a"></i><span>Última visita há <b>${dias} dias</b>. Mande uma mensagem para trazer o cliente de volta.</span></div>` : '';
 
-      const veiculosHtml = veiculos.length
-        ? veiculos.map(v => `<div class="veic"><span class="placa mini"><b>${escHtml(v.placa)}</b></span><span class="t">${escHtml(v.modelo || '—')}</span>
-            <button class="btn-transf" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')"><i class="fas fa-right-left"></i> Transferir</button></div>`).join('')
-        : `<p class="vazio-txt">Nenhum veículo vinculado</p>`;
+      const buscaFrota = veiculos.length >= FROTA_MIN
+        ? `<div class="busca-frota"><div style="position: relative"><span class="lupa"><i class="fas fa-search"></i></span>
+            <input class="form-input" id="buscaFrota" placeholder="Buscar placa ou modelo neste cliente…" value="${escHtml(placaAlvo)}" autocomplete="off" oninput="desenharVeicsDet(this.value)"></div></div>` : '';
 
       document.getElementById('drawerBody').innerHTML = `
         <div class="det-num">
@@ -702,7 +807,8 @@
           <div class="det-linha"><span>Última visita</span><span>${ultimaVisitaFmt}${dias !== null ? ` · há ${dias}d` : ''}</span></div>
         </div>
         <p class="det-tit">Veículos (${veiculos.length})</p>
-        <div>${veiculosHtml}</div>
+        ${buscaFrota}
+        <div id="veicsDet"></div>
         <div class="acoes-det">
           <a class="btn verde largo" href="/funcionario/nova-ordem.html"><i class="fas fa-plus"></i> Nova ordem</a>
           <button class="btn" onclick="openFormEdit('${c.id}')"><i class="fas fa-pen"></i> Editar</button>
@@ -710,6 +816,45 @@
           ${temPermissao('excluir_clientes') ? `<button class="btn lixo largo" onclick="confirmDelete('${c.id}', '${escHtml(c.nome || 'N/A')}')"><i class="fas fa-trash"></i> Excluir cliente</button>` : ''}
         </div>
       `;
+      desenharVeicsDet(placaAlvo);
+      if (alvo) setTimeout(() => document.querySelector('#veicsDet .veic.alvo')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 400);
+    }
+
+    // lista de veículos do detalhe: poucos (ou filtrando) = lista simples; frota = grupos por modelo
+    function desenharVeicsDet(filtro = '') {
+      const c = detCliente, box = document.getElementById('veicsDet');
+      if (!c || !box) return;
+      const veiculos = c.veiculos || [];
+      if (!veiculos.length) { box.innerHTML = `<p class="vazio-txt">Nenhum veículo vinculado</p>`; return; }
+      const qp = normPlaca(filtro), qn = filtro.trim().toLowerCase();
+      const lista = veiculos.filter(v => !qn || (qp.length >= 2 && normPlaca(v.placa).includes(qp)) || (v.modelo || '').toLowerCase().includes(qn));
+      if (!lista.length) { box.innerHTML = `<p class="vazio-txt">Nenhum veículo com isso.</p>`; return; }
+      const linha = (v) => `<div class="veic${qp.length >= 7 && normPlaca(v.placa) === qp ? ' alvo' : ''}">
+          <span class="placa mini"><b>${marcaPlaca(v.placa, qp.length >= 2 ? qp : '')}</b></span><span class="t">${escHtml(v.modelo || '—')}</span>
+          <a class="btn-os" href="/funcionario/nova-ordem.html?placa=${encodeURIComponent(v.placa)}" title="Nova ordem para este carro">+ Ordem</a>
+          <button class="btn-transf" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')" title="Transferir"><i class="fas fa-right-left"></i></button></div>`;
+      if (veiculos.length < FROTA_MIN || (qn && lista.length <= 12)) {
+        box.innerHTML = `<div class="grupo solto"><div class="grupo-corpo">${lista.map(linha).join('')}</div></div>`;
+        return;
+      }
+      const grupos = {};
+      for (const v of lista) { const m = (v.modelo || '').trim() || 'Sem modelo'; (grupos[m] = grupos[m] || []).push(v); }
+      box.innerHTML = Object.entries(grupos).sort((a, b) => b[1].length - a[1].length).map(([m, vs]) => {
+        const lim = detLimite[m] || 15;
+        return `<div class="grupo${detAbertos.has(m) || qn ? ' aberto' : ''}" data-m="${escHtml(m)}">
+            <button type="button" onclick="alternarGrupoDet(this)"><b>${escHtml(m)}</b><span>${vs.length} carro${vs.length > 1 ? 's' : ''}</span><i class="fas fa-chevron-down seta"></i></button>
+            <div class="grupo-corpo">${vs.slice(0, lim).map(linha).join('')}${vs.length > lim ? `<button type="button" class="mais-grupo" onclick="maisDoGrupo(this)">ver mais ${vs.length - lim}</button>` : ''}</div></div>`;
+      }).join('');
+    }
+    function alternarGrupoDet(b) {
+      const g = b.parentElement, m = g.dataset.m;
+      g.classList.toggle('aberto');
+      g.classList.contains('aberto') ? detAbertos.add(m) : detAbertos.delete(m);
+    }
+    function maisDoGrupo(b) {
+      const m = b.closest('.grupo').dataset.m;
+      detLimite[m] = (detLimite[m] || 15) + 30; detAbertos.add(m);
+      desenharVeicsDet(document.getElementById('buscaFrota')?.value || '');
     }
 
     // ── TRANSFER MODAL ────────────────────────────
@@ -885,10 +1030,10 @@
       vehCount++;
       const n = vehCount;
       return `
-        <div class="vehicle-row" id="vr${n}" data-veh-id="${escHtml(vehId)}">
+        <div class="vehicle-row" id="vr${n}" data-veh-id="${escHtml(vehId)}" data-modelo-host>
           <input type="text" class="form-input veh-placa" placeholder="Placa (ABC1234)" value="${escHtml(placa)}"
                  style="text-transform:uppercase;font-weight:700;letter-spacing:.5px">
-          <input type="text" class="form-input veh-modelo" placeholder="Modelo" value="${escHtml(modelo)}">
+          <input type="text" class="form-input veh-modelo" placeholder="Modelo (ex.: onix)" value="${escHtml(modelo)}" data-modelo-carro>
           <button type="button" class="btn-remove-veh" onclick="document.getElementById('vr${n}').remove()">
             <i class="fas fa-times"></i>
           </button>
