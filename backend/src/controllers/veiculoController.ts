@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca } from '../services/veiculoPlaca';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -33,10 +34,8 @@ export const createVeiculo = async (req: EmpresaRequest, res: Response) => {
       return res.status(404).json({ error: 'Cliente não encontrado' });
     }
 
-    // Verificar se placa já existe
-    const existingVeiculo = await prisma.veiculo.findUnique({
-      where: { placa: placa.toUpperCase() }
-    });
+    // Verificar se placa já existe (em qualquer grafia)
+    const existingVeiculo = await acharVeiculoPorPlaca(prisma, placa);
 
     if (existingVeiculo) {
       return res.status(400).json({ 
@@ -47,7 +46,7 @@ export const createVeiculo = async (req: EmpresaRequest, res: Response) => {
     const veiculo = await prisma.veiculo.create({
       data: {
         clienteId,
-        placa: placa.trim().toUpperCase(),
+        placa: normalizarPlaca(placa),
         modelo,
         cor,
         ano
@@ -236,17 +235,7 @@ export const getVeiculoByPlaca = async (req: EmpresaRequest, res: Response) => {
       return res.status(400).json({ error: 'Placa é obrigatória' });
     }
 
-    const veiculo = await prisma.veiculo.findFirst({
-      where: {
-        placa: placa.toUpperCase(),
-        cliente: {
-          empresaId: req.empresaId
-        }
-      },
-      include: {
-        cliente: true
-      }
-    });
+    const veiculo = await acharVeiculoPorPlaca(prisma, placa, { cliente: { empresaId: req.empresaId } });
 
     if (!veiculo) {
       return res.status(404).json({ error: 'Veículo não encontrado' });
@@ -303,10 +292,8 @@ export const updateVeiculo = async (req: EmpresaRequest, res: Response) => {
     }
 
     // Se placa foi alterada, verificar se já existe
-    if (placa && placa !== existingVeiculo.placa) {
-      const duplicateVeiculo = await prisma.veiculo.findUnique({
-        where: { placa: placa.toUpperCase() }
-      });
+    if (placa && normalizarPlaca(placa) !== normalizarPlaca(existingVeiculo.placa)) {
+      const duplicateVeiculo = await acharVeiculoPorPlaca(prisma, placa);
 
       if (duplicateVeiculo) {
         return res.status(400).json({ 
@@ -319,7 +306,7 @@ export const updateVeiculo = async (req: EmpresaRequest, res: Response) => {
       where: { id },
       data: {
         ...(clienteId && { clienteId }),
-        ...(placa && { placa: placa.trim().toUpperCase() }),
+        ...(placa && { placa: normalizarPlaca(placa) }),
         ...(modelo !== undefined && { modelo }),
         ...(cor !== undefined && { cor }),
         ...(ano !== undefined && { ano })
@@ -334,6 +321,12 @@ export const updateVeiculo = async (req: EmpresaRequest, res: Response) => {
         }
       }
     });
+
+    // Mesma placa gravada em outra grafia (outra empresa da rede): leva o modelo/cor junto
+    if (modelo || cor) {
+      await corrigirVeiculoDaPlaca(prisma, veiculo.placa, { modelo, cor })
+        .catch((e) => console.error(`[Veiculos] Não propagou o modelo da placa ${veiculo.placa}:`, e));
+    }
 
     res.json({
       message: 'Veículo atualizado com sucesso',

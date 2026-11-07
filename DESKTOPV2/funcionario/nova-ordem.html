@@ -1108,6 +1108,11 @@
             forcarCriacao: false,
           };
 
+          // Veículo já cadastrado: o modelo/cor confirmados aqui corrigem o cadastro da rede toda
+          if (payload.veiculoId && this.cliente?.modelo) {
+            payload.atualizarVeiculo = { modelo: this.cliente.modelo, cor: this.cliente.cor || null };
+          }
+
           // Novo cliente completo
           if (this.cliente?.isNew) {
             payload.clienteId = null;

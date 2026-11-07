@@ -7,6 +7,7 @@ import { empresasIrmas } from '../services/emailEnriquecimento';
 import { sistemaPrincipalDaEmpresa } from '../utils/sistemaEmpresa';
 import { notifyAdmins } from '../services/whatsappNotificationService';
 import { FORNECEDOR, VALIDADE_DIAS, chavePreco, normalizarPlaca } from '../services/solicitacaoFilaService';
+import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, filtroPlaca } from '../services/veiculoPlaca';
 
 /**
  * Fila de solicitações de lavagem da Localiza.
@@ -61,10 +62,11 @@ async function contexto(irmas: string[], placas: string[]) {
   const veiculos = new Map<string, { modelo: string | null; cor: string | null }>();
   const ultimas = new Map<string, { id: string; numeroOrdem: number; createdAt: Date; empresa: string }[]>();
   if (!placas.length) return { veiculos, ultimas };
-  const variantes = placas.flatMap((p) => [p, `${p.slice(0, 3)}-${p.slice(3)}`]);
+  // Mais antigo primeiro: com a placa gravada em mais de uma grafia, vale o cadastro mais recente
   const vs = await prisma.veiculo.findMany({
-    where: { placa: { in: variantes }, cliente: { empresaId: { in: irmas } } },
+    where: { AND: [filtroPlaca(placas), { cliente: { empresaId: { in: irmas } } }] },
     select: { placa: true, modelo: true, cor: true },
+    orderBy: { updatedAt: 'asc' },
   });
   for (const v of vs) veiculos.set(normalizarPlaca(v.placa), { modelo: v.modelo, cor: v.cor });
 
@@ -73,7 +75,7 @@ async function contexto(irmas: string[], placas: string[]) {
       empresaId: { in: irmas },
       status: { not: 'CANCELADO' as any },
       createdAt: { gte: new Date(Date.now() - REPETIDA_DIAS * DIA) },
-      veiculo: { placa: { in: variantes } },
+      veiculo: filtroPlaca(placas),
     },
     select: { id: true, numeroOrdem: true, createdAt: true, empresa: { select: { nome: true } }, veiculo: { select: { placa: true } } },
     orderBy: { createdAt: 'desc' },
@@ -235,8 +237,7 @@ export async function aceitar(req: Req, res: Response) {
 
     try {
       // Placa já cadastrada (às vezes com hífen) → reaproveita o veículo
-      const variantes = [s.placa, `${s.placa.slice(0, 3)}-${s.placa.slice(3)}`];
-      const veiculo = await prisma.veiculo.findFirst({ where: { placa: { in: variantes } }, select: { id: true, modelo: true, cor: true } });
+      const veiculo = await acharVeiculoPorPlaca(prisma, s.placa);
 
       const body: Record<string, unknown> = {
         clienteId: cliente.id,
@@ -259,9 +260,10 @@ export async function aceitar(req: Req, res: Response) {
 
       const ordem = resOrdem.body.ordem as { id: string; numeroOrdem: number };
       await prisma.solicitacaoLavagem.update({ where: { id }, data: { ordemId: ordem.id } });
-      // Quem está na frente do carro confirmou modelo/cor — corrige o cadastro
-      if (veiculo && (veiculo.modelo !== modelo || (cor && veiculo.cor !== cor))) {
-        await prisma.veiculo.update({ where: { id: veiculo.id }, data: { modelo, ...(cor ? { cor } : {}) } }).catch(() => {});
+      // Quem está na frente do carro confirmou modelo/cor — corrige todos os registros da placa
+      if (veiculo) {
+        await corrigirVeiculoDaPlaca(prisma, s.placa, { modelo, cor })
+          .catch((e) => console.error(`[Solicitacoes] Não corrigiu o modelo da placa ${s.placa}:`, e));
       }
       return res.status(201).json({ ok: true, ordem: { id: ordem.id, numeroOrdem: ordem.numeroOrdem } });
     } catch (err) {
@@ -366,8 +368,9 @@ export async function salvarChecklist(req: Req, res: Response) {
     const novasAvarias = itens.filter((i: { chave: string; st: string }) => i.st === 'av' && !avariasAntes.has(i.chave));
     if (novasAvarias.length) {
       const veic = await prisma.veiculo.findFirst({
-        where: { placa: { in: [s.placa, `${s.placa.slice(0, 3)}-${s.placa.slice(3)}`] } },
+        where: filtroPlaca(s.placa),
         select: { modelo: true, cor: true },
+        orderBy: { updatedAt: 'desc' },
       });
       const nFotos = manter.length + novas.length;
       const linhas = novasAvarias.map((i: { chave: string; obs: string }) => `• ${ROTULO_ITEM.get(i.chave)}${i.obs ? ` — ${i.obs}` : ''}`);

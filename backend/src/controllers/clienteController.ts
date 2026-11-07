@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
+import { acharVeiculoPorPlaca } from '../services/veiculoPlaca';
 
 
 interface EmpresaRequest extends Request {
@@ -407,17 +408,7 @@ export const getClienteByPlaca = async (req: EmpresaRequest, res: Response) => {
       return res.status(400).json({ error: 'Placa inválida' });
     }
 
-    const veiculo = await prisma.veiculo.findFirst({
-      where: {
-        placa,
-        cliente: {
-          empresaId: req.empresaId
-        }
-      },
-      include: {
-        cliente: true
-      }
-    });
+    const veiculo = await acharVeiculoPorPlaca(prisma, placa, { cliente: { empresaId: req.empresaId } });
 
     if (!veiculo || !veiculo.cliente) {
       return res.status(404).json({ error: 'Veículo não encontrado' });

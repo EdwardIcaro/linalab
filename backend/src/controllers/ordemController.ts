@@ -9,6 +9,7 @@ import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
 import { hasPermission } from '../middlewares/permissionMiddleware';
+import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca } from '../services/veiculoPlaca';
 
 
 interface EmpresaRequest extends Request {
@@ -60,7 +61,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
 
   // Use sanitized data instead of raw req.body
   const {
-    clienteId, novoCliente, veiculoId, novoVeiculo,
+    clienteId, novoCliente, veiculoId, novoVeiculo, atualizarVeiculo,
     lavadorId, lavadorIds, itens, forcarCriacao, observacoes,
     tipoOrdem, itemAvulso
   } = validation.sanitizedData!;
@@ -110,18 +111,18 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
 
       // 2. Cria o veículo se for novo
       if (novoVeiculo && novoVeiculo.placa) {
-        // Primeiro, tenta encontrar um veículo com a mesma placa
-        let veiculoExistente = await tx.veiculo.findUnique({
-          where: { placa: novoVeiculo.placa },
-        });
+        // Primeiro, tenta encontrar um veículo com a mesma placa (em qualquer grafia, na rede toda)
+        const veiculoExistente = await acharVeiculoPorPlaca(tx, novoVeiculo.placa);
 
         if (veiculoExistente) {
           finalVeiculoId = veiculoExistente.id;
+          // Quem está na frente do carro digitou modelo/cor: vale para todas as empresas
+          await corrigirVeiculoDaPlaca(tx, novoVeiculo.placa, { modelo: novoVeiculo.modelo, cor: novoVeiculo.cor });
         } else {
           // Se não encontrar, cria um novo veículo
           const veiculoCriado = await tx.veiculo.create({
             data: {
-              placa: novoVeiculo.placa,
+              placa: normalizarPlaca(novoVeiculo.placa),
               modelo: novoVeiculo.modelo,
               cor: novoVeiculo.cor,
               tipoVeiculo: novoVeiculo.tipoVeiculo || null,
@@ -135,6 +136,10 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
           });
           finalVeiculoId = veiculoCriado.id;
         }
+      } else if (finalVeiculoId && atualizarVeiculo && !isAvulso) {
+        // Veículo escolhido na busca, com modelo/cor corrigidos na tela da ordem
+        const v = await tx.veiculo.findUnique({ where: { id: finalVeiculoId }, select: { placa: true } });
+        if (v) await corrigirVeiculoDaPlaca(tx, v.placa, { modelo: atualizarVeiculo.modelo, cor: atualizarVeiculo.cor });
       }
 
       // 3. Verifica se já existe uma ordem ativa para o veículo
