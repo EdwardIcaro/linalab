@@ -129,6 +129,21 @@
     .veic + .veic { border-top: 2px dashed var(--line); }
     .veic .t { flex: 1; min-width: 0; font: 700 13px var(--mono); }
     .btn-transf { padding: 5px 9px; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); color: var(--ink); font: 700 11px var(--mono); cursor: pointer; white-space: nowrap; }
+    /* modelo compartilhado na rede: selo de confirmação, empresas por onde o carro passou e histórico */
+    .veic .t small { display: block; margin-top: 2px; font: 700 10px var(--mono); color: var(--muted); white-space: normal; }
+    .selo-m { display: inline-block; margin-top: 3px; padding: 1px 6px; border-radius: 6px; font: 700 10px/1.35 var(--mono); white-space: normal; }
+    .selo-m.ok { background: #d9f2e2; color: #0b5a2c; border: 1.5px solid #0b7a3b; }
+    .selo-m.nao { background: #fff1dc; color: #8a2a12; border: 1.5px dashed #c1361a; }
+    .rede-aviso { margin: 6px 0 2px; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #d9f2e2; font-size: 12px; }
+    .hist-ev { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-bottom: 12px; position: relative; }
+    .hist-ev::before { content: ""; position: absolute; left: 9px; top: 18px; bottom: 0; border-left: 2px dashed var(--line); }
+    .hist-ev:last-child::before { display: none; }
+    .hist-ev .bola { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--paper); display: grid; place-items: center; font-size: 8px; }
+    .hist-ev.atual .bola { background: var(--green); color: var(--cream); }
+    .hist-ev b { font: 400 14px var(--dela); }
+    .hist-ev small { display: block; color: var(--muted); font-size: 11px; }
+    .hist-ev .btn-transf { margin-top: 5px; }
+    .hist-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
     .acoes-det { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .acoes-det .btn { padding: 10px 8px; font-size: 13px; }
     .acoes-det .btn.largo { grid-column: 1 / -1; }
@@ -767,11 +782,11 @@
     }
 
     // ── DRAWER DETALHE ────────────────────────────
-    let detCliente = null, detAbertos = new Set(), detLimite = {};
+    let detCliente = null, detAbertos = new Set(), detLimite = {}, detRede = null;
     async function openDetail(id, placaAlvo = '') {
       const c = allClientes.find(x => x.id === id);
       if (!c) return;
-      detCliente = c; detAbertos = new Set(); detLimite = {};
+      detCliente = c; detAbertos = new Set(); detLimite = {}; detRede = null;
       const alvo = placaAlvo && (c.veiculos || []).find(v => v.placa === placaAlvo);
       if (alvo) detAbertos.add((alvo.modelo || '').trim() || 'Sem modelo');
 
@@ -806,8 +821,9 @@
           <div class="det-linha"><span>Telefone</span><span>${c.telefone ? escHtml(c.telefone) : '—'}</span></div>
           <div class="det-linha"><span>Última visita</span><span>${ultimaVisitaFmt}${dias !== null ? ` · há ${dias}d` : ''}</span></div>
         </div>
-        <p class="det-tit">Veículos (${veiculos.length})</p>
-        ${buscaFrota}
+        <p class="det-tit" id="detTitVeics">Veículos (${veiculos.length})</p>
+        <div id="detRedeAviso"></div>
+        <div id="buscaFrotaBox">${buscaFrota}</div>
         <div id="veicsDet"></div>
         <div class="acoes-det">
           <a class="btn verde largo" href="/funcionario/nova-ordem.html"><i class="fas fa-plus"></i> Nova ordem</a>
@@ -817,6 +833,7 @@
         </div>
       `;
       desenharVeicsDet(placaAlvo);
+      carregarFrotaRede(c, placaAlvo);
       if (alvo) setTimeout(() => document.querySelector('#veicsDet .veic.alvo')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 400);
     }
 
@@ -824,15 +841,16 @@
     function desenharVeicsDet(filtro = '') {
       const c = detCliente, box = document.getElementById('veicsDet');
       if (!c || !box) return;
-      const veiculos = c.veiculos || [];
+      const veiculos = detRede || c.veiculos || [];
       if (!veiculos.length) { box.innerHTML = `<p class="vazio-txt">Nenhum veículo vinculado</p>`; return; }
       const qp = normPlaca(filtro), qn = filtro.trim().toLowerCase();
       const lista = veiculos.filter(v => !qn || (qp.length >= 2 && normPlaca(v.placa).includes(qp)) || (v.modelo || '').toLowerCase().includes(qn));
       if (!lista.length) { box.innerHTML = `<p class="vazio-txt">Nenhum veículo com isso.</p>`; return; }
       const linha = (v) => `<div class="veic${qp.length >= 7 && normPlaca(v.placa) === qp ? ' alvo' : ''}">
-          <span class="placa mini"><b>${marcaPlaca(v.placa, qp.length >= 2 ? qp : '')}</b></span><span class="t">${escHtml(v.modelo || '—')}</span>
+          <span class="placa mini"><b>${marcaPlaca(v.placa, qp.length >= 2 ? qp : '')}</b></span><span class="t">${escHtml(v.modelo || '—')}${v.rede ? seloModelo(v) : ''}</span>
+          <button class="btn-transf" onclick="abrirHistorico('${escHtml(v.placa)}')" title="Histórico do modelo"><i class="fas fa-clock-rotate-left"></i></button>
           <a class="btn-os" href="/funcionario/nova-ordem.html?placa=${encodeURIComponent(v.placa)}" title="Nova ordem para este carro">+ Ordem</a>
-          <button class="btn-transf" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')" title="Transferir"><i class="fas fa-right-left"></i></button></div>`;
+          ${!v.rede || v.daqui ? `<button class="btn-transf" onclick="openTransferModal('${v.id}', '${v.placa}', '${escHtml(v.modelo || '')}', '${c.id}', '${escHtml(c.nome || 'N/A')}')" title="Transferir"><i class="fas fa-right-left"></i></button>` : ''}</div>`;
       if (veiculos.length < FROTA_MIN || (qn && lista.length <= 12)) {
         box.innerHTML = `<div class="grupo solto"><div class="grupo-corpo">${lista.map(linha).join('')}</div></div>`;
         return;
@@ -846,6 +864,89 @@
             <div class="grupo-corpo">${vs.slice(0, lim).map(linha).join('')}${vs.length > lim ? `<button type="button" class="mais-grupo" onclick="maisDoGrupo(this)">ver mais ${vs.length - lim}</button>` : ''}</div></div>`;
       }).join('');
     }
+    // ── FROTA DA REDE + HISTÓRICO DO MODELO ───────
+    // Cliente Localiza vinculado: mostra os carros que passaram por qualquer empresa da rede
+    async function carregarFrotaRede(c, placaAlvo = '') {
+      try {
+        const r = await window.fetchApi(`/veiculos/rede/frota/${encodeURIComponent(c.id)}`, { semRedirect: true });
+        if (!r?.rede || detCliente !== c) return;
+        detRede = (r.veiculos || []).map(v => ({ ...v, rede: true }));
+        document.getElementById('detTitVeics').textContent = `Frota na rede (${detRede.length})`;
+        document.getElementById('detRedeAviso').innerHTML = `<div class="rede-aviso">Carros que passaram por qualquer empresa da rede. Corrigir o modelo aqui vale para todas.</div>`;
+        const box = document.getElementById('buscaFrotaBox');
+        if (box && !box.innerHTML.trim() && detRede.length >= FROTA_MIN) {
+          box.innerHTML = `<div class="busca-frota"><div style="position: relative"><span class="lupa"><i class="fas fa-search"></i></span>
+            <input class="form-input" id="buscaFrota" placeholder="Buscar placa ou modelo neste cliente…" value="${escHtml(placaAlvo)}" autocomplete="off" oninput="desenharVeicsDet(this.value)"></div></div>`;
+        }
+        desenharVeicsDet(document.getElementById('buscaFrota')?.value || placaAlvo);
+      } catch { /* sem a rota (backend antigo) → fica a lista da própria empresa */ }
+    }
+
+    const dataCurta = (d) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    function seloModelo(v) {
+      const c = v.confirmacao;
+      const onde = v.empresas?.length ? `<small>${v.empresas.map(escHtml).join(' · ')}</small>` : '';
+      if (c?.confirmado) return `<span class="selo-m ok">✔ ${[c.por, c.empresa, dataCurta(c.em)].filter(Boolean).map(escHtml).join(' · ')}</span>${onde}`;
+      return `<span class="selo-m nao">? sem confirmação</span>${onde}`;
+    }
+
+    let histPlaca = null;
+    async function abrirHistorico(placa) {
+      histPlaca = placa;
+      if (!document.getElementById('fHist')) {
+        document.body.insertAdjacentHTML('beforeend', `<div class="folha-fundo" id="fHist" style="z-index: 1200"><div class="folha">
+          <div class="folha-cab"><h3 id="hTit">—</h3><button class="fechar" data-fechar><i class="fas fa-xmark"></i></button></div>
+          <div class="folha-corpo" id="hCorpo"></div></div></div>`);
+      }
+      document.getElementById('hTit').innerHTML = `${escHtml(placa)}<small>Histórico do modelo na rede</small>`;
+      document.getElementById('hCorpo').innerHTML = '<p class="vazio-txt">Carregando…</p>';
+      Folha.abrir('fHist');
+      try {
+        const r = await window.fetchApi(`/veiculos/rede/historico/${encodeURIComponent(placa)}`, { semRedirect: true });
+        if (histPlaca !== placa) return;
+        desenharHistorico(r);
+      } catch (e) {
+        document.getElementById('hCorpo').innerHTML = `<p class="vazio-txt">${escHtml(e?.error || 'Não foi possível carregar o histórico.')}</p>`;
+      }
+    }
+
+    function desenharHistorico(r) {
+      const ev = (h, i) => `<div class="hist-ev${i === 0 ? ' atual' : ''}"><span class="bola">${i === 0 ? '<i class="fas fa-check"></i>' : ''}</span>
+          <div><b>${escHtml(h.modelo)}</b>${h.cor ? ` · ${escHtml(h.cor)}` : ''}${i === 0 ? ' <small style="display: inline">· atual</small>' : ''}
+            <small>${[h.por, h.empresa, new Date(h.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }), h.origem, h.confirmado ? 'confirmado' : 'sem confirmação'].filter(Boolean).map(escHtml).join(' · ')}</small>
+            ${i > 0 && h.modelo !== r.modelo ? `<button class="btn-transf" onclick="salvarModeloRede('${h.id}')"><i class="fas fa-rotate-left"></i> Voltar para este</button>` : ''}</div></div>`;
+      document.getElementById('hCorpo').innerHTML = `
+        <div class="hist-form" data-modelo-host>
+          <div class="campo"><label>Modelo</label><input class="entrada" id="hModelo" maxlength="60" value="${escHtml(r.modelo || '')}" data-modelo-carro autocomplete="off"></div>
+          <div class="campo"><label>Cor</label><input class="entrada" id="hCor" maxlength="40" value="${escHtml(r.cor || '')}"></div>
+        </div>
+        <button class="btn verde" onclick="salvarModeloRede()"><i class="fas fa-check"></i> Salvar e confirmar</button>
+        <small style="color: var(--muted)">Vale para todas as empresas da rede.</small>
+        <p class="det-tit" style="margin-top: 8px">Histórico</p>
+        <div>${r.historico.length ? r.historico.map(ev).join('') : '<p class="vazio-txt">Ainda sem correções registradas.</p>'}</div>`;
+    }
+
+    async function salvarModeloRede(voltarPara = null) {
+      const placa = histPlaca;
+      const body = voltarPara ? { voltarPara } : { modelo: document.getElementById('hModelo').value.trim(), cor: document.getElementById('hCor').value.trim() };
+      if (!voltarPara && !body.modelo) return document.getElementById('hModelo').focus();
+      try {
+        const r = await window.fetchApi(`/veiculos/rede/modelo/${encodeURIComponent(placa)}`, { method: 'POST', body: JSON.stringify(body), semRedirect: true });
+        // Atualiza o que está na tela (todas as grafias da placa)
+        const np = normPlaca(placa);
+        for (const v of [...(detRede || []), ...allClientes.flatMap(x => x.veiculos || [])]) {
+          if (normPlaca(v.placa) !== np) continue;
+          v.modelo = r.modelo; if (r.cor) v.cor = r.cor;
+          if (v.rede) v.confirmacao = { confirmado: true, por: 'Você', empresa: '', em: new Date().toISOString() };
+        }
+        desenharVeicsDet(document.getElementById('buscaFrota')?.value || '');
+        showToast(`${placa}: ${r.modelo} salvo para a rede`, 'success');
+        abrirHistorico(placa);
+      } catch (e) {
+        showToast(e?.error || 'Não foi possível salvar o modelo.', 'error');
+      }
+    }
+
     function alternarGrupoDet(b) {
       const g = b.parentElement, m = g.dataset.m;
       g.classList.toggle('aberto');

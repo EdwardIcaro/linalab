@@ -1790,6 +1790,23 @@ model SolicitacaoVinculo {
   @@map("solicitacao_vinculos")
 }
 
+/// Histórico do modelo de cada placa (vale para a rede toda). A linha mais recente é o modelo atual;
+/// confirmado = alguém na frente do carro conferiu (aceite, nova ordem, correção em Clientes).
+model VeiculoModeloHistorico {
+  id         String   @id @default(cuid())
+  placa      String // sempre padronizada: ABC1D23
+  modelo     String
+  cor        String?
+  empresaId  String?
+  autorNome  String?
+  origem     String // cadastro | nova_ordem | aceite_localiza | correcao | voltar
+  confirmado Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([placa, createdAt])
+  @@map("veiculo_modelo_historico")
+}
+
 model WaMensagemLog {
   id          String    @id @default(cuid())
   canal       String    // LINA | EMPRESA

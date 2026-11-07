@@ -7,7 +7,7 @@ import { empresasIrmas } from '../services/emailEnriquecimento';
 import { sistemaPrincipalDaEmpresa } from '../utils/sistemaEmpresa';
 import { notifyAdmins } from '../services/whatsappNotificationService';
 import { FORNECEDOR, VALIDADE_DIAS, chavePreco, normalizarPlaca } from '../services/solicitacaoFilaService';
-import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, filtroPlaca } from '../services/veiculoPlaca';
+import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, filtroPlaca, registrarConfirmacao, confirmacoesDasPlacas } from '../services/veiculoPlaca';
 
 /**
  * Fila de solicitações de lavagem da Localiza.
@@ -118,6 +118,7 @@ export async function listarFila(req: Req, res: Response) {
     const irmas = await empresasIrmas(empresaId);
     const todas = [...pendentes, ...aceitas];
     const { veiculos, ultimas } = await contexto(irmas, Array.from(new Set(todas.map((s) => s.placa))));
+    const confirmacoes = await confirmacoesDasPlacas(todas.map((s) => s.placa));
     const mapa = servicosDoVinculo(vinculo);
     const servIds = Array.from(new Set(Object.values(mapa)));
     const servicos = servIds.length
@@ -150,6 +151,8 @@ export async function listarFila(req: Req, res: Response) {
         chegouEm: s.createdAt,
         modelo: veic?.modelo ?? null,
         cor: veic?.cor ?? null,
+        // Modelo conferido por alguém na frente do carro (null = sem histórico ainda)
+        confirmacao: veic?.modelo ? confirmacoes.get(s.placa) ?? null : null,
         servico: nomeServ.get(mapa[chavePreco(s.preco)]) ?? null,
         repetida: anterior
           ? { numeroOrdem: anterior.numeroOrdem, empresa: anterior.empresa, dias: Math.floor((Date.now() - anterior.createdAt.getTime()) / DIA) }
@@ -263,6 +266,7 @@ export async function aceitar(req: Req, res: Response) {
       // Quem está na frente do carro confirmou modelo/cor — corrige todos os registros da placa
       if (veiculo) {
         await corrigirVeiculoDaPlaca(prisma, s.placa, { modelo, cor })
+          .then((c) => registrarConfirmacao(c, { empresaId, nome: req.usuarioNome, origem: 'aceite_localiza' }))
           .catch((e) => console.error(`[Solicitacoes] Não corrigiu o modelo da placa ${s.placa}:`, e));
       }
       return res.status(201).json({ ok: true, ordem: { id: ordem.id, numeroOrdem: ordem.numeroOrdem } });

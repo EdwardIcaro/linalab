@@ -9,7 +9,7 @@ import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
 import { hasPermission } from '../middlewares/permissionMiddleware';
-import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca } from '../services/veiculoPlaca';
+import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca, registrarConfirmacao, Correcao } from '../services/veiculoPlaca';
 
 
 interface EmpresaRequest extends Request {
@@ -74,6 +74,8 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
   const normalizedLavadorIds = lavadorId ? [lavadorId, ...extraLavadores] : extraLavadores;
   const primaryLavadorId = normalizedLavadorIds[0] || null;
 
+  // Modelo confirmado na tela da ordem: vai para o histórico da placa depois do commit
+  let correcaoVeiculo: Correcao | null = null;
   try {
     // Utiliza uma transação para garantir a atomicidade da operação
     // Aumenta timeout para 30 segundos (padrão é 5s) - transação tem múltiplas queries
@@ -117,7 +119,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         if (veiculoExistente) {
           finalVeiculoId = veiculoExistente.id;
           // Quem está na frente do carro digitou modelo/cor: vale para todas as empresas
-          await corrigirVeiculoDaPlaca(tx, novoVeiculo.placa, { modelo: novoVeiculo.modelo, cor: novoVeiculo.cor });
+          correcaoVeiculo = await corrigirVeiculoDaPlaca(tx, novoVeiculo.placa, { modelo: novoVeiculo.modelo, cor: novoVeiculo.cor });
         } else {
           // Se não encontrar, cria um novo veículo
           const veiculoCriado = await tx.veiculo.create({
@@ -139,7 +141,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       } else if (finalVeiculoId && atualizarVeiculo && !isAvulso) {
         // Veículo escolhido na busca, com modelo/cor corrigidos na tela da ordem
         const v = await tx.veiculo.findUnique({ where: { id: finalVeiculoId }, select: { placa: true } });
-        if (v) await corrigirVeiculoDaPlaca(tx, v.placa, { modelo: atualizarVeiculo.modelo, cor: atualizarVeiculo.cor });
+        if (v) correcaoVeiculo = await corrigirVeiculoDaPlaca(tx, v.placa, { modelo: atualizarVeiculo.modelo, cor: atualizarVeiculo.cor });
       }
 
       // 3. Verifica se já existe uma ordem ativa para o veículo
@@ -394,6 +396,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
       }
     );
     const ordemFinal = formatOrderWithLavadores(ordem);
+    if (correcaoVeiculo) await registrarConfirmacao(correcaoVeiculo, { empresaId, nome: (req as any).usuarioNome, origem: 'nova_ordem' });
 
     // ✅ Enviar resposta SEM BLOQUEAR
     res.status(201).json({ message: 'Ordem de serviço criada com sucesso!', ordem: ordemFinal });

@@ -53,6 +53,8 @@
       .sl-top{display:flex;gap:10px;align-items:flex-start}
       .sl-placa{font-family:ui-monospace,Consolas,monospace;font-weight:800;font-size:17px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:8px;padding:2px 8px;letter-spacing:.05em;display:inline-block}
       .sl-veic{font-size:13px;color:var(--sl-mut);margin-top:4px}.sl-veic.novo{color:#c2410c;font-weight:600}
+      .sl-selo{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:700;line-height:1.35}
+      .sl-selo.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}.sl-selo.nao{background:#fff7ed;color:#9a3412;border:1px dashed #fb923c}
       .sl-preco{margin-left:auto;text-align:right}.sl-preco b{display:block;font-size:16px}.sl-preco span{font-size:11px;color:var(--sl-mut)}
       .sl-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;font-size:12px;color:var(--sl-mut)}
       .sl-meta b{display:block;color:#0f172a;font-size:13px;font-weight:600}
@@ -164,6 +166,23 @@
       host.querySelector('button').onclick = abrirLista;
     }
 
+    // Modelo conferido por alguém na frente do carro, em qualquer empresa da rede
+    const dataCurta = (d) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    function seloModelo(s) {
+      if (!s.modelo) return '';
+      const c = s.confirmacao;
+      if (c?.confirmado) return `<div class="sl-selo ok">✔ Confirmado${c.por ? ' por ' + esc(c.por) : ''}${c.empresa ? ' · ' + esc(c.empresa) : ''} · ${dataCurta(c.em)}</div>`;
+      return `<div class="sl-selo nao">? Sem confirmação${c?.empresa ? ' · cadastrado por ' + esc(c.empresa) : ''} — confira no carro</div>`;
+    }
+    function avisoModelo(s) {
+      if (!s.modelo) return '';
+      const c = s.confirmacao;
+      const txt = c?.confirmado
+        ? `Modelo confirmado${c.por ? ' por ' + esc(c.por) : ''}${c.empresa ? ' (' + esc(c.empresa) + ')' : ''} em ${dataCurta(c.em)}. Se estiver diferente, corrija.`
+        : `Modelo do cadastro${c?.empresa ? ' de ' + esc(c.empresa) : ''}, <b>nunca confirmado</b>. Confira olhando o carro.`;
+      return `<div class="sl-aviso ${c?.confirmado ? 'azul' : ''}" style="margin-top:8px">${txt} O que você gravar vale para todas as empresas da rede.</div>`;
+    }
+
     function cardHtml(s, aceita) {
       const veic = s.modelo ? `${esc(s.modelo)}${s.cor ? ' · ' + esc(s.cor) : ''}` : '⚠ Placa nova — preencher modelo e cor';
       const ck = s.checklist
@@ -173,7 +192,7 @@
         : '';
       return `<div class="sl-card" data-id="${esc(s.id)}">
           <div class="sl-top">
-            <div><span class="sl-placa">${esc(s.placa)}</span><div class="sl-veic ${s.modelo ? '' : 'novo'}">${veic}</div></div>
+            <div><span class="sl-placa">${esc(s.placa)}</span><div class="sl-veic ${s.modelo ? '' : 'novo'}">${veic}</div>${seloModelo(s)}</div>
             <div class="sl-preco"><b>${esc(s.precoTexto || brl(s.preco))}</b><span>${esc(s.servico || s.tipo || '')}</span></div>
           </div>
           <div class="sl-meta">
@@ -254,7 +273,7 @@
             <div><label class="sl-lbl">Modelo *</label><input class="sl-inp" data-modelo maxlength="60" placeholder="Ex.: Onix" value="${esc(s.modelo || '')}"></div>
             <div><label class="sl-lbl">Cor</label><input class="sl-inp" data-cor maxlength="40" placeholder="Ex.: Branco" value="${esc(s.cor || '')}"></div>
           </div>
-          ${s.modelo ? '<div style="font-size:12px;color:#64748b;margin-top:6px">Preenchido pelo cadastro da placa — pode corrigir.</div>' : ''}
+          ${avisoModelo(s)}
           <label class="sl-lbl">Serviço</label>
           <input class="sl-inp" disabled value="${esc((s.servico || '—') + ' — ' + (s.precoTexto || brl(s.preco)))}">
           ${lav ? `<label class="sl-lbl">Lavador (opcional)</label><select class="sl-inp" data-lavador><option value="">— definir depois —</option>${lav}</select>` : ''}

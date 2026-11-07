@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca } from '../services/veiculoPlaca';
+import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca, registrarConfirmacao } from '../services/veiculoPlaca';
 
 interface EmpresaRequest extends Request {
   empresaId?: string;
@@ -325,6 +325,11 @@ export const updateVeiculo = async (req: EmpresaRequest, res: Response) => {
     // Mesma placa gravada em outra grafia (outra empresa da rede): leva o modelo/cor junto
     if (modelo || cor) {
       await corrigirVeiculoDaPlaca(prisma, veiculo.placa, { modelo, cor })
+        // Só vira confirmação quando o modelo mudou (salvar o formulário do cliente não confirma nada)
+        .then((c) => (modelo || '').trim() === (existingVeiculo.modelo || '').trim() ? undefined : registrarConfirmacao(
+          { ...c, antes: { modelo: existingVeiculo.modelo, cor: existingVeiculo.cor, empresaId: req.empresaId ?? null, createdAt: existingVeiculo.createdAt } },
+          { empresaId: req.empresaId, nome: (req as any).usuarioNome, origem: 'correcao' },
+        ))
         .catch((e) => console.error(`[Veiculos] Não propagou o modelo da placa ${veiculo.placa}:`, e));
     }
 

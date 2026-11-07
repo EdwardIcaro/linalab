@@ -10,6 +10,7 @@ import {
   transferirVeiculo,
   getModelosVeiculos
 } from '../controllers/veiculoController';
+import { historicoDaPlaca, corrigirModeloNaRede, frotaDaRede } from '../controllers/veiculoRedeController';
 
 const router: Router = Router();
 
@@ -20,6 +21,10 @@ router.use(requirePermission('gerenciar_clientes', 'gerenciar_ordens'));
 router.post('/', createVeiculo);
 router.get('/', getVeiculos);
 router.get('/modelos', getModelosVeiculos);
+// Modelo compartilhado entre as empresas da rede (histórico, correção, frota Localiza)
+router.get('/rede/historico/:placa', historicoDaPlaca);
+router.post('/rede/modelo/:placa', corrigirModeloNaRede);
+router.get('/rede/frota/:clienteId', frotaDaRede);
 router.get('/placa/:placa', getVeiculoByPlaca);
 router.get('/:id', getVeiculoById);
 router.put('/:id', updateVeiculo);
