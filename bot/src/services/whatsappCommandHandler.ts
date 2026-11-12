@@ -5,6 +5,7 @@
 
 import { randomBytes } from 'crypto';
 import prisma from '../db';
+import { Prisma } from '@prisma/client';
 import { registrarPontoPoller } from './dpPontoPoller';
 import { chatCompletion, chatCompletionComFerramentas, transcribeAudio } from './groqService';
 import { historicoRecente, EstadoPersistente } from './conversaMemoria';
@@ -1149,6 +1150,17 @@ export async function handleIncomingMessage(
 
     const faturamentoMatchAdmin = command.match(/^faturamento(?:\s+(.+))?$/);
     if (faturamentoMatchAdmin) return handleFaturamentoCommand(empresaId, faturamentoMatchAdmin[1]?.trim());
+
+    // "conferência" / "conferência ontem" / "conferência 10/11" → conferência do dia (só admin).
+    // Com cliente ou mês ("conferência localiza outubro") segue sendo a conferência de placas.
+    const confDiaMatch = message.trim().match(/^confer[eê]ncia(?:\s+(.+))?$/i);
+    if (confDiaMatch) {
+      const resto = (confDiaMatch[1] ?? '')
+        .replace(/(^|\s)(d[aoe]s?|dia|de|hoje)(?=\s|$)/gi, ' ')
+        .replace(/\b(ontem|anteontem)\b|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?/gi, '')
+        .trim();
+      if (!resto) return handleConferenciaDia(empresaId, confDiaMatch[1] ? parseDateFromMessage(confDiaMatch[1]) : null);
+    }
 
     const placasMatchAdmin = message.trim().match(/^(?:placas|confer[eê]ncia)(?:\s+(.+))?$/i);
     if (placasMatchAdmin) return handlePlacasCommand(empresaId, placasMatchAdmin[1]?.trim());
@@ -3315,6 +3327,92 @@ async function handlePendentesCommand(empresaId: string): Promise<string> {
 }
 
 /*
+ * Handler: conferência [dia] — só admin (pedido do dono em 12/11/2026).
+ * Todas as OS finalizadas no dia, para bater com o caixa: particulares com valor e forma de
+ * pagamento; frota vinculada (Localiza, empresa ou irmãs) só placa e valor. No fim, subtotal de
+ * cada grupo, total por forma de pagamento e total geral. Mesma janela do "resumo" (07:00–23:59 BRT).
+ */
+async function handleConferenciaDia(empresaId: string, data: Date | null): Promise<string> {
+  const brl = (n: number) => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dateStr = data ? new Date(data.getTime() - 3 * 3600000).toISOString().split('T')[0] : getTodayStrBRT();
+  const { start, end } = getFixedDayRangeBRT(dateStr);
+
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true, usuarioId: true } });
+  const irmas = empresa
+    ? (await prisma.empresa.findMany({ where: { usuarioId: empresa.usuarioId }, select: { id: true } })).map(e => e.id)
+    : [empresaId];
+  // Clientes de frota vinculada (mesma regra do backend: solicitacao_vinculos da empresa ou irmãs)
+  const vinc = await prisma.$queryRaw<{ clienteId: string }[]>`
+    SELECT "clienteId" FROM solicitacao_vinculos
+    WHERE "empresaId" = ANY(${irmas}::text[]) AND ativo = true AND "clienteId" IS NOT NULL`;
+  const frota = new Set(vinc.map(v => v.clienteId));
+
+  const [ordens, aguardando] = await Promise.all([
+    prisma.ordemServico.findMany({
+      where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
+      select: {
+        numeroOrdem: true, valorTotal: true, clienteId: true, itemAvulso: true,
+        cliente: { select: { nome: true } },
+        veiculo: { select: { placa: true, modelo: true } },
+        pagamentos: { select: { metodo: true, valor: true } },
+      },
+      orderBy: { dataFim: 'asc' },
+    }),
+    // Frota finalizada pela equipe e ainda não confirmada — fora da conta, só avisa
+    prisma.ordemServico.count({
+      where: { empresaId, status: { in: ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'] as any }, NOT: { frotaPedido: { equals: Prisma.DbNull } } },
+    }),
+  ]);
+
+  const [a, m, d] = dateStr.split('-').map(Number);
+  const titulo = `📋 *CONFERÊNCIA DO DIA*\n_${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a} · ${nomeDiaSemana(new Date(a, m - 1, d))}${empresa ? ` · ${empresa.nome}` : ''}_`;
+  const avisoFrota = aguardando ? `\n\n⏳ ${aguardando} ordem(ns) da frota esperando confirmação — fora desta conta.` : '';
+  if (!ordens.length) return `${titulo}\n\nNenhuma ordem finalizada nesse dia.${avisoFrota}`;
+
+  const cortesiaDe = (o: typeof ordens[number]) => o.pagamentos.filter(p => p.metodo === 'CORTESIA').reduce((s, p) => s + p.valor, 0);
+  const particulares = ordens.filter(o => !frota.has(o.clienteId));
+  const daFrota = ordens.filter(o => frota.has(o.clienteId));
+
+  const porMetodo = new Map<string, number>();
+  const somaMetodo = (metodo: string, v: number) => porMetodo.set(metodo, (porMetodo.get(metodo) ?? 0) + v);
+
+  const linhasPart = particulares.map(o => {
+    const carro = o.veiculo ? [o.veiculo.modelo, o.veiculo.placa].filter(Boolean).join(' ') : (o.itemAvulso || 'Item avulso');
+    const cliente = o.cliente?.nome && o.cliente.nome !== 'N/A' ? ` · ${o.cliente.nome}` : '';
+    let pag: string;
+    if (!o.pagamentos.length) { pag = 'PENDENTE'; somaMetodo('PENDENTE', o.valorTotal); }
+    else {
+      for (const p of o.pagamentos) somaMetodo(formatarMetodo(p.metodo), p.valor);
+      pag = o.pagamentos.length === 1
+        ? formatarMetodo(o.pagamentos[0].metodo)
+        : o.pagamentos.map(p => `${formatarMetodo(p.metodo)} ${brl(p.valor)}`).join(' + ');
+    }
+    return `#${o.numeroOrdem} ${carro.toUpperCase()}${cliente}\n   ${brl(o.valorTotal)} · *${pag}*`;
+  });
+  const linhasFrota = daFrota.map(o => `${o.veiculo?.placa || o.itemAvulso || `#${o.numeroOrdem}`} · ${brl(o.valorTotal)}`);
+
+  const subPart = particulares.reduce((s, o) => s + o.valorTotal - cortesiaDe(o), 0);
+  const subFrota = daFrota.reduce((s, o) => s + o.valorTotal - cortesiaDe(o), 0);
+  const cortesia = ordens.reduce((s, o) => s + cortesiaDe(o), 0);
+
+  const blocos: string[] = [titulo];
+  if (linhasPart.length) blocos.push(`👤 *PARTICULARES (${linhasPart.length})*\n${linhasPart.join('\n')}\nSubtotal: *${brl(subPart)}*`);
+  if (linhasFrota.length) blocos.push(`🚗 *FROTA (${linhasFrota.length})*\n${linhasFrota.join('\n')}\nSubtotal: *${brl(subFrota)}*`);
+  if (porMetodo.size) {
+    const lista = [...porMetodo.entries()].sort((x, y) => y[1] - x[1]);
+    blocos.push(`💳 *PARTICULARES POR PAGAMENTO*\n${lista.map(([k, v]) => `${k}: *${brl(v)}*`).join('\n')}`);
+  }
+  const totais = [
+    `👤 Particulares: *${brl(subPart)}*`,
+    linhasFrota.length ? `🚗 Frota: *${brl(subFrota)}*` : '',
+    cortesia > 0.009 ? `🎁 Cortesia (fora do total): ${brl(cortesia)}` : '',
+  ].filter(Boolean);
+  blocos.push(`🧾 *TOTAIS*\n${totais.join('\n')}\n\n💰 *TOTAL GERAL: ${brl(subPart + subFrota)}* · ${ordens.length} ordem(ns)`);
+
+  return blocos.join('\n\n') + avisoFrota;
+}
+
+/*
  * Handler: placas [cliente] [período] — conferência das placas faturadas, pra prestar contas
  * com cliente de frota (ex.: "placas localiza outubro", "placas localiza 01/10 a 15/10").
  * Faturada = ordem FINALIZADA, no dia em que foi concluída. Sem período → mês atual.
@@ -3433,6 +3531,8 @@ function handleAjudaCommand(): string {
     `adiantamento de 150 · nova saída\n\n` +
     `*Caixa:*\n` +
     `fechamento · fechamento ontem · fechamento 02/04\n\n` +
+    `*Conferência do dia:*\n` +
+    `conferência · conferência ontem · conferência 10/11\n\n` +
     `*Conferência de placas:*\n` +
     `placas localiza outubro · placas localiza 01/10 a 15/10\n` +
     `placas semana _(todos os clientes)_\n\n` +
