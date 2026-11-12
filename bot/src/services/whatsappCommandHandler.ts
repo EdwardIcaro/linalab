@@ -3328,8 +3328,8 @@ async function handlePendentesCommand(empresaId: string): Promise<string> {
 
 /*
  * Handler: conferência [dia] — só admin (pedido do dono em 12/11/2026).
- * Todas as OS finalizadas no dia, para bater com o caixa: particulares com valor e forma de
- * pagamento; frota vinculada (Localiza, empresa ou irmãs) só placa e valor. No fim, subtotal de
+ * Todas as OS finalizadas no dia, para bater com o caixa: particulares com modelo, valor e forma de
+ * pagamento; frota vinculada (Localiza, empresa ou irmãs) com placa, modelo e valor. No fim, subtotal de
  * cada grupo, total por forma de pagamento e total geral. Mesma janela do "resumo" (07:00–23:59 BRT).
  */
 async function handleConferenciaDia(empresaId: string, data: Date | null): Promise<string> {
@@ -3352,7 +3352,6 @@ async function handleConferenciaDia(empresaId: string, data: Date | null): Promi
       where: { empresaId, status: 'FINALIZADO' as any, dataFim: { gte: start, lte: end } },
       select: {
         numeroOrdem: true, valorTotal: true, clienteId: true, itemAvulso: true,
-        cliente: { select: { nome: true } },
         veiculo: { select: { placa: true, modelo: true } },
         pagamentos: { select: { metodo: true, valor: true } },
       },
@@ -3377,8 +3376,7 @@ async function handleConferenciaDia(empresaId: string, data: Date | null): Promi
   const somaMetodo = (metodo: string, v: number) => porMetodo.set(metodo, (porMetodo.get(metodo) ?? 0) + v);
 
   const linhasPart = particulares.map(o => {
-    const carro = o.veiculo ? [o.veiculo.modelo, o.veiculo.placa].filter(Boolean).join(' ') : (o.itemAvulso || 'Item avulso');
-    const cliente = o.cliente?.nome && o.cliente.nome !== 'N/A' ? ` · ${o.cliente.nome}` : '';
+    const carro = o.veiculo?.modelo || o.itemAvulso || (o.veiculo ? 'Carro' : 'Item avulso');
     let pag: string;
     if (!o.pagamentos.length) { pag = 'PENDENTE'; somaMetodo('PENDENTE', o.valorTotal); }
     else {
@@ -3387,9 +3385,10 @@ async function handleConferenciaDia(empresaId: string, data: Date | null): Promi
         ? formatarMetodo(o.pagamentos[0].metodo)
         : o.pagamentos.map(p => `${formatarMetodo(p.metodo)} ${brl(p.valor)}`).join(' + ');
     }
-    return `#${o.numeroOrdem} ${carro.toUpperCase()}${cliente}\n   ${brl(o.valorTotal)} · *${pag}*`;
+    return `#${o.numeroOrdem} ${carro.toUpperCase()} · ${brl(o.valorTotal)} · *${pag}*`;
   });
-  const linhasFrota = daFrota.map(o => `${o.veiculo?.placa || o.itemAvulso || `#${o.numeroOrdem}`} · ${brl(o.valorTotal)}`);
+  const linhasFrota = daFrota.map(o =>
+    `${o.veiculo?.placa || o.itemAvulso || `#${o.numeroOrdem}`}${o.veiculo?.modelo ? ` ${o.veiculo.modelo.toUpperCase()}` : ''} · ${brl(o.valorTotal)}`);
 
   const subPart = particulares.reduce((s, o) => s + o.valorTotal - cortesiaDe(o), 0);
   const subFrota = daFrota.reduce((s, o) => s + o.valorTotal - cortesiaDe(o), 0);
