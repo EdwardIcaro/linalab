@@ -46,17 +46,24 @@
     [data-st="CANCELADO"] { --st: #b9b2c8; }
     .lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
     @media (min-width: 720px) { .lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .ordem { --sc: var(--st); cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: transform .12s; }
+    /* borda/sombra iguais em todas (pedido 12/11/2026); a cor do status fica só na etiqueta; frota Localiza = verde */
+    .ordem { --sc: var(--lina); cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: transform .12s; }
     .ordem:active { transform: translate(2px, 2px); }
-    .ordem-topo { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--st); border-bottom: 2.5px solid var(--ink); }
+    .ordem-topo { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--paper); border-bottom: 2px dashed var(--line); }
+    .ordem.frota, .det.frota { --sc: #0b7a3b; border-color: #0b7a3b; }
+    .ordem.frota .ordem-topo, .det.frota .det-topo { background: #d9f2e3; }
+    .tags { margin-left: auto; display: flex; gap: 5px; align-items: center; min-width: 0; }
+    .tag-loc { padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ink); background: #0b7a3b; color: #fff; font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .sem-nome { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 2px dashed var(--orange); border-radius: 8px; background: #fff1ea; color: #b43a14; font: 700 12px var(--mono); cursor: pointer; }
+    .atalhos-lista button.semnome { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 2px dashed var(--yellow); border-radius: 10px; background: transparent; color: var(--yellow); font: 700 11px var(--mono); cursor: pointer; }
+    .atalhos-lista button.semnome.on { background: var(--yellow); color: var(--ink); border-style: solid; }
     .ordem-topo .num { font: 400 15px/1 var(--dela); }
     .ordem-topo .quando { font: 700 10px var(--mono); opacity: .75; }
-    .status { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--st);
+    .status { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ink); background: var(--st); color: var(--ink);
       font: 700 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
     .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: piscar 1.6s ease-in-out infinite; }
     @keyframes piscar { 50% { opacity: .3; } }
-    [data-st="EM_ANDAMENTO"] .ordem-topo, [data-st="EM_ANDAMENTO"] .det-topo { color: var(--cream); }
-    [data-st="EM_ANDAMENTO"] .status { color: #a9c1ff; }
+    [data-st="EM_ANDAMENTO"] .status { color: #fff; }
     .ordem-meio { display: flex; gap: 12px; align-items: center; padding: 8px 12px 6px; }
     .ordem-meio .info { flex: 1; min-width: 0; }
     .ordem-meio .info b { display: block; font: 400 14px/1.15 var(--dela); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -89,8 +96,23 @@
     .folha .spin, .cartao .spin { border-color: var(--ink); border-top-color: transparent; }
 
     /* ===== detalhe ===== */
-    .det { --sc: var(--st); padding: 0; overflow: hidden; }
-    .det-topo { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--st); border-bottom: 3px solid var(--ink); }
+    .det { --sc: var(--lina); padding: 0; overflow: hidden; }
+    .det-topo { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--paper); border-bottom: 2px dashed var(--line); }
+    .det-topo .tags { margin: 6px 0 0; }
+    .det-item.edita-ok { cursor: pointer; position: relative; padding-right: 40px; }
+    .det-item.edita-ok:hover { background: #fff; }
+    .det-item .lapis { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: 2px solid var(--ink); border-radius: 8px; background: var(--yellow); display: grid; place-items: center; font-size: 12px; }
+    .det-item.falta { border-style: dashed; border-color: var(--orange); background: #fff1ea; }
+    .det-item.falta b { color: #b43a14; }
+    .det-item .trava { display: block; font: 700 10px var(--mono); color: #0b7a3b; }
+    .det-edita { display: grid; gap: 6px; }
+    .det-edita .aviso { font-size: 11px; color: var(--muted); }
+    .det-edita .aviso.loc { color: #0b7a3b; font-weight: 700; }
+    .det-edita .botoes { display: flex; gap: 6px; }
+    .det-edita .botoes .btn { padding: 7px 12px; font-size: 12px; }
+    .sugs { display: grid; gap: 5px; }
+    .sugs button { text-align: left; padding: 6px 9px; border: 2px solid var(--ink); border-radius: 8px; background: #fff; color: var(--ink); font: 700 12px var(--mono); cursor: pointer; }
+    .sugs button small { display: block; font-weight: 400; color: var(--muted); }
     .det-topo .num { font: 400 22px/1 var(--dela); }
     .det-topo .quando { font: 700 11px var(--mono); opacity: .8; margin-top: 4px; }
     .det-topo .valor { margin-left: auto; font-size: 24px; text-align: right; }
@@ -342,6 +364,22 @@
   </div>
 </div>
 
+<!-- pôr nome numa ordem sem nome -->
+<div class="janela" id="nomeOrdemModal" style="display:none" onclick="if(event.target===this)fecharNomeOrdem()">
+  <div class="folha" style="--sc: var(--orange)" role="dialog" aria-label="Pôr nome na ordem" onclick="event.stopPropagation()">
+    <div class="folha-cab"><h3>Pôr nome na ordem<small id="nomeOrdemSub">—</small></h3><button class="fechar" onclick="fecharNomeOrdem()"><i class="fas fa-times"></i></button></div>
+    <div class="folha-corpo">
+      <div class="campo"><label for="nomeOrdemIn">Nome do cliente</label><input class="entrada" id="nomeOrdemIn" maxlength="80" autocomplete="off" oninput="sugerirClientesNome()"></div>
+      <div class="sugs" id="nomeOrdemSugs"></div>
+      <div class="campo"><label for="nomeOrdemTel">Telefone (opcional)</label><input class="entrada" id="nomeOrdemTel" maxlength="16" inputmode="tel" placeholder="(31) 9 0000-0000"></div>
+    </div>
+    <div class="folha-pe">
+      <button class="btn cancelar" onclick="fecharNomeOrdem()">Agora não</button>
+      <button class="btn verde" id="nomeOrdemBtn" onclick="salvarNomeOrdem()"><i class="fas fa-check"></i> Salvar nome</button>
+    </div>
+  </div>
+</div>
+
 <!-- setar funcionário -->
 <div class="janela" id="setarLavadorModal" style="display:none" onclick="if(event.target===this)closeSetarLavadorModal()">
   <div class="folha" style="--sc: var(--yellow)" role="dialog" aria-label="Setar funcionário" onclick="event.stopPropagation()">
@@ -465,6 +503,11 @@
     const ROT_STATUS = { PENDENTE: 'Pendente', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PAGAMENTO: 'Aguardando pgto', FINALIZADO: 'Finalizada', COMPLETO: 'Concluída', CANCELADO: 'Cancelada' };
     const CORES_LAV = ['#2f62e6', '#22a15a', '#6b4fd8', '#ff5b2e', '#c2418f', '#0d9488', '#d4a017', '#e5383b'];
     function corLavador(id) { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return CORES_LAV[h % CORES_LAV.length]; }
+    // Ordem sem nome = cliente "N/A" (createOrdem grava assim quando não digitam o nome)
+    const semNomeCli = (n) => !n || !String(n).trim() || String(n).trim().toUpperCase() === 'N/A';
+    const ehAtiva = (st) => ['PENDENTE', 'EM_ANDAMENTO', 'AGUARDANDO_PAGAMENTO'].includes(st || 'PENDENTE');
+    let soSemNome = false;
+    function alternarSemNome() { soSemNome = !soSemNome; renderOrdensList(ordensCache); }
     function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
     function valorCurto(v) { return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     // "há 12 min", "há 1h05"; mais de um dia vira a data
@@ -477,7 +520,7 @@
     }
     function idVeiculoHtml(o) {
       if (o.tipoOrdem === 'AVULSO') return `<span class="avulso"><i class="fas fa-couch"></i>${escHtml(o.itemAvulso || 'Higienização')}</span>`;
-      return o.veiculo?.placa ? `<span class="placa"><b>${escHtml(o.veiculo.placa)}</b></span>` : '';
+      return o.veiculo?.placa ? `<span class="placa${o.frota ? ' loc' : ''}"><b>${escHtml(o.veiculo.placa)}</b></span>` : '';
     }
     function lavadoresDe(o) {
       const lavs = (o.lavadores || []).map(l => (typeof l === 'object' ? l : { id: l, nome: '' })).filter(l => l.nome);
@@ -529,7 +572,12 @@
           </div>`;
         return;
       }
-      main.innerHTML = ATALHOS_LISTA + `<div class="lista">${ordens.map(ordem => {
+      const ehSemNome = (o) => !o.frota && ehAtiva(o.status) && semNomeCli(o.cliente?.nome);
+      const qtdSemNome = ordens.filter(ehSemNome).length;
+      if (!qtdSemNome) soSemNome = false;
+      const btnSemNome = qtdSemNome ? `<div class="atalhos-lista"><button class="semnome${soSemNome ? ' on' : ''}" onclick="alternarSemNome()"><i class="fas fa-user-pen"></i> ${soSemNome ? 'Mostrar todas' : `Sem nome (${qtdSemNome})`}</button></div>` : '';
+      if (soSemNome) ordens = ordens.filter(ehSemNome);
+      main.innerHTML = ATALHOS_LISTA + btnSemNome + `<div class="lista">${ordens.map(ordem => {
         const status = ordem.status || 'PENDENTE';
         // Nomes dos serviços: usa ordem.servicos ou deriva dos items (inclui nomeCustom de itens avulsos)
         let svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ');
@@ -554,9 +602,12 @@
         if (canDone) acoes += `<button class="acao concluir" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir lavagem"><i class="fas fa-flag-checkered"></i></button>`;
         if (canPay) acoes += `<button class="acao pagar" onclick="openPaymentModalFromTable('${ordem.id}')" title="Pagar"><i class="fas fa-credit-card"></i> Pagar</button>`;
 
-        return `<article class="cartao ordem" data-st="${status}" onclick="viewOrdem('${ordem.id}')">
-            <div class="ordem-topo"><span class="num">#${ordem.numeroOrdem || ordem.id.substring(0, 8).toUpperCase()}</span><span class="quando">${quandoTxt(ordem.createdAt)}</span><span class="status">${ROT_STATUS[status] || status}</span></div>
-            <div class="ordem-meio">${idVeiculoHtml(ordem)}<div class="info"><b>${escHtml(ordem.cliente?.nome || '—')}</b>${sub ? `<span>${escHtml(sub)}</span>` : ''}<span>${escHtml(svcTxt)}</span></div></div>
+        const nomeHtml = !ordem.frota && semNomeCli(ordem.cliente?.nome) && ehAtiva(status)
+          ? `<button class="sem-nome" onclick="event.stopPropagation();abrirNomeOrdem('${ordem.id}')"><i class="fas fa-plus"></i> Pôr nome</button>`
+          : `<b>${escHtml(ordem.cliente?.nome || '—')}</b>`;
+        return `<article class="cartao ordem${ordem.frota ? ' frota' : ''}" data-st="${status}" onclick="viewOrdem('${ordem.id}')">
+            <div class="ordem-topo"><span class="num">#${ordem.numeroOrdem || ordem.id.substring(0, 8).toUpperCase()}</span><span class="quando">${quandoTxt(ordem.createdAt)}</span><span class="tags">${ordem.frota ? '<span class="tag-loc">Localiza</span>' : ''}<span class="status">${ROT_STATUS[status] || status}</span></span></div>
+            <div class="ordem-meio">${idVeiculoHtml(ordem)}<div class="info">${nomeHtml}${sub ? `<span>${escHtml(sub)}</span>` : ''}<span>${escHtml(svcTxt)}</span></div></div>
             <div class="ordem-pe"><span class="valor"><small>R$</small>${valorCurto(total)}</span>${falta}${lavsHtml}<span class="acoes" onclick="event.stopPropagation()">${acoes}</span></div>
           </article>`;
       }).join('')}</div>`;
@@ -695,21 +746,22 @@
         const temPlaca = currentOrdem.tipoOrdem !== 'AVULSO' && currentOrdem.veiculo?.placa;
         const veic = [currentOrdem.veiculo?.modelo, currentOrdem.veiculo?.cor].filter(Boolean).join(' · ');
         main.innerHTML = `
-          <article class="cartao det" data-st="${status}">
+          <article class="cartao det${currentOrdem.frota ? ' frota' : ''}" data-st="${status}">
             <div class="det-topo">
               <div><div class="num">#${currentOrdem.numeroOrdem || currentOrdem.id.substring(0,8).toUpperCase()}</div>
-                <div class="quando">${formatDate(currentOrdem.createdAt)} · ${quandoTxt(currentOrdem.createdAt)} · ${statusLabel}</div></div>
+                <div class="quando">${formatDate(currentOrdem.createdAt)} · ${quandoTxt(currentOrdem.createdAt)}</div>
+                <div class="tags">${currentOrdem.frota ? '<span class="tag-loc">Localiza</span>' : ''}<span class="status">${ROT_STATUS[status] || statusLabel}</span></div></div>
               <div class="valor"><small>R$</small>${valorCurto(currentOrdem.valorTotal || currentOrdem.valor)}<span>valor total</span></div>
             </div>
             <div class="det-corpo">
               <div class="det-grade">
-                <div class="det-item"><small>Cliente</small><b>${escHtml(currentOrdem.cliente?.nome || '—')}</b></div>
+                ${detCampoCliente(status)}
                 <div class="det-item"><small>${currentOrdem.tipoOrdem === 'AVULSO' ? 'Item' : 'Placa'}</small>
                   ${currentOrdem.tipoOrdem === 'AVULSO'
                     ? `<b><i class="fas fa-couch"></i> ${escHtml(currentOrdem.itemAvulso || 'Higienização')}</b>`
-                    : (temPlaca ? `<span class="placa"><b>${escHtml(currentOrdem.veiculo.placa)}</b></span>` : '<b>—</b>')}
+                    : (temPlaca ? `<span class="placa${currentOrdem.frota ? ' loc' : ''}"><b>${escHtml(currentOrdem.veiculo.placa)}</b></span>` : '<b>—</b>')}
                 </div>
-                ${veic ? `<div class="det-item inteiro"><small>Veículo</small><b>${escHtml(veic)}</b></div>` : ''}
+                ${detCampoVeiculo(status, veic)}
                 <div class="det-item"><small>Pagamento</small><b>${escHtml(currentOrdem.metodoPagamento || '—')}</b></div>
                 <div class="det-item"><small>Lavadores</small><b>${escHtml(lavNomes)}</b></div>
               </div>
@@ -720,6 +772,126 @@
           </article>
           <div class="acoes-fixas"><div class="det-acoes">${actionsHtml}</div></div>
         `;
+    }
+
+    // ── EDIÇÃO RÁPIDA: nome do cliente e modelo do carro (12/11/2026) ──
+    let detEditando = null;   // 'nome' | 'modelo' | null
+    let detEditandoId = null;
+
+    function detCampoCliente(status) {
+      const o = currentOrdem, nome = o.cliente?.nome;
+      if (detEditandoId !== o.id) { detEditando = null; detEditandoId = o.id; }
+      if (o.frota) return `<div class="det-item"><small>Cliente</small><b>${escHtml(nome || 'Localiza')}</b>${ehAtiva(status) ? '<span class="trava"><i class="fas fa-lock"></i> cliente da frota</span>' : ''}</div>`;
+      if (!ehAtiva(status)) return `<div class="det-item"><small>Cliente</small><b>${escHtml(nome || '—')}</b></div>`;
+      if (semNomeCli(nome)) return `<div class="det-item edita-ok falta" onclick="abrirNomeOrdem('${o.id}')"><small>Cliente</small><b>Sem nome · toque</b><span class="lapis"><i class="fas fa-plus"></i></span></div>`;
+      if (detEditando === 'nome') return `<div class="det-item inteiro det-edita"><small>Cliente</small>
+          <input class="entrada" id="detNomeIn" maxlength="80" value="${escHtml(nome)}">
+          <span class="aviso">Corrige o nome deste cliente em todas as ordens dele.</span>
+          <div class="botoes"><button class="btn cancelar" onclick="editarCampoDet(null)">Cancelar</button><button class="btn verde" onclick="salvarCampoDet('nome')"><i class="fas fa-check"></i> Salvar</button></div></div>`;
+      return `<div class="det-item edita-ok" onclick="editarCampoDet('nome')"><small>Cliente</small><b>${escHtml(nome)}</b><span class="lapis"><i class="fas fa-pen"></i></span></div>`;
+    }
+
+    function detCampoVeiculo(status, veic) {
+      const o = currentOrdem;
+      const temCarro = o.tipoOrdem !== 'AVULSO' && o.veiculo?.placa;
+      if (!temCarro || !ehAtiva(status)) return veic ? `<div class="det-item inteiro"><small>Veículo</small><b>${escHtml(veic)}</b></div>` : '';
+      if (detEditando === 'modelo') return `<div class="det-item inteiro det-edita"><small>Modelo e cor</small>
+          <div data-modelo-host><input class="entrada" id="detModeloIn" maxlength="60" placeholder="Modelo" value="${escHtml(o.veiculo?.modelo || '')}" data-modelo-carro autocomplete="off"></div>
+          <input class="entrada" id="detCorIn" maxlength="40" placeholder="Cor" value="${escHtml(o.veiculo?.cor || '')}">
+          <span class="aviso${o.frota ? ' loc' : ''}">${o.frota ? 'Carro da frota: a correção vale para todas as empresas da rede e fica no histórico.' : 'Corrige o cadastro deste carro.'}</span>
+          <div class="botoes"><button class="btn cancelar" onclick="editarCampoDet(null)">Cancelar</button><button class="btn verde" onclick="salvarCampoDet('modelo')"><i class="fas fa-check"></i> Salvar</button></div></div>`;
+      return `<div class="det-item inteiro edita-ok${veic ? '' : ' falta'}" onclick="editarCampoDet('modelo')"><small>Veículo</small><b>${escHtml(veic || 'Modelo não informado · toque')}</b><span class="lapis"><i class="fas fa-pen"></i></span></div>`;
+    }
+
+    function editarCampoDet(c) {
+      detEditando = c;
+      renderOrdemDetail();
+      const el = document.getElementById(c === 'nome' ? 'detNomeIn' : 'detModeloIn');
+      if (el) { el.focus(); el.select?.(); }
+    }
+
+    // Aplica a resposta na ordem aberta e na lista (outras ordens do mesmo cliente/placa também)
+    function aplicarIdentificacao(ordemId, r, clienteAntigoId) {
+      const base = currentOrdem?.id === ordemId ? currentOrdem : ordensCache.find(o => o.id === ordemId);
+      const placa = base?.veiculo?.placa;
+      for (const o of [currentOrdem, ...ordensCache].filter(Boolean)) {
+        const mesmo = o.id === ordemId || (clienteAntigoId && o.cliente?.id === clienteAntigoId && !semNomeCli(o.cliente?.nome));
+        if (r.cliente && mesmo) { o.cliente = { ...(o.cliente || {}), id: r.cliente.id, nome: r.cliente.nome }; o.clienteId = r.cliente.id; }
+        if (r.veiculo?.modelo && placa && o.veiculo?.placa === placa) { o.veiculo.modelo = r.veiculo.modelo; if (r.veiculo.cor) o.veiculo.cor = r.veiculo.cor; }
+      }
+    }
+
+    async function salvarCampoDet(c) {
+      const o = currentOrdem; if (!o) return;
+      const body = {};
+      if (c === 'nome') {
+        body.clienteNome = document.getElementById('detNomeIn').value.trim();
+        if (!body.clienteNome) return document.getElementById('detNomeIn').focus();
+      } else {
+        body.modelo = document.getElementById('detModeloIn').value.trim();
+        body.cor = document.getElementById('detCorIn').value.trim();
+        if (!body.modelo) return document.getElementById('detModeloIn').focus();
+      }
+      try {
+        const r = await fetchApi(`/ordens/${o.id}/identificacao`, { method: 'PATCH', body: JSON.stringify(body), semRedirect: true });
+        aplicarIdentificacao(o.id, r, o.cliente?.id);
+        detEditando = null;
+        renderOrdemDetail();
+        showToast(c === 'nome' ? `Nome salvo: ${r.cliente?.nome}` : `${o.veiculo?.placa}: ${r.veiculo?.modelo} salvo${o.frota ? ' para a rede' : ''}`, 'success');
+      } catch (e) {
+        showToast(e?.error || 'Não foi possível salvar.', 'error');
+      }
+    }
+
+    // "Pôr nome": ordem sem nome ganha um cliente próprio (ou liga num cliente que já existe)
+    let nomeOrdemId = null, nomeSugTimer = null;
+    function abrirNomeOrdem(id) {
+      const o = (currentOrdem?.id === id ? currentOrdem : null) || ordensCache.find(x => x.id === id);
+      if (!o) return;
+      nomeOrdemId = id;
+      document.getElementById('nomeOrdemSub').textContent = [`#${o.numeroOrdem || ''}`, o.veiculo?.placa, o.veiculo?.modelo].filter(Boolean).join(' · ');
+      document.getElementById('nomeOrdemIn').value = '';
+      document.getElementById('nomeOrdemTel').value = '';
+      document.getElementById('nomeOrdemSugs').innerHTML = '';
+      const m = document.getElementById('nomeOrdemModal');
+      m.style.display = 'flex'; m.classList.add('active');
+      setTimeout(() => document.getElementById('nomeOrdemIn').focus(), 60);
+    }
+    function fecharNomeOrdem() {
+      const m = document.getElementById('nomeOrdemModal');
+      m.style.display = 'none'; m.classList.remove('active');
+      nomeOrdemId = null;
+    }
+    function sugerirClientesNome() {
+      clearTimeout(nomeSugTimer);
+      const q = document.getElementById('nomeOrdemIn').value.trim();
+      const box = document.getElementById('nomeOrdemSugs');
+      if (q.length < 2) { box.innerHTML = ''; return; }
+      nomeSugTimer = setTimeout(async () => {
+        try {
+          const r = await fetchApi(`/ordens/clientes-busca?q=${encodeURIComponent(q)}`, { semRedirect: true });
+          if (document.getElementById('nomeOrdemIn').value.trim() !== q) return;
+          const cs = r.clientes || [];
+          box.innerHTML = cs.length ? `<small style="color: var(--muted)">Já é cliente? Toque para usar o cadastro:</small>` + cs.map(c =>
+            `<button onclick="salvarNomeOrdem('${c.id}')">${escHtml(c.nome)}<small>${[c.telefone, `${c.carros} carro${c.carros === 1 ? '' : 's'}`, `${c.ordens} ordem${c.ordens === 1 ? '' : 'ns'}`].filter(Boolean).map(escHtml).join(' · ')}</small></button>`).join('') : '';
+        } catch { box.innerHTML = ''; }
+      }, 300);
+    }
+    async function salvarNomeOrdem(clienteId = null) {
+      const id = nomeOrdemId; if (!id) return;
+      const nome = document.getElementById('nomeOrdemIn').value.trim();
+      if (!clienteId && !nome) return document.getElementById('nomeOrdemIn').focus();
+      const body = clienteId ? { clienteId } : { clienteNome: nome, telefone: document.getElementById('nomeOrdemTel').value };
+      const btn = document.getElementById('nomeOrdemBtn'); btn.disabled = true;
+      try {
+        const r = await fetchApi(`/ordens/${id}/identificacao`, { method: 'PATCH', body: JSON.stringify(body), semRedirect: true });
+        aplicarIdentificacao(id, r, null);
+        fecharNomeOrdem();
+        if (currentOrdem?.id === id && document.querySelector('.cartao.det')) renderOrdemDetail(); else renderOrdensList(ordensCache);
+        showToast(`Ordem agora é de ${r.cliente?.nome}`, 'success');
+      } catch (e) {
+        showToast(e?.error || 'Não foi possível salvar o nome.', 'error');
+      } finally { btn.disabled = false; }
     }
 
     // ── MARK AS COMPLETE ──────────────────────────
@@ -1856,6 +2028,7 @@
       });
     }
   </script>
+  <script src="/funcionario/modelos-carro.js"></script>
   <script src="/funcionario/decola-base.js"></script>
 </body>
 </html>

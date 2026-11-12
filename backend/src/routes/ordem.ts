@@ -13,6 +13,7 @@ import {
   finalizarOrdem,
   gerarPixQr
 } from '../controllers/ordemController';
+import { editarIdentificacao, redeAtiva, buscarClientesParaNome } from '../controllers/ordemEdicaoController';
 
 const router: Router = Router();
 
@@ -24,7 +25,10 @@ router.post('/', authMiddleware, createOrdem);
 router.get('/', authMiddleware, getOrdens);
 router.get('/stats', authMiddleware, getOrdensStats);
 router.get('/dashboard-resumo', authMiddleware, getDashboardResumo);
+router.get('/rede-ativa/:placa', authMiddleware, redeAtiva);
+router.get('/clientes-busca', authMiddleware, buscarClientesParaNome);
 router.get('/:id', authMiddleware, getOrdemById);
+router.patch('/:id/identificacao', authMiddleware, editarIdentificacao);
 router.put('/:id', authMiddleware, updateOrdem);
 router.post('/:id/finalizar', authMiddleware, finalizarOrdem);
 router.post('/:id/pix', authMiddleware, gerarPixQr);

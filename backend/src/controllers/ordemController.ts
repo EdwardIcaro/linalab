@@ -9,6 +9,8 @@ import { validateCreateOrder, validateFinalizarOrdem, validateUpdateOrder } from
 import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
 import { hasPermission } from '../middlewares/permissionMiddleware';
+import { avisarSeDuplicadaNaRede } from '../services/ordemDuplicadaRede';
+import { clientesFrota } from './ordemEdicaoController';
 import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca, registrarConfirmacao, Correcao } from '../services/veiculoPlaca';
 
 
@@ -414,6 +416,9 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
         console.error('Erro ao criar notificação:', notificationError);
       }
 
+      // Mesmo carro com ordem ativa em outra empresa da rede → admin decide qual cancelar
+      avisarSeDuplicadaNaRede(empresaId, ordem.id, ordemFinal.veiculo?.placa).catch(() => {});
+
       // WhatsApp: notificar nova ordem
       const servicoNome = ordemFinal.items?.[0]?.servico?.nome ?? 'Serviço';
       notifyNovaOrdem(empresaId, {
@@ -733,7 +738,9 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
       prisma.ordemServico.count({ where })
     ]);
 
-    const enrichedOrders = ordens.map(order => formatOrderWithLavadores(order));
+    // frota: ordem do cliente vinculado (Localiza) — a tela pinta a borda de verde
+    const frotaIds = await clientesFrota(req.empresaId!).catch(() => new Set<string>());
+    const enrichedOrders = ordens.map((order: any) => ({ ...formatOrderWithLavadores(order), frota: frotaIds.has(order.clienteId ?? order.cliente?.id) }));
     const result = {
       ordens: enrichedOrders,
       pagination: {
@@ -859,7 +866,8 @@ export const getOrdemById = async (req: EmpresaRequest, res: Response) => {
       return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
     }
 
-    res.json(formatOrderWithLavadores(ordem));
+    const frotaIds = await clientesFrota(req.empresaId!).catch(() => new Set<string>());
+    res.json({ ...formatOrderWithLavadores(ordem), frota: frotaIds.has((ordem as any).clienteId ?? (ordem as any).cliente?.id) });
   } catch (error) {
     console.error('Erro ao buscar ordem de serviço:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });

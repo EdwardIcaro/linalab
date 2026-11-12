@@ -48,6 +48,16 @@
     .sec-cab h2 { margin: 0; font: 400 16px/1.1 var(--dela); flex: 1; min-width: 0; }
     .sec-cab h2 small { font: 700 11px var(--mono); color: var(--muted); margin-left: 4px; }
     .travada { opacity: .42; pointer-events: none; filter: grayscale(.5); transition: opacity .3s, filter .3s; }
+    /* carro com ordem ativa em outra empresa da rede (12/11/2026) */
+    .rede-alerta { margin-top: 12px; border: 3px solid var(--ink); border-radius: 12px; background: #fff7d1; color: var(--ink); padding: 12px; display: grid; gap: 10px; box-shadow: 3px 3px 0 var(--orange); }
+    .rede-alerta h4 { margin: 0; font: 400 14px/1.25 var(--dela); display: flex; gap: 8px; align-items: flex-start; }
+    .rede-alerta p { margin: 0; font-size: 12px; }
+    .rede-alerta .ficha { background: #fff; border: 2px solid var(--ink); border-radius: 10px; padding: 8px 10px; font-size: 12px; }
+    .rede-alerta .ficha b { display: block; font: 400 13px var(--dela); }
+    .rede-alerta .botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+    .rede-alerta .botoes .btn { flex: 1 1 140px; padding: 9px 12px; font-size: 12px; }
+    .rede-alerta .btn.laranja { background: var(--orange); color: #fff; }
+    .rede-alerta.ok { background: #e9f7ee; box-shadow: 3px 3px 0 var(--green); }
     .aviso-trava { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -4px 0 0; font: 700 12px var(--mono); color: var(--yellow); }
     .vazio-sec { margin: 0; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
     .gira { width: 14px; height: 14px; border: 2.5px solid var(--ink); border-top-color: transparent; border-radius: 50%; animation: girar .7s linear infinite; }
@@ -273,7 +283,22 @@
           <div class="placa" x-show="cliente?.placa && cliente?.placa !== '—'"><b x-text="cliente?.placa"></b></div>
           <div class="cli-info"><b x-text="cliente?.nome"></b><span x-text="[cliente?.modelo, cliente?.cor, cliente?.telefone].filter(v => v && v !== '—').join(' · ')"></span></div>
           <button class="mini-btn" title="Editar cliente" @click="abrirFormEdicao()"><i class="fas fa-pen"></i></button>
-          <button class="mini-btn" title="Trocar cliente" @click="cliente=null; ultimoServicoId=null; catLocked=false; searchQuery=''"><i class="fas fa-times"></i></button>
+          <button class="mini-btn" title="Trocar cliente" @click="trocarCliente()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="rede-alerta" id="redeAlerta" x-show="redeAtiva.length && !redeConfirmada" x-cloak>
+          <h4><i class="fas fa-triangle-exclamation"></i> <span x-text="'Este carro já está cadastrado em ' + (redeAtiva[0]?.empresa || 'outra empresa')"></span></h4>
+          <template x-for="o in redeAtiva" :key="o.id">
+            <div class="ficha"><b x-text="'#' + o.numeroOrdem + ' · ' + o.empresa"></b>
+              <span x-text="[o.cliente, [o.modelo, o.cor].filter(Boolean).join(' '), rotStatus(o.status), 'aberta ' + quandoRede(o.createdAt)].filter(Boolean).join(' · ')"></span></div>
+          </template>
+          <p>A ordem de lá continua aberta. Cadastrar aqui cria uma segunda ordem para o mesmo carro, e o admin recebe um aviso para decidir qual cancelar.</p>
+          <div class="botoes">
+            <button class="btn" @click="trocarCliente()"><i class="fas fa-xmark"></i> Não cadastrar</button>
+            <button class="btn laranja" @click="redeConfirmada = true"><i class="fas fa-check"></i> Cadastrar mesmo assim</button>
+          </div>
+        </div>
+        <div class="rede-alerta ok" x-show="redeAtiva.length && redeConfirmada" x-cloak>
+          <p><i class="fas fa-circle-info"></i> Carro também aberto em <b x-text="redeAtiva[0]?.empresa"></b>. O admin vai ser avisado ao criar.</p>
         </div>
       </div>
     </section>
@@ -510,6 +535,7 @@
         addSearch: '',      // busca dentro do sheet
         TOP_ADD_COUNT: 6,   // quantos adicionais "mais usados" mostrar inline
         criando: false, sucesso: false, ordemNum: null,
+        redeAtiva: [], redeConfirmada: false, _redePlaca: '',
 
         // ── Dados da API ───────────────────
         servicos:   [],
@@ -543,6 +569,8 @@
             window.location.href = '../login.html';
             return;
           }
+          // Placa escolhida/digitada: procura ordem ativa dela nas empresas da rede
+          this.$watch('cliente', () => this.checarRede());
 
           // Carrega lavadores, adicionais e tipos de veículos em paralelo
           await Promise.all([
@@ -1063,8 +1091,36 @@
         },
 
         // ── Criar ordem ───────────────────
+        trocarCliente() {
+          this.cliente = null; this.ultimoServicoId = null; this.catLocked = false; this.searchQuery = '';
+          this.redeAtiva = []; this.redeConfirmada = false; this._redePlaca = '';
+        },
+        rotStatus(st) { return ({ PENDENTE: 'Pendente', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PAGAMENTO: 'Aguardando pgto' })[st] || st; },
+        quandoRede(d) {
+          const min = Math.round((Date.now() - new Date(d).getTime()) / 60000);
+          if (min < 60) return `há ${Math.max(min, 1)} min`;
+          if (min < 1440) return `há ${Math.floor(min / 60)} h ${min % 60 ? (min % 60) + ' min' : ''}`.trim();
+          return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        },
+        async checarRede() {
+          const placa = String(this.cliente?.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (placa === this._redePlaca) return;
+          this._redePlaca = placa; this.redeAtiva = []; this.redeConfirmada = false;
+          if (placa.length < 7) return;
+          try {
+            const r = await fetchApi(`/ordens/rede-ativa/${encodeURIComponent(placa)}`, { semRedirect: true });
+            if (this._redePlaca !== placa) return;
+            this.redeAtiva = (r.ordens || []).filter(o => !o.aqui);
+          } catch { /* backend antigo sem a rota → segue sem aviso */ }
+        },
+
         async criar() {
           if (!this.podecriar() || this.criando) return;
+          if (this.redeAtiva.length && !this.redeConfirmada) {
+            document.getElementById('redeAlerta')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast(`Este carro já tem ordem aberta em ${this.redeAtiva[0].empresa}. Confirme antes de criar.`, 'error');
+            return;
+          }
           this.criando = true;
 
           // Monta payload antes do try para poder reusar no catch (forçar criação)
@@ -1175,6 +1231,7 @@
             svc: null, adds: [], lavs: [],
             showAllAdds: false, addSearch: '',
             criando: false, sucesso: false, ordemNum: null,
+        redeAtiva: [], redeConfirmada: false, _redePlaca: '',
             ocr: { isOpen: false, stream: null, isProcessing: false, error: null },
             servicos: [],
           });
