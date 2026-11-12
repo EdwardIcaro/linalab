@@ -517,6 +517,10 @@
                 </a>
             </div>
         </header>
+        <!-- Frota em 2 etapas: ordens da Localiza finalizadas pela equipe esperando o dono confirmar -->
+        <a id="frotaBanner" href="/frota-confirmar.html" style="display:none;align-items:center;gap:12px;margin:0 0 16px;padding:12px 16px;border-radius:12px;background:#d9f2e3;border:2px solid #0b7a3b;color:#0b5a2c;font-weight:700;text-decoration:none">
+            <i class="fas fa-check-double"></i><span id="frotaBannerTxt"></span><span style="margin-left:auto">Confirmar <i class="fas fa-arrow-right"></i></span>
+        </a>
 
         <!-- Stats Grid -->
         <div class="stats-grid">
@@ -991,6 +995,19 @@
     </main>
 
     <div id="toast-container" class="toast-container"></div>
+    <script>
+      // Banner da frota: só aparece quando há ordens esperando confirmação
+      window.addEventListener('load', async () => {
+        try {
+          const r = await fetchApi('/ordens/frota/pendentes', { semRedirect: true });
+          const n = (r.ordens || []).length;
+          if (!n) return;
+          const total = r.ordens.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0);
+          document.getElementById('frotaBannerTxt').textContent = `${n} ordem${n > 1 ? 'ns' : ''} da frota esperando sua confirmação · ${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+          document.getElementById('frotaBanner').style.display = 'flex';
+        } catch { /* sem permissão ou backend antigo */ }
+      });
+    </script>
 
     <!-- Confirm Modal -->
     <div id="customConfirmModal" class="modal-overlay">

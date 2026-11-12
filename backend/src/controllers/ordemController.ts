@@ -639,6 +639,9 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
       }
     }
 
+    // Frota em 2 etapas: quem não confirma não vê mais a ordem que já mandou finalizar
+    if (!(await hasPermission(req, 'confirmar_frota'))) where.frotaPedido = { equals: Prisma.DbNull };
+
     // ✅ OTIMIZAÇÃO: Usar select ao invés de include para melhor performance
     const [ordens, total] = await Promise.all([
       prisma.ordemServico.findMany({
@@ -655,6 +658,8 @@ export const getOrdens = async (req: EmpresaRequest, res: Response) => {
           valorTotal: true,
           comissao: true,
           observacoes: true,
+          frotaPedido: true,
+          frotaDevolvida: true,
           // Cliente - apenas campos necessários
           cliente: {
             select: {
@@ -1161,6 +1166,7 @@ export const cancelOrdem = async (req: EmpresaRequest, res: Response) => {
     const updatedOrdem = await prisma.ordemServico.update({
       where: { id },
       data: {
+        frotaPedido: Prisma.DbNull,
         status: 'CANCELADO'
       },
       include: {
@@ -1733,6 +1739,29 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
       comissaoCalculada = base === 'ADICIONAL' ? 0 : arredondarCentavos((valorFinal * ordem.lavador.comissao) / 100);
     }
 
+    // ── Frota vinculada (Localiza): finalização em 2 etapas (12/11/2026) ──
+    // Quem não pode confirmar só deixa o pedido guardado; caixa, comissão e relatórios
+    // só mudam quando o dono (ou cargo com confirmar_frota) confirma — e a confirmação
+    // roda esta mesma função com o pedido salvo (confirmandoFrota = true).
+    if (!(req as any).confirmandoFrota && (await clientesFrota(empresaId)).has(ordem.clienteId) && !(await hasPermission(req, 'confirmar_frota'))) {
+      const ganhos = ganhosPorLavador.length
+        ? ganhosPorLavador
+        : (ordem.lavadorId ? [{ lavadorId: ordem.lavadorId, ganho: comissaoCalculada }] : []);
+      const pedido = {
+        body: req.body,
+        porNome: (req as any).usuarioNome || null,
+        porSubaccountId: subaccountId || null,
+        em: new Date().toISOString(),
+        valorFinal, desconto, comissao: comissaoCalculada,
+        pagamentos: pagamentos.map((p: any) => ({ metodo: p.metodo, valor: p.valor })),
+        ganhos,
+        avisadoEm: null,
+      };
+      await prisma.ordemServico.update({ where: { id }, data: { frotaPedido: pedido as any, frotaDevolvida: Prisma.DbNull } });
+      // Para a equipe a resposta é a de sempre: a ordem some da lista como finalizada
+      return res.status(200).json({ message: 'Ordem finalizada com sucesso', ordem: { ...ordem, status: 'FINALIZADO' }, pagamentos: [], comissao: null, pendenteConfirmacao: true });
+    }
+
     // Executar tudo em uma transação atômica
     const resultado = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Atualizar status da ordem para FINALIZADO
@@ -1748,7 +1777,9 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
           pago: true,
           // Nome de quem fechou, vindo do token — serve para o extrato do
           // financeiro mostrar "Finalizado por" no detalhe do pagamento.
-          finalizadoPor: (req as any).usuarioNome || null
+          finalizadoPor: (req as any).finalizadoPorFrota || (req as any).usuarioNome || null,
+          frotaPedido: Prisma.DbNull,
+          frotaDevolvida: Prisma.DbNull,
         },
         include: {
           cliente: true,

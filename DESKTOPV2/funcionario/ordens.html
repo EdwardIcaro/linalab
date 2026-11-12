@@ -37,6 +37,10 @@
     .atalhos-lista a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 2px dashed var(--cream); border-radius: 10px;
       color: var(--cream); font: 700 11px var(--mono); text-decoration: none; }
     .atalhos-lista a.fila { border-color: var(--yellow); color: var(--yellow); }
+    .atalhos-lista a.frota { border-color: #4fd18b; color: #4fd18b; }
+    .tag-conf { padding: 2px 8px; border-radius: 999px; border: 2px dashed #0b7a3b; background: #fff; color: #0b7a3b; font: 700 10px var(--mono); text-transform: uppercase; white-space: nowrap; }
+    .tag-dev { padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ink); background: var(--orange); color: #fff; font: 700 10px var(--mono); text-transform: uppercase; white-space: nowrap; }
+    .motivo-dev { margin: 0 12px 8px; padding: 6px 9px; border: 2px dashed var(--orange); border-radius: 8px; background: #fff1ea; color: #8a2d10; font: 700 11px var(--mono); }
 
     /* ===== cartão de ordem (cor da sombra = status) ===== */
     [data-st="PENDENTE"] { --st: var(--yellow); }
@@ -496,10 +500,15 @@
     }
 
     // ── LOAD ORDENS ───────────────────────────────
-    const ATALHOS_LISTA = `<div class="atalhos-lista">
+    // Frota em 2 etapas: quem confirma ganha o atalho com a contagem do que está esperando
+    function atalhosLista() {
+      const n = (ordensCache || []).filter(o => o.frotaPedido).length;
+      const frota = temPermissao('confirmar_frota') ? `<a class="frota" href="/frota-confirmar.html"><i class="fas fa-check-double"></i> Confirmar frota${n ? ` (${n})` : ''}</a>` : '';
+      return `<div class="atalhos-lista">
         <a class="fila" href="/funcionario/fila-entrada.html"><i class="fas fa-bolt"></i> Fila de entrada</a>
-        <a href="/funcionario/servicos.html"><i class="fas fa-wrench"></i> Serviços</a>
+        <a href="/funcionario/servicos.html"><i class="fas fa-wrench"></i> Serviços</a>${frota}
       </div>`;
+    }
     const ROT_STATUS = { PENDENTE: 'Pendente', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PAGAMENTO: 'Aguardando pgto', FINALIZADO: 'Finalizada', COMPLETO: 'Concluída', CANCELADO: 'Cancelada' };
     const CORES_LAV = ['#2f62e6', '#22a15a', '#6b4fd8', '#ff5b2e', '#c2418f', '#0d9488', '#d4a017', '#e5383b'];
     function corLavador(id) { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return CORES_LAV[h % CORES_LAV.length]; }
@@ -540,7 +549,7 @@
 
     async function loadOrdens() {
       const main = document.getElementById('mainContent');
-      main.innerHTML = ATALHOS_LISTA + `<div class="loading-wrap"><div class="spin"></div>Carregando ordens...</div>`;
+      main.innerHTML = atalhosLista() + `<div class="loading-wrap"><div class="spin"></div>Carregando ordens...</div>`;
 
       try {
         const response = await window.api.getOrdens(1, 50, '', currentFilter);
@@ -549,7 +558,7 @@
         renderOrdensList(ordensCache);
       } catch (error) {
         console.error('Erro ao carregar ordens:', error);
-        main.innerHTML = ATALHOS_LISTA + `
+        main.innerHTML = atalhosLista() + `
           <div class="cartao vazio">
             <div class="ic"><i class="fas fa-exclamation-triangle"></i></div>
             <b>Erro ao carregar</b>
@@ -563,7 +572,7 @@
     function renderOrdensList(ordens) {
       const main = document.getElementById('mainContent');
       if (ordens.length === 0) {
-        main.innerHTML = ATALHOS_LISTA + `
+        main.innerHTML = atalhosLista() + `
           <div class="cartao vazio">
             <div class="ic">🫧</div>
             <b>Nada por aqui</b>
@@ -577,7 +586,7 @@
       if (!qtdSemNome) soSemNome = false;
       const btnSemNome = qtdSemNome ? `<div class="atalhos-lista"><button class="semnome${soSemNome ? ' on' : ''}" onclick="alternarSemNome()"><i class="fas fa-user-pen"></i> ${soSemNome ? 'Mostrar todas' : `Sem nome (${qtdSemNome})`}</button></div>` : '';
       if (soSemNome) ordens = ordens.filter(ehSemNome);
-      main.innerHTML = ATALHOS_LISTA + btnSemNome + `<div class="lista">${ordens.map(ordem => {
+      main.innerHTML = atalhosLista() + btnSemNome + `<div class="lista">${ordens.map(ordem => {
         const status = ordem.status || 'PENDENTE';
         // Nomes dos serviços: usa ordem.servicos ou deriva dos items (inclui nomeCustom de itens avulsos)
         let svcNomes = (ordem.servicos || []).map(s => s.nome).join(', ');
@@ -606,7 +615,8 @@
           ? `<button class="sem-nome" onclick="event.stopPropagation();abrirNomeOrdem('${ordem.id}')"><i class="fas fa-plus"></i> Pôr nome</button>`
           : `<b>${escHtml(ordem.cliente?.nome || '—')}</b>`;
         return `<article class="cartao ordem${ordem.frota ? ' frota' : ''}" data-st="${status}" onclick="viewOrdem('${ordem.id}')">
-            <div class="ordem-topo"><span class="num">#${ordem.numeroOrdem || ordem.id.substring(0, 8).toUpperCase()}</span><span class="quando">${quandoTxt(ordem.createdAt)}</span><span class="tags">${ordem.frota ? '<span class="tag-loc">Localiza</span>' : ''}<span class="status">${ROT_STATUS[status] || status}</span></span></div>
+            <div class="ordem-topo"><span class="num">#${ordem.numeroOrdem || ordem.id.substring(0, 8).toUpperCase()}</span><span class="quando">${quandoTxt(ordem.createdAt)}</span><span class="tags">${ordem.frota ? '<span class="tag-loc">Localiza</span>' : ''}${ordem.frotaPedido ? '<span class="tag-conf">a confirmar</span>' : (ordem.frotaDevolvida ? '<span class="tag-dev">devolvida</span>' : '')}<span class="status">${ROT_STATUS[status] || status}</span></span></div>
+            ${ordem.frotaDevolvida && !ordem.frotaPedido ? `<div class="motivo-dev" style="margin-top: 8px"><i class="fas fa-reply"></i> Devolvida${ordem.frotaDevolvida.por ? ' por ' + escHtml(ordem.frotaDevolvida.por) : ''}: ${escHtml(ordem.frotaDevolvida.motivo || '')}</div>` : ''}
             <div class="ordem-meio">${idVeiculoHtml(ordem)}<div class="info">${nomeHtml}${sub ? `<span>${escHtml(sub)}</span>` : ''}<span>${escHtml(svcTxt)}</span></div></div>
             <div class="ordem-pe"><span class="valor"><small>R$</small>${valorCurto(total)}</span>${falta}${lavsHtml}<span class="acoes" onclick="event.stopPropagation()">${acoes}</span></div>
           </article>`;
@@ -765,6 +775,8 @@
                 <div class="det-item"><small>Pagamento</small><b>${escHtml(currentOrdem.metodoPagamento || '—')}</b></div>
                 <div class="det-item"><small>Lavadores</small><b>${escHtml(lavNomes)}</b></div>
               </div>
+              ${currentOrdem.frotaDevolvida && !currentOrdem.frotaPedido ? `<div class="nota" style="background: #fff1ea"><i class="fas fa-reply"></i> Devolvida${currentOrdem.frotaDevolvida.por ? ' por ' + escHtml(currentOrdem.frotaDevolvida.por) : ''}: ${escHtml(currentOrdem.frotaDevolvida.motivo || '')}</div>` : ''}
+              ${currentOrdem.frotaPedido ? `<div class="nota" style="background: #d9f2e3"><i class="fas fa-hourglass-half"></i> Finalizada por ${escHtml(currentOrdem.frotaPedido.porNome || 'equipe')}, esperando confirmação. <a href="/frota-confirmar.html">Confirmar frota</a></div>` : ''}
               ${svcHtml}
               ${addHtml}
               ${obsHtml}

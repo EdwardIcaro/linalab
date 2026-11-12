@@ -1389,6 +1389,8 @@ function comNormalizeWashers(order){
   return [];
 }
 function comWasherShare(order, washerId, lavadorComissao){
+  // Frota finalizada pela equipe, esperando o dono confirmar: ganho já calculado no pedido
+  if(order?.emAnalise) return parseFloat(order.ganhoEmAnalise||0);
   const washers = comNormalizeWashers(order);
   if(!washers.length || !washerId) return 0;
   const valorTotal = parseFloat(order?.valorTotal||0);
@@ -1470,7 +1472,7 @@ function comCalcStats(){
     return { modo:'SALARIO', divida, semanaOrdens, mesOrdens };
   }
 
-  let semana=0, mes=0, creditosFinalizados=0, creditosPendentes=0;
+  let semana=0, mes=0, creditosFinalizados=0, creditosPendentes=0, emAnalise=0;
   (comData.ordens||[]).forEach(o=>{
     if(!['FINALIZADO','EM_ANDAMENTO','AGUARDANDO_PAGAMENTO'].includes(o.status)) return;
     const g = comWasherShare(o, comLavadorId, comData.comissao);
@@ -1482,12 +1484,14 @@ function comCalcStats(){
       const d = new Date(o.dataFim||o.createdAt);
       if(d>=weekStart) semana += g;
       if(d>=monthStart) mes += g;
+    } else if(o.emAnalise){
+      emAnalise += g;
     } else {
       if(!comissaoJaFoiPaga) creditosPendentes += g;
     }
   });
   const saldo = creditosFinalizados - divida;
-  return { modo:comModo, divida, saldo, creditosPendentes, semana, mes };
+  return { modo:comModo, divida, saldo, creditosPendentes, emAnalise, semana, mes };
 }
 
 // ── Render geral ──
@@ -1535,6 +1539,7 @@ function renderComHero(){
       <div class="com-bal${s.saldo<0?' neg':''}${blur}">${comBRL(s.saldo)}</div>
       <div class="com-rows">
         ${chipAberto}
+        ${s.emAnalise>0?`<div class="com-chip"><div class="com-chip-lbl">Em análise</div><div class="com-chip-val amber${blur}">+${comBRL(s.emAnalise)}</div></div>`:''}
         <div class="com-chip"><div class="com-chip-lbl">Vale / dívida</div><div class="com-chip-val red${blur}">${s.divida>0?'-'+comBRL(s.divida):comBRL(0)}</div></div>
       </div>`;
   }
@@ -1632,14 +1637,14 @@ function renderComGanhos(){
         lista += `<div class="com-card">
           <div class="com-ico add"><i class="fas fa-plus"></i></div>
           <div class="com-cinfo"><div class="com-cveic">${adds.join(', ')}</div><div class="com-cserv">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div>${comObsDaOrdem(o)}</div>
-          <div class="com-cright">${valHtml}${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
+          <div class="com-cright">${valHtml}${pend?`<span class="com-cbadge pend">${o.emAnalise?'em análise':'em andamento'}</span>`:''}</div>
         </div>`;
       } else {
         const multi = comIsMulti(o);
         lista += `<div class="com-card">
           <div class="com-ico"><i class="fas fa-car"></i></div>
           <div class="com-cinfo"><div class="com-cveic">${o.veiculo?.modelo||o.itemAvulso||'Veículo'}</div><div class="com-cserv">${comServicosDaOrdem(o)}</div>${comObsDaOrdem(o)}</div>
-          <div class="com-cright">${valHtml}${multi?'<span class="com-cbadge"><i class="fas fa-users"></i> dividida</span>':''}${pend?'<span class="com-cbadge pend">em andamento</span>':''}</div>
+          <div class="com-cright">${valHtml}${multi?'<span class="com-cbadge"><i class="fas fa-users"></i> dividida</span>':''}${pend?`<span class="com-cbadge pend">${o.emAnalise?'em análise':'em andamento'}</span>`:''}</div>
         </div>`;
       }
     });

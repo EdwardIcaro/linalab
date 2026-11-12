@@ -51,6 +51,7 @@ import prisma from './db'; // Importa a instância do Prisma
 import { chaveConfigurada } from './utils/credCrypto';
 import { subscriptionService } from './services/subscriptionService';
 import { cronResumoDiario, cronAlertaCaixaAberto, cronOrdensParadas, cronResumoSemanal } from './services/whatsappNotificationService';
+import { cronResumoFrotaPendente } from './controllers/frotaConfirmacaoController';
 import { fecharBancoHorasDiario } from './services/bancoHorasService';
 import { rodarPontoPendente } from './services/dpEncerramentoService';
 import { rodarLembretesAssinatura } from './services/dpLembreteAssinaturaService';
@@ -283,6 +284,9 @@ cron.schedule('30 19 * * 6', () => { cronResumoSemanal(); }, { timezone: "Americ
 cron.schedule('0 21 * * *', () => {
   cronAlertaCaixaAberto();
 }, { timezone: "America/Sao_Paulo" });
+
+// Frota em 2 etapas: aviso de hora em hora (8h-21h) quando chegam pedidos de finalização novos
+cron.schedule('0 8-21 * * *', () => { cronResumoFrotaPendente(); }, { timezone: "America/Sao_Paulo" });
 
 // WhatsApp: Ordens paradas há 1h+ (a cada 2 horas)
 cron.schedule('0 */2 * * *', () => {

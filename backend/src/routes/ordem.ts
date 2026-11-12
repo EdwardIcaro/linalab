@@ -14,6 +14,7 @@ import {
   gerarPixQr
 } from '../controllers/ordemController';
 import { editarIdentificacao, redeAtiva, buscarClientesParaNome } from '../controllers/ordemEdicaoController';
+import { listarPendentes, confirmar, devolver } from '../controllers/frotaConfirmacaoController';
 
 const router: Router = Router();
 
@@ -26,6 +27,10 @@ router.get('/', authMiddleware, getOrdens);
 router.get('/stats', authMiddleware, getOrdensStats);
 router.get('/dashboard-resumo', authMiddleware, getDashboardResumo);
 router.get('/rede-ativa/:placa', authMiddleware, redeAtiva);
+// Frota em 2 etapas: dono ou cargo com confirmar_frota
+router.get('/frota/pendentes', authMiddleware, requirePermission('confirmar_frota'), listarPendentes);
+router.post('/frota/confirmar', authMiddleware, requirePermission('confirmar_frota'), confirmar);
+router.post('/:id/frota/devolver', authMiddleware, requirePermission('confirmar_frota'), devolver);
 router.get('/clientes-busca', authMiddleware, buscarClientesParaNome);
 router.get('/:id', authMiddleware, getOrdemById);
 router.patch('/:id/identificacao', authMiddleware, editarIdentificacao);

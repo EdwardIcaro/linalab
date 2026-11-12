@@ -668,7 +668,12 @@ export const getExtratoPortal = async (req: Request, res: Response) => {
       salario: lavador.salario,
       empresa: lavador.empresa.nome,
       dataPointAtivo: !!sistemaDP,
-      ordens,
+      // Frota em 2 etapas: finalizada pela equipe e esperando confirmação → "em análise" com o ganho já calculado
+      ordens: ordens.map(({ frotaPedido, frotaDevolvida, ...o }: any) => {
+        if (!frotaPedido) return o;
+        const g = (frotaPedido.ganhos || []).find((x: any) => x.lavadorId === lavador.id);
+        return { ...o, emAnalise: true, ganhoEmAnalise: g ? g.ganho : 0 };
+      }),
       gorjetas,
       fechamentos,
       adiantamentosNaoQuitados,

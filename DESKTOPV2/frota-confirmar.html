@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1e3f">
+  <title>Confirmar frota — Lina X</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/funcionario/decola-base.css">
+  <style>
+    /* Confirmação das ordens da frota (finalização em 2 etapas, 12/11/2026). Dono ou cargo com confirmar_frota. */
+    :root { --loc: #0b7a3b; --loc-claro: #d9f2e3; }
+    .pagina { max-width: 760px; padding-top: calc(22px + env(safe-area-inset-top, 0px)); padding-bottom: 150px; }
+    .topo { display: flex; align-items: center; gap: 10px; }
+    .topo-tit { flex: 1; min-width: 0; }
+    .topo-tit h1 { margin: 0; font: 400 clamp(22px, 6vw, 32px)/1 var(--dela); text-shadow: 3px 3px 0 var(--loc); }
+    .topo-tit small { display: block; margin-top: 4px; font: 700 11px var(--mono); opacity: .75; }
+    .explica { margin: 14px 0; border: 2px dashed #f4ecd866; border-radius: 12px; padding: 10px 12px; font-size: 12px; }
+    .barra-sel { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font: 700 12px var(--mono); }
+    .barra-sel button { padding: 5px 10px; border: 2px solid var(--cream); border-radius: 10px; background: transparent; color: var(--cream); font: 700 11px var(--mono); cursor: pointer; }
+    .lista { display: grid; gap: 14px; }
+    .ord { background: var(--cream); color: var(--ink); border: 3px solid var(--loc); border-radius: 14px; box-shadow: 4px 4px 0 var(--loc); overflow: hidden; }
+    .ord.sel { box-shadow: 4px 4px 0 var(--yellow); border-color: var(--ink); }
+    .ord-topo { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--loc-claro); border-bottom: 2px dashed var(--line); cursor: pointer; }
+    .ord-topo input { width: 22px; height: 22px; accent-color: var(--loc); flex: none; cursor: pointer; }
+    .ord-topo .num { font: 400 16px/1 var(--dela); }
+    .ord-topo .quando { font: 700 10px var(--mono); color: var(--muted); margin-left: auto; text-align: right; }
+    .ord-corpo { padding: 10px 12px; display: grid; gap: 8px; }
+    .linha1 { display: flex; gap: 10px; align-items: center; }
+    .linha1 .info { flex: 1; min-width: 0; }
+    .linha1 .info b { display: block; font: 400 14px var(--dela); }
+    .linha1 .info span { display: block; font-size: 11px; color: var(--muted); }
+    .linha1 .valor { font: 400 18px var(--dela); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .fatos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .fato { background: var(--paper); border: 2px solid var(--ink); border-radius: 9px; padding: 5px 8px; min-width: 0; }
+    .fato small { display: block; font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .fato b { display: block; font: 700 12px var(--mono); overflow-wrap: anywhere; }
+    .fato.inteiro { grid-column: 1 / -1; }
+    .ord-acoes { display: flex; gap: 8px; padding: 8px 12px 12px; flex-wrap: wrap; }
+    .ord-acoes .btn { padding: 7px 12px; font-size: 12px; box-shadow: 2px 2px 0 var(--ink); }
+    .btn.lixo { background: var(--paper); color: #c1361a; }
+    .btn.lixo.armado { background: #c1361a; color: #fff; }
+    .devolver { display: grid; gap: 6px; padding: 0 12px 12px; }
+    .devolver textarea { width: 100%; min-height: 64px; border: 2.5px solid var(--ink); border-radius: 10px; background: #fff; color: var(--ink); padding: 8px; font: 400 13px var(--mono); resize: vertical; }
+    .devolver .linha { display: flex; gap: 8px; }
+    .devolver .btn { padding: 7px 12px; font-size: 12px; box-shadow: 2px 2px 0 var(--ink); }
+    .vazio { text-align: center; padding: 30px 16px; --sc: var(--loc); }
+    .vazio .ic { font-size: 34px; }
+    .vazio b { display: block; font: 400 18px var(--dela); margin: 8px 0 4px; }
+    .vazio p { margin: 0; font-size: 12px; color: var(--muted); }
+    .carregando { display: grid; justify-items: center; gap: 10px; padding: 40px 0; font: 700 12px var(--mono); }
+    .rodape { position: fixed; z-index: 600; left: 0; right: 0; bottom: 0; background: var(--cream); color: var(--ink); border-top: 3px solid var(--ink); box-shadow: 0 -5px 0 var(--loc);
+      padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .rodape-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+    .rodape-in .resumo { flex: 1; min-width: 0; font: 700 12px var(--mono); }
+    .rodape-in .resumo b { display: block; font: 400 17px var(--dela); }
+    .rodape-in .btn { background: var(--loc); color: #fff; }
+    .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 900; background: var(--ink); color: var(--cream);
+      border: 2px solid var(--cream); border-radius: 10px; padding: 9px 14px; font: 700 12px var(--mono); max-width: calc(100% - 32px); }
+    .toast.erro { border-color: var(--red); }
+  </style>
+</head>
+<body>
+<div id="ceu" aria-hidden="true"></div>
+<div id="grao" aria-hidden="true"></div>
+
+<div class="pagina">
+  <header class="topo">
+    <a class="ico-btn" id="btnVoltar" href="/funcionario/ordens.html" title="Voltar"><i class="fas fa-arrow-left"></i></a>
+    <div class="topo-tit"><h1>Confirmar frota</h1><small id="sub">Carregando…</small></div>
+    <button class="ico-btn" onclick="carregar()" title="Atualizar"><i class="fas fa-rotate"></i></button>
+  </header>
+  <p class="explica">Ordens da Localiza que a equipe finalizou. Comissão, caixa e relatórios só entram quando você confirma. Devolver manda a ordem de volta para a equipe com o motivo.</p>
+  <div class="barra-sel" id="barraSel" hidden><button onclick="marcarTodas()" id="btnTodas">Marcar todas</button><span id="contaSel"></span></div>
+  <div id="lista" class="lista"><div class="carregando"><div class="spin"></div>Carregando…</div></div>
+</div>
+
+<div class="rodape" id="rodape" hidden>
+  <div class="rodape-in">
+    <div class="resumo"><b id="rodTotal">R$ 0,00</b><span id="rodQtd">nenhuma selecionada</span></div>
+    <button class="btn" id="btnConfirmar" onclick="confirmarSelecionadas()" disabled><i class="fas fa-check-double"></i> Confirmar</button>
+  </div>
+</div>
+
+<script src="/api.js"></script>
+<script>
+  // Dono volta para o painel dele; subconta para Ordens
+  if (localStorage.getItem('userRole') !== 'USER') document.getElementById('btnVoltar').href = '/ordens.html';
+  if (!localStorage.getItem('token')) location.href = '/login.html';
+
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const brl = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const METODO = { DINHEIRO: 'Dinheiro', PIX: 'Pix', CARTAO: 'Cartão', NFE: 'NF-e', CORTESIA: 'Cortesia', PENDENTE: 'A prazo', OUTRO: 'Outro' };
+  const quando = (d) => {
+    const min = Math.round((Date.now() - new Date(d).getTime()) / 60000);
+    if (min < 60) return `há ${Math.max(min, 1)} min`;
+    if (min < 1440) return `há ${Math.floor(min / 60)} h`;
+    return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+  let ordens = [], sel = new Set(), devolvendo = null, armado = null;
+
+  function toast(msg, erro = false) {
+    document.querySelector('.toast')?.remove();
+    const t = document.createElement('div'); t.className = 'toast' + (erro ? ' erro' : ''); t.textContent = msg;
+    document.body.append(t); setTimeout(() => t.remove(), 3200);
+  }
+
+  async function carregar() {
+    try {
+      const r = await fetchApi('/ordens/frota/pendentes', { semRedirect: true });
+      ordens = r.ordens || [];
+      sel = new Set([...sel].filter(id => ordens.some(o => o.id === id)));
+      desenhar();
+    } catch (e) {
+      const msg = e?.status === 403 || /permiss/i.test(e?.error || '') ? 'Seu cargo não tem a permissão "Confirmar ordens de frota".' : (e?.error || 'Não foi possível carregar.');
+      document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-lock"></i></div><b>Sem acesso</b><p>${esc(msg)}</p></div>`;
+      document.getElementById('sub').textContent = '—';
+    }
+  }
+
+  function desenhar() {
+    const total = ordens.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0);
+    document.getElementById('sub').textContent = ordens.length ? `${ordens.length} esperando · ${brl(total)}` : 'Nada esperando';
+    document.getElementById('barraSel').hidden = !ordens.length;
+    document.getElementById('rodape').hidden = !ordens.length;
+    if (!ordens.length) {
+      document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic">✅</div><b>Tudo confirmado</b><p>Quando a equipe finalizar uma ordem da frota, ela aparece aqui.</p></div>`;
+      return atualizarRodape();
+    }
+    document.getElementById('lista').innerHTML = ordens.map(o => {
+      const p = o.pedido || {};
+      const pags = (p.pagamentos || []).map(x => `${METODO[x.metodo] || x.metodo} ${brl(x.valor)}`).join(' + ') || '—';
+      const ganhos = (p.ganhos || []).map(g => `${g.nome} ${brl(g.ganho)}`).join(' · ') || 'sem lavador';
+      return `<article class="ord${sel.has(o.id) ? ' sel' : ''}" data-id="${o.id}">
+        <label class="ord-topo"><input type="checkbox" ${sel.has(o.id) ? 'checked' : ''} onchange="alternar('${o.id}')">
+          <span class="num">#${o.numeroOrdem}</span>
+          <span class="placa loc" style="min-width: 0"><b style="font-size: 13px">${esc(o.veiculo?.placa || '—')}</b></span>
+          <span class="quando">finalizada ${quando(p.em)}<br>por ${esc(p.porNome || 'equipe')}</span></label>
+        <div class="ord-corpo">
+          <div class="linha1"><div class="info"><b>${esc([o.veiculo?.modelo, o.veiculo?.cor].filter(Boolean).join(' · ') || 'Modelo não informado')}</b><span>${esc((o.servicos || []).join(', ') || '—')}</span></div>
+            <div class="valor">${brl(p.valorFinal)}</div></div>
+          <div class="fatos">
+            <div class="fato"><small>Pagamento</small><b>${esc(pags)}</b></div>
+            <div class="fato"><small>Comissão ao confirmar</small><b>${esc(ganhos)}</b></div>
+            ${p.desconto > 0 ? `<div class="fato"><small>Desconto</small><b>${brl(p.desconto)}</b></div>` : ''}
+            ${o.observacoes ? `<div class="fato inteiro"><small>Observação</small><b>${esc(o.observacoes)}</b></div>` : ''}
+          </div>
+        </div>
+        ${devolvendo === o.id ? `<div class="devolver"><textarea id="motivo" maxlength="300" placeholder="O que a equipe precisa corrigir? Ex.: pagamento é NF-e, não Pix"></textarea>
+          <div class="linha"><button class="btn" onclick="devolvendo=null;desenhar()">Cancelar</button><button class="btn amarelo" style="background: var(--yellow)" onclick="devolver('${o.id}')"><i class="fas fa-reply"></i> Devolver para a equipe</button></div></div>`
+        : `<div class="ord-acoes">
+          <button class="btn" onclick="abrirDevolver('${o.id}')"><i class="fas fa-reply"></i> Devolver</button>
+          <button class="btn lixo${armado === o.id ? ' armado' : ''}" onclick="cancelar('${o.id}')"><i class="fas fa-ban"></i> ${armado === o.id ? 'Toque de novo para cancelar' : 'Cancelar ordem'}</button>
+        </div>`}
+      </article>`;
+    }).join('');
+    if (devolvendo) document.getElementById('motivo')?.focus();
+    atualizarRodape();
+  }
+
+  function atualizarRodape() {
+    const escolhidas = ordens.filter(o => sel.has(o.id));
+    const total = escolhidas.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0);
+    document.getElementById('rodTotal').textContent = brl(total);
+    document.getElementById('rodQtd').textContent = escolhidas.length ? `${escolhidas.length} selecionada${escolhidas.length > 1 ? 's' : ''}` : 'nenhuma selecionada';
+    document.getElementById('contaSel').textContent = `${escolhidas.length} de ${ordens.length}`;
+    document.getElementById('btnTodas').textContent = escolhidas.length === ordens.length && ordens.length ? 'Desmarcar todas' : 'Marcar todas';
+    const b = document.getElementById('btnConfirmar');
+    b.disabled = !escolhidas.length;
+    b.innerHTML = `<i class="fas fa-check-double"></i> Confirmar${escolhidas.length ? ' ' + escolhidas.length : ''}`;
+  }
+
+  function alternar(id) { sel.has(id) ? sel.delete(id) : sel.add(id); document.querySelector(`.ord[data-id="${id}"]`)?.classList.toggle('sel', sel.has(id)); atualizarRodape(); }
+  function marcarTodas() { sel = sel.size === ordens.length ? new Set() : new Set(ordens.map(o => o.id)); desenhar(); }
+  function abrirDevolver(id) { devolvendo = id; armado = null; desenhar(); }
+
+  async function confirmarSelecionadas() {
+    const ids = [...sel]; if (!ids.length) return;
+    const b = document.getElementById('btnConfirmar'); b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando…';
+    try {
+      const r = await fetchApi('/ordens/frota/confirmar', { method: 'POST', body: JSON.stringify({ ids }), semRedirect: true });
+      const falhas = (r.resultados || []).filter(x => !x.ok);
+      sel = new Set(falhas.map(f => f.id));
+      if (falhas.length) toast(`${r.confirmadas} confirmada(s). #${falhas[0].numeroOrdem || ''}: ${falhas[0].erro}`, true);
+      else toast(`${r.confirmadas} ordem(ns) confirmada(s). Comissão e caixa atualizados.`);
+    } catch (e) { toast(e?.error || 'Não foi possível confirmar.', true); }
+    await carregar();
+  }
+
+  async function devolver(id) {
+    const motivo = document.getElementById('motivo')?.value.trim();
+    if (!motivo) return document.getElementById('motivo')?.focus();
+    try {
+      await fetchApi(`/ordens/${id}/frota/devolver`, { method: 'POST', body: JSON.stringify({ motivo }), semRedirect: true });
+      devolvendo = null; sel.delete(id);
+      toast('Ordem devolvida para a equipe.');
+      await carregar();
+    } catch (e) { toast(e?.error || 'Não foi possível devolver.', true); }
+  }
+
+  async function cancelar(id) {
+    if (armado !== id) { armado = id; devolvendo = null; desenhar(); setTimeout(() => { if (armado === id) { armado = null; desenhar(); } }, 4000); return; }
+    armado = null;
+    try {
+      await fetchApi(`/ordens/${id}/cancel`, { method: 'PATCH', semRedirect: true });
+      sel.delete(id);
+      toast('Ordem cancelada.');
+      await carregar();
+    } catch (e) { toast(e?.error || 'Não foi possível cancelar.', true); }
+  }
+
+  carregar();
+</script>
+<script src="/funcionario/decola-base.js"></script>
+</body>
+</html>
