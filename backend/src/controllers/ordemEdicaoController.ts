@@ -15,6 +15,17 @@ interface Req extends Request { empresaId?: string; usuarioNome?: string }
 /** Nome que o sistema grava quando a ordem é criada sem cliente identificado. */
 export const semNome = (nome: string | null | undefined) => !nome || !nome.trim() || nome.trim().toUpperCase() === 'N/A';
 
+/**
+ * Nome que começa com "Localiza" é do cliente da frota, que já existe (13/11/2026).
+ * "Bruno localiza" pode; "Localiza", "localiza bernardo" não.
+ */
+export const MSG_NOME_FROTA = 'Já existe o cliente "Localiza" (frota). Busque pela placa ou escolha "Localiza" na busca de clientes. Para identificar alguém, coloque o nome antes: "Bruno localiza".';
+export function nomeReservadoFrota(nome: unknown): boolean {
+  if (typeof nome !== 'string') return false;
+  const n = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  return /^localiza(\b|$)/.test(n);
+}
+
 /** Lê o JSON `empresa.config` (gravado como texto pelo updateEmpresa). */
 function lerConfig(c: unknown): Record<string, any> {
   if (!c) return {};
@@ -70,6 +81,10 @@ export async function editarIdentificacao(req: Req, res: Response) {
     const frota = (await clientesFrota(empresaId)).has(ordem.clienteId);
     if (frota && (nome || clienteIdNovo)) {
       return res.status(400).json({ error: 'Ordem da frota: o cliente não muda por aqui.' });
+    }
+
+    if (nome && nomeReservadoFrota(nome)) {
+      return res.status(400).json({ error: MSG_NOME_FROTA, code: 'NOME_RESERVADO_FROTA' });
     }
 
     let clienteFinal = ordem.cliente;

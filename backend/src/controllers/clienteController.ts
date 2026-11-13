@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 import { acharVeiculoPorPlaca } from '../services/veiculoPlaca';
+import { nomeReservadoFrota, MSG_NOME_FROTA } from './ordemEdicaoController';
 
 
 interface EmpresaRequest extends Request {
@@ -19,6 +20,9 @@ export const createCliente = async (req: EmpresaRequest, res: Response) => {
       return res.status(400).json({ 
         error: 'Nome do cliente é obrigatório' 
       });
+    }
+    if (nomeReservadoFrota(nome)) {
+      return res.status(400).json({ error: MSG_NOME_FROTA, code: 'NOME_RESERVADO_FROTA' });
     }
 
     // Verificar se cliente já existe na mesma empresa
@@ -256,6 +260,10 @@ export const updateCliente = async (req: EmpresaRequest, res: Response) => {
 
     if (!existingCliente) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+    // Renomear para "Localiza..." só vale para quem já é a Localiza
+    if (nome && nomeReservadoFrota(nome) && !nomeReservadoFrota(existingCliente.nome)) {
+      return res.status(400).json({ error: MSG_NOME_FROTA, code: 'NOME_RESERVADO_FROTA' });
     }
 
     // Verificar duplicidade de email/telefone

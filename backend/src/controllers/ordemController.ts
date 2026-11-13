@@ -10,7 +10,7 @@ import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
 import { hasPermission } from '../middlewares/permissionMiddleware';
 import { avisarSeDuplicadaNaRede } from '../services/ordemDuplicadaRede';
-import { clientesFrota, frotaDuplaAtiva } from './ordemEdicaoController';
+import { clientesFrota, frotaDuplaAtiva, nomeReservadoFrota, MSG_NOME_FROTA } from './ordemEdicaoController';
 import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca, registrarConfirmacao, Correcao } from '../services/veiculoPlaca';
 
 
@@ -69,6 +69,10 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
   } = validation.sanitizedData!;
 
   const isAvulso = tipoOrdem === 'AVULSO';
+
+  if (!clienteId && novoCliente && nomeReservadoFrota(novoCliente.nome)) {
+    return res.status(400).json({ error: MSG_NOME_FROTA, code: 'NOME_RESERVADO_FROTA' });
+  }
 
     const extraLavadores = Array.from(new Set(
       (lavadorIds || []).filter((id: string | null | undefined): id is string => !!id && id !== lavadorId)

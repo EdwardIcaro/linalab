@@ -890,7 +890,12 @@
             };
             this._linkClienteId = null;
           } else {
-            // Completamente novo
+            // Completamente novo — "Localiza..." é o cliente da frota, que já existe
+            const nomeN = (this.form.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+            if (/^localiza(\b|$)/.test(nomeN)) {
+              showToast('Já existe o cliente "Localiza" (frota). Busque pela placa ou escolha "Localiza" na busca. Para identificar alguém, coloque o nome antes: "Bruno localiza".', 'error');
+              return;
+            }
             this.cliente = {
               clienteId: null,
               veiculoId: null,
