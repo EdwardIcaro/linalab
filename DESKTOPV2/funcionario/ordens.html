@@ -609,7 +609,9 @@
         let acoes = '';
         if (pendenteSemLav) acoes += `<button class="acao lav" onclick="openSetarLavadorModal('${ordem.id}')" title="Setar funcionário"><i class="fas fa-user-plus"></i></button>`;
         if (canDone) acoes += `<button class="acao concluir" onclick="markOrderCompletedFromTable('${ordem.id}')" title="Concluir lavagem"><i class="fas fa-flag-checkered"></i></button>`;
-        if (canPay) acoes += `<button class="acao pagar" onclick="openPaymentModalFromTable('${ordem.id}')" title="Pagar"><i class="fas fa-credit-card"></i> Pagar</button>`;
+        if (canPay) acoes += ordem.frota
+          ? `<button class="acao pagar" onclick="openPaymentModalFromTable('${ordem.id}')" title="Finalizar em NF-e"><i class="fas fa-file-invoice"></i> NF-e</button>`
+          : `<button class="acao pagar" onclick="openPaymentModalFromTable('${ordem.id}')" title="Pagar"><i class="fas fa-credit-card"></i> Pagar</button>`;
 
         const nomeHtml = !ordem.frota && semNomeCli(ordem.cliente?.nome) && ehAtiva(status)
           ? `<button class="sem-nome" onclick="event.stopPropagation();abrirNomeOrdem('${ordem.id}')"><i class="fas fa-plus"></i> Pôr nome</button>`
@@ -735,7 +737,9 @@
               </a>`;
             }
           }
-          actionsHtml += `<button class="btn verde" onclick="openPaymentModal(currentOrdem)">
+          actionsHtml += currentOrdem.frota
+            ? `<button class="btn verde" onclick="openPaymentModal(currentOrdem)"><i class="fas fa-file-invoice"></i> Finalizar NF-e</button>`
+            : `<button class="btn verde" onclick="openPaymentModal(currentOrdem)">
             <i class="fas fa-credit-card"></i> Pagar
           </button>`;
         }
@@ -982,6 +986,8 @@
         showToast('Conclua a lavagem antes de registrar pagamento.', 'error');
         return;
       }
+      // Localiza: sem modal — o pagamento entra direto como NF-e (pedido do dono, 12/11/2026)
+      if (order.frota) return finalizarFrotaNfe(order);
       paymentModal.orderId      = order.id;
       paymentModal.originalTotal= order.valorTotal || order.valor || 0;
       paymentModal.total        = paymentModal.originalTotal;
@@ -1471,6 +1477,27 @@
         submitBtn.innerHTML = 'Finalizar ordem';
         paymentModal.isProcessing = false;
       }
+    }
+
+    // Ordem da frota vinculada (Localiza): finaliza na hora com o que falta pagar em NF-e
+    const finalizandoNfe = new Set();
+    async function finalizarFrotaNfe(order) {
+      if (finalizandoNfe.has(order.id)) return;
+      finalizandoNfe.add(order.id);
+      const total = order.valorTotal || order.valor || 0;
+      const pago = (order.pagamentos || []).filter(p => p.status === 'PAGO').reduce((s, p) => s + (p.valor || 0), 0);
+      const falta = Math.max(0, total - pago);
+      try {
+        await window.api.finalizarOrdem(order.id, {
+          pagamentos: falta > 0.009 ? [{ metodo: 'NFE', valor: falta.toFixed(2) }] : [],
+          desconto: 0,
+        });
+        showToast('Ordem da Localiza finalizada em NF-e!', 'success');
+        if (currentView === 'detail') goBack();
+        else patchOrdemLocal(order.id, { status: 'COMPLETO' });
+      } catch (e) {
+        showToast(`Erro: ${e?.error || 'Tente novamente.'}`, 'error');
+      } finally { finalizandoNfe.delete(order.id); }
     }
 
     // ── NAV ───────────────────────────────────────
