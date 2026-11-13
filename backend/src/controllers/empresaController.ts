@@ -247,7 +247,7 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
     const {
       nome, config, horarioAbertura, horarioFechamento,
       finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao,
-      notificationPreferences, paymentMethodsConfig
+      notificationPreferences, paymentMethodsConfig, frotaConfirmacaoDupla
     } = req.body;
 
     if (Array.isArray(id)) {
@@ -266,6 +266,11 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
     
     if (nome) updateData.nome = nome;
     if (config && typeof config === 'object') updateData.config = JSON.stringify(config);
+    if (typeof frotaConfirmacaoDupla === 'boolean') {
+      // mescla no config que já existe (moeda, timezone...) em vez de substituir
+      const base = parseEmpresaConfig({ config: updateData.config ?? existingEmpresa.config }).config || {};
+      updateData.config = JSON.stringify({ ...base, frotaConfirmacaoDupla });
+    }
     if (horarioAbertura) updateData.horarioAbertura = horarioAbertura;
     if (horarioFechamento) updateData.horarioFechamento = horarioFechamento;
     if (finalizacaoAutomatica !== undefined) updateData.finalizacaoAutomatica = finalizacaoAutomatica;

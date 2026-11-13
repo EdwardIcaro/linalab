@@ -10,7 +10,7 @@ import { gerarQrPixAvulso } from '../services/pixService';
 import { getDateRangeBRT } from '../utils/dateUtils';
 import { hasPermission } from '../middlewares/permissionMiddleware';
 import { avisarSeDuplicadaNaRede } from '../services/ordemDuplicadaRede';
-import { clientesFrota } from './ordemEdicaoController';
+import { clientesFrota, frotaDuplaAtiva } from './ordemEdicaoController';
 import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca, registrarConfirmacao, Correcao } from '../services/veiculoPlaca';
 
 
@@ -1743,7 +1743,8 @@ export const finalizarOrdem = async (req: EmpresaRequest, res: Response) => {
     // Quem não pode confirmar só deixa o pedido guardado; caixa, comissão e relatórios
     // só mudam quando o dono (ou cargo com confirmar_frota) confirma — e a confirmação
     // roda esta mesma função com o pedido salvo (confirmandoFrota = true).
-    if (!(req as any).confirmandoFrota && (await clientesFrota(empresaId)).has(ordem.clienteId) && !(await hasPermission(req, 'confirmar_frota'))) {
+    // Cada empresa liga/desliga em Configurações › Preferências (config.frotaConfirmacaoDupla).
+    if (!(req as any).confirmandoFrota && (await clientesFrota(empresaId)).has(ordem.clienteId) && !(await hasPermission(req, 'confirmar_frota')) && (await frotaDuplaAtiva(empresaId))) {
       const ganhos = ganhosPorLavador.length
         ? ganhosPorLavador
         : (ordem.lavadorId ? [{ lavadorId: ordem.lavadorId, ganho: comissaoCalculada }] : []);

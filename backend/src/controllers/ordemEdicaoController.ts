@@ -15,6 +15,22 @@ interface Req extends Request { empresaId?: string; usuarioNome?: string }
 /** Nome que o sistema grava quando a ordem é criada sem cliente identificado. */
 export const semNome = (nome: string | null | undefined) => !nome || !nome.trim() || nome.trim().toUpperCase() === 'N/A';
 
+/** Lê o JSON `empresa.config` (gravado como texto pelo updateEmpresa). */
+function lerConfig(c: unknown): Record<string, any> {
+  if (!c) return {};
+  if (typeof c === 'string') { try { return JSON.parse(c) || {}; } catch { return {}; } }
+  return typeof c === 'object' ? (c as Record<string, any>) : {};
+}
+
+/**
+ * Finalização da frota em 2 etapas ligada nesta empresa? (13/11/2026)
+ * Chave por empresa em `config.frotaConfirmacaoDupla`; sem a chave = ligada (como era antes).
+ */
+export async function frotaDuplaAtiva(empresaId: string): Promise<boolean> {
+  const e = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { config: true } });
+  return lerConfig(e?.config).frotaConfirmacaoDupla !== false;
+}
+
 /** Clientes da frota vinculada (Localiza) desta empresa e das irmãs. */
 export async function clientesFrota(empresaId: string): Promise<Set<string>> {
   const irmas = await empresasIrmas(empresaId);

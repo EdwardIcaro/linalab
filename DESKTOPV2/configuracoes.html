@@ -318,6 +318,21 @@
 
                             <div class="notification-preference-item">
                                 <div>
+                                    <label for="frotaConfirmacaoDupla" class="form-label" style="margin-bottom: 4px;">
+                                        Confirmar ordens da frota (Localiza)
+                                    </label>
+                                    <p class="text-sm text-secondary">
+                                        Se habilitado, quando a equipe finaliza um carro da frota a ordem fica esperando você (ou um cargo com "Confirmar ordens de frota") aceitar ou devolver. Pagamento e comissão só entram depois da confirmação. Desligado, a ordem da frota finaliza direto.
+                                    </p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="frotaConfirmacaoDupla" x-model="preferencias.frotaConfirmacaoDupla">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+
+                            <div class="notification-preference-item">
+                                <div>
                                     <label for="paginaInicialPadrao" class="form-label" style="margin-bottom: 4px;">
                                         Página Inicial Padrão
                                     </label>
@@ -1095,6 +1110,7 @@
 
                 preferencias: {
                     exigirLavadorParaFinalizar: false,
+                    frotaConfirmacaoDupla: true,
                     paginaInicialPadrao: 'index.html',
                     paymentMethods: {
                         DINHEIRO: true,
@@ -1316,6 +1332,7 @@
 
                         // Load business logic settings
                         this.preferencias.exigirLavadorParaFinalizar = empresa.exigirLavadorParaFinalizar || false;
+                        this.preferencias.frotaConfirmacaoDupla = (empresa.config || {}).frotaConfirmacaoDupla !== false;
                         this.preferencias.paginaInicialPadrao = empresa.paginaInicialPadrao || 'index.html';
 
                         // Load payment methods config
@@ -1403,6 +1420,7 @@
 
                         const data = {
                             exigirLavadorParaFinalizar: this.preferencias.exigirLavadorParaFinalizar,
+                            frotaConfirmacaoDupla: this.preferencias.frotaConfirmacaoDupla,
                             paginaInicialPadrao: this.preferencias.paginaInicialPadrao,
                             paymentMethodsConfig: this.preferencias.paymentMethods,
                             notificationPreferences: this.preferencias.notifications
