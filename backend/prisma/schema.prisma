@@ -343,6 +343,11 @@ model OrdemServico {
   finalizadoPor        String?               // nome de quem fechou a ordem — texto, não relação, para o registro continuar legível se a subconta for removida
   frotaPedido          Json?                 // frota vinculada: finalização pedida pela equipe, esperando o dono/cargo confirmar ({ body, porNome, em, valorFinal, ganhos, ... })
   frotaDevolvida       Json?                 // frota: confirmador devolveu para a equipe ({ motivo, por, em })
+  // Acompanhamento do veículo (link do cliente, 15/11/2026)
+  acompToken           String?               @unique // código do link público /v/:token
+  acompEnviadoEm       DateTime?             // link chegou ao cliente pelo WhatsApp da empresa
+  acompAbertoEm        DateTime?             // cliente abriu a página pela 1ª vez
+  acompProntoEm        DateTime?             // aviso de "pronto" foi enfileirado
   cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
@@ -1616,7 +1621,7 @@ model EmailDestinatario {
 model WhatsappEnvio {
   id         String    @id @default(cuid())
   empresaId  String
-  origem     String    // "EMAIL_AUTOMACAO"
+  origem     String    // "EMAIL_AUTOMACAO" | "ACOMP_LINK" | "ACOMP_PRONTO"
   destino    String    // telefone/JID já resolvido e validado pelo backend
   texto      String    // zerado ("") depois de ENVIADO
   status     String    @default("PENDENTE") // PENDENTE | ENVIADO | ERRO
@@ -1624,9 +1629,13 @@ model WhatsappEnvio {
   erro       String?
   createdAt  DateTime  @default(now())
   enviadoEm  DateTime?
+  canal      String    @default("LINA") // LINA (número da Lina) | EMPRESA (número da empresa)
+  ordemId    String?   // acompanhamento do veículo: ordem a que a mensagem se refere
+  enviarApos DateTime? // não envia antes disso (link sai X min depois de criar a ordem)
   empresa    Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([status, createdAt])
+  @@index([ordemId])
   @@map("whatsapp_envios")
 }
 

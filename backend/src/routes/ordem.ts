@@ -15,6 +15,7 @@ import {
 } from '../controllers/ordemController';
 import { editarIdentificacao, redeAtiva, buscarClientesParaNome } from '../controllers/ordemEdicaoController';
 import { listarPendentes, confirmar, devolver } from '../controllers/frotaConfirmacaoController';
+import { getAcompanhamentoOrdem, postEnviarAcompanhamento, postNaoEnviarAcompanhamento } from '../controllers/acompanhamentoController';
 
 const router: Router = Router();
 
@@ -34,6 +35,10 @@ router.post('/:id/frota/devolver', authMiddleware, requirePermission('confirmar_
 router.get('/clientes-busca', authMiddleware, buscarClientesParaNome);
 router.get('/:id', authMiddleware, getOrdemById);
 router.patch('/:id/identificacao', authMiddleware, editarIdentificacao);
+// Acompanhamento do veículo (link do cliente)
+router.get('/:id/acompanhamento', authMiddleware, getAcompanhamentoOrdem);
+router.post('/:id/acompanhamento/enviar', authMiddleware, postEnviarAcompanhamento);
+router.post('/:id/acompanhamento/nao-enviar', authMiddleware, postNaoEnviarAcompanhamento);
 router.put('/:id', authMiddleware, updateOrdem);
 router.post('/:id/finalizar', authMiddleware, finalizarOrdem);
 router.post('/:id/pix', authMiddleware, gerarPixQr);

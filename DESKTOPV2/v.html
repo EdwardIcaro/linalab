@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Acompanhamento do veículo</title>
+<!-- Acompanhamento do veículo (15/11/2026) — página pública do cliente, link /v/CÓDIGO.
+     Protótipo aprovado: Features/front/acompanhamento-veiculo.html. Dados: GET /api/v/:token -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<script src="/pixel-kit/pixelkit.js"></script>
+<script src="/pixel-kit/sprites-lavagem.js"></script>
+<script src="/pixel-kit/cena-lavagem.js"></script>
+<script src="/pixel-kit/icones-pixel.js"></script>
+<script defer src="/vendor/alpinejs/cdn.min.js"></script>
+<style>
+  :root{
+    --primary:#00bcd4; --primary-dk:color-mix(in srgb,var(--primary) 78%,#000); --primary-lt:color-mix(in srgb,var(--primary) 14%,#fff);
+    --green:#16a34a; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+    --ink:#1b1e24; --pxb:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);
+    --legivel:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#e4e8ec}
+  body{font-family:'Pixelify Sans',system-ui,sans-serif;font-variant-ligatures:none;color:var(--text);min-height:100vh;
+       background-image:linear-gradient(45deg,rgba(27,30,36,.04) 25%,transparent 25% 75%,rgba(27,30,36,.04) 75%),linear-gradient(45deg,rgba(27,30,36,.04) 25%,transparent 25% 75%,rgba(27,30,36,.04) 75%);
+       background-size:8px 8px;background-position:0 0,4px 4px}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  a{color:inherit;text-decoration:none}
+  [x-cloak]{display:none!important}
+  .wrap{max-width:480px;margin:0 auto;min-height:100vh;overflow-x:hidden}
+  .ip{width:32px;height:32px;display:inline-block;flex-shrink:0;vertical-align:middle}
+
+  .c-head{--dz:rgba(255,255,255,.07);background-color:var(--primary-dk);color:#fff;padding:18px 20px 58px;position:relative;overflow:hidden;
+          background-image:linear-gradient(45deg,var(--dz) 25%,transparent 25% 75%,var(--dz) 75%),linear-gradient(45deg,var(--dz) 25%,transparent 25% 75%,var(--dz) 75%);background-size:8px 8px;background-position:0 0,4px 4px}
+  .c-emp{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+  .c-logo{width:38px;height:38px;background:#fff;color:var(--primary-dk);display:grid;place-items:center;box-shadow:var(--pxb);font-size:20px;font-weight:700;margin:3px;flex-shrink:0}
+  .c-emp b{display:block;font-size:16px;font-weight:600}
+  .c-emp small{opacity:.8;font-size:12px}
+  .c-ola{margin-top:20px;font-size:15px;opacity:.85;position:relative;z-index:1}
+  .c-tit{font-size:25px;font-weight:600;line-height:1.2;margin-top:2px;text-shadow:2px 2px 0 rgba(0,0,0,.28);position:relative;z-index:1;text-wrap:balance}
+  .c-deco{position:absolute;right:14px;top:14px;width:60px;height:44px;z-index:0;opacity:.5;pointer-events:none}
+  .c-deco .ip{position:absolute;width:16px;height:16px;animation:flutua 2.4s steps(4) infinite alternate}
+  .c-deco .ip:nth-child(1){width:32px;height:32px;left:28px;top:2px}
+  .c-deco .ip:nth-child(2){left:16px;top:28px;animation-delay:-1.2s}
+  .c-deco .ip:nth-child(3){left:4px;top:4px;animation-duration:1.6s}
+  @keyframes flutua{to{transform:translateY(-8px)}}
+
+  .c-body{padding:0 17px 24px;margin-top:-40px;display:grid;gap:18px;position:relative;z-index:2}
+  .card{background:#fff;padding:16px;box-shadow:var(--pxb),0 9px 0 0 rgba(27,30,36,.16)}
+  .card h4{font-family:'Silkscreen',monospace;font-size:12px;font-weight:400;letter-spacing:.5px;color:#5d6670;display:flex;align-items:center;gap:8px;margin-bottom:12px;text-transform:uppercase}
+
+  .cena{display:block;aspect-ratio:96/48;image-rendering:pixelated;background:#94a0ad;box-shadow:0 0 0 3px var(--ink);margin:3px 3px 17px;width:calc(100% - 6px)}
+  .st{display:flex;gap:14px;align-items:center;justify-content:space-between}
+  .st b{font-size:23px;font-weight:600;display:block}
+  .st span{font:15px/1.35 var(--legivel);color:#475569;display:block;margin-top:2px}
+  .merc{display:flex;flex-direction:column;flex-shrink:0;background:#fff;text-align:center;margin:2px;box-shadow:0 -2px 0 0 var(--ink),0 2px 0 0 var(--ink),-2px 0 0 0 var(--ink),2px 0 0 0 var(--ink)}
+  .merc i{background:#003399;color:#fff;font:700 8px/1 var(--legivel);letter-spacing:2px;padding:3px 0 2px;font-style:normal}
+  .merc span{font:800 19px/1 var(--legivel)!important;letter-spacing:1.5px;color:#111!important;padding:5px 9px 6px;margin:0!important}
+  .vivo{font-size:12px;color:var(--muted);margin-top:14px;display:flex;align-items:center;gap:6px}
+  .vivo i{width:8px;height:8px;background:var(--green);display:inline-block;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:.25}}
+
+  .tl{display:grid;grid-template-columns:repeat(3,1fr);margin-top:18px;position:relative}
+  .tl::before{content:'';position:absolute;top:13px;left:16.6%;right:16.6%;height:4px;background:repeating-linear-gradient(90deg,#c3cad2 0 6px,transparent 6px 10px)}
+  .tl .bar{position:absolute;top:13px;left:16.6%;height:4px;background:var(--primary);transition:width .4s}
+  .tl div{text-align:center;position:relative;color:var(--muted);font-family:'Silkscreen',monospace;font-size:11px}
+  .tl .dot{width:30px;height:30px;background:#fff;box-shadow:var(--pxb);margin:3px auto 8px;display:grid;place-items:center;font-family:'Pixelify Sans',sans-serif;font-size:15px;font-weight:700;position:relative;z-index:1}
+  .tl .dot .ip{width:16px;height:16px}
+  .tl .now .dot{background:var(--primary);color:#fff;animation:pulsa 1s steps(1) infinite}
+  .tl .ok,.tl .now{color:var(--text);font-weight:700}
+  .tl small{display:block;font-family:'Pixelify Sans',sans-serif;font-weight:400;color:var(--muted);font-size:12px;margin-top:1px}
+  @keyframes pulsa{50%{background:var(--primary-dk)}}
+
+  .pronto-box{--dz:rgba(22,163,74,.07);background-color:#f0fdf4;background-image:linear-gradient(45deg,var(--dz) 25%,transparent 25% 75%,var(--dz) 75%),linear-gradient(45deg,var(--dz) 25%,transparent 25% 75%,var(--dz) 75%);background-size:8px 8px;background-position:0 0,4px 4px}
+  .pix-v{font-size:36px;font-weight:700;margin:2px 0}
+  .qr{width:180px;max-width:100%;padding:8px;background:#fff;box-shadow:var(--pxb);margin:18px auto 6px}
+  .qr img{width:100%;display:block;image-rendering:pixelated}
+  .pix-code{display:flex;gap:10px;margin-top:16px;align-items:center}
+  .pix-code input{flex:1;min-width:0;border:none;box-shadow:inset 0 0 0 3px #c3cad2;font:11px ui-monospace,Consolas,monospace;margin:3px 0;padding:10px;color:var(--muted);background:#fff}
+  .pago{display:flex;gap:8px;align-items:center;color:var(--green);font-size:17px;font-weight:600}
+  .leve{font:13px/1.45 var(--legivel);color:var(--muted)}
+
+  .btn{background:var(--primary-dk);color:#fff;margin:3px;font-size:16px;font-weight:600;padding:9px 14px 12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+       box-shadow:var(--pxb),inset 0 -4px 0 rgba(0,0,0,.24),inset 0 3px 0 rgba(255,255,255,.22)}
+  .btn:active{transform:translateY(2px);box-shadow:var(--pxb),inset 0 -1px 0 rgba(0,0,0,.24)}
+  .btn.green{background:#2fb35a}
+  .btn.ghost{background:#fff;color:var(--text);box-shadow:var(--pxb),inset 0 -4px 0 #d5dce4}
+  .btn.full{width:calc(100% - 6px)}
+  .btn .ip{margin:-6px 0 -6px -4px}
+
+  .row{display:flex;justify-content:space-between;gap:12px;font:15px var(--legivel);padding:8px 0;background:repeating-linear-gradient(90deg,#d5dce4 0 4px,transparent 4px 8px) bottom/100% 2px no-repeat}
+  .row:last-child{background:none}
+  .row.tot{font-size:20px;font-weight:800;background:linear-gradient(var(--ink),var(--ink)) top/100% 3px no-repeat;margin-top:6px;padding-top:12px}
+  .row .v{white-space:nowrap}
+
+  .contato{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .contato .btn{font-size:15px;padding-left:8px;padding-right:8px;white-space:nowrap}
+  .contato.um{grid-template-columns:1fr}
+  .end{font:14px/1.5 var(--legivel);color:var(--muted);margin-top:12px}
+  .rodape{text-align:center;font-family:'Silkscreen',monospace;font-size:10px;color:#94a3b8;padding:6px 0 4px}
+  .rodape b{color:var(--muted)}
+
+  .vazio{padding:72px 28px;text-align:center}
+  .vazio .ip{width:64px;height:64px}
+  .vazio b{display:block;font-size:23px;font-weight:600;margin:16px 0 6px}
+  .vazio p{font:15px/1.5 var(--legivel);color:var(--muted);margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="wrap" x-data="acomp()" x-init="iniciar()" x-cloak>
+
+  <!-- carregando / não encontrado / erro -->
+  <template x-if="!d && fase!=='ok'">
+    <div class="vazio">
+      <div x-html="pi(fase==='carregando' ? 'ampulheta' : 'alerta')"></div>
+      <b x-text="fase==='carregando' ? 'Carregando…' : (fase==='naoEncontrado' ? 'Link não encontrado' : 'Não deu para carregar')"></b>
+      <p x-show="fase!=='carregando'" x-text="fase==='naoEncontrado' ? 'Confira se o link está completo, do jeito que chegou no WhatsApp.' : 'Verifique a internet e tente de novo.'"></p>
+      <button class="btn full" x-show="fase==='erro'" @click="carregar()" x-html="pi('relogio')+'Tentar de novo'"></button>
+    </div>
+  </template>
+
+  <!-- link expirado -->
+  <template x-if="d && d.expirado">
+    <div class="vazio">
+      <div x-html="pi('ampulheta')"></div>
+      <b>Este acompanhamento terminou</b>
+      <p x-text="`Seu veículo foi retirado em ${dataCurta(d.retiradoEm)}. O link fica disponível por 7 dias depois da retirada.`"></p>
+      <template x-if="d.empresa.whatsapp">
+        <a class="btn green full" :href="zap()" target="_blank" rel="noopener" x-html="pi('chat')+'Falar com a ' + esc(d.empresa.nome)"></a>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="d && !d.expirado">
+    <div>
+      <div class="c-head">
+        <div class="c-emp"><div class="c-logo" x-text="(d.empresa.nome||'?').trim().charAt(0).toUpperCase()"></div><div><b x-text="d.empresa.nome"></b><small>Acompanhamento</small></div></div>
+        <div class="c-ola" x-text="d.cliente ? `Olá, ${d.cliente}` : 'Olá!'"></div>
+        <div class="c-tit" x-text="titulo()"></div>
+        <div class="c-deco" aria-hidden="true" x-html="pi('bolha')+pi('bolha')+pi('brilho')"></div>
+      </div>
+
+      <div class="c-body">
+        <!-- status -->
+        <div class="card">
+          <canvas class="cena" role="img" :aria-label="st().t" x-init="iniciarCena($el)"></canvas>
+          <div class="st">
+            <div><b x-text="st().t"></b><span x-text="st().s"></span></div>
+            <div class="merc" :aria-label="'Placa ' + d.veiculo.placa"><i>BRASIL</i><span x-text="d.veiculo.placa"></span></div>
+          </div>
+          <template x-if="d.ordem.status!=='cancelado'">
+            <div class="tl">
+              <span class="bar" :style="`width:${({pendente:0,lavando:33.3})[d.ordem.status] ?? 66.6}%`"></span>
+              <div :class="passo(0)"><span class="dot" x-html="d.ordem.status==='pendente' ? '1' : pi('check')"></span>Recebido<small x-text="hora(d.ordem.recebidoEm)"></small></div>
+              <div :class="passo(1)"><span class="dot" x-html="['pronto','finalizado'].includes(d.ordem.status) ? pi('check') : '2'"></span>Lavando<small x-text="d.ordem.status==='pendente' ? '—' : ' '"></small></div>
+              <div :class="passo(2)"><span class="dot" x-html="d.ordem.status==='finalizado' ? pi('check') : '3'"></span>Pronto<small x-text="hora(d.ordem.prontoEm) || '—'"></small></div>
+            </div>
+          </template>
+          <div class="vivo" x-show="!['finalizado','cancelado'].includes(d.ordem.status)"><i></i> Esta página atualiza sozinha</div>
+        </div>
+
+        <!-- pronto: pagamento -->
+        <template x-if="d.ordem.status==='pronto' && d.mostrarValor">
+          <div class="card pronto-box">
+            <h4><span style="display:contents" x-html="pi('moeda')"></span>Pagamento</h4>
+            <template x-if="!d.pago">
+              <div>
+                <div class="leve" x-text="d.pix ? 'Pague por PIX e é só retirar' : 'Valor para retirada'"></div>
+                <div class="pix-v" x-text="brl(d.restante)"></div>
+                <template x-if="d.pix">
+                  <div>
+                    <div class="qr"><img :src="d.pix.qrDataUrl" alt="QR Code do PIX"></div>
+                    <div class="pix-code">
+                      <input readonly :value="d.pix.payload" x-ref="pix" aria-label="PIX copia e cola" @focus="$event.target.select()">
+                      <button class="btn" @click="copiar()" x-html="copiado ? pi('check')+'Copiado' : pi('copiar')+'Copiar'"></button>
+                    </div>
+                    <div class="leve" style="margin-top:8px" x-text="`Recebedor: ${d.pix.recebedor}. Se preferir, pague no balcão.`"></div>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="d.pago"><div class="pago"><span style="display:contents" x-html="pi('selo')"></span>Pagamento recebido. É só retirar.</div></template>
+          </div>
+        </template>
+
+        <!-- serviços -->
+        <div class="card" x-show="d.itens.length">
+          <h4><span style="display:contents" x-html="pi('lista')"></span>Serviços</h4>
+          <template x-for="(it, i) in d.itens" :key="i">
+            <div class="row"><span x-text="(it.quantidade > 1 ? it.quantidade + '× ' : '') + it.nome"></span><span class="v" x-show="it.valor !== null" x-text="brl(it.valor)"></span></div>
+          </template>
+          <div class="row tot" x-show="d.total !== null"><span>Total</span><span class="v" x-text="brl(d.total)"></span></div>
+        </div>
+
+        <!-- contato -->
+        <div class="card" x-show="d.empresa.whatsapp || d.empresa.endereco || d.empresa.horario">
+          <h4><span style="display:contents" x-html="pi('chat')"></span>Fale com a gente</h4>
+          <div class="contato" :class="{um: !(d.empresa.whatsapp && d.empresa.endereco)}" x-show="d.empresa.whatsapp || d.empresa.endereco">
+            <template x-if="d.empresa.whatsapp"><a class="btn green" :href="zap()" target="_blank" rel="noopener" x-html="pi('chat')+'WhatsApp'"></a></template>
+            <template x-if="d.empresa.endereco"><a class="btn ghost" :href="mapa()" target="_blank" rel="noopener" x-html="pi('pin')+'Como chegar'"></a></template>
+          </div>
+          <div class="end" x-show="d.empresa.endereco || d.empresa.horario">
+            <span x-text="d.empresa.endereco || ''"></span><br x-show="d.empresa.endereco && d.empresa.horario"><span x-text="d.empresa.horario || ''"></span>
+          </div>
+        </div>
+
+        <div class="rodape" x-html="`Ordem #${d.ordem.numero} · feito com <b>Lina Wash</b>`"></div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+// Cor do cadastro (texto livre) → cor do sprite
+const CORES = { branco:'#e6eaee', branca:'#e6eaee', prata:'#aeb7c0', cinza:'#8a939d', preto:'#3b4048', preta:'#3b4048', vermelho:'#c43a31', vermelha:'#c43a31',
+  vinho:'#7a2430', azul:'#2f6db3', verde:'#3f8f4f', amarelo:'#e2b52b', amarela:'#e2b52b', bege:'#d8c7a3', marrom:'#7b5434', laranja:'#e07a2c', dourado:'#c9a548', roxo:'#6b4ea0' };
+let cena = null;
+
+function acomp() {
+  return {
+    token: (location.pathname.split('/').filter(Boolean)[1] || new URLSearchParams(location.search).get('t') || '').toUpperCase(),
+    d: null, fase: 'carregando', copiado: false, timer: null,
+
+    async iniciar() {
+      await this.carregar();
+      this.timer = setInterval(() => { if (!document.hidden && this.vivo()) this.carregar(); }, 20000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && this.vivo()) this.carregar(); });
+    },
+    vivo() { return !this.d || (!this.d.expirado && !['finalizado', 'cancelado'].includes(this.d.ordem.status)); },
+    async carregar() {
+      if (!/^[A-Z2-9]{6,10}$/.test(this.token)) { this.fase = 'naoEncontrado'; return; }
+      try {
+        // ?equipe=1 (botão "Ver página" da ordem) não conta como "cliente abriu"
+        const equipe = new URLSearchParams(location.search).has('equipe') ? '?equipe=1' : '';
+        const r = await fetch('/api/v/' + this.token + equipe, { cache: 'no-store' });
+        if (r.status === 404) { this.fase = 'naoEncontrado'; this.d = null; return; }
+        if (!r.ok) throw new Error(r.status);
+        const novo = await r.json();
+        this.d = novo; this.fase = 'ok';
+        if (novo.empresa?.cor) document.documentElement.style.setProperty('--primary', novo.empresa.cor);
+        document.title = `${novo.empresa?.nome || 'Lina Wash'} · Acompanhamento`;
+        cena?.set(this.opcoesCena());
+      } catch { if (!this.d) this.fase = 'erro'; }
+    },
+
+    pi(nome) { try { return IconesPixel.svg(nome); } catch { return ''; } },
+    esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]); },
+    brl(n) { return (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
+    hora(iso) { return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : ''; },
+    dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' }) : ''; },
+    zap() { return 'https://wa.me/' + this.d.empresa.whatsapp; },
+    mapa() { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.d.empresa.endereco); },
+
+    titulo() {
+      return ({ finalizado: 'Obrigado pela visita', cancelado: 'Atualização do seu atendimento', pronto: 'Seu veículo está pronto' })[this.d.ordem.status] ?? 'Seu veículo está com a gente';
+    },
+    st() {
+      const o = this.d.ordem;
+      return ({
+        pendente:   { t: 'Recebido', s: 'Na fila. A lavagem começa em breve.' },
+        lavando:    { t: 'Lavando', s: 'A lavagem já começou.' },
+        pronto:     { t: 'Pronto para retirada', s: o.prontoEm ? `Ficou pronto às ${this.hora(o.prontoEm)}.` : 'Já pode retirar.' },
+        finalizado: { t: 'Retirado', s: o.retiradoEm ? `Retirado às ${this.hora(o.retiradoEm)}.` : 'Obrigado!' },
+        cancelado:  { t: 'Serviço cancelado', s: 'Fale com a gente se tiver alguma dúvida.' },
+      })[o.status] || { t: '', s: '' };
+    },
+    passo(i) { const at = { pendente: 0, lavando: 1, pronto: 2, finalizado: 3 }[this.d.ordem.status]; return i < at ? 'ok' : i === at ? 'now' : ''; },
+
+    opcoesCena() {
+      const v = this.d.veiculo, cor = String(v.cor || '').trim().toLowerCase().split(/\s+/)[0];
+      return { status: this.d.ordem.status, veiculo: v.tipo, cor: CORES[cor] || '#aeb7c0', placa: v.placa,
+               marca: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#00bcd4' };
+    },
+    iniciarCena(el) { try { cena?.parar(); cena = CenaLavagem.criar(el, this.opcoesCena()); } catch (e) { console.warn('cena', e); } },
+
+    async copiar() {
+      const txt = this.d.pix.payload;
+      try { await navigator.clipboard.writeText(txt); }
+      catch { const i = this.$refs.pix; i.focus(); i.select(); try { document.execCommand('copy'); } catch {} }
+      this.copiado = true; setTimeout(() => (this.copiado = false), 1500);
+    },
+  };
+}
+</script>
+</body>
+</html>

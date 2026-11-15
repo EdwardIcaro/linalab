@@ -11,6 +11,7 @@ import { getDateRangeBRT } from '../utils/dateUtils';
 import { hasPermission } from '../middlewares/permissionMiddleware';
 import { avisarSeDuplicadaNaRede } from '../services/ordemDuplicadaRede';
 import { clientesFrota, frotaDuplaAtiva, nomeReservadoFrota, MSG_NOME_FROTA } from './ordemEdicaoController';
+import { agendarLinkAoCriar, descartarPendentes } from '../services/acompanhamentoService';
 import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, normalizarPlaca, registrarConfirmacao, Correcao } from '../services/veiculoPlaca';
 
 
@@ -409,6 +410,7 @@ export const createOrdem = async (req: EmpresaRequest, res: Response) => {
 
     // ✅ OTIMIZAÇÃO: Enviar notificação em background (não bloqueia a resposta)
     setImmediate(async () => {
+      agendarLinkAoCriar(ordem.id); // acompanhamento do veículo (link pelo WhatsApp da empresa)
       try {
         await createNotification({
           empresaId: empresaId,
@@ -1215,6 +1217,7 @@ export const cancelOrdem = async (req: EmpresaRequest, res: Response) => {
       }
     });
 
+    descartarPendentes(id);
     notifyOrdemCancelada(req.empresaId!, {
       numeroOrdem: updatedOrdem.numeroOrdem,
       clienteNome: updatedOrdem.cliente?.nome ?? 'Cliente',
@@ -1564,6 +1567,7 @@ export const deleteOrdem = async (req: EmpresaRequest, res: Response) => {
     });
 
     res.json({ message: 'Ordem de serviço deletada com sucesso' });
+    descartarPendentes(id);
 
     setImmediate(async () => {
       try {

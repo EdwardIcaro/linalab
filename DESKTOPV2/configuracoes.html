@@ -349,6 +349,85 @@
                         </div>
                     </div>
 
+                    <!-- Acompanhamento do veículo (15/11/2026) -->
+                    <div class="secao-preferencia" style="margin-top: 32px;">
+                        <h4 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-car-side mr-2" style="color: var(--primary-color);"></i>
+                            Acompanhamento do Veículo
+                        </h4>
+                        <p class="text-sm text-secondary mb-4">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            O cliente recebe um link com o andamento do serviço pelo <b>WhatsApp da empresa</b> (precisa estar conectado). Ordens da Localiza e avulsas ficam de fora, e só sai para cliente com telefone cadastrado.
+                        </p>
+                        <div class="notification-preference-list">
+                            <div class="notification-preference-item">
+                                <div>
+                                    <label for="acompAtivo" class="form-label" style="margin-bottom: 4px;">Enviar o link ao cliente</label>
+                                    <p class="text-sm text-secondary">Ligado, o link sai sozinho quando a ordem é criada.</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="acompAtivo" x-model="preferencias.acomp.ativo">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div :style="preferencias.acomp.ativo ? '' : 'opacity:.45;pointer-events:none'">
+                                <div class="notification-preference-item">
+                                    <div>
+                                        <label for="acompAtraso" class="form-label" style="margin-bottom: 4px;">Quando enviar</label>
+                                        <p class="text-sm text-secondary">Um pequeno atraso dá tempo de corrigir algo na ordem antes do cliente ver.</p>
+                                    </div>
+                                    <select id="acompAtraso" x-model.number="preferencias.acomp.atraso" class="form-select" style="max-width: 200px;">
+                                        <option value="0">Na hora</option>
+                                        <option value="3">3 min depois</option>
+                                        <option value="5">5 min depois</option>
+                                        <option value="10">10 min depois</option>
+                                    </select>
+                                </div>
+                                <div class="notification-preference-item">
+                                    <div>
+                                        <label for="acompPronto" class="form-label" style="margin-bottom: 4px;">Avisar quando ficar pronto</label>
+                                        <p class="text-sm text-secondary">Segunda mensagem curta quando a ordem vai para "Aguardando pagamento".</p>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" id="acompPronto" x-model="preferencias.acomp.avisoPronto">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                                <div class="notification-preference-item">
+                                    <div>
+                                        <label for="acompValor" class="form-label" style="margin-bottom: 4px;">Mostrar valor e PIX na página</label>
+                                        <p class="text-sm text-secondary">Usa a chave da Integração PIX. Sem chave, mostra só o valor.</p>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" id="acompValor" x-model="preferencias.acomp.mostrarValor">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                                <div class="form-group" style="margin-top: 12px;">
+                                    <label for="acompEndereco" class="form-label">Endereço (botão "Como chegar")</label>
+                                    <input id="acompEndereco" class="form-input" maxlength="160" placeholder="Ex.: Av. Brasil, 1200 · Centro" x-model="preferencias.acomp.endereco">
+                                </div>
+                                <div class="form-group">
+                                    <label for="acompHorario" class="form-label">Horário de funcionamento</label>
+                                    <input id="acompHorario" class="form-input" maxlength="80" placeholder="Ex.: Seg a Sáb, 8h às 18h" x-model="preferencias.acomp.horario">
+                                </div>
+                                <div class="form-group">
+                                    <label for="acompTplLink" class="form-label">Mensagem do link</label>
+                                    <textarea id="acompTplLink" class="form-input" rows="4" maxlength="600" x-model="preferencias.acomp.tplLink"></textarea>
+                                </div>
+                                <div class="form-group" x-show="preferencias.acomp.avisoPronto">
+                                    <label for="acompTplPronto" class="form-label">Mensagem de pronto</label>
+                                    <textarea id="acompTplPronto" class="form-input" rows="4" maxlength="600" x-model="preferencias.acomp.tplPronto"></textarea>
+                                </div>
+                                <p class="text-sm text-secondary">
+                                    Pode usar: <code x-text="'{{nome}}'"></code> <code x-text="'{{placa}}'"></code> <code x-text="'{{empresa}}'"></code> <code x-text="'{{valor}}'"></code> <code x-text="'{{link}}'"></code>.
+                                    Textos curtos e sem emoji reduzem o risco de o WhatsApp tratar o número como spam.
+                                    <a href="#" @click.prevent="preferencias.acomp.tplLink = ACOMP_TPL_LINK; preferencias.acomp.tplPronto = ACOMP_TPL_PRONTO">Voltar ao texto padrão</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Seção de Formas de Pagamento -->
                     <div class="secao-preferencia" style="margin-top: 32px;">
                         <h4 class="text-lg font-semibold mb-4">
@@ -1078,6 +1157,11 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
+        // Textos padrão do acompanhamento do veículo (iguais ao backend: acompanhamentoService.ts)
+        const ACOMP_TPL_LINK = 'Olá, {{nome}}! Aqui é da {{empresa}}.\nSeu veículo {{placa}} está com a gente. Acompanhe o andamento por aqui:\n{{link}}';
+        const ACOMP_TPL_PRONTO = '{{nome}}, seu veículo {{placa}} está pronto para retirada.\nTotal: {{valor}}. Você pode pagar por PIX no mesmo link:\n{{link}}';
+    </script>
+    <script>
         function configApp() {
             return {
                 activeTab: 'empresa',
@@ -1111,6 +1195,7 @@
                 preferencias: {
                     exigirLavadorParaFinalizar: false,
                     frotaConfirmacaoDupla: true,
+                    acomp: { ativo: false, atraso: 3, avisoPronto: true, mostrarValor: true, tplLink: ACOMP_TPL_LINK, tplPronto: ACOMP_TPL_PRONTO, endereco: '', horario: '' },
                     paginaInicialPadrao: 'index.html',
                     paymentMethods: {
                         DINHEIRO: true,
@@ -1333,6 +1418,17 @@
                         // Load business logic settings
                         this.preferencias.exigirLavadorParaFinalizar = empresa.exigirLavadorParaFinalizar || false;
                         this.preferencias.frotaConfirmacaoDupla = (empresa.config || {}).frotaConfirmacaoDupla !== false;
+                        const ac = (empresa.config || {}).acompanhamento || {};
+                        this.preferencias.acomp = {
+                            ativo: ac.ativo === true,
+                            atraso: [0, 3, 5, 10].includes(Number(ac.atraso)) ? Number(ac.atraso) : 3,
+                            avisoPronto: ac.avisoPronto !== false,
+                            mostrarValor: ac.mostrarValor !== false,
+                            tplLink: ac.tplLink || ACOMP_TPL_LINK,
+                            tplPronto: ac.tplPronto || ACOMP_TPL_PRONTO,
+                            endereco: ac.endereco || '',
+                            horario: ac.horario || ''
+                        };
                         this.preferencias.paginaInicialPadrao = empresa.paginaInicialPadrao || 'index.html';
 
                         // Load payment methods config
@@ -1421,6 +1517,7 @@
                         const data = {
                             exigirLavadorParaFinalizar: this.preferencias.exigirLavadorParaFinalizar,
                             frotaConfirmacaoDupla: this.preferencias.frotaConfirmacaoDupla,
+                            acompanhamento: this.preferencias.acomp,
                             paginaInicialPadrao: this.preferencias.paginaInicialPadrao,
                             paymentMethodsConfig: this.preferencias.paymentMethods,
                             notificationPreferences: this.preferencias.notifications

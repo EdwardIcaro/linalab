@@ -35,6 +35,8 @@ import whatsappRoutes from './routes/whatsapp';
 import empresaWaRoutes from './routes/empresaWa';
 import ocrRoutes from './routes/ocr';
 import portalPublicoRoutes from './routes/portalPublico';
+import acompanhamentoPublicoRoutes from './routes/acompanhamentoPublico';
+import { cronAcompanhamento } from './services/acompanhamentoService';
 import relatorioFinanceiroRoutes from './routes/relatorioFinanceiro';
 import gorjetaRoutes from './routes/gorjeta';
 import hubRoutes from './routes/hub';
@@ -121,6 +123,7 @@ app.post('/api/public/lavador-data', getLavadorPublicData);
 
 // Portal público do funcionário (resolve token curto sem autenticação)
 app.use('/api/p', portalPublicoRoutes);
+app.use('/api/v', acompanhamentoPublicoRoutes); // acompanhamento do veículo (página pública do cliente)
 
 // Relatório de Saúde Financeira (leitura pública por token + geração autenticada)
 app.use('/api/relatorio-financeiro', relatorioFinanceiroRoutes);
@@ -287,6 +290,8 @@ cron.schedule('0 21 * * *', () => {
 
 // Frota em 2 etapas: aviso de hora em hora (8h-21h) quando chegam pedidos de finalização novos
 cron.schedule('0 8-21 * * *', () => { cronResumoFrotaPendente(); }, { timezone: "America/Sao_Paulo" });
+// Acompanhamento do veículo: aviso de pronto + descarta link de ordem encerrada
+cron.schedule('* * * * *', () => { cronAcompanhamento(); }, { timezone: "America/Sao_Paulo" });
 
 // WhatsApp: Ordens paradas há 1h+ (a cada 2 horas)
 cron.schedule('0 */2 * * *', () => {

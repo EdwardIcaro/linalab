@@ -1,28 +1,54 @@
 import prisma from '../db';
 import { sendMessage, getStatus } from './baileyService';
+import { getEmpresaStatus, sendEmpresaMessage } from './empresaWaService';
 
 /**
  * Consumidor da fila `whatsapp_envios`.
  *
- * O backend enfileira a mensagem (automação de email) e o bot envia pelo número da Lina.
+ * O backend enfileira a mensagem e o bot envia pelo número da Lina (automação de email)
+ * ou pelo número da empresa (acompanhamento do veículo).
  * Assim a chave que descriptografa as senhas dos clientes fica só no servidor, e o envio
  * não depende do ngrok — o bot lê do banco no mesmo laço de 5s que já existe.
  */
 
 const LOTE = 20;
 const MAX_TENTATIVAS = 3;
+// Mensagem pelo número da empresa que não saiu em 2 h (WhatsApp desconectado) perde o sentido
+const VALIDADE_EMPRESA_MS = 2 * 60 * 60 * 1000;
+
+type Envio = {
+  id: string; empresaId: string; destino: string; texto: string; tentativas: number;
+  canal: string; origem: string; ordemId: string | null; enviarApos: Date | null; createdAt: Date;
+};
+
+/**
+ * canal LINA    → número da Lina (automação de e-mail)
+ * canal EMPRESA → número da própria empresa (acompanhamento do veículo, 15/11/2026);
+ *                 respeita `enviarApos` e, ao entregar o link, marca a ordem como enviada.
+ */
+let rodando = false; // o laço de 5s não pode sobrepor um lote ainda em envio (mandaria em dobro)
 
 export async function processarFilaEnvios(): Promise<void> {
-  // Sem WhatsApp conectado não adianta consumir: a mensagem voltaria como erro
-  if (getStatus() !== 'connected') return;
+  if (rodando) return;
+  rodando = true;
+  try { await processarLote(); } finally { rodando = false; }
+}
 
-  let pendentes: { id: string; empresaId: string; destino: string; texto: string; tentativas: number }[] = [];
+async function processarLote(): Promise<void> {
+  const linaOk = getStatus() === 'connected';
+
+  let pendentes: Envio[] = [];
   try {
     pendentes = await (prisma as any).whatsappEnvio.findMany({
-      where: { status: 'PENDENTE', tentativas: { lt: MAX_TENTATIVAS } },
+      where: {
+        status: 'PENDENTE',
+        tentativas: { lt: MAX_TENTATIVAS },
+        canal: { in: linaOk ? ['LINA', 'EMPRESA'] : ['EMPRESA'] },
+        OR: [{ enviarApos: null }, { enviarApos: { lte: new Date() } }],
+      },
       orderBy: { createdAt: 'asc' },
       take: LOTE,
-      select: { id: true, empresaId: true, destino: true, texto: true, tentativas: true },
+      select: { id: true, empresaId: true, destino: true, texto: true, tentativas: true, canal: true, origem: true, ordemId: true, enviarApos: true, createdAt: true },
     });
   } catch (err: any) {
     // P1017 = Neon fechou conexão ociosa — reconecta e tenta no próximo ciclo
@@ -36,28 +62,49 @@ export async function processarFilaEnvios(): Promise<void> {
   }
 
   for (const envio of pendentes) {
+    const daEmpresa = envio.canal === 'EMPRESA';
+    if (daEmpresa && getEmpresaStatus(envio.empresaId).status !== 'CONECTADO') {
+      const desde = (envio.enviarApos ?? envio.createdAt).getTime();
+      if (Date.now() - desde > VALIDADE_EMPRESA_MS) {
+        await (prisma as any).whatsappEnvio.update({
+          where: { id: envio.id },
+          data: { status: 'ERRO', texto: '', erro: 'WhatsApp da empresa desconectado' },
+        }).catch(() => {});
+      }
+      continue; // espera a empresa reconectar
+    }
     try {
-      await sendMessage(envio.destino, envio.texto, { empresaId: envio.empresaId, tipo: 'EMAIL_AUTOMACAO' });
+      if (daEmpresa) await sendEmpresaMessage(envio.empresaId, envio.destino, envio.texto, envio.origem);
+      else await sendMessage(envio.destino, envio.texto, { empresaId: envio.empresaId, tipo: 'EMAIL_AUTOMACAO' });
       // Texto é zerado depois do envio: a fila não guarda código de acesso à toa
       await (prisma as any).whatsappEnvio.update({
         where: { id: envio.id },
         data: { status: 'ENVIADO', enviadoEm: new Date(), texto: '', tentativas: envio.tentativas + 1 },
       });
-      console.log(`[FilaEnvio] Enviado ${envio.id}`);
+      if (envio.ordemId && envio.origem.startsWith('ACOMP_')) {
+        await (prisma as any).ordemServico.updateMany({
+          where: { id: envio.ordemId, acompEnviadoEm: null },
+          data: { acompEnviadoEm: new Date() },
+        }).catch(() => {});
+      }
+      console.log(`[FilaEnvio] Enviado ${envio.id} (${envio.canal})`);
+      if (daEmpresa) await new Promise((r) => setTimeout(r, 1500)); // espaça os envios do número da empresa
     } catch (err: any) {
-      const tentativas = envio.tentativas + 1;
-      const desistiu = tentativas >= MAX_TENTATIVAS;
-      // Só a mensagem do erro, sem o texto da mensagem (que pode ter código)
       const motivo = String(err?.message ?? err).slice(0, 200);
+      // Número que não existe no WhatsApp não melhora tentando de novo
+      const semVolta = /não encontrado no WhatsApp/i.test(motivo);
+      const tentativas = envio.tentativas + 1;
+      const desistiu = semVolta || tentativas >= MAX_TENTATIVAS;
       await (prisma as any).whatsappEnvio.update({
         where: { id: envio.id },
         data: {
           tentativas,
-          erro: motivo,
+          // Só a mensagem do erro, sem o telefone/texto
+          erro: semVolta ? 'Número não encontrado no WhatsApp' : motivo,
           ...(desistiu ? { status: 'ERRO', texto: '' } : {}),
         },
       }).catch(() => { /* se o banco cair, tenta de novo no próximo ciclo */ });
-      console.error(`[FilaEnvio] Falha no envio ${envio.id} (tentativa ${tentativas}/${MAX_TENTATIVAS}): ${motivo}`);
+      console.error(`[FilaEnvio] Falha no envio ${envio.id} (tentativa ${tentativas}/${MAX_TENTATIVAS}): ${semVolta ? 'número não encontrado' : motivo}`);
     }
   }
 }

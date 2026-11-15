@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
+import { sanitizarCfgAcomp } from '../services/acompanhamentoService';
 
 // Função auxiliar para parsear campos JSON
 const parseEmpresaConfig = (empresa: any) => {
@@ -247,7 +248,7 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
     const {
       nome, config, horarioAbertura, horarioFechamento,
       finalizacaoAutomatica, exigirLavadorParaFinalizar, paginaInicialPadrao,
-      notificationPreferences, paymentMethodsConfig, frotaConfirmacaoDupla
+      notificationPreferences, paymentMethodsConfig, frotaConfirmacaoDupla, acompanhamento
     } = req.body;
 
     if (Array.isArray(id)) {
@@ -270,6 +271,11 @@ export const updateEmpresa = async (req: EmpresaRequest, res: Response) => {
       // mescla no config que já existe (moeda, timezone...) em vez de substituir
       const base = parseEmpresaConfig({ config: updateData.config ?? existingEmpresa.config }).config || {};
       updateData.config = JSON.stringify({ ...base, frotaConfirmacaoDupla });
+    }
+    if (acompanhamento && typeof acompanhamento === 'object') {
+      // acompanhamento do veículo: mescla no config existente, com os valores validados
+      const base = parseEmpresaConfig({ config: updateData.config ?? existingEmpresa.config }).config || {};
+      updateData.config = JSON.stringify({ ...base, acompanhamento: sanitizarCfgAcomp(acompanhamento) });
     }
     if (horarioAbertura) updateData.horarioAbertura = horarioAbertura;
     if (horarioFechamento) updateData.horarioFechamento = horarioFechamento;

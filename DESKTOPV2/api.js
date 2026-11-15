@@ -487,6 +487,10 @@ const api = {
     body: JSON.stringify({ valor }),
   }),
   finalizarOrdensPendentes: () => fetchApi('/ordens/finalizar-pendentes', { method: 'POST' }),
+  // Acompanhamento do veículo (link do cliente pelo WhatsApp da empresa)
+  getAcompanhamento: (ordemId) => fetchApi(`/ordens/${ordemId}/acompanhamento`),
+  enviarAcompanhamento: (ordemId) => fetchApi(`/ordens/${ordemId}/acompanhamento/enviar`, { method: 'POST' }),
+  naoEnviarAcompanhamento: (ordemId) => fetchApi(`/ordens/${ordemId}/acompanhamento/nao-enviar`, { method: 'POST' }),
 
   // ===== PAGAMENTOS - REFATORADO =====
   /**
