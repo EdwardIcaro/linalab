@@ -14,6 +14,7 @@
 <script src="/pixel-kit/sprites-lavagem.js"></script>
 <script src="/pixel-kit/cena-lavagem.js"></script>
 <script src="/pixel-kit/icones-pixel.js"></script>
+<script src="/vistoria-editor.js"></script>
 <script defer src="/vendor/alpinejs/cdn.min.js"></script>
 <style>
   :root{
@@ -108,6 +109,31 @@
   .vazio .ip{width:64px;height:64px}
   .vazio b{display:block;font-size:23px;font-weight:600;margin:16px 0 6px}
   .vazio p{font:15px/1.5 var(--legivel);color:var(--muted);margin-bottom:20px}
+  /* vistoria de entrada */
+  .km{display:flex;align-items:center;gap:12px;background:#f1f4f7;box-shadow:inset 0 0 0 3px #d5dce4;padding:12px 14px}
+  .km .ip{width:48px;height:48px}
+  .km b{display:block;font-size:20px;font-weight:600}
+  .km small{font:12px var(--legivel);color:var(--muted)}
+  .veic svg{width:100%;max-width:190px;display:block;margin:16px auto 0;shape-rendering:crispEdges}
+  .veic .z{fill:#eef1f4;stroke:var(--ink);stroke-width:2.5}
+  .veic .z.vd{fill:#a8d4ff}
+  .veic .z.rd{fill:#4a525c}
+  .veic .z.av{fill:#ff9fa1}
+  .veic .pin{fill:#e5484d;stroke:var(--ink);stroke-width:2.5}
+  .veic text{font-family:'Pixelify Sans',sans-serif;font-size:13px;font-weight:700;fill:#fff}
+  .av-list{display:grid;gap:12px;margin-top:14px}
+  .av{display:flex;gap:10px;align-items:flex-start}
+  .av-n{width:24px;height:24px;background:#e5484d;color:#fff;box-shadow:0 0 0 2px var(--ink);font-size:14px;font-weight:700;display:grid;place-items:center;flex-shrink:0;margin:2px}
+  .av b{font-size:15px;font-weight:600;display:block}
+  .av span{font:13px var(--legivel);color:var(--muted)}
+  .av .av-n{color:#fff;font:700 14px/1 'Pixelify Sans',sans-serif}
+  .fotos{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .foto{width:58px;height:58px;background:#d5dce4 center/cover;box-shadow:0 0 0 3px var(--ink);margin:3px;cursor:zoom-in}
+  .obs{display:flex;gap:8px;font:14px/1.45 var(--legivel);color:var(--muted);margin-top:14px;padding-top:12px;background:repeating-linear-gradient(90deg,#d5dce4 0 4px,transparent 4px 8px) top/100% 2px no-repeat}
+  .obs .ip{margin-top:-6px}
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;color:#fff;gap:12px}
+  .lightbox img{max-width:100%;max-height:78vh;box-shadow:0 0 0 3px #fff}
+  .lightbox small{opacity:.8;font:12px var(--legivel);text-align:center}
 </style>
 </head>
 <body>
@@ -196,6 +222,36 @@
           <div class="row tot" x-show="d.total !== null"><span>Total</span><span class="v" x-text="brl(d.total)"></span></div>
         </div>
 
+        <!-- vistoria de entrada (só aparece se a equipe registrou algo) -->
+        <template x-if="d.vistoria">
+          <div class="card">
+            <h4><span style="display:contents" x-html="pi('prancheta')"></span>Vistoria de entrada</h4>
+            <template x-if="d.vistoria.km != null">
+              <div class="km"><div x-html="pi('velocimetro')"></div><div><b x-text="Number(d.vistoria.km).toLocaleString('pt-BR') + ' km'"></b><small>Quilometragem na entrada</small></div></div>
+            </template>
+            <template x-if="d.vistoria.avarias.length">
+              <div>
+                <div class="veic" x-html="window.VistoriaEditor ? VistoriaEditor.svg(d.vistoria.tipo, d.vistoria.avarias.map(a => a.zona), null, true) : ''"></div>
+                <div class="av-list">
+                  <template x-for="(a, i) in d.vistoria.avarias" :key="a.zona">
+                    <div class="av">
+                      <span class="av-n" x-text="i + 1"></span>
+                      <div>
+                        <b x-text="a.tipo + ' · ' + zona(a.zona)"></b>
+                        <span x-text="a.obs"></span>
+                        <div class="fotos" x-show="a.fotos.length">
+                          <template x-for="f in a.fotos" :key="f"><button class="foto" :style="`background-image:url('${f}')`" :aria-label="'Foto: ' + a.tipo" @click="foto = { src: f, txt: a.tipo + ' · ' + zona(a.zona) }"></button></template>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <div class="obs" x-show="d.vistoria.obs"><span style="display:contents" x-html="pi('nota')"></span><span x-text="d.vistoria.obs"></span></div>
+          </div>
+        </template>
+
         <!-- contato -->
         <div class="card" x-show="d.empresa.whatsapp || d.empresa.endereco || d.empresa.horario">
           <h4><span style="display:contents" x-html="pi('chat')"></span>Fale com a gente</h4>
@@ -212,6 +268,13 @@
       </div>
     </div>
   </template>
+
+  <!-- foto ampliada -->
+  <div class="lightbox" x-show="foto" x-cloak @click="foto = null" @keydown.escape.window="foto = null">
+    <img :src="foto?.src || ''" :alt="foto?.txt || ''">
+    <small x-text="foto?.txt"></small>
+    <small>toque para fechar</small>
+  </div>
 </div>
 
 <script>
@@ -223,7 +286,7 @@ let cena = null;
 function acomp() {
   return {
     token: (location.pathname.split('/').filter(Boolean)[1] || new URLSearchParams(location.search).get('t') || '').toUpperCase(),
-    d: null, fase: 'carregando', copiado: false, timer: null,
+    d: null, fase: 'carregando', copiado: false, timer: null, foto: null,
 
     async iniciar() {
       await this.carregar();
@@ -252,6 +315,7 @@ function acomp() {
     brl(n) { return (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
     hora(iso) { return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : ''; },
     dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' }) : ''; },
+    zona(z) { return window.VistoriaEditor ? VistoriaEditor.nomeZona(this.d.vistoria?.tipo, z) : z; },
     zap() { return 'https://wa.me/' + this.d.empresa.whatsapp; },
     mapa() { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.d.empresa.endereco); },
 

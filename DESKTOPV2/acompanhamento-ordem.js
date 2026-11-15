@@ -24,6 +24,8 @@
   .acb-acoes button:disabled{opacity:.6;cursor:default}
   .acb-log{font-size:12px;color:#64748b;display:grid;gap:4px;margin-top:10px;border-left:2px solid #e5e7eb;padding-left:10px}
   .acb-link{display:flex;gap:6px;margin-top:10px}
+  .acb-link[hidden]{display:none}
+  .acb-vist{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #f1f5f9}
   .acb-link input{flex:1;min-width:0;font:12px ui-monospace,Consolas,monospace;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;color:#475569;background:#f8fafc}
   `;
 
@@ -37,6 +39,29 @@
     semTelefone:       ['#f1f5f9', '#64748b', 'fa-phone-slash'],
     naoEnviado:        ['#f1f5f9', '#64748b', 'fa-link'],
   };
+
+  // Editor da vistoria (vistoria-editor.js) carregado sob demanda
+  function editorPronto() {
+    if (global.VistoriaEditor) return Promise.resolve();
+    return new Promise((ok, falhou) => {
+      const s = document.createElement('script'); s.src = '/vistoria-editor.js';
+      s.onload = () => ok(); s.onerror = () => falhou(new Error('Não deu para abrir a vistoria'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function htmlVistoria(v) {
+    if (!v || (!v.ativa && !v.resumo)) return '';
+    const r = v.resumo;
+    const partes = r ? [r.km != null ? `${Number(r.km).toLocaleString('pt-BR')} km` : null, r.avarias ? `${r.avarias} avaria${r.avarias > 1 ? 's' : ''}` : 'sem avarias', r.fotos ? `${r.fotos} foto${r.fotos > 1 ? 's' : ''}` : null].filter(Boolean) : [];
+    const botao = v.editavel
+      ? `<button data-a="vistoria"><i class="fas fa-clipboard-check"></i> ${r ? 'Editar vistoria' : 'Fazer vistoria'}</button>`
+      : (r ? `<button data-a="vistoria"><i class="fas fa-eye"></i> Ver vistoria</button>` : '');
+    return `<div class="acb-vist"><h5>Vistoria de entrada</h5>
+      <div class="acb-lin"><div class="acb-ic" style="background:#f1f5f9;color:#475569"><i class="fas fa-clipboard-list"></i></div>
+      <div><b>${r ? esc(partes.join(' · ')) : 'Nenhuma vistoria'}</b><span>${r ? 'Aparece para o cliente na página do acompanhamento.' : (v.editavel ? 'Km, avarias e fotos. Opcional.' : 'A ordem já foi encerrada.')}</span></div></div>
+      ${botao ? `<div class="acb-acoes">${botao}</div>` : ''}</div>`;
+  }
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '');
@@ -83,13 +108,14 @@
     if (d.enviadoEm) log.push(`Link enviado às ${hora(d.enviadoEm)}`);
     if (d.abertoEm) log.push(`Cliente abriu a página às ${hora(d.abertoEm)}`);
     if (d.prontoEm) log.push(`Aviso de pronto às ${hora(d.prontoEm)}`);
-    return `
+    const mostrarAcomp = d.ativo || d.link;
+    return htmlVistoria(d.vistoria) + (!mostrarAcomp ? '' : `
       <h5>Acompanhamento do cliente</h5>
       <div class="acb-lin"><div class="acb-ic" style="background:${bg};color:${cor}"><i class="fas ${ic}"></i></div><div><b>${esc(t)}</b><span>${esc(s)}</span></div></div>
       ${!d.ativo ? '<div class="acb-log" style="border-color:#fde68a">O envio automático está desligado nesta empresa (Configurações › Preferências).</div>' : ''}
       ${b.length ? `<div class="acb-acoes">${b.join('')}</div>` : ''}
       ${log.length ? `<div class="acb-log">${log.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
-      <div class="acb-link" hidden><input readonly value="${esc(d.link || '')}" aria-label="Link do acompanhamento"></div>`;
+      <div class="acb-link" hidden><input readonly value="${esc(d.link || '')}" aria-label="Link do acompanhamento"></div>`);
   }
 
   function montar(el, ordemId) {
@@ -105,7 +131,8 @@
 
     const desenhar = () => {
       if (el._acbOrdem !== ordemId) return;
-      if (!d || !d.disponivel || (!d.ativo && !d.link)) { el.innerHTML = ''; el.className = ''; return; }
+      const temVist = d?.vistoria && (d.vistoria.ativa || d.vistoria.resumo);
+      if (!d || !d.disponivel || (!d.ativo && !d.link && !temVist)) { el.innerHTML = ''; el.className = ''; return; }
       el.className = 'acb';
       el.innerHTML = html(d, ocupado);
     };
@@ -126,6 +153,22 @@
       if (!a || !d) return;
       if (a === 'enviar') acao(global.api.enviarAcompanhamento, 'Mensagem na fila do WhatsApp da empresa');
       else if (a === 'nao') acao(global.api.naoEnviarAcompanhamento, 'Envio cancelado');
+      else if (a === 'vistoria') {
+        try {
+          await editorPronto();
+          const v = await global.api.getVistoria(ordemId);
+          global.VistoriaEditor.abrir({
+            tipo: v.tipo, placa: v.placa, dados: v,
+            botao: v.editavel ? 'Salvar vistoria' : 'Fechar',
+            onSalvar: async (dados) => {
+              if (!v.editavel) return;
+              await global.api.salvarVistoria(ordemId, dados);
+              toast('Vistoria salva', 'success');
+              carregar();
+            },
+          });
+        } catch (e) { toast(e?.error || e?.message || 'Não deu para abrir a vistoria', 'error'); }
+      }
       else if (a === 'copiar') {
         try { await navigator.clipboard.writeText(d.link); toast('Link copiado', 'success'); }
         catch {

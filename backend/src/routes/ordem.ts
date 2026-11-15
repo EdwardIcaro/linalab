@@ -15,7 +15,7 @@ import {
 } from '../controllers/ordemController';
 import { editarIdentificacao, redeAtiva, buscarClientesParaNome } from '../controllers/ordemEdicaoController';
 import { listarPendentes, confirmar, devolver } from '../controllers/frotaConfirmacaoController';
-import { getAcompanhamentoOrdem, postEnviarAcompanhamento, postNaoEnviarAcompanhamento } from '../controllers/acompanhamentoController';
+import { getAcompanhamentoOrdem, postEnviarAcompanhamento, postNaoEnviarAcompanhamento, getVistoriaConfig, getVistoria, putVistoria } from '../controllers/acompanhamentoController';
 
 const router: Router = Router();
 
@@ -33,12 +33,16 @@ router.get('/frota/pendentes', authMiddleware, requirePermission('confirmar_frot
 router.post('/frota/confirmar', authMiddleware, requirePermission('confirmar_frota'), confirmar);
 router.post('/:id/frota/devolver', authMiddleware, requirePermission('confirmar_frota'), devolver);
 router.get('/clientes-busca', authMiddleware, buscarClientesParaNome);
+router.get('/vistoria/config', authMiddleware, getVistoriaConfig);
 router.get('/:id', authMiddleware, getOrdemById);
 router.patch('/:id/identificacao', authMiddleware, editarIdentificacao);
 // Acompanhamento do veículo (link do cliente)
 router.get('/:id/acompanhamento', authMiddleware, getAcompanhamentoOrdem);
 router.post('/:id/acompanhamento/enviar', authMiddleware, postEnviarAcompanhamento);
 router.post('/:id/acompanhamento/nao-enviar', authMiddleware, postNaoEnviarAcompanhamento);
+// Vistoria de entrada (km, avarias, fotos)
+router.get('/:id/vistoria', authMiddleware, getVistoria);
+router.put('/:id/vistoria', authMiddleware, putVistoria);
 router.put('/:id', authMiddleware, updateOrdem);
 router.post('/:id/finalizar', authMiddleware, finalizarOrdem);
 router.post('/:id/pix', authMiddleware, gerarPixQr);

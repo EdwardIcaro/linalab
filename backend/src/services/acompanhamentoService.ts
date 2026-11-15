@@ -16,6 +16,7 @@ import { randomInt } from 'crypto';
 import prisma from '../db';
 import { gerarQrPixAvulso } from './pixService';
 import { clientesFrota, semNome } from '../controllers/ordemEdicaoController';
+import { lerVistoria, vistoriaVazia, resumoVistoria } from './vistoriaService';
 
 export interface CfgAcomp {
   ativo: boolean;
@@ -26,6 +27,7 @@ export interface CfgAcomp {
   tplPronto: string;
   endereco: string;
   horario: string;
+  vistoria: boolean;     // seção de vistoria na nova ordem / detalhe (independe do envio)
 }
 
 export const TPL_LINK_PADRAO = 'Olá, {{nome}}! Aqui é da {{empresa}}.\nSeu veículo {{placa}} está com a gente. Acompanhe o andamento por aqui:\n{{link}}';
@@ -34,7 +36,7 @@ const TPL_PRONTO_SEM_PIX = '{{nome}}, seu veículo {{placa}} está pronto para r
 
 const PADRAO: CfgAcomp = {
   ativo: false, atraso: 3, avisoPronto: true, mostrarValor: true,
-  tplLink: TPL_LINK_PADRAO, tplPronto: TPL_PRONTO_PADRAO, endereco: '', horario: '',
+  tplLink: TPL_LINK_PADRAO, tplPronto: TPL_PRONTO_PADRAO, endereco: '', horario: '', vistoria: true,
 };
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -58,6 +60,7 @@ export function cfgAcomp(config: unknown): CfgAcomp {
     tplPronto: typeof a.tplPronto === 'string' && a.tplPronto.trim() ? a.tplPronto.slice(0, 600) : PADRAO.tplPronto,
     endereco: typeof a.endereco === 'string' ? a.endereco.slice(0, 160) : '',
     horario: typeof a.horario === 'string' ? a.horario.slice(0, 80) : '',
+    vistoria: a.vistoria !== false,
   };
 }
 
@@ -119,7 +122,7 @@ export async function garantirToken(ordemId: string): Promise<string> {
 
 const SELECT_ORDEM = {
   id: true, empresaId: true, clienteId: true, numeroOrdem: true, status: true, tipoOrdem: true, valorTotal: true,
-  acompToken: true, acompEnviadoEm: true, acompAbertoEm: true, acompProntoEm: true,
+  acompToken: true, acompEnviadoEm: true, acompAbertoEm: true, acompProntoEm: true, vistoria: true,
   cliente: { select: { nome: true, telefone: true } },
   veiculo: { select: { placa: true } },
   empresa: { select: { nome: true, config: true } },
@@ -187,6 +190,11 @@ export async function estadoAcomp(ordemId: string, empresaId: string) {
   const cfg = cfgAcomp(o.empresa.config);
   const fora = await foraDoAcomp(o);
   if (fora) return { disponivel: false, motivo: fora, ativo: cfg.ativo };
+  const vistoria = {
+    ativa: cfg.vistoria,
+    editavel: !['FINALIZADO', 'CANCELADO'].includes(o.status),
+    resumo: resumoVistoria(o.vistoria),
+  };
 
   const [envios, sessao] = await Promise.all([
     prisma.whatsappEnvio.findMany({
@@ -213,6 +221,7 @@ export async function estadoAcomp(ordemId: string, empresaId: string) {
   return {
     disponivel: true,
     ativo: cfg.ativo,
+    vistoria,
     waConectado,
     temTelefone: !!telefone,
     estado,
@@ -294,6 +303,18 @@ export async function cronAcompanhamento(): Promise<void> {
 
 // ── Página pública ─────────────────────────────────────────────────────────────
 
+/** Vistoria para o cliente: fotos viram URLs da própria página (/api/v/:token/foto/:id). */
+function vistoriaPublica(v: unknown, token: string, tipoVeiculo?: string | null) {
+  const x = lerVistoria(v);
+  if (vistoriaVazia(x)) return null;
+  return {
+    tipo: (tipoVeiculo || '').toUpperCase() === 'MOTO' ? 'moto' : 'carro',
+    km: x!.km,
+    obs: x!.obs || null,
+    avarias: x!.avarias.map((a) => ({ zona: a.zona, tipo: a.tipo, obs: a.obs || '', fotos: (a.fotos || []).map((id) => `/api/v/${token}/foto/${id}`) })),
+  };
+}
+
 function categoria(tipo?: string | null, sub?: string | null): string {
   if ((tipo || '').toUpperCase() === 'MOTO') return 'moto';
   switch ((sub || '').toUpperCase()) {
@@ -312,7 +333,7 @@ export async function dadosPublicos(token: string, opts: { equipe?: boolean } = 
   const o = await prisma.ordemServico.findUnique({
     where: { acompToken: token },
     select: {
-      id: true, empresaId: true, numeroOrdem: true, status: true, valorTotal: true, createdAt: true, dataFim: true, updatedAt: true, acompAbertoEm: true,
+      id: true, empresaId: true, numeroOrdem: true, status: true, valorTotal: true, createdAt: true, dataFim: true, updatedAt: true, acompAbertoEm: true, vistoria: true,
       cliente: { select: { nome: true } },
       veiculo: { select: { placa: true, cor: true, tipoVeiculo: true, subtipoVeiculo: true } },
       items: { select: { quantidade: true, subtotal: true, nomeCustom: true, servico: { select: { nome: true } }, adicional: { select: { nome: true } } }, orderBy: { createdAt: 'asc' } },
@@ -388,5 +409,6 @@ export async function dadosPublicos(token: string, opts: { equipe?: boolean } = 
     restante: cfg.mostrarValor ? restante : null,
     pago: status === 'finalizado' || restante <= 0.009,
     pix,
+    vistoria: vistoriaPublica(o.vistoria, token, o.veiculo?.tipoVeiculo),
   };
 }

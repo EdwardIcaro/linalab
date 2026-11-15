@@ -375,6 +375,12 @@
           <textarea class="obs" x-model="obs" maxlength="500" rows="3" placeholder="Ex.: não passar pretinho, carro já está na doca…"></textarea>
           <p class="obs-dica" x-show="obs.trim()" x-cloak><i class="fab fa-whatsapp"></i> Vai junto no aviso do lavador pelo WhatsApp</p>
         </div>
+        <!-- Vistoria de entrada (opcional): km, avarias e fotos — vistoria-editor.js -->
+        <div x-show="cliente && vistoriaAtiva && cliente?.placa && cliente?.placa !== '—'" x-cloak>
+          <div class="sec-cab" style="margin: 12px 0 6px"><h2 style="font-size: 13px">Vistoria <small>(opcional)</small></h2></div>
+          <button type="button" class="btn-todos" style="font-size: 12px; padding: 6px 10px" @click="abrirVistoria()"><i class="fas fa-clipboard-check"></i> <span x-text="vistoria ? 'Editar vistoria' : 'Fazer vistoria'"></span></button>
+          <p class="obs-dica" x-show="vistoria" x-cloak><i class="fas fa-clipboard-list"></i> <span x-text="vistoria ? VistoriaEditor.resumo(vistoria) : ''"></span></p>
+        </div>
       </section>
     </div>
   </div>
@@ -492,6 +498,7 @@
 </div>
 
   <script src="../api.js"></script>
+  <script src="/vistoria-editor.js"></script>
   <script src="/funcionario/modelos-carro.js"></script>
   <script>
     // Paleta de gradientes para lavadores (atribuída por índice)
@@ -534,8 +541,10 @@
         showAllAdds: false, // sheet "todos os adicionais"
         addSearch: '',      // busca dentro do sheet
         TOP_ADD_COUNT: 6,   // quantos adicionais "mais usados" mostrar inline
+        vistoriaAtiva: false, // Configurações › Preferências › vistoria na nova ordem
         criando: false, sucesso: false, ordemNum: null,
         redeAtiva: [], redeConfirmada: false, _redePlaca: '',
+        vistoria: null, // vistoria de entrada (salva depois de criar a ordem)
 
         // ── Dados da API ───────────────────
         servicos:   [],
@@ -570,7 +579,8 @@
             return;
           }
           // Placa escolhida/digitada: procura ordem ativa dela nas empresas da rede
-          this.$watch('cliente', () => this.checarRede());
+          this.$watch('cliente', () => { this.checarRede(); this.vistoria = null; });
+          window.api.getVistoriaConfig?.().then((r) => { this.vistoriaAtiva = !!r?.ativa; }).catch(() => {});
 
           // Carrega lavadores, adicionais e tipos de veículos em paralelo
           await Promise.all([
@@ -1204,6 +1214,7 @@
           try {
             const response = await window.api.createOrdem(payload);
             this.ordemNum = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+            await this.salvarVistoriaDaOrdem(response);
             this.sucesso = true;
 
           } catch (error) {
@@ -1212,6 +1223,7 @@
                 try {
                   const response = await window.api.createOrdem({ ...payload, forcarCriacao: true });
                   this.ordemNum = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                  await this.salvarVistoriaDaOrdem(response);
                   this.sucesso = true;
                 } catch (e2) {
                   showToast(e2?.details || e2?.error || 'Erro ao criar ordem', 'error');
@@ -1223,6 +1235,23 @@
           } finally {
             this.criando = false;
           }
+        },
+
+        abrirVistoria() {
+          VistoriaEditor.abrir({
+            tipo: this.tipo === 'MOTO' ? 'moto' : 'carro',
+            placa: this.cliente?.placa || '',
+            dados: this.vistoria,
+            botao: 'Concluir',
+            onSalvar: (d) => { this.vistoria = VistoriaEditor.vazia(d) ? null : d; },
+          });
+        },
+
+        async salvarVistoriaDaOrdem(resp) {
+          const id = resp?.ordem?.id;
+          if (!this.vistoria || !id) return;
+          try { await window.api.salvarVistoria(id, this.vistoria); }
+          catch (e) { showToast('Ordem criada, mas a vistoria não foi salva: ' + (e?.error || 'tente pelo detalhe da ordem'), 'error'); }
         },
 
         reset() {
@@ -1237,6 +1266,7 @@
             showAllAdds: false, addSearch: '',
             criando: false, sucesso: false, ordemNum: null,
         redeAtiva: [], redeConfirmada: false, _redePlaca: '',
+        vistoria: null, // vistoria de entrada (salva depois de criar a ordem)
             ocr: { isOpen: false, stream: null, isProcessing: false, error: null },
             servicos: [],
           });

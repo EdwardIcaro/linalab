@@ -1660,6 +1660,18 @@
                             x-model="observacoes"
                         ></textarea>
                     </div>
+
+                    <!-- Vistoria de entrada (opcional): km, avarias e fotos — vistoria-editor.js -->
+                    <div class="form-group" style="margin-top: 16px;" x-show="vistoriaAtiva && placaVistoria()" x-cloak>
+                        <label class="form-label">Vistoria <span style="font-weight:400;color:var(--wizard-text-light);">(Opcional)</span></label>
+                        <button type="button" class="btn btn-secondary" style="width:auto" @click="abrirVistoria()">
+                            <i class="fas fa-clipboard-check"></i>
+                            <span x-text="vistoria ? 'Editar vistoria' : 'Fazer vistoria'"></span>
+                        </button>
+                        <div x-show="vistoria" style="font-size: 13px; color: var(--wizard-text-light); margin-top: 6px;">
+                            <i class="fas fa-clipboard-list"></i> <span x-text="vistoria ? VistoriaEditor.resumo(vistoria) : ''"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Mini Resumo — aparece quando há serviço selecionado -->
@@ -1856,6 +1868,7 @@
 
     <script src="utils.js"></script>
     <script src="api.js"></script>
+    <script src="/vistoria-editor.js"></script>
 
     <script>
         /**
@@ -1951,6 +1964,8 @@
                 selectedAdicionais: [],       // Multiple adicionais
                 selectedWasherIds: [],
                 observacoes: '',
+                vistoriaAtiva: false,   // Configurações › Preferências › vistoria na nova ordem
+                vistoria: null,         // vistoria de entrada (salva depois de criar a ordem)
 
                 // ==========================================
                 // ORDER STATE
@@ -2113,6 +2128,7 @@
                         window.location.href = 'login.html';
                         return;
                     }
+                    window.api.getVistoriaConfig?.().then((r) => { this.vistoriaAtiva = !!r?.ativa; }).catch(() => {});
 
                     const params = new URLSearchParams(window.location.search);
                     if (params.get('tipo')) this.vehicleType = params.get('tipo');
@@ -2628,6 +2644,7 @@
                     try {
                         const response = await window.api.createOrdem(orderData);
                         this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                        await this.salvarVistoriaDaOrdem(response);
                         this.showSuccessModal = true;
                         showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
                         setTimeout(() => {
@@ -2645,6 +2662,7 @@
                                 try {
                                     const response = await window.api.createOrdem(orderData);
                                     this.createdOrderNumber = response.ordem?.numeroOrdem || response.numeroOrdem || '?';
+                                    await this.salvarVistoriaDaOrdem(response);
                                     this.showSuccessModal = true;
                                     showToast(`Ordem #${this.createdOrderNumber} criada com sucesso!`, 'success');
                                     setTimeout(() => {
@@ -2667,7 +2685,29 @@
                 // ==========================================
                 // POST-CREATION ACTIONS
                 // ==========================================
+                // Vistoria de entrada: guarda aqui e salva depois que a ordem existe
+                placaVistoria() {
+                    if (this.vehicle?.placa) return this.vehicle.placa;
+                    return this.semPlaca ? '' : (this.quickRegister.vehiclePlate || '').trim().toUpperCase();
+                },
+                abrirVistoria() {
+                    VistoriaEditor.abrir({
+                        tipo: this.vehicleType === 'MOTO' ? 'moto' : 'carro',
+                        placa: this.placaVistoria(),
+                        dados: this.vistoria,
+                        botao: 'Concluir',
+                        onSalvar: (d) => { this.vistoria = VistoriaEditor.vazia(d) ? null : d; },
+                    });
+                },
+                async salvarVistoriaDaOrdem(resp) {
+                    const id = resp?.ordem?.id;
+                    if (!this.vistoria || !id) return;
+                    try { await window.api.salvarVistoria(id, this.vistoria); }
+                    catch (e) { showToast('Ordem criada, mas a vistoria não foi salva: ' + (e?.error || 'tente pelo detalhe da ordem'), 'error'); }
+                },
+
                 createAnother() {
+                    this.vistoria = null;
                     this.step = 1;
                     this.client = null;
                     this.vehicle = null;

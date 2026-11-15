@@ -348,6 +348,7 @@ model OrdemServico {
   acompEnviadoEm       DateTime?             // link chegou ao cliente pelo WhatsApp da empresa
   acompAbertoEm        DateTime?             // cliente abriu a página pela 1ª vez
   acompProntoEm        DateTime?             // aviso de "pronto" foi enfileirado
+  vistoria             Json?                 // vistoria de entrada: { km, obs, avarias: [{ zona, tipo, obs, fotos: [fotoId] }], por, em }
   cliente              Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   empresa              Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fechamentoComissao   FechamentoComissao?   @relation(fields: [fechamentoComissaoId], references: [id])
@@ -357,6 +358,7 @@ model OrdemServico {
   ordemLavadores       OrdemServicoLavador[]
   pagamentos           Pagamento[]
   reports              OrdemReport[]
+  vistoriaFotos        OrdemVistoriaFoto[]
 
   @@unique([empresaId, numeroOrdem])
   @@index([empresaId, status])
@@ -1770,4 +1772,17 @@ model SolicitacaoLavagem {
   @@unique([usuarioId, fornecedor, numero, placa], map: "solicitacoes_lavagem_unica")
   @@index([usuarioId, status, createdAt], map: "solicitacoes_lavagem_fila")
   @@map("solicitacoes_lavagem")
+}
+
+/// Fotos da vistoria de entrada (data URL JPEG comprimida no navegador, ~100-400 KB), 15/11/2026
+model OrdemVistoriaFoto {
+  id        String       @id @default(cuid())
+  ordemId   String
+  empresaId String
+  imagem    String
+  createdAt DateTime     @default(now())
+  ordem     OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+
+  @@index([ordemId])
+  @@map("ordens_vistoria_fotos")
 }

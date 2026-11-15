@@ -491,6 +491,10 @@ const api = {
   getAcompanhamento: (ordemId) => fetchApi(`/ordens/${ordemId}/acompanhamento`),
   enviarAcompanhamento: (ordemId) => fetchApi(`/ordens/${ordemId}/acompanhamento/enviar`, { method: 'POST' }),
   naoEnviarAcompanhamento: (ordemId) => fetchApi(`/ordens/${ordemId}/acompanhamento/nao-enviar`, { method: 'POST' }),
+  // Vistoria de entrada (km, avarias, fotos)
+  getVistoriaConfig: () => fetchApi('/ordens/vistoria/config'),
+  getVistoria: (ordemId) => fetchApi(`/ordens/${ordemId}/vistoria`),
+  salvarVistoria: (ordemId, dados) => fetchApi(`/ordens/${ordemId}/vistoria`, { method: 'PUT', body: JSON.stringify(dados) }),
 
   // ===== PAGAMENTOS - REFATORADO =====
   /**
