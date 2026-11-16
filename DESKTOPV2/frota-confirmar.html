@@ -60,6 +60,35 @@
     .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 900; background: var(--ink); color: var(--cream);
       border: 2px solid var(--cream); border-radius: 10px; padding: 9px 14px; font: 700 12px var(--mono); max-width: calc(100% - 32px); }
     .toast.erro { border-color: var(--red); }
+    /* Acesso rápido (16/11/2026): chave → senha → todas as empresas */
+    .ico-btn.chave { border-color: #6ee7a8; color: #6ee7a8; }
+    .ico-btn.chave.on { background: var(--loc); border-color: var(--cream); color: var(--cream); }
+    .quem { display: inline-flex; align-items: center; gap: 6px; margin-top: 3px; font: 700 10px var(--mono); opacity: .6; }
+    .quem button { background: none; border: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; padding: 0; }
+    .abas { display: flex; gap: 8px; overflow-x: auto; padding: 2px 4px 8px 2px; margin-bottom: 6px; }
+    .abas .chip { --sc: var(--ink); padding-right: 10px; font-size: 12px; }
+    .abas .chip b { background: var(--loc); min-width: 22px; height: 22px; }
+    .abas .chip[aria-pressed="true"] { background: var(--yellow); }
+    .abas .chip.zero { opacity: .55; }
+    .grupo-tit { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 8px; }
+    .grupo-tit:first-child { margin-top: 0; }
+    .grupo-tit h3 { margin: 0; font: 400 15px var(--dela); }
+    .grupo-tit span { font: 700 11px var(--mono); opacity: .7; }
+    .confirm-dialog { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .confirm-overlay { position: absolute; inset: 0; background: #0e0f24bb; }
+    .confirm-box { position: relative; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; padding: 20px; max-width: 360px; width: 100%; box-shadow: 6px 6px 0 var(--loc); }
+    .confirm-box h2 { margin: 0 0 6px; font: 400 18px var(--dela); display: flex; align-items: center; gap: 8px; }
+    .confirm-box p { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
+    .confirm-box .resumo-cf { background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 8px 10px; margin-bottom: 16px; font: 700 12px var(--mono); display: grid; gap: 3px; }
+    .confirm-box .resumo-cf div { display: flex; justify-content: space-between; gap: 10px; }
+    .confirm-box .quem-modal { font: 700 12px var(--mono); margin: -4px 0 12px; }
+    .confirm-box .campo { margin-bottom: 14px; }
+    .confirm-box .erro { color: var(--red); font: 700 11px var(--mono); margin: -6px 0 12px; }
+    .confirm-buttons { display: flex; gap: 10px; }
+    .btn-cancel, .btn-confirm { flex: 1; padding: 10px 12px 12px; border: 3px solid var(--ink); border-radius: 12px; cursor: pointer; font: 400 14px var(--dela); box-shadow: 3px 3px 0 var(--ink); }
+    .btn-cancel { background: var(--paper); color: var(--ink); }
+    .btn-confirm { background: var(--loc); color: var(--cream); }
+    .btn-confirm:disabled { opacity: .6; cursor: wait; }
   </style>
 </head>
 <body>
@@ -69,10 +98,12 @@
 <div class="pagina">
   <header class="topo">
     <a class="ico-btn" id="btnVoltar" href="/funcionario/ordens.html" title="Voltar"><i class="fas fa-arrow-left"></i></a>
-    <div class="topo-tit"><h1>Confirmar frota</h1><small id="sub">Carregando…</small></div>
+    <div class="topo-tit"><h1>Confirmar frota</h1><small id="sub">Carregando…</small><span class="quem" id="quem" hidden></span></div>
+    <button class="ico-btn chave" id="btnChave" onclick="abrirChave()" title="Acesso rápido: todas as empresas" aria-label="Acesso rápido"><i class="fas fa-key"></i></button>
     <button class="ico-btn" onclick="carregar()" title="Atualizar"><i class="fas fa-rotate"></i></button>
   </header>
   <p class="explica">Ordens da Localiza que a equipe finalizou. Comissão, caixa e relatórios só entram quando você confirma. Devolver manda a ordem de volta para a equipe com o motivo.</p>
+  <div class="abas" id="abas" role="group" aria-label="Empresas" hidden></div>
   <div class="barra-sel" id="barraSel" hidden><button onclick="marcarTodas()" id="btnTodas">Marcar todas</button><span id="contaSel"></span></div>
   <div id="lista" class="lista"><div class="carregando"><div class="spin"></div>Carregando…</div></div>
 </div>
@@ -80,15 +111,27 @@
 <div class="rodape" id="rodape" hidden>
   <div class="rodape-in">
     <div class="resumo"><b id="rodTotal">R$ 0,00</b><span id="rodQtd">nenhuma selecionada</span></div>
-    <button class="btn" id="btnConfirmar" onclick="confirmarSelecionadas()" disabled><i class="fas fa-check-double"></i> Confirmar</button>
+    <button class="btn" id="btnConfirmar" onclick="pedirConfirmacao()" disabled><i class="fas fa-check-double"></i> Confirmar</button>
   </div>
 </div>
 
 <script src="/api.js"></script>
 <script>
-  // Dono volta para o painel dele; subconta para Ordens
+  // Acesso rápido (16/11/2026): o link do WhatsApp traz ?k=CÓDIGO (só diz quem é a pessoa). A chave pede a
+  // senha e abre uma sessão de 12 h que vê a frota de todas as empresas dela. Sem login normal também funciona.
+  const K = new URLSearchParams(location.search).get('k');
+  const FR_KEY = 'frota_rapido';
+  const logado = !!localStorage.getItem('token');
+  function lerRapido() {
+    try { const r = JSON.parse(localStorage.getItem(FR_KEY) || 'null'); return r && r.token && r.expiraEm > Date.now() ? r : null; } catch { return null; }
+  }
+  function gravarRapido(r) { try { r ? localStorage.setItem(FR_KEY, JSON.stringify(r)) : localStorage.removeItem(FR_KEY); } catch {} }
+  let rapido = lerRapido();
+
+  // Dono volta para o painel dele; subconta para Ordens. Sem login, não há para onde voltar.
   if (localStorage.getItem('userRole') !== 'USER') document.getElementById('btnVoltar').href = '/ordens.html';
-  if (!localStorage.getItem('token')) location.href = '/login.html';
+  if (!logado) document.getElementById('btnVoltar').hidden = true;
+  if (!logado && !K && !rapido) location.href = '/login.html';
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const brl = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -99,7 +142,7 @@
     if (min < 1440) return `há ${Math.floor(min / 60)} h`;
     return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
-  let ordens = [], sel = new Set(), devolvendo = null, armado = null;
+  let ordens = [], empresas = [], filtroEmp = 'todas', sel = new Set(), devolvendo = null, armado = null;
 
   function toast(msg, erro = false) {
     document.querySelector('.toast')?.remove();
@@ -107,85 +150,211 @@
     document.body.append(t); setTimeout(() => t.remove(), 3200);
   }
 
+  // Rotas do acesso rápido usam a sessão própria (o fetchApi derrubaria o login normal num 401)
+  async function fr(path, opts = {}, bearer = rapido?.token) {
+    const resp = await fetch(`${API_BASE_URL}/frota-rapido${path}`, {
+      ...opts, headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+    });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      if (body.code === 'FROTA_SESSAO') { sairRapido(false); abrirChave(body.error); }
+      throw { ...body, status: resp.status };
+    }
+    return body;
+  }
+  const api = {
+    pendentes: () => rapido ? fr('/pendentes') : fetchApi('/ordens/frota/pendentes', { semRedirect: true }),
+    confirmar: (ids) => rapido ? fr('/confirmar', { method: 'POST', body: JSON.stringify({ ids }) }) : fetchApi('/ordens/frota/confirmar', { method: 'POST', body: JSON.stringify({ ids }), semRedirect: true }),
+    devolver: (id, motivo) => rapido ? fr(`/${id}/devolver`, { method: 'POST', body: JSON.stringify({ motivo }) }) : fetchApi(`/ordens/${id}/frota/devolver`, { method: 'POST', body: JSON.stringify({ motivo }), semRedirect: true }),
+  };
+
+  function marcarSessao() {
+    document.getElementById('btnChave').classList.toggle('on', !!rapido);
+    const q = document.getElementById('quem');
+    q.hidden = !rapido;
+    q.innerHTML = rapido ? `<i class="fas fa-key"></i>${esc(rapido.nome)} · <button onclick="sairRapido()">sair</button>` : '';
+  }
+
+  function sairRapido(recarregar = true) {
+    rapido = null; gravarRapido(null); empresas = []; filtroEmp = 'todas'; sel = new Set(); marcarSessao();
+    if (recarregar) carregar();
+  }
+
+  function bloqueado(msg) {
+    ordens = []; empresas = [];
+    document.getElementById('sub').textContent = 'Toque na chave para entrar';
+    document.getElementById('abas').hidden = true;
+    document.getElementById('barraSel').hidden = true;
+    document.getElementById('rodape').hidden = true;
+    document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-key"></i></div><b>Entre com sua senha</b><p>${esc(msg || 'Mostra as ordens da Localiza de todas as empresas em que você confirma frota.')}</p>
+      <button class="btn" style="margin-top:12px;background:var(--loc);color:#fff" onclick="abrirChave()"><i class="fas fa-key"></i> Digitar senha</button></div>`;
+  }
+
+  async function abrirChave(erro = '') {
+    document.querySelector('.confirm-dialog')?.remove();
+    const loginBearer = K ? null : localStorage.getItem('token');
+    let nome = rapido?.nome || '';
+    if (!nome) {
+      try { nome = (await fr(`/quem${K ? `?k=${encodeURIComponent(K)}` : ''}`, {}, loginBearer)).nome; }
+      catch (e) { if (!logado) return bloqueado(e?.error || 'Link inválido. Peça um novo aviso.'); }
+    }
+    const d = document.createElement('div'); d.className = 'confirm-dialog';
+    d.innerHTML = `<div class="confirm-overlay"></div><div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="chTit">
+      <h2 id="chTit"><i class="fas fa-key" style="color:var(--loc)"></i> Acesso rápido</h2>
+      <p>Digite sua senha para ver a frota de todas as suas empresas.</p>
+      ${nome ? `<div class="quem-modal">${esc(nome)}</div>` : ''}
+      <form id="fChave">
+        <div class="campo"><label for="chSenha">Senha</label><input class="entrada" id="chSenha" type="password" autocomplete="current-password" required></div>
+        ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
+        <div class="confirm-buttons"><button type="button" class="btn-cancel">Cancelar</button><button type="submit" class="btn-confirm">Entrar</button></div>
+      </form></div>`;
+    document.body.append(d);
+    const fechar = () => { d.remove(); if (!logado && !rapido) bloqueado(); };
+    d.querySelector('.confirm-overlay').onclick = fechar;
+    d.querySelector('.btn-cancel').onclick = fechar;
+    d.querySelector('#fChave').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const senha = d.querySelector('#chSenha').value;
+      const b = d.querySelector('.btn-confirm'); b.disabled = true; b.textContent = 'Entrando…';
+      try {
+        const r = await fr('/entrar', { method: 'POST', body: JSON.stringify({ k: K || undefined, senha }) }, loginBearer);
+        rapido = { token: r.token, nome: r.nome, expiraEm: r.expiraEm };
+        gravarRapido(rapido); d.remove(); sel = new Set(); filtroEmp = 'todas'; marcarSessao(); carregar();
+      } catch (e) { d.remove(); abrirChave(e?.error || 'Não foi possível entrar.'); }
+    };
+    setTimeout(() => d.querySelector('#chSenha')?.focus(), 0);
+  }
+
   async function carregar() {
+    marcarSessao();
+    if (!rapido && !logado) return bloqueado();
     try {
-      const r = await fetchApi('/ordens/frota/pendentes', { semRedirect: true });
-      ordens = r.ordens || [];
+      const r = await api.pendentes();
+      if (rapido) {
+        empresas = (r.empresas || []).map(e => ({ id: e.id, nome: e.nome, qtd: (e.ordens || []).length }));
+        ordens = (r.empresas || []).flatMap(e => (e.ordens || []).map(o => ({ ...o, empresaId: e.id, empresaNome: e.nome })));
+        if (filtroEmp !== 'todas' && !empresas.some(e => e.id === filtroEmp)) filtroEmp = 'todas';
+      } else { empresas = []; ordens = r.ordens || []; }
       sel = new Set([...sel].filter(id => ordens.some(o => o.id === id)));
       desenhar();
     } catch (e) {
+      if (rapido || e?.code === 'FROTA_SESSAO') return;
       const msg = e?.status === 403 || /permiss/i.test(e?.error || '') ? 'Seu cargo não tem a permissão "Confirmar ordens de frota".' : (e?.error || 'Não foi possível carregar.');
       document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-lock"></i></div><b>Sem acesso</b><p>${esc(msg)}</p></div>`;
       document.getElementById('sub').textContent = '—';
     }
   }
 
+  const visiveis = () => ordens.filter(o => filtroEmp === 'todas' || o.empresaId === filtroEmp);
+
+  function cartao(o) {
+    const p = o.pedido || {};
+    const pags = (p.pagamentos || []).map(x => `${METODO[x.metodo] || x.metodo} ${brl(x.valor)}`).join(' + ') || '—';
+    const ganhos = (p.ganhos || []).map(g => `${g.nome} ${brl(g.ganho)}`).join(' · ') || 'sem lavador';
+    return `<article class="ord${sel.has(o.id) ? ' sel' : ''}" data-id="${o.id}">
+      <label class="ord-topo"><input type="checkbox" ${sel.has(o.id) ? 'checked' : ''} onchange="alternar('${o.id}')">
+        <span class="num">#${o.numeroOrdem}</span>
+        <span class="placa loc" style="min-width: 0"><b style="font-size: 13px">${esc(o.veiculo?.placa || '—')}</b></span>
+        <span class="quando">finalizada ${quando(p.em)}<br>por ${esc(p.porNome || 'equipe')}</span></label>
+      <div class="ord-corpo">
+        <div class="linha1"><div class="info"><b>${esc([o.veiculo?.modelo, o.veiculo?.cor].filter(Boolean).join(' · ') || 'Modelo não informado')}</b><span>${esc((o.servicos || []).join(', ') || '—')}</span></div>
+          <div class="valor">${brl(p.valorFinal)}</div></div>
+        <div class="fatos">
+          <div class="fato"><small>Pagamento</small><b>${esc(pags)}</b></div>
+          <div class="fato"><small>Comissão ao confirmar</small><b>${esc(ganhos)}</b></div>
+          ${p.desconto > 0 ? `<div class="fato"><small>Desconto</small><b>${brl(p.desconto)}</b></div>` : ''}
+          ${o.observacoes ? `<div class="fato inteiro"><small>Observação</small><b>${esc(o.observacoes)}</b></div>` : ''}
+        </div>
+      </div>
+      ${devolvendo === o.id ? `<div class="devolver"><textarea id="motivo" maxlength="300" placeholder="O que a equipe precisa corrigir? Ex.: pagamento é NF-e, não Pix"></textarea>
+        <div class="linha"><button class="btn" onclick="devolvendo=null;desenhar()">Cancelar</button><button class="btn amarelo" style="background: var(--yellow)" onclick="devolver('${o.id}')"><i class="fas fa-reply"></i> Devolver para a equipe</button></div></div>`
+      : `<div class="ord-acoes">
+        <button class="btn" onclick="abrirDevolver('${o.id}')"><i class="fas fa-reply"></i> Devolver</button>
+        ${rapido ? '' : `<button class="btn lixo${armado === o.id ? ' armado' : ''}" onclick="cancelar('${o.id}')"><i class="fas fa-ban"></i> ${armado === o.id ? 'Toque de novo para cancelar' : 'Cancelar ordem'}</button>`}
+      </div>`}
+    </article>`;
+  }
+
   function desenhar() {
     const total = ordens.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0);
-    document.getElementById('sub').textContent = ordens.length ? `${ordens.length} esperando · ${brl(total)}` : 'Nada esperando';
-    document.getElementById('barraSel').hidden = !ordens.length;
+    const nEmp = new Set(ordens.map(o => o.empresaId)).size;
+    document.getElementById('sub').textContent = ordens.length ? `${ordens.length} esperando${rapido && nEmp > 1 ? ` em ${nEmp} empresas` : ''} · ${brl(total)}` : 'Nada esperando';
+    const abas = document.getElementById('abas');
+    abas.hidden = !(rapido && empresas.length > 1);
+    if (!abas.hidden) {
+      abas.innerHTML = `<button class="chip" aria-pressed="${filtroEmp === 'todas'}" onclick="filtrar('todas')"><b>${ordens.length}</b>Todas</button>` +
+        empresas.map(e => `<button class="chip${e.qtd ? '' : ' zero'}" aria-pressed="${filtroEmp === e.id}" onclick="filtrar('${e.id}')"><b>${e.qtd}</b>${esc(e.nome)}</button>`).join('');
+    }
+    const lista = visiveis();
+    document.getElementById('barraSel').hidden = !lista.length;
     document.getElementById('rodape').hidden = !ordens.length;
-    if (!ordens.length) {
+    if (!lista.length) {
       document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic">✅</div><b>Tudo confirmado</b><p>Quando a equipe finalizar uma ordem da frota, ela aparece aqui.</p></div>`;
       return atualizarRodape();
     }
-    document.getElementById('lista').innerHTML = ordens.map(o => {
-      const p = o.pedido || {};
-      const pags = (p.pagamentos || []).map(x => `${METODO[x.metodo] || x.metodo} ${brl(x.valor)}`).join(' + ') || '—';
-      const ganhos = (p.ganhos || []).map(g => `${g.nome} ${brl(g.ganho)}`).join(' · ') || 'sem lavador';
-      return `<article class="ord${sel.has(o.id) ? ' sel' : ''}" data-id="${o.id}">
-        <label class="ord-topo"><input type="checkbox" ${sel.has(o.id) ? 'checked' : ''} onchange="alternar('${o.id}')">
-          <span class="num">#${o.numeroOrdem}</span>
-          <span class="placa loc" style="min-width: 0"><b style="font-size: 13px">${esc(o.veiculo?.placa || '—')}</b></span>
-          <span class="quando">finalizada ${quando(p.em)}<br>por ${esc(p.porNome || 'equipe')}</span></label>
-        <div class="ord-corpo">
-          <div class="linha1"><div class="info"><b>${esc([o.veiculo?.modelo, o.veiculo?.cor].filter(Boolean).join(' · ') || 'Modelo não informado')}</b><span>${esc((o.servicos || []).join(', ') || '—')}</span></div>
-            <div class="valor">${brl(p.valorFinal)}</div></div>
-          <div class="fatos">
-            <div class="fato"><small>Pagamento</small><b>${esc(pags)}</b></div>
-            <div class="fato"><small>Comissão ao confirmar</small><b>${esc(ganhos)}</b></div>
-            ${p.desconto > 0 ? `<div class="fato"><small>Desconto</small><b>${brl(p.desconto)}</b></div>` : ''}
-            ${o.observacoes ? `<div class="fato inteiro"><small>Observação</small><b>${esc(o.observacoes)}</b></div>` : ''}
-          </div>
-        </div>
-        ${devolvendo === o.id ? `<div class="devolver"><textarea id="motivo" maxlength="300" placeholder="O que a equipe precisa corrigir? Ex.: pagamento é NF-e, não Pix"></textarea>
-          <div class="linha"><button class="btn" onclick="devolvendo=null;desenhar()">Cancelar</button><button class="btn amarelo" style="background: var(--yellow)" onclick="devolver('${o.id}')"><i class="fas fa-reply"></i> Devolver para a equipe</button></div></div>`
-        : `<div class="ord-acoes">
-          <button class="btn" onclick="abrirDevolver('${o.id}')"><i class="fas fa-reply"></i> Devolver</button>
-          <button class="btn lixo${armado === o.id ? ' armado' : ''}" onclick="cancelar('${o.id}')"><i class="fas fa-ban"></i> ${armado === o.id ? 'Toque de novo para cancelar' : 'Cancelar ordem'}</button>
-        </div>`}
-      </article>`;
-    }).join('');
+    if (rapido && empresas.length > 1) {
+      document.getElementById('lista').innerHTML = empresas.map(e => {
+        const os = lista.filter(o => o.empresaId === e.id);
+        if (!os.length) return '';
+        return `<div class="grupo-tit"><h3>${esc(e.nome)}</h3><span>${os.length} · ${brl(os.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0))}</span></div>` + os.map(cartao).join('');
+      }).join('');
+    } else {
+      document.getElementById('lista').innerHTML = lista.map(cartao).join('');
+    }
     if (devolvendo) document.getElementById('motivo')?.focus();
     atualizarRodape();
   }
 
+  function filtrar(id) { filtroEmp = id; devolvendo = null; desenhar(); }
+
   function atualizarRodape() {
+    const lista = visiveis();
     const escolhidas = ordens.filter(o => sel.has(o.id));
     const total = escolhidas.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0);
+    const nEmp = new Set(escolhidas.map(o => o.empresaId)).size;
     document.getElementById('rodTotal').textContent = brl(total);
-    document.getElementById('rodQtd').textContent = escolhidas.length ? `${escolhidas.length} selecionada${escolhidas.length > 1 ? 's' : ''}` : 'nenhuma selecionada';
-    document.getElementById('contaSel').textContent = `${escolhidas.length} de ${ordens.length}`;
-    document.getElementById('btnTodas').textContent = escolhidas.length === ordens.length && ordens.length ? 'Desmarcar todas' : 'Marcar todas';
+    document.getElementById('rodQtd').textContent = escolhidas.length ? `${escolhidas.length} selecionada${escolhidas.length > 1 ? 's' : ''}${rapido && nEmp > 1 ? ` · ${nEmp} empresas` : ''}` : 'nenhuma selecionada';
+    const marcadasAqui = lista.filter(o => sel.has(o.id)).length;
+    document.getElementById('contaSel').textContent = `${marcadasAqui} de ${lista.length}`;
+    document.getElementById('btnTodas').textContent = marcadasAqui === lista.length && lista.length ? 'Desmarcar todas' : 'Marcar todas';
     const b = document.getElementById('btnConfirmar');
     b.disabled = !escolhidas.length;
     b.innerHTML = `<i class="fas fa-check-double"></i> Confirmar${escolhidas.length ? ' ' + escolhidas.length : ''}`;
   }
 
   function alternar(id) { sel.has(id) ? sel.delete(id) : sel.add(id); document.querySelector(`.ord[data-id="${id}"]`)?.classList.toggle('sel', sel.has(id)); atualizarRodape(); }
-  function marcarTodas() { sel = sel.size === ordens.length ? new Set() : new Set(ordens.map(o => o.id)); desenhar(); }
+  function marcarTodas() {
+    const lista = visiveis(); const todas = lista.every(o => sel.has(o.id));
+    lista.forEach(o => todas ? sel.delete(o.id) : sel.add(o.id)); desenhar();
+  }
   function abrirDevolver(id) { devolvendo = id; armado = null; desenhar(); }
+
+  // Confirma antes de lançar caixa e comissão
+  function pedirConfirmacao() {
+    const escolhidas = ordens.filter(o => sel.has(o.id)); if (!escolhidas.length) return;
+    const grupos = {};
+    escolhidas.forEach(o => { const k = o.empresaNome || 'Ordens'; (grupos[k] ||= []).push(o); });
+    const linhas = Object.entries(grupos).map(([nome, os]) => `<div><span>${esc(rapido ? nome : `${os.length} ordem${os.length > 1 ? 'ns' : ''}`)}${rapido ? ` · ${os.length}` : ''}</span><b>${brl(os.reduce((s, o) => s + (o.pedido?.valorFinal || 0), 0))}</b></div>`).join('');
+    const d = document.createElement('div'); d.className = 'confirm-dialog';
+    d.innerHTML = `<div class="confirm-overlay"></div><div class="confirm-box" role="dialog" aria-modal="true"><h2>Confirmar ordens?</h2><p>Pagamento, caixa e comissão entram agora.</p><div class="resumo-cf">${linhas}</div>
+      <div class="confirm-buttons"><button class="btn-cancel">Voltar</button><button class="btn-confirm">Confirmar</button></div></div>`;
+    document.body.append(d);
+    d.querySelector('.confirm-overlay').onclick = () => d.remove();
+    d.querySelector('.btn-cancel').onclick = () => d.remove();
+    d.querySelector('.btn-confirm').onclick = () => { d.remove(); confirmarSelecionadas(); };
+    d.querySelector('.btn-confirm').focus();
+  }
 
   async function confirmarSelecionadas() {
     const ids = [...sel]; if (!ids.length) return;
     const b = document.getElementById('btnConfirmar'); b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando…';
     try {
-      const r = await fetchApi('/ordens/frota/confirmar', { method: 'POST', body: JSON.stringify({ ids }), semRedirect: true });
+      const r = await api.confirmar(ids);
       const falhas = (r.resultados || []).filter(x => !x.ok);
       sel = new Set(falhas.map(f => f.id));
       if (falhas.length) toast(`${r.confirmadas} confirmada(s). #${falhas[0].numeroOrdem || ''}: ${falhas[0].erro}`, true);
       else toast(`${r.confirmadas} ordem(ns) confirmada(s). Comissão e caixa atualizados.`);
-    } catch (e) { toast(e?.error || 'Não foi possível confirmar.', true); }
+    } catch (e) { if (e?.code !== 'FROTA_SESSAO') toast(e?.error || 'Não foi possível confirmar.', true); }
     await carregar();
   }
 
@@ -193,11 +362,11 @@
     const motivo = document.getElementById('motivo')?.value.trim();
     if (!motivo) return document.getElementById('motivo')?.focus();
     try {
-      await fetchApi(`/ordens/${id}/frota/devolver`, { method: 'POST', body: JSON.stringify({ motivo }), semRedirect: true });
+      await api.devolver(id, motivo);
       devolvendo = null; sel.delete(id);
       toast('Ordem devolvida para a equipe.');
       await carregar();
-    } catch (e) { toast(e?.error || 'Não foi possível devolver.', true); }
+    } catch (e) { if (e?.code !== 'FROTA_SESSAO') toast(e?.error || 'Não foi possível devolver.', true); }
   }
 
   async function cancelar(id) {
@@ -211,7 +380,9 @@
     } catch (e) { toast(e?.error || 'Não foi possível cancelar.', true); }
   }
 
-  carregar();
+  // Veio pelo link sem sessão rápida → já abre a chave
+  if (K && !rapido) { if (logado) carregar(); else bloqueado(); abrirChave(); }
+  else carregar();
 </script>
 <script src="/funcionario/decola-base.js"></script>
 </body>

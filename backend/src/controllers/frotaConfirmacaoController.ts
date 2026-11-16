@@ -13,7 +13,8 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../db';
 import { finalizarOrdem } from './ordemController';
-import { notifyAdmins, notifyByPermission } from '../services/whatsappNotificationService';
+import { botSend, botGetStatus } from '../services/botServiceClient';
+import { codigoDoLink } from './frotaRapidoController';
 
 interface Req extends Request { empresaId?: string; usuarioNome?: string; subaccountId?: string }
 
@@ -25,7 +26,7 @@ type Pedido = {
   avisadoEm: string | null;
 };
 
-function respostaFalsa() {
+export function respostaFalsa() {
   const r: any = { statusCode: 200, body: null };
   r.status = (c: number) => { r.statusCode = c; return r; };
   r.json = (b: unknown) => { r.body = b; return r; };
@@ -119,34 +120,74 @@ export async function devolver(req: Req, res: Response) {
 }
 
 /**
- * Cron de hora em hora (horário comercial): avisa no WhatsApp quem confirma quando
- * chegaram pedidos novos desde o último aviso. Uma mensagem por empresa, só se houver novidade.
+ * Cron de hora em hora (horário comercial): avisa no WhatsApp quem confirma quando chegaram
+ * pedidos novos desde o último aviso. UMA mensagem por pessoa juntando as empresas dela, com o
+ * link pessoal do acesso rápido (frotaRapidoController) — 16/11/2026.
  */
 export async function cronResumoFrotaPendente() {
   try {
+    try {
+      if ((await botGetStatus()).status !== 'connected') return; // não marca como avisado se o bot está fora
+    } catch { return; }
+
     const pend = await prisma.ordemServico.findMany({
       where: { status: { in: [...ATIVAS] }, NOT: { frotaPedido: { equals: Prisma.DbNull } } },
+      orderBy: { updatedAt: 'asc' },
       select: { id: true, empresaId: true, numeroOrdem: true, frotaPedido: true, veiculo: { select: { placa: true } } },
     });
     const porEmpresa = new Map<string, typeof pend>();
     for (const o of pend) porEmpresa.set(o.empresaId, [...(porEmpresa.get(o.empresaId) || []), o]);
+    const comNovidade = [...porEmpresa.entries()].filter(([, os]) => os.some((o) => !(o.frotaPedido as Pedido).avisadoEm));
+    if (!comNovidade.length) return;
+
+    const empresas = await prisma.empresa.findMany({ where: { id: { in: comNovidade.map(([id]) => id) } }, select: { id: true, nome: true, usuarioId: true } });
+    const empresaPorId = new Map(empresas.map((e) => [e.id, e]));
+
+    // destino (jid) → quem é + empresas que entram no aviso
+    const dest = new Map<string, { quem: { tipo: 'u' | 's'; id: string }; empresas: string[] }>();
+    const somar = (jid: string, quem: { tipo: 'u' | 's'; id: string }, empresaId: string) => {
+      const d = dest.get(jid) || { quem, empresas: [] };
+      if (!d.empresas.includes(empresaId)) d.empresas.push(empresaId);
+      dest.set(jid, d);
+    };
+    for (const [empresaId] of comNovidade) {
+      const emp = empresaPorId.get(empresaId);
+      if (!emp) continue;
+      const admins = await prisma.whatsappAdminPhone.findMany({ where: { empresaId, ativo: true }, select: { jid: true, telefone: true, notifPrefs: true } });
+      for (const a of admins) {
+        if (((a.notifPrefs as any) ?? {}).frotaPendente === false) continue;
+        somar(a.jid ?? `${a.telefone.replace(/\D/g, '')}@s.whatsapp.net`, { tipo: 'u', id: emp.usuarioId }, empresaId);
+      }
+      const equipe = await prisma.whatsappBotUser.findMany({
+        where: { empresaId, ativo: true, jid: { not: null }, subaccountId: { not: null }, subaccount: { roleInt: { permissoes: { some: { name: 'confirmar_frota' } } } } },
+        select: { jid: true, subaccountId: true },
+      });
+      for (const u of equipe) if (u.jid && u.subaccountId) somar(u.jid, { tipo: 's', id: u.subaccountId }, empresaId);
+    }
+
     const url = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
-    for (const [empresaId, ordens] of porEmpresa) {
-      const novas = ordens.filter((o) => !(o.frotaPedido as Pedido).avisadoEm);
-      if (!novas.length) continue;
-      const total = ordens.reduce((s, o) => s + ((o.frotaPedido as Pedido).valorFinal || 0), 0);
+    const brl = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
+    for (const [jid, d] of dest) {
+      const blocos = d.empresas.map((empresaId) => {
+        const ordens = porEmpresa.get(empresaId) || [];
+        const total = ordens.reduce((s, o) => s + ((o.frotaPedido as Pedido).valorFinal || 0), 0);
+        const linhas = ordens.slice(0, 6).map((o) => `• #${o.numeroOrdem}${o.veiculo?.placa ? ` · ${o.veiculo.placa}` : ''} — ${(o.frotaPedido as Pedido).porNome || 'equipe'}`);
+        if (ordens.length > 6) linhas.push(`• e mais ${ordens.length - 6}`);
+        return [`*${empresaPorId.get(empresaId)?.nome || 'Empresa'}* · ${ordens.length} ordem${ordens.length > 1 ? 'ns' : ''} · ${brl(total)}`, ...linhas].join('\n');
+      });
       const texto = [
         `🚗 *Frota esperando confirmação*`,
         ``,
-        `${ordens.length} ordem${ordens.length > 1 ? 'ns' : ''} da Localiza finalizada${ordens.length > 1 ? 's' : ''} pela equipe (${novas.length} nova${novas.length > 1 ? 's' : ''} desde o último aviso), somando R$ ${total.toFixed(2).replace('.', ',')}.`,
-        novas.slice(0, 8).map((o) => `• #${o.numeroOrdem}${o.veiculo?.placa ? ` · ${o.veiculo.placa}` : ''} — ${(o.frotaPedido as Pedido).porNome || 'equipe'}`).join('\n'),
+        blocos.join('\n\n'),
         ``,
-        `Comissão e caixa só entram depois de confirmar.${url ? `\n${url}/frota-confirmar.html` : ''}`,
+        `Comissão e caixa só entram depois de confirmar.${url ? `\n${url}/frota-confirmar.html?k=${codigoDoLink(d.quem)}` : ''}`,
       ].join('\n');
-      await notifyAdmins(empresaId, texto, 'frotaPendente').catch(() => {});
-      await notifyByPermission(empresaId, 'confirmar_frota', texto).catch(() => {});
-      const agora = new Date().toISOString();
-      for (const o of novas) {
+      await botSend(jid, texto, { empresaId: d.empresas[0], tipo: 'frotaPendente' }).catch((e) => console.error(`[Frota] Erro ao avisar ${jid}:`, e));
+    }
+
+    const agora = new Date().toISOString();
+    for (const [, ordens] of comNovidade) {
+      for (const o of ordens.filter((x) => !(x.frotaPedido as Pedido).avisadoEm)) {
         // Só marca se continua pendente (pode ter sido confirmada/devolvida durante o envio)
         await prisma.ordemServico.updateMany({
           where: { id: o.id, status: { in: [...ATIVAS] }, NOT: { frotaPedido: { equals: Prisma.DbNull } } },

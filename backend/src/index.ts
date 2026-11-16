@@ -36,6 +36,7 @@ import empresaWaRoutes from './routes/empresaWa';
 import ocrRoutes from './routes/ocr';
 import portalPublicoRoutes from './routes/portalPublico';
 import acompanhamentoPublicoRoutes from './routes/acompanhamentoPublico';
+import frotaRapidoRoutes from './routes/frotaRapido';
 import { cronAcompanhamento } from './services/acompanhamentoService';
 import relatorioFinanceiroRoutes from './routes/relatorioFinanceiro';
 import gorjetaRoutes from './routes/gorjeta';
@@ -124,6 +125,7 @@ app.post('/api/public/lavador-data', getLavadorPublicData);
 // Portal público do funcionário (resolve token curto sem autenticação)
 app.use('/api/p', portalPublicoRoutes);
 app.use('/api/v', acompanhamentoPublicoRoutes); // acompanhamento do veículo (página pública do cliente)
+app.use('/api/frota-rapido', frotaRapidoRoutes); // confirmação de frota: link pessoal + senha
 
 // Relatório de Saúde Financeira (leitura pública por token + geração autenticada)
 app.use('/api/relatorio-financeiro', relatorioFinanceiroRoutes);
