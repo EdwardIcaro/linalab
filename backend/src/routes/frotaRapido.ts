@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { quem, entrar, sessaoFrota, pendentes, confirmarRapido, devolverRapido } from '../controllers/frotaRapidoController';
 
 // Acesso rápido da confirmação de frota: link pessoal + senha → sessão de 12 h só para estas rotas
-const router = Router();
+const router: Router = Router();
 router.get('/quem', quem);
 router.post('/entrar', entrar);
 router.get('/pendentes', sessaoFrota as any, pendentes as any);
