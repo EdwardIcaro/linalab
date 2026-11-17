@@ -231,6 +231,7 @@ app.use('/api/solicitacoes', authMiddleware, solicitacoesPortalRoutes); // fila 
 // ela libera — nesse caso, um novo commit (como este) força o redeploy.
 // (Mais um caso: ef10b40 foi enviado às 13:48 BRT, dentro da janela bloqueada.)
 // (E commit vazio NÃO serve: Railway pula por "No changes to watched files" — precisa tocar arquivo em backend/. Caso 94a2bfa/bf83146, 13/09.)
+// (Deploy 17/11 04h: Railway parado em 1851456, sem acompanhamento fases 1-2 e acesso rapido da frota.)
 // (Deploy 15/09 22h: correções de segurança do commit e6c4dad — push das 10h caiu na janela bloqueada.)
 app.get('/health', (_req: express.Request, res: express.Response) => {
   res.json({
