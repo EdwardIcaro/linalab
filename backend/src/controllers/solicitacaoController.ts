@@ -7,6 +7,10 @@ import { empresasIrmas } from '../services/emailEnriquecimento';
 import { sistemaPrincipalDaEmpresa } from '../utils/sistemaEmpresa';
 import { notifyAdmins } from '../services/whatsappNotificationService';
 import { FORNECEDOR, VALIDADE_DIAS, chavePreco, normalizarPlaca } from '../services/solicitacaoFilaService';
+import {
+  celularValido, enfileirarChecklist, enviosDe, garantirTokenChecklist, linkChecklist,
+  listarResponsaveis, responsavelPorNome, salvarResponsavel, whatsEmpresaConectado, ChecklistJson,
+} from '../services/checklistLocalizaService';
 import { acharVeiculoPorPlaca, corrigirVeiculoDaPlaca, filtroPlaca, registrarConfirmacao, confirmacoesDasPlacas } from '../services/veiculoPlaca';
 
 /**
@@ -159,7 +163,10 @@ export async function listarFila(req: Req, res: Response) {
           : null,
         mesmoPedido: (lote.get(s.numero) ?? []).filter((p) => p !== s.placa),
         checklist: checklist
-          ? { feito: true, avarias: (checklist.itens ?? []).filter((i) => i.st === 'av').length, fotos: s._count.fotos }
+          ? {
+              feito: true, avarias: (checklist.itens ?? []).filter((i) => i.st === 'av').length, fotos: s._count.fotos,
+              enviadoPara: enviosDe(s.checklistEnvios).map((e) => e.nome.split(' ')[0]),
+            }
           : null,
         aceitaPorNome: s.aceitaPorNome,
         ordemNumero: s.ordemId ? ordensAceitas.get(s.ordemId) ?? null : null,
@@ -356,7 +363,9 @@ export async function salvarChecklist(req: Req, res: Response) {
       }
     }
 
-    const antes = ((s.checklist ?? null) as { itens?: Array<{ chave: string; st: string }> } | null)?.itens ?? [];
+    const ckAntes = (s.checklist ?? null) as ChecklistJson | null;
+    const antes = ckAntes?.itens ?? [];
+    const primeiroEm = ckAntes?.primeiroEm || s.checklistEm?.toISOString() || new Date().toISOString();
     const avariasAntes = new Set(antes.filter((i) => i.st === 'av').map((i) => i.chave));
 
     await prisma.$transaction([
@@ -364,7 +373,7 @@ export async function salvarChecklist(req: Req, res: Response) {
       ...(novas.length ? [prisma.solicitacaoFoto.createMany({ data: novas.map((f: { lado: string | null; imagem: string }) => ({ ...f, solicitacaoId: s.id })) })] : []),
       prisma.solicitacaoLavagem.update({
         where: { id: s.id },
-        data: { checklist: { itens }, checklistPor: req.usuarioNome ?? null, checklistEm: new Date() },
+        data: { checklist: { itens, empresaId, primeiroEm }, checklistPor: req.usuarioNome ?? null, checklistEm: new Date() },
       }),
     ]);
 
@@ -384,10 +393,117 @@ export async function salvarChecklist(req: Req, res: Response) {
       notifyAdmins(s.aceitaEmpresaId ?? empresaId, msg, 'reportAvaria').catch(() => {});
     }
 
-    return res.json({ ok: true, avarias: itens.filter((i: { st: string }) => i.st === 'av').length });
+    const envio = await envioDepoisDoChecklist(s.id, empresaId, req.usuarioNome ?? null).catch((e) => {
+      console.error('[Solicitacoes] Erro ao preparar envio do checklist:', e?.message);
+      return null;
+    });
+    return res.json({ ok: true, avarias: itens.filter((i: { st: string }) => i.st === 'av').length, envio });
   } catch (err) {
     console.error('[Solicitacoes] Erro ao salvar checklist:', err);
     return res.status(500).json({ error: 'Erro ao salvar o checklist' });
+  }
+}
+
+// ──────────────────── CHECKLIST → RESPONSÁVEL DA LOCALIZA ────────────────────
+
+/**
+ * Depois de salvar: se é a 1ª vez e quem abriu a solicitação tem número na agenda, já manda.
+ * Senão devolve o caso para a tela perguntar (cadastrar número, outra pessoa ou não enviar).
+ */
+async function envioDepoisDoChecklist(solicitacaoId: string, empresaId: string, por: string | null) {
+  const s = await prisma.solicitacaoLavagem.findUnique({ where: { id: solicitacaoId } });
+  if (!s) return null;
+  const token = await garantirTokenChecklist(s.id);
+  const envios = enviosDe(s.checklistEnvios);
+  const resp = await responsavelPorNome(s.usuarioId, s.solicitante);
+  const base = {
+    link: linkChecklist(token),
+    solicitante: resp?.nome || s.solicitante || null,
+    telefone: resp?.telefone || null,
+    conectado: await whatsEmpresaConectado(empresaId),
+    envios,
+  };
+  if (!envios.length && resp?.telefone) {
+    const r = await enfileirarChecklist(s.id, empresaId, { nome: resp.nome, telefone: resp.telefone }, por);
+    return { ...base, caso: 'enviado' as const, para: { nome: resp.nome, telefone: resp.telefone }, envios: [...envios, r.envio] };
+  }
+  return { ...base, caso: envios.length ? ('jaEnviado' as const) : resp?.telefone ? ('temNumero' as const) : ('semNumero' as const) };
+}
+
+/**
+ * POST /api/solicitacoes/:id/checklist/enviar
+ * { chave } = alguém da agenda que já tem número · { nome, telefone, salvar } = número digitado na hora
+ */
+export async function enviarChecklist(req: Req, res: Response) {
+  const empresaId = req.empresaId!;
+  try {
+    const s = await solicitacaoVisivel(empresaId, req.params.id as string);
+    if (!s) return res.status(404).json({ error: 'Solicitação não encontrada.' });
+    if (!s.checklistEm) return res.status(400).json({ error: 'Salve o checklist antes de enviar.' });
+
+    let para: { nome: string; telefone: string };
+    if (req.body?.chave) {
+      const lista = await listarResponsaveis(s.usuarioId);
+      const r = lista.find((x) => x.chave === String(req.body.chave));
+      if (!r?.telefone) return res.status(400).json({ error: 'Essa pessoa ainda não tem número.' });
+      para = { nome: r.nome, telefone: r.telefone };
+    } else {
+      const nome = String(req.body?.nome || s.solicitante || '').trim();
+      const telefone = celularValido(req.body?.telefone);
+      if (!nome) return res.status(400).json({ error: 'Informe o nome.' });
+      if (!telefone) return res.status(400).json({ error: 'Número inválido: DDD + celular (11 dígitos).' });
+      if (req.body?.salvar) {
+        const emp = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } });
+        const salvo = await salvarResponsavel(s.usuarioId, { nome, telefone }, { nome: req.usuarioNome ?? null, empresa: emp?.nome ?? null });
+        para = { nome: salvo.nome, telefone };
+      } else para = { nome, telefone };
+    }
+    const r = await enfileirarChecklist(s.id, empresaId, para, req.usuarioNome ?? null);
+    return res.json({ ok: true, ...r });
+  } catch (err) {
+    console.error('[Solicitacoes] Erro ao enviar checklist:', err);
+    return res.status(500).json({ error: 'Não foi possível enviar o checklist.' });
+  }
+}
+
+/** GET /api/solicitacoes/responsaveis — agenda do dono (vale para todas as empresas dele). */
+export async function verResponsaveis(req: Req, res: Response) {
+  try {
+    const dono = await donoDa(req.empresaId!);
+    if (!dono) return res.status(404).json({ error: 'Empresa não encontrada.' });
+    const [responsaveis, empresas] = await Promise.all([listarResponsaveis(dono), empresasLinaWash(dono)]);
+    return res.json({ responsaveis, empresas: empresas.map((e) => e.nome) });
+  } catch (err) {
+    console.error('[Solicitacoes] Erro ao listar responsáveis:', err);
+    return res.status(500).json({ error: 'Erro ao carregar os responsáveis.' });
+  }
+}
+
+/** PUT /api/solicitacoes/responsaveis { chaveAntiga?, nome, agencia?, telefone? ('' apaga) } */
+export async function salvarResponsavelCtrl(req: Req, res: Response) {
+  try {
+    const dono = await donoDa(req.empresaId!);
+    if (!dono) return res.status(404).json({ error: 'Empresa não encontrada.' });
+    const nome = String(req.body?.nome || '').trim();
+    if (!nome) return res.status(400).json({ error: 'Informe o nome.' });
+    let telefone: string | null | undefined;
+    if (req.body?.telefone !== undefined) {
+      const bruto = String(req.body.telefone ?? '').trim();
+      telefone = bruto ? celularValido(bruto) : null;
+      if (bruto && !telefone) return res.status(400).json({ error: 'Número inválido: DDD + celular (11 dígitos).' });
+    }
+    const emp = await prisma.empresa.findUnique({ where: { id: req.empresaId! }, select: { nome: true } });
+    const r = await salvarResponsavel(
+      dono,
+      { chaveAntiga: req.body?.chaveAntiga ?? null, nome, agencia: req.body?.agencia, telefone },
+      { nome: req.usuarioNome ?? null, empresa: emp?.nome ?? null },
+    );
+    return res.json({ ok: true, responsavel: r });
+  } catch (err: any) {
+    if (err?.message === 'DUPLICADO') return res.status(409).json({ error: 'Já existe alguém com esse nome na agenda.' });
+    if (err?.message === 'NOME') return res.status(400).json({ error: 'Informe o nome.' });
+    console.error('[Solicitacoes] Erro ao salvar responsável:', err);
+    return res.status(500).json({ error: 'Erro ao salvar.' });
   }
 }
 

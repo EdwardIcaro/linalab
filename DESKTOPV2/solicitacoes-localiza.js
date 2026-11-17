@@ -80,6 +80,21 @@
       .sl-seg button{border:none;background:none;cursor:pointer;font:inherit;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;color:var(--sl-mut)}
       .sl-seg button.ok{background:#dcfce7;color:var(--sl-ok)}.sl-seg button.av{background:#fee2e2;color:var(--sl-av)}
       .sl-item textarea{width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--sl-bd);border-radius:10px;padding:8px;font:inherit;font-size:13px;resize:vertical}
+      .sl-verde{background:var(--sl-ok);color:#fff}
+      .sl-inp{color:#0f172a}.sl-aviso.ok{background:#dcfce7;color:#166534}
+      .sl-envio{background:#fff;border-radius:14px;padding:12px;display:grid;gap:12px;margin-top:12px}
+      .sl-envio h4{margin:0;font-size:15px}.sl-envio p{margin:2px 0 0;font-size:12px;color:var(--sl-mut);line-height:1.5}
+      .sl-linha{display:flex;gap:10px;align-items:flex-start}
+      .sl-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;font-weight:800;font-size:16px}
+      .sl-ic.ok{background:#c9efd5}.sl-ic.sem{background:#ffd23f}.sl-ic.desc{background:#ffd0cc}
+      .sl-tel{display:flex;gap:6px;align-items:stretch}.sl-tel .sl-btn{white-space:nowrap}
+      .sl-ou{text-align:center;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sl-mut)}
+      .sl-pess{display:flex;align-items:center;gap:10px;border:1.5px solid var(--sl-bd);border-radius:10px;padding:8px 10px;background:#fff;text-align:left;width:100%;cursor:pointer;font:inherit;color:inherit}
+      .sl-pess.on{background:#cfdcff;border-color:var(--sl-ac)}
+      .sl-pess b{display:block;font-size:13px}.sl-pess small{font-size:11px;color:var(--sl-mut)}
+      .sl-radio{width:18px;height:18px;border-radius:50%;border:2px solid #0f172a;flex:none;margin-left:auto;background:#fff}
+      .sl-pess.on .sl-radio{background:var(--sl-ac);box-shadow:inset 0 0 0 3px #fff}
+      .sl-env{font-size:11px;margin-top:4px;color:var(--sl-mut)}
       .sl-toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;max-width:90vw;text-align:center}
     `;
     document.head.appendChild(st);
@@ -188,7 +203,8 @@
       const ck = s.checklist
         ? (s.checklist.avarias
           ? `<div class="sl-ck av">⚠ Checklist feito · ${s.checklist.avarias} avaria(s)${s.checklist.fotos ? ' · ' + s.checklist.fotos + ' foto(s)' : ''}</div>`
-          : `<div class="sl-ck ok">✔ Checklist feito · sem avarias${s.checklist.fotos ? ' · ' + s.checklist.fotos + ' foto(s)' : ''}</div>`)
+          : `<div class="sl-ck ok">✔ Checklist feito · sem avarias${s.checklist.fotos ? ' · ' + s.checklist.fotos + ' foto(s)' : ''}</div>`) +
+          (s.checklist.enviadoPara?.length ? `<div class="sl-env">📨 Enviado para ${esc(s.checklist.enviadoPara.join(', '))}</div>` : '')
         : '';
       return `<div class="sl-card" data-id="${esc(s.id)}">
           <div class="sl-top">
@@ -405,12 +421,132 @@
             }),
           });
           m.fechar();
-          toast(r.avarias ? `Checklist salvo · ${r.avarias} avaria(s) — dono avisado` : 'Checklist salvo · sem avarias');
+          if (r.envio) abrirEnvio(s, r);
+          else toast(r.avarias ? `Checklist salvo · ${r.avarias} avaria(s) — dono avisado` : 'Checklist salvo · sem avarias');
         } catch (e) {
           toast(e?.error || 'Não foi possível salvar o checklist.', true);
           ok.disabled = false; ok.textContent = 'Salvar checklist';
         }
         carregar();
+      };
+    }
+
+    // ── Depois do checklist: mandar para quem abriu a solicitação (protótipo 16/11) ──
+    const soDig = (v) => String(v || '').replace(/\D/g, '');
+    const celularOk = (v) => { let d = soDig(v); if (d.length === 13 && d.startsWith('55')) d = d.slice(2); return d.length === 11 && d[2] === '9'; };
+    function fmtTel(v) {
+      let d = soDig(v); if (d.length === 13 && d.startsWith('55')) d = d.slice(2);
+      return d.length === 11 ? `(${d.slice(0, 2)}) ${d[2]} ${d.slice(3, 7)}-${d.slice(7)}` : v;
+    }
+    const iniciais = (n) => String(n || '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+    const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    function abrirEnvio(s, r) {
+      const e = r.envio;
+      const nome = e.solicitante || 'quem abriu a solicitação';
+      const primeiro = String(nome).split(' ')[0];
+      const resumo = r.avarias ? `✔ Checklist salvo · ${r.avarias} avaria(s)` : '✔ Checklist salvo · sem avarias';
+      let escolhido = null;   // chave de outra pessoa da agenda
+      let outros = null;      // lista carregada sob demanda
+
+      const desc = e.conectado ? '' : `
+          <div class="sl-envio"><div class="sl-linha"><div class="sl-ic desc">⚠</div>
+            <div><h4>WhatsApp de ${esc(empresaNome())} desconectado</h4><p>A mensagem fica na fila e sai quando reconectar (até 2 h). Se preferir, copie o link e mande na mão.</p></div></div>
+            <div class="sl-tel"><input class="sl-inp" readonly value="${esc(e.link)}" data-link><button class="sl-btn sl-sec" type="button" data-copiar>Copiar</button></div></div>`;
+
+      let corpo, alvo = null;
+      if (e.caso === 'enviado') {
+        corpo = `<div class="sl-envio"><div class="sl-linha"><div class="sl-ic ok">✓</div>
+            <div><h4>${e.conectado ? 'Enviado' : 'Na fila'} para ${esc(e.para.nome)}</h4><p>Pelo WhatsApp de ${esc(empresaNome())}, para ${esc(fmtTel(e.para.telefone))}, com o link do checklist.</p></div></div>
+            <button class="sl-btn sl-sec" type="button" data-mais style="justify-self:start">➕ Mandar também para outra pessoa</button>
+            <div data-outros hidden></div></div>`;
+      } else if (e.caso === 'semNumero') {
+        corpo = `<div class="sl-envio"><div class="sl-linha"><div class="sl-ic sem">!</div>
+            <div><h4>${esc(nome)} não tem número</h4><p>Cadastre agora (fica salvo para as próximas, em todas as empresas) ou mande para outra pessoa.</p></div></div>
+            <div class="sl-tel"><input class="sl-inp" inputmode="tel" placeholder="(99) 9 9999-9999" data-tel><button class="sl-btn sl-verde" type="button" data-salvar-env>Salvar e enviar</button></div>
+            <div class="sl-ou">ou mandar para quem já tem número</div>
+            <div data-outros></div></div>`;
+      } else {
+        const ult = (e.envios || []).slice(-1)[0];
+        alvo = ult ? { nome: ult.nome, telefone: ult.telefone } : e.telefone ? { nome, telefone: e.telefone } : null;
+        corpo = `<div class="sl-envio"><div class="sl-linha"><div class="sl-ic ok">✓</div>
+            <div><h4>${ult ? `Já enviado para ${esc(ult.nome)}` : `${esc(nome)} tem número`}</h4><p>${ult ? `Às ${hora(ult.em)}${ult.por ? ' por ' + esc(ult.por) : ''}. Editou o checklist? Reenvie para a pessoa ver a versão nova.` : 'Envie o link do checklist pelo WhatsApp da empresa.'}</p></div></div>
+            ${alvo ? `<button class="sl-btn sl-pri" type="button" data-reenviar style="justify-self:start">📨 ${ult ? 'Reenviar' : 'Enviar'} para ${esc(alvo.nome.split(' ')[0])}</button>` : ''}
+            <button class="sl-btn sl-sec" type="button" data-mais style="justify-self:start">➕ Mandar para outra pessoa</button>
+            <div data-outros hidden></div></div>`;
+      }
+
+      const m = abrirSheet('📋 Checklist de avarias', `
+          <div class="sl-res"><span class="sl-placa">${esc(s.placa)}</span>
+            <div style="flex:1;font-size:12px;color:#64748b">Solicitação ${esc(s.numero)}<br>Aberta por <b>${esc(nome)}</b>${s.agencia ? ' (' + esc(s.agencia) + ')' : ''}</div></div>
+          <div class="sl-aviso ok" style="margin-top:12px">${esc(resumo)}</div>
+          ${corpo}${desc}`,
+        `<button class="sl-btn sl-sec" type="button" data-fechar>${e.caso === 'semNumero' ? 'Não enviar' : 'Fechar'}</button>
+         <button class="sl-btn sl-verde" type="button" data-enviar-outro hidden>Enviar</button>`);
+      m.ov.addEventListener('click', (ev) => { if (ev.target === m.ov || ev.target.closest('[data-fechar]')) carregar(); });
+
+      const btnOutro = m.q('[data-enviar-outro]');
+      async function enviar(corpoReq, btn, rotulo) {
+        btn.disabled = true; const txt = btn.textContent; btn.textContent = 'Enviando...';
+        try {
+          const rr = await window.fetchApi(`/solicitacoes/${encodeURIComponent(s.id)}/checklist/enviar`, { method: 'POST', semRedirect: true, body: JSON.stringify(corpoReq) });
+          m.fechar();
+          toast(rr.conectado ? `Checklist enviado para ${rotulo}` : `Na fila para ${rotulo} — sai quando o WhatsApp reconectar`);
+          carregar();
+        } catch (er) {
+          toast(er?.error || 'Não foi possível enviar.', true);
+          btn.disabled = false; btn.textContent = txt;
+        }
+      }
+
+      async function desenharOutros() {
+        const caixa = m.q('[data-outros]');
+        if (!caixa) return;
+        caixa.hidden = false;
+        if (!outros) {
+          caixa.innerHTML = '<div class="sl-ou">carregando...</div>';
+          try { outros = (await window.fetchApi('/solicitacoes/responsaveis', { semRedirect: true, cache: 'no-store' })).responsaveis || []; }
+          catch { outros = []; }
+        }
+        const lista = outros.filter((p) => p.telefone && p.nome !== e.para?.nome);
+        caixa.innerHTML = lista.length
+          ? `<div style="display:grid;gap:8px">${lista.map((p) => `<button type="button" class="sl-pess ${escolhido === p.chave ? 'on' : ''}" data-p="${esc(p.chave)}">
+                <span class="sl-ic ok" style="width:30px;height:30px;font-size:12px">${esc(iniciais(p.nome))}</span>
+                <span><b>${esc(p.nome)}</b><small>${esc(p.agencia || '')}${p.agencia ? ' · ' : ''}${esc(fmtTel(p.telefone))}</small></span><span class="sl-radio"></span></button>`).join('')}</div>`
+          : '<div class="sl-ou">Ninguém da agenda tem número ainda. Cadastre em Ajustes › Responsáveis.</div>';
+        caixa.querySelectorAll('[data-p]').forEach((b) => {
+          b.onclick = () => {
+            escolhido = b.dataset.p;
+            const p = outros.find((x) => x.chave === escolhido);
+            btnOutro.hidden = false; btnOutro.textContent = `Enviar para ${String(p.nome).split(' ')[0]}`;
+            desenharOutros();
+          };
+        });
+      }
+
+      btnOutro.onclick = () => {
+        const p = (outros || []).find((x) => x.chave === escolhido);
+        if (p) enviar({ chave: p.chave }, btnOutro, String(p.nome).split(' ')[0]);
+      };
+      const mais = m.q('[data-mais]');
+      if (mais) mais.onclick = () => { mais.hidden = true; desenharOutros(); };
+      if (e.caso === 'semNumero') desenharOutros();
+      const reenv = m.q('[data-reenviar]');
+      if (reenv) reenv.onclick = () => enviar({ nome: alvo.nome, telefone: alvo.telefone }, reenv, alvo.nome.split(' ')[0]);
+      const salvarEnv = m.q('[data-salvar-env]');
+      if (salvarEnv) {
+        const inp = m.q('[data-tel]');
+        inp.oninput = () => inp.style.borderColor = '';
+        salvarEnv.onclick = () => {
+          if (!celularOk(inp.value)) { inp.style.borderColor = '#dc2626'; inp.focus(); return toast('Número inválido: DDD + celular (11 dígitos).', true); }
+          enviar({ nome, telefone: inp.value, salvar: true }, salvarEnv, primeiro);
+        };
+      }
+      const copiar = m.q('[data-copiar]');
+      if (copiar) copiar.onclick = async () => {
+        const inp = m.q('[data-link]');
+        try { await navigator.clipboard.writeText(inp.value); toast('Link copiado'); }
+        catch { inp.select(); document.execCommand && document.execCommand('copy'); toast('Link copiado'); }
       };
     }
 

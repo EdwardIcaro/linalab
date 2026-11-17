@@ -120,9 +120,9 @@ function createMobileNav(activePage) {
 
   if (permissoes.includes('config_ver_servicos')) {
     html += `
-      <a href="servicos.html" class="nav-item ${activePage === 'servicos' ? 'active' : ''}" title="Serviços">
-        <i class="fas fa-wrench"></i>
-        <span>Serviços</span>
+      <a href="servicos.html" class="nav-item ${activePage === 'servicos' ? 'active' : ''}" title="Ajustes">
+        <i class="fas fa-sliders"></i>
+        <span>Ajustes</span>
       </a>
     `;
   }

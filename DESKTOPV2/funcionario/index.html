@@ -106,6 +106,16 @@
     html body .sl-foto { border: 2.5px dashed var(--ink); background: var(--paper); }
     html body .sl-seg { background: #e3d8bd; border: 2px solid var(--ink); }
     html body .sl-sec-t, html body .sl-lbl { font-family: var(--mono); color: var(--muted); }
+    html body .sl-verde { background: var(--green); color: var(--cream); }
+    html body .sl-envio { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
+    html body .sl-envio h4 { font: 400 14px/1.2 var(--dela); }
+    html body .sl-ic { border: 2.5px solid var(--ink); color: var(--ink); font-family: var(--dela); font-weight: 400; }
+    html body .sl-ic.sem { background: var(--yellow); }
+    html body .sl-pess { border: 2.5px solid var(--ink); }
+    html body .sl-pess.on { background: #cfdcff; box-shadow: 3px 3px 0 var(--blue); }
+    html body .sl-pess b { font: 400 12px var(--dela); }
+    html body .sl-radio { border: 2.5px solid var(--ink); }
+    html body .sl-aviso.ok { background: #c9efd5; }
 
     /* ===== navegação ===== */
     .rotulo-secao { display: flex; align-items: center; gap: 12px; font: 700 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--cream); }
@@ -658,10 +668,10 @@
         href: '/funcionario/financeiro.html'
       },
       {
-        permission: 'config_ver_servicos',
-        label: 'Serviços',
-        sub: 'Tabela de preços',
-        icon: 'fa-wrench',
+        permission: ['config_ver_servicos', 'gerenciar_ordens'], // preços ou Localiza (17/11/2026)
+        label: 'Ajustes',
+        sub: 'Preços e Localiza',
+        icon: 'fa-sliders',
         color: 'ic-indigo',
         bg: 'var(--paper)', fg: '',
         href: '/funcionario/servicos.html'
@@ -765,7 +775,7 @@
       const grid = document.getElementById('navGrid');
 
       // Deduplica permissões já mostradas (ex: gerenciar_ordens aparece 2x mas Nova Ordem e Ordens são distintos)
-      const visibles = NAV_PAGES.filter(p => permissoes.includes(p.permission));
+      const visibles = NAV_PAGES.filter(p => [].concat(p.permission).some(x => permissoes.includes(x)));
 
       if (visibles.length === 0 && !permissoes.includes('gerenciar_ordens')) {
         document.getElementById('emptyState').style.display = 'block';

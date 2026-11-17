@@ -1766,6 +1766,8 @@ model SolicitacaoLavagem {
   checklist       Json?     // { itens: [{ chave, st: 'ok'|'av', obs }] }
   checklistPor    String?
   checklistEm     DateTime?
+  checklistToken  String?   @unique // link público /c/CÓDIGO do checklist (16/11/2026)
+  checklistEnvios Json?     // [{ nome, telefone, em, por, empresaId }] envios ao responsável da Localiza
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   fotos           SolicitacaoFoto[]
@@ -1785,6 +1787,26 @@ model SolicitacaoFoto {
 
   @@index([solicitacaoId], map: "solicitacao_fotos_sol")
   @@map("solicitacao_fotos")
+}
+
+/// Agenda de quem abre as solicitações da Localiza. Por DONO: o número vale em todas as empresas dele.
+/// Os nomes vêm das solicitações (solicitante); a linha só existe quando alguém salva número ou cadastra à mão.
+model SolicitacaoResponsavel {
+  id         String    @id @default(cuid())
+  usuarioId  String
+  fornecedor String    @default("localiza")
+  chave      String    // nome sem acento, minúsculo, espaços únicos
+  nome       String
+  agencia    String?
+  telefone   String?   // só dígitos com 55
+  salvoPor   String?
+  salvoEm    DateTime?
+  salvoNa    String?   // nome da empresa onde foi salvo
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([usuarioId, fornecedor, chave], map: "solicitacao_responsaveis_unica")
+  @@map("solicitacao_responsaveis")
 }
 
 /// O que cada empresa já usa para a Localiza: cliente e serviço por valor do e-mail.

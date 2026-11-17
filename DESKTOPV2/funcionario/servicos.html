@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1b1e3f">
-  <title>Serviços — Lina X</title>
+  <title>Ajustes — Lina X</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
@@ -27,6 +27,39 @@
     .tab-btn.active { background: var(--cream); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--pink); }
     .tab-btn.active b { background: var(--ink); color: var(--yellow); }
     .tab-btn .ico { width: 22px; text-align: center; }
+    /* Ajustes (17/11/2026): abas em 2 grupos — Tabela de preços · Localiza */
+    .abas { align-items: flex-end; gap: 14px; }
+    .grupo-abas { flex: none; display: grid; gap: 5px; }
+    .grupo-abas > small { font: 700 9px var(--mono); letter-spacing: .12em; text-transform: uppercase; opacity: .65; padding-left: 4px; }
+    .grupo-abas > div { display: flex; gap: 8px; }
+    .abas .sep { flex: none; align-self: stretch; margin-top: 16px; border-left: 2px dashed var(--cream); opacity: .3; }
+    .tab-btn:not(.active) b.alerta { background: var(--yellow); }
+    .tab-btn.loc.active { box-shadow: 3px 3px 0 var(--green); }
+    .rede { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--green); padding: 10px 12px; margin-bottom: 14px; }
+    .rede .ic { width: 34px; height: 34px; border-radius: 10px; border: 2.5px solid var(--ink); background: var(--green); color: var(--cream); display: grid; place-items: center; flex: none; }
+    .rede .t { flex: 1; min-width: 180px; font-size: 12px; line-height: 1.4; }
+    .rede .t b { font: 400 13px var(--dela); display: block; }
+    .rede .emps { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+    .rede .emp { padding: 1px 7px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--paper); font: 700 10px/1.6 var(--mono); }
+    .busca-resp { display: flex; align-items: center; gap: 8px; background: var(--paper); color: var(--ink); border: 2.5px solid var(--ink); border-radius: 12px; padding: 0 12px; margin-bottom: 6px; }
+    .busca-resp input { flex: 1; min-width: 0; border: 0; background: none; padding: 10px 0; font: 700 14px var(--mono); color: var(--ink); outline: none; }
+    .lista-resp { display: grid; gap: 10px; }
+    .resp { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: center; padding: 10px 12px; }
+    .resp .av { width: 40px; height: 40px; border-radius: 12px; border: 2.5px solid var(--ink); display: grid; place-items: center; font: 400 15px var(--dela); background: var(--yellow); grid-row: span 2; }
+    .resp.ok .av { background: #c9efd5; }
+    .resp .nm b { font: 400 14px/1.15 var(--dela); display: block; overflow-wrap: anywhere; }
+    .resp .nm span { font: 700 10px var(--mono); color: var(--muted); letter-spacing: .03em; }
+    .resp .tel { display: flex; gap: 8px; grid-column: 2; }
+    .resp .tel input { flex: 1; min-width: 0; border: 2.5px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 8px 10px; font: 700 14px var(--mono); outline: none; }
+    .resp .tel input:focus { box-shadow: 3px 3px 0 var(--blue); }
+    .resp .tel input.erro { border-color: var(--red); box-shadow: 3px 3px 0 var(--red); }
+    .resp .tel .btn { padding: 8px 12px; font-size: 13px; }
+    .resp .num { grid-column: 2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 700 14px var(--mono); }
+    .resp .num .zap { color: var(--green); }
+    .resp .num .lapis { margin-left: auto; width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; display: grid; place-items: center; }
+    .resp .quem { grid-column: 2; font-size: 10px; color: var(--muted); }
+    .vazio-resp { text-align: center; padding: 14px; font-size: 12px; opacity: .8; }
+    .btn-apagar { background: none; border: 0; color: #c1361a; font: 700 12px var(--mono); cursor: pointer; text-decoration: underline; justify-self: start; padding: 0; }
 
     .grupo-tit { display: flex; align-items: center; gap: 10px; margin: 8px 0 10px; font: 400 15px var(--dela); }
     .grupo-tit i { width: 30px; height: 30px; border-radius: 9px; border: 2.5px solid var(--ink); background: var(--c); color: var(--cream); display: grid; place-items: center; font-size: 13px; flex: none; }
@@ -118,14 +151,26 @@
 <div class="pagina">
   <header class="topo">
     <a class="ico-btn" href="/funcionario/index.html" title="Início"><i class="fas fa-home"></i></a>
-    <div class="topo-tit"><h1>Serviços</h1><p id="hd-count">Carregando...</p></div>
-    <button class="btn btn-novo" id="btnNovo" onclick="abrirNovo()"><i class="fas fa-plus"></i> Novo</button>
+    <div class="topo-tit"><h1>Ajustes</h1><p id="hd-count">Carregando...</p></div>
+    <button class="btn btn-novo" id="btnNovo" onclick="abrirNovo()"><i class="fas fa-plus"></i> <span id="btnNovoTxt">Novo</span></button>
   </header>
 
   <nav class="abas">
-    <button class="tab-btn active" id="tabServicos" onclick="setTab('servicos')"><b id="countServicos">—</b>Serviços</button>
-    <button class="tab-btn" id="tabAdicionais" onclick="setTab('adicionais')"><b id="countAdicionais">—</b>Adicionais</button>
-    <button class="tab-btn" id="tabCategorias" onclick="setTab('categorias')"><i class="fas fa-layer-group ico"></i>Categorias</button>
+    <div class="grupo-abas" id="grupoPrecos" hidden>
+      <small>Tabela de preços</small>
+      <div>
+        <button class="tab-btn active" id="tabServicos" onclick="setTab('servicos')"><b id="countServicos">—</b>Serviços</button>
+        <button class="tab-btn" id="tabAdicionais" onclick="setTab('adicionais')"><b id="countAdicionais">—</b>Adicionais</button>
+        <button class="tab-btn" id="tabCategorias" onclick="setTab('categorias')"><i class="fas fa-layer-group ico"></i>Categorias</button>
+      </div>
+    </div>
+    <span class="sep" id="sepGrupos" hidden></span>
+    <div class="grupo-abas" id="grupoLocaliza" hidden>
+      <small>Localiza</small>
+      <div>
+        <button class="tab-btn loc" id="tabResponsaveis" onclick="setTab('responsaveis')"><b id="countSemNumero" class="alerta">—</b>Responsáveis</button>
+      </div>
+    </div>
   </nav>
 
   <div id="listBody"><div class="state-box"><div class="spin"></div></div></div>
@@ -148,7 +193,7 @@
   <script src="../api.js"></script>
   <script src="utils.js"></script>
   <script>
-    const PAGE_TITLE  = 'Serviços';
+    const PAGE_TITLE  = 'Ajustes';
     const PAGE_ACTIVE = 'servicos';
 
     let tabAtiva   = 'servicos';
@@ -157,6 +202,11 @@
     let categorias = [];       // subtipos de CARRO (TipoVeiculo com categoria)
     let catSortable = null;    // instância do SortableJS
     let editandoId = null;
+    let podePrecos = false, podeLocaliza = false;
+    let responsaveis = null;   // agenda da Localiza (vale para todas as empresas do dono)
+    let empresasDono = [];
+    let buscaResp = '';
+    let editandoResp = null;
 
     const CATS_CARRO = ['HATCH','SEDAN','SUV','PICKUP','CAMINHONETE','VAN','MICROONIBUS','CAMINHAO'];
     const LABELS_CAT = {
@@ -176,12 +226,19 @@
     document.addEventListener('DOMContentLoaded', async () => {
       if (!validateFuncionarioAccess()) return;
       const perms = JSON.parse(localStorage.getItem('permissoes') || '[]');
-      if (!perms.includes('config_ver_servicos')) {
-        showToast('Sem permissão para gerenciar serviços', 'error');
+      podePrecos = perms.includes('config_ver_servicos');
+      podeLocaliza = perms.includes('gerenciar_ordens');
+      if (!podePrecos && !podeLocaliza) {
+        showToast('Sem permissão para os ajustes', 'error');
         setTimeout(() => { window.location.href = '/funcionario/index.html'; }, 1500);
         return;
       }
+      document.getElementById('grupoPrecos').hidden = !podePrecos;
+      document.getElementById('grupoLocaliza').hidden = !podeLocaliza;
+      document.getElementById('sepGrupos').hidden = !(podePrecos && podeLocaliza);
       document.getElementById('bottomNav').innerHTML = createMobileNav(PAGE_ACTIVE);
+      if (podeLocaliza) carregarResponsaveis();
+      if (!podePrecos || location.hash === '#responsaveis') return setTab('responsaveis');
       await carregar();
     });
 
@@ -220,6 +277,13 @@
     }
 
     function atualizarCount() {
+      if (tabAtiva === 'responsaveis') {
+        const sem = (responsaveis || []).filter(r => !r.telefone).length;
+        document.getElementById('hd-count').textContent = responsaveis
+          ? `Localiza · ${responsaveis.length} pessoa${responsaveis.length !== 1 ? 's' : ''}${sem ? ` · ${sem} sem número` : ''}`
+          : 'Carregando...';
+        return;
+      }
       if (tabAtiva === 'categorias') {
         const total = categorias.length;
         document.getElementById('hd-count').textContent = `${total} categoria${total !== 1 ? 's' : ''}`;
@@ -232,20 +296,152 @@
 
     // ── TAB ───────────────────────────────────────
     function setTab(tab) {
+      const precisaCarregar = tab !== 'responsaveis' && tabAtiva === 'responsaveis' && !servicos.length && !adicionais.length && !categorias.length;
       tabAtiva = tab;
       document.getElementById('tabServicos').classList.toggle('active', tab === 'servicos');
       document.getElementById('tabAdicionais').classList.toggle('active', tab === 'adicionais');
       document.getElementById('tabCategorias').classList.toggle('active', tab === 'categorias');
-      // Botão "Novo" não faz sentido na aba de categorias
+      document.getElementById('tabResponsaveis').classList.toggle('active', tab === 'responsaveis');
+      // Botão "Novo" não faz sentido na aba de categorias; em Responsáveis vira "Pessoa"
       document.getElementById('btnNovo').style.display = tab === 'categorias' ? 'none' : '';
+      document.getElementById('btnNovoTxt').textContent = tab === 'responsaveis' ? 'Pessoa' : 'Novo';
+      try { history.replaceState(null, '', tab === 'responsaveis' ? '#responsaveis' : location.pathname); } catch (e) { /* ignora */ }
+      document.querySelector('.tab-btn.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+      if (precisaCarregar) return carregar();
       atualizarCount();
       renderTab();
     }
 
     function renderTab() {
-      if (tabAtiva === 'servicos') renderServicos();
+      if (tabAtiva === 'responsaveis') renderResponsaveis();
+      else if (tabAtiva === 'servicos') renderServicos();
       else if (tabAtiva === 'adicionais') renderAdicionais();
       else renderCategorias();
+    }
+
+    // ── RESPONSÁVEIS DA LOCALIZA (agenda do dono, 17/11/2026) ──
+    const soDig = (v) => String(v || '').replace(/\D/g, '');
+    const telLocal = (v) => { let d = soDig(v); if (d.length === 13 && d.startsWith('55')) d = d.slice(2); return d; };
+    const celularOk = (v) => { const d = telLocal(v); return d.length === 11 && d[2] === '9'; };
+    const fmtTel = (v) => { const d = telLocal(v); return d.length === 11 ? `(${d.slice(0, 2)}) ${d[2]} ${d.slice(3, 7)}-${d.slice(7)}` : v; };
+    const iniciais = (n) => String(n || '?').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+    function haQuantoDias(iso) {
+      if (!iso) return '—';
+      const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+      return d <= 0 ? 'hoje' : d === 1 ? 'ontem' : d < 7 ? `há ${d} dias` : d < 14 ? 'há 1 semana' : d < 30 ? `há ${Math.floor(d / 7)} semanas` : d < 60 ? 'há 1 mês' : `há ${Math.floor(d / 30)} meses`;
+    }
+    const dataCurta = (iso) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+    async function carregarResponsaveis() {
+      try {
+        const r = await window.fetchApi('/solicitacoes/responsaveis', { semRedirect: true, cache: 'no-store' });
+        responsaveis = r.responsaveis || [];
+        empresasDono = r.empresas || [];
+      } catch (e) {
+        responsaveis = responsaveis || [];
+        if (tabAtiva === 'responsaveis') showToast(e?.error || 'Erro ao carregar os responsáveis', 'error');
+      }
+      document.getElementById('countSemNumero').textContent = responsaveis.filter(r => !r.telefone).length;
+      if (tabAtiva === 'responsaveis') { atualizarCount(); renderResponsaveis(); }
+    }
+
+    function linhaResp(r) {
+      const meta = `${escHtml(r.agencia || '—')} · ${r.solicitacoes} solicitaç${r.solicitacoes === 1 ? 'ão' : 'ões'}${r.ultima ? ' · última ' + haQuantoDias(r.ultima) : ''}`;
+      const tel = r.telefone
+        ? `<div class="num"><i class="fab fa-whatsapp zap"></i><span>${escHtml(fmtTel(r.telefone))}</span><button class="lapis" onclick="abrirFormResp('${escHtml(r.chave)}')" aria-label="Editar"><i class="fas fa-pen"></i></button></div>
+           ${r.salvoPor || r.salvoNa ? `<div class="quem">Salvo${r.salvoPor ? ' por ' + escHtml(r.salvoPor) : ''}${r.salvoNa ? ' · ' + escHtml(r.salvoNa) : ''}${r.salvoEm ? ' em ' + dataCurta(r.salvoEm) : ''}</div>` : ''}`
+        : `<div class="tel"><input inputmode="tel" placeholder="(99) 9 9999-9999" data-tel="${escHtml(r.chave)}" oninput="this.classList.remove('erro')"><button class="btn verde" onclick="salvarTelRapido('${escHtml(r.chave)}', this)">Salvar</button></div>`;
+      return `<article class="cartao resp ${r.telefone ? 'ok' : ''}"><span class="av">${escHtml(iniciais(r.nome))}</span>
+        <div class="nm"><b>${escHtml(r.nome)}</b><span>${meta}</span></div>${tel}</article>`;
+    }
+
+    function renderResponsaveis() {
+      const body = document.getElementById('listBody');
+      if (!responsaveis) { body.innerHTML = '<div class="state-box"><div class="spin"></div></div>'; return; }
+      const q = buscaResp.trim().toLowerCase();
+      const f = responsaveis.filter(r => !q || r.nome.toLowerCase().includes(q) || (r.agencia || '').toLowerCase().includes(q));
+      const sem = f.filter(r => !r.telefone), com = f.filter(r => r.telefone);
+      body.innerHTML = `
+        <div class="rede"><span class="ic"><i class="fas fa-link"></i></span>
+          <div class="t"><b>Vale para todas as empresas</b>Quem abre as solicitações da Localiza. O número salvo aqui aparece igual em:
+            <div class="emps">${empresasDono.map(e => `<span class="emp">${escHtml(e)}</span>`).join('')}</div></div></div>
+        <label class="busca-resp"><i class="fas fa-magnifying-glass"></i><input id="buscaResp" placeholder="Buscar nome ou agência" value="${escHtml(buscaResp)}"></label>
+        <h2 class="grupo-tit"><i class="fas fa-phone-slash" style="--c: var(--yellow); color: var(--ink)"></i>Sem número <small>${sem.length}</small></h2>
+        <div class="lista-resp">${sem.map(linhaResp).join('') || '<div class="vazio-resp">Todo mundo já tem número 🎉</div>'}</div>
+        <h2 class="grupo-tit" style="margin-top: 18px"><i class="fab fa-whatsapp" style="--c: var(--green)"></i>Com número <small>${com.length}</small></h2>
+        <div class="lista-resp">${com.map(linhaResp).join('') || '<div class="vazio-resp">Ninguém ainda.</div>'}</div>
+        <p class="dica" style="margin-top: 14px">Os nomes chegam sozinhos dos e-mails da Localiza. Quem abrir uma solicitação pela primeira vez aparece em "Sem número". O checklist de avarias vai para esse número pelo WhatsApp da empresa.</p>`;
+      const b = document.getElementById('buscaResp');
+      b.oninput = () => {
+        buscaResp = b.value; const pos = b.selectionStart;
+        renderResponsaveis();
+        const nb = document.getElementById('buscaResp'); nb.focus(); nb.setSelectionRange(pos, pos);
+      };
+    }
+
+    async function gravarResp(corpo) {
+      return window.fetchApi('/solicitacoes/responsaveis', { method: 'PUT', semRedirect: true, body: JSON.stringify(corpo) });
+    }
+
+    async function salvarTelRapido(chave, btn) {
+      const r = responsaveis.find(x => x.chave === chave);
+      const inp = document.querySelector(`[data-tel="${CSS.escape(chave)}"]`);
+      if (!r || !inp) return;
+      if (!celularOk(inp.value)) { inp.classList.add('erro'); inp.focus(); return showToast('Número inválido: DDD + celular (11 dígitos).', 'error'); }
+      btn.disabled = true;
+      try {
+        await gravarResp({ chaveAntiga: r.chave, nome: r.nome, telefone: inp.value });
+        showToast(`Número de ${r.nome.split(' ')[0]} salvo para ${empresasDono.length > 1 ? empresasDono.length + ' empresas' : 'a empresa'}.`, 'success');
+        await carregarResponsaveis();
+      } catch (e) {
+        showToast(e?.error || 'Erro ao salvar.', 'error');
+        btn.disabled = false;
+      }
+    }
+
+    function abrirFormResp(chave) {
+      const r = chave ? responsaveis.find(x => x.chave === chave) : null;
+      editandoResp = r;
+      document.getElementById('drawerTitle').textContent = r ? 'Editar responsável' : 'Nova pessoa da Localiza';
+      document.getElementById('drawerBody').innerHTML = `
+        <div class="form-group"><label class="form-label" for="rNome">Nome</label><input class="form-input" id="rNome" maxlength="60" value="${escHtml(r?.nome || '')}"></div>
+        <div class="form-group"><label class="form-label" for="rAg">Agência</label><input class="form-input" id="rAg" maxlength="20" placeholder="Ex.: ACITZ" value="${escHtml(r?.agencia || '')}"></div>
+        <div class="form-group"><label class="form-label" for="rTel">WhatsApp</label><input class="form-input" id="rTel" inputmode="tel" placeholder="(99) 9 9999-9999" value="${r?.telefone ? escHtml(fmtTel(r.telefone)) : ''}">
+          <span class="form-hint">Vale para todas as empresas${empresasDono.length ? ': ' + escHtml(empresasDono.join(', ')) : ''}.</span></div>
+        ${r?.telefone ? '<button class="btn-apagar" onclick="apagarTelResp()">Apagar número</button>' : ''}`;
+      document.getElementById('drawerFooter').innerHTML = `
+        <button class="btn-f" onclick="fecharDrawer()">Cancelar</button>
+        <button class="btn-f btn-f-save" id="btnSalvarResp" onclick="salvarFormResp()">Salvar</button>`;
+      abrirDrawer();
+      setTimeout(() => document.getElementById(r ? 'rTel' : 'rNome')?.focus(), 300);
+    }
+
+    async function salvarFormResp() {
+      const nome = document.getElementById('rNome').value.trim();
+      const tel = document.getElementById('rTel').value.trim();
+      if (!nome) return showToast('Informe o nome.', 'error');
+      if (tel && !celularOk(tel)) return showToast('Número inválido: DDD + celular (11 dígitos).', 'error');
+      const btn = document.getElementById('btnSalvarResp'); btn.disabled = true;
+      try {
+        await gravarResp({ chaveAntiga: editandoResp?.chave || null, nome, agencia: document.getElementById('rAg').value.trim(), telefone: tel });
+        fecharDrawer();
+        showToast(`Salvo para ${empresasDono.length > 1 ? empresasDono.length + ' empresas' : 'a empresa'}.`, 'success');
+        await carregarResponsaveis();
+      } catch (e) {
+        showToast(e?.error || 'Erro ao salvar.', 'error');
+        btn.disabled = false;
+      }
+    }
+
+    async function apagarTelResp() {
+      const r = editandoResp;
+      if (!r) return;
+      try {
+        await gravarResp({ chaveAntiga: r.chave, nome: r.nome, telefone: '' });
+        fecharDrawer();
+        showToast('Número apagado em todas as empresas.', 'success');
+        await carregarResponsaveis();
+      } catch (e) { showToast(e?.error || 'Erro ao apagar.', 'error'); }
     }
 
     // ── RENDER CATEGORIAS (drag + toggle) ─────────
@@ -411,7 +607,8 @@
 
     // ── BOTÃO "NOVO" (contexto-aware) ─────────────
     function abrirNovo() {
-      if (tabAtiva === 'servicos') abrirFormServico(null);
+      if (tabAtiva === 'responsaveis') abrirFormResp(null);
+      else if (tabAtiva === 'servicos') abrirFormServico(null);
       else abrirFormAdicional(null);
     }
 
