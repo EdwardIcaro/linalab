@@ -162,7 +162,7 @@
     }
     return body;
   }
-  const api = {
+  const frotaApi = {
     pendentes: () => rapido ? fr('/pendentes') : fetchApi('/ordens/frota/pendentes', { semRedirect: true }),
     confirmar: (ids) => rapido ? fr('/confirmar', { method: 'POST', body: JSON.stringify({ ids }) }) : fetchApi('/ordens/frota/confirmar', { method: 'POST', body: JSON.stringify({ ids }), semRedirect: true }),
     devolver: (id, motivo) => rapido ? fr(`/${id}/devolver`, { method: 'POST', body: JSON.stringify({ motivo }) }) : fetchApi(`/ordens/${id}/frota/devolver`, { method: 'POST', body: JSON.stringify({ motivo }), semRedirect: true }),
@@ -229,7 +229,7 @@
     marcarSessao();
     if (!rapido && !logado) return bloqueado();
     try {
-      const r = await api.pendentes();
+      const r = await frotaApi.pendentes();
       if (rapido) {
         empresas = (r.empresas || []).map(e => ({ id: e.id, nome: e.nome, qtd: (e.ordens || []).length }));
         ordens = (r.empresas || []).flatMap(e => (e.ordens || []).map(o => ({ ...o, empresaId: e.id, empresaNome: e.nome })));
@@ -349,7 +349,7 @@
     const ids = [...sel]; if (!ids.length) return;
     const b = document.getElementById('btnConfirmar'); b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando…';
     try {
-      const r = await api.confirmar(ids);
+      const r = await frotaApi.confirmar(ids);
       const falhas = (r.resultados || []).filter(x => !x.ok);
       sel = new Set(falhas.map(f => f.id));
       if (falhas.length) toast(`${r.confirmadas} confirmada(s). #${falhas[0].numeroOrdem || ''}: ${falhas[0].erro}`, true);
@@ -362,7 +362,7 @@
     const motivo = document.getElementById('motivo')?.value.trim();
     if (!motivo) return document.getElementById('motivo')?.focus();
     try {
-      await api.devolver(id, motivo);
+      await frotaApi.devolver(id, motivo);
       devolvendo = null; sel.delete(id);
       toast('Ordem devolvida para a equipe.');
       await carregar();
