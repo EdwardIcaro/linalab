@@ -8,6 +8,10 @@
  * o cargo tem `confirmar_frota`). Quem já está logado usa o próprio token no lugar do código.
  *
  * A sessão NÃO tem `id`/`empresaId`, então o authMiddleware normal recusa — ela não abre o resto do sistema.
+ *
+ * 17/11/2026: a tela também abre SEM link e SEM login — só a senha. O sistema compara com as contas que
+ * confirmam frota (donos com empresa + subcontas com `confirmar_frota`) e descobre quem é. Trava por IP.
+ * Logado no painel: entra direto com o próprio token, sem digitar nada.
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -18,7 +22,8 @@ import prisma from '../db';
 import { listarPendentes, confirmar, devolver, respostaFalsa } from './frotaConfirmacaoController';
 
 type Quem = { tipo: 'u' | 's'; id: string };
-type Sessao = Quem & { nome: string };
+/** Sessão rápida: normalmente 1 pessoa; mais de uma quando a mesma senha bate em 2 contas. */
+type Sessao = { pessoas: Quem[]; nome: string };
 interface ReqFrota extends Request { frota?: Sessao }
 
 const PERM = 'confirmar_frota';
@@ -95,6 +100,57 @@ export async function empresasPermitidas(q: Quem): Promise<{ id: string; nome: s
   return lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
+/** Empresas de todas as pessoas da sessão, sem repetir. */
+export async function empresasDaSessao(s: Sessao): Promise<{ id: string; nome: string }[]> {
+  const listas = await Promise.all(s.pessoas.map((q) => empresasPermitidas(q)));
+  const vistas = new Map<string, { id: string; nome: string }>();
+  for (const e of listas.flat()) vistas.set(e.id, e);
+  return [...vistas.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+function emitirSessao(res: Response, pessoas: Quem[], nome: string) {
+  const token = jwt.sign({ fr: 'sessao', ps: pessoas.map((q) => `${q.tipo}${q.id}`), nome }, segredo(), { expiresIn: `${SESSAO_HORAS}h` });
+  return res.json({ token, nome, expiraEm: Date.now() + SESSAO_HORAS * 3600_000 });
+}
+
+function ipDe(req: Request): string {
+  const xf = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return xf || req.ip || 'sem-ip';
+}
+
+/** Só a senha: descobre de quem é entre as contas que confirmam frota. */
+async function entrarSoSenha(req: Request, res: Response, senha: string) {
+  const chave = `ip:${ipDe(req)}`;
+  const min = travado(chave);
+  if (min) return res.status(429).json({ error: `Muitas tentativas. Tente de novo em ${min} min.` });
+  const [donos, subs] = await Promise.all([
+    prisma.usuario.findMany({ where: { empresas: { some: {} } }, select: { id: true, nome: true, senha: true }, take: 200 }),
+    prisma.subaccount.findMany({
+      where: { OR: [
+        { roleInt: { permissoes: { some: { name: PERM } } } },
+        { empresaAcessos: { some: { role: { permissoes: { some: { name: PERM } } } } } },
+      ] },
+      select: { id: true, nome: true, senha: true }, take: 300,
+    }),
+  ]);
+  const candidatos = [
+    ...donos.map((d) => ({ q: { tipo: 'u' as const, id: d.id }, nome: d.nome, senha: d.senha })),
+    ...subs.map((s) => ({ q: { tipo: 's' as const, id: s.id }, nome: s.nome, senha: s.senha })),
+  ].filter((c) => c.senha);
+  const bate = await Promise.all(candidatos.map((c) => bcrypt.compare(senha, c.senha).catch(() => false)));
+  const achados = candidatos.filter((_, i) => bate[i]);
+  const comEmpresa = [];
+  for (const c of achados) if ((await empresasPermitidas(c.q)).length) comEmpresa.push(c);
+  if (!comEmpresa.length) {
+    const restam = errou(chave);
+    if (achados.length) return res.status(403).json({ error: 'Seu cargo não tem a permissão "Confirmar ordens de frota" em nenhuma empresa.' });
+    return res.status(401).json({ error: restam ? `Senha incorreta. Restam ${restam} tentativa${restam > 1 ? 's' : ''}.` : `Senha incorreta. Acesso travado por ${TRAVA_MIN} min.` });
+  }
+  falhas.delete(chave);
+  const nome = [...new Set(comEmpresa.map((c) => c.nome))].join(' · ');
+  return emitirSessao(res, comEmpresa.map((c) => c.q), nome);
+}
+
 // ─── trava de senha errada (memória do processo) ───────────────────────────
 const falhas = new Map<string, { n: number; ate: number }>();
 function travado(chave: string): number {
@@ -123,10 +179,18 @@ export async function quem(req: Request, res: Response) {
 /** POST /api/frota-rapido/entrar { k?, senha } — devolve a sessão de 12 h. */
 export async function entrar(req: Request, res: Response) {
   try {
-    const q = identificar(req);
-    if (!q) return res.status(400).json({ error: 'Link inválido. Peça um novo aviso.' });
     const senha = String(req.body?.senha || '');
+    const doLink = lerCodigo(req.body?.k ?? req.query?.k);
+    const doLogin = doLink ? null : lerTokenNormal(req);
+    // Logado no painel: o próprio token já prova quem é — entra sem senha.
+    if (!senha && doLogin) {
+      const p = await pessoa(doLogin);
+      if (!p || !(await empresasPermitidas(doLogin)).length) return res.status(403).json({ error: 'Sem empresas para confirmar frota.' });
+      return emitirSessao(res, [doLogin], p.nome);
+    }
     if (!senha) return res.status(400).json({ error: 'Digite a senha.' });
+    const q = doLink || doLogin;
+    if (!q) return entrarSoSenha(req, res, senha);
     const chave = `${q.tipo}${q.id}`;
     const min = travado(chave);
     if (min) return res.status(429).json({ error: `Muitas tentativas. Tente de novo em ${min} min.` });
@@ -138,8 +202,7 @@ export async function entrar(req: Request, res: Response) {
     falhas.delete(chave);
     const empresas = await empresasPermitidas(q);
     if (!empresas.length) return res.status(403).json({ error: 'Seu cargo não tem a permissão "Confirmar ordens de frota" em nenhuma empresa.' });
-    const token = jwt.sign({ fr: 'sessao', tipo: q.tipo, sid: q.id, nome: p.nome }, segredo(), { expiresIn: `${SESSAO_HORAS}h` });
-    return res.json({ token, nome: p.nome, expiraEm: Date.now() + SESSAO_HORAS * 3600_000 });
+    return emitirSessao(res, [q], p.nome);
   } catch (e) {
     console.error('[FrotaRapido] Erro ao entrar:', e);
     return res.status(500).json({ error: 'Não foi possível entrar.' });
@@ -151,8 +214,13 @@ export function sessaoFrota(req: ReqFrota, res: Response, next: NextFunction) {
   const h = req.headers.authorization;
   try {
     const d = jwt.verify(h?.startsWith('Bearer ') ? h.slice(7) : '', segredo()) as any;
-    if (d?.fr !== 'sessao' || (d.tipo !== 'u' && d.tipo !== 's') || !d.sid) throw new Error('escopo');
-    req.frota = { tipo: d.tipo, id: d.sid, nome: d.nome || '' };
+    if (d?.fr !== 'sessao') throw new Error('escopo');
+    const brutos: string[] = Array.isArray(d.ps) ? d.ps : d.sid ? [`${d.tipo}${d.sid}`] : []; // sessões antigas: tipo/sid
+    const pessoas = brutos
+      .filter((x) => typeof x === 'string' && (x[0] === 'u' || x[0] === 's') && x.length > 1)
+      .map((x) => ({ tipo: x[0] as 'u' | 's', id: x.slice(1) }));
+    if (!pessoas.length) throw new Error('escopo');
+    req.frota = { pessoas, nome: d.nome || '' };
     return next();
   } catch {
     return res.status(401).json({ error: 'Acesso expirado. Toque na chave e digite a senha de novo.', code: 'FROTA_SESSAO' });
@@ -168,7 +236,7 @@ function reqDe(req: ReqFrota, empresaId: string, extra: Record<string, unknown> 
 /** GET /api/frota-rapido/pendentes — ordens esperando, agrupadas por empresa. */
 export async function pendentes(req: ReqFrota, res: Response) {
   try {
-    const empresas = await empresasPermitidas(req.frota!);
+    const empresas = await empresasDaSessao(req.frota!);
     const grupos = [];
     for (const e of empresas) {
       const r = respostaFalsa();
@@ -188,7 +256,7 @@ export async function confirmarRapido(req: ReqFrota, res: Response) {
   try {
     const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.filter((x: unknown) => typeof x === 'string').slice(0, 100) : [];
     if (!ids.length) return res.status(400).json({ error: 'Escolha ao menos uma ordem.' });
-    const permitidas = new Set((await empresasPermitidas(req.frota!)).map((e) => e.id));
+    const permitidas = new Set((await empresasDaSessao(req.frota!)).map((e) => e.id));
     const ordens = await prisma.ordemServico.findMany({ where: { id: { in: ids } }, select: { id: true, empresaId: true } });
     const porEmpresa = new Map<string, string[]>();
     const resultados: any[] = [];
@@ -215,7 +283,7 @@ export async function devolverRapido(req: ReqFrota, res: Response) {
   try {
     const id = req.params.id as string;
     const o = await prisma.ordemServico.findUnique({ where: { id }, select: { empresaId: true } });
-    const permitidas = new Set((await empresasPermitidas(req.frota!)).map((e) => e.id));
+    const permitidas = new Set((await empresasDaSessao(req.frota!)).map((e) => e.id));
     if (!o || !permitidas.has(o.empresaId)) return res.status(404).json({ error: 'Ordem não encontrada.' });
     const r = respostaFalsa();
     await devolver(reqDe(req, o.empresaId, { params: { id }, body: { motivo: req.body?.motivo } }) as any, r);

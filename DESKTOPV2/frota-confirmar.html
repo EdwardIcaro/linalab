@@ -99,7 +99,7 @@
   <header class="topo">
     <a class="ico-btn" id="btnVoltar" href="/funcionario/ordens.html" title="Voltar"><i class="fas fa-arrow-left"></i></a>
     <div class="topo-tit"><h1>Confirmar frota</h1><small id="sub">Carregando…</small><span class="quem" id="quem" hidden></span></div>
-    <button class="ico-btn chave" id="btnChave" onclick="abrirChave()" title="Acesso rápido: todas as empresas" aria-label="Acesso rápido"><i class="fas fa-key"></i></button>
+    <button class="ico-btn chave" id="btnChave" onclick="sairRapido()" title="Entrar com outra senha" aria-label="Entrar com outra senha"><i class="fas fa-key"></i></button>
     <button class="ico-btn" onclick="carregar()" title="Atualizar"><i class="fas fa-rotate"></i></button>
   </header>
   <p class="explica">Ordens da Localiza que a equipe finalizou. Comissão, caixa e relatórios só entram quando você confirma. Devolver manda a ordem de volta para a equipe com o motivo.</p>
@@ -117,8 +117,9 @@
 
 <script src="/api.js"></script>
 <script>
-  // Acesso rápido (16/11/2026): o link do WhatsApp traz ?k=CÓDIGO (só diz quem é a pessoa). A chave pede a
-  // senha e abre uma sessão de 12 h que vê a frota de todas as empresas dela. Sem login normal também funciona.
+  // Acesso só com a senha (17/11/2026): a tela abre para qualquer um, pede a senha e o servidor descobre de quem
+  // é — mostra a frota de todas as empresas da pessoa (sessão de 12 h). Logado no painel: entra direto.
+  // O link do WhatsApp (?k=CÓDIGO) continua valendo: só mostra o nome de quem vai entrar.
   const K = new URLSearchParams(location.search).get('k');
   const FR_KEY = 'frota_rapido';
   const logado = !!localStorage.getItem('token');
@@ -131,7 +132,6 @@
   // Dono volta para o painel dele; subconta para Ordens. Sem login, não há para onde voltar.
   if (localStorage.getItem('userRole') !== 'USER') document.getElementById('btnVoltar').href = '/ordens.html';
   if (!logado) document.getElementById('btnVoltar').hidden = true;
-  if (!logado && !K && !rapido) location.href = '/login.html';
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const brl = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -157,15 +157,15 @@
     });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok) {
-      if (body.code === 'FROTA_SESSAO') { sairRapido(false); abrirChave(body.error); }
+      if (body.code === 'FROTA_SESSAO') { sairRapido(false); telaSenha(body.error); }
       throw { ...body, status: resp.status };
     }
     return body;
   }
   const frotaApi = {
-    pendentes: () => rapido ? fr('/pendentes') : fetchApi('/ordens/frota/pendentes', { semRedirect: true }),
-    confirmar: (ids) => rapido ? fr('/confirmar', { method: 'POST', body: JSON.stringify({ ids }) }) : fetchApi('/ordens/frota/confirmar', { method: 'POST', body: JSON.stringify({ ids }), semRedirect: true }),
-    devolver: (id, motivo) => rapido ? fr(`/${id}/devolver`, { method: 'POST', body: JSON.stringify({ motivo }) }) : fetchApi(`/ordens/${id}/frota/devolver`, { method: 'POST', body: JSON.stringify({ motivo }), semRedirect: true }),
+    pendentes: () => fr('/pendentes'),
+    confirmar: (ids) => fr('/confirmar', { method: 'POST', body: JSON.stringify({ ids }) }),
+    devolver: (id, motivo) => fr(`/${id}/devolver`, { method: 'POST', body: JSON.stringify({ motivo }) }),
   };
 
   function marcarSessao() {
@@ -180,54 +180,49 @@
     if (recarregar) carregar();
   }
 
-  function bloqueado(msg) {
+  let nomeLink = '', tentouLogin = false;
+
+  // Tela de entrada: só a senha, na própria página
+  async function telaSenha(erro = '') {
     ordens = []; empresas = [];
-    document.getElementById('sub').textContent = 'Toque na chave para entrar';
-    document.getElementById('abas').hidden = true;
-    document.getElementById('barraSel').hidden = true;
-    document.getElementById('rodape').hidden = true;
-    document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-key"></i></div><b>Entre com sua senha</b><p>${esc(msg || 'Mostra as ordens da Localiza de todas as empresas em que você confirma frota.')}</p>
-      <button class="btn" style="margin-top:12px;background:var(--loc);color:#fff" onclick="abrirChave()"><i class="fas fa-key"></i> Digitar senha</button></div>`;
+    document.getElementById('sub').textContent = 'Digite sua senha';
+    ['abas', 'barraSel', 'rodape'].forEach(id => document.getElementById(id).hidden = true);
+    if (K && !nomeLink) { try { nomeLink = (await fr(`/quem?k=${encodeURIComponent(K)}`, {}, null)).nome; } catch {} }
+    document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-key"></i></div>
+      <b>${nomeLink ? `Olá, ${esc(nomeLink.split(' ')[0])}` : 'Entre com sua senha'}</b>
+      <p>Mostra as ordens da Localiza esperando confirmação em todas as suas empresas.</p>
+      <form id="fSenha" style="display:grid;gap:10px;margin-top:14px;width:100%;max-width:300px;justify-self:center">
+        <input class="entrada" id="chSenha" type="password" autocomplete="current-password" placeholder="Senha" aria-label="Senha" required>
+        ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
+        <button class="btn" type="submit" style="background:var(--loc);color:#fff;justify-content:center"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
+      </form></div>`;
+    const f = document.getElementById('fSenha');
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const b = f.querySelector('button'); b.disabled = true; b.textContent = 'Entrando…';
+      try { await entrar({ k: K || undefined, senha: document.getElementById('chSenha').value }, null); }
+      catch (e) { telaSenha(e?.error || 'Não foi possível entrar.'); }
+    };
+    setTimeout(() => document.getElementById('chSenha')?.focus(), 0);
   }
 
-  async function abrirChave(erro = '') {
-    document.querySelector('.confirm-dialog')?.remove();
-    const loginBearer = K ? null : localStorage.getItem('token');
-    let nome = rapido?.nome || '';
-    if (!nome) {
-      try { nome = (await fr(`/quem${K ? `?k=${encodeURIComponent(K)}` : ''}`, {}, loginBearer)).nome; }
-      catch (e) { if (!logado) return bloqueado(e?.error || 'Link inválido. Peça um novo aviso.'); }
-    }
-    const d = document.createElement('div'); d.className = 'confirm-dialog';
-    d.innerHTML = `<div class="confirm-overlay"></div><div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="chTit">
-      <h2 id="chTit"><i class="fas fa-key" style="color:var(--loc)"></i> Acesso rápido</h2>
-      <p>Digite sua senha para ver a frota de todas as suas empresas.</p>
-      ${nome ? `<div class="quem-modal">${esc(nome)}</div>` : ''}
-      <form id="fChave">
-        <div class="campo"><label for="chSenha">Senha</label><input class="entrada" id="chSenha" type="password" autocomplete="current-password" required></div>
-        ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
-        <div class="confirm-buttons"><button type="button" class="btn-cancel">Cancelar</button><button type="submit" class="btn-confirm">Entrar</button></div>
-      </form></div>`;
-    document.body.append(d);
-    const fechar = () => { d.remove(); if (!logado && !rapido) bloqueado(); };
-    d.querySelector('.confirm-overlay').onclick = fechar;
-    d.querySelector('.btn-cancel').onclick = fechar;
-    d.querySelector('#fChave').onsubmit = async (ev) => {
-      ev.preventDefault();
-      const senha = d.querySelector('#chSenha').value;
-      const b = d.querySelector('.btn-confirm'); b.disabled = true; b.textContent = 'Entrando…';
-      try {
-        const r = await fr('/entrar', { method: 'POST', body: JSON.stringify({ k: K || undefined, senha }) }, loginBearer);
-        rapido = { token: r.token, nome: r.nome, expiraEm: r.expiraEm };
-        gravarRapido(rapido); d.remove(); sel = new Set(); filtroEmp = 'todas'; marcarSessao(); carregar();
-      } catch (e) { d.remove(); abrirChave(e?.error || 'Não foi possível entrar.'); }
-    };
-    setTimeout(() => d.querySelector('#chSenha')?.focus(), 0);
+  async function entrar(corpo, bearer) {
+    const r = await fr('/entrar', { method: 'POST', body: JSON.stringify(corpo) }, bearer);
+    rapido = { token: r.token, nome: r.nome, expiraEm: r.expiraEm };
+    gravarRapido(rapido); sel = new Set(); filtroEmp = 'todas';
+    await carregar();
   }
 
   async function carregar() {
     marcarSessao();
-    if (!rapido && !logado) return bloqueado();
+    if (!rapido) {
+      // Logado no painel (e sem link de outra pessoa): entra direto com o próprio login
+      if (logado && !K && !tentouLogin) {
+        tentouLogin = true;
+        try { return await entrar({}, localStorage.getItem('token')); } catch {}
+      }
+      return telaSenha();
+    }
     try {
       const r = await frotaApi.pendentes();
       if (rapido) {
@@ -238,9 +233,8 @@
       sel = new Set([...sel].filter(id => ordens.some(o => o.id === id)));
       desenhar();
     } catch (e) {
-      if (rapido || e?.code === 'FROTA_SESSAO') return;
-      const msg = e?.status === 403 || /permiss/i.test(e?.error || '') ? 'Seu cargo não tem a permissão "Confirmar ordens de frota".' : (e?.error || 'Não foi possível carregar.');
-      document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-lock"></i></div><b>Sem acesso</b><p>${esc(msg)}</p></div>`;
+      if (e?.code === 'FROTA_SESSAO') return;
+      document.getElementById('lista').innerHTML = `<div class="cartao vazio"><div class="ic"><i class="fas fa-triangle-exclamation"></i></div><b>Não carregou</b><p>${esc(e?.error || 'Sem conexão. Toque em atualizar.')}</p></div>`;
       document.getElementById('sub').textContent = '—';
     }
   }
@@ -380,9 +374,7 @@
     } catch (e) { toast(e?.error || 'Não foi possível cancelar.', true); }
   }
 
-  // Veio pelo link sem sessão rápida → já abre a chave
-  if (K && !rapido) { if (logado) carregar(); else bloqueado(); abrirChave(); }
-  else carregar();
+  carregar();
 </script>
 <script src="/funcionario/decola-base.js"></script>
 </body>
